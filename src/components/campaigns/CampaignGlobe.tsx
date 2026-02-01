@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
+import { AuroraBorealis } from "./AuroraBorealis";
 import { 
   Select, 
   SelectContent, 
@@ -408,6 +409,9 @@ function Earth({
       <Suspense fallback={<SimpleEarth />}>
         <TexturedEarth rotation={0} />
       </Suspense>
+
+      {/* Aurora Borealis effect at poles */}
+      <AuroraBorealis />
 
       {/* Network */}
       <PartnerNetwork />
