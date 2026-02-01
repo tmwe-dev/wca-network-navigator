@@ -1,7 +1,8 @@
-import { useRef, useState, useMemo, useCallback, useEffect } from "react";
+import { useRef, useState, useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
 import { 
   Select, 
   SelectContent, 
@@ -354,10 +355,8 @@ function Earth({
   targetRotation: React.MutableRefObject<{ x: number; y: number }>;
 }) {
   const earthRef = useRef<THREE.Group>(null);
-  const cloudsRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
   const currentRotation = useRef({ x: 0, y: 0 });
-  const selectionTime = useRef(0);
 
   // Get partners for selected country
   const countryPartners = useMemo(() => {
@@ -366,8 +365,6 @@ function Earth({
   }, [selectedCountry]);
 
   useFrame((state, delta) => {
-    const time = state.clock.elapsedTime;
-
     // Smooth rotation interpolation
     if (earthRef.current) {
       if (!selectedCountry) {
@@ -383,11 +380,6 @@ function Earth({
       }
       earthRef.current.rotation.y = currentRotation.current.y;
     }
-    
-    // Cloud rotation
-    if (cloudsRef.current) {
-      cloudsRef.current.rotation.y += delta * 0.015;
-    }
 
     // Smooth camera zoom
     const currentZ = camera.position.z;
@@ -402,7 +394,6 @@ function Earth({
       if (country) {
         targetRotation.current.y = -(country.lng + 90) * (Math.PI / 180);
         targetZoom.current = 2.2; // Zoom in
-        selectionTime.current = 0;
       }
     } else {
       targetZoom.current = 2.8; // Zoom out
@@ -411,78 +402,12 @@ function Earth({
 
   const countries = Object.values(COUNTRIES_WITH_PARTNERS);
 
-  // Atmosphere shaders
-  const atmosphereMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        void main() {
-          float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
-          vec3 atmosphere = vec3(0.3, 0.6, 1.0);
-          gl_FragColor = vec4(atmosphere, 1.0) * intensity * 1.5;
-        }
-      `,
-      blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
-      transparent: true,
-      depthWrite: false,
-    });
-  }, []);
-
-  const innerGlowMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        void main() {
-          float intensity = pow(0.8 - dot(vNormal, vec3(0, 0, 1.0)), 3.0);
-          vec3 glow = vec3(0.1, 0.4, 0.8);
-          gl_FragColor = vec4(glow, intensity * 0.5);
-        }
-      `,
-      blending: THREE.AdditiveBlending,
-      side: THREE.FrontSide,
-      transparent: true,
-      depthWrite: false,
-    });
-  }, []);
-
   return (
     <group ref={earthRef}>
-      {/* Atmosphere */}
-      <Sphere args={[1.25, 64, 64]} material={atmosphereMaterial} />
-      <Sphere args={[1.02, 64, 64]} material={innerGlowMaterial} />
-
-      {/* Earth surface */}
-      <Sphere args={[1, 128, 128]}>
-        <meshPhongMaterial color="#0c1929" emissive="#0a1525" emissiveIntensity={0.1} shininess={25} />
-      </Sphere>
-
-      {/* Wireframe layers */}
-      <Sphere args={[1.003, 128, 128]}>
-        <meshPhongMaterial color="#1a365d" emissive="#1e3a5f" emissiveIntensity={0.15} transparent opacity={0.9} wireframe />
-      </Sphere>
-      <Sphere args={[1.006, 48, 48]}>
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.08} wireframe />
-      </Sphere>
-
-      {/* Clouds */}
-      <Sphere ref={cloudsRef} args={[1.015, 64, 64]}>
-        <meshPhongMaterial color="#ffffff" transparent opacity={0.04} />
-      </Sphere>
+      {/* Textured Earth with NASA satellite imagery */}
+      <Suspense fallback={<SimpleEarth />}>
+        <TexturedEarth rotation={0} />
+      </Suspense>
 
       {/* Network */}
       <PartnerNetwork />
