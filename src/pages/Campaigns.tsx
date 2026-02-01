@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CampaignGlobe, MOCK_PARTNERS, COUNTRIES_WITH_PARTNERS } from "@/components/campaigns/CampaignGlobe";
+import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignSummary } from "@/components/campaigns/CampaignSummary";
 import { EmailPreview } from "@/components/campaigns/EmailPreview";
 import { Globe, Mail, RefreshCw } from "lucide-react";
+import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
+import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
 
 interface CampaignPartner {
   id: string;
@@ -22,24 +24,27 @@ export default function Campaigns() {
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
-  // Get partners for selected country from mock data
+  // Fetch partners data from Supabase
+  const { data: globeData } = usePartnersForGlobe();
+  const { data: countryPartnersData = [] } = usePartnersByCountryForGlobe(selectedCountry);
+
+  // Get partners for selected country from real data
   const countryPartners = useMemo(() => {
-    if (!selectedCountry) return [];
-    return MOCK_PARTNERS.filter(p => p.country_code === selectedCountry).map(p => ({
+    return countryPartnersData.map(p => ({
       id: p.id,
       company_name: p.company_name,
       city: p.city,
       country_code: p.country_code,
       country_name: p.country_name,
       email: p.email,
-      partner_type: p.partner_type,
-      partner_certifications: p.certifications.map(c => ({ certification: c })),
-      partner_services: p.services.map(s => ({ service_category: s })),
+      partner_type: p.partner_type || 'freight_forwarder',
+      partner_certifications: (p as any).partner_certifications || [],
+      partner_services: (p as any).partner_services || [],
     }));
-  }, [selectedCountry]);
+  }, [countryPartnersData]);
 
   const countryName = selectedCountry 
-    ? COUNTRIES_WITH_PARTNERS[selectedCountry]?.name 
+    ? WCA_COUNTRIES_MAP[selectedCountry]?.name 
     : undefined;
 
   // Toggle single partner selection
@@ -132,7 +137,7 @@ export default function Campaigns() {
               <Globe className="w-4 h-4" />
               Network Globale
               <span className="text-muted-foreground font-normal text-sm ml-auto">
-                {Object.keys(COUNTRIES_WITH_PARTNERS).length} paesi
+                {TOTAL_WCA_COUNTRIES} paesi
               </span>
             </CardTitle>
           </CardHeader>
