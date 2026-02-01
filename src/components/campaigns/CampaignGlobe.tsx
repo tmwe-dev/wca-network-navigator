@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo, useCallback, useEffect } from "react";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Sphere } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls, Sphere, Stars, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { 
   Select, 
@@ -85,35 +85,58 @@ function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector
   return new THREE.Vector3(x, y, z);
 }
 
-interface CountryMarkerProps {
+// Beautiful animated marker with glow effect
+function GlowMarker({ 
+  country, 
+  isSelected, 
+  onSelect 
+}: { 
   country: { code: string; name: string; count: number; lat: number; lng: number };
   isSelected: boolean;
   onSelect: (code: string) => void;
-}
-
-function CountryMarker({ country, isSelected, onSelect }: CountryMarkerProps) {
-  const ref = useRef<THREE.Mesh>(null);
-  const position = useMemo(() => latLngToVector3(country.lat, country.lng, 1.02), [country]);
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const innerRef = useRef<THREE.Mesh>(null);
+  const outerRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  const position = useMemo(() => latLngToVector3(country.lat, country.lng, 1.01), [country]);
   const [hovered, setHovered] = useState(false);
 
-  useFrame(() => {
-    if (ref.current) {
-      const targetScale = isSelected ? 2 : hovered ? 1.5 : 1;
-      ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    
+    if (innerRef.current) {
+      // Pulse animation
+      const pulse = isSelected 
+        ? Math.sin(time * 4) * 0.3 + 1.3
+        : hovered 
+          ? Math.sin(time * 3) * 0.15 + 1.15
+          : Math.sin(time * 2) * 0.1 + 1;
+      innerRef.current.scale.setScalar(pulse);
+    }
+
+    if (outerRef.current) {
+      // Outer glow breathing
+      const breathe = Math.sin(time * 2 + country.lat) * 0.2 + 0.8;
+      outerRef.current.scale.setScalar(isSelected ? 2.5 : hovered ? 2 : breathe * 1.5);
+      (outerRef.current.material as THREE.MeshBasicMaterial).opacity = 
+        isSelected ? 0.6 : hovered ? 0.4 : breathe * 0.3;
+    }
+
+    if (ringRef.current && isSelected) {
+      // Expanding ring animation
+      const ringScale = ((time * 0.5) % 1) * 3 + 1;
+      ringRef.current.scale.setScalar(ringScale);
+      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = 1 - ((time * 0.5) % 1);
     }
   });
 
-  // Pulse animation for selected
-  useFrame((state) => {
-    if (ref.current && isSelected) {
-      const pulse = Math.sin(state.clock.elapsedTime * 3) * 0.1 + 1;
-      ref.current.scale.multiplyScalar(pulse);
-    }
-  });
+  const baseColor = isSelected ? "#fbbf24" : "#f59e0b";
+  const glowColor = isSelected ? "#fef3c7" : "#fcd34d";
 
   return (
-    <mesh
-      ref={ref}
+    <group 
+      ref={groupRef} 
       position={position}
       onClick={(e) => {
         e.stopPropagation();
@@ -129,49 +152,193 @@ function CountryMarker({ country, isSelected, onSelect }: CountryMarkerProps) {
         document.body.style.cursor = "auto";
       }}
     >
-      <sphereGeometry args={[0.035, 16, 16]} />
-      <meshStandardMaterial
-        color={isSelected ? "#eab308" : "#eab308"}
-        emissive={isSelected ? "#eab308" : "#ca8a04"}
-        emissiveIntensity={isSelected ? 1.5 : hovered ? 1 : 0.6}
-        transparent
-        opacity={isSelected ? 1 : 0.8}
+      {/* Inner core - bright */}
+      <mesh ref={innerRef}>
+        <sphereGeometry args={[0.025, 16, 16]} />
+        <meshBasicMaterial color={glowColor} />
+      </mesh>
+
+      {/* Outer glow */}
+      <mesh ref={outerRef}>
+        <sphereGeometry args={[0.04, 16, 16]} />
+        <meshBasicMaterial 
+          color={baseColor} 
+          transparent 
+          opacity={0.4}
+        />
+      </mesh>
+
+      {/* Expanding ring for selected */}
+      {isSelected && (
+        <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.04, 0.05, 32]} />
+          <meshBasicMaterial 
+            color="#fbbf24" 
+            transparent 
+            opacity={0.5}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* Point light for glow effect */}
+      <pointLight 
+        color={baseColor} 
+        intensity={isSelected ? 0.5 : hovered ? 0.3 : 0.1} 
+        distance={0.3}
       />
-    </mesh>
+    </group>
   );
 }
 
-function GlobeScene({ 
+// Animated connection arc between two points
+function ConnectionArc({ 
+  start, 
+  end, 
+  color = "#3b82f6",
+}: { 
+  start: THREE.Vector3; 
+  end: THREE.Vector3;
+  color?: string;
+}) {
+  const points = useMemo(() => {
+    const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+    const distance = start.distanceTo(end);
+    mid.normalize().multiplyScalar(1 + distance * 0.15);
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    return curve.getPoints(50);
+  }, [start, end]);
+
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    return geo;
+  }, [points]);
+
+  return (
+    <primitive object={new THREE.Line(geometry, new THREE.LineBasicMaterial({ 
+      color, 
+      transparent: true, 
+      opacity: 0.4,
+    }))} />
+  );
+}
+
+// Network connections between partners
+function PartnerNetwork() {
+  const connections = useMemo(() => {
+    const countries = Object.values(COUNTRIES_WITH_PARTNERS);
+    const lines: { start: THREE.Vector3; end: THREE.Vector3; key: string }[] = [];
+    
+    // Create some beautiful connections
+    const pairs = [
+      ["GB", "US"], ["GB", "DE"], ["DE", "CN"], ["CN", "JP"], 
+      ["US", "BR"], ["FR", "IT"], ["SG", "AU"], ["AE", "IN"],
+      ["NL", "DE"], ["JP", "KR"], ["ES", "BR"], ["FR", "CN"],
+    ];
+
+    pairs.forEach(([a, b]) => {
+      const countryA = countries.find(c => c.code === a);
+      const countryB = countries.find(c => c.code === b);
+      if (countryA && countryB) {
+        lines.push({
+          start: latLngToVector3(countryA.lat, countryA.lng, 1.01),
+          end: latLngToVector3(countryB.lat, countryB.lng, 1.01),
+          key: `${a}-${b}`,
+        });
+      }
+    });
+
+    return lines;
+  }, []);
+
+  return (
+    <group>
+      {connections.map((conn) => (
+        <ConnectionArc 
+          key={conn.key} 
+          start={conn.start} 
+          end={conn.end}
+          color="#60a5fa"
+        />
+      ))}
+    </group>
+  );
+}
+
+// Beautiful Earth with realistic materials
+function Earth({ 
   selectedCountry, 
-  onCountrySelect 
+  onCountrySelect,
+  globeRotation
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
+  globeRotation: React.MutableRefObject<number>;
 }) {
-  const globeRef = useRef<THREE.Group>(null);
-  const controlsRef = useRef<any>(null);
+  const earthRef = useRef<THREE.Group>(null);
+  const cloudsRef = useRef<THREE.Mesh>(null);
+  const { camera } = useThree();
 
-  // Rotate to selected country
-  useEffect(() => {
-    if (selectedCountry && controlsRef.current) {
-      const country = COUNTRIES_WITH_PARTNERS[selectedCountry];
-      if (country) {
-        const pos = latLngToVector3(country.lat, country.lng, 3);
-        // Animate camera
-        controlsRef.current.autoRotate = false;
-      }
-    }
-  }, [selectedCountry]);
-
-  // Slow auto-rotation
+  // Smooth rotation
   useFrame((state, delta) => {
-    if (globeRef.current && !selectedCountry) {
-      globeRef.current.rotation.y += delta * 0.05;
+    if (earthRef.current) {
+      // Auto-rotate when no country selected
+      if (!selectedCountry) {
+        globeRotation.current += delta * 0.1;
+      }
+      earthRef.current.rotation.y = globeRotation.current;
+    }
+    
+    // Clouds rotate slightly faster
+    if (cloudsRef.current) {
+      cloudsRef.current.rotation.y += delta * 0.02;
     }
   });
 
-  // Atmosphere shader
+  // Rotate to selected country
+  useEffect(() => {
+    if (selectedCountry) {
+      const country = COUNTRIES_WITH_PARTNERS[selectedCountry];
+      if (country) {
+        // Calculate target rotation to face the country
+        const targetRotation = -(country.lng + 90) * (Math.PI / 180);
+        globeRotation.current = targetRotation;
+      }
+    }
+  }, [selectedCountry, globeRotation]);
+
+  const countries = Object.values(COUNTRIES_WITH_PARTNERS);
+
+  // Atmosphere shader - beautiful blue glow
   const atmosphereMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+          float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
+          vec3 atmosphere = vec3(0.3, 0.6, 1.0);
+          gl_FragColor = vec4(atmosphere, 1.0) * intensity * 1.5;
+        }
+      `,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+    });
+  }, []);
+
+  // Inner atmosphere glow
+  const innerGlowMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: `
         varying vec3 vNormal;
@@ -183,66 +350,149 @@ function GlobeScene({
       fragmentShader: `
         varying vec3 vNormal;
         void main() {
-          float intensity = pow(0.7 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
-          gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+          float intensity = pow(0.8 - dot(vNormal, vec3(0, 0, 1.0)), 3.0);
+          vec3 glow = vec3(0.1, 0.4, 0.8);
+          gl_FragColor = vec4(glow, intensity * 0.5);
         }
       `,
       blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
+      side: THREE.FrontSide,
       transparent: true,
+      depthWrite: false,
     });
   }, []);
 
-  const countries = Object.values(COUNTRIES_WITH_PARTNERS);
+  return (
+    <group ref={earthRef}>
+      {/* Outer atmosphere glow */}
+      <Sphere args={[1.25, 64, 64]} material={atmosphereMaterial} />
+      
+      {/* Inner atmosphere */}
+      <Sphere args={[1.02, 64, 64]} material={innerGlowMaterial} />
+
+      {/* Earth base - deep ocean */}
+      <Sphere args={[1, 128, 128]}>
+        <meshPhongMaterial
+          color="#0c1929"
+          emissive="#0a1525"
+          emissiveIntensity={0.1}
+          shininess={25}
+        />
+      </Sphere>
+
+      {/* Continents layer */}
+      <Sphere args={[1.003, 128, 128]}>
+        <meshPhongMaterial
+          color="#1a365d"
+          emissive="#1e3a5f"
+          emissiveIntensity={0.15}
+          transparent
+          opacity={0.9}
+          wireframe
+          wireframeLinewidth={0.5}
+        />
+      </Sphere>
+
+      {/* Grid overlay for tech look */}
+      <Sphere args={[1.006, 48, 48]}>
+        <meshBasicMaterial
+          color="#3b82f6"
+          transparent
+          opacity={0.08}
+          wireframe
+        />
+      </Sphere>
+
+      {/* Cloud layer */}
+      <Sphere ref={cloudsRef} args={[1.015, 64, 64]}>
+        <meshPhongMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.04}
+        />
+      </Sphere>
+
+      {/* Partner network connections */}
+      <PartnerNetwork />
+
+      {/* Country markers */}
+      {countries.map((country) => (
+        <GlowMarker
+          key={country.code}
+          country={country}
+          isSelected={selectedCountry === country.code}
+          onSelect={onCountrySelect}
+        />
+      ))}
+    </group>
+  );
+}
+
+// Scene setup with lighting
+function GlobeScene({ 
+  selectedCountry, 
+  onCountrySelect 
+}: { 
+  selectedCountry: string | null; 
+  onCountrySelect: (code: string) => void;
+}) {
+  const controlsRef = useRef<any>(null);
+  const globeRotation = useRef(0);
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 3, 5]} intensity={1} />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#0ea5e9" />
+      {/* Ambient light for base visibility */}
+      <ambientLight intensity={0.2} color="#6366f1" />
+      
+      {/* Main directional light - sun */}
+      <directionalLight 
+        position={[5, 3, 5]} 
+        intensity={1.2} 
+        color="#ffffff"
+        castShadow
+      />
+      
+      {/* Back light for rim effect */}
+      <directionalLight 
+        position={[-5, -3, -5]} 
+        intensity={0.4} 
+        color="#3b82f6"
+      />
+      
+      {/* Accent lights */}
+      <pointLight position={[3, 2, 4]} intensity={0.5} color="#60a5fa" />
+      <pointLight position={[-3, -2, -4]} intensity={0.3} color="#a78bfa" />
 
-      {/* Atmosphere glow */}
-      <Sphere args={[1.15, 64, 64]} material={atmosphereMaterial} />
+      {/* Starfield background */}
+      <Stars 
+        radius={100} 
+        depth={50} 
+        count={5000} 
+        factor={4} 
+        saturation={0.5}
+        fade
+        speed={0.5}
+      />
 
       {/* Earth */}
-      <group ref={globeRef}>
-        <Sphere args={[1, 64, 64]}>
-          <meshStandardMaterial
-            color="#1e3a5f"
-            roughness={0.8}
-            metalness={0.1}
-          />
-        </Sphere>
+      <Earth 
+        selectedCountry={selectedCountry} 
+        onCountrySelect={onCountrySelect}
+        globeRotation={globeRotation}
+      />
 
-        {/* Wireframe overlay */}
-        <Sphere args={[1.001, 32, 32]}>
-          <meshStandardMaterial
-            color="#2d5a87"
-            transparent
-            opacity={0.3}
-            wireframe
-          />
-        </Sphere>
-
-        {/* Country markers */}
-        {countries.map((country) => (
-          <CountryMarker
-            key={country.code}
-            country={country}
-            isSelected={selectedCountry === country.code}
-            onSelect={onCountrySelect}
-          />
-        ))}
-      </group>
-
+      {/* Controls */}
       <OrbitControls
         ref={controlsRef}
         enableZoom={true}
         enablePan={false}
-        minDistance={2}
+        minDistance={1.8}
         maxDistance={4}
-        autoRotate={!selectedCountry}
-        autoRotateSpeed={0.3}
+        autoRotate={false}
+        rotateSpeed={0.5}
+        zoomSpeed={0.8}
+        enableDamping
+        dampingFactor={0.05}
       />
     </>
   );
@@ -261,24 +511,27 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
   }, [selectedCountry, onCountrySelect]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 pointer-events-none z-10" />
+      
       {/* Dropdown synced with globe */}
-      <div className="absolute top-4 left-4 right-4 z-10">
+      <div className="absolute top-4 left-4 right-4 z-20">
         <Select 
           value={selectedCountry || ""} 
           onValueChange={(val) => onCountrySelect(val || null)}
         >
-          <SelectTrigger className="bg-card/90 backdrop-blur-sm">
-            <SelectValue placeholder="Seleziona un paese..." />
+          <SelectTrigger className="bg-card/95 backdrop-blur-md border-primary/20 shadow-lg">
+            <SelectValue placeholder="🌍 Seleziona un paese..." />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-card/95 backdrop-blur-md">
             {countries.map((country) => (
               <SelectItem key={country.code} value={country.code}>
                 <div className="flex items-center gap-2">
-                  <span>{getCountryFlag(country.code)}</span>
+                  <span className="text-lg">{getCountryFlag(country.code)}</span>
                   <span>{country.name}</span>
-                  <span className="text-muted-foreground ml-auto">
-                    ({country.count})
+                  <span className="text-muted-foreground ml-auto text-xs">
+                    {country.count} partner
                   </span>
                 </div>
               </SelectItem>
@@ -287,10 +540,16 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
         </Select>
       </div>
 
-      {/* 3D Globe */}
+      {/* 3D Globe Canvas */}
       <Canvas
-        camera={{ position: [0, 0, 3], fov: 45 }}
-        className="bg-gradient-to-b from-slate-900 via-slate-950 to-black"
+        camera={{ position: [0, 0, 2.8], fov: 50 }}
+        style={{ background: "linear-gradient(180deg, #020617 0%, #0f172a 50%, #1e1b4b 100%)" }}
+        dpr={[1, 2]}
+        gl={{ 
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance"
+        }}
       >
         <GlobeScene 
           selectedCountry={selectedCountry} 
@@ -299,28 +558,58 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
       </Canvas>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-sm border rounded-lg p-3 text-xs space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <span>Paesi con partner</span>
+      <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-primary/20 rounded-xl p-4 text-xs space-y-3 z-20 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+            <div className="absolute inset-0 w-3 h-3 rounded-full bg-amber-400/50 animate-ping" />
+          </div>
+          <span className="text-foreground/80">Paesi con partner</span>
         </div>
-        <p className="text-muted-foreground">
-          Clicca su un marker per selezionare
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-px bg-gradient-to-r from-blue-400 to-blue-600" />
+          <span className="text-foreground/80">Connessioni network</span>
+        </div>
+        <p className="text-muted-foreground pt-1 border-t border-primary/10">
+          Clicca per selezionare · Trascina per ruotare
         </p>
       </div>
 
       {/* Selected country indicator */}
       {selectedCountry && (
-        <div className="absolute top-16 left-4 right-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-2 text-sm text-center">
-          <span className="mr-2">{getCountryFlag(selectedCountry)}</span>
-          <span className="font-medium">
-            {COUNTRIES_WITH_PARTNERS[selectedCountry]?.name}
-          </span>
-          <span className="text-muted-foreground ml-2">
-            ({COUNTRIES_WITH_PARTNERS[selectedCountry]?.count} partner)
-          </span>
+        <div className="absolute top-16 left-4 right-4 z-20">
+          <div className="bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-500/20 border border-amber-400/40 rounded-xl p-3 text-center backdrop-blur-md shadow-lg animate-fade-in">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-2xl">{getCountryFlag(selectedCountry)}</span>
+              <div className="text-left">
+                <p className="font-semibold text-amber-100">
+                  {COUNTRIES_WITH_PARTNERS[selectedCountry]?.name}
+                </p>
+                <p className="text-xs text-amber-200/70">
+                  {COUNTRIES_WITH_PARTNERS[selectedCountry]?.count} partner disponibili
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Network stats */}
+      <div className="absolute bottom-4 right-4 bg-card/90 backdrop-blur-md border border-primary/20 rounded-xl p-4 z-20 shadow-xl">
+        <div className="text-center">
+          <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            {Object.keys(COUNTRIES_WITH_PARTNERS).length}
+          </p>
+          <p className="text-xs text-muted-foreground">Paesi</p>
+        </div>
+        <div className="w-px h-4 bg-primary/20 mx-auto my-2" />
+        <div className="text-center">
+          <p className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+            {MOCK_PARTNERS.length}
+          </p>
+          <p className="text-xs text-muted-foreground">Partner</p>
+        </div>
+      </div>
     </div>
   );
 }
