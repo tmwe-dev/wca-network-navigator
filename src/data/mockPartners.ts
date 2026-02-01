@@ -219,6 +219,14 @@ export const MOCK_PARTNERS: MockPartner[] = [
   // Kazakhstan (KZ)
   createPartner("Almaty Logistics", "Almaty", "KZ", "Kazakhstan", 43.238, 76.9458, "almaty-log.kz"),
   
+  // Afghanistan (AF)
+  createPartner("Kabul Freight Services", "Kabul", "AF", "Afghanistan", 34.5553, 69.2075, "kfs.af"),
+  createPartner("Afghan Cargo Express", "Herat", "AF", "Afghanistan", 34.3529, 62.2043, "ace.af"),
+  
+  // Cambodia (KH)
+  createPartner("Phnom Penh Logistics", "Phnom Penh", "KH", "Cambodia", 11.5564, 104.9282, "ppl.kh"),
+  createPartner("Sihanoukville Port Services", "Sihanoukville", "KH", "Cambodia", 10.6093, 103.5296, "sps.kh"),
+  
   // === MIDDLE EAST ===
   // UAE (AE)
   createPartner("Dubai Cargo Hub LLC", "Dubai", "AE", "UAE", 25.2048, 55.2708, "dch.ae"),
