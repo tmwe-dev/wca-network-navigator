@@ -83,6 +83,30 @@ export function usePartners(filters?: PartnerFilters) {
   });
 }
 
+export function usePartnersByCountry(countryCode: string | null) {
+  return useQuery({
+    queryKey: ["partners-by-country", countryCode],
+    queryFn: async () => {
+      if (!countryCode) return [];
+      
+      const { data, error } = await supabase
+        .from("partners")
+        .select(`
+          *,
+          partner_services (service_category),
+          partner_certifications (certification)
+        `)
+        .eq("is_active", true)
+        .eq("country_code", countryCode)
+        .order("company_name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!countryCode,
+  });
+}
+
 export function usePartner(id: string) {
   return useQuery({
     queryKey: ["partner", id],
