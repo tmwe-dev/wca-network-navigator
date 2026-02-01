@@ -5,8 +5,7 @@ import {
   Users,
   Calendar,
   Download,
-  Search,
-  Star,
+  Mail,
   Globe,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Partners", url: "/partners", icon: Users },
+  { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Reminders", url: "/reminders", icon: Calendar },
   { title: "Export", url: "/export", icon: Download },
 ];
