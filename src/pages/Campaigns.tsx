@@ -1,31 +1,11 @@
 import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
+import { CampaignGlobe, MOCK_PARTNERS, COUNTRIES_WITH_PARTNERS } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignSummary } from "@/components/campaigns/CampaignSummary";
 import { EmailPreview } from "@/components/campaigns/EmailPreview";
-import { usePartners, usePartnersByCountry } from "@/hooks/usePartners";
 import { Globe, Mail, RefreshCw } from "lucide-react";
-
-// Country names mapping
-const COUNTRY_NAMES: Record<string, string> = {
-  GB: "United Kingdom",
-  CN: "China",
-  NL: "Netherlands",
-  AE: "United Arab Emirates",
-  AU: "Australia",
-  DE: "Germany",
-  SG: "Singapore",
-  IT: "Italy",
-  JP: "Japan",
-  BR: "Brazil",
-  US: "United States",
-  FR: "France",
-  ES: "Spain",
-  IN: "India",
-  // Add more as needed
-};
 
 interface CampaignPartner {
   id: string;
@@ -42,14 +22,24 @@ export default function Campaigns() {
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
-  // Fetch all partners for globe visualization
-  const { data: allPartners } = usePartners();
-  
-  // Fetch partners for selected country
-  const { data: countryPartners, isLoading: loadingCountry } = usePartnersByCountry(selectedCountry);
+  // Get partners for selected country from mock data
+  const countryPartners = useMemo(() => {
+    if (!selectedCountry) return [];
+    return MOCK_PARTNERS.filter(p => p.country_code === selectedCountry).map(p => ({
+      id: p.id,
+      company_name: p.company_name,
+      city: p.city,
+      country_code: p.country_code,
+      country_name: p.country_name,
+      email: p.email,
+      partner_type: p.partner_type,
+      partner_certifications: p.certifications.map(c => ({ certification: c })),
+      partner_services: p.services.map(s => ({ service_category: s })),
+    }));
+  }, [selectedCountry]);
 
   const countryName = selectedCountry 
-    ? COUNTRY_NAMES[selectedCountry] || countryPartners?.[0]?.country_name || selectedCountry
+    ? COUNTRIES_WITH_PARTNERS[selectedCountry]?.name 
     : undefined;
 
   // Toggle single partner selection
@@ -67,7 +57,6 @@ export default function Campaigns() {
 
   // Select all filtered partners
   const handleSelectAll = useCallback(() => {
-    if (!countryPartners) return;
     setSelectedPartnerIds(new Set(countryPartners.map(p => p.id)));
   }, [countryPartners]);
 
@@ -78,8 +67,6 @@ export default function Campaigns() {
 
   // Add selected to campaign
   const handleAddToCampaign = useCallback(() => {
-    if (!countryPartners) return;
-    
     const newPartners = countryPartners
       .filter(p => selectedPartnerIds.has(p.id))
       .filter(p => !campaignPartners.some(cp => cp.id === p.id))
@@ -144,6 +131,9 @@ export default function Campaigns() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Globe className="w-4 h-4" />
               Network Globale
+              <span className="text-muted-foreground font-normal text-sm ml-auto">
+                {Object.keys(COUNTRIES_WITH_PARTNERS).length} paesi
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 h-[calc(100%-60px)]">
@@ -157,7 +147,7 @@ export default function Campaigns() {
         {/* Company List - Middle */}
         <Card className="col-span-4 overflow-hidden flex flex-col">
           <CompanyList
-            partners={countryPartners || []}
+            partners={countryPartners}
             selectedPartners={selectedPartnerIds}
             onTogglePartner={handleTogglePartner}
             onSelectAll={handleSelectAll}
