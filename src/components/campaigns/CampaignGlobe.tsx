@@ -15,67 +15,12 @@ import { getCountryFlag } from "@/lib/countries";
 import { Building2, Mail, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Mock partner data with coordinates
-export interface MockPartner {
-  id: string;
-  company_name: string;
-  city: string;
-  country_code: string;
-  country_name: string;
-  email: string | null;
-  partner_type: string;
-  lat: number;
-  lng: number;
-  certifications: string[];
-  services: string[];
-}
+// Import from centralized data files
+import { MOCK_PARTNERS, COUNTRIES_WITH_PARTNERS, type MockPartner } from "@/data/mockPartners";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 
-export const MOCK_PARTNERS: MockPartner[] = [
-  { id: "1", company_name: "Global Freight Solutions Ltd", city: "London", country_code: "GB", country_name: "United Kingdom", email: "info@gfs.co.uk", partner_type: "freight_forwarder", lat: 51.5074, lng: -0.1278, certifications: ["IATA", "AEO"], services: ["air_freight", "ocean_fcl"] },
-  { id: "2", company_name: "British Cargo Express", city: "Manchester", country_code: "GB", country_name: "United Kingdom", email: "ops@bce.co.uk", partner_type: "freight_forwarder", lat: 53.4808, lng: -2.2426, certifications: ["ISO"], services: ["road_freight", "warehousing"] },
-  { id: "3", company_name: "London Logistics Partners", city: "London", country_code: "GB", country_name: "United Kingdom", email: "hello@llp.co.uk", partner_type: "3pl", lat: 51.5074, lng: -0.1278, certifications: ["IATA", "ISO"], services: ["air_freight", "pharma"] },
-  { id: "4", company_name: "Shanghai Express Logistics", city: "Shanghai", country_code: "CN", country_name: "China", email: "contact@sel.cn", partner_type: "freight_forwarder", lat: 31.2304, lng: 121.4737, certifications: ["IATA", "BASC"], services: ["air_freight", "ocean_fcl", "pharma"] },
-  { id: "5", company_name: "Beijing Cargo Services", city: "Beijing", country_code: "CN", country_name: "China", email: "info@bcs.cn", partner_type: "carrier", lat: 39.9042, lng: 116.4074, certifications: ["ISO"], services: ["air_freight", "dangerous_goods"] },
-  { id: "6", company_name: "Guangzhou Shipping Co", city: "Guangzhou", country_code: "CN", country_name: "China", email: "ship@gzsc.cn", partner_type: "nvocc", lat: 23.1291, lng: 113.2644, certifications: ["IATA"], services: ["ocean_fcl", "ocean_lcl"] },
-  { id: "7", company_name: "Rotterdam Port Services BV", city: "Rotterdam", country_code: "NL", country_name: "Netherlands", email: "ops@rps.nl", partner_type: "freight_forwarder", lat: 51.9244, lng: 4.4777, certifications: ["AEO", "ISO"], services: ["ocean_fcl", "warehousing"] },
-  { id: "8", company_name: "Amsterdam Freight BV", city: "Amsterdam", country_code: "NL", country_name: "Netherlands", email: "info@afbv.nl", partner_type: "customs_broker", lat: 52.3676, lng: 4.9041, certifications: ["AEO"], services: ["customs_broker", "pharma"] },
-  { id: "9", company_name: "Dubai Cargo Hub LLC", city: "Dubai", country_code: "AE", country_name: "UAE", email: "cargo@dch.ae", partner_type: "freight_forwarder", lat: 25.2048, lng: 55.2708, certifications: ["IATA", "BASC"], services: ["air_freight", "dangerous_goods", "pharma"] },
-  { id: "10", company_name: "Abu Dhabi Logistics", city: "Abu Dhabi", country_code: "AE", country_name: "UAE", email: "ops@adl.ae", partner_type: "3pl", lat: 24.4539, lng: 54.3773, certifications: ["ISO"], services: ["warehousing", "ecommerce"] },
-  { id: "11", company_name: "Sydney Freight Partners", city: "Sydney", country_code: "AU", country_name: "Australia", email: "hello@sfp.com.au", partner_type: "freight_forwarder", lat: -33.8688, lng: 151.2093, certifications: ["IATA"], services: ["air_freight", "ocean_fcl"] },
-  { id: "12", company_name: "Melbourne Cargo Co", city: "Melbourne", country_code: "AU", country_name: "Australia", email: "info@mcc.com.au", partner_type: "carrier", lat: -37.8136, lng: 144.9631, certifications: ["ISO"], services: ["road_freight", "perishables"] },
-  { id: "13", company_name: "Hamburg Shipping GmbH", city: "Hamburg", country_code: "DE", country_name: "Germany", email: "kontakt@hsg.de", partner_type: "freight_forwarder", lat: 53.5511, lng: 9.9937, certifications: ["AEO", "ISO", "IATA"], services: ["ocean_fcl", "rail_freight", "pharma"] },
-  { id: "14", company_name: "Frankfurt Logistics AG", city: "Frankfurt", country_code: "DE", country_name: "Germany", email: "info@flag.de", partner_type: "3pl", lat: 50.1109, lng: 8.6821, certifications: ["AEO"], services: ["air_freight", "warehousing"] },
-  { id: "15", company_name: "Munich Transport GmbH", city: "Munich", country_code: "DE", country_name: "Germany", email: "ops@mtg.de", partner_type: "carrier", lat: 48.1351, lng: 11.582, certifications: ["ISO"], services: ["road_freight", "project_cargo"] },
-  { id: "16", company_name: "Singapore Air Cargo Pte Ltd", city: "Singapore", country_code: "SG", country_name: "Singapore", email: "cargo@sac.sg", partner_type: "freight_forwarder", lat: 1.3521, lng: 103.8198, certifications: ["IATA", "C-TPAT"], services: ["air_freight", "pharma", "dangerous_goods"] },
-  { id: "17", company_name: "Milan Intermodal SpA", city: "Milan", country_code: "IT", country_name: "Italy", email: "info@mis.it", partner_type: "freight_forwarder", lat: 45.4642, lng: 9.19, certifications: ["IATA", "ISO"], services: ["air_freight", "rail_freight"] },
-  { id: "18", company_name: "Rome Cargo Services", city: "Rome", country_code: "IT", country_name: "Italy", email: "ops@rcs.it", partner_type: "customs_broker", lat: 41.9028, lng: 12.4964, certifications: ["AEO"], services: ["customs_broker", "ocean_lcl"] },
-  { id: "19", company_name: "Tokyo Logistics Corp", city: "Tokyo", country_code: "JP", country_name: "Japan", email: "info@tlc.jp", partner_type: "freight_forwarder", lat: 35.6762, lng: 139.6503, certifications: ["IATA", "AEO", "ISO"], services: ["air_freight", "ocean_fcl", "pharma"] },
-  { id: "20", company_name: "Osaka Freight Services", city: "Osaka", country_code: "JP", country_name: "Japan", email: "cargo@ofs.jp", partner_type: "nvocc", lat: 34.6937, lng: 135.5023, certifications: ["ISO"], services: ["ocean_fcl", "ocean_lcl", "ecommerce"] },
-  { id: "21", company_name: "São Paulo Transporte Ltda", city: "São Paulo", country_code: "BR", country_name: "Brazil", email: "contato@spt.br", partner_type: "freight_forwarder", lat: -23.5505, lng: -46.6333, certifications: ["IATA"], services: ["air_freight", "road_freight"] },
-  { id: "22", company_name: "Rio Cargo Express", city: "Rio de Janeiro", country_code: "BR", country_name: "Brazil", email: "info@rce.br", partner_type: "carrier", lat: -22.9068, lng: -43.1729, certifications: ["ISO"], services: ["ocean_fcl", "perishables"] },
-  { id: "23", company_name: "New York Freight Inc", city: "New York", country_code: "US", country_name: "United States", email: "info@nyf.com", partner_type: "freight_forwarder", lat: 40.7128, lng: -74.006, certifications: ["IATA", "C-TPAT"], services: ["air_freight", "ocean_fcl", "pharma"] },
-  { id: "24", company_name: "LA Cargo Solutions", city: "Los Angeles", country_code: "US", country_name: "United States", email: "ops@lacs.com", partner_type: "nvocc", lat: 34.0522, lng: -118.2437, certifications: ["C-TPAT"], services: ["ocean_fcl", "ocean_lcl", "ecommerce"] },
-  { id: "25", company_name: "Chicago Logistics LLC", city: "Chicago", country_code: "US", country_name: "United States", email: "hello@cll.com", partner_type: "3pl", lat: 41.8781, lng: -87.6298, certifications: ["ISO"], services: ["warehousing", "rail_freight"] },
-  { id: "26", company_name: "Paris Freight SARL", city: "Paris", country_code: "FR", country_name: "France", email: "contact@pf.fr", partner_type: "freight_forwarder", lat: 48.8566, lng: 2.3522, certifications: ["IATA", "AEO"], services: ["air_freight", "pharma"] },
-  { id: "27", company_name: "Madrid Cargo SL", city: "Madrid", country_code: "ES", country_name: "Spain", email: "info@mc.es", partner_type: "freight_forwarder", lat: 40.4168, lng: -3.7038, certifications: ["IATA"], services: ["air_freight", "road_freight"] },
-  { id: "28", company_name: "Mumbai Express Logistics", city: "Mumbai", country_code: "IN", country_name: "India", email: "ops@mel.in", partner_type: "freight_forwarder", lat: 19.076, lng: 72.8777, certifications: ["IATA", "ISO"], services: ["air_freight", "ocean_fcl", "pharma"] },
-  { id: "29", company_name: "Seoul Air Cargo", city: "Seoul", country_code: "KR", country_name: "South Korea", email: "info@sac.kr", partner_type: "freight_forwarder", lat: 37.5665, lng: 126.978, certifications: ["IATA", "AEO"], services: ["air_freight", "ecommerce"] },
-];
-
-// Get unique countries with partner counts
-export const COUNTRIES_WITH_PARTNERS = MOCK_PARTNERS.reduce((acc, p) => {
-  if (!acc[p.country_code]) {
-    acc[p.country_code] = {
-      code: p.country_code,
-      name: p.country_name,
-      count: 0,
-      lat: p.lat,
-      lng: p.lng,
-    };
-  }
-  acc[p.country_code].count++;
-  return acc;
-}, {} as Record<string, { code: string; name: string; count: number; lat: number; lng: number }>);
+// Re-export for backward compatibility
+export { MOCK_PARTNERS, COUNTRIES_WITH_PARTNERS, type MockPartner };
 
 // Convert lat/lng to 3D position on sphere
 function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
