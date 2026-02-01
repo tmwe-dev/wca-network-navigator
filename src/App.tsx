@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Partners from "./pages/Partners";
 import PartnerDetail from "./pages/PartnerDetail";
+import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
 import Export from "./pages/Export";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/partners/:id" element={<PartnerDetail />} />
+            <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/export" element={<Export />} />
           </Route>
