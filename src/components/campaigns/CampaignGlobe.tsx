@@ -4,18 +4,9 @@ import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
 import { AuroraBorealis } from "./AuroraBorealis";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { getCountryFlag } from "@/lib/countries";
-import { Building2, Mail, MapPin, Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from "lucide-react";
 import { usePartnersForGlobe, usePartnersByCountryForGlobe, type GlobePartner, type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
-import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 
 // Optimized components
 import { InstancedCountryMarkers } from "./globe/InstancedCountryMarkers";
@@ -183,60 +174,6 @@ function GlobeScene({
   );
 }
 
-// Partner popup component
-function PartnerPopup({ 
-  partners, 
-  countryName 
-}: { 
-  partners: GlobePartner[]; 
-  countryName: string;
-}) {
-  return (
-    <div className="w-80 max-w-[calc(100vw-2rem)] bg-card/95 backdrop-blur-md border border-amber-400/30 rounded-xl shadow-2xl animate-scale-in overflow-hidden">
-      <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 p-3 border-b border-amber-400/20">
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-amber-400" />
-          <span className="font-semibold text-amber-100">{countryName}</span>
-          <span className="ml-auto text-xs bg-amber-500/30 px-2 py-0.5 rounded-full text-amber-200">
-            {partners.length} partner
-          </span>
-        </div>
-      </div>
-      
-      <ScrollArea className="h-40">
-        <div className="p-2 space-y-1">
-          {partners.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-2 text-center">Nessun partner in questo paese</p>
-          ) : (
-            partners.map((partner) => (
-              <div 
-                key={partner.id} 
-                className="p-2 rounded-lg hover:bg-primary/5 transition-colors group"
-              >
-                <p className="font-medium text-sm text-foreground/90 truncate">
-                  {partner.company_name}
-                </p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {partner.city}
-                  </span>
-                  {partner.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      <span className="truncate max-w-24">{partner.email}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </ScrollArea>
-    </div>
-  );
-}
-
 interface CampaignGlobeProps {
   selectedCountry: string | null;
   onCountrySelect: (countryCode: string | null) => void;
@@ -283,16 +220,6 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
           countryPartners={countryPartners}
         />
       </Canvas>
-
-      {/* Selected country popup - minimal overlay at bottom */}
-      {selectedCountry && countriesMap[selectedCountry] && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
-          <PartnerPopup 
-            partners={countryPartners} 
-            countryName={countriesMap[selectedCountry]?.name || ''} 
-          />
-        </div>
-      )}
 
       {/* Minimal legend - bottom left corner */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 text-[10px] text-muted-foreground bg-black/40 backdrop-blur-sm rounded px-2 py-1">

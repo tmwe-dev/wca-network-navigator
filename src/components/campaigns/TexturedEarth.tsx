@@ -41,15 +41,13 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
     }
   });
 
-  // Custom shader for day/night blending based on light direction
+  // Custom shader - night only view with subtle lighting
   const earthMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
-        dayTexture: { value: dayTexture },
         nightTexture: { value: nightTexture },
         bumpTexture: { value: bumpTexture },
         specularTexture: { value: specularTexture },
-        sunDirection: { value: new THREE.Vector3(5, 3, 5).normalize() },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -64,34 +62,25 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
         }
       `,
       fragmentShader: `
-        uniform sampler2D dayTexture;
         uniform sampler2D nightTexture;
         uniform sampler2D bumpTexture;
         uniform sampler2D specularTexture;
-        uniform vec3 sunDirection;
         
         varying vec2 vUv;
         varying vec3 vNormal;
         varying vec3 vPosition;
         
         void main() {
-          // Sample textures
-          vec4 dayColor = texture2D(dayTexture, vUv);
+          // Sample night texture
           vec4 nightColor = texture2D(nightTexture, vUv);
           float specular = texture2D(specularTexture, vUv).r;
           
-          // Calculate lighting
-          float intensity = dot(vNormal, sunDirection);
+          // Use night texture with enhanced brightness
+          vec4 baseColor = nightColor * 1.8;
           
-          // Smooth transition between day and night
-          float dayNightMix = smoothstep(-0.2, 0.3, intensity);
-          
-          // Blend day and night textures
-          vec4 baseColor = mix(nightColor * 1.5, dayColor, dayNightMix);
-          
-          // Add specular highlight on water (where specular map is bright)
-          float specularHighlight = pow(max(dot(reflect(-sunDirection, vNormal), normalize(cameraPosition - vPosition)), 0.0), 32.0);
-          baseColor.rgb += specular * specularHighlight * 0.5 * dayNightMix;
+          // Add subtle specular on water
+          float specularHighlight = pow(max(dot(vNormal, normalize(cameraPosition - vPosition)), 0.0), 16.0);
+          baseColor.rgb += specular * specularHighlight * 0.2;
           
           // Slight atmospheric tint at the edges
           float fresnel = pow(1.0 - abs(dot(vNormal, normalize(cameraPosition - vPosition))), 2.0);
@@ -101,7 +90,7 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
         }
       `,
     });
-  }, [dayTexture, nightTexture, bumpTexture, specularTexture]);
+  }, [nightTexture, bumpTexture, specularTexture]);
 
   // Atmosphere shader - beautiful blue glow
   const atmosphereMaterial = useMemo(() => {
