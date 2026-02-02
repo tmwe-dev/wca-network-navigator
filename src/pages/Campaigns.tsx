@@ -8,6 +8,14 @@ import { EmailPreview } from "@/components/campaigns/EmailPreview";
 import { Globe, Mail, RefreshCw } from "lucide-react";
 import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
 import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { getCountryFlag } from "@/lib/countries";
 
 interface CampaignPartner {
   id: string;
@@ -27,6 +35,10 @@ export default function Campaigns() {
   // Fetch partners data from Supabase
   const { data: globeData } = usePartnersForGlobe();
   const { data: countryPartnersData = [] } = usePartnersByCountryForGlobe(selectedCountry);
+
+  const countries = globeData?.countries || [];
+  const totalPartners = globeData?.partners.length || 0;
+  const countriesWithPartners = countries.filter(c => c.count > 0).length;
 
   // Get partners for selected country from real data
   const countryPartners = useMemo(() => {
@@ -106,42 +118,72 @@ export default function Campaigns() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Mail className="w-6 h-6" />
+      {/* Header with controls */}
+      <div className="flex flex-wrap items-center gap-4 shrink-0">
+        {/* Title */}
+        <div className="flex-1 min-w-48">
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+            <Mail className="w-5 h-5" />
             Email Campaigns
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Seleziona paesi sul globo e crea campagne email per i tuoi partner
-          </p>
         </div>
+
+        {/* Country selector */}
+        <div className="w-64">
+          <Select value={selectedCountry || ""} onValueChange={(val) => handleCountrySelect(val || null)}>
+            <SelectTrigger className="bg-card border-primary/20">
+              <SelectValue placeholder="🌍 Seleziona paese..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-80">
+              {countries.map((country) => (
+                <SelectItem key={country.code} value={country.code}>
+                  <div className="flex items-center gap-2">
+                    <span>{getCountryFlag(country.code)}</span>
+                    <span className="truncate">{country.name}</span>
+                    <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                      {country.count}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Stats badges */}
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+            <span className="font-semibold text-blue-400">{TOTAL_WCA_COUNTRIES}</span>
+            <span className="text-muted-foreground text-xs">Paesi</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+            <span className="font-semibold text-green-400">{countriesWithPartners}</span>
+            <span className="text-muted-foreground text-xs">Attivi</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+            <span className="font-semibold text-amber-400">{totalPartners}</span>
+            <span className="text-muted-foreground text-xs">Partner</span>
+          </div>
+        </div>
+
+        {/* Reset button */}
         {selectedCountry && (
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => handleCountrySelect(null)}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reset selezione
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Reset
           </Button>
         )}
       </div>
 
       {/* Main content */}
       <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
-        {/* Globe - Left side */}
-        <Card className="col-span-5 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Globe className="w-4 h-4" />
-              Network Globale
-              <span className="text-muted-foreground font-normal text-sm ml-auto">
-                {TOTAL_WCA_COUNTRIES} paesi
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 h-[calc(100%-60px)]">
+        {/* Globe - Left side - CLEAN */}
+        <Card className="col-span-5 overflow-hidden border-primary/10">
+          <CardContent className="p-0 h-full">
             <CampaignGlobe
               selectedCountry={selectedCountry}
               onCountrySelect={handleCountrySelect}
