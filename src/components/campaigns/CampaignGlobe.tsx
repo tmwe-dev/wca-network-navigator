@@ -116,8 +116,11 @@ function Earth({
       
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
-        const lngRad = ((-country.lng - 90) * Math.PI) / 180;
-        const latRad = ((country.lat) * Math.PI) / 180 * 0.4;
+        // Rotate globe so the country faces the camera (camera is at positive Z)
+        // Longitude: rotate around Y axis to bring the country to front
+        const lngRad = (-country.lng * Math.PI) / 180;
+        // Latitude: tilt around X axis (negative because we want to look down at northern hemisphere)
+        const latRad = (-country.lat * Math.PI) / 180 * 0.5;
         
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
