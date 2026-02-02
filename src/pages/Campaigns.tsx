@@ -34,13 +34,20 @@ function CampaignHeaderControls({
   onCountrySelect,
   countriesWithPartners,
   totalPartners,
+  campaignPartners,
+  onGenerateEmail,
 }: {
   countries: { code: string; name: string; count: number }[];
   selectedCountry: string | null;
   onCountrySelect: (code: string | null) => void;
   countriesWithPartners: number;
   totalPartners: number;
+  campaignPartners: CampaignPartner[];
+  onGenerateEmail: () => void;
 }) {
+  const totalWithEmail = campaignPartners.filter(p => p.email).length;
+  const uniqueCountries = new Set(campaignPartners.map(p => p.country_code)).size;
+
   return (
     <>
       {/* Country selector */}
@@ -101,195 +108,82 @@ function CampaignHeaderControls({
           </Button>
         </>
       )}
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Campaign Summary in Header */}
+      {campaignPartners.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-slate-300">
+            <Send className="w-4 h-4 text-emerald-400" />
+            <span className="text-emerald-400">{campaignPartners.length}</span>
+            <span className="text-slate-500">aziende</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-amber-400">{uniqueCountries}</span>
+            <span className="text-slate-500">paesi</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-blue-400">{totalWithEmail}</span>
+            <span className="text-slate-500">email</span>
+          </div>
+          <Button 
+            onClick={onGenerateEmail} 
+            size="sm"
+            className="space-button-primary"
+            disabled={totalWithEmail === 0}
+          >
+            <Mail className="w-4 h-4 mr-1.5" />
+            Genera Email
+          </Button>
+        </div>
+      )}
     </>
   );
 }
 
-// Bottom tabbed panel component
-function BottomTabbedPanel({
-  activeTab,
-  onTabChange,
-  countryPartners,
-  countryName,
+// Floating campaign partners list on the right
+function FloatingCampaignPartners({
   campaignPartners,
   onRemoveFromCampaign,
   onClearCampaign,
-  onGenerateEmail,
 }: {
-  activeTab: 'partners' | 'campaign';
-  onTabChange: (tab: 'partners' | 'campaign') => void;
-  countryPartners: any[];
-  countryName: string;
   campaignPartners: CampaignPartner[];
   onRemoveFromCampaign: (id: string) => void;
   onClearCampaign: () => void;
-  onGenerateEmail: () => void;
 }) {
-  // Group campaign partners by country
-  const groupedByCountry = campaignPartners.reduce((acc, partner) => {
-    const country = partner.country_name;
-    if (!acc[country]) acc[country] = [];
-    acc[country].push(partner);
-    return acc;
-  }, {} as Record<string, CampaignPartner[]>);
-
-  const countries = Object.keys(groupedByCountry);
-  const totalWithEmail = campaignPartners.filter(p => p.email).length;
+  if (campaignPartners.length === 0) return null;
 
   return (
-    <div className="space-panel-amber h-full flex flex-col">
-      {/* Tab headers */}
-      <div className="flex border-b border-amber-500/20">
-        <button
-          onClick={() => onTabChange('partners')}
-          className={`flex-1 px-4 py-3 text-sm flex items-center justify-center gap-2 transition-colors ${
-            activeTab === 'partners' 
-              ? 'text-amber-400 bg-amber-500/10 border-b-2 border-amber-400' 
-              : 'text-slate-400 hover:text-slate-300 hover:bg-amber-500/5'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          Partner del Paese
-          {countryPartners.length > 0 && (
-            <span className="text-xs bg-amber-500/20 px-1.5 py-0.5 rounded">{countryPartners.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => onTabChange('campaign')}
-          className={`flex-1 px-4 py-3 text-sm flex items-center justify-center gap-2 transition-colors ${
-            activeTab === 'campaign' 
-              ? 'text-emerald-400 bg-emerald-500/10 border-b-2 border-emerald-400' 
-              : 'text-slate-400 hover:text-slate-300 hover:bg-emerald-500/5'
-          }`}
-        >
-          <Send className="w-4 h-4" />
-          Riepilogo Campagna
-          {campaignPartners.length > 0 && (
-            <span className="text-xs bg-emerald-500/20 px-1.5 py-0.5 rounded">{campaignPartners.length}</span>
-          )}
-        </button>
-      </div>
-
-      {/* Tab content */}
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'partners' ? (
-          <div className="h-full flex flex-col">
-            {countryPartners.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center">
-                  <Building2 className="w-10 h-10 mx-auto mb-2 text-amber-500/30" />
-                  <p className="text-slate-400 text-sm">Seleziona un paese per vedere i partner</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="p-3 border-b border-amber-500/20 flex items-center justify-between">
-                  <span className="text-amber-400 text-sm">{countryName}</span>
-                  <span className="text-xs text-slate-400">{countryPartners.length} partner</span>
-                </div>
-                <ScrollArea className="flex-1">
-                  <div className="p-2 space-y-1">
-                    {countryPartners.map((partner: any) => (
-                      <div key={partner.id} className="p-2 rounded-lg hover:bg-amber-500/10 transition-colors">
-                        <p className="text-sm text-slate-100 truncate">{partner.company_name}</p>
-                        <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                          <span>{partner.city}</span>
-                          {partner.email && <span className="truncate max-w-32">{partner.email}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </>
-            )}
+    <div className="flex flex-col items-end gap-2">
+      {/* Clear button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClearCampaign}
+        className="text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 px-2 py-1"
+      >
+        <X className="w-3 h-3 mr-1" />
+        Svuota
+      </Button>
+      
+      {/* Partner chips */}
+      <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto pr-1">
+        {campaignPartners.map(partner => (
+          <div 
+            key={partner.id}
+            className="group flex items-center gap-2 bg-black/50 backdrop-blur-sm border border-emerald-500/30 rounded-lg px-3 py-1.5 text-sm"
+          >
+            <span className="text-slate-300 truncate max-w-40">{partner.company_name}</span>
+            <span className="text-slate-500 text-xs">{getCountryFlag(partner.country_code)}</span>
+            {partner.email && <Mail className="w-3 h-3 text-emerald-500/60" />}
+            <button
+              onClick={() => onRemoveFromCampaign(partner.id)}
+              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 transition-opacity"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
-        ) : (
-          <div className="h-full flex flex-col">
-            {campaignPartners.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center">
-                  <Users className="w-10 h-10 mx-auto mb-2 text-emerald-500/30" />
-                  <p className="text-slate-400 text-sm">Aggiungi partner alla campagna</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Stats */}
-                <div className="p-3 border-b border-emerald-500/20">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-stat-card">
-                      <div className="text-xl font-mono text-amber-400">{campaignPartners.length}</div>
-                      <div className="text-xs text-slate-400">Aziende</div>
-                    </div>
-                    <div className="space-stat-card">
-                      <div className="text-xl font-mono text-amber-400">{countries.length}</div>
-                      <div className="text-xs text-slate-400">Paesi</div>
-                    </div>
-                    <div className="space-stat-card">
-                      <div className="text-xl font-mono text-emerald-400">{totalWithEmail}</div>
-                      <div className="text-xs text-slate-400">Con email</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <ScrollArea className="flex-1">
-                  <div className="p-2 space-y-3">
-                    {countries.map(country => (
-                      <div key={country}>
-                        <div className="flex items-center gap-2 mb-1 px-2">
-                          <span>{getCountryFlag(groupedByCountry[country][0].country_code)}</span>
-                          <span className="text-sm text-slate-200">{country}</span>
-                          <Badge className="ml-auto space-badge text-xs">{groupedByCountry[country].length}</Badge>
-                        </div>
-                        <div className="space-y-0.5 pl-6">
-                          {groupedByCountry[country].map(partner => (
-                            <div key={partner.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-emerald-500/10 group">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm text-slate-200 truncate">{partner.company_name}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {partner.email && <Mail className="w-3 h-3 text-emerald-500/60" />}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
-                                  onClick={() => onRemoveFromCampaign(partner.id)}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-
-                <div className="p-3 border-t border-emerald-500/20 space-y-2">
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={onGenerateEmail} 
-                      className="flex-1 space-button-primary"
-                      disabled={totalWithEmail === 0}
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Genera Email ({totalWithEmail})
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={onClearCampaign}
-                      className="text-slate-400 hover:text-red-400 hover:bg-red-500/10"
-                    >
-                      Svuota
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -301,7 +195,6 @@ export default function Campaigns() {
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState<'partners' | 'campaign'>('partners');
 
   // Fetch partners data from Supabase
   const { data: globeData } = usePartnersForGlobe();
@@ -369,7 +262,6 @@ export default function Campaigns() {
 
     setCampaignPartners(prev => [...prev, ...newPartners]);
     setSelectedPartnerIds(new Set());
-    setActiveBottomTab('campaign');
   }, [countryPartners, selectedPartnerIds, campaignPartners]);
 
   // Remove from campaign
@@ -386,9 +278,6 @@ export default function Campaigns() {
   const handleCountrySelect = useCallback((countryCode: string | null) => {
     setSelectedCountry(countryCode);
     setSelectedPartnerIds(new Set());
-    if (countryCode) {
-      setActiveBottomTab('partners');
-    }
   }, []);
 
   // Find header container for portal
@@ -407,6 +296,8 @@ export default function Campaigns() {
           onCountrySelect={handleCountrySelect}
           countriesWithPartners={countriesWithPartners}
           totalPartners={totalPartners}
+          campaignPartners={campaignPartners}
+          onGenerateEmail={() => setShowEmailPreview(true)}
         />,
         headerContainer
       )}
@@ -419,30 +310,27 @@ export default function Campaigns() {
         />
       </div>
 
-      {/* Floating Company List - Left */}
-      <div className="absolute left-4 top-4 bottom-52 w-[360px] z-10">
-        <CompanyList
-          partners={countryPartners}
-          selectedPartners={selectedPartnerIds}
-          onTogglePartner={handleTogglePartner}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onAddToCampaign={handleAddToCampaign}
-          countryName={countryName}
-        />
+      {/* Left side - stacked Company List and Partners panels */}
+      <div className="absolute left-4 top-4 bottom-4 w-[360px] z-10 flex flex-col gap-4">
+        <div className="flex-1 min-h-0">
+          <CompanyList
+            partners={countryPartners}
+            selectedPartners={selectedPartnerIds}
+            onTogglePartner={handleTogglePartner}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={handleDeselectAll}
+            onAddToCampaign={handleAddToCampaign}
+            countryName={countryName}
+          />
+        </div>
       </div>
 
-      {/* Bottom Tabbed Panel */}
-      <div className="absolute left-4 right-4 bottom-4 h-44 z-10">
-        <BottomTabbedPanel
-          activeTab={activeBottomTab}
-          onTabChange={setActiveBottomTab}
-          countryPartners={countryPartners}
-          countryName={countryName}
+      {/* Right side - floating campaign partners */}
+      <div className="absolute right-4 top-4 z-10">
+        <FloatingCampaignPartners
           campaignPartners={campaignPartners}
           onRemoveFromCampaign={handleRemoveFromCampaign}
           onClearCampaign={handleClearCampaign}
-          onGenerateEmail={() => setShowEmailPreview(true)}
         />
       </div>
 

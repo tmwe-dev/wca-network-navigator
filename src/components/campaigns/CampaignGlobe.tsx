@@ -21,7 +21,8 @@ function Earth({
   targetZoom,
   targetRotation,
   countries,
-  countryPartners
+  countryPartners,
+  userInteracting
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
@@ -29,18 +30,18 @@ function Earth({
   targetRotation: React.MutableRefObject<{ x: number; y: number }>;
   countries: CountryWithPartners[];
   countryPartners: GlobePartner[];
+  userInteracting: React.MutableRefObject<boolean>;
 }) {
   const earthRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const currentRotation = useRef({ x: 0, y: 0 });
-  const autoRotate = useRef(true);
 
   useFrame((state, delta) => {
     if (earthRef.current) {
-      if (!selectedCountry && autoRotate.current) {
-        // Slow auto-rotation when no country selected
+      // Only auto-rotate if user hasn't interacted
+      if (!selectedCountry && !userInteracting.current) {
         currentRotation.current.y += delta * 0.08;
-      } else if (selectedCountry) {
+      } else if (selectedCountry && !userInteracting.current) {
         // Smooth interpolation to target rotation (looking at the country)
         currentRotation.current.x = THREE.MathUtils.lerp(
           currentRotation.current.x,
@@ -60,31 +61,26 @@ function Earth({
     // Smooth zoom interpolation with easing
     const currentZ = camera.position.z;
     const diff = targetZoom.current - currentZ;
-    const newZ = currentZ + diff * 0.04; // Smoother zoom
+    const newZ = currentZ + diff * 0.04;
     camera.position.z = newZ;
   });
 
   useEffect(() => {
-    if (selectedCountry) {
+    if (selectedCountry && !userInteracting.current) {
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
-        // Calculate rotation to position the country facing the camera
-        // The camera is at positive Z, so we need to rotate the globe
-        // to bring the country to face positive Z
         const lngRad = ((-country.lng - 90) * Math.PI) / 180;
-        const latRad = ((country.lat) * Math.PI) / 180 * 0.4; // Subtle tilt
+        const latRad = ((country.lat) * Math.PI) / 180 * 0.4;
         
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
         targetZoom.current = 2.0;
-        autoRotate.current = false;
       }
-    } else {
+    } else if (!selectedCountry && !userInteracting.current) {
       targetZoom.current = 2.8;
       targetRotation.current.x = 0;
-      autoRotate.current = true;
     }
-  }, [selectedCountry, targetRotation, targetZoom]);
+  }, [selectedCountry, targetRotation, targetZoom, userInteracting]);
 
   // Get selected country data for highlight
   const selectedCountryData = useMemo(() => {
@@ -131,15 +127,21 @@ function GlobeScene({
   selectedCountry, 
   onCountrySelect,
   countries,
-  countryPartners
+  countryPartners,
+  userInteracting
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
   countries: CountryWithPartners[];
   countryPartners: GlobePartner[];
+  userInteracting: React.MutableRefObject<boolean>;
 }) {
   const targetZoom = useRef(2.8);
   const targetRotation = useRef({ x: 0, y: 0 });
+
+  const handleOrbitStart = useCallback(() => {
+    userInteracting.current = true;
+  }, [userInteracting]);
 
   return (
     <>
@@ -158,6 +160,7 @@ function GlobeScene({
         targetRotation={targetRotation}
         countries={countries}
         countryPartners={countryPartners}
+        userInteracting={userInteracting}
       />
 
       <OrbitControls
@@ -169,6 +172,7 @@ function GlobeScene({
         zoomSpeed={0.5}
         enableDamping={true}
         dampingFactor={0.08}
+        onStart={handleOrbitStart}
       />
     </>
   );
@@ -185,9 +189,7 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
   const { data: countryPartners = [] } = usePartnersByCountryForGlobe(selectedCountry);
   
   const countries = globeData?.countries || [];
-  const countriesMap = globeData?.countriesMap || {};
-  const totalPartners = globeData?.partners.length || 0;
-  const countriesWithPartners = countries.filter(c => c.count > 0).length;
+  const userInteracting = useRef(false);
 
   const handleGlobeCountrySelect = useCallback((code: string) => {
     onCountrySelect(code === selectedCountry ? null : code);
@@ -218,6 +220,7 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
           onCountrySelect={handleGlobeCountrySelect}
           countries={countries}
           countryPartners={countryPartners}
+          userInteracting={userInteracting}
         />
       </Canvas>
 
