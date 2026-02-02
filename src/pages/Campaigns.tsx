@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
@@ -25,10 +26,89 @@ interface CampaignPartner {
   email: string | null;
 }
 
+// Header controls component to be portaled
+function CampaignHeaderControls({
+  countries,
+  selectedCountry,
+  onCountrySelect,
+  countriesWithPartners,
+  totalPartners,
+}: {
+  countries: { code: string; name: string; count: number }[];
+  selectedCountry: string | null;
+  onCountrySelect: (code: string | null) => void;
+  countriesWithPartners: number;
+  totalPartners: number;
+}) {
+  return (
+    <>
+      {/* Country selector */}
+      <Select value={selectedCountry || ""} onValueChange={(val) => onCountrySelect(val || null)}>
+        <SelectTrigger className="w-56 bg-black/40 border-amber-500/30 text-amber-100 focus:ring-amber-500/50">
+          <SelectValue placeholder="🌍 Seleziona paese..." />
+        </SelectTrigger>
+        <SelectContent className="max-h-80 bg-black/90 backdrop-blur-xl border-amber-500/30">
+          {countries.map((country) => (
+            <SelectItem 
+              key={country.code} 
+              value={country.code}
+              className="text-slate-200 focus:bg-amber-500/20 focus:text-amber-100"
+            >
+              <div className="flex items-center gap-2">
+                <span>{getCountryFlag(country.code)}</span>
+                <span className="truncate">{country.name}</span>
+                <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  {country.count}
+                </span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Divider */}
+      <div className="w-px h-6 bg-amber-500/30" />
+
+      {/* Stats badges */}
+      <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
+          <span className="font-mono font-bold text-blue-400">{TOTAL_WCA_COUNTRIES}</span>
+          <span className="text-slate-400 text-xs">Paesi</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+          <span className="font-mono font-bold text-emerald-400">{countriesWithPartners}</span>
+          <span className="text-slate-400 text-xs">Attivi</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30">
+          <span className="font-mono font-bold text-amber-400">{totalPartners}</span>
+          <span className="text-slate-400 text-xs">Partner</span>
+        </div>
+      </div>
+
+      {/* Reset button */}
+      {selectedCountry && (
+        <>
+          <div className="w-px h-6 bg-amber-500/30" />
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => onCountrySelect(null)}
+            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Reset
+          </Button>
+        </>
+      )}
+    </>
+  );
+}
+
 export default function Campaigns() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
+  const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
   // Fetch partners data from Supabase
@@ -115,78 +195,32 @@ export default function Campaigns() {
     setSelectedPartnerIds(new Set());
   }, []);
 
+  // Find header container for portal
+  useEffect(() => {
+    const container = document.getElementById('campaign-header-controls');
+    setHeaderContainer(container);
+  }, []);
+
   return (
     <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6">
+      {/* Portal header controls */}
+      {headerContainer && createPortal(
+        <CampaignHeaderControls
+          countries={countries}
+          selectedCountry={selectedCountry}
+          onCountrySelect={handleCountrySelect}
+          countriesWithPartners={countriesWithPartners}
+          totalPartners={totalPartners}
+        />,
+        headerContainer
+      )}
+
       {/* Globe as full background */}
       <div className="absolute inset-0">
         <CampaignGlobe
           selectedCountry={selectedCountry}
           onCountrySelect={handleCountrySelect}
         />
-      </div>
-
-      {/* Floating top bar with controls */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 space-floating-bar flex items-center gap-3">
-        {/* Country selector */}
-        <Select value={selectedCountry || ""} onValueChange={(val) => handleCountrySelect(val || null)}>
-          <SelectTrigger className="w-56 bg-transparent border-amber-500/30 text-amber-100 focus:ring-amber-500/50">
-            <SelectValue placeholder="🌍 Seleziona paese..." />
-          </SelectTrigger>
-          <SelectContent className="max-h-80 bg-black/90 backdrop-blur-xl border-amber-500/30">
-            {countries.map((country) => (
-              <SelectItem 
-                key={country.code} 
-                value={country.code}
-                className="text-slate-200 focus:bg-amber-500/20 focus:text-amber-100"
-              >
-                <div className="flex items-center gap-2">
-                  <span>{getCountryFlag(country.code)}</span>
-                  <span className="truncate">{country.name}</span>
-                  <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
-                    {country.count}
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Divider */}
-        <div className="w-px h-6 bg-amber-500/30" />
-
-        {/* Stats badges */}
-        <div className="flex items-center gap-2 text-sm">
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono font-bold text-blue-400">{TOTAL_WCA_COUNTRIES}</span>
-            <span className="text-slate-400 text-xs">Paesi</span>
-          </div>
-          <div className="w-px h-4 bg-amber-500/20" />
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono font-bold text-emerald-400">{countriesWithPartners}</span>
-            <span className="text-slate-400 text-xs">Attivi</span>
-          </div>
-          <div className="w-px h-4 bg-amber-500/20" />
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono font-bold text-amber-400">{totalPartners}</span>
-            <span className="text-slate-400 text-xs">Partner</span>
-          </div>
-        </div>
-
-        {/* Reset button */}
-        {selectedCountry && (
-          <>
-            <div className="w-px h-6 bg-amber-500/30" />
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => handleCountrySelect(null)}
-              className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-            >
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              Reset
-            </Button>
-          </>
-        )}
       </div>
 
       {/* Floating Company List - Left */}

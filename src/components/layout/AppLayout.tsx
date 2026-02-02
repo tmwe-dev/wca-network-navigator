@@ -22,6 +22,7 @@ export function AppLayout() {
   // Get current page info
   const currentPath = location.pathname;
   const pageInfo = PAGE_INFO[currentPath] || PAGE_INFO["/"];
+  const isCampaignsPage = currentPath === "/campaigns";
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -41,27 +42,32 @@ export function AppLayout() {
       
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-40 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-6 h-full px-6">
+        <header className={`sticky top-0 z-40 h-16 border-b border-border ${isCampaignsPage ? 'bg-black/60 backdrop-blur-xl border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}`}>
+          <div className="flex items-center gap-4 h-full px-6">
             {/* Page title */}
-            <div className="flex items-center gap-2 text-foreground">
+            <div className={`flex items-center gap-2 ${isCampaignsPage ? 'text-amber-400' : 'text-foreground'}`}>
               {pageInfo.icon}
               <h1 className="text-lg font-semibold">{pageInfo.title}</h1>
             </div>
 
-            {/* Search */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCommandOpen(true)}
-              className="w-64 justify-start text-muted-foreground"
-            >
-              <Search className="w-4 h-4 mr-2" />
-              <span>Search partners...</span>
-              <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </Button>
+            {/* Campaign controls slot - will be filled by portal */}
+            <div id="campaign-header-controls" className="flex items-center gap-4 flex-1" />
+
+            {/* Search - hide on campaigns page */}
+            {!isCampaignsPage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCommandOpen(true)}
+                className="w-64 justify-start text-muted-foreground"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                <span>Search partners...</span>
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+            )}
           </div>
         </header>
 
