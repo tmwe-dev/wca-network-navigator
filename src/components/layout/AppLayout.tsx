@@ -42,7 +42,7 @@ export function AppLayout() {
       
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className={`sticky top-0 z-40 h-16 border-b border-border ${isCampaignsPage ? 'bg-black/60 backdrop-blur-xl border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}`}>
+        <header className={`sticky top-0 z-40 h-16 border-b ${isCampaignsPage ? 'bg-slate-900/95 border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-border'}`}>
           <div className="flex items-center gap-4 h-full px-6">
             {/* Page title */}
             <div className={`flex items-center gap-2 ${isCampaignsPage ? 'text-amber-400' : 'text-foreground'}`}>
