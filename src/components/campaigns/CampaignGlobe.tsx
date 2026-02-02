@@ -124,7 +124,7 @@ function Earth({
         
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
-        targetZoom.current = 2.0;
+        targetZoom.current = 1.6; // 20% more zoom than before
       }
     } else if (!selectedCountry && !isResetting.current) {
       targetZoom.current = 2.8;
