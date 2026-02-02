@@ -13,6 +13,17 @@ import { InstancedCountryMarkers } from "./globe/InstancedCountryMarkers";
 import { SelectionHighlight } from "./globe/SelectionHighlight";
 import { CityMarkers } from "./globe/CityMarkers";
 import { NetworkConnections } from "./globe/NetworkConnections";
+import { FlyingAirplanes } from "./globe/FlyingAirplanes";
+import { CountryToast } from "./globe/CountryToast";
+
+// Smooth easing functions
+function easeOutQuart(x: number): number {
+  return 1 - Math.pow(1 - x, 4);
+}
+
+function easeInOutCubic(x: number): number {
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
 
 // Earth component with smooth zoom and rotation to selected country
 function Earth({ 
@@ -22,7 +33,8 @@ function Earth({
   targetRotation,
   countries,
   countryPartners,
-  userInteracting
+  userInteracting,
+  isResetting
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
@@ -31,16 +43,48 @@ function Earth({
   countries: CountryWithPartners[];
   countryPartners: GlobePartner[];
   userInteracting: React.MutableRefObject<boolean>;
+  isResetting: React.MutableRefObject<boolean>;
 }) {
   const earthRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const currentRotation = useRef({ x: 0, y: 0 });
+  const resetStartTimeRef = useRef<number>(0);
+  const resetStartZoomRef = useRef<number>(2.8);
+  const resetStartRotationRef = useRef({ x: 0, y: 0 });
 
   useFrame((state, delta) => {
     if (earthRef.current) {
-      // Only auto-rotate if user hasn't interacted
-      if (!selectedCountry && !userInteracting.current) {
+      const time = state.clock.elapsedTime;
+      
+      // Handle reset animation
+      if (isResetting.current) {
+        const resetDuration = 1.5; // 1.5 second smooth reset
+        const elapsed = time - resetStartTimeRef.current;
+        const progress = Math.min(elapsed / resetDuration, 1);
+        const eased = easeInOutCubic(progress);
+        
+        // Interpolate rotation back to origin
+        currentRotation.current.x = resetStartRotationRef.current.x * (1 - eased);
+        currentRotation.current.y = resetStartRotationRef.current.y + (targetRotation.current.y - resetStartRotationRef.current.y) * eased + delta * 0.08 * eased;
+        
+        // Smooth zoom out
+        const currentZ = camera.position.z;
+        const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
+        camera.position.z = targetZ;
+        
+        if (progress >= 1) {
+          isResetting.current = false;
+          userInteracting.current = false;
+        }
+      }
+      // Only auto-rotate if user hasn't interacted and not resetting
+      else if (!selectedCountry && !userInteracting.current) {
         currentRotation.current.y += delta * 0.08;
+        
+        // Smooth zoom interpolation
+        const currentZ = camera.position.z;
+        const diff = targetZoom.current - currentZ;
+        camera.position.z = currentZ + diff * 0.04;
       } else if (selectedCountry && !userInteracting.current) {
         // Smooth interpolation to target rotation (looking at the country)
         currentRotation.current.x = THREE.MathUtils.lerp(
@@ -53,16 +97,16 @@ function Earth({
           targetRotation.current.y,
           0.03
         );
+        
+        // Smooth zoom interpolation
+        const currentZ = camera.position.z;
+        const diff = targetZoom.current - currentZ;
+        camera.position.z = currentZ + diff * 0.04;
       }
+      
       earthRef.current.rotation.x = currentRotation.current.x;
       earthRef.current.rotation.y = currentRotation.current.y;
     }
-
-    // Smooth zoom interpolation with easing
-    const currentZ = camera.position.z;
-    const diff = targetZoom.current - currentZ;
-    const newZ = currentZ + diff * 0.04;
-    camera.position.z = newZ;
   });
 
   useEffect(() => {
@@ -76,11 +120,11 @@ function Earth({
         targetRotation.current.x = latRad;
         targetZoom.current = 2.0;
       }
-    } else if (!selectedCountry && !userInteracting.current) {
+    } else if (!selectedCountry && !userInteracting.current && !isResetting.current) {
       targetZoom.current = 2.8;
       targetRotation.current.x = 0;
     }
-  }, [selectedCountry, targetRotation, targetZoom, userInteracting]);
+  }, [selectedCountry, targetRotation, targetZoom, userInteracting, isResetting]);
 
   // Get selected country data for highlight
   const selectedCountryData = useMemo(() => {
@@ -96,6 +140,12 @@ function Earth({
 
       <AuroraBorealis />
       <NetworkConnections countries={countries} />
+
+      {/* Flying airplanes when globe is free */}
+      <FlyingAirplanes 
+        countries={countries} 
+        isActive={!selectedCountry && !userInteracting.current}
+      />
 
       {/* Single instanced mesh for all 249 country markers */}
       <InstancedCountryMarkers
@@ -128,13 +178,17 @@ function GlobeScene({
   onCountrySelect,
   countries,
   countryPartners,
-  userInteracting
+  userInteracting,
+  isResetting,
+  onStartReset
 }: { 
   selectedCountry: string | null; 
   onCountrySelect: (code: string) => void;
   countries: CountryWithPartners[];
   countryPartners: GlobePartner[];
   userInteracting: React.MutableRefObject<boolean>;
+  isResetting: React.MutableRefObject<boolean>;
+  onStartReset: () => void;
 }) {
   const targetZoom = useRef(2.8);
   const targetRotation = useRef({ x: 0, y: 0 });
@@ -161,6 +215,7 @@ function GlobeScene({
         countries={countries}
         countryPartners={countryPartners}
         userInteracting={userInteracting}
+        isResetting={isResetting}
       />
 
       <OrbitControls
@@ -190,10 +245,24 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
   
   const countries = globeData?.countries || [];
   const userInteracting = useRef(false);
+  const isResetting = useRef(false);
 
   const handleGlobeCountrySelect = useCallback((code: string) => {
     onCountrySelect(code === selectedCountry ? null : code);
   }, [selectedCountry, onCountrySelect]);
+
+  // Handle reset - trigger smooth animation back to original state
+  const handleStartReset = useCallback(() => {
+    isResetting.current = true;
+    userInteracting.current = false;
+  }, []);
+
+  // Reset when country is deselected
+  useEffect(() => {
+    if (!selectedCountry && userInteracting.current) {
+      handleStartReset();
+    }
+  }, [selectedCountry, handleStartReset]);
 
   if (isLoading) {
     return (
@@ -208,6 +277,9 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
 
   return (
     <div className="relative w-full h-full">
+      {/* Country name toast */}
+      <CountryToast countryCode={selectedCountry} />
+
       {/* Globe Canvas - Full area */}
       <Canvas
         camera={{ position: [0, 0, 2.8], fov: 50 }}
@@ -221,6 +293,8 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
           countries={countries}
           countryPartners={countryPartners}
           userInteracting={userInteracting}
+          isResetting={isResetting}
+          onStartReset={handleStartReset}
         />
       </Canvas>
 
