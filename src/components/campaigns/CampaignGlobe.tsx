@@ -116,10 +116,11 @@ function Earth({
       
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
-        // Rotate globe so the country faces the camera (positive lng = rotate left)
-        const lngRad = ((country.lng + 90) * Math.PI) / 180;
-        // Latitude: tilt around X axis (+ 20° south offset)
-        const latRad = (-country.lat * Math.PI) / 180 * 0.5 + (20 * Math.PI) / 180;
+        // Rotate globe so the selected country faces the camera.
+        // With our lat/lng -> Vector3 mapping, the correct yaw to bring a point to +Z is: -(lng + 90°).
+        // Pitch is simply +lat (keeps the selected point centered vertically without flipping hemispheres).
+        const lngRad = THREE.MathUtils.degToRad(-(country.lng + 90));
+        const latRad = THREE.MathUtils.degToRad(country.lat);
         
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
