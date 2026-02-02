@@ -111,41 +111,41 @@ export function CompanyList({
   ).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-4 border-b border-amber-500/20 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Building2 className="w-4 h-4" />
+          <h3 className="font-semibold flex items-center gap-2 text-amber-400">
+            <Building2 className="w-4 h-4 text-amber-500" />
             {countryName ? `Aziende in ${countryName}` : "Seleziona un paese"}
           </h3>
-          <Badge variant="secondary">
+          <Badge className="space-badge">
             {filteredPartners.length} risultati
           </Badge>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/60" />
           <Input
             placeholder="Cerca per nome, città, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 space-input"
           />
         </div>
 
         {/* Filters row */}
         <div className="flex gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[180px] bg-black/50 border-amber-500/30 text-slate-200">
+              <Filter className="w-4 h-4 mr-2 text-amber-500" />
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i tipi</SelectItem>
+            <SelectContent className="bg-black/90 backdrop-blur-xl border-amber-500/30">
+              <SelectItem value="all" className="text-slate-200 focus:bg-amber-500/20">Tutti i tipi</SelectItem>
               {partnerTypes.map(type => (
-                <SelectItem key={type} value={type}>
+                <SelectItem key={type} value={type} className="text-slate-200 focus:bg-amber-500/20">
                   {formatPartnerType(type)}
                 </SelectItem>
               ))}
@@ -155,22 +155,32 @@ export function CompanyList({
 
         {/* AI Filter */}
         <div className="relative">
-          <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warning" />
+          <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
           <Input
             placeholder="Filtra con AI: 'solo IATA certified', 'con servizio pharma'..."
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
-            className="pl-9 border-warning/50 focus-visible:ring-warning"
+            className="pl-9 bg-black/50 border-emerald-500/40 text-emerald-100 placeholder:text-emerald-400/40 focus-visible:ring-emerald-500/50"
           />
         </div>
 
         {/* Selection controls */}
         {partners.length > 0 && (
           <div className="flex items-center gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={onSelectAll}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onSelectAll}
+              className="bg-transparent border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+            >
               Seleziona tutti ({filteredPartners.length})
             </Button>
-            <Button variant="outline" size="sm" onClick={onDeselectAll}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onDeselectAll}
+              className="bg-transparent border-amber-500/30 text-slate-400 hover:bg-amber-500/10 hover:text-slate-300"
+            >
               Deseleziona tutti
             </Button>
           </div>
@@ -179,11 +189,11 @@ export function CompanyList({
 
       {/* Partner List */}
       <ScrollArea className="flex-1">
-        <div className="divide-y">
+        <div className="divide-y divide-amber-500/10">
           {filteredPartners.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>
+            <div className="p-8 text-center">
+              <Building2 className="w-12 h-12 mx-auto mb-3 text-amber-500/30" />
+              <p className="text-slate-400">
                 {partners.length === 0 
                   ? "Clicca su un paese nel globo per vedere le aziende"
                   : "Nessuna azienda corrisponde ai filtri"
@@ -194,31 +204,31 @@ export function CompanyList({
             filteredPartners.map((partner) => (
               <label
                 key={partner.id}
-                className="flex items-start gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                className="flex items-start gap-3 p-3 hover:bg-amber-500/10 cursor-pointer transition-colors"
               >
                 <Checkbox
                   checked={selectedPartners.has(partner.id)}
                   onCheckedChange={() => onTogglePartner(partner.id)}
-                  className="mt-1"
+                  className="mt-1 border-amber-500/50 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{getCountryFlag(partner.country_code)}</span>
-                    <span className="font-medium truncate">{partner.company_name}</span>
+                    <span className="font-medium truncate text-slate-100">{partner.company_name}</span>
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 mt-1 text-sm text-slate-400">
                     <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
+                      <MapPin className="w-3 h-3 text-amber-500/60" />
                       {partner.city}
                     </span>
                     {partner.partner_type && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400/80">
                         {formatPartnerType(partner.partner_type)}
                       </Badge>
                     )}
                   </div>
                   {partner.email && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1 mt-1 text-xs text-slate-500">
                       <Mail className="w-3 h-3" />
                       {partner.email}
                     </div>
@@ -227,7 +237,7 @@ export function CompanyList({
                   {partner.partner_certifications && partner.partner_certifications.length > 0 && (
                     <div className="flex gap-1 mt-2 flex-wrap">
                       {partner.partner_certifications.map((cert, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        <Badge key={i} className="text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
                           {cert.certification}
                         </Badge>
                       ))}
@@ -242,8 +252,8 @@ export function CompanyList({
 
       {/* Footer */}
       {selectedCount > 0 && (
-        <div className="p-4 border-t bg-muted/30">
-          <Button onClick={onAddToCampaign} className="w-full">
+        <div className="p-4 border-t border-amber-500/20">
+          <Button onClick={onAddToCampaign} className="w-full space-button-primary">
             <Plus className="w-4 h-4 mr-2" />
             Aggiungi alla campagna ({selectedCount})
           </Button>

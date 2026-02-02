@@ -134,3 +134,56 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Space Station Theme */
+@layer components {
+  .space-panel {
+    @apply bg-black/40 backdrop-blur-xl border rounded-2xl;
+  }
+
+  .space-panel-amber {
+    @apply space-panel border-amber-500/30 shadow-2xl;
+    box-shadow: 
+      0 0 30px rgba(245, 158, 11, 0.1),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .space-panel-emerald {
+    @apply space-panel border-emerald-500/30 shadow-2xl;
+    box-shadow: 
+      0 0 30px rgba(16, 185, 129, 0.1),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .space-text-primary {
+    @apply text-amber-400;
+  }
+
+  .space-text-secondary {
+    @apply text-emerald-400;
+  }
+
+  .space-input {
+    @apply bg-black/50 border-amber-500/40 text-amber-100 placeholder:text-amber-100/40;
+  }
+
+  .space-input:focus {
+    @apply ring-amber-500/50 border-amber-500/60;
+  }
+
+  .space-badge {
+    @apply bg-emerald-500/20 border border-emerald-500/40 text-emerald-300;
+  }
+
+  .space-button-primary {
+    @apply bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 border-0;
+  }
+
+  .space-stat-card {
+    @apply bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center;
+  }
+
+  .space-floating-bar {
+    @apply bg-black/60 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-2;
+  }
+}

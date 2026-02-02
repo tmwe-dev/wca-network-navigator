@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCountryFlag } from "@/lib/countries";
-import { X, Mail, Users, Globe, Send } from "lucide-react";
+import { X, Mail, Users, Send } from "lucide-react";
 
 interface Partner {
   id: string;
@@ -42,64 +41,69 @@ export function CampaignSummary({
 
   if (selectedPartners.length === 0) {
     return (
-      <Card className="h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Send className="w-5 h-5" />
+      <div className="h-full flex flex-col space-panel-emerald animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="p-4 border-b border-emerald-500/20">
+          <h3 className="font-semibold flex items-center gap-2 text-emerald-400">
+            <Send className="w-5 h-5 text-emerald-500" />
             Riepilogo Campagna
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Seleziona aziende dal pannello a sinistra</p>
-            <p className="text-sm mt-1">per aggiungerle alla campagna</p>
+          </h3>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <Users className="w-12 h-12 mx-auto mb-3 text-emerald-500/30" />
+            <p className="text-slate-400">Seleziona aziende dal pannello a sinistra</p>
+            <p className="text-sm mt-1 text-slate-500">per aggiungerle alla campagna</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <div className="h-full flex flex-col space-panel-emerald animate-in fade-in slide-in-from-right-4 duration-500">
+      <div className="p-4 border-b border-emerald-500/20">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Send className="w-5 h-5" />
+          <h3 className="font-semibold flex items-center gap-2 text-emerald-400">
+            <Send className="w-5 h-5 text-emerald-500" />
             Riepilogo Campagna
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClearAll}>
+          </h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClearAll}
+            className="text-slate-400 hover:text-slate-300 hover:bg-emerald-500/10"
+          >
             Svuota tutto
           </Button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-3">
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-primary">{selectedPartners.length}</div>
-            <div className="text-xs text-muted-foreground">Aziende</div>
+          <div className="space-stat-card">
+            <div className="text-2xl font-mono font-bold text-amber-400">{selectedPartners.length}</div>
+            <div className="text-xs text-slate-400">Aziende</div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-primary">{countries.length}</div>
-            <div className="text-xs text-muted-foreground">Paesi</div>
+          <div className="space-stat-card">
+            <div className="text-2xl font-mono font-bold text-amber-400">{countries.length}</div>
+            <div className="text-xs text-slate-400">Paesi</div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-success">{totalWithEmail}</div>
-            <div className="text-xs text-muted-foreground">Con email</div>
+          <div className="space-stat-card">
+            <div className="text-2xl font-mono font-bold text-emerald-400">{totalWithEmail}</div>
+            <div className="text-xs text-slate-400">Con email</div>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
       <ScrollArea className="flex-1 px-4">
-        <div className="space-y-4 pb-4">
+        <div className="space-y-4 py-4">
           {countries.map(country => (
             <div key={country}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">
                   {getCountryFlag(groupedByCountry[country][0].country_code)}
                 </span>
-                <span className="font-medium text-sm">{country}</span>
-                <Badge variant="secondary" className="ml-auto">
+                <span className="font-medium text-sm text-slate-200">{country}</span>
+                <Badge className="ml-auto space-badge">
                   {groupedByCountry[country].length}
                 </Badge>
               </div>
@@ -107,20 +111,20 @@ export function CampaignSummary({
                 {groupedByCountry[country].map(partner => (
                   <div 
                     key={partner.id}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 group"
+                    className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-emerald-500/10 group"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{partner.company_name}</p>
-                      <p className="text-xs text-muted-foreground">{partner.city}</p>
+                      <p className="text-sm font-medium truncate text-slate-200">{partner.company_name}</p>
+                      <p className="text-xs text-slate-500">{partner.city}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {partner.email && (
-                        <Mail className="w-3 h-3 text-muted-foreground" />
+                        <Mail className="w-3 h-3 text-emerald-500/60" />
                       )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-400 hover:bg-red-500/10"
                         onClick={() => onRemovePartner(partner.id)}
                       >
                         <X className="w-3 h-3" />
@@ -134,21 +138,21 @@ export function CampaignSummary({
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t space-y-2">
+      <div className="p-4 border-t border-emerald-500/20 space-y-2">
         <Button 
           onClick={onGenerateEmail} 
-          className="w-full"
+          className="w-full space-button-primary"
           disabled={totalWithEmail === 0}
         >
           <Mail className="w-4 h-4 mr-2" />
           Genera Email ({totalWithEmail} destinatari)
         </Button>
         {totalWithEmail < selectedPartners.length && (
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-slate-500 text-center">
             {selectedPartners.length - totalWithEmail} aziende senza email verranno escluse
           </p>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
