@@ -90,17 +90,14 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
       const isHovered = hoveredRef.current === i;
       const hasSelection = selectedCountry !== null;
       
-      // Calculate scale based on state - hide others when country is selected
+      // Calculate scale based on state - hide ALL markers when a country is selected
       let innerScale: number;
       let outerScale: number;
       
-      if (hasSelection && !isSelected) {
-        // Hide non-selected markers when a country is selected
+      if (hasSelection) {
+        // Hide ALL markers when any country is selected (SelectionHighlight handles the target)
         innerScale = 0;
         outerScale = 0;
-      } else if (isSelected) {
-        innerScale = (Math.sin(time * 4) * 0.2 + 1.5) * (hasPartners ? 1 : 0.5);
-        outerScale = 3;
       } else if (isHovered) {
         innerScale = (Math.sin(time * 3) * 0.15 + 1.2) * (hasPartners ? 1 : 0.5);
         outerScale = 2;
