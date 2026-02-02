@@ -115,7 +115,7 @@ export function CompanyList({
       {/* Header */}
       <div className="p-4 border-b border-amber-500/20 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2 text-amber-400">
+          <h3 className="flex items-center gap-2 text-amber-400">
             <Building2 className="w-4 h-4 text-amber-500" />
             {countryName ? `Aziende in ${countryName}` : "Seleziona un paese"}
           </h3>
@@ -214,7 +214,7 @@ export function CompanyList({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{getCountryFlag(partner.country_code)}</span>
-                    <span className="font-medium truncate text-slate-100">{partner.company_name}</span>
+                    <span className="truncate text-slate-100">{partner.company_name}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-sm text-slate-400">
                     <span className="flex items-center gap-1">

@@ -47,7 +47,7 @@ export function AppLayout() {
             {/* Page title */}
             <div className={`flex items-center gap-2 ${isCampaignsPage ? 'text-amber-400' : 'text-foreground'}`}>
               {pageInfo.icon}
-              <h1 className="text-lg font-semibold">{pageInfo.title}</h1>
+              <h1 className="text-lg">{pageInfo.title}</h1>
             </div>
 
             {/* Campaign controls slot - will be filled by portal */}
