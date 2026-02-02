@@ -23,6 +23,21 @@ export interface CountryWithPartners {
   region: WCACountry['region'];
 }
 
+// Pre-computed countries map for O(1) lookups (computed once at module load)
+const PRECOMPUTED_COUNTRIES_MAP: Record<string, CountryWithPartners> = {};
+const PRECOMPUTED_COUNTRIES: CountryWithPartners[] = WCA_COUNTRIES.map(country => {
+  const cwp: CountryWithPartners = {
+    code: country.code,
+    name: country.name,
+    count: 0,
+    lat: country.lat,
+    lng: country.lng,
+    region: country.region,
+  };
+  PRECOMPUTED_COUNTRIES_MAP[country.code] = cwp;
+  return cwp;
+});
+
 // Fetch all partners for globe visualization
 export function usePartnersForGlobe() {
   return useQuery({
@@ -36,9 +51,13 @@ export function usePartnersForGlobe() {
 
       if (error) throw error;
 
-      // Add lat/lng from country data
+      // Reset counts efficiently
+      const countryCounts: Record<string, number> = {};
+      
+      // Add lat/lng from country data with O(1) lookups
       const globePartners: GlobePartner[] = (partners || []).map(p => {
-        const country = WCA_COUNTRIES_MAP[p.country_code];
+        countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
+        const country = PRECOMPUTED_COUNTRIES_MAP[p.country_code];
         return {
           ...p,
           lat: country?.lat || 0,
@@ -46,31 +65,25 @@ export function usePartnersForGlobe() {
         };
       });
 
-      // Build countries with partner counts
-      const countryCounts: Record<string, number> = {};
-      globePartners.forEach(p => {
-        countryCounts[p.country_code] = (countryCounts[p.country_code] || 0) + 1;
-      });
-
-      // Include ALL WCA countries, even those with 0 partners
-      const countriesWithPartners: CountryWithPartners[] = WCA_COUNTRIES.map(country => ({
-        code: country.code,
-        name: country.name,
-        count: countryCounts[country.code] || 0,
-        lat: country.lat,
-        lng: country.lng,
-        region: country.region,
+      // Update counts in pre-computed countries (single pass)
+      const countriesWithPartners = PRECOMPUTED_COUNTRIES.map(c => ({
+        ...c,
+        count: countryCounts[c.code] || 0,
       }));
+
+      const countriesMap = countriesWithPartners.reduce((acc, c) => {
+        acc[c.code] = c;
+        return acc;
+      }, {} as Record<string, CountryWithPartners>);
 
       return {
         partners: globePartners,
         countries: countriesWithPartners,
-        countriesMap: countriesWithPartners.reduce((acc, c) => {
-          acc[c.code] = c;
-          return acc;
-        }, {} as Record<string, CountryWithPartners>),
+        countriesMap,
       };
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - reduce refetches
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -83,24 +96,14 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
 
       const { data, error } = await supabase
         .from("partners")
-        .select(`
-          id, 
-          company_name, 
-          city, 
-          country_code, 
-          country_name, 
-          email, 
-          partner_type,
-          partner_services (service_category),
-          partner_certifications (certification)
-        `)
+        .select("id, company_name, city, country_code, country_name, email, partner_type")
         .eq("is_active", true)
         .eq("country_code", countryCode)
         .order("company_name");
 
       if (error) throw error;
 
-      const country = WCA_COUNTRIES_MAP[countryCode];
+      const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
       
       return (data || []).map(p => ({
         ...p,
@@ -109,5 +112,7 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
       }));
     },
     enabled: !!countryCode,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
   });
 }
