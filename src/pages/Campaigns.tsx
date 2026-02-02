@@ -120,13 +120,7 @@ export default function Campaigns() {
     <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-4">
       {/* Header with controls */}
       <div className="flex flex-wrap items-center gap-4 shrink-0">
-        {/* Title */}
-        <div className="flex-1 min-w-48">
-          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <Mail className="w-5 h-5" />
-            Email Campaigns
-          </h1>
-        </div>
+        {/* Title removed - now in app header */}
 
         {/* Country selector */}
         <div className="w-64">

@@ -1,14 +1,27 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search } from "lucide-react";
+import { Search, LayoutDashboard, Users, Bell, Mail, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
+// Page titles and icons mapping
+const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
+  "/": { title: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+  "/partners": { title: "Partners", icon: <Users className="w-5 h-5" /> },
+  "/reminders": { title: "Reminders", icon: <Bell className="w-5 h-5" /> },
+  "/campaigns": { title: "Email Campaigns", icon: <Mail className="w-5 h-5" /> },
+  "/export": { title: "Export", icon: <Download className="w-5 h-5" /> },
+};
 
 export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const location = useLocation();
+
+  // Get current page info
+  const currentPath = location.pathname;
+  const pageInfo = PAGE_INFO[currentPath] || PAGE_INFO["/"];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -29,7 +42,14 @@ export function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-40 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center justify-between h-full px-6">
+          <div className="flex items-center gap-6 h-full px-6">
+            {/* Page title */}
+            <div className="flex items-center gap-2 text-foreground">
+              {pageInfo.icon}
+              <h1 className="text-lg font-semibold">{pageInfo.title}</h1>
+            </div>
+
+            {/* Search */}
             <Button
               variant="outline"
               size="sm"
