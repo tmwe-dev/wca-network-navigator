@@ -247,130 +247,41 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Top bar - Controls & Stats */}
-      <div className="flex-shrink-0 p-4 bg-gradient-to-b from-slate-950 to-transparent space-y-3">
-        {/* Row 1: Dropdown + Stats */}
-        <div className="flex items-center gap-4">
-          {/* Country selector */}
-          <div className="flex-1 max-w-md">
-            <Select value={selectedCountry || ""} onValueChange={(val) => onCountrySelect(val || null)}>
-              <SelectTrigger className="bg-card/95 backdrop-blur-md border-primary/20 shadow-lg">
-                <SelectValue placeholder="🌍 Seleziona un paese..." />
-              </SelectTrigger>
-              <SelectContent className="bg-card/95 backdrop-blur-md max-h-80">
-                {countries.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{getCountryFlag(country.code)}</span>
-                      <span>{country.name}</span>
-                      <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                        {country.count} partner
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="relative w-full h-full">
+      {/* Globe Canvas - Full area */}
+      <Canvas
+        camera={{ position: [0, 0, 2.8], fov: 50 }}
+        style={{ background: "linear-gradient(180deg, #020617 0%, #0f172a 50%, #1e1b4b 100%)" }}
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      >
+        <GlobeScene 
+          selectedCountry={selectedCountry} 
+          onCountrySelect={handleGlobeCountrySelect}
+          countries={countries}
+          countryPartners={countryPartners}
+        />
+      </Canvas>
 
-          {/* Stats row - inline */}
-          <div className="flex items-center gap-6 bg-card/80 backdrop-blur-md border border-primary/20 rounded-xl px-4 py-2">
-            <div className="text-center">
-              <p className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {TOTAL_WCA_COUNTRIES}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Paesi WCA</p>
-            </div>
-            <div className="w-px h-8 bg-primary/20" />
-            <div className="text-center">
-              <p className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                {countriesWithPartners}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Con partner</p>
-            </div>
-            <div className="w-px h-8 bg-primary/20" />
-            <div className="text-center">
-              <p className="text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-                {totalPartners}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Partner</p>
-            </div>
-          </div>
-
-          {/* Legend - inline */}
-          <div className="hidden lg:flex items-center gap-4 bg-card/80 backdrop-blur-md border border-primary/20 rounded-xl px-4 py-2 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-              </div>
-              <span className="text-foreground/80">Con partner</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
-              <span className="text-foreground/80">Senza partner</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-px bg-gradient-to-r from-blue-400 to-blue-600" />
-              <span className="text-foreground/80">Network</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Selected country indicator */}
-        {selectedCountry && countriesMap[selectedCountry] && (
-          <div className="max-w-md">
-            <div className="bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-500/20 border border-amber-400/40 rounded-xl p-2.5 backdrop-blur-md shadow-lg animate-fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{getCountryFlag(selectedCountry)}</span>
-                <div>
-                  <p className="font-semibold text-amber-100 text-sm">{countriesMap[selectedCountry]?.name}</p>
-                  <p className="text-xs text-amber-200/70">{countriesMap[selectedCountry]?.count || 0} partner disponibili</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Globe - takes remaining space */}
-      <div className="flex-1 relative min-h-0">
-        <Canvas
-          camera={{ position: [0, 0, 2.8], fov: 50 }}
-          style={{ background: "linear-gradient(180deg, #020617 0%, #0f172a 50%, #1e1b4b 100%)" }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        >
-          <GlobeScene 
-            selectedCountry={selectedCountry} 
-            onCountrySelect={handleGlobeCountrySelect}
-            countries={countries}
-            countryPartners={countryPartners}
+      {/* Selected country popup - minimal overlay at bottom */}
+      {selectedCountry && countriesMap[selectedCountry] && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+          <PartnerPopup 
+            partners={countryPartners} 
+            countryName={countriesMap[selectedCountry]?.name || ''} 
           />
-        </Canvas>
+        </div>
+      )}
 
-        {/* Partner popup - inside globe area at bottom */}
-        {selectedCountry && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <PartnerPopup 
-              partners={countryPartners} 
-              countryName={countriesMap[selectedCountry]?.name || ''} 
-            />
-          </div>
-        )}
-
-        {/* Mobile legend */}
-        <div className="lg:hidden absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-primary/20 rounded-lg px-3 py-2 text-[10px] z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>Partner</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-gray-500" />
-              <span>Vuoto</span>
-            </div>
-          </div>
+      {/* Minimal legend - bottom left corner */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-3 text-[10px] text-muted-foreground bg-black/40 backdrop-blur-sm rounded px-2 py-1">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-amber-400" />
+          <span>Partner</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-gray-500" />
+          <span>Vuoto</span>
         </div>
       </div>
     </div>
