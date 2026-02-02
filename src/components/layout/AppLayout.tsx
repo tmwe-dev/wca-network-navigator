@@ -15,7 +15,7 @@ const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
 };
 
 export function AppLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [commandOpen, setCommandOpen] = useState(false);
   const location = useLocation();
 

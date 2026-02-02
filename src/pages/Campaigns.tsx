@@ -1,11 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignSummary } from "@/components/campaigns/CampaignSummary";
 import { EmailPreview } from "@/components/campaigns/EmailPreview";
-import { Globe, Mail, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
 import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
 import { 
@@ -117,96 +116,100 @@ export default function Campaigns() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-4">
-      {/* Header with controls */}
-      <div className="flex flex-wrap items-center gap-4 shrink-0">
-        {/* Title removed - now in app header */}
+    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6">
+      {/* Globe as full background */}
+      <div className="absolute inset-0">
+        <CampaignGlobe
+          selectedCountry={selectedCountry}
+          onCountrySelect={handleCountrySelect}
+        />
+      </div>
 
+      {/* Floating top bar with controls */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 space-floating-bar flex items-center gap-3">
         {/* Country selector */}
-        <div className="w-64">
-          <Select value={selectedCountry || ""} onValueChange={(val) => handleCountrySelect(val || null)}>
-            <SelectTrigger className="bg-card border-primary/20">
-              <SelectValue placeholder="🌍 Seleziona paese..." />
-            </SelectTrigger>
-            <SelectContent className="max-h-80">
-              {countries.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  <div className="flex items-center gap-2">
-                    <span>{getCountryFlag(country.code)}</span>
-                    <span className="truncate">{country.name}</span>
-                    <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                      {country.count}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={selectedCountry || ""} onValueChange={(val) => handleCountrySelect(val || null)}>
+          <SelectTrigger className="w-56 bg-transparent border-amber-500/30 text-amber-100 focus:ring-amber-500/50">
+            <SelectValue placeholder="🌍 Seleziona paese..." />
+          </SelectTrigger>
+          <SelectContent className="max-h-80 bg-black/90 backdrop-blur-xl border-amber-500/30">
+            {countries.map((country) => (
+              <SelectItem 
+                key={country.code} 
+                value={country.code}
+                className="text-slate-200 focus:bg-amber-500/20 focus:text-amber-100"
+              >
+                <div className="flex items-center gap-2">
+                  <span>{getCountryFlag(country.code)}</span>
+                  <span className="truncate">{country.name}</span>
+                  <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                    {country.count}
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-amber-500/30" />
 
         {/* Stats badges */}
-        <div className="flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-            <span className="font-semibold text-blue-400">{TOTAL_WCA_COUNTRIES}</span>
-            <span className="text-muted-foreground text-xs">Paesi</span>
+        <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono font-bold text-blue-400">{TOTAL_WCA_COUNTRIES}</span>
+            <span className="text-slate-400 text-xs">Paesi</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-            <span className="font-semibold text-green-400">{countriesWithPartners}</span>
-            <span className="text-muted-foreground text-xs">Attivi</span>
+          <div className="w-px h-4 bg-amber-500/20" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono font-bold text-emerald-400">{countriesWithPartners}</span>
+            <span className="text-slate-400 text-xs">Attivi</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-            <span className="font-semibold text-amber-400">{totalPartners}</span>
-            <span className="text-muted-foreground text-xs">Partner</span>
+          <div className="w-px h-4 bg-amber-500/20" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono font-bold text-amber-400">{totalPartners}</span>
+            <span className="text-slate-400 text-xs">Partner</span>
           </div>
         </div>
 
         {/* Reset button */}
         {selectedCountry && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => handleCountrySelect(null)}
-          >
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            Reset
-          </Button>
+          <>
+            <div className="w-px h-6 bg-amber-500/30" />
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleCountrySelect(null)}
+              className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Reset
+            </Button>
+          </>
         )}
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
-        {/* Globe - Left side - CLEAN */}
-        <Card className="col-span-5 overflow-hidden border-primary/10">
-          <CardContent className="p-0 h-full">
-            <CampaignGlobe
-              selectedCountry={selectedCountry}
-              onCountrySelect={handleCountrySelect}
-            />
-          </CardContent>
-        </Card>
+      {/* Floating Company List - Left */}
+      <div className="absolute left-4 top-20 bottom-4 w-[380px] z-10">
+        <CompanyList
+          partners={countryPartners}
+          selectedPartners={selectedPartnerIds}
+          onTogglePartner={handleTogglePartner}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onAddToCampaign={handleAddToCampaign}
+          countryName={countryName}
+        />
+      </div>
 
-        {/* Company List - Middle */}
-        <Card className="col-span-4 overflow-hidden flex flex-col">
-          <CompanyList
-            partners={countryPartners}
-            selectedPartners={selectedPartnerIds}
-            onTogglePartner={handleTogglePartner}
-            onSelectAll={handleSelectAll}
-            onDeselectAll={handleDeselectAll}
-            onAddToCampaign={handleAddToCampaign}
-            countryName={countryName}
-          />
-        </Card>
-
-        {/* Campaign Summary - Right */}
-        <div className="col-span-3 overflow-hidden">
-          <CampaignSummary
-            selectedPartners={campaignPartners}
-            onRemovePartner={handleRemoveFromCampaign}
-            onClearAll={handleClearCampaign}
-            onGenerateEmail={() => setShowEmailPreview(true)}
-          />
-        </div>
+      {/* Floating Campaign Summary - Right */}
+      <div className="absolute right-4 top-20 bottom-4 w-[320px] z-10">
+        <CampaignSummary
+          selectedPartners={campaignPartners}
+          onRemovePartner={handleRemoveFromCampaign}
+          onClearAll={handleClearCampaign}
+          onGenerateEmail={() => setShowEmailPreview(true)}
+        />
       </div>
 
       {/* Email Preview Modal */}
