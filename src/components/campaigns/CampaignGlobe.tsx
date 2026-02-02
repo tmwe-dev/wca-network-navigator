@@ -78,14 +78,14 @@ function Earth({
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
         // Calculate rotation to position the country facing the camera
-        // Longitude determines Y rotation (horizontal)
-        // Latitude determines X rotation (tilt) - inverted because we're rotating the earth, not the camera
-        const lngRad = -((country.lng + 90) * (Math.PI / 180));
-        const latRad = (country.lat * (Math.PI / 180)) * 0.5; // Subtle tilt based on latitude
+        // The camera is at positive Z, so we need to rotate the globe
+        // to bring the country to face positive Z
+        const lngRad = ((-country.lng - 90) * Math.PI) / 180;
+        const latRad = ((country.lat) * Math.PI) / 180 * 0.4; // Subtle tilt
         
         targetRotation.current.y = lngRad;
-        targetRotation.current.x = -latRad;
-        targetZoom.current = 2.0; // Closer zoom when country selected
+        targetRotation.current.x = latRad;
+        targetZoom.current = 2.0;
         autoRotate.current = false;
       }
     } else {
