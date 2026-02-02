@@ -71,44 +71,44 @@ export function SelectionHighlight({ lat, lng, isVisible }: Props) {
     const introProgress = Math.min(timeSinceEntry / 0.8, 1); // 0.8s intro
     const introEased = easeOutQuart(introProgress);
     
-    // Center dot - slow pulsing
+    // Center dot - slow pulsing (1/3 speed)
     if (dotRef.current) {
-      const dotPulse = easeInOutSine((time * 0.5) % 1); // Slow pulse
+      const dotPulse = easeInOutSine((time * 0.167) % 1); // Very slow pulse
       const dotScale = 1 + dotPulse * 0.4; // Scale between 1 and 1.4
       const dotOpacity = 0.7 + dotPulse * 0.3; // Opacity between 0.7 and 1
       dotRef.current.scale.setScalar(dotScale);
       (dotRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * dotOpacity;
     }
     
-    // Inner ring - subtle breathing with delayed start
+    // Inner ring - subtle breathing (1/3 speed)
     if (innerRef.current) {
-      const breath = easeInOutSine((time * 1.5) % 1) * 0.15 + 1;
+      const breath = easeInOutSine((time * 0.5) % 1) * 0.15 + 1;
       const scale = introEased * breath;
       innerRef.current.scale.setScalar(scale);
       (innerRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * 0.95;
     }
     
-    // Middle ring - counter-rotate with phase offset
+    // Middle ring - counter-rotate (1/3 speed)
     if (middleRef.current) {
-      const breath = easeInOutSine((time * 1.2 + 0.3) % 1) * 0.1 + 1;
+      const breath = easeInOutSine((time * 0.4 + 0.3) % 1) * 0.1 + 1;
       const scale = introEased * breath * 1.1;
       middleRef.current.scale.setScalar(scale);
-      middleRef.current.rotation.z = time * 0.3; // Slow rotation
+      middleRef.current.rotation.z = time * 0.1; // Very slow rotation
       (middleRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * 0.7;
     }
     
-    // Outer ring - slow expansion
+    // Outer ring - slow expansion (1/3 speed)
     if (outerRef.current) {
-      const breath = easeInOutSine((time * 0.8 + 0.6) % 1) * 0.08 + 1;
+      const breath = easeInOutSine((time * 0.267 + 0.6) % 1) * 0.08 + 1;
       const scale = introEased * breath * 1.15;
       outerRef.current.scale.setScalar(scale);
-      outerRef.current.rotation.z = -time * 0.2; // Counter rotation
+      outerRef.current.rotation.z = -time * 0.067; // Very slow counter rotation
       (outerRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * 0.5;
     }
     
-    // Pulse ring - continuous expanding wave
+    // Pulse ring - continuous expanding wave (1/3 speed)
     if (pulseRef.current) {
-      const pulsePhase = (time * 0.6) % 1;
+      const pulsePhase = (time * 0.2) % 1;
       const pulseScale = introEased * (1 + pulsePhase * 1.5);
       const pulseOpacity = opacity * (1 - pulsePhase) * 0.6;
       pulseRef.current.scale.setScalar(pulseScale);
