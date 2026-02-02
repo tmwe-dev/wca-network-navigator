@@ -110,7 +110,10 @@ function Earth({
   });
 
   useEffect(() => {
-    if (selectedCountry && !userInteracting.current) {
+    if (selectedCountry) {
+      // Reset user interaction to allow smooth movement to target
+      userInteracting.current = false;
+      
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
         const lngRad = ((-country.lng - 90) * Math.PI) / 180;
@@ -120,7 +123,7 @@ function Earth({
         targetRotation.current.x = latRad;
         targetZoom.current = 2.0;
       }
-    } else if (!selectedCountry && !userInteracting.current && !isResetting.current) {
+    } else if (!selectedCountry && !isResetting.current) {
       targetZoom.current = 2.8;
       targetRotation.current.x = 0;
     }
