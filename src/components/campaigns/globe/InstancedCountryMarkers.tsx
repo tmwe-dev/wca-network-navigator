@@ -3,9 +3,9 @@ import { useFrame, useThree, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
 
-// Shared geometries and materials (created once, reused)
-const INNER_GEOMETRY = new THREE.SphereGeometry(0.02, 8, 8);
-const OUTER_GEOMETRY = new THREE.SphereGeometry(0.03, 8, 8);
+// Smaller marker geometries
+const INNER_GEOMETRY = new THREE.SphereGeometry(0.012, 6, 6);
+const OUTER_GEOMETRY = new THREE.SphereGeometry(0.018, 6, 6);
 
 // Convert lat/lng to 3D position on sphere
 function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
@@ -89,24 +89,24 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
       const isSelected = selectedCountry === country.code;
       const isHovered = hoveredRef.current === i;
       
-      // Calculate scale based on state
+      // Calculate scale based on state - smaller overall
       let innerScale: number;
       let outerScale: number;
       let outerOpacity: number;
       
       if (isSelected) {
-        innerScale = (Math.sin(time * 4) * 0.3 + 1.5) * (hasPartners ? 1 : 0.6);
-        outerScale = 3;
-        outerOpacity = 0.6;
-      } else if (isHovered) {
-        innerScale = (Math.sin(time * 3) * 0.2 + 1.3) * (hasPartners ? 1 : 0.6);
+        innerScale = (Math.sin(time * 4) * 0.2 + 1.3) * (hasPartners ? 1 : 0.5);
         outerScale = 2.5;
         outerOpacity = 0.5;
+      } else if (isHovered) {
+        innerScale = (Math.sin(time * 3) * 0.15 + 1.2) * (hasPartners ? 1 : 0.5);
+        outerScale = 2;
+        outerOpacity = 0.4;
       } else {
-        const breathe = Math.sin(time * 2 + country.lat) * 0.1 + 1;
-        innerScale = breathe * (hasPartners ? 1 : 0.6);
-        outerScale = (Math.sin(time * 2 + country.lat) * 0.2 + 0.8) * 2;
-        outerOpacity = (Math.sin(time * 2 + country.lat) * 0.2 + 0.8) * (hasPartners ? 0.3 : 0.1);
+        const breathe = Math.sin(time * 2 + country.lat) * 0.08 + 1;
+        innerScale = breathe * (hasPartners ? 1 : 0.5);
+        outerScale = (Math.sin(time * 2 + country.lat) * 0.15 + 0.7) * 1.8;
+        outerOpacity = (Math.sin(time * 2 + country.lat) * 0.15 + 0.6) * (hasPartners ? 0.25 : 0.08);
       }
       
       // Update inner mesh

@@ -23,7 +23,7 @@ import { SelectionHighlight } from "./globe/SelectionHighlight";
 import { CityMarkers } from "./globe/CityMarkers";
 import { NetworkConnections } from "./globe/NetworkConnections";
 
-// Earth component with smooth zoom
+// Earth component with smooth zoom and rotation to selected country
 function Earth({ 
   selectedCountry, 
   onCountrySelect,
@@ -42,23 +42,34 @@ function Earth({
   const earthRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const currentRotation = useRef({ x: 0, y: 0 });
+  const autoRotate = useRef(true);
 
   useFrame((state, delta) => {
     if (earthRef.current) {
-      if (!selectedCountry) {
+      if (!selectedCountry && autoRotate.current) {
+        // Slow auto-rotation when no country selected
         currentRotation.current.y += delta * 0.08;
-      } else {
+      } else if (selectedCountry) {
+        // Smooth interpolation to target rotation (looking at the country)
+        currentRotation.current.x = THREE.MathUtils.lerp(
+          currentRotation.current.x,
+          targetRotation.current.x,
+          0.03
+        );
         currentRotation.current.y = THREE.MathUtils.lerp(
           currentRotation.current.y,
           targetRotation.current.y,
-          0.05
+          0.03
         );
       }
+      earthRef.current.rotation.x = currentRotation.current.x;
       earthRef.current.rotation.y = currentRotation.current.y;
     }
 
+    // Smooth zoom interpolation with easing
     const currentZ = camera.position.z;
-    const newZ = THREE.MathUtils.lerp(currentZ, targetZoom.current, 0.05);
+    const diff = targetZoom.current - currentZ;
+    const newZ = currentZ + diff * 0.04; // Smoother zoom
     camera.position.z = newZ;
   });
 
@@ -66,11 +77,21 @@ function Earth({
     if (selectedCountry) {
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
-        targetRotation.current.y = -(country.lng + 90) * (Math.PI / 180);
-        targetZoom.current = 2.2;
+        // Calculate rotation to position the country facing the camera
+        // Longitude determines Y rotation (horizontal)
+        // Latitude determines X rotation (tilt) - inverted because we're rotating the earth, not the camera
+        const lngRad = -((country.lng + 90) * (Math.PI / 180));
+        const latRad = (country.lat * (Math.PI / 180)) * 0.5; // Subtle tilt based on latitude
+        
+        targetRotation.current.y = lngRad;
+        targetRotation.current.x = -latRad;
+        targetZoom.current = 2.0; // Closer zoom when country selected
+        autoRotate.current = false;
       }
     } else {
       targetZoom.current = 2.8;
+      targetRotation.current.x = 0;
+      autoRotate.current = true;
     }
   }, [selectedCountry, targetRotation, targetZoom]);
 
@@ -151,12 +172,12 @@ function GlobeScene({
       <OrbitControls
         enableZoom={true}
         enablePan={false}
-        minDistance={1.6}
+        minDistance={1.5}
         maxDistance={4}
-        rotateSpeed={0.5}
-        zoomSpeed={0.8}
-        enableDamping
-        dampingFactor={0.05}
+        rotateSpeed={0.4}
+        zoomSpeed={0.5}
+        enableDamping={true}
+        dampingFactor={0.08}
       />
     </>
   );
