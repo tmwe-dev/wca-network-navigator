@@ -88,25 +88,26 @@ export function InstancedCountryMarkers({ countries, selectedCountry, onSelect }
       const hasPartners = country.count > 0;
       const isSelected = selectedCountry === country.code;
       const isHovered = hoveredRef.current === i;
+      const hasSelection = selectedCountry !== null;
       
-      // Calculate scale based on state - smaller overall
+      // Calculate scale based on state - hide others when country is selected
       let innerScale: number;
       let outerScale: number;
-      let outerOpacity: number;
       
-      if (isSelected) {
-        innerScale = (Math.sin(time * 4) * 0.2 + 1.3) * (hasPartners ? 1 : 0.5);
-        outerScale = 2.5;
-        outerOpacity = 0.5;
+      if (hasSelection && !isSelected) {
+        // Hide non-selected markers when a country is selected
+        innerScale = 0;
+        outerScale = 0;
+      } else if (isSelected) {
+        innerScale = (Math.sin(time * 4) * 0.2 + 1.5) * (hasPartners ? 1 : 0.5);
+        outerScale = 3;
       } else if (isHovered) {
         innerScale = (Math.sin(time * 3) * 0.15 + 1.2) * (hasPartners ? 1 : 0.5);
         outerScale = 2;
-        outerOpacity = 0.4;
       } else {
         const breathe = Math.sin(time * 2 + country.lat) * 0.08 + 1;
         innerScale = breathe * (hasPartners ? 1 : 0.5);
         outerScale = (Math.sin(time * 2 + country.lat) * 0.15 + 0.7) * 1.8;
-        outerOpacity = (Math.sin(time * 2 + country.lat) * 0.15 + 0.6) * (hasPartners ? 0.25 : 0.08);
       }
       
       // Update inner mesh
