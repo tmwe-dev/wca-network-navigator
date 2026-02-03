@@ -14,6 +14,17 @@ import { WCA_COUNTRIES_MAP, DEFAULT_COUNTRIES } from "./data/wcaCountries";
 import { easeInOutCubic } from "./utils";
 import { StandaloneGlobeProps, CountryWithPartners, GlobePartner } from "./types";
 
+interface EarthProps {
+  selectedCountry: string | null;
+  onCountrySelect: (code: string) => void;
+  targetZoom: React.MutableRefObject<number>;
+  targetRotation: React.MutableRefObject<{ x: number; y: number }>;
+  countries: CountryWithPartners[];
+  countryPartners: GlobePartner[];
+  userInteracting: React.MutableRefObject<boolean>;
+  isResetting: React.MutableRefObject<boolean>;
+}
+
 // Earth component with smooth zoom and rotation to selected country
 function Earth({ 
   selectedCountry, 
@@ -24,16 +35,7 @@ function Earth({
   countryPartners,
   userInteracting,
   isResetting
-}: { 
-  selectedCountry: string | null; 
-  onCountrySelect: (code: string) => void;
-  targetZoom: React.MutableRefObject<number>;
-  targetRotation: React.MutableRefObject<{ x: number; y: number }>;
-  countries: CountryWithPartners[];
-  countryPartners: GlobePartner[];
-  userInteracting: React.MutableRefObject<boolean>;
-  isResetting: React.MutableRefObject<boolean>;
-}) {
+}: EarthProps) {
   const earthRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const currentRotation = useRef({ x: 0, y: 0 });
@@ -41,36 +43,59 @@ function Earth({
   const resetStartZoomRef = useRef<number>(2.8);
   const resetStartRotationRef = useRef({ x: 0, y: 0 });
 
+  // Trigger reset animation when deselecting
+  useEffect(() => {
+    if (!selectedCountry && userInteracting.current) {
+      // Start reset animation
+      isResetting.current = true;
+      resetStartTimeRef.current = 0; // Will be set on first frame
+      resetStartRotationRef.current = { ...currentRotation.current };
+      resetStartZoomRef.current = camera.position.z;
+    }
+  }, [selectedCountry, userInteracting, isResetting, camera]);
+
   useFrame((state, delta) => {
     if (earthRef.current) {
       const time = state.clock.elapsedTime;
       
       // Handle reset animation
       if (isResetting.current) {
+        // Initialize start time on first frame of reset
+        if (resetStartTimeRef.current === 0) {
+          resetStartTimeRef.current = time;
+        }
+        
         const resetDuration = 1.5;
         const elapsed = time - resetStartTimeRef.current;
         const progress = Math.min(elapsed / resetDuration, 1);
         const eased = easeInOutCubic(progress);
         
+        // Animate rotation back to neutral with continuous Y rotation
         currentRotation.current.x = resetStartRotationRef.current.x * (1 - eased);
-        currentRotation.current.y = resetStartRotationRef.current.y + (targetRotation.current.y - resetStartRotationRef.current.y) * eased + delta * 0.08 * eased;
+        currentRotation.current.y = resetStartRotationRef.current.y + delta * 0.08 * eased;
         
-        const currentZ = camera.position.z;
+        // Animate zoom back to default
         const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
         camera.position.z = targetZ;
         
         if (progress >= 1) {
           isResetting.current = false;
           userInteracting.current = false;
+          resetStartTimeRef.current = 0;
         }
       }
+      // Auto-rotate when no selection and user not interacting
       else if (!selectedCountry && !userInteracting.current) {
         currentRotation.current.y += delta * 0.08;
         
+        // Smooth zoom to default
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
-      } else if (selectedCountry && !userInteracting.current) {
+      } 
+      // Animate to selected country
+      else if (selectedCountry && !userInteracting.current) {
+        // Smooth rotation to target
         currentRotation.current.x = THREE.MathUtils.lerp(
           currentRotation.current.x,
           targetRotation.current.x,
@@ -82,31 +107,37 @@ function Earth({
           0.03
         );
         
+        // Smooth zoom
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
       }
       
+      // Apply rotation
       earthRef.current.rotation.x = currentRotation.current.x;
       earthRef.current.rotation.y = currentRotation.current.y;
     }
   });
 
+  // Set target rotation when country is selected
   useEffect(() => {
     if (selectedCountry) {
       userInteracting.current = false;
       
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
+        // Convert lat/lng to rotation angles
+        // Longitude -> Y rotation (yaw), with offset so country faces camera
         const lngRad = THREE.MathUtils.degToRad(-(country.lng + 90));
+        // Latitude -> X rotation (pitch)
         const latRad = THREE.MathUtils.degToRad(country.lat);
         
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
-        targetZoom.current = 1.6;
+        targetZoom.current = 1.6; // Zoom in
       }
     } else if (!selectedCountry && !isResetting.current) {
-      targetZoom.current = 2.8;
+      targetZoom.current = 2.8; // Zoom out to default
       targetRotation.current.x = 0;
     }
   }, [selectedCountry, targetRotation, targetZoom, userInteracting, isResetting]);
@@ -152,7 +183,16 @@ function Earth({
   );
 }
 
-// Scene setup
+interface GlobeSceneProps {
+  selectedCountry: string | null;
+  onCountrySelect: (code: string) => void;
+  countries: CountryWithPartners[];
+  countryPartners: GlobePartner[];
+  userInteracting: React.MutableRefObject<boolean>;
+  isResetting: React.MutableRefObject<boolean>;
+}
+
+// Scene setup with lights, stars, and controls
 function GlobeScene({ 
   selectedCountry, 
   onCountrySelect,
@@ -160,14 +200,7 @@ function GlobeScene({
   countryPartners,
   userInteracting,
   isResetting,
-}: { 
-  selectedCountry: string | null; 
-  onCountrySelect: (code: string) => void;
-  countries: CountryWithPartners[];
-  countryPartners: GlobePartner[];
-  userInteracting: React.MutableRefObject<boolean>;
-  isResetting: React.MutableRefObject<boolean>;
-}) {
+}: GlobeSceneProps) {
   const targetZoom = useRef(2.8);
   const targetRotation = useRef({ x: 0, y: 0 });
 
@@ -211,6 +244,16 @@ function GlobeScene({
   );
 }
 
+/**
+ * StandaloneGlobe - A fully self-contained 3D interactive globe component
+ * 
+ * Features:
+ * - Smooth rotation animation when selecting countries
+ * - Auto-rotation when idle
+ * - Interactive markers for countries with partners
+ * - Aurora borealis and network connection effects
+ * - Flying airplane animations
+ */
 export function StandaloneGlobe({ 
   selectedCountry, 
   onCountrySelect,
@@ -223,17 +266,6 @@ export function StandaloneGlobe({
   const handleGlobeCountrySelect = useCallback((code: string) => {
     onCountrySelect(code === selectedCountry ? null : code);
   }, [selectedCountry, onCountrySelect]);
-
-  const handleStartReset = useCallback(() => {
-    isResetting.current = true;
-    userInteracting.current = false;
-  }, []);
-
-  useEffect(() => {
-    if (!selectedCountry && userInteracting.current) {
-      handleStartReset();
-    }
-  }, [selectedCountry, handleStartReset]);
 
   return (
     <div className="relative w-full h-full">
