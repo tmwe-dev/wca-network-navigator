@@ -1,142 +1,97 @@
 
-# Layout Immersivo "Space Station" per Campaigns
 
-## Obiettivo
-Trasformare la pagina Campaigns in un'esperienza immersiva dove il globo 3D è lo sfondo principale e tutti gli elementi UI fluttuano sopra con uno stile futuristico "stazione spaziale".
+# Scraper Automatico WCA Partners con Firecrawl
 
-## Architettura del Layout
+## Panoramica
+
+Creare una funzionalita' che scarica automaticamente i partner dalla directory pubblica del sito wcaworld.com e li salva nel database. Lo scraper itererera' paese per paese, estraendo i dati dei membri dalla directory pubblica.
+
+## Prerequisiti
+
+Prima di tutto va collegato il **connettore Firecrawl** al progetto per ottenere la chiave API necessaria per lo scraping.
+
+## Come funziona il sito WCA
+
+La directory su wcaworld.com ha un form di ricerca che permette di filtrare per paese (codice ISO a 2 lettere). I risultati vengono caricati dinamicamente via JavaScript. Firecrawl puo' gestire il rendering JavaScript e restituire il contenuto completo della pagina.
+
+Lo scraper:
+1. Per ogni paese (dalla lista dei ~200 codici ISO disponibili nel dropdown), invia una richiesta di scraping alla pagina directory
+2. Usa Firecrawl con formato JSON + prompt per estrarre strutturalmente i dati dei partner (nome, citta', email, telefono, ecc.)
+3. Esegue upsert nel database basandosi su `company_name` + `country_code` per evitare duplicati
+
+## Cosa verra' creato
+
+### 1. Connettore Firecrawl
+- Collegamento del connettore Firecrawl al progetto tramite il tool `connect`
+
+### 2. Backend Function: `scrape-wca-partners`
+File: `supabase/functions/scrape-wca-partners/index.ts`
+
+Questa funzione:
+- Riceve un parametro opzionale `countryCodes` (array di codici paese da scaricare; se vuoto, scarica tutti)
+- Per ogni paese, usa Firecrawl per fare scraping della pagina directory WCA con il filtro paese
+- Usa il formato `json` con uno schema per estrarre strutturalmente: company_name, city, email, phone, website, WCA ID
+- Esegue upsert nel database (insert o update basato su company_name + country_code)
+- Restituisce un report con contatori: trovati, inseriti, aggiornati, errori
+
+### 3. API Client Frontend
+File: `src/lib/api/wcaScraper.ts`
+
+Funzione wrapper per chiamare la backend function dal frontend.
+
+### 4. Componente UI: WCAScraper
+File: `src/components/partners/WCAScraper.tsx`
+
+Interfaccia nella pagina Import/Export con:
+- Selezione paese (dropdown multi-select o "Tutti i paesi")
+- Bottone "Scarica da WCA"
+- Barra di progresso durante lo scraping
+- Report finale: partner trovati, nuovi, aggiornati
+
+### 5. Integrazione nella pagina Export
+File: `src/pages/Export.tsx`
+
+Aggiunta di un terzo tab "Scarica da WCA" accanto a "Importa" e "Esporta".
+
+## Dettagli tecnici
+
+### Backend Function - Logica principale
 
 ```text
-+----------------------------------------------------------+
-|  Header (semi-trasparente, backdrop blur)                |
-+----------------------------------------------------------+
-|                                                          |
-|   +----------------+                    +--------------+ |
-|   | Company List   |                    | Campaign     | |
-|   | (floating      |    [GLOBE 3D]      | Summary      | |
-|   |  glassmorphism)|    FULL SCREEN     | (floating)   | |
-|   |                |                    |              | |
-|   +----------------+                    +--------------+ |
-|                                                          |
-|   [Stats badges floating top-center]                     |
-|   [Country selector floating]                            |
-|                                                          |
-+----------------------------------------------------------+
+Per ogni countryCode:
+  1. Chiama Firecrawl scrape su https://www.wcaworld.com/Directory
+     con waitFor per il rendering JavaScript
+     usando formato JSON con schema per estrarre i dati dei partner
+  2. Parse dei risultati estratti
+  3. Per ogni partner trovato:
+     - Cerca nel DB per company_name + country_code
+     - Se esiste: aggiorna i campi
+     - Se non esiste: inserisci nuovo record
+  4. Accumula statistiche (nuovi, aggiornati, errori)
 ```
 
-## Modifiche Dettagliate
+### Schema di estrazione Firecrawl
 
-### 1. AppLayout.tsx - Sidebar collassata di default
-- Cambiare `useState(false)` a `useState(true)` per `sidebarCollapsed`
-- L'utente puo' sempre espanderla cliccando
+Lo schema JSON definira' i campi da estrarre:
+- company_name (obbligatorio)
+- city (obbligatorio)
+- country_code / country_name
+- email, phone, website
+- WCA ID (se visibile)
+- Networks/certificazioni
 
-### 2. Campaigns.tsx - Layout immersivo
-**Struttura completamente nuova:**
-- Container principale con `position: relative` e altezza full-screen
-- CampaignGlobe diventa lo sfondo assoluto (`absolute inset-0`)
-- Rimuovere tutte le Card wrapper
-- Pannelli flottanti con `position: absolute`
+### Gestione limiti e rate limiting
 
-**Layout pannelli:**
-```text
-- Top center: Stats badges + Country selector (floating bar)
-- Left: CompanyList (absolute left-4, top-24, bottom-4, width 380px)
-- Right: CampaignSummary (absolute right-4, top-24, bottom-4, width 320px)
-```
+- Lo scraping avverra' un paese alla volta per evitare sovraccarichi
+- Timeout configurabile per ogni richiesta
+- Possibilita' di riprendere lo scraping da dove si era interrotto in caso di errore
 
-### 3. CompanyList.tsx - Stile Spaziale
-**Rimozione sfondo solido, aggiunta glassmorphism:**
-- Background: `bg-black/40 backdrop-blur-xl`
-- Border: `border border-amber-500/30`
-- Border radius: `rounded-2xl`
-- Shadow: `shadow-2xl shadow-amber-500/10`
+### Sequenza dei file da creare/modificare
 
-**Colori testi futuristici:**
-- Titoli: `text-amber-400` (arancione luminoso)
-- Testi secondari: `text-emerald-400` (verde)
-- Labels/muted: `text-slate-300`
-- Icone: `text-amber-500`
+1. Collegare connettore Firecrawl
+2. Creare `supabase/functions/scrape-wca-partners/index.ts`
+3. Aggiornare `supabase/config.toml` per JWT verification
+4. Creare `src/lib/api/wcaScraper.ts`
+5. Creare `src/components/partners/WCAScraper.tsx`
+6. Modificare `src/pages/Export.tsx` (aggiungere tab "Scarica da WCA")
 
-**Elementi UI:**
-- Input search: `bg-black/50 border-amber-500/40 text-amber-100`
-- Badges: bordi luminosi `border-emerald-500/50`
-- Checkbox: stile amber
-- Hover states: `hover:bg-amber-500/10`
-
-### 4. CampaignSummary.tsx - Stile Spaziale
-**Stesso trattamento glassmorphism:**
-- `bg-black/40 backdrop-blur-xl border border-emerald-500/30 rounded-2xl`
-- Titolo: `text-emerald-400`
-- Stats cards: `bg-emerald-500/10 border border-emerald-500/30`
-- Numeri: `text-amber-400 font-mono` (font monospace per effetto tech)
-- Bottoni: gradient `bg-gradient-to-r from-amber-500 to-orange-500`
-
-### 5. Header della pagina (floating bar)
-**Stats e controlli flottanti al centro-top:**
-```text
-+--------------------------------------------------+
-|  [Country Selector]  | 249 Paesi | 42 Attivi | 156 Partner |  [Reset]
-+--------------------------------------------------+
-```
-- Background: `bg-black/60 backdrop-blur-md`
-- Border: `border border-amber-500/20 rounded-full`
-- Posizione: `absolute top-4 left-1/2 -translate-x-1/2`
-
-### 6. Elementi di design aggiuntivi
-
-**Effetti glow sui bordi:**
-```css
-.glow-amber {
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15),
-              inset 0 0 20px rgba(245, 158, 11, 0.05);
-}
-
-.glow-emerald {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15),
-              inset 0 0 20px rgba(16, 185, 129, 0.05);
-}
-```
-
-**Animazioni subtle:**
-- Pulse leggero sui bordi attivi
-- Fade-in sui pannelli al caricamento
-
-### 7. CSS aggiuntivo in index.css
-
-```css
-/* Space Station Theme */
-.space-panel {
-  @apply bg-black/40 backdrop-blur-xl border rounded-2xl;
-}
-
-.space-text-primary {
-  @apply text-amber-400;
-}
-
-.space-text-secondary {
-  @apply text-emerald-400;
-}
-
-.space-glow {
-  box-shadow: 
-    0 0 30px rgba(245, 158, 11, 0.1),
-    0 0 60px rgba(16, 185, 129, 0.05);
-}
-```
-
-## File da Modificare
-
-| File | Modifiche |
-|------|-----------|
-| `src/components/layout/AppLayout.tsx` | Sidebar collassata di default |
-| `src/pages/Campaigns.tsx` | Layout immersivo con pannelli flottanti |
-| `src/components/campaigns/CompanyList.tsx` | Stile glassmorphism spaziale |
-| `src/components/campaigns/CampaignSummary.tsx` | Stile glassmorphism spaziale |
-| `src/index.css` | Classi utility per tema spaziale |
-
-## Risultato Visivo Atteso
-- Globo 3D come protagonista assoluto, visibile ovunque
-- Pannelli laterali semi-trasparenti che "galleggiano" sullo spazio
-- Colori amber/emerald per un look "control room" spaziale
-- Effetti glow sottili per profondita'
-- Esperienza immersiva e moderna
