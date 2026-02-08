@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, FileSpreadsheet, FileText, File, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, File, Upload, Globe } from "lucide-react";
 import { usePartners } from "@/hooks/usePartners";
 import { toast } from "@/hooks/use-toast";
 import { CSVImport } from "@/components/partners/CSVImport";
+import { WCAScraper } from "@/components/partners/WCAScraper";
 
 const EXPORT_FIELDS = [
   { id: "company_name", label: "Company Name" },
@@ -130,6 +131,10 @@ export default function Export() {
             <Download className="w-4 h-4" />
             Esporta
           </TabsTrigger>
+          <TabsTrigger value="wca" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Scarica da WCA
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="import">
@@ -235,6 +240,10 @@ export default function Export() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="wca">
+          <WCAScraper />
         </TabsContent>
       </Tabs>
     </div>

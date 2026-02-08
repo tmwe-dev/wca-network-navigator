@@ -1,1 +1,4 @@
 project_id = "zrbditqddhjkutzjycgi"
+
+[functions.scrape-wca-partners]
+verify_jwt = false
