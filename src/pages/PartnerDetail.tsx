@@ -247,20 +247,27 @@ export default function PartnerDetail() {
                           <p className="text-sm text-muted-foreground">{contact.title}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {contact.direct_phone && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={`tel:${contact.direct_phone}`}>
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          </Button>
-                        )}
+                      <div className="flex flex-col items-end gap-1 text-sm">
                         {contact.email && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={`mailto:${contact.email}`}>
-                              <Mail className="w-4 h-4" />
-                            </a>
-                          </Button>
+                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-primary hover:underline">
+                            <Mail className="w-3.5 h-3.5" />
+                            {contact.email}
+                          </a>
+                        )}
+                        {contact.direct_phone && (
+                          <a href={`tel:${contact.direct_phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+                            <Phone className="w-3.5 h-3.5" />
+                            {contact.direct_phone}
+                          </a>
+                        )}
+                        {contact.mobile && (
+                          <a href={`tel:${contact.mobile}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+                            <Phone className="w-3.5 h-3.5" />
+                            {contact.mobile}
+                          </a>
+                        )}
+                        {!contact.email && !contact.direct_phone && !contact.mobile && (
+                          <span className="text-xs text-muted-foreground italic">Nessun contatto</span>
                         )}
                       </div>
                     </div>
