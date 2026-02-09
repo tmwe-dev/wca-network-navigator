@@ -10,7 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, XCircle, FlaskConical,
-  ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon
+  ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
+  Search, Users, MapPin, Filter
 } from "lucide-react";
 import { scrapeWcaPartnerById, type ScrapeSingleResult, type ScrapedPartner } from "@/lib/api/wcaScraper";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,11 +19,13 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
+import { WCA_NETWORKS } from "@/data/wcaFilters";
 import { getCountryFlag } from "@/lib/countries";
 
 // ─── Types ────────────────────────────────────────────────────
 type ActionType = "download" | "enrich" | "network";
 type Step = "choose" | "configure" | "running";
+type DownloadSubStep = "pick-network" | "pick-country" | "partner-list" | "speed-config";
 
 interface ScrapeLog {
   wcaId: number;
@@ -47,24 +50,32 @@ interface EnrichPartner {
   rating: number | null;
 }
 
+interface ExistingPartner {
+  id: string;
+  company_name: string;
+  city: string;
+  country_code: string;
+  country_name: string;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  wca_id: number | null;
+}
+
 // ─── Theme Context ────────────────────────────────────────────
 const ThemeCtx = createContext(true);
 const useTheme = () => useContext(ThemeCtx);
 
-// Theme helpers — returns class strings based on dark/light
 function t(dark: boolean) {
   return {
-    // Page
     pageBg: dark ? "bg-slate-950" : "bg-slate-50",
     pageGrad1: dark ? "from-slate-950 via-slate-900 to-slate-950" : "from-slate-100 via-white to-slate-100",
     pageGrad2: dark ? "from-amber-900/10" : "from-sky-200/30",
-    // Panels
     panel: dark ? "bg-black/40 backdrop-blur-xl" : "bg-white/80 backdrop-blur-lg shadow-lg",
     panelBorderAmber: dark ? "border-amber-500/20" : "border-sky-300/40",
     panelBorderEmerald: dark ? "border-emerald-500/20" : "border-emerald-300/40",
     panelBorderBlue: dark ? "border-blue-500/20" : "border-blue-300/40",
     panelBorderSlate: dark ? "border-slate-700/50" : "border-slate-200",
-    // Text
     h1: dark ? "text-slate-100" : "text-slate-800",
     h2: dark ? "text-slate-100" : "text-slate-800",
     sub: dark ? "text-slate-400" : "text-slate-500",
@@ -72,13 +83,10 @@ function t(dark: boolean) {
     label: dark ? "text-slate-400" : "text-slate-500",
     dimText: dark ? "text-slate-500" : "text-slate-400",
     monoText: dark ? "text-slate-100" : "text-slate-800",
-    // Inputs
     input: dark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800",
     selectTrigger: dark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800",
     selectContent: dark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200",
-    // Cards
     cardBg: dark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm",
-    // Buttons
     backBtn: dark ? "text-slate-400 hover:text-amber-400" : "text-slate-500 hover:text-sky-600",
     btnActive: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
     btnInactive: dark ? "border-slate-600 text-slate-300 hover:bg-slate-800" : "border-slate-300 text-slate-600 hover:bg-slate-100",
@@ -88,33 +96,27 @@ function t(dark: boolean) {
     btnStop: dark ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-red-400 text-red-600 hover:bg-red-50",
     btnTest: dark ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10" : "border-blue-400 text-blue-600 hover:bg-blue-50",
     btnEnrich: dark ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white",
-    // Action cards
     accentAmber: dark ? "text-amber-400" : "text-sky-600",
     accentEmerald: dark ? "text-emerald-400" : "text-emerald-600",
     accentBlue: dark ? "text-blue-400" : "text-blue-600",
-    // Log
     logNew: dark ? "text-emerald-400" : "text-emerald-600",
     logUpd: dark ? "text-blue-400" : "text-blue-600",
     logEmpty: dark ? "text-slate-600" : "text-slate-400",
     logError: dark ? "text-red-400" : "text-red-600",
     logId: dark ? "text-slate-600" : "text-slate-400",
     logName: dark ? "text-slate-300" : "text-slate-700",
-    // Partner chips
     chipBg: dark ? "bg-black/50 backdrop-blur-sm border-slate-700/50 hover:border-amber-500/40" : "bg-white border-slate-200 hover:border-sky-400 shadow-sm",
     chipName: dark ? "text-slate-200" : "text-slate-800",
     chipCity: dark ? "text-slate-500" : "text-slate-400",
-    // Badge variants
     badgeNew: dark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-200",
     badgeUpd: dark ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-blue-50 text-blue-700 border-blue-200",
     badgeNetwork: dark ? "bg-amber-500/10 text-amber-300 border-amber-500/30" : "bg-sky-50 text-sky-700 border-sky-200",
-    // Dialog
     dialogBg: dark ? "bg-slate-900/95 backdrop-blur-xl border-amber-500/20 text-slate-100" : "bg-white border-slate-200 text-slate-800",
     dialogTitle: dark ? "text-slate-100" : "text-slate-800",
     dialogSub: dark ? "text-slate-400" : "text-slate-500",
     dialogField: dark ? "text-slate-500" : "text-slate-400",
     dialogValue: dark ? "text-slate-300" : "text-slate-700",
     dialogAiBox: dark ? "bg-slate-800/50" : "bg-slate-50 border border-slate-200",
-    // Misc
     pulse: dark ? "bg-amber-400" : "bg-sky-500",
     countdown: dark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-300",
     countdownText: dark ? "text-slate-300" : "text-slate-600",
@@ -125,6 +127,19 @@ function t(dark: boolean) {
     highlightId: dark ? "text-amber-400" : "text-sky-600",
     divider: dark ? "divide-slate-800" : "divide-slate-200",
     listHover: dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50",
+    // Step indicator
+    stepActive: dark ? "bg-amber-500 text-white" : "bg-sky-500 text-white",
+    stepDone: dark ? "bg-emerald-500 text-white" : "bg-emerald-500 text-white",
+    stepPending: dark ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-400",
+    stepLine: dark ? "bg-slate-700" : "bg-slate-200",
+    stepLineDone: dark ? "bg-emerald-500" : "bg-emerald-500",
+    // Option cards (for network/country selection)
+    optionCard: dark
+      ? "bg-slate-800/50 border-slate-700/50 hover:border-amber-500/40 hover:bg-slate-800/80 text-slate-200"
+      : "bg-white border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 text-slate-700 shadow-sm",
+    optionCardSelected: dark
+      ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+      : "bg-sky-50 border-sky-400 text-sky-700",
   };
 }
 
@@ -164,35 +179,29 @@ export default function DownloadManagement() {
   return (
     <ThemeCtx.Provider value={isDark}>
       <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`}>
-        {/* Gradient background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
 
         <div className="relative z-10 h-full flex flex-col p-6">
-          {/* Top bar: back + theme toggle */}
+          {/* Top bar */}
           <div className="flex items-center justify-between mb-4">
             <div>
               {step !== "choose" && (
-                <button
-                  onClick={goBack}
-                  className={`flex items-center gap-1.5 text-sm transition-colors ${th.backBtn}`}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Indietro
+                <button onClick={goBack} className={`flex items-center gap-1.5 text-sm transition-colors ${th.backBtn}`}>
+                  <ArrowLeft className="w-4 h-4" /> Indietro
                 </button>
               )}
             </div>
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}
-              title={isDark ? "Modalità chiara" : "Modalità scura"}
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
 
           {step === "choose" && <StepChoose onSelect={selectAction} />}
-          {step === "configure" && action === "download" && <DownloadConfigure onStart={() => setStep("running")} />}
+          {step === "configure" && action === "download" && <DownloadWizard onStartRunning={() => setStep("running")} />}
           {step === "configure" && action === "enrich" && <EnrichConfigure onStart={() => setStep("running")} />}
           {step === "configure" && action === "network" && <NetworkConfigure />}
           {step === "running" && action === "download" && <DownloadRunning />}
@@ -211,46 +220,16 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
   const th = t(isDark);
 
   const actions = [
-    {
-      type: "download" as ActionType,
-      icon: Download,
-      title: "Scarica Partner",
-      desc: "Download sequenziale dalla directory WCA, manuale o automatico",
-      color: "amber",
-    },
-    {
-      type: "enrich" as ActionType,
-      icon: Sparkles,
-      title: "Arricchisci dal Sito",
-      desc: "Leggi siti web di partner già scaricati con AI",
-      color: "emerald",
-    },
-    {
-      type: "network" as ActionType,
-      icon: Globe,
-      title: "Analisi Network",
-      desc: "Verifica a quali gruppi WCA hai accesso ai dati",
-      color: "blue",
-    },
+    { type: "download" as ActionType, icon: Download, title: "Scarica Partner", desc: "Scegli network e paese, poi scarica dalla directory WCA", color: "amber" },
+    { type: "enrich" as ActionType, icon: Sparkles, title: "Arricchisci dal Sito", desc: "Leggi siti web di partner già scaricati con AI", color: "emerald" },
+    { type: "network" as ActionType, icon: Globe, title: "Analisi Network", desc: "Verifica a quali gruppi WCA hai accesso ai dati", color: "blue" },
   ];
 
   const colorMap: Record<string, string> = isDark
-    ? {
-        amber: "border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/5",
-        emerald: "border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5",
-        blue: "border-blue-500/30 hover:border-blue-500/60 hover:bg-blue-500/5",
-      }
-    : {
-        amber: "border-sky-200 hover:border-sky-400 hover:bg-sky-50",
-        emerald: "border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50",
-        blue: "border-blue-200 hover:border-blue-400 hover:bg-blue-50",
-      };
+    ? { amber: "border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/5", emerald: "border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5", blue: "border-blue-500/30 hover:border-blue-500/60 hover:bg-blue-500/5" }
+    : { amber: "border-sky-200 hover:border-sky-400 hover:bg-sky-50", emerald: "border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50", blue: "border-blue-200 hover:border-blue-400 hover:bg-blue-50" };
 
-  const iconColorMap: Record<string, string> = {
-    amber: th.accentAmber,
-    emerald: th.accentEmerald,
-    blue: th.accentBlue,
-  };
+  const iconColorMap: Record<string, string> = { amber: th.accentAmber, emerald: th.accentEmerald, blue: th.accentBlue };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8">
@@ -260,11 +239,7 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full">
         {actions.map((a) => (
-          <button
-            key={a.type}
-            onClick={() => onSelect(a.type)}
-            className={`group ${th.panel} border rounded-2xl p-8 text-left transition-all duration-300 ${colorMap[a.color]}`}
-          >
+          <button key={a.type} onClick={() => onSelect(a.type)} className={`group ${th.panel} border rounded-2xl p-8 text-left transition-all duration-300 ${colorMap[a.color]}`}>
             <a.icon className={`w-10 h-10 mb-4 ${iconColorMap[a.color]}`} />
             <h3 className={`text-lg mb-2 ${th.h2}`}>{a.title}</h3>
             <p className={`text-sm ${th.sub}`}>{a.desc}</p>
@@ -277,15 +252,315 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STEP 2A - Download Configure
+// STEP 2A - Download Wizard (guided sub-steps)
 // ═══════════════════════════════════════════════════════════════
-function DownloadConfigure({ onStart }: { onStart: () => void }) {
+function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
 
-  const [mode, setMode] = useState<"manual" | "auto">("auto");
-  const [rangeStart, setRangeStart] = useState("");
-  const [rangeEnd, setRangeEnd] = useState("");
+  const [subStep, setSubStep] = useState<DownloadSubStep>("pick-network");
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountryName, setSelectedCountryName] = useState<string>("");
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const subStepLabels = ["Network", "Paese", "Partner", "Velocità"];
+  const subStepKeys: DownloadSubStep[] = ["pick-network", "pick-country", "partner-list", "speed-config"];
+  const currentIndex = subStepKeys.indexOf(subStep);
+
+  const goSubBack = () => {
+    const idx = subStepKeys.indexOf(subStep);
+    if (idx > 0) setSubStep(subStepKeys[idx - 1]);
+  };
+
+  const pickNetwork = (n: string) => {
+    setSelectedNetwork(n);
+    setSubStep("pick-country");
+  };
+
+  const pickCountry = (code: string, name: string) => {
+    setSelectedCountry(code);
+    setSelectedCountryName(name);
+    setSubStep("partner-list");
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* Sub-step indicator */}
+      <div className="flex items-center justify-center gap-2 mb-6">
+        {subStepLabels.map((label, i) => (
+          <div key={label} className="flex items-center gap-2">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono ${
+              i < currentIndex ? th.stepDone : i === currentIndex ? th.stepActive : th.stepPending
+            }`}>
+              {i < currentIndex ? "✓" : i + 1}
+            </div>
+            <span className={`text-xs hidden sm:inline ${i === currentIndex ? th.h2 : th.dimText}`}>{label}</span>
+            {i < subStepLabels.length - 1 && (
+              <div className={`w-8 h-0.5 ${i < currentIndex ? th.stepLineDone : th.stepLine}`} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Sub-step back */}
+      {currentIndex > 0 && (
+        <button onClick={goSubBack} className={`flex items-center gap-1 text-xs mb-3 w-fit ${th.backBtn}`}>
+          <ArrowLeft className="w-3 h-3" /> Passo precedente
+        </button>
+      )}
+
+      {subStep === "pick-network" && (
+        <PickNetwork onSelect={pickNetwork} />
+      )}
+      {subStep === "pick-country" && (
+        <PickCountry
+          network={selectedNetwork}
+          search={countrySearch}
+          onSearchChange={setCountrySearch}
+          onSelect={pickCountry}
+        />
+      )}
+      {subStep === "partner-list" && (
+        <PartnerList
+          network={selectedNetwork}
+          countryCode={selectedCountry}
+          countryName={selectedCountryName}
+          onContinue={() => setSubStep("speed-config")}
+        />
+      )}
+      {subStep === "speed-config" && (
+        <SpeedConfig
+          network={selectedNetwork}
+          countryCode={selectedCountry}
+          countryName={selectedCountryName}
+          onStart={onStartRunning}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Sub-step: Pick Network ──────────────────────────────────
+function PickNetwork({ onSelect }: { onSelect: (n: string) => void }) {
+  const isDark = useTheme();
+  const th = t(isDark);
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6">
+      <div className="text-center">
+        <h2 className={`text-xl mb-1 ${th.h2}`}>Seleziona Network</h2>
+        <p className={`text-sm ${th.sub}`}>Da quale gruppo WCA vuoi scaricare?</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full">
+        {/* "Tutti" option */}
+        <button
+          onClick={() => onSelect("")}
+          className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${th.optionCard}`}
+        >
+          <Globe className={`w-5 h-5 ${th.accentAmber}`} />
+          <div className="text-left">
+            <p className="text-sm font-medium">Tutti i Network</p>
+            <p className={`text-xs ${th.dimText}`}>Nessun filtro</p>
+          </div>
+        </button>
+        {WCA_NETWORKS.map((n) => (
+          <button
+            key={n}
+            onClick={() => onSelect(n)}
+            className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${th.optionCard}`}
+          >
+            <Users className={`w-5 h-5 flex-shrink-0 ${th.accentAmber}`} />
+            <span className="text-sm text-left">{n}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sub-step: Pick Country ──────────────────────────────────
+function PickCountry({ network, search, onSearchChange, onSelect }: {
+  network: string;
+  search: string;
+  onSearchChange: (s: string) => void;
+  onSelect: (code: string, name: string) => void;
+}) {
+  const isDark = useTheme();
+  const th = t(isDark);
+
+  const filtered = WCA_COUNTRIES.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.code.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="flex-1 flex flex-col items-center gap-4">
+      <div className="text-center">
+        <h2 className={`text-xl mb-1 ${th.h2}`}>Seleziona Paese</h2>
+        <p className={`text-sm ${th.sub}`}>
+          {network ? `Network: ${network}` : "Tutti i network"} — Quale paese vuoi esplorare?
+        </p>
+      </div>
+
+      {/* "Tutti" option */}
+      <button
+        onClick={() => onSelect("", "Tutti i paesi")}
+        className={`flex items-center gap-3 p-3 rounded-xl border transition-all w-full max-w-xl ${th.optionCard}`}
+      >
+        <Globe className={`w-4 h-4 ${th.accentAmber}`} />
+        <span className="text-sm">Tutti i paesi — nessun filtro geografico</span>
+      </button>
+
+      {/* Search */}
+      <div className="relative w-full max-w-xl">
+        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dimText}`} />
+        <Input
+          placeholder="Cerca paese..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className={`pl-10 ${th.input}`}
+        />
+      </div>
+
+      {/* Country grid */}
+      <ScrollArea className="flex-1 w-full max-w-xl">
+        <div className="grid grid-cols-2 gap-2 pr-4">
+          {filtered.map(c => (
+            <button
+              key={c.code}
+              onClick={() => onSelect(c.code, c.name)}
+              className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${th.optionCard}`}
+            >
+              <span className="text-lg">{getCountryFlag(c.code)}</span>
+              <div className="min-w-0">
+                <p className="text-sm truncate">{c.name}</p>
+                <p className={`text-xs ${th.dimText}`}>{c.code}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+// ─── Sub-step: Partner List (existing in DB) ─────────────────
+function PartnerList({ network, countryCode, countryName, onContinue }: {
+  network: string;
+  countryCode: string;
+  countryName: string;
+  onContinue: () => void;
+}) {
+  const isDark = useTheme();
+  const th = t(isDark);
+
+  const { data: partners, isLoading } = useQuery({
+    queryKey: ["existing-partners-for-dl", network, countryCode],
+    queryFn: async () => {
+      let query = supabase
+        .from("partners")
+        .select("id, company_name, city, country_code, country_name, email, phone, website, wca_id")
+        .order("company_name");
+
+      if (countryCode) query = query.eq("country_code", countryCode);
+
+      const { data, error } = await query.limit(1000);
+      if (error) throw error;
+
+      // Filter by network if specified — need to check partner_networks table
+      if (network && data && data.length > 0) {
+        const partnerIds = data.map(p => p.id);
+        const { data: networkLinks } = await supabase
+          .from("partner_networks")
+          .select("partner_id")
+          .eq("network_name", network)
+          .in("partner_id", partnerIds);
+
+        const matchingIds = new Set(networkLinks?.map(n => n.partner_id) || []);
+        return data.filter(p => matchingIds.has(p.id)) as ExistingPartner[];
+      }
+
+      return data as ExistingPartner[];
+    },
+  });
+
+  return (
+    <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
+      <div className="text-center">
+        <h2 className={`text-xl mb-1 ${th.h2}`}>Partner già scaricati</h2>
+        <p className={`text-sm ${th.sub}`}>
+          {network || "Tutti i network"} • {countryName || "Tutti i paesi"}
+        </p>
+      </div>
+
+      {isLoading ? (
+        <Loader2 className={`w-8 h-8 animate-spin ${th.sub}`} />
+      ) : (
+        <>
+          <div className={`${th.panel} border ${th.panelBorderAmber} rounded-2xl p-5 w-full max-w-2xl`}>
+            <div className="flex items-center justify-between mb-3">
+              <p className={`text-sm ${th.body}`}>
+                <span className={`font-mono ${th.highlightId}`}>{partners?.length || 0}</span> partner trovati nel database
+              </p>
+              {(partners?.length || 0) > 0 && (
+                <Badge className={th.badgeNew}>
+                  <CheckCircle className="w-3 h-3 mr-1" /> Già scaricati
+                </Badge>
+              )}
+            </div>
+
+            {partners && partners.length > 0 ? (
+              <ScrollArea className="h-48">
+                <div className={`divide-y ${th.divider}`}>
+                  {partners.map(p => (
+                    <div key={p.id} className={`flex items-center gap-3 px-2 py-2 ${th.listHover}`}>
+                      <span>{getCountryFlag(p.country_code)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm truncate ${th.chipName}`}>{p.company_name}</p>
+                        <p className={`text-xs ${th.chipCity}`}>{p.city}</p>
+                      </div>
+                      <span className={`text-xs font-mono ${th.dimText}`}>#{p.wca_id || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className={`text-center py-6 ${th.sub}`}>
+                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Nessun partner ancora scaricato per questa selezione</p>
+              </div>
+            )}
+          </div>
+
+          <div className={`${th.panel} border ${th.panelBorderAmber} rounded-2xl p-5 w-full max-w-2xl`}>
+            <p className={`text-sm mb-3 ${th.body}`}>
+              Vuoi cercare <span className={th.highlightId}>nuovi partner</span> nella directory WCA?
+            </p>
+            <p className={`text-xs mb-4 ${th.dimText}`}>
+              Il sistema scansionerà la directory WCA alla ricerca di partner {countryCode ? `in ${countryName}` : ""} {network ? `nel network ${network}` : ""} che non hai ancora nel database.
+            </p>
+            <Button onClick={onContinue} className={`w-full ${th.btnPrimary}`}>
+              <Search className="w-4 h-4 mr-2" />
+              Scansiona nuovi partner
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Sub-step: Speed Config ──────────────────────────────────
+function SpeedConfig({ network, countryCode, countryName, onStart }: {
+  network: string;
+  countryCode: string;
+  countryName: string;
+  onStart: () => void;
+}) {
+  const isDark = useTheme();
+  const th = t(isDark);
+
   const [delayIndex, setDelayIndex] = useState(3);
   const [pauseEvery, setPauseEvery] = useState("10");
   const [pauseDuration, setPauseDuration] = useState("30");
@@ -294,13 +569,16 @@ function DownloadConfigure({ onStart }: { onStart: () => void }) {
 
   const handleStart = () => {
     sessionStorage.setItem("dl_config", JSON.stringify({
-      mode,
-      rangeStart: parseInt(rangeStart, 10) || 1,
-      rangeEnd: parseInt(rangeEnd, 10) || 999999,
+      mode: "auto",
+      rangeStart: savedLastId > 0 ? savedLastId + 1 : 1,
+      rangeEnd: 999999,
       delay: DELAY_VALUES[delayIndex] * 1000,
       pauseEvery: parseInt(pauseEvery, 10) || 0,
       pauseDuration: parseInt(pauseDuration, 10) * 1000 || 30000,
       savedLastId,
+      filterNetwork: network,
+      filterCountry: countryCode,
+      filterCountryName: countryName,
     }));
     onStart();
   };
@@ -309,54 +587,24 @@ function DownloadConfigure({ onStart }: { onStart: () => void }) {
     <div className="flex-1 flex items-center justify-center">
       <div className={`${th.panel} border ${th.panelBorderAmber} rounded-2xl p-8 max-w-lg w-full space-y-6`}>
         <div>
-          <h2 className={`text-xl mb-1 ${th.h2}`}>Configura Download</h2>
-          <p className={`text-sm ${th.sub}`}>Imposta modalità e velocità di scaricamento</p>
+          <h2 className={`text-xl mb-1 ${th.h2}`}>Configura Velocità</h2>
+          <p className={`text-sm ${th.sub}`}>
+            {network || "Tutti i network"} • {countryName || "Tutti i paesi"}
+          </p>
         </div>
 
-        {/* Mode */}
-        <div className="flex gap-2">
-          <Button
-            variant={mode === "manual" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("manual")}
-            className={mode === "manual" ? th.btnActive : th.btnInactive}
-          >
-            Manuale
-          </Button>
-          <Button
-            variant={mode === "auto" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("auto")}
-            className={mode === "auto" ? th.btnActive : th.btnInactive}
-          >
-            Automatico
-          </Button>
+        {/* Resume info */}
+        <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+          Scansione da ID <span className={`font-mono ${th.highlightId}`}>{savedLastId > 0 ? savedLastId + 1 : 1}</span> — procede finché non lo fermi.
+          {savedLastId > 0 && (
+            <p className={`mt-1 text-xs ${th.dimText}`}>
+              Ultimo ID: #{savedLastId}
+              <button onClick={() => localStorage.removeItem("wca_scraper_last_id")} className={`ml-2 underline ${th.highlightId}`}>
+                Reset
+              </button>
+            </p>
+          )}
         </div>
-
-        {mode === "manual" ? (
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className={`text-xs ${th.label}`}>ID Inizio</label>
-              <Input type="number" placeholder="es. 11470" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} className={th.input} />
-            </div>
-            <div className="flex-1">
-              <label className={`text-xs ${th.label}`}>ID Fine</label>
-              <Input type="number" placeholder="es. 11500" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className={th.input} />
-            </div>
-          </div>
-        ) : (
-          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
-            Parte da ID <span className={`font-mono ${th.highlightId}`}>{savedLastId > 0 ? savedLastId + 1 : 1}</span> e procede finché non lo fermi.
-            {savedLastId > 0 && (
-              <p className={`mt-1 text-xs ${th.dimText}`}>
-                Ultimo ID: #{savedLastId}
-                <button onClick={() => localStorage.removeItem("wca_scraper_last_id")} className={`ml-2 underline ${th.highlightId}`}>
-                  Reset
-                </button>
-              </p>
-            )}
-          </div>
-        )}
 
         {/* Delay slider */}
         <div>
@@ -382,9 +630,9 @@ function DownloadConfigure({ onStart }: { onStart: () => void }) {
           </div>
         </div>
 
-        <Button onClick={handleStart} disabled={mode === "manual" && !rangeStart} className={`w-full ${th.btnPrimary}`}>
+        <Button onClick={handleStart} className={`w-full ${th.btnPrimary}`}>
           <Zap className="w-4 h-4 mr-2" />
-          Avvia Download
+          Avvia Scansione
         </Button>
       </div>
     </div>
@@ -440,8 +688,8 @@ function DownloadRunning() {
   useEffect(() => {
     let mounted = true;
     const run = async () => {
-      const startId = config.mode === "auto" ? (config.savedLastId > 0 ? config.savedLastId + 1 : 1) : config.rangeStart;
-      const endId = config.mode === "auto" ? 999999 : config.rangeEnd;
+      const startId = config.rangeStart || 1;
+      const endId = config.rangeEnd || 999999;
       const delay = config.delay || 5000;
       const pauseEvery = config.pauseEvery || 0;
       const pauseDur = config.pauseDuration || 30000;
@@ -477,8 +725,7 @@ function DownloadRunning() {
             log.status = "not_found";
             localStats.notFound++;
             consecutiveNotFound++;
-            if (config.mode === "manual" && consecutiveNotFound > 200) break;
-            if (config.mode === "auto" && consecutiveNotFound > 500) break;
+            if (consecutiveNotFound > 500) break;
           } else {
             log.status = "error";
             log.error = result.error;
@@ -516,12 +763,11 @@ function DownloadRunning() {
         setCountdown(0);
         queryClient.invalidateQueries({ queryKey: ["partners"] });
         toast({
-          title: abortRef.current ? "Download in pausa" : "Download completato",
+          title: abortRef.current ? "Scansione fermata" : "Scansione completata",
           description: `Trovati: ${localStats.found}, Nuovi: ${localStats.inserted}, Aggiornati: ${localStats.updated}`,
         });
       }
     };
-
     run();
     return () => { mounted = false; abortRef.current = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -537,18 +783,17 @@ function DownloadRunning() {
 
   return (
     <div className="flex-1 flex gap-6 min-h-0">
-      {/* Center panel */}
       <div className="flex-1 flex flex-col gap-4 min-h-0">
-        {/* Current ID indicator */}
+        {/* Header with context */}
         <div className={`${th.panel} border ${th.panelBorderAmber} rounded-2xl p-6`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {isRunning && (
-                <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />
-              )}
+              {isRunning && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
               <div>
                 <p className={`text-xs ${th.sub}`}>
-                  {isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO" : "COMPLETATO"}
+                  {isPaused ? "IN PAUSA" : isRunning ? "SCANSIONE IN CORSO" : "COMPLETATO"}
+                  {config.filterNetwork && <span className="ml-2">• {config.filterNetwork}</span>}
+                  {config.filterCountryName && <span className="ml-2">• {config.filterCountryName}</span>}
                 </p>
                 <p className={`text-2xl font-mono ${th.monoText}`}>
                   {currentId ? `ID #${currentId}` : "—"}
@@ -581,7 +826,7 @@ function DownloadRunning() {
           </div>
         </div>
 
-        {/* Stats badges */}
+        {/* Stats */}
         <div className="flex flex-wrap gap-3">
           <StatBadge label="Trovati" value={stats.found} color="amber" />
           <StatBadge label="Nuovi" value={stats.inserted} color="emerald" />
@@ -611,7 +856,7 @@ function DownloadRunning() {
         </div>
       </div>
 
-      {/* Right panel - floating partner list */}
+      {/* Right panel */}
       <div className="w-72 flex flex-col min-h-0">
         <p className={`text-xs mb-2 ${th.dimText}`}>Partner scaricati ({successLogs.length})</p>
         <ScrollArea className="flex-1">
@@ -644,9 +889,7 @@ function DownloadRunning() {
               <Building2 className={`w-5 h-5 ${th.accentAmber}`} />
               {detailPartner?.companyName}
             </DialogTitle>
-            <DialogDescription className={th.dialogSub}>
-              WCA ID #{detailPartner?.wcaId}
-            </DialogDescription>
+            <DialogDescription className={th.dialogSub}>WCA ID #{detailPartner?.wcaId}</DialogDescription>
           </DialogHeader>
           {detailPartner?.partner && (
             <div className="space-y-3 text-sm">
@@ -655,9 +898,7 @@ function DownloadRunning() {
                 <div><span className={th.dialogField}>Città:</span> {detailPartner.partner.city}</div>
                 {detailPartner.partner.email && <div><span className={th.dialogField}>Email:</span> {detailPartner.partner.email}</div>}
                 {detailPartner.partner.phone && <div><span className={th.dialogField}>Tel:</span> {detailPartner.partner.phone}</div>}
-                {detailPartner.partner.website && (
-                  <div className="col-span-2"><span className={th.dialogField}>Sito:</span> {detailPartner.partner.website}</div>
-                )}
+                {detailPartner.partner.website && <div className="col-span-2"><span className={th.dialogField}>Sito:</span> {detailPartner.partner.website}</div>}
               </div>
               {detailPartner.partner.networks && detailPartner.partner.networks.length > 0 && (
                 <div>
@@ -781,17 +1022,13 @@ function EnrichConfigure({ onStart }: { onStart: () => void }) {
             <ScrollArea className={`h-60 border rounded-lg ${th.panelBorderSlate}`}>
               <div className={th.divider}>
                 {partners?.map(p => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setSelected(prev => {
-                        const next = new Set(prev);
-                        next.has(p.id) ? next.delete(p.id) : next.add(p.id);
-                        return next;
-                      });
-                    }}
-                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${th.listHover}`}
-                  >
+                  <div key={p.id} onClick={() => {
+                    setSelected(prev => {
+                      const next = new Set(prev);
+                      next.has(p.id) ? next.delete(p.id) : next.add(p.id);
+                      return next;
+                    });
+                  }} className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${th.listHover}`}>
                     <Checkbox checked={selected.has(p.id)} />
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm truncate ${th.chipName}`}>{p.company_name}</p>
@@ -943,9 +1180,7 @@ function NetworkConfigure() {
                 <div>
                   <p className={`text-sm ${th.chipName}`}>{config.network_name}</p>
                   {config.sample_tested_at && (
-                    <p className={`text-xs ${th.dimText}`}>
-                      Testato: {new Date(config.sample_tested_at).toLocaleDateString("it-IT")}
-                    </p>
+                    <p className={`text-xs ${th.dimText}`}>Testato: {new Date(config.sample_tested_at).toLocaleDateString("it-IT")}</p>
                   )}
                 </div>
               </div>
@@ -976,20 +1211,8 @@ function NetworkConfigure() {
 function StatBadge({ label, value, color, icon }: { label: string; value: number | string; color: string; icon?: React.ReactNode }) {
   const isDark = useTheme();
   const colorClasses: Record<string, Record<string, string>> = {
-    dark: {
-      amber: "bg-amber-500/10 border-amber-500/30 text-amber-400",
-      emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
-      blue: "bg-blue-500/10 border-blue-500/30 text-blue-400",
-      red: "bg-red-500/10 border-red-500/30 text-red-400",
-      slate: "bg-slate-500/10 border-slate-500/30 text-slate-400",
-    },
-    light: {
-      amber: "bg-sky-50 border-sky-200 text-sky-700",
-      emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
-      blue: "bg-blue-50 border-blue-200 text-blue-700",
-      red: "bg-red-50 border-red-200 text-red-700",
-      slate: "bg-slate-100 border-slate-200 text-slate-600",
-    },
+    dark: { amber: "bg-amber-500/10 border-amber-500/30 text-amber-400", emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", blue: "bg-blue-500/10 border-blue-500/30 text-blue-400", red: "bg-red-500/10 border-red-500/30 text-red-400", slate: "bg-slate-500/10 border-slate-500/30 text-slate-400" },
+    light: { amber: "bg-sky-50 border-sky-200 text-sky-700", emerald: "bg-emerald-50 border-emerald-200 text-emerald-700", blue: "bg-blue-50 border-blue-200 text-blue-700", red: "bg-red-50 border-red-200 text-red-700", slate: "bg-slate-100 border-slate-200 text-slate-600" },
   };
   const mode = isDark ? "dark" : "light";
   return (
