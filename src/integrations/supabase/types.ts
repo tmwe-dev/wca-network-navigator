@@ -74,6 +74,7 @@ export type Database = {
       directory_cache: {
         Row: {
           country_code: string
+          download_verified: boolean
           id: string
           members: Json
           network_name: string
@@ -81,9 +82,11 @@ export type Database = {
           total_pages: number
           total_results: number
           updated_at: string
+          verified_at: string | null
         }
         Insert: {
           country_code: string
+          download_verified?: boolean
           id?: string
           members?: Json
           network_name?: string
@@ -91,9 +94,11 @@ export type Database = {
           total_pages?: number
           total_results?: number
           updated_at?: string
+          verified_at?: string | null
         }
         Update: {
           country_code?: string
+          download_verified?: boolean
           id?: string
           members?: Json
           network_name?: string
@@ -101,6 +106,7 @@ export type Database = {
           total_pages?: number
           total_results?: number
           updated_at?: string
+          verified_at?: string | null
         }
         Relationships: []
       }

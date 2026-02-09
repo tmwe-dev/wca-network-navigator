@@ -381,19 +381,27 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
     staleTime: 60_000,
   });
 
-  // Directory cache counts per country
-  const { data: cacheCounts = {} } = useQuery({
-    queryKey: ["cache-counts-by-country"],
+  // Directory cache data per country (counts + verified flag)
+  const { data: cacheData = {} } = useQuery({
+    queryKey: ["cache-data-by-country"],
     queryFn: async () => {
       const { data } = await supabase
         .from("directory_cache")
-        .select("country_code, total_results");
-      const counts: Record<string, number> = {};
-      (data || []).forEach((r: any) => { counts[r.country_code] = (counts[r.country_code] || 0) + (r.total_results || 0); });
-      return counts;
+        .select("country_code, total_results, download_verified");
+      const result: Record<string, { count: number; verified: boolean }> = {};
+      (data || []).forEach((r: any) => {
+        const prev = result[r.country_code];
+        result[r.country_code] = {
+          count: (prev?.count || 0) + (r.total_results || 0),
+          verified: prev?.verified !== false ? (r.download_verified === true) : false,
+        };
+      });
+      return result;
     },
     staleTime: 60_000,
   });
+  const cacheCounts: Record<string, number> = {};
+  Object.entries(cacheData).forEach(([k, v]) => { cacheCounts[k] = v.count; });
 
   const exploredSet = new Set(Object.keys(partnerCounts).concat(Object.keys(cacheCounts)));
   const selectedCodes = new Set(selected.map(c => c.code));
@@ -490,7 +498,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             const pCount = partnerCounts[c.code] || 0;
             const cCount = cacheCounts[c.code] || 0;
             const isExplored = pCount > 0 || cCount > 0;
-            const isComplete = cCount > 0 && pCount >= cCount;
+            const isVerified = cacheData[c.code]?.verified === true;
+            const isComplete = isVerified;
             return (
               <button
                 key={c.code}
@@ -525,7 +534,9 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                 </div>
                 {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
                 {!isSelected && isComplete && (
-                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>Completo</span>
+                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
+                    <CheckCircle className="w-3 h-3" /> {pCount}/{cCount}
+                  </span>
                 )}
                 {!isSelected && !isComplete && cCount > 0 && (
                   <span className={`relative text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{pCount}/{cCount}</span>
