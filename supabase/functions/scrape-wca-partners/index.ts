@@ -355,6 +355,8 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
     contacts,
     branch_offices: branchOffices,
     has_branches: branchOffices.length > 0,
+    _rawHtml: html,
+    _rawMarkdown: md,
   }
 }
 
@@ -577,7 +579,7 @@ async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: s
     console.log(`Country code override: XX -> ${finalCountryCode} (from caller)`)
   }
 
-  const partnerRecord = {
+  const partnerRecord: Record<string, any> = {
     company_name: parsed.company_name,
     city: parsed.city,
     country_code: finalCountryCode,
@@ -597,6 +599,10 @@ async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: s
     branch_cities: parsed.branch_offices.length > 0 ? JSON.stringify(parsed.branch_offices) : '[]',
     is_active: true,
   }
+
+  // Save raw HTML and markdown for later AI re-parsing
+  if (parsed._rawHtml) partnerRecord.raw_profile_html = parsed._rawHtml
+  if (parsed._rawMarkdown) partnerRecord.raw_profile_markdown = parsed._rawMarkdown
 
   const { data: existingById } = await supabase
     .from('partners')

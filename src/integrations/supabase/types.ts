@@ -513,6 +513,7 @@ export type Database = {
       partners: {
         Row: {
           address: string | null
+          ai_parsed_at: string | null
           branch_cities: Json | null
           city: string
           company_name: string
@@ -538,12 +539,15 @@ export type Database = {
           profile_description: string | null
           rating: number | null
           rating_details: Json | null
+          raw_profile_html: string | null
+          raw_profile_markdown: string | null
           updated_at: string | null
           wca_id: number | null
           website: string | null
         }
         Insert: {
           address?: string | null
+          ai_parsed_at?: string | null
           branch_cities?: Json | null
           city: string
           company_name: string
@@ -569,12 +573,15 @@ export type Database = {
           profile_description?: string | null
           rating?: number | null
           rating_details?: Json | null
+          raw_profile_html?: string | null
+          raw_profile_markdown?: string | null
           updated_at?: string | null
           wca_id?: number | null
           website?: string | null
         }
         Update: {
           address?: string | null
+          ai_parsed_at?: string | null
           branch_cities?: Json | null
           city?: string
           company_name?: string
@@ -600,6 +607,8 @@ export type Database = {
           profile_description?: string | null
           rating?: number | null
           rating_details?: Json | null
+          raw_profile_html?: string | null
+          raw_profile_markdown?: string | null
           updated_at?: string | null
           wca_id?: number | null
           website?: string | null
