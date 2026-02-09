@@ -1464,6 +1464,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const currentDelayIdx = DELAY_VALUES.findIndex(v => v >= job.delay_seconds);
   const delayIdx = currentDelayIdx >= 0 ? currentDelayIdx : 4;
 
+  const [localDelayIdx, setLocalDelayIdx] = useState(delayIdx);
+  useEffect(() => setLocalDelayIdx(delayIdx), [delayIdx]);
+
   return (
     <div className={`${th.panel} border ${isActive ? th.panelAmber : isPaused ? th.panelAmber : th.panelSlate} rounded-2xl p-5 space-y-3`}>
       {/* Header */}
@@ -1562,9 +1565,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         <div className={`p-3 rounded-lg border ${th.infoBox}`}>
           <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
             <Timer className="w-3 h-3" />
-            Delay: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[delayIdx]]}</span>
+            Delay: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[localDelayIdx]]}</span>
           </label>
-          <Slider value={[delayIdx]} onValueChange={([v]) => handleSpeedChange(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+          <Slider value={[localDelayIdx]} onValueChange={([v]) => setLocalDelayIdx(v)} onValueCommit={([v]) => handleSpeedChange(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
         </div>
       )}
 
