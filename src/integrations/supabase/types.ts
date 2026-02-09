@@ -492,6 +492,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_favorite: boolean | null
+          logo_url: string | null
           member_since: string | null
           membership_expires: string | null
           mobile: string | null
@@ -522,6 +523,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_favorite?: boolean | null
+          logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
           mobile?: string | null
@@ -552,6 +554,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_favorite?: boolean | null
+          logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
           mobile?: string | null
