@@ -129,6 +129,8 @@ export function usePauseResumeJob() {
 }
 
 export function useUpdateJobSpeed() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ jobId, delay_seconds }: { jobId: string; delay_seconds: number }) => {
       const { error } = await supabase
@@ -136,6 +138,9 @@ export function useUpdateJobSpeed() {
         .update({ delay_seconds })
         .eq("id", jobId);
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
     },
   });
 }
