@@ -783,6 +783,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
       company_name: m.company_name,
       city: m.city,
       country: m.country,
+      country_code: m.country_code || entry.country_code,
       wca_id: m.wca_id,
     }));
   });
@@ -880,6 +881,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
       company_name: m.company_name,
       city: m.city,
       country: m.country,
+      country_code: m.country_code,
       wca_id: m.wca_id,
     }));
 
@@ -940,6 +942,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
               const newMembers = result.members.map(m => ({
                 ...m,
                 country: m.country || country.name,
+                country_code: country.code,
               }));
               countryMembers.push(...newMembers);
               allMembers.push(...newMembers);
@@ -1387,7 +1390,7 @@ function Phase2Config({ countries, networks, members, onStart }: {
     const idsByCountry = new Map<string, number[]>();
     for (const m of members) {
       if (!m.wca_id) continue;
-      const cc = countries.find(c => c.name === m.country || c.code === m.country)?.code;
+      const cc = m.country_code || countries.find(c => c.name === m.country || c.code === m.country)?.code;
       if (!cc) continue;
       if (!idsByCountry.has(cc)) idsByCountry.set(cc, []);
       idsByCountry.get(cc)!.push(m.wca_id);

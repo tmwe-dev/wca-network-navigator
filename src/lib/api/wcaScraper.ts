@@ -83,6 +83,7 @@ export interface DirectoryMember {
   company_name: string;
   city?: string;
   country?: string;
+  country_code?: string;
   wca_id?: number;
   network_memberships?: string[];
 }
