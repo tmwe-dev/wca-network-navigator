@@ -800,17 +800,41 @@ function Phase2Config({ countries, network, members, onStart }: {
   const isDark = useTheme();
   const th = t(isDark);
   const createJob = useCreateDownloadJob();
+  const [includeExisting, setIncludeExisting] = useState(false);
 
-  const totalIds = members.length;
-  const ids = members.filter(m => m.wca_id).map(m => m.wca_id!);
+  const allIds = members.filter(m => m.wca_id).map(m => m.wca_id!);
+
+  // Cross-reference with partners already in DB
+  const { data: existingWcaIds = [], isLoading: checkingDb } = useQuery({
+    queryKey: ["existing-wca-ids", allIds],
+    queryFn: async () => {
+      if (allIds.length === 0) return [];
+      const { data } = await supabase
+        .from("partners")
+        .select("wca_id, updated_at")
+        .in("wca_id", allIds);
+      return (data || []).map(r => ({ wca_id: r.wca_id!, updated_at: r.updated_at }));
+    },
+    staleTime: 30_000,
+  });
+
+  const existingSet = new Set(existingWcaIds.map(e => e.wca_id));
+  const missingIds = allIds.filter(id => !existingSet.has(id));
+  const alreadyDownloaded = allIds.filter(id => existingSet.has(id));
+  const idsToDownload = includeExisting ? allIds : missingIds;
+
+  // Oldest update date for existing partners
+  const oldestUpdate = existingWcaIds.length > 0
+    ? existingWcaIds.reduce((min, e) => (!min || (e.updated_at && e.updated_at < min) ? e.updated_at : min), existingWcaIds[0].updated_at)
+    : null;
 
   // Speed
   const [delayIndex, setDelayIndex] = useState(4);
   const delay = DELAY_VALUES[delayIndex];
 
   // Time estimate
-  const avgScrapeTime = 15; // ~15s per profile
-  const totalTime = ids.length * (delay + avgScrapeTime);
+  const avgScrapeTime = 15;
+  const totalTime = idsToDownload.length * (delay + avgScrapeTime);
   const estimateLabel = totalTime >= 3600
     ? `~${(totalTime / 3600).toFixed(1)} ore`
     : totalTime >= 60
@@ -822,14 +846,16 @@ function Phase2Config({ countries, network, members, onStart }: {
     : `${countries.length} paesi`;
 
   const handleStart = async () => {
-    // Create one job per country (or a single combined job)
+    if (idsToDownload.length === 0) {
+      toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
+      return;
+    }
     for (const country of countries) {
-      const countryIds = ids; // In a multi-country scenario, you'd filter per country
       await createJob.mutateAsync({
         country_code: country.code,
         country_name: country.name,
         network_name: network || "Tutti",
-        wca_ids: countryIds,
+        wca_ids: idsToDownload,
         delay_seconds: delay,
       });
     }
@@ -846,46 +872,92 @@ function Phase2Config({ countries, network, members, onStart }: {
           </p>
         </div>
 
-        {/* Summary from Phase 1 */}
-        <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
-          <div className="flex items-center justify-between">
-            <span className={`text-sm ${th.body}`}>Partner dalla Fase 1</span>
-            <span className={`font-mono font-bold ${th.hi}`}>{totalIds}</span>
+        {checkingDb ? (
+          <div className="flex items-center justify-center py-4 gap-2">
+            <Loader2 className={`w-4 h-4 animate-spin ${th.sub}`} />
+            <span className={`text-sm ${th.sub}`}>Verifico partner già scaricati...</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className={`text-sm ${th.body}`}>Con WCA ID (scaricabili)</span>
-            <span className={`font-mono font-bold ${th.acEm}`}>{ids.length}</span>
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* Summary from Phase 1 with DB cross-reference */}
+            <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm ${th.body}`}>Partner dalla Fase 1</span>
+                <span className={`font-mono font-bold ${th.hi}`}>{members.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm ${th.body}`}>Con WCA ID</span>
+                <span className={`font-mono ${th.mono}`}>{allIds.length}</span>
+              </div>
+              <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${th.acEm}`}>✓ Già nel database</span>
+                <span className={`font-mono font-bold ${th.acEm}`}>{alreadyDownloaded.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
+                <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
+              </div>
+              {oldestUpdate && (
+                <p className={`text-xs ${th.dim}`}>
+                  Ultimo aggiornamento più vecchio: {new Date(oldestUpdate).toLocaleDateString("it-IT")}
+                </p>
+              )}
+            </div>
 
-        {/* Info: background processing */}
-        <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-          🚀 Il download proseguirà in background anche se navighi altrove. Un badge nella sidebar ti mostrerà i job attivi.
-        </div>
+            {/* Option to re-download existing */}
+            {alreadyDownloaded.length > 0 && (
+              <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
+                <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
+                Aggiorna anche i {alreadyDownloaded.length} già presenti nel DB
+              </label>
+            )}
 
-        {/* Speed */}
-        <div>
-          <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
-            <Timer className="w-3.5 h-3.5" />
-            Velocità Fase 2: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
-          </label>
-          <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
-          <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
-            <span>Veloce</span>
-            <span>Lento (sicuro)</span>
-          </div>
-        </div>
+            {/* Info: background processing */}
+            {idsToDownload.length > 0 && (
+              <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+                🚀 Il download proseguirà in background anche se navighi altrove.
+              </div>
+            )}
 
-        {/* Time estimate */}
-        <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
-          <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
-          <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
-        </div>
+            {idsToDownload.length === 0 && (
+              <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+                ✅ Tutti i partner sono già nel database! Spunta la casella sopra per aggiornare i profili esistenti.
+              </div>
+            )}
 
-        <Button onClick={handleStart} disabled={ids.length === 0 || createJob.isPending} className={`w-full ${th.btnPri}`}>
-          {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-          Avvia Download in Background ({ids.length})
-        </Button>
+            {/* Speed */}
+            {idsToDownload.length > 0 && (
+              <div>
+                <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
+                  <Timer className="w-3.5 h-3.5" />
+                  Velocità Fase 2: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
+                </label>
+                <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+                <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
+                  <span>Veloce</span>
+                  <span>Lento (sicuro)</span>
+                </div>
+              </div>
+            )}
+
+            {/* Time estimate */}
+            {idsToDownload.length > 0 && (
+              <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
+                <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
+                <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
+              </div>
+            )}
+
+            <Button onClick={handleStart} disabled={idsToDownload.length === 0 || createJob.isPending} className={`w-full ${th.btnPri}`}>
+              {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+              {idsToDownload.length > 0
+                ? `Avvia Download in Background (${idsToDownload.length})`
+                : "Tutti già scaricati ✓"
+              }
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
