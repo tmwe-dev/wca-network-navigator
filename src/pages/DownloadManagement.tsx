@@ -512,6 +512,29 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             <SelectItem value="completion">Completamento</SelectItem>
           </SelectContent>
         </Select>
+        {/* Select All / Deselect All */}
+        {(() => {
+          const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCodes.has(c.code));
+          return (
+            <button
+              onClick={() => {
+                filtered.forEach(c => {
+                  if (allFilteredSelected) {
+                    if (selectedCodes.has(c.code)) onToggle(c.code, c.name);
+                  } else {
+                    if (!selectedCodes.has(c.code)) onToggle(c.code, c.name);
+                  }
+                });
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
+                isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30" : "bg-sky-100 border-sky-300 text-sky-700 hover:bg-sky-200"
+              }`}
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              {allFilteredSelected ? "Deseleziona tutti" : `Seleziona tutti (${filtered.length})`}
+            </button>
+          );
+        })()}
       </div>
 
       <ScrollArea className="flex-1 w-full max-w-3xl">
