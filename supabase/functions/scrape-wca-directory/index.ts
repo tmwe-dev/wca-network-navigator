@@ -5,7 +5,7 @@ const corsHeaders = {
 
 // Mapping from network display names to WCA numeric networkIds
 const NETWORK_ID_MAP: Record<string, number[]> = {
-  '': [1,2,3,4,61,98,108,118,5,22,13,18,15,16,38,107,124], // All networks
+  '': [1,2,3,4,61,98,108,118,5,22,13,18,15,16,38,107,124],
   'WCA Inter Global': [1],
   'WCA China Global': [2],
   'WCA First': [3],
@@ -18,11 +18,72 @@ const NETWORK_ID_MAP: Record<string, number[]> = {
 }
 
 /**
- * Scrape the WCA directory listing page to get a list of members for a given country.
- * Phase 1: get the list of partner names + IDs from the directory.
- * 
- * URL format: https://www.wcaworld.com/Directory?siteID=24&pageIndex=1&pageSize=50&searchby=CountryCode&country=AL&networkIds=1&networkIds=2...
+ * Parse members from HTML content returned by Firecrawl.
+ * WCA directory links have the format:
+ *   <a href="/Directory/Members/12345">City - Company Name (City, Head Office)</a>
+ * We parse out the wca_id, company_name, and city.
  */
+function parseMembersFromContent(html: string, markdown: string): { company_name: string; city?: string; country?: string; wca_id?: number }[] {
+  const members: { company_name: string; city?: string; country?: string; wca_id?: number }[] = []
+  const seen = new Set<number>()
+  const content = html || markdown || ''
+
+  // Match member links: href="/Directory/Members/XXXXX" with link text
+  const linkRegex = /href="[^"]*\/[Dd]irectory\/[Mm]embers\/(\d+)"[^>]*>([^<]+)</gi
+  let match
+  while ((match = linkRegex.exec(content)) !== null) {
+    const wcaId = parseInt(match[1])
+    let rawText = match[2].trim()
+    if (!wcaId || seen.has(wcaId) || rawText.length < 2) continue
+    seen.add(wcaId)
+
+    // Decode HTML entities
+    rawText = rawText.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+
+    // Parse "City - Company Name (City, Head Office)" format
+    let city: string | undefined
+    let companyName = rawText
+
+    // Remove trailing "(City, Head Office)" or "(Head Office)" 
+    companyName = companyName.replace(/\s*\([^)]*(?:Head Office|Branch)\)\s*$/i, '')
+
+    // Split "City - Company Name" 
+    const dashIdx = companyName.indexOf(' - ')
+    if (dashIdx > 0) {
+      city = companyName.substring(0, dashIdx).trim()
+      companyName = companyName.substring(dashIdx + 3).trim()
+    }
+
+    if (companyName.length > 0) {
+      members.push({ company_name: companyName, city, wca_id: wcaId })
+    }
+  }
+
+  // Fallback: markdown links [text](/Directory/Members/12345)
+  if (members.length === 0 && markdown) {
+    const mdRegex = /\[([^\]]+)\]\([^)]*\/[Dd]irectory\/[Mm]embers\/(\d+)[^)]*\)/g
+    while ((match = mdRegex.exec(markdown)) !== null) {
+      const wcaId = parseInt(match[2])
+      let rawText = match[1].trim()
+      if (!wcaId || seen.has(wcaId) || rawText.length < 2) continue
+      seen.add(wcaId)
+      rawText = rawText.replace(/&amp;/g, '&')
+      let city: string | undefined
+      let companyName = rawText.replace(/\s*\([^)]*(?:Head Office|Branch)\)\s*$/i, '')
+      const dashIdx = companyName.indexOf(' - ')
+      if (dashIdx > 0) {
+        city = companyName.substring(0, dashIdx).trim()
+        companyName = companyName.substring(dashIdx + 3).trim()
+      }
+      if (companyName.length > 0) {
+        members.push({ company_name: companyName, city, wca_id: wcaId })
+      }
+    }
+  }
+
+  return members
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -49,7 +110,6 @@ Deno.serve(async (req) => {
     const currentPage = pageIndex || 1
     const size = pageSize || 50
 
-    // Build the WCA directory URL with correct parameters
     const networkIds = NETWORK_ID_MAP[network || ''] || NETWORK_ID_MAP['']
     
     const params = new URLSearchParams()
@@ -62,12 +122,11 @@ Deno.serve(async (req) => {
     params.set('layout', 'v1')
     params.set('submitted', 'search')
     
-    // networkIds must be appended as repeated params
     const networkParams = networkIds.map(id => `networkIds=${id}`).join('&')
-    
     const url = `https://www.wcaworld.com/Directory?${params.toString()}&${networkParams}`
     console.log(`Scraping WCA directory: ${url}`)
 
+    // Use markdown+html instead of extract (LLM) — much faster (~5s vs ~40s)
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -76,53 +135,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url,
-        formats: ['extract'],
-        extract: {
-          prompt: `You are looking at a WCA member directory listing page. It shows a table/list of freight forwarding companies.
-
-Extract ALL member companies visible on this page. For each company entry, extract:
-- company_name: the business name exactly as shown
-- city: the city where the office is located
-- country: country name if shown
-- wca_id: the WCA member ID number. Look for it in links like "/directory/members/12345" or "/Directory/Members/12345" — the number at the end is the wca_id
-- network_memberships: any network badges/labels shown (e.g. "WCA Inter Global", "WCA Projects")
-
-Also extract pagination info:
-- total_results: total number of results shown (e.g. "47 results" or "Showing 1-50 of 123")
-- current_page: current page number
-- total_pages: total number of pages (if shown, or calculate from total_results / page_size)
-- has_next_page: boolean, whether there appears to be a next page
-
-IMPORTANT: Extract every single row from the listing. Don't skip any.
-If this is a login page, empty page, or error page, return members as an empty array.`,
-          schema: {
-            type: 'object',
-            properties: {
-              members: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    company_name: { type: 'string' },
-                    city: { type: 'string' },
-                    country: { type: 'string' },
-                    wca_id: { type: 'number' },
-                    network_memberships: {
-                      type: 'array',
-                      items: { type: 'string' },
-                    },
-                  },
-                  required: ['company_name'],
-                },
-              },
-              total_results: { type: 'number' },
-              current_page: { type: 'number' },
-              total_pages: { type: 'number' },
-              has_next_page: { type: 'boolean' },
-            },
-            required: ['members'],
-          },
-        },
+        formats: ['markdown', 'rawHtml'],
         waitFor: 3000,
       }),
     })
@@ -137,14 +150,17 @@ If this is a login page, empty page, or error page, return members as an empty a
       )
     }
 
-    const extracted = scrapeData?.data?.extract || scrapeData?.extract || {}
-    const members = extracted.members || []
+    const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || ''
+    const html = scrapeData?.data?.rawHtml || scrapeData?.rawHtml || ''
 
-    console.log(`Found ${members.length} members for ${countryCode} (page ${currentPage})${network ? ` [${network}]` : ''}`)
+    console.log(`Got content: markdown=${markdown.length} chars, html=${html.length} chars`)
 
-    // Calculate pagination — deterministic: if we got a full page, there's likely more
-    const totalResults = extracted.total_results || members.length
-    const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
+    // Parse members from content using regex
+    const members = parseMembersFromContent(html, markdown)
+
+    console.log(`Parsed ${members.length} members for ${countryCode} (page ${currentPage})${network ? ` [${network}]` : ''}`)
+
+    // Deterministic pagination
     const hasNextPage = members.length >= size
 
     return new Response(
@@ -152,9 +168,9 @@ If this is a login page, empty page, or error page, return members as an empty a
         success: true,
         members,
         pagination: {
-          total_results: totalResults,
+          total_results: members.length,
           current_page: currentPage,
-          total_pages: totalPages,
+          total_pages: 0, // unknown without LLM
           has_next_page: hasNextPage,
         },
       }),
