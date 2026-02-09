@@ -1,64 +1,41 @@
 
-# Fix: Paginazione Directory e Distinzione HQ/Branch
+# Fix: Permettere di Rientrare nella Vista Job Attivi
 
-## Problema 1: La scansione si ferma troppo presto
+## Problema
+Quando l'utente esce dalla pagina di download management e torna, vede il banner "X job attivi in background" nella schermata iniziale, ma non puo cliccarci sopra per entrare nella vista dettagliata dei job. L'unico modo per vedere i job attivi e navigare attraverso tutto il wizard (Scarica Partner > selezione paese > ecc.), il che non ha senso.
 
-La scansione degli Stati Uniti si e fermata alla pagina 3 (150 membri trovati), ma in realta ce ne sono molti di piu. Il motivo:
+## Soluzione
+Rendere il banner dei job attivi **cliccabile** e aggiungere un **pulsante esplicito** per entrare direttamente nella vista `DownloadRunning` senza passare dal wizard.
 
-- Il sistema si affida al LLM di Firecrawl per estrarre i dati di paginazione (`total_results`, `total_pages`, `has_next_page`)
-- Il LLM ha restituito `total_results: 47` e `total_pages: 1` — dati completamente sbagliati
-- Con `total_pages: 1`, la formula `has_next_page = currentPage(3) < totalPages(1)` = `false`, quindi la scansione si ferma
-
-**Soluzione**: Non fidarsi del LLM per la paginazione. Usare un approccio deterministico:
-- Se una pagina restituisce esattamente `pageSize` (50) membri, c'e sicuramente una pagina successiva
-- Fermarsi solo quando una pagina restituisce meno di `pageSize` membri (o zero)
-- Mantenere i dati del LLM (`total_results`, `total_pages`) solo come informazione indicativa, mai come criterio di stop
-
-## Problema 2: Branch Office vs Headquarter
-
-La directory WCA di un paese include sia gli headquarter di aziende locali che le filiali (branch) di aziende di altri paesi. Il sistema gia estrae `office_type` ("head_office" o "branch") quando scarica il profilo dettagliato di ogni partner, ma nella fase di scansione directory questa distinzione non e visibile.
-
-**Soluzione**: Dopo il download dei profili, mostrare nella UI quanti sono HQ e quanti branch per dare consapevolezza all'utente.
-
----
-
-## Dettagli Tecnici
-
-### File: `supabase/functions/scrape-wca-directory/index.ts`
-
-Cambiare la logica di paginazione (linee 145-148):
-
-```text
-// PRIMA (inaffidabile - si affida al LLM):
-const totalResults = extracted.total_results || members.length
-const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
-const hasNextPage = extracted.has_next_page ?? (currentPage < totalPages)
-
-// DOPO (deterministico):
-const totalResults = extracted.total_results || members.length
-const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
-// Regola deterministica: se abbiamo ricevuto esattamente pageSize risultati,
-// quasi sicuramente c'e un'altra pagina
-const hasNextPage = members.length >= size
-```
-
-Il valore `totalResults` e `totalPages` dal LLM vengono ancora restituiti come informazione indicativa, ma `has_next_page` si basa solo sul numero di risultati effettivamente ricevuti.
+## Modifiche
 
 ### File: `src/pages/DownloadManagement.tsx`
 
-**DirectoryScanner** — aggiungere sicurezza anche lato client (linea ~838):
+**1. Banner job attivi nella `StepChoose` (linee 218-235)**
 
-Anche nel loop del client, aggiungere un fallback: se `members.length >= pageSize` ma `has_next_page` e `false`, forzare il continuo. Questo come doppia sicurezza nel caso il backend non venga aggiornato.
+Aggiungere un `onClick` al banner che imposta `step = "running"` e `action = "download"`:
+- Trasformare il `div` del banner in un elemento cliccabile con cursore pointer
+- Aggiungere un pulsante "Visualizza dettagli" o una freccia a destra per indicare che e cliccabile
+- Al click, chiamare `onSelect("download")` con un flag speciale oppure esporre direttamente la navigazione verso running
 
-```text
-// Doppia sicurezza: se la pagina ha restituito 50 risultati,
-// continua anche se il server dice has_next_page: false
-hasNext = result.pagination.has_next_page || result.members.length >= 50;
+**2. Esporre la navigazione diretta nel componente principale (linee 144-193)**
+
+Aggiungere una funzione `goToRunning` nel componente `DownloadManagement` che setta simultaneamente `step = "running"` e `action = "download"`, e passarla a `StepChoose`:
+```
+const goToRunning = () => { setAction("download"); setStep("running"); };
 ```
 
-**PickCountry** — aggiungere conteggio HQ/Branch nei badge paese:
+Passare questa funzione come prop a `StepChoose`:
+```
+<StepChoose onSelect={...} onGoToJobs={goToRunning} />
+```
 
-Nella query che conta i partner per paese, aggiungere il breakdown per `office_type`. Mostrare nelle card qualcosa come "150 (120 HQ + 30 Branch)" per dare all'utente piena visibilita.
+**3. Aggiungere le metriche tempo medio (dal piano precedente approvato)**
 
-- Query aggiuntiva: raggruppare per `office_type` nella stessa query partner per paese
-- Badge aggiuntivo nelle card paese: mostrare il rapporto HQ/Branch sotto il conteggio totale
+Nella `JobCard`, aggiungere sotto la progress bar:
+- **Tempo medio per profilo**: calcolato come `(updated_at - created_at) / current_index`
+- **Tempo netto di scraping**: tempo medio meno il delay configurato
+- **Tempo rimanente stimato**: tempo medio moltiplicato per i profili restanti
+- **Velocita**: profili al minuto
+
+Questi dati si aggiornano in tempo reale grazie alla subscription Realtime gia attiva.
