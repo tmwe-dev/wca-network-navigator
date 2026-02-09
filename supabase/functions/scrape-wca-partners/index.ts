@@ -327,6 +327,105 @@ function parseDateString(dateStr: string): string | null {
   }
 }
 
+// ─── Save & Respond Helper ──────────────────────────────────
+
+async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: string, wcaId: number, parsed: any) {
+  const partnerRecord = {
+    company_name: parsed.company_name,
+    city: parsed.city,
+    country_code: parsed.country_code,
+    country_name: parsed.country,
+    email: parsed.email,
+    phone: parsed.phone,
+    fax: parsed.fax,
+    website: parsed.website,
+    wca_id: wcaId,
+    address: parsed.address,
+    profile_description: parsed.profile_description,
+    office_type: parsed.office_type,
+    member_since: parsed.member_since ? parseDateString(parsed.member_since) : null,
+    has_branches: parsed.has_branches,
+    branch_cities: parsed.branch_offices.length > 0 ? JSON.stringify(parsed.branch_offices) : '[]',
+    is_active: true,
+  }
+
+  const { data: existingById } = await supabase
+    .from('partners')
+    .select('id')
+    .eq('wca_id', wcaId)
+    .maybeSingle()
+
+  let action = 'skipped'
+  let partnerId = existingById?.id
+
+  if (existingById) {
+    const { error } = await supabase
+      .from('partners')
+      .update({ ...partnerRecord, updated_at: new Date().toISOString() })
+      .eq('id', existingById.id)
+    if (error) {
+      return new Response(
+        JSON.stringify({ success: false, error: error.message, wcaId }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    action = 'updated'
+  } else {
+    const { data: inserted, error } = await supabase
+      .from('partners')
+      .insert(partnerRecord)
+      .select('id')
+      .single()
+    if (error) {
+      return new Response(
+        JSON.stringify({ success: false, error: error.message, wcaId }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    partnerId = inserted.id
+    action = 'inserted'
+  }
+
+  if (partnerId) {
+    await saveCertificationsBatch(supabase, partnerId, parsed.certifications)
+    await saveNetworksBatch(supabase, partnerId, parsed.networks)
+    await saveContactsBatch(supabase, partnerId, parsed.contacts)
+  }
+
+  const fullPartner = {
+    ...partnerRecord,
+    gold_medallion: parsed.gold_medallion,
+    networks: parsed.networks,
+    certifications: parsed.certifications,
+    contacts: parsed.contacts,
+    branch_offices: parsed.branch_offices,
+  }
+
+  // Fire-and-forget AI analysis
+  const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
+  fetch(analyzeUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ partnerId, profileData: fullPartner }),
+  }).catch(err => console.error('AI analysis fire-and-forget error:', err))
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      found: true,
+      wcaId,
+      action,
+      partnerId,
+      partner: fullPartner,
+      aiClassification: null,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+}
+
 // ─── Main Handler ────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -379,19 +478,80 @@ Deno.serve(async (req) => {
       formats: ['markdown', 'rawHtml'],
     }
 
-    // If we have WCA credentials, use Firecrawl actions to login first
+    // If we have WCA credentials, do HTTP login to get session cookies, then pass to Firecrawl
     if (wcaUsername && wcaPassword) {
-      console.log('Using WCA credentials for authenticated scraping via Firecrawl actions')
-      scrapeBody.url = 'https://www.wcaworld.com/Account/Login'
-      scrapeBody.actions = [
-        { type: 'wait', milliseconds: 1000 },
-        { type: 'write', selector: 'input[name="usr"]', text: wcaUsername },
-        { type: 'write', selector: 'input[name="pwd"]', text: wcaPassword },
-        { type: 'click', selector: 'button[type="submit"], input[type="submit"], .btn-login, form button' },
-        { type: 'wait', milliseconds: 3000 },
-        { type: 'navigate', url },
-        { type: 'wait', milliseconds: 2000 },
-      ]
+      console.log('Using WCA credentials for authenticated scraping (HTTP login)')
+      
+      try {
+        // Step A: Get login page to capture __RequestVerificationToken and initial cookies
+        const loginPageRes = await fetch('https://www.wcaworld.com/Account/Login', {
+          method: 'GET',
+          redirect: 'manual',
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        })
+        const loginPageHtml = await loginPageRes.text()
+        const setCookies1 = loginPageRes.headers.getSetCookie?.() || []
+        
+        // Debug: find all input fields in the login form
+        const inputFields = [...loginPageHtml.matchAll(/<input[^>]*name="([^"]+)"[^>]*/gi)].map(m => m[1])
+        console.log('Login page input fields:', inputFields.join(', '))
+        console.log('Login page status:', loginPageRes.status, 'cookies:', setCookies1.length)
+        
+        // Extract verification token
+        const tokenMatch = loginPageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)
+        const token = tokenMatch?.[1] || ''
+        console.log('Token found:', !!token, token ? token.substring(0, 20) + '...' : 'none')
+        
+        // Collect cookies from login page
+        const cookieJar: string[] = []
+        for (const sc of setCookies1) {
+          const name = sc.split('=')[0]
+          const val = sc.split(';')[0]
+          cookieJar.push(val)
+        }
+        
+        // Step B: POST login form
+        const formBody = new URLSearchParams({
+          usr: wcaUsername,
+          pwd: wcaPassword,
+          __RequestVerificationToken: token,
+        })
+        
+        const loginRes = await fetch('https://www.wcaworld.com/Account/Login', {
+          method: 'POST',
+          redirect: 'manual',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookieJar.join('; '),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.wcaworld.com/Account/Login',
+          },
+          body: formBody.toString(),
+        })
+        
+        // Collect all Set-Cookie from response (including redirects)
+        const setCookies2 = loginRes.headers.getSetCookie?.() || []
+        for (const sc of setCookies2) {
+          const val = sc.split(';')[0]
+          // Replace existing or add new
+          const name = val.split('=')[0]
+          const idx = cookieJar.findIndex(c => c.startsWith(name + '='))
+          if (idx >= 0) cookieJar[idx] = val
+          else cookieJar.push(val)
+        }
+        
+        const sessionCookieStr = cookieJar.join('; ')
+        console.log(`Login response status: ${loginRes.status}, cookies: ${cookieJar.length}, new cookies: ${setCookies2.length}`)
+        console.log('Login response headers:', [...loginRes.headers.entries()].filter(([k]) => k.startsWith('set-cookie') || k === 'location').map(([k,v]) => `${k}: ${v.substring(0, 80)}`).join(' | '))
+        // Check if login was successful by following redirect or checking response
+        const loginResBody = await loginRes.text()
+        console.log('Login response body preview:', loginResBody.substring(0, 300))
+        
+        // Step C: Use cookies in Firecrawl to scrape authenticated profile
+        scrapeBody.headers = { 'Cookie': sessionCookieStr }
+      } catch (loginErr) {
+        console.warn('HTTP login failed, falling back to unauthenticated:', loginErr)
+      }
     } else {
       // Fallback: try WCA_SESSION_COOKIE env var
       const wcaCookie = Deno.env.get('WCA_SESSION_COOKIE')
@@ -438,104 +598,7 @@ Deno.serve(async (req) => {
 
     console.log(`Parsed ID ${wcaId}: ${parsed.company_name} (${parsed.city}, ${parsed.country_code})`)
 
-    // ── Step 3: Upsert partner record ──
-    const partnerRecord = {
-      company_name: parsed.company_name,
-      city: parsed.city,
-      country_code: parsed.country_code,
-      country_name: parsed.country,
-      email: parsed.email,
-      phone: parsed.phone,
-      fax: parsed.fax,
-      website: parsed.website,
-      wca_id: wcaId,
-      address: parsed.address,
-      profile_description: parsed.profile_description,
-      office_type: parsed.office_type,
-      member_since: parsed.member_since ? parseDateString(parsed.member_since) : null,
-      has_branches: parsed.has_branches,
-      branch_cities: parsed.branch_offices.length > 0 ? JSON.stringify(parsed.branch_offices) : '[]',
-      is_active: true,
-    }
-
-    const { data: existingById } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('wca_id', wcaId)
-      .maybeSingle()
-
-    let action = 'skipped'
-    let partnerId = existingById?.id
-
-    if (existingById) {
-      const { error } = await supabase
-        .from('partners')
-        .update({ ...partnerRecord, updated_at: new Date().toISOString() })
-        .eq('id', existingById.id)
-      if (error) {
-        console.error(`Update error for ID ${wcaId}:`, error)
-        return new Response(
-          JSON.stringify({ success: false, error: error.message, wcaId }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      action = 'updated'
-    } else {
-      const { data: inserted, error } = await supabase
-        .from('partners')
-        .insert(partnerRecord)
-        .select('id')
-        .single()
-      if (error) {
-        console.error(`Insert error for ID ${wcaId}:`, error)
-        return new Response(
-          JSON.stringify({ success: false, error: error.message, wcaId }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      partnerId = inserted.id
-      action = 'inserted'
-    }
-
-    // ── Step 4: Batch DB operations for related data ──
-    if (partnerId) {
-      await saveCertificationsBatch(supabase, partnerId, parsed.certifications)
-      await saveNetworksBatch(supabase, partnerId, parsed.networks)
-      await saveContactsBatch(supabase, partnerId, parsed.contacts)
-    }
-
-    // ── Step 5: Fire-and-forget AI analysis (NON-BLOCKING) ──
-    const fullPartner = {
-      ...partnerRecord,
-      gold_medallion: parsed.gold_medallion,
-      networks: parsed.networks,
-      certifications: parsed.certifications,
-      contacts: parsed.contacts,
-      branch_offices: parsed.branch_offices,
-    }
-
-    const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
-    fetch(analyzeUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ partnerId, profileData: fullPartner }),
-    }).catch(err => console.error('AI analysis fire-and-forget error:', err))
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        found: true,
-        wcaId,
-        action,
-        partnerId,
-        partner: fullPartner,
-        aiClassification: null, // arrives async
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, parsed)
   } catch (error) {
     console.error('Error:', error)
     return new Response(
