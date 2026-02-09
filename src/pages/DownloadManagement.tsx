@@ -11,11 +11,13 @@ import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
-  Search, Users, MapPin, Settings2
+  Search, Users, MapPin, Settings2, List, FileDown
 } from "lucide-react";
 import {
   scrapeWcaPartnerById,
+  scrapeWcaDirectory,
   type ScrapedPartner,
+  type DirectoryMember,
 } from "@/lib/api/wcaScraper";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -220,9 +222,9 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DOWNLOAD WIZARD — Country → Network → Speed → Scan Live
+// DOWNLOAD WIZARD — Country → Network → Fase1: Lista → Fase2: Dettagli
 // ═══════════════════════════════════════════════════════════════
-type DlSub = "country" | "network" | "speed";
+type DlSub = "country" | "network" | "listing" | "details";
 
 function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const isDark = useTheme();
@@ -231,9 +233,10 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
   const [network, setNetwork] = useState("");
   const [search, setSearch] = useState("");
+  const [discoveredMembers, setDiscoveredMembers] = useState<DirectoryMember[]>([]);
 
-  const labels = ["Paesi", "Network", "Configura & Avvia"];
-  const keys: DlSub[] = ["country", "network", "speed"];
+  const labels = ["Paesi", "Network", "Fase 1: Lista", "Fase 2: Dettagli"];
+  const keys: DlSub[] = ["country", "network", "listing", "details"];
   const idx = keys.indexOf(sub);
 
   const goSubBack = () => { if (idx > 0) setSub(keys[idx - 1]); };
@@ -248,6 +251,11 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
 
   const removeCountry = (code: string) => {
     setCountries(prev => prev.filter(c => c.code !== code));
+  };
+
+  const handleListingComplete = (members: DirectoryMember[]) => {
+    setDiscoveredMembers(members);
+    setSub("details");
   };
 
   return (
@@ -282,12 +290,20 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
         />
       )}
       {sub === "network" && countries.length > 0 && (
-        <PickNetwork country={countries[0]} onSelect={n => { setNetwork(n); setSub("speed"); }} />
+        <PickNetwork country={countries[0]} onSelect={n => { setNetwork(n); setSub("listing"); }} />
       )}
-      {sub === "speed" && countries.length > 0 && (
-        <ScanConfig
+      {sub === "listing" && countries.length > 0 && (
+        <DirectoryScanner
           countries={countries}
           network={network}
+          onComplete={handleListingComplete}
+        />
+      )}
+      {sub === "details" && discoveredMembers.length > 0 && (
+        <Phase2Config
+          countries={countries}
+          network={network}
+          members={discoveredMembers}
           onStart={onStartRunning}
         />
       )}
@@ -308,7 +324,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const th = t(isDark);
   const [showOnlyMissing, setShowOnlyMissing] = useState(false);
 
-  // Fetch which countries already have partners in DB
   const { data: exploredCodes = [] } = useQuery({
     queryKey: ["explored-countries"],
     queryFn: async () => {
@@ -341,7 +356,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
       </div>
 
-      {/* Selected chips */}
       {selected.length > 0 && (
         <div className="w-full max-w-xl">
           <div className="flex items-center gap-2 mb-2">
@@ -362,7 +376,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         </div>
       )}
 
-      {/* Search + filters */}
       <div className="w-full max-w-xl flex gap-2">
         <div className="relative flex-1">
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
@@ -381,7 +394,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         </button>
       </div>
 
-      {/* Country grid */}
       <ScrollArea className="flex-1 w-full max-w-xl">
         <div className="grid grid-cols-2 gap-2 pr-4">
           {filtered.map(c => {
@@ -412,7 +424,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         </div>
       </ScrollArea>
 
-      {/* Confirm button */}
       {selected.length > 0 && (
         <div className="w-full max-w-xl">
           <Button onClick={onConfirm} className={`w-full ${th.btnPri}`}>
@@ -460,10 +471,290 @@ function PickNetwork({ country, onSelect }: {
   );
 }
 
-// ─── Scan Config (simplified — no ID range input) ───────────
-function ScanConfig({ countries, network, onStart }: {
+// ═══════════════════════════════════════════════════════════════
+// FASE 1: Directory Scanner — scrapes the listing page by page
+// ═══════════════════════════════════════════════════════════════
+function DirectoryScanner({ countries, network, onComplete }: {
   countries: { code: string; name: string }[];
   network: string;
+  onComplete: (members: DirectoryMember[]) => void;
+}) {
+  const isDark = useTheme();
+  const th = t(isDark);
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [members, setMembers] = useState<DirectoryMember[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
+  const [totalResults, setTotalResults] = useState<number | null>(null);
+  const [currentCountryIdx, setCurrentCountryIdx] = useState(0);
+  const [pageTime, setPageTime] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
+
+  // Speed control for listing phase
+  const [listingDelayIdx, setListingDelayIdx] = useState(3); // default 3s
+  const listingDelayRef = useRef(DELAY_VALUES[3] * 1000);
+  useEffect(() => { listingDelayRef.current = DELAY_VALUES[listingDelayIdx] * 1000; }, [listingDelayIdx]);
+
+  const abortRef = useRef(false);
+  const pauseRef = useRef(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const waitWhilePaused = useCallback(async () => {
+    while (pauseRef.current && !abortRef.current) await new Promise(r => setTimeout(r, 300));
+  }, []);
+
+  const handleStart = useCallback(async () => {
+    setIsRunning(true);
+    setError(null);
+    abortRef.current = false;
+    const allMembers: DirectoryMember[] = [];
+
+    for (let ci = 0; ci < countries.length; ci++) {
+      if (abortRef.current) break;
+      setCurrentCountryIdx(ci);
+      const country = countries[ci];
+      let page = 1;
+      let hasNext = true;
+
+      while (hasNext && !abortRef.current) {
+        await waitWhilePaused();
+        if (abortRef.current) break;
+
+        setCurrentPage(page);
+        const start = Date.now();
+
+        try {
+          const result = await scrapeWcaDirectory(country.code, network, page);
+          const elapsed = Date.now() - start;
+          setPageTime(elapsed);
+
+          if (!result.success) {
+            setError(result.error || "Errore sconosciuto");
+            break;
+          }
+
+          if (result.members.length > 0) {
+            const newMembers = result.members.map(m => ({
+              ...m,
+              country: m.country || country.name,
+            }));
+            allMembers.push(...newMembers);
+            setMembers([...allMembers]);
+          }
+
+          setTotalResults(result.pagination.total_results);
+          setTotalPages(result.pagination.total_pages);
+          hasNext = result.pagination.has_next_page;
+          page++;
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Errore di rete");
+          break;
+        }
+
+        // Wait between pages
+        if (hasNext && !abortRef.current) {
+          await new Promise(r => setTimeout(r, listingDelayRef.current));
+        }
+      }
+    }
+
+    setIsRunning(false);
+    setIsComplete(true);
+  }, [countries, network, waitWhilePaused]);
+
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [members.length]);
+
+  const countryLabel = countries.length === 1
+    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
+    : `${countries.length} paesi`;
+
+  const membersWithId = members.filter(m => m.wca_id);
+
+  return (
+    <div className="flex-1 flex gap-6 min-h-0">
+      {/* Left: controls + log */}
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
+        {/* Header */}
+        <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6`}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-4">
+              {isRunning && !isPaused && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
+              {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
+              <div>
+                <p className={`text-xs ${th.sub}`}>
+                  FASE 1 — {isComplete ? "COMPLETATA" : isRunning ? "SCANSIONE LISTA" : "PRONTO"}
+                  {` • ${countryLabel}`}
+                  {network && ` • ${network}`}
+                </p>
+                {isRunning && (
+                  <p className={`text-2xl font-mono ${th.mono}`}>
+                    Pagina {currentPage}
+                    {totalPages !== null && <span className={`text-sm ml-1 ${th.dim}`}>/{totalPages}</span>}
+                    <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {members.length}</span>
+                  </p>
+                )}
+                {isComplete && (
+                  <p className={`text-2xl font-mono ${th.mono}`}>
+                    {members.length} partner trovati
+                    <span className={`text-sm ml-3 ${th.dim}`}>({membersWithId.length} con WCA ID)</span>
+                  </p>
+                )}
+              </div>
+              {pageTime !== null && isRunning && (
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
+                  <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
+                  <span className={`font-mono text-xs ${th.cdText}`}>{(pageTime / 1000).toFixed(1)}s/pagina</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {!isRunning && !isComplete && (
+                <Button onClick={handleStart} className={th.btnPri}>
+                  <Play className="w-4 h-4 mr-1" /> Avvia Scansione Lista
+                </Button>
+              )}
+              {isRunning && !isPaused && (
+                <Button size="sm" variant="outline" onClick={() => { pauseRef.current = true; setIsPaused(true); }} className={th.btnPause}>
+                  <Pause className="w-4 h-4 mr-1" /> Pausa
+                </Button>
+              )}
+              {isPaused && (
+                <Button size="sm" onClick={() => { pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
+                  <Play className="w-4 h-4 mr-1" /> Riprendi
+                </Button>
+              )}
+              {isRunning && (
+                <Button size="sm" variant="outline" onClick={() => { abortRef.current = true; setIsRunning(false); setIsComplete(true); }} className={th.btnStop}>
+                  <Square className="w-4 h-4 mr-1" /> Stop
+                </Button>
+              )}
+              {isComplete && membersWithId.length > 0 && (
+                <Button onClick={() => onComplete(membersWithId)} className={th.btnPri}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Scarica Dettagli ({membersWithId.length})
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Speed control for listing */}
+        {(isRunning || (!isRunning && !isComplete)) && (
+          <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4`}>
+            <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
+              <Timer className="w-3.5 h-3.5" />
+              Velocità Fase 1 (tra pagine): <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[listingDelayIdx]]}</span>
+            </label>
+            <Slider value={[listingDelayIdx]} onValueChange={([v]) => setListingDelayIdx(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+            <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
+              <span>Veloce</span>
+              <span>Lento (sicuro)</span>
+            </div>
+          </div>
+        )}
+
+        {/* Progress bar */}
+        {totalPages !== null && totalPages > 0 && (
+          <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
+            <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${(currentPage / totalPages) * 100}%` }} />
+          </div>
+        )}
+
+        {error && (
+          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* Live member list */}
+        <div className={`flex-1 ${th.panel} border ${th.panelSlate} rounded-2xl p-4 min-h-0 overflow-hidden flex flex-col`}>
+          <div className="flex items-center justify-between mb-2">
+            <p className={`text-xs ${th.dim}`}>
+              <List className="w-3 h-3 inline mr-1" />
+              Partner trovati ({members.length})
+            </p>
+            {totalResults !== null && (
+              <p className={`text-xs ${th.dim}`}>Totale directory: {totalResults}</p>
+            )}
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="space-y-1 text-xs font-mono pr-4">
+              {members.map((m, i) => (
+                <div key={`${m.wca_id || i}-${i}`} className={`flex items-center gap-2 py-1 px-2 rounded animate-fade-in ${th.hover}`}>
+                  <span className={`w-12 text-right ${th.logId}`}>{m.wca_id ? `#${m.wca_id}` : "—"}</span>
+                  <span className="text-sm">{m.country ? getCountryFlag(m.country) : "🌍"}</span>
+                  <span className={`flex-1 truncate ${th.logName}`}>{m.company_name}</span>
+                  <span className={`${th.dim}`}>{m.city || ""}</span>
+                </div>
+              ))}
+              <div ref={logsEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+
+      {/* Right: summary */}
+      <div className="w-64 flex flex-col gap-3 min-h-0">
+        <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4 space-y-3`}>
+          <p className={`text-xs font-medium ${th.label}`}>Riepilogo</p>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className={`text-xs ${th.body}`}>Partner trovati</span>
+              <span className={`font-mono font-bold ${th.hi}`}>{members.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className={`text-xs ${th.body}`}>Con WCA ID</span>
+              <span className={`font-mono ${th.acEm}`}>{membersWithId.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className={`text-xs ${th.body}`}>Pagine lette</span>
+              <span className={`font-mono ${th.mono}`}>{currentPage}</span>
+            </div>
+            {countries.length > 1 && (
+              <div className="flex justify-between">
+                <span className={`text-xs ${th.body}`}>Paese corrente</span>
+                <span className={`text-xs ${th.mono}`}>{countries[currentCountryIdx]?.name || "—"}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Per-country breakdown */}
+        {countries.length > 0 && (
+          <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4`}>
+            <p className={`text-xs font-medium mb-2 ${th.label}`}>Paesi</p>
+            <div className="space-y-1">
+              {countries.map((c, i) => {
+                const countForCountry = members.filter(m => m.country === c.name || m.country === c.code).length;
+                return (
+                  <div key={c.code} className="flex items-center justify-between">
+                    <span className={`text-xs ${th.body}`}>{getCountryFlag(c.code)} {c.name}</span>
+                    <span className={`font-mono text-xs ${i < currentCountryIdx ? th.acEm : i === currentCountryIdx && isRunning ? th.hi : th.dim}`}>
+                      {countForCountry}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FASE 2 Config: Speed settings before downloading details
+// ═══════════════════════════════════════════════════════════════
+function Phase2Config({ countries, network, members, onStart }: {
+  countries: { code: string; name: string }[];
+  network: string;
+  members: DirectoryMember[];
   onStart: () => void;
 }) {
   const isDark = useTheme();
@@ -474,42 +765,12 @@ function ScanConfig({ countries, network, onStart }: {
   const [nightPauseEnabled, setNightPauseEnabled] = useState(false);
   const [nightPauseMinutes, setNightPauseMinutes] = useState("60");
 
-  const countryCodes = countries.map(c => c.code);
-  const countryLabel = countries.length === 1
-    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
-    : `${countries.length} paesi`;
-
-  // Auto-determine scan range from DB
-  const { data: dbInfo, isLoading: dbLoading } = useQuery({
-    queryKey: ["db-scan-info", countryCodes.join(",")],
-    queryFn: async () => {
-      const [countResult, maxResult, lastScannedResult] = await Promise.all([
-        supabase.from("partners").select("id", { count: "exact", head: true }).in("country_code", countryCodes),
-        supabase.from("partners").select("wca_id").not("wca_id", "is", null).order("wca_id", { ascending: false }).limit(1).maybeSingle(),
-        // Check download_queue for last processed ID for these countries
-        supabase.from("download_queue").select("last_processed_id, id_range_end").in("country_code", countryCodes).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      const maxGlobalId = maxResult.data?.wca_id || 0;
-      const lastProcessed = lastScannedResult.data?.last_processed_id || 0;
-      // Start from after the last processed, or from 1
-      const rangeStart = lastProcessed > 0 ? lastProcessed + 1 : 1;
-      // Scan up to max known + 500 buffer, minimum 500
-      const rangeEnd = Math.max(maxGlobalId + 500, rangeStart + 499);
-      return {
-        countryPartners: countResult.count || 0,
-        maxGlobalId,
-        lastProcessed,
-        rangeStart,
-        rangeEnd,
-        totalIds: rangeEnd - rangeStart + 1,
-      };
-    },
-  });
-
   const delay = DELAY_VALUES[delayIndex];
   const pauseDur = PAUSE_DURATION_VALUES[pauseDurationIndex];
   const pauseEveryN = parseInt(pauseEvery, 10) || 0;
-  const totalIds = dbInfo?.totalIds || 500;
+  const totalIds = members.length;
+
+  const ids = members.filter(m => m.wca_id).map(m => m.wca_id!);
 
   const estimateSeconds = (() => {
     const avgDownloadTime = 3;
@@ -524,18 +785,21 @@ function ScanConfig({ countries, network, onStart }: {
     ? `~${Math.ceil(estimateSeconds / 60)} minuti`
     : `~${estimateSeconds} secondi`;
 
+  const countryLabel = countries.length === 1
+    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
+    : `${countries.length} paesi`;
+
   const handleStart = () => {
     sessionStorage.setItem("dl_config", JSON.stringify({
-      mode: "range",
-      rangeStart: dbInfo?.rangeStart || 1,
-      rangeEnd: dbInfo?.rangeEnd || 500,
+      mode: "ids",
+      ids,
       delay: delay * 1000,
       pauseEvery: pauseEveryN,
       pauseDuration: pauseDur * 1000,
       nightPauseEnabled,
       nightPauseMs: parseInt(nightPauseMinutes, 10) * 60 * 1000,
       filterNetwork: network,
-      filterCountries: countryCodes,
+      filterCountries: countries.map(c => c.code),
       filterCountryNames: countries.map(c => c.name),
     }));
     onStart();
@@ -545,57 +809,29 @@ function ScanConfig({ countries, network, onStart }: {
     <div className="flex-1 flex items-center justify-center">
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-8 max-w-lg w-full space-y-6`}>
         <div>
-          <h2 className={`text-xl mb-1 ${th.h2}`}>{countryLabel}</h2>
+          <h2 className={`text-xl mb-1 ${th.h2}`}>Fase 2 — Download Dettagli</h2>
           <p className={`text-sm ${th.sub}`}>
-            {network || "Tutti i network"} — Pronto per la scansione
+            {countryLabel} • {network || "Tutti i network"}
           </p>
-          {countries.length > 1 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {countries.map(c => (
-                <span key={c.code} className={`text-xs px-2 py-0.5 rounded ${isDark ? "bg-amber-500/15 text-amber-300" : "bg-sky-50 text-sky-600"}`}>
-                  {getCountryFlag(c.code)} {c.name}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Auto-calculated info */}
-        {dbLoading ? (
-          <div className="flex items-center gap-2 py-4 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className={`text-sm ${th.dim}`}>Analisi database...</span>
+        {/* Summary from Phase 1 */}
+        <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm ${th.body}`}>Partner dalla Fase 1</span>
+            <span className={`font-mono font-bold ${th.hi}`}>{totalIds}</span>
           </div>
-        ) : dbInfo && (
-          <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm ${th.body}`}>Partner già nel database</span>
-              <span className={`font-mono font-bold ${th.hi}`}>{dbInfo.countryPartners}</span>
-            </div>
-            {dbInfo.lastProcessed > 0 && (
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${th.body}`}>Ultima scansione fino a ID</span>
-                <span className={`font-mono ${th.hi}`}>{dbInfo.lastProcessed}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className={`text-sm ${th.body}`}>Profili da scansionare</span>
-              <span className={`font-mono font-bold ${th.hi}`}>{dbInfo.totalIds.toLocaleString()}</span>
-            </div>
-            <p className={`text-xs ${th.dim} pt-1`}>
-              {dbInfo.lastProcessed > 0
-                ? `Riprendo da ID ${dbInfo.rangeStart} (dove avevi interrotto)`
-                : `Scansione completa da ID ${dbInfo.rangeStart} a ${dbInfo.rangeEnd}`
-              }
-            </p>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm ${th.body}`}>Con WCA ID (scaricabili)</span>
+            <span className={`font-mono font-bold ${th.acEm}`}>{ids.length}</span>
           </div>
-        )}
+        </div>
 
-        {/* Speed — simple presets */}
+        {/* Speed */}
         <div>
           <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
             <Timer className="w-3.5 h-3.5" />
-            Velocità: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
+            Velocità Fase 2: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
           </label>
           <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
           <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
@@ -646,16 +882,17 @@ function ScanConfig({ countries, network, onStart }: {
           <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
         </div>
 
-        <Button onClick={handleStart} disabled={dbLoading || !dbInfo} className={`w-full ${th.btnPri}`}>
+        <Button onClick={handleStart} disabled={ids.length === 0} className={`w-full ${th.btnPri}`}>
           <Zap className="w-4 h-4 mr-2" />
-          Avvia Scansione
+          Avvia Download Dettagli ({ids.length})
         </Button>
       </div>
     </div>
   );
 }
+
 // ═══════════════════════════════════════════════════════════════
-// DOWNLOAD RUNNING (Phase 2: download details)
+// DOWNLOAD RUNNING (Phase 2: download details by specific IDs)
 // ═══════════════════════════════════════════════════════════════
 function DownloadRunning() {
   const isDark = useTheme();
@@ -702,9 +939,7 @@ function DownloadRunning() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const downloadTimesRef = useRef<number[]>([]);
 
-  const totalIds = config.mode === "range"
-    ? Math.max(0, (config.rangeEnd || 0) - (config.rangeStart || 1) + 1)
-    : (config.ids?.length || 0);
+  const totalIds = config.ids?.length || 0;
   const [countryMatches, setCountryMatches] = useState(0);
   const elapsed = (Date.now() - startTime) / 1000 / 60;
   const speed = elapsed > 0.01 ? (stats.found / elapsed).toFixed(1) : "—";
@@ -750,10 +985,7 @@ function DownloadRunning() {
   useEffect(() => {
     let mounted = true;
     const run = async () => {
-      // Build ID list from range or explicit ids
-      const ids: number[] = config.mode === "range"
-        ? Array.from({ length: (config.rangeEnd || 1) - (config.rangeStart || 1) + 1 }, (_, i) => (config.rangeStart || 1) + i)
-        : (config.ids || []);
+      const ids: number[] = config.ids || [];
       let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
       let localCountryMatches = 0;
 
@@ -789,7 +1021,6 @@ function DownloadRunning() {
             localStats.found++;
             if (result.action === "inserted") localStats.inserted++;
             if (result.action === "updated") localStats.updated++;
-            // Track country matches
             if (config.filterCountries?.length && result.partner?.country_code && config.filterCountries.includes(result.partner.country_code.toUpperCase())) {
               localCountryMatches++;
               if (mounted) setCountryMatches(localCountryMatches);
@@ -864,7 +1095,7 @@ function DownloadRunning() {
               {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
               <div>
                 <p className={`text-xs ${th.sub}`}>
-                  {prolongedPause ? "PAUSA PROLUNGATA" : isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
+                  FASE 2 — {prolongedPause ? "PAUSA PROLUNGATA" : isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
                   {config.filterCountryNames?.length > 0 && ` • ${config.filterCountryNames.length === 1 ? config.filterCountryNames[0] : config.filterCountryNames.length + " paesi"}`}
                   {config.filterNetwork && ` • ${config.filterNetwork}`}
                 </p>
@@ -873,21 +1104,18 @@ function DownloadRunning() {
                   <span className={`text-sm ml-3 ${th.dim}`}>{currentIdx}/{totalIds}</span>
                 </p>
               </div>
-              {/* Prolonged countdown */}
               {prolongedPause && prolongedCountdown > 0 && (
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isDark ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-50 border-sky-200"}`}>
                   <Timer className={`w-3.5 h-3.5 ${th.acAmber}`} />
                   <span className={`font-mono text-sm ${th.acAmber}`}>{formatDuration(prolongedCountdown)}</span>
                 </div>
               )}
-              {/* Normal countdown */}
               {!prolongedPause && countdown > 0 && (
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
                   <Timer className={`w-3.5 h-3.5 ${th.cdIcon}`} />
                   <span className={`font-mono text-sm ${th.cdText}`}>{countdown}s</span>
                 </div>
               )}
-              {/* Per-download timing */}
               {lastDownloadMs !== null && (
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
                   <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
@@ -939,7 +1167,7 @@ function DownloadRunning() {
         {/* Live speed adjustment panel */}
         {showSpeedPanel && (
           <div className={`${th.panel} border ${th.panelAmber} rounded-xl p-4 space-y-3`}>
-            <p className={`text-xs font-medium ${th.label}`}>⚡ Calibrazione velocità in tempo reale</p>
+            <p className={`text-xs font-medium ${th.label}`}>⚡ Calibrazione velocità Fase 2</p>
             <div>
               <label className={`text-xs flex items-center gap-1 mb-2 ${th.dim}`}>
                 Attesa tra download: <span className={`font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[liveDelay]]}</span>
@@ -982,7 +1210,7 @@ function DownloadRunning() {
 
         {/* Log */}
         <div className={`flex-1 ${th.panel} border ${th.panelSlate} rounded-2xl p-4 min-h-0 overflow-hidden flex flex-col`}>
-          <p className={`text-xs mb-2 ${th.dim}`}>Log attività</p>
+          <p className={`text-xs mb-2 ${th.dim}`}>Log attività — Fase 2</p>
           <ScrollArea className="flex-1">
             <div className="space-y-1 text-xs font-mono pr-4">
               {logs.map((log, i) => (
