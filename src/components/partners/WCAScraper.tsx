@@ -1,13 +1,14 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square, Building2, MapPin } from "lucide-react";
+import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square, Building2, MapPin, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { scrapeWcaPartnerById, type ScrapeSingleResult } from "@/lib/api/wcaScraper";
-import { useQueryClient } from "@tanstack/react-query";
+import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } from "@/lib/api/wcaScraper";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailModal } from "./PartnerDetailModal";
 
 interface ScrapeLog {
@@ -20,6 +21,7 @@ interface ScrapeLog {
   countryName?: string;
   partner?: ScrapeSingleResult["partner"];
   partnerId?: string;
+  aiClassification?: AIClassification;
   error?: string;
 }
 
@@ -37,6 +39,29 @@ export function WCAScraper() {
   const [modalOpen, setModalOpen] = useState(false);
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
+
+  // Get max wca_id for sync feature
+  const { data: maxWcaId } = useQuery({
+    queryKey: ["max-wca-id"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("wca_id")
+        .not("wca_id", "is", null)
+        .order("wca_id", { ascending: false })
+        .limit(1)
+        .single();
+      return data?.wca_id || 0;
+    },
+  });
+
+  const handleSyncNew = () => {
+    if (maxWcaId) {
+      setStartId(maxWcaId + 1);
+      setEndId(maxWcaId + 50);
+      toast({ title: "Sync impostato", description: `Cercherò nuovi partner da ID ${maxWcaId + 1} a ${maxWcaId + 50}` });
+    }
+  };
 
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
@@ -92,6 +117,7 @@ export function WCAScraper() {
           log.countryName = result.partner?.country_name;
           log.partner = result.partner;
           log.partnerId = result.partnerId;
+          log.aiClassification = result.aiClassification;
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
@@ -183,12 +209,25 @@ export function WCAScraper() {
             </div>
           </div>
 
+          {/* Sync button */}
+          {maxWcaId && !isLoading && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm flex-1">
+                Ultimo ID nel DB: <strong>{maxWcaId}</strong>
+              </span>
+              <Button variant="outline" size="sm" onClick={handleSyncNew}>
+                Cerca nuovi partner
+              </Button>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button onClick={handleScrape} disabled={isLoading} className="flex-1">
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Scraping in corso...
+                  Scraping + Analisi AI...
                 </>
               ) : (
                 <>
@@ -248,14 +287,21 @@ export function WCAScraper() {
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-mono text-xs text-muted-foreground shrink-0">#{log.wcaId}</span>
                     {log.status === "success" && (
-                      <>
-                        <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="font-medium truncate">{log.companyName}</span>
-                        <span className="text-muted-foreground text-xs hidden sm:inline">
-                          <MapPin className="w-3 h-3 inline mr-0.5" />
-                          {log.city}{log.countryCode ? `, ${log.countryCode}` : ""}
-                        </span>
-                      </>
+                      <div className="flex flex-col min-w-0 gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="font-medium truncate">{log.companyName}</span>
+                          <span className="text-muted-foreground text-xs hidden sm:inline">
+                            <MapPin className="w-3 h-3 inline mr-0.5" />
+                            {log.city}{log.countryCode ? `, ${log.countryCode}` : ""}
+                          </span>
+                        </div>
+                        {log.aiClassification?.summary && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[400px]">
+                            {log.aiClassification.summary}
+                          </p>
+                        )}
+                      </div>
                     )}
                     {log.status === "not_found" && (
                       <span className="text-muted-foreground">Non trovato</span>
@@ -292,6 +338,7 @@ export function WCAScraper() {
       <PartnerDetailModal
         partner={selectedLog?.partner ?? null}
         partnerId={selectedLog?.partnerId}
+        aiClassification={selectedLog?.aiClassification}
         open={modalOpen}
         onOpenChange={setModalOpen}
       />

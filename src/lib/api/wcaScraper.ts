@@ -16,6 +16,12 @@ export interface BranchOffice {
   wca_id?: number;
 }
 
+export interface AIClassification {
+  summary: string;
+  services: string[];
+  partner_type: string;
+}
+
 export interface ScrapedPartner {
   company_name: string;
   city: string;
@@ -46,6 +52,7 @@ export interface ScrapeSingleResult {
   action?: "inserted" | "updated" | "skipped";
   partnerId?: string;
   partner?: ScrapedPartner;
+  aiClassification?: AIClassification;
   error?: string;
 }
 

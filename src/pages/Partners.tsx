@@ -73,11 +73,32 @@ export default function Partners() {
   const [filters, setFilters] = useState<PartnerFilters>({});
   const [showFilters, setShowFilters] = useState(true);
 
+  const { data: allPartners } = usePartners({});
   const { data: partners, isLoading } = usePartners({
     search: search.length >= 2 ? search : undefined,
     ...filters,
   });
   const toggleFavorite = useToggleFavorite();
+
+  // Compute unique countries from all partners
+  const uniqueCountries = (() => {
+    if (!allPartners) return [];
+    const map = new Map<string, { code: string; name: string; flag: string; count: number }>();
+    for (const p of allPartners) {
+      const existing = map.get(p.country_code);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(p.country_code, {
+          code: p.country_code,
+          name: p.country_name,
+          flag: getCountryFlag(p.country_code),
+          count: 1,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   const handleTypeFilter = (type: string, checked: boolean) => {
     setFilters((prev) => ({
@@ -119,13 +140,39 @@ export default function Partners() {
         <Card>
           <CardContent className="p-4 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Filters</h2>
+              <h2 className="font-semibold">Filtri</h2>
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="w-4 h-4 mr-1" />
-                  Clear
+                  Pulisci
                 </Button>
               )}
+            </div>
+
+            {/* Country filter */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Paese</label>
+              <Select
+                value={filters.countries?.[0] || "all"}
+                onValueChange={(v) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    countries: v === "all" ? undefined : [v],
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti i paesi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti i paesi</SelectItem>
+                  {uniqueCountries.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.flag} {c.name} ({c.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Favorites */}
