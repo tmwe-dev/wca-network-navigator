@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, Cookie } from "lucide-react";
+import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
@@ -147,7 +147,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Cookie className="w-5 h-5 text-primary" />
+                <KeyRound className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-base">Cookie di Sessione WCA</CardTitle>
