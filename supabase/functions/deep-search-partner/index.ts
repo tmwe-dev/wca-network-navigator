@@ -72,10 +72,15 @@ Deno.serve(async (req) => {
         continue
       }
 
+      // Search specifically for personal LinkedIn profiles (linkedin.com/in/)
       const query = `"${contact.name}" "${partner.company_name}" site:linkedin.com/in`
+      const queryAlt = contact.title 
+        ? `"${contact.name}" "${contact.title}" "${partner.city || partner.country_name || ''}" linkedin.com/in`
+        : null
       console.log(`Searching: ${query}`)
 
       try {
+        // Primary search
         const searchResp = await fetch('https://api.firecrawl.dev/v1/search', {
           method: 'POST',
           headers: {
@@ -85,16 +90,33 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ query, limit: 5 }),
         })
 
-        if (!searchResp.ok) {
-          console.error(`Firecrawl search error for ${contact.name}: ${searchResp.status}`)
-          continue
+        let results: any[] = []
+        if (searchResp.ok) {
+          const searchData = await searchResp.json()
+          results = (searchData?.data || searchData?.results || [])
+            .filter((r: any) => r.url?.includes('linkedin.com/in/'))
         }
 
-        const searchData = await searchResp.json()
-        const results = searchData?.data || searchData?.results || []
+        // If no personal profile results and we have an alt query, try that
+        if (results.length === 0 && queryAlt) {
+          console.log(`No results with primary query, trying alt: ${queryAlt}`)
+          const altResp = await fetch('https://api.firecrawl.dev/v1/search', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${firecrawlKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: queryAlt, limit: 5 }),
+          })
+          if (altResp.ok) {
+            const altData = await altResp.json()
+            results = (altData?.data || altData?.results || [])
+              .filter((r: any) => r.url?.includes('linkedin.com/in/'))
+          }
+        }
 
         if (results.length === 0) {
-          console.log(`No results for ${contact.name}`)
+          console.log(`No personal LinkedIn results for ${contact.name}`)
           continue
         }
 
@@ -109,12 +131,20 @@ Deno.serve(async (req) => {
             model: 'google/gemini-2.5-flash-lite',
             messages: [{
               role: 'user',
-              content: `I'm looking for the LinkedIn profile of "${contact.name}" who works at "${partner.company_name}" in ${partner.city || ''}, ${partner.country_name || ''}.${contact.title ? ` Their title is "${contact.title}".` : ''}
+              content: `I need to find the PERSONAL LinkedIn profile (linkedin.com/in/) of a specific person.
 
-Here are the search results:
+Person: "${contact.name}"
+Company: "${partner.company_name}"
+Location: ${partner.city || ''}, ${partner.country_name || ''}
+${contact.title ? `Title/Role: "${contact.title}"` : ''}
+${contact.email ? `Email: "${contact.email}"` : ''}
+
+IMPORTANT: I need the PERSONAL profile (linkedin.com/in/...), NOT a company page (linkedin.com/company/...).
+
+Search results:
 ${results.map((r: any, i: number) => `${i + 1}. URL: ${r.url}\n   Title: ${r.title || 'N/A'}\n   Description: ${r.description || 'N/A'}`).join('\n\n')}
 
-If one of these results clearly matches the person, respond with ONLY the LinkedIn URL (e.g., https://www.linkedin.com/in/username). If none match or you're not confident, respond with "NONE".`
+If one result clearly matches this PERSON (not company), respond with ONLY the LinkedIn URL. If none match or you're unsure, respond with "NONE".`
             }],
           }),
         })
