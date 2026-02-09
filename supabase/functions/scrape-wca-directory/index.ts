@@ -142,10 +142,10 @@ If this is a login page, empty page, or error page, return members as an empty a
 
     console.log(`Found ${members.length} members for ${countryCode} (page ${currentPage})${network ? ` [${network}]` : ''}`)
 
-    // Calculate pagination
+    // Calculate pagination — deterministic: if we got a full page, there's likely more
     const totalResults = extracted.total_results || members.length
     const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
-    const hasNextPage = extracted.has_next_page ?? (currentPage < totalPages)
+    const hasNextPage = members.length >= size
 
     return new Response(
       JSON.stringify({
