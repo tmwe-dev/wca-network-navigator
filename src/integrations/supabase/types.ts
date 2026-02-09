@@ -144,6 +144,7 @@ export type Database = {
           delay_seconds: number
           error_message: string | null
           id: string
+          job_type: string
           last_processed_company: string | null
           last_processed_wca_id: number | null
           network_name: string
@@ -162,6 +163,7 @@ export type Database = {
           delay_seconds?: number
           error_message?: string | null
           id?: string
+          job_type?: string
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string
@@ -180,6 +182,7 @@ export type Database = {
           delay_seconds?: number
           error_message?: string | null
           id?: string
+          job_type?: string
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string

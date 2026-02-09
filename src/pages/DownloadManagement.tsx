@@ -11,8 +11,9 @@ import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
-  Search, Users, MapPin, Settings2, List, FileDown, Activity
+  Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw
 } from "lucide-react";
+import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import {
   scrapeWcaPartnerById,
   scrapeWcaDirectory,
@@ -32,7 +33,7 @@ import {
 } from "@/hooks/useDownloadJobs";
 
 // ─── Types ────────────────────────────────────────────────────
-type ActionType = "download" | "enrich" | "network";
+type ActionType = "download" | "enrich" | "network" | "resync";
 type Step = "choose" | "configure" | "running";
 
 interface ScrapeLog {
@@ -184,8 +185,10 @@ export default function DownloadManagement() {
             {step === "configure" && action === "download" && <DownloadWizard onStartRunning={() => setStep("running")} />}
             {step === "configure" && action === "enrich" && <EnrichConfigure onStart={() => setStep("running")} />}
             {step === "configure" && action === "network" && <NetworkConfigure />}
+            {step === "configure" && action === "resync" && <ResyncConfigure isDark={isDark} onStartRunning={() => setStep("running")} />}
             {step === "running" && action === "download" && <DownloadRunning />}
             {step === "running" && action === "enrich" && <EnrichRunning />}
+            {step === "running" && action === "resync" && <DownloadRunning />}
           </div>
         </div>
       </div>
@@ -204,13 +207,14 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
 
   const actions = [
     { type: "download" as ActionType, icon: Download, title: "Scarica Partner", desc: "Scegli paese e network, cerca la lista, poi scarica i dettagli", color: "amber" },
+    { type: "resync" as ActionType, icon: RefreshCw, title: "Aggiorna Contatti", desc: "Ri-scarica partner esistenti per recuperare email e telefoni", color: "purple" },
     { type: "enrich" as ActionType, icon: Sparkles, title: "Arricchisci dal Sito", desc: "Leggi siti web di partner già scaricati con AI", color: "emerald" },
     { type: "network" as ActionType, icon: Globe, title: "Analisi Network", desc: "Verifica a quali gruppi WCA hai accesso ai dati", color: "blue" },
   ];
   const cMap: Record<string, string> = isDark
-    ? { amber: "border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/5", emerald: "border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5", blue: "border-blue-500/30 hover:border-blue-500/60 hover:bg-blue-500/5" }
-    : { amber: "border-sky-200 hover:border-sky-400 hover:bg-sky-50", emerald: "border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50", blue: "border-blue-200 hover:border-blue-400 hover:bg-blue-50" };
-  const iMap: Record<string, string> = { amber: th.acAmber, emerald: th.acEm, blue: th.acBl };
+    ? { amber: "border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/5", emerald: "border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5", blue: "border-blue-500/30 hover:border-blue-500/60 hover:bg-blue-500/5", purple: "border-purple-500/30 hover:border-purple-500/60 hover:bg-purple-500/5" }
+    : { amber: "border-sky-200 hover:border-sky-400 hover:bg-sky-50", emerald: "border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50", blue: "border-blue-200 hover:border-blue-400 hover:bg-blue-50", purple: "border-purple-200 hover:border-purple-400 hover:bg-purple-50" };
+  const iMap: Record<string, string> = { amber: th.acAmber, emerald: th.acEm, blue: th.acBl, purple: isDark ? "text-purple-400" : "text-purple-600" };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8">
@@ -246,7 +250,7 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
         <h1 className={`text-2xl mb-2 ${th.h1}`}>Cosa vuoi fare?</h1>
         <p className={`text-sm ${th.sub}`}>Scegli un'azione per iniziare</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl w-full">
         {actions.map(a => (
           <button key={a.type} onClick={() => onSelect(a.type)} className={`group ${th.panel} border rounded-2xl p-8 text-left transition-all duration-300 ${cMap[a.color]}`}>
             <a.icon className={`w-10 h-10 mb-4 ${iMap[a.color]}`} />

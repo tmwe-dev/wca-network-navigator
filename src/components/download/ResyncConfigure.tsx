@@ -1,0 +1,396 @@
+import { useState, useEffect, useContext, createContext } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
+import {
+  RefreshCw, Play, Users, Mail, Phone, AlertTriangle, ArrowRight, Loader2
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { WCA_NETWORKS } from "@/data/wcaFilters";
+
+// Theme context - reuse from parent
+const ThemeCtx = createContext(true);
+
+interface NetworkStats {
+  network_name: string;
+  total_partners: number;
+  missing_contacts: number;
+  wca_ids: number[];
+}
+
+const DELAY_VALUES = [0, 1, 2, 3, 5, 8, 10, 15, 20, 30, 45, 60];
+const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 2: "2s", 3: "3s", 5: "5s", 8: "8s", 10: "10s", 15: "15s", 20: "20s", 30: "30s", 45: "45s", 60: "60s" };
+
+function t(dark: boolean) {
+  return {
+    panel: dark ? "bg-black/40 backdrop-blur-xl" : "bg-white/80 backdrop-blur-lg shadow-lg",
+    h1: dark ? "text-slate-100" : "text-slate-800",
+    h2: dark ? "text-slate-100" : "text-slate-800",
+    sub: dark ? "text-slate-400" : "text-slate-500",
+    body: dark ? "text-slate-300" : "text-slate-600",
+    label: dark ? "text-slate-400" : "text-slate-500",
+    cardBg: dark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm",
+    btnPri: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
+    hi: dark ? "text-amber-400" : "text-sky-600",
+    acEm: dark ? "text-emerald-400" : "text-emerald-600",
+    acAmber: dark ? "text-amber-400" : "text-sky-600",
+    infoBox: dark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600",
+    input: dark ? "bg-slate-800/50 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800",
+    hover: dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50",
+    dim: dark ? "text-slate-500" : "text-slate-400",
+  };
+}
+
+export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; onStartRunning: () => void }) {
+  const th = t(isDark);
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(true);
+  const [networkStats, setNetworkStats] = useState<NetworkStats[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [delayIdx, setDelayIdx] = useState(5); // default 8s
+  const [prioritizeMissing, setPrioritizeMissing] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [hasCookie, setHasCookie] = useState<boolean | null>(null);
+
+  // Load network stats
+  useEffect(() => {
+    loadStats();
+    checkCookie();
+  }, []);
+
+  async function checkCookie() {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "wca_session_cookie")
+      .maybeSingle();
+    setHasCookie(!!data?.value);
+  }
+
+  async function loadStats() {
+    setLoading(true);
+    try {
+      // Get all partner networks with partner info
+      const { data: pnData } = await supabase
+        .from("partner_networks")
+        .select("network_name, partner_id, partners!inner(wca_id)");
+
+      // Get contacts with email
+      const { data: contactsData } = await supabase
+        .from("partner_contacts")
+        .select("partner_id, email");
+
+      const partnersWithEmail = new Set(
+        (contactsData || []).filter(c => c.email).map(c => c.partner_id)
+      );
+
+      // Group by network
+      const byNetwork = new Map<string, { partnerIds: Set<string>; wcaIds: Set<number> }>();
+      for (const pn of (pnData || [])) {
+        const nn = pn.network_name;
+        if (!byNetwork.has(nn)) byNetwork.set(nn, { partnerIds: new Set(), wcaIds: new Set() });
+        const entry = byNetwork.get(nn)!;
+        entry.partnerIds.add(pn.partner_id);
+        const wcaId = (pn as any).partners?.wca_id;
+        if (wcaId) entry.wcaIds.add(wcaId);
+      }
+
+      const stats: NetworkStats[] = [];
+      for (const [nn, entry] of byNetwork) {
+        const missing = [...entry.partnerIds].filter(pid => !partnersWithEmail.has(pid)).length;
+        stats.push({
+          network_name: nn,
+          total_partners: entry.partnerIds.size,
+          missing_contacts: missing,
+          wca_ids: [...entry.wcaIds],
+        });
+      }
+      stats.sort((a, b) => b.total_partners - a.total_partners);
+      setNetworkStats(stats);
+    } catch (err) {
+      console.error("Error loading network stats:", err);
+    }
+    setLoading(false);
+  }
+
+  function toggleNetwork(name: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (selected.size === networkStats.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(networkStats.map(n => n.network_name)));
+    }
+  }
+
+  const totalSelected = networkStats.filter(n => selected.has(n.network_name));
+  const totalPartners = totalSelected.reduce((s, n) => s + n.total_partners, 0);
+  const totalMissing = totalSelected.reduce((s, n) => s + n.missing_contacts, 0);
+
+  async function startResync() {
+    if (selected.size === 0) return;
+    setStarting(true);
+
+    try {
+      // Collect all WCA IDs from selected networks
+      // If prioritizing missing, we need to reorder
+      let allWcaIds: number[] = [];
+      for (const ns of totalSelected) {
+        allWcaIds.push(...ns.wca_ids);
+      }
+      // Deduplicate
+      allWcaIds = [...new Set(allWcaIds)];
+
+      if (prioritizeMissing) {
+        // Get partner IDs without contacts email
+        const { data: partnersWithoutEmail } = await supabase
+          .from("partners")
+          .select("wca_id")
+          .in("wca_id", allWcaIds)
+          .not("wca_id", "is", null);
+
+        const { data: contactsWithEmail } = await supabase
+          .from("partner_contacts")
+          .select("partner_id, email")
+          .not("email", "is", null);
+
+        const partnerIdsWithEmail = new Set(
+          (contactsWithEmail || []).map(c => c.partner_id)
+        );
+
+        // Get partners that have email
+        const { data: partnersAll } = await supabase
+          .from("partners")
+          .select("id, wca_id")
+          .in("wca_id", allWcaIds)
+          .not("wca_id", "is", null);
+
+        const withEmailWcaIds = new Set<number>();
+        const withoutEmailWcaIds: number[] = [];
+
+        for (const p of (partnersAll || [])) {
+          if (partnerIdsWithEmail.has(p.id)) {
+            withEmailWcaIds.add(p.wca_id!);
+          } else {
+            withoutEmailWcaIds.push(p.wca_id!);
+          }
+        }
+
+        // Put missing first, then existing
+        const orderedIds = [
+          ...withoutEmailWcaIds,
+          ...allWcaIds.filter(id => withEmailWcaIds.has(id)),
+        ];
+        allWcaIds = [...new Set(orderedIds)];
+      }
+
+      const networkNames = [...selected].join(", ");
+
+      // Create the resync job
+      const { data, error } = await supabase
+        .from("download_jobs")
+        .insert({
+          country_code: "ALL",
+          country_name: "Re-sync Contatti",
+          network_name: networkNames,
+          wca_ids: allWcaIds as any,
+          total_count: allWcaIds.length,
+          delay_seconds: DELAY_VALUES[delayIdx],
+          status: "pending",
+          job_type: "resync",
+        } as any)
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      // Trigger the processor
+      await supabase.functions.invoke("process-download-job", {
+        body: { jobId: data.id },
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      toast({ title: "Re-sync avviato", description: `${allWcaIds.length} partner da aggiornare` });
+      onStartRunning();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    }
+    setStarting(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className={`w-8 h-8 animate-spin ${th.hi}`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col gap-6 max-w-3xl mx-auto w-full">
+      <div>
+        <h2 className={`text-xl font-semibold ${th.h1}`}>
+          <RefreshCw className={`w-5 h-5 inline mr-2 ${th.hi}`} />
+          Aggiorna Contatti
+        </h2>
+        <p className={`text-sm mt-1 ${th.sub}`}>
+          Ri-scarica i partner per network per recuperare email e telefoni dei contatti
+        </p>
+      </div>
+
+      {/* Cookie warning */}
+      {hasCookie === false && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
+          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className={`text-sm font-medium ${th.h2}`}>Cookie WCA non configurato</p>
+            <p className={`text-xs mt-1 ${th.sub}`}>
+              Vai in Impostazioni e inserisci il cookie di sessione WCA prima di avviare il re-sync,
+              altrimenti i contatti non saranno visibili.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Network list */}
+      <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-sm font-medium ${th.h2}`}>Seleziona Network</h3>
+          <button onClick={selectAll} className={`text-xs ${th.hi}`}>
+            {selected.size === networkStats.length ? "Deseleziona tutti" : "Seleziona tutti"}
+          </button>
+        </div>
+
+        {networkStats.length === 0 ? (
+          <p className={`text-sm ${th.sub}`}>Nessun partner trovato nel database</p>
+        ) : (
+          <div className="space-y-2">
+            {networkStats.map(ns => {
+              const pct = ns.total_partners > 0
+                ? Math.round(((ns.total_partners - ns.missing_contacts) / ns.total_partners) * 100)
+                : 0;
+              const isComplete = ns.missing_contacts === 0;
+
+              return (
+                <label
+                  key={ns.network_name}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${th.cardBg} ${th.hover}`}
+                >
+                  <Checkbox
+                    checked={selected.has(ns.network_name)}
+                    onCheckedChange={() => toggleNetwork(ns.network_name)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium ${th.h2}`}>{ns.network_name}</span>
+                      <Badge
+                        variant="outline"
+                        className={isComplete
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
+                          : "bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]"
+                        }
+                      >
+                        {isComplete ? "Completo" : `${ns.missing_contacts} mancanti`}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className={`text-xs ${th.dim}`}>
+                        <Users className="w-3 h-3 inline mr-1" />
+                        {ns.total_partners} partner
+                      </span>
+                      <span className={`text-xs ${th.dim}`}>
+                        <Mail className="w-3 h-3 inline mr-1" />
+                        {pct}% con email
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-20">
+                    <Progress value={pct} className="h-1.5" />
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Options */}
+      {selected.size > 0 && (
+        <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5 space-y-5`}>
+          {/* Priority toggle */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <Checkbox
+              checked={prioritizeMissing}
+              onCheckedChange={(v) => setPrioritizeMissing(!!v)}
+            />
+            <div>
+              <span className={`text-sm ${th.h2}`}>Priorità ai contatti mancanti</span>
+              <p className={`text-xs ${th.sub}`}>Scarica prima i partner senza email/telefono</p>
+            </div>
+          </label>
+
+          {/* Delay slider */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-sm ${th.label}`}>Velocità</span>
+              <span className={`text-sm font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[delayIdx]]}</span>
+            </div>
+            <Slider
+              min={0}
+              max={DELAY_VALUES.length - 1}
+              step={1}
+              value={[delayIdx]}
+              onValueChange={([v]) => setDelayIdx(v)}
+            />
+            <div className={`flex justify-between text-[10px] mt-1 ${th.dim}`}>
+              <span>Veloce</span>
+              <span>Lento</span>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className={`${th.infoBox} rounded-xl p-4 border`}>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className={`text-2xl font-bold ${th.h1}`}>{totalPartners}</p>
+                <p className={`text-xs ${th.sub}`}>Partner totali</p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold text-amber-400`}>{totalMissing}</p>
+                <p className={`text-xs ${th.sub}`}>Senza contatti</p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${th.acEm}`}>{totalPartners - totalMissing}</p>
+                <p className={`text-xs ${th.sub}`}>Con email</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Start button */}
+          <Button
+            onClick={startResync}
+            disabled={starting || hasCookie === false}
+            className={`w-full ${th.btnPri}`}
+          >
+            {starting ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio in corso...</>
+            ) : (
+              <><Play className="w-4 h-4 mr-2" /> Avvia Re-sync ({totalPartners} partner)</>
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
