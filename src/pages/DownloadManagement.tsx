@@ -68,10 +68,10 @@ const useTheme = () => useContext(ThemeCtx);
 
 function t(dark: boolean) {
   return {
-    pageBg: dark ? "bg-slate-950" : "bg-slate-50",
-    pageGrad1: dark ? "from-slate-950 via-slate-900 to-slate-950" : "from-slate-100 via-white to-slate-100",
-    pageGrad2: dark ? "from-amber-900/10" : "from-sky-200/30",
-    panel: dark ? "bg-black/40 backdrop-blur-xl" : "bg-white/80 backdrop-blur-lg shadow-lg",
+    pageBg: dark ? "bg-slate-950" : "bg-slate-100",
+    pageGrad1: dark ? "from-slate-950 via-slate-900/95 to-slate-950" : "from-slate-100 via-slate-50 to-slate-100",
+    pageGrad2: dark ? "from-slate-800/20" : "from-slate-200/30",
+    panel: dark ? "bg-white/[0.06] backdrop-blur-xl border-white/[0.1]" : "bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/30 border-white/80",
     panelAmber: dark ? "border-amber-500/20" : "border-sky-300/40",
     panelEmerald: dark ? "border-emerald-500/20" : "border-emerald-300/40",
     panelBlue: dark ? "border-blue-500/20" : "border-blue-300/40",
@@ -133,9 +133,9 @@ function t(dark: boolean) {
     stepLine: dark ? "bg-slate-700" : "bg-slate-200",
     stepLineOk: "bg-emerald-500",
     optCard: dark
-      ? "bg-slate-800/50 border-slate-700/50 hover:border-amber-500/40 hover:bg-slate-800/80 text-slate-200"
-      : "bg-white border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 text-slate-700 shadow-sm",
-    infoBox: dark ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600",
+      ? "bg-white/[0.04] backdrop-blur-md border-white/[0.08] hover:bg-white/[0.08] hover:border-white/[0.15] hover:shadow-lg hover:shadow-white/[0.03] text-slate-200 transition-all duration-200"
+      : "bg-white/60 backdrop-blur-md border-white/80 hover:bg-white/80 hover:border-slate-300/80 hover:shadow-lg hover:shadow-slate-200/50 text-slate-700 transition-all duration-200",
+    infoBox: dark ? "bg-white/[0.04] backdrop-blur-sm border-white/[0.08] text-slate-300" : "bg-white/50 backdrop-blur-sm border-slate-200/60 text-slate-600",
   };
 }
 
@@ -454,12 +454,13 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   return (
     <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
       <div className="text-center">
-        <h2 className={`text-xl mb-1 ${th.h2}`}>Quali paesi vuoi esplorare?</h2>
+        <h2 className={`text-xl font-semibold mb-1 ${th.h2}`}>Quali paesi vuoi esplorare?</h2>
+        <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
         <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
       </div>
 
       {selected.length > 0 && (
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="flex items-center gap-2 mb-2">
             <span className={`text-xs ${th.label}`}>Selezionati:</span>
             <Badge variant="secondary" className="text-xs">{selected.length}</Badge>
@@ -479,7 +480,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
       )}
 
       {/* Search + Filters + Sort */}
-      <div className="w-full max-w-3xl flex flex-wrap gap-2 items-center">
+      <div className="w-full max-w-4xl flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
           <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
@@ -492,10 +493,10 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             <button
               key={mode}
               onClick={() => setFilterMode(mode)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all duration-200 whitespace-nowrap ${
                 active
-                  ? isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                  : th.optCard
+                  ? isDark ? "bg-white/[0.1] border-white/[0.2] text-white shadow-sm" : "bg-white/90 border-slate-300 text-slate-800 shadow-sm"
+                  : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200" : "bg-white/40 border-slate-200/60 text-slate-500 hover:bg-white/70 hover:text-slate-700"
               }`}
             >
               {mode === "all" && <Globe className="w-3.5 h-3.5" />}
@@ -531,8 +532,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                   }
                 });
               }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
-                isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30" : "bg-sky-100 border-sky-300 text-sky-700 hover:bg-sky-200"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                isDark ? "bg-white/[0.1] border-white/[0.2] text-white hover:bg-white/[0.15]" : "bg-white/90 border-slate-300 text-slate-800 hover:bg-white shadow-sm"
               }`}
             >
               <CheckCircle className="w-3.5 h-3.5" />
@@ -542,91 +543,114 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         })()}
       </div>
 
-      <ScrollArea className="flex-1 w-full max-w-3xl">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pr-4">
+      <ScrollArea className="flex-1 w-full max-w-4xl">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pr-4">
           {filtered.map(c => {
             const isSelected = selectedCodes.has(c.code);
             const pCount = partnerCounts[c.code] || 0;
             const cCount = cacheCounts[c.code] || 0;
             const hasDirectoryScan = cCount > 0;
             const hasDbOnly = pCount > 0 && cCount === 0;
-            const isExplored = hasDirectoryScan;
             const isVerified = cacheData[c.code]?.verified === true;
             const isComplete = isVerified;
+            const cs = completeness?.byCountry[c.code];
+            const contactsTotal = cs?.total_partners || 0;
+            const withEmail = cs?.with_personal_email || 0;
+            const withPhone = cs?.with_personal_phone || 0;
+            const withBoth = cs?.with_both || 0;
+            const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
+
+            // Download completeness
+            const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
+
             return (
               <button
                 key={c.code}
                 onClick={() => onToggle(c.code, c.name)}
-                className={`relative flex items-center gap-2 p-3 rounded-lg border transition-all text-left overflow-hidden ${
+                className={`relative rounded-xl border p-3 text-left transition-all duration-200 ${
                   isSelected
-                    ? isDark ? "bg-amber-500/15 border-amber-500/40 ring-1 ring-amber-500/30" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300"
+                    ? isDark
+                      ? "bg-white/[0.1] border-white/[0.25] ring-1 ring-white/20 shadow-lg shadow-white/[0.05]"
+                      : "bg-sky-50/80 border-sky-300/80 ring-1 ring-sky-300/50 shadow-lg shadow-sky-100/50"
                     : th.optCard
                 }`}
               >
-                {/* Green gradient only for scanned countries */}
-                {isExplored && !isSelected && (
-                  <div className={`absolute inset-0 pointer-events-none ${
-                    isDark
-                      ? "bg-gradient-to-l from-emerald-500/12 via-emerald-500/5 to-transparent"
-                      : "bg-gradient-to-l from-emerald-100/80 via-emerald-50/40 to-transparent"
-                  }`} />
-                )}
-                {/* Orange gradient for DB-only (partial data) */}
-                {hasDbOnly && !isSelected && (
-                  <div className={`absolute inset-0 pointer-events-none ${
-                    isDark
-                      ? "bg-gradient-to-l from-orange-500/10 via-orange-500/3 to-transparent"
-                      : "bg-gradient-to-l from-orange-100/60 via-orange-50/30 to-transparent"
-                  }`} />
-                )}
-                <span className="relative text-lg">{getCountryFlag(c.code)}</span>
-                <div className="relative min-w-0 flex-1">
-                  <p className="text-sm truncate">{c.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {hasDirectoryScan && (
-                      <>
-                        <span className={`text-[10px] ${th.acEm}`}>{pCount}/{cCount}</span>
-                        {pCount > 0 && partnerData[c.code] && (partnerData[c.code].branch > 0) && (
-                          <span className={`text-[10px] ${th.dim}`}>({partnerData[c.code].hq}HQ+{partnerData[c.code].branch}B)</span>
-                        )}
-                      </>
+                {/* Header: flag + name + status */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl leading-none">{getCountryFlag(c.code)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${th.h2}`}>{c.name}</p>
+                  </div>
+                  {isSelected && <CheckCircle className={`w-4 h-4 flex-shrink-0 ${isDark ? "text-white/70" : "text-sky-500"}`} />}
+                </div>
+
+                {/* Status badge */}
+                {(hasDirectoryScan || hasDbOnly) && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {isComplete && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium flex items-center gap-0.5 ${isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-50 text-emerald-600"}`}>
+                        <CheckCircle className="w-3 h-3" /> Completo
+                      </span>
+                    )}
+                    {!isComplete && hasDirectoryScan && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono font-medium ${isDark ? "bg-white/[0.06] text-slate-300" : "bg-slate-100/80 text-slate-600"}`}>
+                        {pCount}/{cCount} scaricati ({dlPct}%)
+                      </span>
                     )}
                     {hasDbOnly && (
-                      <>
-                        <span className={`text-[10px] ${isDark ? "text-orange-400" : "text-orange-600"}`}>{pCount} partner (lista ?)</span>
-                        {partnerData[c.code] && partnerData[c.code].branch > 0 && (
-                          <span className={`text-[10px] ${th.dim}`}>({partnerData[c.code].hq}HQ+{partnerData[c.code].branch}B)</span>
-                        )}
-                      </>
-                    )}
-                    {!hasDirectoryScan && !hasDbOnly && (
-                      <span className={`text-[10px] ${th.dim}`}>{c.code}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${isDark ? "bg-amber-500/10 text-amber-400" : "bg-amber-50 text-amber-600"}`}>
+                        {pCount} partner (parziale)
+                      </span>
                     )}
                   </div>
-                  {/* Contact quality indicator */}
-                  {completeness?.byCountry[c.code] && (() => {
-                    const cs = completeness.byCountry[c.code];
-                    const pctEmail = cs.total_partners > 0 ? Math.round((cs.with_personal_email / cs.total_partners) * 100) : 0;
-                    const color = pctEmail >= 60 ? "text-emerald-500" : pctEmail >= 30 ? "text-amber-500" : "text-red-500";
-                    return (
-                      <div className={`flex items-center gap-1 text-[9px] ${color} mt-0.5`}>
-                        {pctEmail >= 60 ? <UserCheck className="w-2.5 h-2.5" /> : <UserX className="w-2.5 h-2.5" />}
-                        <span>{pctEmail}% contatti</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-                {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
-                {!isSelected && isComplete && (
-                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
-                    <CheckCircle className="w-3 h-3" /> Completo
-                  </span>
                 )}
-                {!isSelected && !isComplete && hasDirectoryScan && (
-                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{pCount}/{cCount}</span>
+
+                {/* Contact stats — only show when we have data */}
+                {pCount > 0 && (
+                  <div className={`rounded-lg p-2 space-y-1.5 ${isDark ? "bg-white/[0.03]" : "bg-slate-50/60"}`}>
+                    {/* People count */}
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`flex items-center gap-1 ${th.dim}`}>
+                        <Users className="w-3 h-3" /> Responsabili
+                      </span>
+                      <span className={`font-mono font-bold ${cs && (withEmail > 0 || withPhone > 0) ? (isDark ? "text-slate-200" : "text-slate-700") : (isDark ? "text-red-400" : "text-red-500")}`}>
+                        {cs ? `${withEmail > 0 || withPhone > 0 ? Math.max(withEmail, withPhone) : 0}` : "0"}/{pCount}
+                      </span>
+                    </div>
+                    {/* Email count */}
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`flex items-center gap-1 ${th.dim}`}>
+                        <Mail className="w-3 h-3" /> Email personale
+                      </span>
+                      <span className={`font-mono font-bold ${withEmail > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>
+                        {withEmail}
+                      </span>
+                    </div>
+                    {/* Phone count */}
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`flex items-center gap-1 ${th.dim}`}>
+                        <Phone className="w-3 h-3" /> Telefono diretto
+                      </span>
+                      <span className={`font-mono font-bold ${withPhone > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>
+                        {withPhone}
+                      </span>
+                    </div>
+                    {/* Quality bar */}
+                    <div className={`w-full h-1 rounded-full overflow-hidden mt-1 ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+                      <div
+                        className={`h-full rounded-full transition-all ${pctEmail >= 60 ? "bg-emerald-500" : pctEmail >= 30 ? "bg-amber-500" : "bg-red-500"}`}
+                        style={{ width: `${pctEmail}%` }}
+                      />
+                    </div>
+                    <p className={`text-[9px] text-right font-mono ${pctEmail >= 60 ? "text-emerald-500" : pctEmail >= 30 ? "text-amber-500" : "text-red-500"}`}>
+                      {pctEmail}% copertura
+                    </p>
+                  </div>
                 )}
-                {!isSelected && hasDbOnly && (
-                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-orange-500/15 text-orange-400 border border-orange-500/30" : "bg-orange-50 text-orange-600 border border-orange-200"}`}>Parziale</span>
+
+                {/* Empty state for unexplored countries */}
+                {pCount === 0 && !hasDirectoryScan && (
+                  <p className={`text-[10px] ${th.dim}`}>{c.code} — mai esplorato</p>
                 )}
               </button>
             );
@@ -635,7 +659,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
       </ScrollArea>
 
       {selected.length > 0 && (
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <Button onClick={onConfirm} className={`w-full ${th.btnPri}`}>
             <ArrowRight className="w-4 h-4 mr-2" />
             Prosegui con {selected.length} {selected.length === 1 ? "paese" : "paesi"}
