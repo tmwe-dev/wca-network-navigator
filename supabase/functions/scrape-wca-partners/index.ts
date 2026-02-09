@@ -178,39 +178,87 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   }
 
   // ── Contacts ──
-  // WCA pages show contacts with Title, Name, Email, Phone fields
+  // WCA markdown format has fields on separate lines:
+  // Title:\n\nManaging Director\n\nName:\n\nJohn Smith\n\nEmail:\n\njohn@example.com
   const contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[] = []
   
+  // Helper: extract value after a field label in multi-line format
+  // Handles both "Field: value" (same line) and "Field:\n\nvalue" (next non-empty line)
+  function extractMultiLineField(block: string, fieldName: string): string | null {
+    // Pattern 1: "Field: value" on same line
+    const sameLineRegex = new RegExp(fieldName + '\\s*:\\s*(.+)', 'i')
+    const sameLineMatch = block.match(sameLineRegex)
+    if (sameLineMatch && sameLineMatch[1].trim().length > 0) {
+      return sameLineMatch[1].trim()
+    }
+    
+    // Pattern 2: "Field:\n\nvalue" on separate lines
+    const multiLineRegex = new RegExp(fieldName + '\\s*:\\s*\\n+\\s*(.+)', 'i')
+    const multiLineMatch = block.match(multiLineRegex)
+    if (multiLineMatch && multiLineMatch[1].trim().length > 0) {
+      return multiLineMatch[1].trim()
+    }
+    
+    return null
+  }
+  
   // Split by "Title:" to get each contact block
-  const titleBlocks = md.split(/Title:\s*/i).slice(1)
-  for (const block of titleBlocks) {
+  const titleBlocks = md.split(/^Title:\s*$/mi)
+  // If no match with strict line boundary, try looser split
+  const blocks = titleBlocks.length > 1 ? titleBlocks.slice(1) : md.split(/Title:\s*/i).slice(1)
+  
+  for (const block of blocks) {
+    // Title value is the first non-empty line in the block
     const lines = block.split('\n')
-    const titleLine = lines[0]?.trim()
+    let titleLine: string | null = null
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.length >= 2) {
+        titleLine = trimmed
+        break
+      }
+    }
     if (!titleLine || titleLine.length < 3) continue
     // Skip placeholder text from non-authenticated scraping
     if (/Members\s*only|please\s*\*?\*?Login\*?\*?|Login\s*to\s*view/i.test(titleLine)) continue
     
     const contact: { title: string; name?: string; email?: string; phone?: string; mobile?: string } = { title: titleLine }
     
-    // Extract Name, Email, Phone, Mobile from subsequent lines
-    const blockText = block.substring(0, 500)
-    const nameMatch = blockText.match(/Name:\s*(.+)/i)
-    if (nameMatch) {
-      const name = nameMatch[1].trim().replace(/\*+/g, '')
+    // Extract Name
+    const rawName = extractMultiLineField(block, 'Name')
+    if (rawName) {
+      const name = rawName.replace(/\*+/g, '').trim()
       if (name && !/Members\s*only|Login/i.test(name)) contact.name = name
     }
-    const emailMatch = blockText.match(/Email:\s*\[?([^\s\]\n<>]+@[^\s\]\n<>]+)/i)
-    if (emailMatch) {
-      const email = emailMatch[1].trim()
-      if (!/Members\s*only|Login|wcaworld/i.test(email)) contact.email = email
+    
+    // Extract Email - handle markdown link format [email](mailto:email) and plain
+    const rawEmail = extractMultiLineField(block, 'Email')
+    if (rawEmail) {
+      // Extract from markdown link: [email@domain.com](mailto:email@domain.com)
+      const linkMatch = rawEmail.match(/\[([^\]]+@[^\]]+)\]/)
+      const email = linkMatch ? linkMatch[1].trim() : rawEmail.replace(/\*+/g, '').trim()
+      if (email && /\S+@\S+\.\S+/.test(email) && !/Members\s*only|Login|wcaworld/i.test(email)) {
+        contact.email = email
+      }
     }
-    const phoneMatch = blockText.match(/(?:Direct\s*Phone|Phone|Tel)\s*[:：]\s*([+\d\s\-().]{7,25})/i)
-    if (phoneMatch) contact.phone = phoneMatch[1].trim()
-    const mobileMatch = blockText.match(/Mobile\s*[:：]\s*([+\d\s\-().]{7,25})/i)
-    if (mobileMatch) contact.mobile = mobileMatch[1].trim()
+    
+    // Extract Direct Line / Direct Phone / Phone
+    const rawPhone = extractMultiLineField(block, '(?:Direct\\s*(?:Line|Phone)|Phone|Tel)')
+    if (rawPhone) {
+      const phone = rawPhone.replace(/\[.*?\]\(.*?\)/g, '').replace(/\*+/g, '').trim()
+      if (phone && /[+\d]/.test(phone) && !/Members\s*only|Login/i.test(phone)) contact.phone = phone
+    }
+    
+    // Extract Mobile
+    const rawMobile = extractMultiLineField(block, 'Mobile')
+    if (rawMobile) {
+      const mobile = rawMobile.replace(/\[.*?\]\(.*?\)/g, '').replace(/\*+/g, '').trim()
+      if (mobile && /[+\d]/.test(mobile) && !/Members\s*only|Login/i.test(mobile)) contact.mobile = mobile
+    }
     
     contacts.push(contact)
   }
+  
   // HTML fallback
   if (contacts.length === 0) {
     const htmlContactRegex = /Title:\s*<\/[^>]+>\s*<[^>]+>([^<]+)/gi
