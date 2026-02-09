@@ -1,131 +1,120 @@
 
 
-# Piano: Download Management - Processo Strutturato di Acquisizione Partner
+# Download Management - Pagina Unica a Flusso Guidato
 
-## Situazione Attuale
+Riprogettazione completa della pagina Download Management: da 4 tab separati a un'unica esperienza guidata passo-passo, con lo stile visivo della pagina Campaigns (sfondo scuro, glassmorphism, tema spaziale).
 
-Oggi lo scraper funziona per "intervallo ID" cieco (es. 11470-11480), senza sapere a priori cosa troveremo. L'utente vuole un processo molto piu intelligente e controllato.
+---
 
-## Nuovo Flusso Operativo
+## Concetto
 
-Il processo si divide in **4 fasi sequenziali**, ognuna con il suo pannello nella nuova pagina:
+L'utente viene guidato attraverso un flusso lineare. Ogni passo si espande al centro della pagina, mentre a destra appare un elenco sospeso (floating) dei partner scaricati in tempo reale, cliccabile per vedere i dettagli in un popup.
 
 ```text
-+------------------+     +------------------+     +------------------+     +------------------+
-| FASE 1           | --> | FASE 2           | --> | FASE 3           | --> | FASE 4           |
-| Analisi Network  |     | Elenco Partner   |     | Download 1-a-1   |     | Arricchimento    |
-| "A quali network |     | "Carica lista    |     | "Scarica profilo |     | "Leggi sito web  |
-|  apparteniamo?"  |     |  partner per      |     |  completo e      |     |  e classifica"   |
-|                  |     |  paese/network"   |     |  classifica AI"  |     |  (opzionale,     |
-|                  |     |                   |     |                  |     |   per gruppi)    |
-+------------------+     +------------------+     +------------------+     +------------------+
++-----------------------------+-----------------------+
+|                             |                       |
+|   AREA CENTRALE             |  LISTA SOSPESA        |
+|                             |  (partner scaricati)  |
+|   Step 1: Cosa vuoi fare?   |                       |
+|   Step 2: Configura         |  [Partner 1]  [x]     |
+|   Step 3: Processo LIVE     |  [Partner 2]  [x]     |
+|                             |  [Partner 3]  [x]     |
+|   [statistiche live]        |  ...                  |
+|   [log in tempo reale]      |                       |
+|                             |                       |
++-----------------------------+-----------------------+
 ```
 
 ---
 
-## FASE 1: Analisi Network
+## Step 1 - "Cosa vuoi fare?"
 
-Un pannello dove l'utente configura a quali network WCA ha accesso e verifica quali dati sono disponibili.
+Tre opzioni presentate come card grandi con icone:
 
-- **Lista network conosciuti** (WCAworld, AWS, GAA, GPLN, ecc.) con checkbox per selezionare quelli di cui si e membri
-- **Test campione**: bottone "Verifica accesso dati" che scarica 3-5 profili a campione dal network selezionato per verificare se i dati di contatto personali (email, telefono diretto dei responsabili) sono effettivamente visibili
-- **Report risultato**: mostra per ogni network testato:
-  - Dati aziendali disponibili (si/no)
-  - Email contatti visibili (si/no)
-  - Nomi responsabili visibili (si/no)
-  - Telefoni diretti visibili (si/no)
-- Le impostazioni dei network vengono salvate in una nuova tabella `download_settings` per riutilizzo futuro
+- **Scarica Partner** - Download sequenziale dalla directory WCA (manuale o automatico)
+- **Arricchisci dal Sito** - Leggi siti web di partner gia scaricati con AI
+- **Analisi Network** - Verifica a quali gruppi WCA hai accesso ai dati
 
-## FASE 2: Elenco Partner per Paese
+Cliccando su un'opzione, si passa allo Step 2.
 
-Una volta scelto il network, l'utente decide **cosa scaricare** e **con che priorita**.
+## Step 2 - Configurazione (varia in base alla scelta)
 
-- **Selezione paese**: dropdown con tutti i paesi WCA, multi-selezione
-- **Priorita paesi**: drag-and-drop o numerazione per decidere l'ordine di download (es. prima Italia, poi Germania, poi USA)
-- **Range ID per paese**: possibilita di specificare range ID per ogni paese oppure lasciare "tutti"
-- **Stima volume**: mostra quanti partner stimati ci sono per paese (basato su dati gia scaricati o stima)
-- **Salvataggio coda**: la configurazione viene salvata in tabella `download_queue` con stato per ogni paese (pending, in_progress, completed)
+### Se "Scarica Partner":
+- Modalita: Manuale (range ID) / Automatico (riprendi da ultimo ID)
+- Slider o input per **tempo di attesa** tra un download e l'altro (es. 1s, 3s, 5s, 10s, 30s)
+- Pausa extra ogni N partner (configurabile)
+- Pulsante "Avvia"
 
-## FASE 3: Download Uno per Uno + Classificazione AI
+### Se "Arricchisci dal Sito":
+- Filtri per paese, tipo partner, solo non arricchiti
+- Selezione partner con checkbox
+- Pulsante "Avvia Arricchimento"
 
-Questa e la fase di esecuzione vera e propria, simile allo scraper attuale ma molto piu strutturata:
+### Se "Analisi Network":
+- Lista gruppi WCA con toggle membro/non membro
+- Bottone test a campione
 
-- **Dashboard di avanzamento** per paese: barra progresso per ogni paese in coda
-- **Download sequenziale**: un profilo alla volta con delay anti-blocco (come ora)
-- **Classificazione AI automatica**: dopo ogni download, il profilo viene analizzato da Gemini (come gia accade)
-- **Log in tempo reale**: lista scrollabile dei partner scaricati con esito
-- **Pausa/Riprendi**: possibilita di mettere in pausa e riprendere il download
-- **Statistiche live**: contatori per trovati, nuovi, aggiornati, errori
+## Step 3 - Processo LIVE
 
-## FASE 4: Arricchimento dal Sito (Opzionale, per Gruppi)
+Quando l'utente avvia il processo, la pagina si trasforma in una dashboard live:
 
-L'arricchimento dal sito web **non e automatico** ma gestito manualmente per gruppi selezionati:
+### Pannello centrale:
+- **Indicatore attuale**: "Scaricando ID #11472..." con animazione pulsante
+- **Countdown**: timer visibile prima del prossimo download
+- **Statistiche live** in badge luminosi (come i badge della pagina Campaigns): Trovati, Nuovi, Aggiornati, Errori, Velocita (partner/min)
+- **Log scorrevole**: ultime righe di attivita con colori per stato (verde = nuovo, blu = aggiornato, grigio = non trovato, rosso = errore)
+- **Pulsanti**: Pausa / Riprendi / Stop
 
-- **Filtri**: l'utente filtra i partner gia scaricati per paese, rating, tipo
-- **Selezione gruppo**: checkbox per selezionare un gruppo di partner da arricchire
-- **Avvio batch**: bottone "Arricchisci selezionati" che lancia l'enrichment uno alla volta
-- **Progresso**: barra avanzamento e risultati per ogni partner arricchito
-- Riutilizza la edge function `enrich-partner-website` gia esistente
+### Pannello destro flottante:
+- Lista verticale sospesa (stile identico ai partner selezionati nella pagina Campaigns)
+- Ogni chip mostra: nome azienda, bandiera paese, badge "Nuovo"/"Aggiornato"
+- Click su un chip = apri popup con tutti i dati scaricati
+- Il pannello si popola in tempo reale mentre i download avvengono
+- Scroll automatico verso il basso per i nuovi arrivi
+
+### Popup dettaglio partner:
+- Dialog con glassmorphism
+- Mostra: nome, citta, paese, email, telefono, sito web, network, servizi, riassunto AI, rating
+- JSON raw collassabile per dati completi
+
+---
+
+## Stile Visivo
+
+La pagina adotta lo stesso approccio della pagina Campaigns:
+- Sfondo scuro pieno (`bg-slate-950`) senza il globo 3D, ma con un gradiente sottile
+- Pannelli in glassmorphism (`bg-black/40 backdrop-blur-xl border-amber-500/20`)
+- Testi in `amber`, `emerald`, `blue` per i diversi stati
+- Badge luminosi come nella barra delle statistiche Campaigns
+- Header della pagina con sfondo scuro solido come quello delle Campaigns (`bg-slate-900/95`)
+- Animazioni fade-in per nuovi elementi nella lista
 
 ---
 
 ## Dettagli Tecnici
 
-### Database - Nuove tabelle
-
-**Tabella `network_configs`** (configurazione network):
-- `id` (uuid, PK)
-- `network_name` (text) - es. "WCAworld", "AWS"
-- `is_member` (boolean) - se siamo membri
-- `has_contact_emails` (boolean) - se vediamo le email
-- `has_contact_names` (boolean) - se vediamo i nomi
-- `has_contact_phones` (boolean) - se vediamo i telefoni
-- `sample_tested_at` (timestamp) - ultimo test campione
-- `notes` (text)
-- `created_at`, `updated_at`
-
-**Tabella `download_queue`** (coda download per paese):
-- `id` (uuid, PK)
-- `country_code` (char 2)
-- `country_name` (text)
-- `network_name` (text)
-- `priority` (integer) - ordine di elaborazione
-- `id_range_start` (integer, nullable)
-- `id_range_end` (integer, nullable)
-- `status` (enum: pending, in_progress, completed, paused)
-- `total_found` (integer, default 0)
-- `total_processed` (integer, default 0)
-- `last_processed_id` (integer, nullable) - per riprendere
-- `created_at`, `updated_at`
-
-RLS: accesso pubblico come le altre tabelle.
-
-### Nuova pagina: `src/pages/DownloadManagement.tsx`
-
-Pagina con 4 tab (Tabs component):
-1. **Network** - Configurazione e test campione
-2. **Coda Download** - Gestione paesi e priorita
-3. **Download** - Esecuzione e monitoraggio
-4. **Arricchimento** - Enrichment opzionale per gruppi
-
-### Sidebar
-
-Aggiungere voce "Download" nella sidebar con icona `Download` (o rinominare l'attuale "Export" per distinguere).
-
 ### File da creare
-- `src/pages/DownloadManagement.tsx` - Pagina principale con le 4 fasi
-- `src/components/download/NetworkAnalysis.tsx` - Fase 1
-- `src/components/download/DownloadQueue.tsx` - Fase 2
-- `src/components/download/DownloadRunner.tsx` - Fase 3 (riutilizza logica da WCAScraper)
-- `src/components/download/BatchEnrichment.tsx` - Fase 4
-- `src/hooks/useDownloadQueue.ts` - Hook per CRUD della coda
-- `src/hooks/useNetworkConfigs.ts` - Hook per configurazione network
+- `src/pages/DownloadManagement.tsx` - riscrittura completa come pagina unica a flusso guidato
 
 ### File da modificare
-- `src/components/layout/AppSidebar.tsx` - Aggiungere voce "Download Management"
-- `src/App.tsx` - Registrare nuova route `/download-management`
-- `supabase/functions/scrape-wca-partners/index.ts` - Nessuna modifica, viene riutilizzata
+- `src/components/layout/AppLayout.tsx` - aggiungere la rotta `/download-management` al trattamento "sfondo scuro" come `/campaigns`
 
-### Logica di ripresa download
-La coda salva `last_processed_id` per ogni paese, cosi se l'utente interrompe puo riprendere esattamente da dove aveva lasciato.
+### File da mantenere (riutilizzati internamente)
+- `src/data/wcaFilters.ts` - costanti network/regioni/servizi
+- `src/hooks/useNetworkConfigs.ts` - per la sezione Analisi Network
+- `src/hooks/useDownloadQueue.ts` - puo servire per persistenza stato
+- `src/lib/api/wcaScraper.ts` - funzione di scraping
+
+### File da eliminare (logica integrata nella pagina unica)
+- `src/components/download/NetworkAnalysis.tsx`
+- `src/components/download/DownloadQueue.tsx`
+- `src/components/download/DownloadRunner.tsx`
+- `src/components/download/BatchEnrichment.tsx`
+
+### Delay configurabile
+L'utente sceglie il tempo di attesa tramite uno slider con valori predefiniti: 0s, 1s, 3s, 5s, 10s, 30s. Opzione separata per "pausa lunga ogni N partner" (es. 30s ogni 10 partner).
+
+### Persistenza
+- Ultimo ID processato salvato in `localStorage` (come ora)
+- Stato dei network configs nel database (come ora)
 
