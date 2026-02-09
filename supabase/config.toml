@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.deep-search-partner]
 verify_jwt = false
+
+[functions.parse-profile-ai]
+verify_jwt = false
