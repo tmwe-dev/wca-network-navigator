@@ -71,6 +71,63 @@ export type Database = {
           },
         ]
       }
+      download_jobs: {
+        Row: {
+          completed_at: string | null
+          country_code: string
+          country_name: string
+          created_at: string
+          current_index: number
+          delay_seconds: number
+          error_message: string | null
+          id: string
+          last_processed_company: string | null
+          last_processed_wca_id: number | null
+          network_name: string
+          processed_ids: Json
+          status: string
+          total_count: number
+          updated_at: string
+          wca_ids: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          country_code: string
+          country_name: string
+          created_at?: string
+          current_index?: number
+          delay_seconds?: number
+          error_message?: string | null
+          id?: string
+          last_processed_company?: string | null
+          last_processed_wca_id?: number | null
+          network_name?: string
+          processed_ids?: Json
+          status?: string
+          total_count?: number
+          updated_at?: string
+          wca_ids?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          current_index?: number
+          delay_seconds?: number
+          error_message?: string | null
+          id?: string
+          last_processed_company?: string | null
+          last_processed_wca_id?: number | null
+          network_name?: string
+          processed_ids?: Json
+          status?: string
+          total_count?: number
+          updated_at?: string
+          wca_ids?: Json
+        }
+        Relationships: []
+      }
       download_queue: {
         Row: {
           country_code: string

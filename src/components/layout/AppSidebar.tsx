@@ -16,13 +16,14 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useActiveJobCount } from "@/hooks/useDownloadJobs";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Agenti", url: "/agents", icon: Users },
   { title: "Partners", url: "/partners", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
-  { title: "Download", url: "/download-management", icon: HardDriveDownload },
+  { title: "Download", url: "/download-management", icon: HardDriveDownload, badgeKey: "download" },
   { title: "Reminders", url: "/reminders", icon: Calendar },
   { title: "Export", url: "/export", icon: Download },
 ];
@@ -35,6 +36,7 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
+  const activeJobCount = useActiveJobCount();
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -68,19 +70,29 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       <nav className="flex-1 py-4 px-2 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.url;
+          const showBadge = item.badgeKey === "download" && activeJobCount > 0;
+          
           const NavItem = (
             <Link
               key={item.title}
               to={item.url}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>{item.title}</span>}
+              {!collapsed && <span className="flex-1">{item.title}</span>}
+              {showBadge && (
+                <span className={cn(
+                  "flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-amber-500 animate-pulse",
+                  collapsed ? "absolute -top-1 -right-1 w-4 h-4" : "w-5 h-5"
+                )}>
+                  {activeJobCount}
+                </span>
+              )}
             </Link>
           );
 
@@ -90,6 +102,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                 <TooltipTrigger asChild>{NavItem}</TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
                   {item.title}
+                  {showBadge && ` (${activeJobCount} attivi)`}
                 </TooltipContent>
               </Tooltip>
             );
