@@ -366,20 +366,27 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
 
-  // Partner counts per country
-  const { data: partnerCounts = {} } = useQuery({
-    queryKey: ["partner-counts-by-country"],
+  // Partner counts per country with office_type breakdown
+  const { data: partnerData = {} } = useQuery({
+    queryKey: ["partner-counts-by-country-with-type"],
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")
-        .select("country_code")
+        .select("country_code, office_type")
         .not("country_code", "is", null);
-      const counts: Record<string, number> = {};
-      (data || []).forEach(r => { counts[r.country_code] = (counts[r.country_code] || 0) + 1; });
+      const counts: Record<string, { total: number; hq: number; branch: number }> = {};
+      (data || []).forEach(r => {
+        if (!counts[r.country_code]) counts[r.country_code] = { total: 0, hq: 0, branch: 0 };
+        counts[r.country_code].total++;
+        if (r.office_type === "branch") counts[r.country_code].branch++;
+        else counts[r.country_code].hq++;
+      });
       return counts;
     },
     staleTime: 60_000,
   });
+  const partnerCounts: Record<string, number> = {};
+  Object.entries(partnerData).forEach(([k, v]) => { partnerCounts[k] = v.total; });
 
   // Directory cache data per country (counts + verified flag)
   const { data: cacheData = {} } = useQuery({
@@ -537,10 +544,20 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                   <p className="text-sm truncate">{c.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {hasDirectoryScan && (
-                      <span className={`text-[10px] ${th.acEm}`}>{pCount}/{cCount}</span>
+                      <>
+                        <span className={`text-[10px] ${th.acEm}`}>{pCount}/{cCount}</span>
+                        {pCount > 0 && partnerData[c.code] && (partnerData[c.code].branch > 0) && (
+                          <span className={`text-[10px] ${th.dim}`}>({partnerData[c.code].hq}HQ+{partnerData[c.code].branch}B)</span>
+                        )}
+                      </>
                     )}
                     {hasDbOnly && (
-                      <span className={`text-[10px] ${isDark ? "text-orange-400" : "text-orange-600"}`}>{pCount} partner (lista ?)</span>
+                      <>
+                        <span className={`text-[10px] ${isDark ? "text-orange-400" : "text-orange-600"}`}>{pCount} partner (lista ?)</span>
+                        {partnerData[c.code] && partnerData[c.code].branch > 0 && (
+                          <span className={`text-[10px] ${th.dim}`}>({partnerData[c.code].hq}HQ+{partnerData[c.code].branch}B)</span>
+                        )}
+                      </>
                     )}
                     {!hasDirectoryScan && !hasDbOnly && (
                       <span className={`text-[10px] ${th.dim}`}>{c.code}</span>
@@ -835,7 +852,8 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
           countryPages = result.pagination.total_pages;
           setTotalResults(result.pagination.total_results);
           setTotalPages(result.pagination.total_pages);
-          hasNext = result.pagination.has_next_page;
+          // Deterministic: if we got 50 results, assume there's more
+          hasNext = result.pagination.has_next_page || result.members.length >= 50;
           page++;
         } catch (err) {
           setError(err instanceof Error ? err.message : "Errore di rete");
