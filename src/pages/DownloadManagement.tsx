@@ -131,8 +131,10 @@ function t(dark: boolean) {
   };
 }
 
-const DELAY_VALUES = [0, 1, 3, 5, 10, 30];
-const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 3: "3s", 5: "5s", 10: "10s", 30: "30s" };
+const DELAY_VALUES = [0, 1, 2, 3, 5, 8, 10, 15, 20, 30, 45, 60];
+const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 2: "2s", 3: "3s", 5: "5s", 8: "8s", 10: "10s", 15: "15s", 20: "20s", 30: "30s", 45: "45s", 60: "60s" };
+const PAUSE_DURATION_VALUES = [10, 30, 60, 120, 300, 600, 1800, 3600];
+const formatDuration = (s: number) => s >= 3600 ? `${(s / 3600).toFixed(0)}h` : s >= 60 ? `${(s / 60).toFixed(0)}min` : `${s}s`;
 
 // ─── Main ────────────────────────────────────────────────────
 export default function DownloadManagement() {
@@ -517,17 +519,43 @@ function SpeedConfig({ country, network, memberIds, onStart }: {
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const [delayIndex, setDelayIndex] = useState(3);
+  const [delayIndex, setDelayIndex] = useState(4); // 5s default
   const [pauseEvery, setPauseEvery] = useState("10");
-  const [pauseDuration, setPauseDuration] = useState("30");
+  const [pauseDurationIndex, setPauseDurationIndex] = useState(1); // 30s default
+  const [nightPauseEnabled, setNightPauseEnabled] = useState(false);
+  const [nightPauseMinutes, setNightPauseMinutes] = useState("60");
+
+  const delay = DELAY_VALUES[delayIndex];
+  const pauseDur = PAUSE_DURATION_VALUES[pauseDurationIndex];
+  const pauseEveryN = parseInt(pauseEvery, 10) || 0;
+
+  // Estimate total time
+  const estimateSeconds = (() => {
+    const avgDownloadTime = 3; // ~3s per request
+    const n = memberIds.length;
+    let total = n * (delay + avgDownloadTime);
+    if (pauseEveryN > 0) {
+      const pauses = Math.floor(n / pauseEveryN);
+      total += pauses * pauseDur;
+    }
+    return total;
+  })();
+
+  const estimateLabel = estimateSeconds >= 3600
+    ? `~${(estimateSeconds / 3600).toFixed(1)} ore`
+    : estimateSeconds >= 60
+    ? `~${Math.ceil(estimateSeconds / 60)} minuti`
+    : `~${estimateSeconds} secondi`;
 
   const handleStart = () => {
     sessionStorage.setItem("dl_config", JSON.stringify({
       mode: "list",
       ids: memberIds,
-      delay: DELAY_VALUES[delayIndex] * 1000,
-      pauseEvery: parseInt(pauseEvery, 10) || 0,
-      pauseDuration: parseInt(pauseDuration, 10) * 1000 || 30000,
+      delay: delay * 1000,
+      pauseEvery: pauseEveryN,
+      pauseDuration: pauseDur * 1000,
+      nightPauseEnabled,
+      nightPauseMs: parseInt(nightPauseMinutes, 10) * 60 * 1000,
       filterNetwork: network,
       filterCountry: country.code,
       filterCountryName: country.name,
@@ -539,37 +567,70 @@ function SpeedConfig({ country, network, memberIds, onStart }: {
     <div className="flex-1 flex items-center justify-center">
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-8 max-w-lg w-full space-y-6`}>
         <div>
-          <h2 className={`text-xl mb-1 ${th.h2}`}>Configura Velocità</h2>
+          <h2 className={`text-xl mb-1 ${th.h2}`}>Calibra la Velocità</h2>
           <p className={`text-sm ${th.sub}`}>
             {getCountryFlag(country.code)} {country.name} {network && `• ${network}`} • {memberIds.length} partner da scaricare
           </p>
         </div>
 
         <div className={`p-3 rounded-lg border text-sm ${th.infoBox}`}>
-          Il sistema scaricherà i dettagli di <span className={`font-mono ${th.hi}`}>{memberIds.length}</span> partner dalla directory WCA, uno alla volta.
+          Ogni profilo viene scaricato singolarmente. Se troppo veloce, rischi blocchi. Calibra per simulare un ritmo umano.
         </div>
 
         {/* Delay slider */}
         <div>
           <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
             <Timer className="w-3.5 h-3.5" />
-            Attesa tra download: <span className={`font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[delayIndex]]}</span>
+            Attesa tra un download e l'altro: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
           </label>
           <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
           <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
-            {DELAY_VALUES.map(v => <span key={v}>{DELAY_LABELS[v]}</span>)}
+            <span>Veloce</span>
+            <span>Lento (sicuro)</span>
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className={`text-xs ${th.label}`}>Pausa extra ogni</label>
-            <Input type="number" value={pauseEvery} onChange={e => setPauseEvery(e.target.value)} className={th.input} placeholder="10" />
+        {/* Pause every N */}
+        <div>
+          <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
+            <Pause className="w-3.5 h-3.5" />
+            Pausa extra ogni N download
+          </label>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <p className={`text-xs mb-1 ${th.dim}`}>Ogni quanti</p>
+              <Input type="number" value={pauseEvery} onChange={e => setPauseEvery(e.target.value)} className={th.input} placeholder="10" min={0} />
+            </div>
+            <div className="flex-1">
+              <p className={`text-xs mb-1 ${th.dim}`}>Durata pausa: <span className={`font-mono ${th.hi}`}>{formatDuration(pauseDur)}</span></p>
+              <Slider value={[pauseDurationIndex]} onValueChange={([v]) => setPauseDurationIndex(v)} min={0} max={PAUSE_DURATION_VALUES.length - 1} step={1} className="w-full mt-2" />
+            </div>
           </div>
-          <div className="flex-1">
-            <label className={`text-xs ${th.label}`}>partner, durata (s)</label>
-            <Input type="number" value={pauseDuration} onChange={e => setPauseDuration(e.target.value)} className={th.input} placeholder="30" />
-          </div>
+        </div>
+
+        {/* Night/prolonged pause */}
+        <div className={`p-4 rounded-xl border ${nightPauseEnabled ? (isDark ? "border-amber-500/30 bg-amber-500/5" : "border-sky-300 bg-sky-50") : th.panelSlate}`}>
+          <label className={`flex items-center gap-2 cursor-pointer`}>
+            <Checkbox checked={nightPauseEnabled} onCheckedChange={v => setNightPauseEnabled(!!v)} />
+            <div>
+              <p className={`text-sm ${th.body}`}>Pausa prolungata (notturna)</p>
+              <p className={`text-xs ${th.dim}`}>Metti in pausa automatica dopo il completamento di un ciclo</p>
+            </div>
+          </label>
+          {nightPauseEnabled && (
+            <div className="mt-3 flex items-center gap-2">
+              <p className={`text-xs ${th.label}`}>Durata pausa:</p>
+              <Input type="number" value={nightPauseMinutes} onChange={e => setNightPauseMinutes(e.target.value)} className={`w-20 ${th.input}`} min={1} />
+              <span className={`text-xs ${th.dim}`}>minuti</span>
+            </div>
+          )}
+        </div>
+
+        {/* Time estimate */}
+        <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
+          <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
+          <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
+          <p className={`text-xs ${th.dim}`}>{memberIds.length} profili × ({delay}s attesa + ~3s download)</p>
         </div>
 
         <Button onClick={handleStart} disabled={memberIds.length === 0} className={`w-full ${th.btnPri}`}>
@@ -598,17 +659,66 @@ function DownloadRunning() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [countdown, setCountdown] = useState(0);
   const [startTime] = useState(Date.now());
+  const [lastDownloadMs, setLastDownloadMs] = useState<number | null>(null);
+  const [avgDownloadMs, setAvgDownloadMs] = useState(0);
   const [detailPartner, setDetailPartner] = useState<ScrapeLog | null>(null);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [showSpeedPanel, setShowSpeedPanel] = useState(false);
+
+  // Live-adjustable speed via refs
+  const delayRef = useRef(config.delay || 5000);
+  const pauseEveryRef = useRef(config.pauseEvery || 0);
+  const pauseDurationRef = useRef(config.pauseDuration || 30000);
+  const [liveDelay, setLiveDelay] = useState(() => {
+    const ms = config.delay || 5000;
+    const idx = DELAY_VALUES.findIndex(v => v * 1000 >= ms);
+    return idx >= 0 ? idx : 4;
+  });
+  const [livePauseEvery, setLivePauseEvery] = useState(String(config.pauseEvery || 10));
+  const [livePauseDurIdx, setLivePauseDurIdx] = useState(() => {
+    const s = (config.pauseDuration || 30000) / 1000;
+    const idx = PAUSE_DURATION_VALUES.findIndex(v => v >= s);
+    return idx >= 0 ? idx : 1;
+  });
+
+  useEffect(() => { delayRef.current = DELAY_VALUES[liveDelay] * 1000; }, [liveDelay]);
+  useEffect(() => { pauseEveryRef.current = parseInt(livePauseEvery, 10) || 0; }, [livePauseEvery]);
+  useEffect(() => { pauseDurationRef.current = PAUSE_DURATION_VALUES[livePauseDurIdx] * 1000; }, [livePauseDurIdx]);
 
   const abortRef = useRef(false);
   const pauseRef = useRef(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const downloadTimesRef = useRef<number[]>([]);
 
   const totalIds = config.ids?.length || 0;
   const elapsed = (Date.now() - startTime) / 1000 / 60;
   const speed = elapsed > 0.01 ? (stats.found / elapsed).toFixed(1) : "—";
   const successLogs = logs.filter(l => l.status === "success");
+
+  // Prolonged pause
+  const [prolongedPause, setProlongedPause] = useState(false);
+  const [prolongedCountdown, setProlongedCountdown] = useState(0);
+  const prolongedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleProlongedPause = useCallback((minutes: number) => {
+    pauseRef.current = true;
+    setIsPaused(true);
+    setProlongedPause(true);
+    let remaining = minutes * 60;
+    setProlongedCountdown(remaining);
+    if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current);
+    prolongedIntervalRef.current = setInterval(() => {
+      remaining--;
+      setProlongedCountdown(remaining);
+      if (remaining <= 0) {
+        if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current);
+        setProlongedPause(false);
+        pauseRef.current = false;
+        setIsPaused(false);
+        setProlongedCountdown(0);
+      }
+    }, 1000);
+  }, []);
 
   const sleep = useCallback((ms: number) =>
     new Promise<void>((resolve) => {
@@ -626,10 +736,6 @@ function DownloadRunning() {
     let mounted = true;
     const run = async () => {
       const ids: number[] = config.ids || [];
-      const delay = config.delay || 5000;
-      const pauseEvery = config.pauseEvery || 0;
-      const pauseDur = config.pauseDuration || 30000;
-
       let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
 
       for (let i = 0; i < ids.length; i++) {
@@ -641,8 +747,16 @@ function DownloadRunning() {
         setCurrentId(id);
         setCurrentIdx(i + 1);
 
+        const dlStart = Date.now();
         try {
           const result = await scrapeWcaPartnerById(id);
+          const dlTime = Date.now() - dlStart;
+          downloadTimesRef.current.push(dlTime);
+          if (mounted) {
+            setLastDownloadMs(dlTime);
+            setAvgDownloadMs(Math.round(downloadTimesRef.current.reduce((a, b) => a + b, 0) / downloadTimesRef.current.length));
+          }
+
           const log: ScrapeLog = { wcaId: id, status: "error" };
 
           if (result.success && result.found) {
@@ -670,7 +784,10 @@ function DownloadRunning() {
             setStats({ ...localStats });
           }
         } catch (err) {
+          const dlTime = Date.now() - dlStart;
+          downloadTimesRef.current.push(dlTime);
           if (mounted) {
+            setLastDownloadMs(dlTime);
             setLogs(prev => [...prev, { wcaId: id, status: "error" as const, error: String(err) }].slice(-500));
             localStats.errors++;
             setStats({ ...localStats });
@@ -678,10 +795,16 @@ function DownloadRunning() {
         }
 
         if (!abortRef.current && mounted && i < ids.length - 1) {
-          if (pauseEvery > 0 && (i + 1) % pauseEvery === 0) {
-            await sleep(pauseDur);
+          const pe = pauseEveryRef.current;
+          if (pe > 0 && (i + 1) % pe === 0) {
+            if (config.nightPauseEnabled && (i + 1) % (pe * 5) === 0) {
+              handleProlongedPause(config.nightPauseMs / 60000);
+              await waitWhilePaused();
+            } else {
+              await sleep(pauseDurationRef.current);
+            }
           } else {
-            await sleep(delay);
+            await sleep(delayRef.current);
           }
         }
       }
@@ -704,17 +827,20 @@ function DownloadRunning() {
 
   useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [logs.length]);
 
+  const formatMs = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+
   return (
     <div className="flex-1 flex gap-6 min-h-0">
       <div className="flex-1 flex flex-col gap-4 min-h-0">
         {/* Header */}
         <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6`}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
-              {isRunning && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
+              {isRunning && !isPaused && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
+              {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
               <div>
                 <p className={`text-xs ${th.sub}`}>
-                  {isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
+                  {prolongedPause ? "PAUSA PROLUNGATA" : isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
                   {config.filterCountryName && ` • ${config.filterCountryName}`}
                   {config.filterNetwork && ` • ${config.filterNetwork}`}
                 </p>
@@ -723,23 +849,59 @@ function DownloadRunning() {
                   <span className={`text-sm ml-3 ${th.dim}`}>{currentIdx}/{totalIds}</span>
                 </p>
               </div>
-              {countdown > 0 && (
+              {/* Prolonged countdown */}
+              {prolongedPause && prolongedCountdown > 0 && (
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isDark ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-50 border-sky-200"}`}>
+                  <Timer className={`w-3.5 h-3.5 ${th.acAmber}`} />
+                  <span className={`font-mono text-sm ${th.acAmber}`}>{formatDuration(prolongedCountdown)}</span>
+                </div>
+              )}
+              {/* Normal countdown */}
+              {!prolongedPause && countdown > 0 && (
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
                   <Timer className={`w-3.5 h-3.5 ${th.cdIcon}`} />
                   <span className={`font-mono text-sm ${th.cdText}`}>{countdown}s</span>
                 </div>
               )}
+              {/* Per-download timing */}
+              {lastDownloadMs !== null && (
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
+                  <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
+                  <span className={`font-mono text-xs ${th.cdText}`}>{formatMs(lastDownloadMs)}</span>
+                  <span className={`text-xs ${th.dim}`}>media {formatMs(avgDownloadMs)}</span>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {isRunning && (
+                <Button size="sm" variant="outline" onClick={() => setShowSpeedPanel(!showSpeedPanel)} className={th.btnPause}>
+                  <Settings2 className="w-4 h-4 mr-1" /> Velocità
+                </Button>
+              )}
               {isRunning && !isPaused && (
                 <Button size="sm" variant="outline" onClick={() => { pauseRef.current = true; setIsPaused(true); }} className={th.btnPause}>
                   <Pause className="w-4 h-4 mr-1" /> Pausa
                 </Button>
               )}
-              {isPaused && (
+              {isPaused && !prolongedPause && (
                 <Button size="sm" onClick={() => { pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
                   <Play className="w-4 h-4 mr-1" /> Riprendi
                 </Button>
+              )}
+              {prolongedPause && (
+                <Button size="sm" onClick={() => { if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current); setProlongedPause(false); setProlongedCountdown(0); pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
+                  <Play className="w-4 h-4 mr-1" /> Interrompi pausa
+                </Button>
+              )}
+              {isRunning && !isPaused && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => handleProlongedPause(30)} className={th.btnPause}>
+                    <Timer className="w-4 h-4 mr-1" /> 30min
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleProlongedPause(60)} className={th.btnPause}>
+                    <Timer className="w-4 h-4 mr-1" /> 1h
+                  </Button>
+                </>
               )}
               {isRunning && (
                 <Button size="sm" variant="outline" onClick={() => { abortRef.current = true; setIsRunning(false); }} className={th.btnStop}>
@@ -749,6 +911,30 @@ function DownloadRunning() {
             </div>
           </div>
         </div>
+
+        {/* Live speed adjustment panel */}
+        {showSpeedPanel && (
+          <div className={`${th.panel} border ${th.panelAmber} rounded-xl p-4 space-y-3`}>
+            <p className={`text-xs font-medium ${th.label}`}>⚡ Calibrazione velocità in tempo reale</p>
+            <div>
+              <label className={`text-xs flex items-center gap-1 mb-2 ${th.dim}`}>
+                Attesa tra download: <span className={`font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[liveDelay]]}</span>
+              </label>
+              <Slider value={[liveDelay]} onValueChange={([v]) => setLiveDelay(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+              <div className={`flex justify-between text-xs mt-1 ${th.dim}`}><span>Veloce</span><span>Lento</span></div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className={`text-xs ${th.dim}`}>Pausa ogni</label>
+                <Input type="number" value={livePauseEvery} onChange={e => setLivePauseEvery(e.target.value)} className={`${th.input} h-8 text-sm`} min={0} />
+              </div>
+              <div className="flex-1">
+                <label className={`text-xs ${th.dim}`}>Durata: {formatDuration(PAUSE_DURATION_VALUES[livePauseDurIdx])}</label>
+                <Slider value={[livePauseDurIdx]} onValueChange={([v]) => setLivePauseDurIdx(v)} min={0} max={PAUSE_DURATION_VALUES.length - 1} step={1} className="w-full mt-2" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         {totalIds > 0 && (
