@@ -18,6 +18,9 @@ import {
   MessageCircle,
   GlobeIcon,
   Building2,
+  UserCheck,
+  UserX,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getCountryFlag,
@@ -27,7 +30,7 @@ import {
   getServiceColor,
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-
+import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 function cleanPhoneForWhatsApp(phone: string): string {
   return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
 }
@@ -161,6 +164,40 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               {yearsM} yrs
             </span>
           )}
+          {/* Contact quality badge */}
+          {(() => {
+            const quality = getPartnerContactQuality(partner.partner_contacts);
+            if (quality === "complete") return (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center gap-0.5">
+                    <UserCheck className="w-3 h-3" /> Contatti OK
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Ha email e telefono personale del responsabile</TooltipContent>
+              </Tooltip>
+            );
+            if (quality === "partial") return (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-0.5">
+                    <AlertTriangle className="w-3 h-3" /> Parziale
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Manca email o telefono personale</TooltipContent>
+              </Tooltip>
+            );
+            return (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-0.5">
+                    <UserX className="w-3 h-3" /> No contatti
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Nessuna email o telefono personale del responsabile</TooltipContent>
+              </Tooltip>
+            );
+          })()}
         </div>
 
         {/* Services */}

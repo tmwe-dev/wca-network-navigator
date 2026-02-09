@@ -24,8 +24,13 @@ import {
   ExternalLink,
   Sparkles,
   Loader2,
+  UserCheck,
+  UserX,
+  AlertTriangle,
+  Filter,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
+import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -63,11 +68,17 @@ export default function Agents() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [filterIncomplete, setFilterIncomplete] = useState(false);
 
   const { data: partners, isLoading } = usePartners({
     search: search.length >= 2 ? search : undefined,
   });
   const toggleFavorite = useToggleFavorite();
+
+  // Filter for incomplete contacts
+  const filteredPartners = filterIncomplete
+    ? (partners || []).filter(p => getPartnerContactQuality(p.partner_contacts) !== "complete")
+    : partners;
 
   const { data: selectedPartner, isLoading: detailLoading } = usePartner(selectedId || "");
 
@@ -100,8 +111,20 @@ export default function Agents() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {isLoading ? "Caricamento..." : `${partners?.length || 0} agenti`}
+            {isLoading ? "Caricamento..." : `${filteredPartners?.length || 0} agenti`}
           </p>
+          <button
+            onClick={() => setFilterIncomplete(!filterIncomplete)}
+            className={cn(
+              "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all",
+              filterIncomplete
+                ? "bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-500/40 dark:text-red-400"
+                : "bg-muted border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            <Filter className="w-3 h-3" />
+            Solo incompleti
+          </button>
         </div>
 
         <ScrollArea className="flex-1">
@@ -113,7 +136,7 @@ export default function Agents() {
                     <Skeleton className="h-4 w-28" />
                   </div>
                 ))
-              : partners?.map((partner) => (
+              : filteredPartners?.map((partner) => (
                   <div
                     key={partner.id}
                     onClick={() => setSelectedId(partner.id)}
@@ -153,6 +176,13 @@ export default function Agents() {
                           )}
                         </div>
                         <KpiBadges partner={partner} compact />
+                        {/* Contact quality indicator */}
+                        {(() => {
+                          const q = getPartnerContactQuality(partner.partner_contacts);
+                          if (q === "complete") return <span className="text-[9px] flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400"><UserCheck className="w-3 h-3" /> Contatti OK</span>;
+                          if (q === "partial") return <span className="text-[9px] flex items-center gap-0.5 text-amber-600 dark:text-amber-400"><AlertTriangle className="w-3 h-3" /> Parziale</span>;
+                          return <span className="text-[9px] flex items-center gap-0.5 text-red-600 dark:text-red-400"><UserX className="w-3 h-3" /> No contatti</span>;
+                        })()}
                         {/* Service tags */}
                         {partner.partner_services && partner.partner_services.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">

@@ -1,4 +1,4 @@
-import { Building2, Globe, Star, Calendar } from "lucide-react";
+import { Building2, Globe, Star, Calendar, UserCheck } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentPartners } from "@/components/dashboard/RecentPartners";
 import { UpcomingReminders } from "@/components/dashboard/UpcomingReminders";
@@ -6,10 +6,12 @@ import { CountryChart } from "@/components/dashboard/CountryChart";
 import { TypeChart } from "@/components/dashboard/TypeChart";
 import { usePartnerStats } from "@/hooks/usePartners";
 import { usePendingReminders } from "@/hooks/useReminders";
+import { useContactCompleteness } from "@/hooks/useContactCompleteness";
 
 const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = usePartnerStats();
   const { data: reminders } = usePendingReminders();
+  const { data: completeness } = useContactCompleteness();
 
   return (
     <div className="space-y-6">
@@ -36,10 +38,11 @@ const Dashboard = () => {
           icon={<Globe className="w-6 h-6" />}
         />
         <StatCard
-          title="Favorites"
-          value="—"
-          description="Key partners"
-          icon={<Star className="w-6 h-6" />}
+          title="Qualità Contatti"
+          value={completeness ? `${completeness.global.pct}%` : "..."}
+          description={completeness ? `${completeness.global.missingEmail} senza email personale` : "Contatti di valore"}
+          icon={<UserCheck className="w-6 h-6" />}
+          className={completeness ? (completeness.global.pct >= 60 ? "border-l-2 border-l-emerald-500" : completeness.global.pct >= 30 ? "border-l-2 border-l-amber-500" : "border-l-2 border-l-destructive") : ""}
         />
         <StatCard
           title="Pending Reminders"

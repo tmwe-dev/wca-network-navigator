@@ -51,7 +51,8 @@ export function usePartners(filters?: PartnerFilters) {
           *,
           partner_services (service_category),
           partner_certifications (certification),
-          partner_networks (network_name, expires)
+          partner_networks (network_name, expires),
+          partner_contacts (email, direct_phone, mobile)
         `)
         .eq("is_active", true);
 
