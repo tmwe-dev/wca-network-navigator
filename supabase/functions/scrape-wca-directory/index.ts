@@ -123,7 +123,7 @@ If this is a login page, empty page, or error page, return members as an empty a
             required: ['members'],
           },
         },
-        waitFor: 10000,
+        waitFor: 3000,
       }),
     })
 
