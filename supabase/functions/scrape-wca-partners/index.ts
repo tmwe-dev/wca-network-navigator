@@ -45,7 +45,28 @@ Deno.serve(async (req) => {
         url,
         formats: ['extract'],
         extract: {
-          prompt: `Extract the freight forwarding company profile from this WCA member page. Extract: company_name, city, country (full name), country_code (2-letter ISO code), email, phone, website, address. If the page shows a 404 or "not found" or no company profile, return company_name as empty string.`,
+          prompt: `Extract ALL information from this WCA freight forwarder member profile page. Extract every field available:
+- company_name: the business name
+- city: city where the office is located
+- country: full country name
+- country_code: 2-letter ISO country code
+- office_type: "head_office" or "branch"
+- email: company email (if visible, not behind login wall)
+- phone: phone number
+- fax: fax number
+- website: website URL
+- address: full street address
+- profile_description: the full company profile/description text
+- logo_url: URL of the company logo image
+- member_since: date when they became a member (e.g. "Dec 10, 2003")
+- gold_medallion: boolean, whether enrolled in Gold Medallion program
+- networks: array of network memberships, each with name and expiry date
+- certifications: array of certification/license names (e.g. IATA, C-TPAT, ISO, etc.)
+- contacts: array of office contacts, each with title/role and name if visible
+- branch_offices: array of other offices, each with city and wca_id if visible
+- has_branches: boolean, whether the company has multiple offices
+
+If the page shows 404, not found, or no company profile, return company_name as empty string.`,
           schema: {
             type: 'object',
             properties: {
@@ -53,10 +74,52 @@ Deno.serve(async (req) => {
               city: { type: 'string' },
               country: { type: 'string' },
               country_code: { type: 'string' },
+              office_type: { type: 'string' },
               email: { type: 'string' },
               phone: { type: 'string' },
+              fax: { type: 'string' },
               website: { type: 'string' },
               address: { type: 'string' },
+              profile_description: { type: 'string' },
+              logo_url: { type: 'string' },
+              member_since: { type: 'string' },
+              gold_medallion: { type: 'boolean' },
+              networks: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    expires: { type: 'string' },
+                  },
+                },
+              },
+              certifications: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              contacts: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    name: { type: 'string' },
+                    email: { type: 'string' },
+                  },
+                },
+              },
+              branch_offices: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    city: { type: 'string' },
+                    wca_id: { type: 'number' },
+                  },
+                },
+              },
+              has_branches: { type: 'boolean' },
             },
             required: ['company_name'],
           },
@@ -78,7 +141,6 @@ Deno.serve(async (req) => {
     const extracted = scrapeData?.data?.extract || scrapeData?.extract || {}
     console.log(`Extracted for ID ${wcaId}:`, JSON.stringify(extracted))
 
-    // Check if profile was found
     if (!extracted.company_name || extracted.company_name.trim() === '') {
       return new Response(
         JSON.stringify({ success: true, found: false, wcaId }),
@@ -86,7 +148,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Upsert into database
+    // Map office_type to enum
+    const officeType = extracted.office_type?.toLowerCase()?.includes('branch') ? 'branch' : 'head_office'
+
+    // Build partner record
     const partnerRecord = {
       company_name: extracted.company_name.trim(),
       city: extracted.city?.trim() || 'Unknown',
@@ -94,13 +159,21 @@ Deno.serve(async (req) => {
       country_name: extracted.country?.trim() || '',
       email: extracted.email?.trim() || null,
       phone: extracted.phone?.trim() || null,
+      fax: extracted.fax?.trim() || null,
       website: extracted.website?.trim() || null,
       wca_id: wcaId,
       address: extracted.address?.trim() || null,
+      profile_description: extracted.profile_description?.trim() || null,
+      office_type: officeType,
+      member_since: extracted.member_since ? parseDateString(extracted.member_since) : null,
+      has_branches: extracted.has_branches || false,
+      branch_cities: extracted.branch_offices?.length > 0
+        ? JSON.stringify(extracted.branch_offices)
+        : '[]',
       is_active: true,
     }
 
-    // Check if exists by wca_id first, then by name+country
+    // Check if exists by wca_id
     const { data: existingById } = await supabase
       .from('partners')
       .select('id')
@@ -140,6 +213,81 @@ Deno.serve(async (req) => {
       action = 'inserted'
     }
 
+    // Save certifications
+    if (extracted.certifications?.length > 0 && partnerId) {
+      const validCerts = ['IATA', 'BASC', 'ISO', 'C-TPAT', 'AEO']
+      for (const cert of extracted.certifications) {
+        const certUpper = cert.toUpperCase().trim()
+        const matchedCert = validCerts.find(vc => certUpper.includes(vc))
+        if (matchedCert) {
+          const { data: existingCert } = await supabase
+            .from('partner_certifications')
+            .select('id')
+            .eq('partner_id', partnerId)
+            .eq('certification', matchedCert)
+            .maybeSingle()
+          if (!existingCert) {
+            await supabase.from('partner_certifications').insert({
+              partner_id: partnerId,
+              certification: matchedCert,
+            })
+          }
+        }
+      }
+    }
+
+    // Save networks
+    if (extracted.networks?.length > 0 && partnerId) {
+      for (const network of extracted.networks) {
+        if (!network.name) continue
+        const { data: existingNet } = await supabase
+          .from('partner_networks')
+          .select('id')
+          .eq('partner_id', partnerId)
+          .eq('network_name', network.name)
+          .maybeSingle()
+        if (!existingNet) {
+          await supabase.from('partner_networks').insert({
+            partner_id: partnerId,
+            network_name: network.name,
+            expires: network.expires ? parseDateString(network.expires) : null,
+          })
+        }
+      }
+    }
+
+    // Save contacts
+    if (extracted.contacts?.length > 0 && partnerId) {
+      for (const contact of extracted.contacts) {
+        if (!contact.title) continue
+        const { data: existingContact } = await supabase
+          .from('partner_contacts')
+          .select('id')
+          .eq('partner_id', partnerId)
+          .eq('title', contact.title)
+          .maybeSingle()
+        if (!existingContact) {
+          await supabase.from('partner_contacts').insert({
+            partner_id: partnerId,
+            name: contact.name || contact.title,
+            title: contact.title,
+            email: contact.email || null,
+          })
+        }
+      }
+    }
+
+    // Build full response with all extracted data
+    const fullPartner = {
+      ...partnerRecord,
+      logo_url: extracted.logo_url || null,
+      gold_medallion: extracted.gold_medallion || false,
+      networks: extracted.networks || [],
+      certifications: extracted.certifications || [],
+      contacts: extracted.contacts || [],
+      branch_offices: extracted.branch_offices || [],
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -147,7 +295,7 @@ Deno.serve(async (req) => {
         wcaId,
         action,
         partnerId,
-        partner: partnerRecord,
+        partner: fullPartner,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -159,3 +307,13 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+function parseDateString(dateStr: string): string | null {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return null
+    return d.toISOString().split('T')[0]
+  } catch {
+    return null
+  }
+}
