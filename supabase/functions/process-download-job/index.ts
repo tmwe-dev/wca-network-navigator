@@ -61,6 +61,9 @@ Deno.serve(async (req) => {
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', jobId)
 
+      // Verify download completeness for this country
+      await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
+
       return new Response(
         JSON.stringify({ success: true, message: 'Job completed', total: wcaIds.length }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -165,6 +168,9 @@ Deno.serve(async (req) => {
           .from('download_jobs')
           .update({ status: 'completed', completed_at: new Date().toISOString() })
           .eq('id', jobId)
+
+        // Verify download completeness for this country
+        await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
       }
     }
 
@@ -187,3 +193,53 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+/**
+ * Verify that all WCA IDs in the directory_cache for a country+network
+ * have been downloaded to the partners table.
+ * Sets download_verified = true only if every ID is present.
+ */
+async function verifyDownloadCompleteness(supabase: any, countryCode: string, networkName: string) {
+  try {
+    // Get cached members for this country+network
+    const { data: cacheRows } = await supabase
+      .from('directory_cache')
+      .select('id, members')
+      .eq('country_code', countryCode)
+      .eq('network_name', networkName)
+
+    if (!cacheRows || cacheRows.length === 0) return
+
+    for (const cache of cacheRows) {
+      const members = cache.members as Array<{ id: number }> | number[]
+      if (!members || !Array.isArray(members) || members.length === 0) continue
+
+      // Extract WCA IDs from members (could be objects with .id or plain numbers)
+      const wcaIds: number[] = members.map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean)
+      if (wcaIds.length === 0) continue
+
+      // Check which IDs exist in partners
+      const { data: partners } = await supabase
+        .from('partners')
+        .select('wca_id')
+        .eq('country_code', countryCode)
+        .in('wca_id', wcaIds)
+
+      const foundIds = new Set((partners || []).map((p: any) => p.wca_id))
+      const allPresent = wcaIds.every(id => foundIds.has(id))
+
+      // Update the verified flag
+      await supabase
+        .from('directory_cache')
+        .update({
+          download_verified: allPresent,
+          verified_at: allPresent ? new Date().toISOString() : null,
+        })
+        .eq('id', cache.id)
+
+      console.log(`Verification for ${countryCode}/${networkName}: ${foundIds.size}/${wcaIds.length} — verified: ${allPresent}`)
+    }
+  } catch (err) {
+    console.error('Verification error:', err)
+  }
+}
