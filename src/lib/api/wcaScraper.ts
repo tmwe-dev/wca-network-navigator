@@ -100,12 +100,13 @@ export interface DirectoryResult {
 }
 
 export async function scrapeWcaDirectory(
-  country: string,
+  countryCode: string,
   network?: string,
-  page?: number
+  pageIndex?: number,
+  pageSize?: number
 ): Promise<DirectoryResult> {
   const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
-    body: { country, network: network || "", page: page || 1 },
+    body: { countryCode, network: network || "", pageIndex: pageIndex || 1, pageSize: pageSize || 50 },
   });
 
   if (error) {
