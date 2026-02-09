@@ -288,6 +288,26 @@ If the page shows 404, not found, or no company profile, return company_name as 
       branch_offices: extracted.branch_offices || [],
     }
 
+    // Trigger AI analysis asynchronously (fire and forget)
+    let aiClassification = null
+    try {
+      const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
+      const analyzeResponse = await fetch(analyzeUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ partnerId, profileData: fullPartner }),
+      })
+      const analyzeData = await analyzeResponse.json()
+      if (analyzeData.success) {
+        aiClassification = analyzeData.classification
+      }
+    } catch (aiErr) {
+      console.error('AI analysis error (non-blocking):', aiErr)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -296,6 +316,7 @@ If the page shows 404, not found, or no company profile, return company_name as 
         action,
         partnerId,
         partner: fullPartner,
+        aiClassification,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

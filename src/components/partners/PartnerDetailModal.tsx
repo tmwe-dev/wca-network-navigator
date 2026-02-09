@@ -4,16 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Building2, MapPin, Mail, Phone, Globe, ExternalLink, Award, Users, Network, FileText, Calendar, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import type { ScrapedPartner } from "@/lib/api/wcaScraper";
+import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
+import { formatServiceCategory } from "@/lib/countries";
 
 interface PartnerDetailModalProps {
   partner: ScrapedPartner | null;
   partnerId?: string;
+  aiClassification?: AIClassification | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PartnerDetailModal({ partner, partnerId, open, onOpenChange }: PartnerDetailModalProps) {
+export function PartnerDetailModal({ partner, partnerId, aiClassification, open, onOpenChange }: PartnerDetailModalProps) {
   const navigate = useNavigate();
 
   if (!partner) return null;
@@ -50,6 +52,26 @@ export function PartnerDetailModal({ partner, partnerId, open, onOpenChange }: P
               </h4>
               <p className="text-sm text-muted-foreground leading-relaxed">{partner.profile_description}</p>
             </div>
+          )}
+
+          {/* AI Classification */}
+          {aiClassification && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">
+                  🤖 Analisi AI
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-2">{aiClassification.summary}</p>
+                {aiClassification.services?.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {aiClassification.services.map((s, i) => (
+                      <Badge key={i} className="text-xs">{formatServiceCategory(s)}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <Separator />
