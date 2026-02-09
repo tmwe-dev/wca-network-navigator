@@ -1,46 +1,73 @@
 
 
-# Fix: Rilevamento "Member not found" nel parser WCA
+# Deep Search: Ricerca automatica social e loghi per partner
 
-## Problema
+## Obiettivo
+Creare un sistema automatico che, con un click, cerca i profili social (LinkedIn, Facebook, ecc.) dei contatti di un'azienda partner e il logo aziendale, senza intervento manuale.
 
-Il sito WCA, quando un profilo non esiste o e scaduto, restituisce una pagina HTTP 200 con il testo "Member not found. Please try again." invece di un vero errore 404.
+## Componenti
 
-Il parser attuale (riga 25 di `scrape-wca-partners`) cerca solo:
-- `page not found`
-- `404`
-- `no results found`
+### 1. Migrazione database
+- Aggiungere colonna `logo_url` (text, nullable) alla tabella `partners` per salvare il logo aziendale
 
-Non riconosce "Member not found", quindi lo tratta come un profilo valido e salva "Member not found. Please try again." come nome dell'azienda.
+### 2. Nuova edge function: `deep-search-partner`
+Riceve un `partnerId` e:
+1. Recupera il partner (nome azienda, sito web, citta, paese) e i suoi contatti dalla tabella `partner_contacts`
+2. Per ogni contatto con nome, usa **Firecrawl** per cercare il profilo LinkedIn (query: `"Nome Contatto" "Nome Azienda" site:linkedin.com/in`)
+3. Usa **Lovable AI (Gemini)** per analizzare i risultati e estrarre gli URL dei profili social corretti
+4. Salva i link trovati nella tabella `partner_social_links` (evitando duplicati)
+5. Se il partner ha un sito web, estrae il logo (da favicon o og:image) e lo salva in `partners.logo_url`
 
-## Soluzione
+Chiavi API necessarie: `FIRECRAWL_API_KEY` e `LOVABLE_API_KEY` (gia configurate).
 
-### File: `supabase/functions/scrape-wca-partners/index.ts`
+### 3. Modifiche UI in `src/pages/Agents.tsx`
+- Aggiungere un pulsante **"Deep Search"** (con icona ricerca/AI) nell'header del dettaglio agente, accanto ai pulsanti esistenti
+- Mostrare stato di caricamento durante la ricerca
+- Dopo il completamento, i social link appaiono automaticamente grazie all'invalidazione della cache
+- Mostrare il **logo aziendale** accanto al nome dell'azienda (al posto o accanto alla bandiera del paese) quando disponibile
 
-1. **Aggiungere "member not found" alla regex di rilevamento 404** (riga 25):
-   - Aggiungere il pattern `member\s*not\s*found` alla regex esistente
-   - Rimuovere il vincolo `content.length < 2000` perche il messaggio potrebbe essere dentro una pagina piu lunga con navigazione
+### 4. Modifiche a `src/components/agents/SocialLinks.tsx`
+- Nessuna modifica strutturale: i link trovati dalla deep search vengono salvati nella stessa tabella `partner_social_links` e appaiono automaticamente
 
-2. **Aggiungere un controllo aggiuntivo sul company_name** (dopo riga 40):
-   - Se il `company_name` estratto contiene "not found" o "try again", trattarlo come profilo non trovato
-   - Questo e un fallback di sicurezza nel caso la regex principale non intercetti varianti del messaggio
+### 5. Configurazione deploy
+- Aggiungere `[functions.deep-search-partner]` con `verify_jwt = false` in `supabase/config.toml`
 
-### Dettaglio tecnico
+## Dettaglio tecnico
 
-Riga 25 attuale:
+### Edge function `deep-search-partner`
+
+```text
+Input: { partnerId: string }
+
+Flow:
+1. GET partner + partner_contacts dal DB
+2. Per ogni contatto:
+   a. Firecrawl search: "{name} {company} linkedin"
+   b. AI analizza risultati -> estrae URL LinkedIn
+   c. INSERT in partner_social_links (platform: "linkedin", contact_id: contatto)
+3. Per il logo:
+   a. Firecrawl scrape del sito web del partner (formato: links + metadata)
+   b. Estrae og:image o favicon
+   c. UPDATE partners SET logo_url = ...
+4. Return: { success, socialLinksFound, logoFound }
 ```
-if (/page\s*(not|was not)\s*found|404|no\s*results?\s*found/i.test(content) && content.length < 2000) {
-```
 
-Diventa:
-```
-if (/page\s*(not|was not)\s*found|member\s*not\s*found|404|no\s*results?\s*found/i.test(content)) {
-```
+### UI: Pulsante Deep Search nell'header AgentDetail
 
-Dopo riga 40, aggiungere:
-```
-if (/not\s*found|try\s*again/i.test(companyName)) return null
-```
+Posizione: accanto al pulsante "Scheda completa", un nuovo pulsante:
+- Icona: Search + Sparkles
+- Testo: "Deep Search"
+- Loading spinner durante l'esecuzione
+- Toast di successo/errore al completamento
 
-Nessuna modifica al database o ad altri file.
+### Logo nell'header
+
+Quando `partner.logo_url` e presente, mostrare un'immagine 48x48 arrotondata al posto della bandiera grande. La bandiera viene spostata come badge piccolo sovrapposto.
+
+## File da modificare/creare
+
+1. **Migrazione DB**: aggiunta colonna `logo_url`
+2. **Nuovo file**: `supabase/functions/deep-search-partner/index.ts`
+3. **Modifica**: `src/pages/Agents.tsx` (pulsante Deep Search + logo)
+4. **Modifica**: `supabase/config.toml` (configurazione funzione)
 
