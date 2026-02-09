@@ -1043,11 +1043,18 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
                 )}
 
                 {isRunning && (
-                  <p className={`text-2xl font-mono ${th.mono}`}>
-                    Pagina {currentPage}
-                    {totalPages !== null && <span className={`text-sm ml-1 ${th.dim}`}>/{totalPages}</span>}
-                    <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {scannedMembers.length}</span>
-                  </p>
+                  <div>
+                    {countries.length > 1 && (
+                      <p className={`text-xs mb-1 ${th.hi}`}>
+                        Paese {currentCountryIdx + 1}/{countries.length}: {getCountryFlag(countries[currentCountryIdx]?.code)} {countries[currentCountryIdx]?.name}
+                      </p>
+                    )}
+                    <p className={`text-2xl font-mono ${th.mono}`}>
+                      Pagina {currentPage}
+                      {totalPages !== null && <span className={`text-sm ml-1 ${th.dim}`}>/{totalPages}</span>}
+                      <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {scannedMembers.length}</span>
+                    </p>
+                  </div>
                 )}
                 {isComplete && (
                   <div>
@@ -1168,6 +1175,22 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
           <div className={`px-3 py-2 rounded-lg border text-xs ${th.infoBox}`}>
             📋 Ultima scansione directory: {new Date(cachedAt).toLocaleString("it-IT")}
             {cachedTotalResults > 0 && ` • ${cachedTotalResults} risultati trovati`}
+          </div>
+        )}
+
+        {/* Informational banner during scanning */}
+        {isRunning && (
+          <div className={`px-4 py-3 rounded-xl border text-sm flex items-start gap-3 ${isDark ? "bg-amber-500/10 border-amber-500/30 text-amber-200" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
+            <Loader2 className={`w-4 h-4 animate-spin flex-shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-sky-500"}`} />
+            <div>
+              <p className="font-medium">Scansione directory WCA in corso dal browser</p>
+              <p className={`text-xs mt-0.5 ${isDark ? "text-amber-300/70" : "text-sky-600"}`}>
+                {countries.length > 1
+                  ? `Paese ${currentCountryIdx + 1} di ${countries.length}: ${countries[currentCountryIdx]?.name}`
+                  : countries[0]?.name}
+                {" — "}Al termine, potrai avviare il download dei profili che proseguirà in background.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1359,12 +1382,28 @@ function Phase2Config({ countries, networks, members, onStart }: {
       toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
       return;
     }
+
+    // Group IDs by country_code using member data
+    const idsByCountry = new Map<string, number[]>();
+    for (const m of members) {
+      if (!m.wca_id) continue;
+      const cc = countries.find(c => c.name === m.country || c.code === m.country)?.code;
+      if (!cc) continue;
+      if (!idsByCountry.has(cc)) idsByCountry.set(cc, []);
+      idsByCountry.get(cc)!.push(m.wca_id);
+    }
+
     for (const country of countries) {
+      const countryIds = idsByCountry.get(country.code) || [];
+      const filteredIds = includeExisting
+        ? countryIds
+        : countryIds.filter(id => !existingSet.has(id));
+      if (filteredIds.length === 0) continue;
       await createJob.mutateAsync({
         country_code: country.code,
         country_name: country.name,
         network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-        wca_ids: idsToDownload,
+        wca_ids: filteredIds,
         delay_seconds: delay,
       });
     }
