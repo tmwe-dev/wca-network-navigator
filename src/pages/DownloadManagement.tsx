@@ -159,8 +159,9 @@ export default function DownloadManagement() {
       <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`}>
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
-        <div className="relative z-10 h-full flex flex-col p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="relative z-10 h-full flex flex-col">
+          {/* Compact top bar: back + theme toggle */}
+          <div className="flex items-center justify-between px-6 py-2 flex-shrink-0">
             <div>
               {step !== "choose" && (
                 <button onClick={goBack} className={`flex items-center gap-1.5 text-sm transition-colors ${th.back}`}>
@@ -173,12 +174,15 @@ export default function DownloadManagement() {
             </button>
           </div>
 
-          {step === "choose" && <StepChoose onSelect={a => { setAction(a); setStep("configure"); }} />}
-          {step === "configure" && action === "download" && <DownloadWizard onStartRunning={() => setStep("running")} />}
-          {step === "configure" && action === "enrich" && <EnrichConfigure onStart={() => setStep("running")} />}
-          {step === "configure" && action === "network" && <NetworkConfigure />}
-          {step === "running" && action === "download" && <DownloadRunning />}
-          {step === "running" && action === "enrich" && <EnrichRunning />}
+          {/* Content area — scrollable */}
+          <div className="flex-1 flex flex-col min-h-0 px-6 pb-6 overflow-auto">
+            {step === "choose" && <StepChoose onSelect={a => { setAction(a); setStep("configure"); }} />}
+            {step === "configure" && action === "download" && <DownloadWizard onStartRunning={() => setStep("running")} />}
+            {step === "configure" && action === "enrich" && <EnrichConfigure onStart={() => setStep("running")} />}
+            {step === "configure" && action === "network" && <NetworkConfigure />}
+            {step === "running" && action === "download" && <DownloadRunning />}
+            {step === "running" && action === "enrich" && <EnrichRunning />}
+          </div>
         </div>
       </div>
     </ThemeCtx.Provider>
@@ -260,24 +264,25 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Progress */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        {labels.map((l, i) => (
-          <div key={l} className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono ${i < idx ? th.stepDone : i === idx ? th.stepAct : th.stepWait}`}>
-              {i < idx ? "✓" : i + 1}
+      {/* Compact stepper + back in one row */}
+      <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+        {idx > 0 && (
+          <button onClick={goSubBack} className={`flex items-center gap-1 text-xs whitespace-nowrap ${th.back}`}>
+            <ArrowLeft className="w-3 h-3" /> Indietro
+          </button>
+        )}
+        <div className="flex items-center gap-1.5 flex-1 justify-center">
+          {labels.map((l, i) => (
+            <div key={l} className="flex items-center gap-1.5">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono ${i < idx ? th.stepDone : i === idx ? th.stepAct : th.stepWait}`}>
+                {i < idx ? "✓" : i + 1}
+              </div>
+              <span className={`text-[11px] hidden sm:inline ${i === idx ? th.h2 : th.dim}`}>{l}</span>
+              {i < labels.length - 1 && <div className={`w-6 h-0.5 ${i < idx ? th.stepLineOk : th.stepLine}`} />}
             </div>
-            <span className={`text-xs hidden sm:inline ${i === idx ? th.h2 : th.dim}`}>{l}</span>
-            {i < labels.length - 1 && <div className={`w-8 h-0.5 ${i < idx ? th.stepLineOk : th.stepLine}`} />}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-
-      {idx > 0 && (
-        <button onClick={goSubBack} className={`flex items-center gap-1 text-xs mb-3 w-fit ${th.back}`}>
-          <ArrowLeft className="w-3 h-3" /> Passo precedente
-        </button>
-      )}
 
       {sub === "country" && (
         <PickCountry
