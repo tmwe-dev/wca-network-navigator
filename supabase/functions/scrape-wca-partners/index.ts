@@ -178,14 +178,38 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   }
 
   // ── Contacts ──
-  // WCA pages show contacts with Title: and Name: but names are often behind login wall
-  const contacts: { title: string; name?: string; email?: string }[] = []
-  // Extract title blocks, skip "Members only" entries
+  // WCA pages show contacts with Title, Name, Email, Phone fields
+  const contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[] = []
+  
+  // Split by "Title:" to get each contact block
   const titleBlocks = md.split(/Title:\s*/i).slice(1)
   for (const block of titleBlocks) {
-    const titleLine = block.split('\n')[0]?.trim()
-    if (!titleLine || titleLine.length < 3 || /Members\s*only|Login|login/i.test(titleLine)) continue
-    contacts.push({ title: titleLine })
+    const lines = block.split('\n')
+    const titleLine = lines[0]?.trim()
+    if (!titleLine || titleLine.length < 3) continue
+    // Skip placeholder text from non-authenticated scraping
+    if (/Members\s*only|please\s*\*?\*?Login\*?\*?|Login\s*to\s*view/i.test(titleLine)) continue
+    
+    const contact: { title: string; name?: string; email?: string; phone?: string; mobile?: string } = { title: titleLine }
+    
+    // Extract Name, Email, Phone, Mobile from subsequent lines
+    const blockText = block.substring(0, 500)
+    const nameMatch = blockText.match(/Name:\s*(.+)/i)
+    if (nameMatch) {
+      const name = nameMatch[1].trim().replace(/\*+/g, '')
+      if (name && !/Members\s*only|Login/i.test(name)) contact.name = name
+    }
+    const emailMatch = blockText.match(/Email:\s*\[?([^\s\]\n<>]+@[^\s\]\n<>]+)/i)
+    if (emailMatch) {
+      const email = emailMatch[1].trim()
+      if (!/Members\s*only|Login|wcaworld/i.test(email)) contact.email = email
+    }
+    const phoneMatch = blockText.match(/(?:Direct\s*Phone|Phone|Tel)\s*[:：]\s*([+\d\s\-().]{7,25})/i)
+    if (phoneMatch) contact.phone = phoneMatch[1].trim()
+    const mobileMatch = blockText.match(/Mobile\s*[:：]\s*([+\d\s\-().]{7,25})/i)
+    if (mobileMatch) contact.mobile = mobileMatch[1].trim()
+    
+    contacts.push(contact)
   }
   // HTML fallback
   if (contacts.length === 0) {
@@ -335,17 +359,23 @@ Deno.serve(async (req) => {
     const url = `https://www.wcaworld.com/directory/members/${wcaId}`
     console.log(`Scraping WCA member profile: ${url}`)
 
-    // ── Step 1: Firecrawl with markdown (NO LLM extraction) ──
+    // ── Step 1: Firecrawl with markdown (with WCA auth cookie if available) ──
+    const wcaCookie = Deno.env.get('WCA_SESSION_COOKIE')
+    const scrapeBody: any = {
+      url,
+      formats: ['markdown', 'rawHtml'],
+    }
+    if (wcaCookie) {
+      scrapeBody.headers = { 'Cookie': wcaCookie }
+      console.log('Using WCA session cookie for authenticated scraping')
+    }
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        url,
-        formats: ['markdown', 'rawHtml'],
-      }),
+      body: JSON.stringify(scrapeBody),
     })
 
     const scrapeData = await scrapeResponse.json()
@@ -525,25 +555,49 @@ async function saveNetworksBatch(supabase: any, partnerId: string, networks: { n
   }
 }
 
-async function saveContactsBatch(supabase: any, partnerId: string, contacts: { title: string; name?: string; email?: string }[]) {
+async function saveContactsBatch(supabase: any, partnerId: string, contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[]) {
   if (!contacts.length) return
 
   const { data: existing } = await supabase
     .from('partner_contacts')
-    .select('title')
+    .select('id, title, name, email, direct_phone, mobile')
     .eq('partner_id', partnerId)
 
-  const existingSet = new Set((existing || []).map((e: any) => e.title))
-  const toInsert = contacts
-    .filter(c => c.title && !existingSet.has(c.title))
-    .map(c => ({
-      partner_id: partnerId,
-      name: c.name || c.title,
-      title: c.title,
-      email: c.email || null,
-    }))
+  const existingByTitle = new Map((existing || []).map((e: any) => [e.title, e]))
+  
+  const toInsert: any[] = []
+  const toUpdate: any[] = []
+  
+  for (const c of contacts) {
+    if (!c.title) continue
+    const ex = existingByTitle.get(c.title)
+    if (ex) {
+      // Update existing contact if we have new data (e.g. from authenticated scraping)
+      const updates: any = {}
+      if (c.name && c.name !== ex.name && ex.name === ex.title) updates.name = c.name
+      if (c.email && !ex.email) updates.email = c.email
+      if (c.phone && !ex.direct_phone) updates.direct_phone = c.phone
+      if (c.mobile && !ex.mobile) updates.mobile = c.mobile
+      if (Object.keys(updates).length > 0) {
+        toUpdate.push({ id: ex.id, ...updates })
+      }
+    } else {
+      toInsert.push({
+        partner_id: partnerId,
+        name: c.name || c.title,
+        title: c.title,
+        email: c.email || null,
+        direct_phone: c.phone || null,
+        mobile: c.mobile || null,
+      })
+    }
+  }
 
   if (toInsert.length > 0) {
     await supabase.from('partner_contacts').insert(toInsert)
+  }
+  for (const u of toUpdate) {
+    const { id, ...fields } = u
+    await supabase.from('partner_contacts').update(fields).eq('id', id)
   }
 }
