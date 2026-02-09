@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (freshJob && freshJob.status === 'running') {
-      const delaySec = freshJob.delay_seconds || 10
+      const delaySec = freshJob.delay_seconds || 3
       
       // Fire the next step after delay
       // We use setTimeout-like behavior by waiting, then calling ourselves

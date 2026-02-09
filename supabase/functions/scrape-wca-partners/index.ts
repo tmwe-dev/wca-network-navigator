@@ -5,6 +5,305 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+// ─── Regex Parsing Helpers ───────────────────────────────────
+
+function extractField(content: string, patterns: RegExp[]): string | null {
+  for (const p of patterns) {
+    const m = content.match(p)
+    if (m && m[1]?.trim()) return m[1].trim()
+  }
+  return null
+}
+
+function parseProfileFromContent(html: string, markdown: string, wcaId: number) {
+  const content = html || markdown || ''
+  const md = markdown || ''
+
+  // Detect 404 / not found
+
+  // Detect 404 / not found
+  if (/page\s*(not|was not)\s*found|404|no\s*results?\s*found/i.test(content) && content.length < 2000) {
+    return null
+  }
+
+  // ── Company Name ──
+  const companyName = extractField(content, [
+    /<h1[^>]*class="[^"]*company[^"]*"[^>]*>([^<]+)</i,
+    /<h1[^>]*>([^<]{3,100})<\/h1>/i,
+    /class="[^"]*member-?name[^"]*"[^>]*>([^<]+)</i,
+    /class="[^"]*company-?name[^"]*"[^>]*>([^<]+)</i,
+  ]) || extractField(md, [
+    /^#\s+(.{3,100})$/m,
+    /^##\s+(.{3,100})$/m,
+  ])
+
+  if (!companyName) return null
+
+  // ── City & Office Type from "(City, Head Office)" pattern ──
+  let city: string | null = null
+  let country: string | null = null
+  let detectedOfficeType: string | null = null
+
+  // Pattern: "(Chattanooga, Head Office)" right after the heading
+  const locationBracket = md.match(/\(([^,)]+),\s*(Head\s*Office|Branch)\)/i)
+  if (locationBracket) {
+    city = locationBracket[1].trim()
+    detectedOfficeType = locationBracket[2].trim()
+  }
+
+  // Country: standalone line like "United States of America" near the top
+  // Look for country names in the first 2000 chars of markdown
+  const topSection = md.substring(0, 2000)
+  const countryLineMatch = topSection.match(/^(United States of America|United Kingdom|Canada|Australia|Germany|France|Italy|Spain|China|India|Japan|Brazil|Mexico|Argentina|Colombia|Chile|Peru|South Korea|Thailand|Indonesia|Malaysia|Vietnam|Philippines|Singapore|Hong Kong|Taiwan|Turkey|Saudi Arabia|United Arab Emirates|South Africa|Nigeria|Kenya|Egypt|Netherlands|Belgium|Switzerland|Austria|Sweden|Norway|Denmark|Finland|Poland|Czech Republic|Portugal|Greece|Ireland|New Zealand|Israel|Russia|Ukraine|Romania|Hungary|Pakistan|Bangladesh|Sri Lanka|Nepal|Panama|Costa Rica|Ecuador|Bolivia|Paraguay|Uruguay|Venezuela|Guatemala|Honduras|Dominican Republic|El Salvador|Nicaragua|Cuba|Jamaica|Trinidad and Tobago|Puerto Rico)$/mi)
+  if (countryLineMatch) {
+    country = countryLineMatch[1].trim()
+  }
+
+  // Fallback city: try "City:" or HTML patterns
+  if (!city) {
+    city = extractField(content, [
+      /class="[^"]*city[^"]*"[^>]*>([^<]+)</i,
+    ]) || extractField(md, [
+      /(?:City)\s*[:：]\s*(.+)/im,
+    ])
+  }
+
+  // ── Country Code ──
+  // Try to derive from country name or from existing partner data
+  const countryCode = countryNameToCode(country) || extractField(content, [
+    /\/flags?\/([a-z]{2})\./i,
+    /country[_-]?code["']?\s*[:=]\s*["']?([A-Z]{2})/i,
+  ])?.toUpperCase() || 'XX'
+
+  // ── Contact Info ──
+  // Exclude wcaworld.com emails
+  const rawEmail = extractField(content, [
+    /mailto:([^\s"'<>]+@[^\s"'<>]+)/i,
+    /(?:Email|E-mail)\s*[:：]\s*([^\s<>"]+@[^\s<>"]+)/i,
+  ]) || extractField(md, [
+    /(?:Email|E-mail)\s*[:：]\s*\[?([^\s\]<>]+@[^\s\]<>]+)/im,
+    /\[([^\]]+@[^\]]+)\]\(mailto:/im,
+  ])
+  const email = rawEmail && !rawEmail.includes('wcaworld.com') ? rawEmail : null
+
+  const phone = extractField(content, [
+    /(?:Phone|Tel|Telephone)\s*[:：]\s*([+\d\s\-().]{7,25})/i,
+  ]) || extractField(md, [
+    /(?:Phone|Tel|Telephone)\s*[:：]\s*([+\d\s\-().]{7,25})/im,
+  ])
+
+  const fax = extractField(content, [
+    /(?:Fax)\s*[:：]\s*([+\d\s\-().]{7,25})/i,
+  ]) || extractField(md, [
+    /(?:Fax)\s*[:：]\s*([+\d\s\-().]{7,25})/im,
+  ])
+
+  // ── Website ──
+  // Handle markdown link format [url](url) and extract clean URL
+  let website: string | null = null
+  const websiteMatch = md.match(/(?:Website|Web|URL|Homepage)\s*[:：]\s*\[([^\]]+)\]\(([^)]+)\)/im)
+  if (websiteMatch) {
+    website = websiteMatch[2] || websiteMatch[1]
+  }
+  if (!website) {
+    website = extractField(content, [
+      /href="(https?:\/\/(?!(?:www\.)?wcaworld)[^\s"]+)"[^>]*>\s*(?:Visit\s*Website|Website|www\.)/i,
+      /(?:Website|Web|URL|Homepage)\s*[:：]\s*(?:<a[^>]*href=")?([^"<\s]+(?:https?:\/\/(?!(?:www\.)?wcaworld)[^\s"<]+))/i,
+    ]) || extractField(md, [
+      /(?:Website|Web|URL|Homepage)\s*[:：]\s*(https?:\/\/(?!(?:www\.)?wcaworld)[^\s\]]+)/im,
+    ])
+  }
+
+  // ── Address ──
+  const address = extractField(content, [
+    /class="[^"]*address[^"]*"[^>]*>([\s\S]{5,200}?)<\//i,
+    /(?:Address)\s*[:：]\s*([^<\n]{5,200})/i,
+  ]) || extractField(md, [
+    /(?:Address)\s*[:：]\s*(.{5,200})/im,
+  ])
+
+  // ── Profile Description ──
+  // WCA format: inside a markdown table "| description text |" after "Profile:"
+  let profileDescription = extractField(md, [
+    /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*[-–]+\s*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
+    /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
+  ])
+  // HTML fallback
+  if (!profileDescription) {
+    profileDescription = extractField(content, [
+      /class="[^"]*(?:profile|description|about|company-?info)[^"]*"[^>]*>([\s\S]{20,2000}?)<\//i,
+    ])
+  }
+  // Clean up table formatting and skip navigation text
+  if (profileDescription) {
+    profileDescription = profileDescription.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\|\s*$/gm, '').replace(/\s+/g, ' ').trim()
+  }
+  if (profileDescription && (profileDescription.length < 15 || /^[«»<>←→]/m.test(profileDescription))) {
+    profileDescription = null
+  }
+
+  // ── Member Since ──
+  const memberSince = extractField(content, [
+    /(?:Member\s*Since|Joined|Since)\s*[:：]?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i,
+    /(?:Member\s*Since|Joined|Since)\s*[:：]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+  ]) || extractField(md, [
+    /(?:Member\s*Since|Joined|Since)\s*[:：]?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4})/im,
+  ])
+
+  // ── Office Type ──
+  const officeType = detectedOfficeType?.toLowerCase()?.includes('branch') ? 'branch' : 'head_office'
+
+  // ── Gold Medallion ──
+  const goldMedallion = /gold\s*medallion/i.test(content)
+
+  // ── Networks ──
+  const networks: { name: string; expires?: string }[] = []
+  const wcaNetworks = ['WCA Inter Global', 'WCA China Global', 'WCA First', 'WCA Advanced Professionals', 'WCA Projects', 'WCA Dangerous Goods', 'WCA Perishables', 'WCA Time Critical', 'WCA Pharma', 'WCA eCommerce']
+  for (const net of wcaNetworks) {
+    if (content.includes(net) || md.includes(net)) {
+      const expiryRegex = new RegExp(net.replace(/\s+/g, '\\s+') + '[^\\n]*?(?:Expires?\\s*[:：]?\\s*|[-–]\\s*)(\\w+\\s+\\d{1,2},?\\s*\\d{4})', 'i')
+      const expiryMatch = content.match(expiryRegex) || md.match(expiryRegex)
+      networks.push({ name: net, expires: expiryMatch?.[1] || undefined })
+    }
+  }
+
+  // ── Certifications ──
+  const certifications: string[] = []
+  const validCerts = ['IATA', 'BASC', 'ISO', 'C-TPAT', 'AEO']
+  for (const cert of validCerts) {
+    if (content.includes(cert) || md.includes(cert)) {
+      certifications.push(cert)
+    }
+  }
+
+  // ── Contacts ──
+  // WCA pages show contacts with Title: and Name: but names are often behind login wall
+  const contacts: { title: string; name?: string; email?: string }[] = []
+  // Extract title blocks, skip "Members only" entries
+  const titleBlocks = md.split(/Title:\s*/i).slice(1)
+  for (const block of titleBlocks) {
+    const titleLine = block.split('\n')[0]?.trim()
+    if (!titleLine || titleLine.length < 3 || /Members\s*only|Login|login/i.test(titleLine)) continue
+    contacts.push({ title: titleLine })
+  }
+  // HTML fallback
+  if (contacts.length === 0) {
+    const htmlContactRegex = /Title:\s*<\/[^>]+>\s*<[^>]+>([^<]+)/gi
+    let hcm
+    while ((hcm = htmlContactRegex.exec(content)) !== null) {
+      const title = hcm[1].trim()
+      if (title.length >= 3 && !/Members\s*only|Login/i.test(title)) {
+        contacts.push({ title })
+      }
+    }
+  }
+
+  // ── Branch Offices ──
+  const branchOffices: { city: string; wca_id?: number }[] = []
+  // Look for links to other member profiles
+  const branchRegex = /href="[^"]*\/[Dd]irectory\/[Mm]embers\/(\d+)"[^>]*>[^<]*?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)[^<]*Branch/gi
+  let bm
+  while ((bm = branchRegex.exec(content)) !== null) {
+    const branchId = parseInt(bm[1])
+    if (branchId !== wcaId) {
+      branchOffices.push({ city: bm[2].trim(), wca_id: branchId })
+    }
+  }
+  // Markdown fallback
+  if (branchOffices.length === 0) {
+    const mdBranchRegex = /\[([^\]]*Branch[^\]]*)\]\([^)]*\/[Dd]irectory\/[Mm]embers\/(\d+)/gi
+    let mbm
+    while ((mbm = mdBranchRegex.exec(md)) !== null) {
+      const branchId = parseInt(mbm[2])
+      if (branchId !== wcaId) {
+        const cityMatch = mbm[1].match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*[-–]/)?.[1]
+        branchOffices.push({ city: cityMatch || mbm[1].trim(), wca_id: branchId })
+      }
+    }
+  }
+
+  return {
+    company_name: decodeEntities(companyName),
+    city: city ? decodeEntities(city) : 'Unknown',
+    country: country ? decodeEntities(country) : '',
+    country_code: countryCode,
+    office_type: officeType,
+    email: email || null,
+    phone: phone || null,
+    fax: fax || null,
+    website: cleanWebsite(website),
+    address: address ? decodeEntities(address.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()) : null,
+    profile_description: profileDescription ? decodeEntities(profileDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()) : null,
+    member_since: memberSince || null,
+    gold_medallion: goldMedallion,
+    networks,
+    certifications,
+    contacts,
+    branch_offices: branchOffices,
+    has_branches: branchOffices.length > 0,
+  }
+}
+
+function decodeEntities(str: string): string {
+  return str.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+}
+
+function cleanWebsite(url: string | null): string | null {
+  if (!url) return null
+  let cleaned = url.trim()
+  if (!cleaned.startsWith('http')) cleaned = 'https://' + cleaned
+  // Remove wcaworld references
+  if (cleaned.includes('wcaworld.com')) return null
+  return cleaned
+}
+
+function countryNameToCode(name: string | null): string | null {
+  if (!name) return null
+  const map: Record<string, string> = {
+    'united states of america': 'US', 'united states': 'US', 'usa': 'US',
+    'united kingdom': 'GB', 'great britain': 'GB', 'england': 'GB',
+    'canada': 'CA', 'australia': 'AU', 'germany': 'DE', 'france': 'FR',
+    'italy': 'IT', 'spain': 'ES', 'china': 'CN', 'india': 'IN',
+    'japan': 'JP', 'brazil': 'BR', 'mexico': 'MX', 'argentina': 'AR',
+    'colombia': 'CO', 'chile': 'CL', 'peru': 'PE', 'south korea': 'KR',
+    'thailand': 'TH', 'indonesia': 'ID', 'malaysia': 'MY', 'vietnam': 'VN',
+    'philippines': 'PH', 'singapore': 'SG', 'hong kong': 'HK', 'taiwan': 'TW',
+    'turkey': 'TR', 'saudi arabia': 'SA', 'united arab emirates': 'AE',
+    'south africa': 'ZA', 'nigeria': 'NG', 'kenya': 'KE', 'egypt': 'EG',
+    'netherlands': 'NL', 'belgium': 'BE', 'switzerland': 'CH', 'austria': 'AT',
+    'sweden': 'SE', 'norway': 'NO', 'denmark': 'DK', 'finland': 'FI',
+    'poland': 'PL', 'czech republic': 'CZ', 'portugal': 'PT', 'greece': 'GR',
+    'ireland': 'IE', 'new zealand': 'NZ', 'israel': 'IL', 'russia': 'RU',
+    'ukraine': 'UA', 'romania': 'RO', 'hungary': 'HU', 'pakistan': 'PK',
+    'bangladesh': 'BD', 'sri lanka': 'LK', 'nepal': 'NP', 'panama': 'PA',
+    'costa rica': 'CR', 'ecuador': 'EC', 'bolivia': 'BO', 'paraguay': 'PY',
+    'uruguay': 'UY', 'venezuela': 'VE', 'guatemala': 'GT', 'honduras': 'HN',
+    'dominican republic': 'DO', 'el salvador': 'SV', 'nicaragua': 'NI',
+    'cuba': 'CU', 'jamaica': 'JM', 'trinidad and tobago': 'TT', 'puerto rico': 'PR',
+    'morocco': 'MA', 'tunisia': 'TN', 'algeria': 'DZ', 'ghana': 'GH',
+    'ethiopia': 'ET', 'tanzania': 'TZ', 'uganda': 'UG', 'mozambique': 'MZ',
+    'cambodia': 'KH', 'myanmar': 'MM', 'laos': 'LA', 'mongolia': 'MN',
+    'jordan': 'JO', 'lebanon': 'LB', 'kuwait': 'KW', 'qatar': 'QA',
+    'bahrain': 'BH', 'oman': 'OM', 'iraq': 'IQ', 'iran': 'IR',
+    'croatia': 'HR', 'serbia': 'RS', 'bulgaria': 'BG', 'slovakia': 'SK',
+    'slovenia': 'SI', 'lithuania': 'LT', 'latvia': 'LV', 'estonia': 'EE',
+    'luxembourg': 'LU', 'malta': 'MT', 'cyprus': 'CY', 'iceland': 'IS',
+  }
+  return map[name.toLowerCase().trim()] || null
+}
+
+function parseDateString(dateStr: string): string | null {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return null
+    return d.toISOString().split('T')[0]
+  } catch {
+    return null
+  }
+}
+
+// ─── Main Handler ────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -35,6 +334,7 @@ Deno.serve(async (req) => {
     const url = `https://www.wcaworld.com/directory/members/${wcaId}`
     console.log(`Scraping WCA member profile: ${url}`)
 
+    // ── Step 1: Firecrawl with markdown (NO LLM extraction) ──
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -43,88 +343,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url,
-        formats: ['extract'],
-        extract: {
-          prompt: `Extract ALL information from this WCA freight forwarder member profile page. Extract every field available:
-- company_name: the business name
-- city: city where the office is located
-- country: full country name
-- country_code: 2-letter ISO country code
-- office_type: "head_office" or "branch"
-- email: company email (if visible, not behind login wall)
-- phone: phone number
-- fax: fax number
-- website: website URL
-- address: full street address
-- profile_description: the full company profile/description text
-- logo_url: URL of the company logo image
-- member_since: date when they became a member (e.g. "Dec 10, 2003")
-- gold_medallion: boolean, whether enrolled in Gold Medallion program
-- networks: array of network memberships, each with name and expiry date
-- certifications: array of certification/license names (e.g. IATA, C-TPAT, ISO, etc.)
-- contacts: array of office contacts, each with title/role and name if visible
-- branch_offices: array of other offices, each with city and wca_id if visible
-- has_branches: boolean, whether the company has multiple offices
-
-If the page shows 404, not found, or no company profile, return company_name as empty string.`,
-          schema: {
-            type: 'object',
-            properties: {
-              company_name: { type: 'string' },
-              city: { type: 'string' },
-              country: { type: 'string' },
-              country_code: { type: 'string' },
-              office_type: { type: 'string' },
-              email: { type: 'string' },
-              phone: { type: 'string' },
-              fax: { type: 'string' },
-              website: { type: 'string' },
-              address: { type: 'string' },
-              profile_description: { type: 'string' },
-              logo_url: { type: 'string' },
-              member_since: { type: 'string' },
-              gold_medallion: { type: 'boolean' },
-              networks: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    expires: { type: 'string' },
-                  },
-                },
-              },
-              certifications: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-              contacts: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string' },
-                    name: { type: 'string' },
-                    email: { type: 'string' },
-                  },
-                },
-              },
-              branch_offices: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    city: { type: 'string' },
-                    wca_id: { type: 'number' },
-                  },
-                },
-              },
-              has_branches: { type: 'boolean' },
-            },
-            required: ['company_name'],
-          },
-        },
-        waitFor: 5000,
+        formats: ['markdown', 'rawHtml'],
       }),
     })
 
@@ -138,42 +357,42 @@ If the page shows 404, not found, or no company profile, return company_name as 
       )
     }
 
-    const extracted = scrapeData?.data?.extract || scrapeData?.extract || {}
-    console.log(`Extracted for ID ${wcaId}:`, JSON.stringify(extracted))
+    const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || ''
+    const html = scrapeData?.data?.rawHtml || scrapeData?.rawHtml || ''
+    console.log(`Got content for ID ${wcaId}: markdown=${markdown.length}c, html=${html.length}c`)
 
-    if (!extracted.company_name || extracted.company_name.trim() === '') {
+    // ── Step 2: Parse with regex (instant) ──
+    const parsed = parseProfileFromContent(html, markdown, wcaId)
+
+    if (!parsed || !parsed.company_name) {
       return new Response(
         JSON.stringify({ success: true, found: false, wcaId }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Map office_type to enum
-    const officeType = extracted.office_type?.toLowerCase()?.includes('branch') ? 'branch' : 'head_office'
+    console.log(`Parsed ID ${wcaId}: ${parsed.company_name} (${parsed.city}, ${parsed.country_code})`)
 
-    // Build partner record
+    // ── Step 3: Upsert partner record ──
     const partnerRecord = {
-      company_name: extracted.company_name.trim(),
-      city: extracted.city?.trim() || 'Unknown',
-      country_code: extracted.country_code?.trim()?.toUpperCase() || 'XX',
-      country_name: extracted.country?.trim() || '',
-      email: extracted.email?.trim() || null,
-      phone: extracted.phone?.trim() || null,
-      fax: extracted.fax?.trim() || null,
-      website: extracted.website?.trim() || null,
+      company_name: parsed.company_name,
+      city: parsed.city,
+      country_code: parsed.country_code,
+      country_name: parsed.country,
+      email: parsed.email,
+      phone: parsed.phone,
+      fax: parsed.fax,
+      website: parsed.website,
       wca_id: wcaId,
-      address: extracted.address?.trim() || null,
-      profile_description: extracted.profile_description?.trim() || null,
-      office_type: officeType,
-      member_since: extracted.member_since ? parseDateString(extracted.member_since) : null,
-      has_branches: extracted.has_branches || false,
-      branch_cities: extracted.branch_offices?.length > 0
-        ? JSON.stringify(extracted.branch_offices)
-        : '[]',
+      address: parsed.address,
+      profile_description: parsed.profile_description,
+      office_type: parsed.office_type,
+      member_since: parsed.member_since ? parseDateString(parsed.member_since) : null,
+      has_branches: parsed.has_branches,
+      branch_cities: parsed.branch_offices.length > 0 ? JSON.stringify(parsed.branch_offices) : '[]',
       is_active: true,
     }
 
-    // Check if exists by wca_id
     const { data: existingById } = await supabase
       .from('partners')
       .select('id')
@@ -213,100 +432,32 @@ If the page shows 404, not found, or no company profile, return company_name as 
       action = 'inserted'
     }
 
-    // Save certifications
-    if (extracted.certifications?.length > 0 && partnerId) {
-      const validCerts = ['IATA', 'BASC', 'ISO', 'C-TPAT', 'AEO']
-      for (const cert of extracted.certifications) {
-        const certUpper = cert.toUpperCase().trim()
-        const matchedCert = validCerts.find(vc => certUpper.includes(vc))
-        if (matchedCert) {
-          const { data: existingCert } = await supabase
-            .from('partner_certifications')
-            .select('id')
-            .eq('partner_id', partnerId)
-            .eq('certification', matchedCert)
-            .maybeSingle()
-          if (!existingCert) {
-            await supabase.from('partner_certifications').insert({
-              partner_id: partnerId,
-              certification: matchedCert,
-            })
-          }
-        }
-      }
+    // ── Step 4: Batch DB operations for related data ──
+    if (partnerId) {
+      await saveCertificationsBatch(supabase, partnerId, parsed.certifications)
+      await saveNetworksBatch(supabase, partnerId, parsed.networks)
+      await saveContactsBatch(supabase, partnerId, parsed.contacts)
     }
 
-    // Save networks
-    if (extracted.networks?.length > 0 && partnerId) {
-      for (const network of extracted.networks) {
-        if (!network.name) continue
-        const { data: existingNet } = await supabase
-          .from('partner_networks')
-          .select('id')
-          .eq('partner_id', partnerId)
-          .eq('network_name', network.name)
-          .maybeSingle()
-        if (!existingNet) {
-          await supabase.from('partner_networks').insert({
-            partner_id: partnerId,
-            network_name: network.name,
-            expires: network.expires ? parseDateString(network.expires) : null,
-          })
-        }
-      }
-    }
-
-    // Save contacts
-    if (extracted.contacts?.length > 0 && partnerId) {
-      for (const contact of extracted.contacts) {
-        if (!contact.title) continue
-        const { data: existingContact } = await supabase
-          .from('partner_contacts')
-          .select('id')
-          .eq('partner_id', partnerId)
-          .eq('title', contact.title)
-          .maybeSingle()
-        if (!existingContact) {
-          await supabase.from('partner_contacts').insert({
-            partner_id: partnerId,
-            name: contact.name || contact.title,
-            title: contact.title,
-            email: contact.email || null,
-          })
-        }
-      }
-    }
-
-    // Build full response with all extracted data
+    // ── Step 5: Fire-and-forget AI analysis (NON-BLOCKING) ──
     const fullPartner = {
       ...partnerRecord,
-      logo_url: extracted.logo_url || null,
-      gold_medallion: extracted.gold_medallion || false,
-      networks: extracted.networks || [],
-      certifications: extracted.certifications || [],
-      contacts: extracted.contacts || [],
-      branch_offices: extracted.branch_offices || [],
+      gold_medallion: parsed.gold_medallion,
+      networks: parsed.networks,
+      certifications: parsed.certifications,
+      contacts: parsed.contacts,
+      branch_offices: parsed.branch_offices,
     }
 
-    // Trigger AI analysis asynchronously (fire and forget)
-    let aiClassification = null
-    try {
-      const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
-      const analyzeResponse = await fetch(analyzeUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId, profileData: fullPartner }),
-      })
-      const analyzeData = await analyzeResponse.json()
-      if (analyzeData.success) {
-        aiClassification = analyzeData.classification
-      }
-    } catch (aiErr) {
-      console.error('AI analysis error (non-blocking):', aiErr)
-    }
+    const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
+    fetch(analyzeUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ partnerId, profileData: fullPartner }),
+    }).catch(err => console.error('AI analysis fire-and-forget error:', err))
 
     return new Response(
       JSON.stringify({
@@ -316,7 +467,7 @@ If the page shows 404, not found, or no company profile, return company_name as 
         action,
         partnerId,
         partner: fullPartner,
-        aiClassification,
+        aiClassification: null, // arrives async
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -329,12 +480,69 @@ If the page shows 404, not found, or no company profile, return company_name as 
   }
 })
 
-function parseDateString(dateStr: string): string | null {
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return null
-    return d.toISOString().split('T')[0]
-  } catch {
-    return null
+// ─── Batch DB Helpers ────────────────────────────────────────
+
+async function saveCertificationsBatch(supabase: any, partnerId: string, certifications: string[]) {
+  if (!certifications.length) return
+  const validCerts = ['IATA', 'BASC', 'ISO', 'C-TPAT', 'AEO']
+  const matched = [...new Set(certifications.filter(c => validCerts.includes(c)))]
+  if (!matched.length) return
+
+  // Get existing in one query
+  const { data: existing } = await supabase
+    .from('partner_certifications')
+    .select('certification')
+    .eq('partner_id', partnerId)
+
+  const existingSet = new Set((existing || []).map((e: any) => e.certification))
+  const toInsert = matched.filter(c => !existingSet.has(c)).map(c => ({ partner_id: partnerId, certification: c }))
+
+  if (toInsert.length > 0) {
+    await supabase.from('partner_certifications').insert(toInsert)
+  }
+}
+
+async function saveNetworksBatch(supabase: any, partnerId: string, networks: { name: string; expires?: string }[]) {
+  if (!networks.length) return
+
+  const { data: existing } = await supabase
+    .from('partner_networks')
+    .select('network_name')
+    .eq('partner_id', partnerId)
+
+  const existingSet = new Set((existing || []).map((e: any) => e.network_name))
+  const toInsert = networks
+    .filter(n => n.name && !existingSet.has(n.name))
+    .map(n => ({
+      partner_id: partnerId,
+      network_name: n.name,
+      expires: n.expires ? parseDateString(n.expires) : null,
+    }))
+
+  if (toInsert.length > 0) {
+    await supabase.from('partner_networks').insert(toInsert)
+  }
+}
+
+async function saveContactsBatch(supabase: any, partnerId: string, contacts: { title: string; name?: string; email?: string }[]) {
+  if (!contacts.length) return
+
+  const { data: existing } = await supabase
+    .from('partner_contacts')
+    .select('title')
+    .eq('partner_id', partnerId)
+
+  const existingSet = new Set((existing || []).map((e: any) => e.title))
+  const toInsert = contacts
+    .filter(c => c.title && !existingSet.has(c.title))
+    .map(c => ({
+      partner_id: partnerId,
+      name: c.name || c.title,
+      title: c.title,
+      email: c.email || null,
+    }))
+
+  if (toInsert.length > 0) {
+    await supabase.from('partner_contacts').insert(toInsert)
   }
 }
