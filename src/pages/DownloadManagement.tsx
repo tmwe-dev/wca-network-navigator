@@ -19,6 +19,7 @@ import {
   scrapeWcaDirectory,
   type ScrapedPartner,
   type DirectoryMember,
+  type DirectoryResult,
 } from "@/lib/api/wcaScraper";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -900,17 +901,22 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
   }, [queryClient]);
 
+  const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
+
   const handleStart = useCallback(async () => {
     setIsRunning(true);
     setHasScanned(true);
     setError(null);
+    setSkippedCountries([]);
     abortRef.current = false;
     const allMembers: DirectoryMember[] = [];
+    const skipped: string[] = [];
 
     for (let ci = 0; ci < countries.length; ci++) {
       if (abortRef.current) break;
       setCurrentCountryIdx(ci);
       const country = countries[ci];
+      setError(null); // Reset errore ad ogni paese
 
       // Iterate over each selected network (or just "" for all)
       for (const netKey of networkKeys) {
@@ -920,6 +926,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         let countryTotal = 0;
         let countryPages = 0;
         const countryMembers: DirectoryMember[] = [];
+        let countryFailed = false;
 
         while (hasNext && !abortRef.current) {
           await waitWhilePaused();
@@ -928,40 +935,66 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
           setCurrentPage(page);
           const start = Date.now();
 
-          try {
-            const result = await scrapeWcaDirectory(country.code, netKey, page);
-            const elapsed = Date.now() - start;
-            setPageTime(elapsed);
+          // Retry con backoff esponenziale (3 tentativi)
+          const maxRetries = 3;
+          let result: DirectoryResult | null = null;
+          let lastError = "";
 
-            if (!result.success) {
-              setError(result.error || "Errore sconosciuto");
-              break;
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              result = await scrapeWcaDirectory(country.code, netKey, page);
+              if (result.success) break;
+              lastError = result.error || "Errore sconosciuto";
+              result = null;
+            } catch (err) {
+              lastError = err instanceof Error ? err.message : "Errore di rete";
+              result = null;
             }
-
-            if (result.members.length > 0) {
-              const newMembers = result.members.map(m => ({
-                ...m,
-                country: m.country || country.name,
-                country_code: country.code,
-              }));
-              countryMembers.push(...newMembers);
-              allMembers.push(...newMembers);
-              setScannedMembers([...allMembers]);
+            if (attempt < maxRetries) {
+              const backoffMs = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+              console.warn(`${country.code}/${netKey} p${page}: tentativo ${attempt}/${maxRetries} fallito, retry in ${backoffMs / 1000}s...`);
+              await new Promise(r => setTimeout(r, backoffMs));
             }
-
-            countryTotal = result.pagination.total_results;
-            countryPages = result.pagination.total_pages;
-            setTotalResults(result.pagination.total_results);
-            setTotalPages(result.pagination.total_pages);
-            hasNext = result.pagination.has_next_page || result.members.length >= 50;
-            page++;
-          } catch (err) {
-            setError(err instanceof Error ? err.message : "Errore di rete");
-            break;
           }
+
+          if (!result || !result.success) {
+            console.warn(`${country.code}/${netKey} p${page}: fallito dopo ${maxRetries} tentativi - ${lastError}`);
+            setError(`${country.name}: ${lastError} (saltato dopo ${maxRetries} tentativi)`);
+            countryFailed = true;
+            break; // Esce dal while delle pagine, continua col prossimo network/paese
+          }
+
+          const elapsed = Date.now() - start;
+          setPageTime(elapsed);
+
+          if (result.members.length > 0) {
+            const newMembers = result.members.map(m => ({
+              ...m,
+              country: m.country || country.name,
+              country_code: country.code,
+            }));
+            countryMembers.push(...newMembers);
+            allMembers.push(...newMembers);
+            setScannedMembers([...allMembers]);
+          }
+
+          countryTotal = result.pagination.total_results;
+          countryPages = result.pagination.total_pages;
+          setTotalResults(result.pagination.total_results);
+          setTotalPages(result.pagination.total_pages);
+          hasNext = result.pagination.has_next_page || result.members.length >= 50;
+          page++;
 
           if (hasNext && !abortRef.current) {
             await new Promise(r => setTimeout(r, listingDelayRef.current));
+          }
+        }
+
+        if (countryFailed) {
+          const label = `${country.name} (${country.code})${netKey ? ` [${netKey}]` : ''}`;
+          if (!skipped.includes(label)) {
+            skipped.push(label);
+            setSkippedCountries([...skipped]);
           }
         }
 
@@ -1170,6 +1203,12 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         {error && (
           <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
             ⚠️ {error}
+          </div>
+        )}
+
+        {skippedCountries.length > 0 && (
+          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
+            ⚠️ {skippedCountries.length} paes{skippedCountries.length === 1 ? 'e saltato' : 'i saltati'} per errore: {skippedCountries.join(', ')}
           </div>
         )}
 
