@@ -3,16 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Loader2, CheckCircle, XCircle, Globe, FlaskConical, Plus } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Globe, FlaskConical } from "lucide-react";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
 import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { toast } from "@/hooks/use-toast";
 
 export function NetworkAnalysis() {
-  const { data: configs, isLoading, updateConfig, addNetwork } = useNetworkConfigs();
+  const { data: configs, isLoading, updateConfig } = useNetworkConfigs();
   const [testing, setTesting] = useState<string | null>(null);
-  const [newNetwork, setNewNetwork] = useState("");
 
   const handleToggleMember = (config: NetworkConfig) => {
     updateConfig.mutate({ id: config.id, is_member: !config.is_member });
@@ -59,13 +57,6 @@ export function NetworkAnalysis() {
     }
   };
 
-  const handleAddNetwork = () => {
-    if (newNetwork.trim()) {
-      addNetwork.mutate(newNetwork.trim());
-      setNewNetwork("");
-    }
-  };
-
   const StatusIcon = ({ value }: { value: boolean }) =>
     value ? (
       <CheckCircle className="w-4 h-4 text-green-500" />
@@ -83,10 +74,10 @@ export function NetworkAnalysis() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Globe className="w-5 h-5" />
-            Network di Appartenenza
+            Gruppi WCA
           </CardTitle>
           <CardDescription>
-            Seleziona i network a cui appartieni e verifica la visibilità dei dati di contatto con un test a campione.
+            Seleziona i gruppi WCA a cui appartieni e verifica la visibilità dei dati di contatto con un test a campione.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -150,18 +141,6 @@ export function NetworkAnalysis() {
             ))}
           </div>
 
-          {/* Add new network */}
-          <div className="flex gap-2 pt-2">
-            <Input
-              placeholder="Aggiungi network..."
-              value={newNetwork}
-              onChange={(e) => setNewNetwork(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddNetwork()}
-            />
-            <Button variant="outline" size="icon" onClick={handleAddNetwork} disabled={!newNetwork.trim()}>
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
