@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.analyze-partner]
 verify_jwt = false
+
+[functions.enrich-partner-website]
+verify_jwt = false
