@@ -228,15 +228,27 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
   const [sub, setSub] = useState<DlSub>("country");
-  const [country, setCountry] = useState<{ code: string; name: string } | null>(null);
+  const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
   const [network, setNetwork] = useState("");
   const [search, setSearch] = useState("");
 
-  const labels = ["Paese", "Network", "Configura & Avvia"];
+  const labels = ["Paesi", "Network", "Configura & Avvia"];
   const keys: DlSub[] = ["country", "network", "speed"];
   const idx = keys.indexOf(sub);
 
   const goSubBack = () => { if (idx > 0) setSub(keys[idx - 1]); };
+
+  const toggleCountry = (code: string, name: string) => {
+    setCountries(prev =>
+      prev.some(c => c.code === code)
+        ? prev.filter(c => c.code !== code)
+        : [...prev, { code, name }]
+    );
+  };
+
+  const removeCountry = (code: string) => {
+    setCountries(prev => prev.filter(c => c.code !== code));
+  };
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -260,14 +272,21 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
       )}
 
       {sub === "country" && (
-        <PickCountry search={search} onSearchChange={setSearch} onSelect={(code, name) => { setCountry({ code, name }); setSub("network"); }} />
+        <PickCountry
+          search={search}
+          onSearchChange={setSearch}
+          selected={countries}
+          onToggle={toggleCountry}
+          onRemove={removeCountry}
+          onConfirm={() => setSub("network")}
+        />
       )}
-      {sub === "network" && country && (
-        <PickNetwork country={country} onSelect={n => { setNetwork(n); setSub("speed"); }} />
+      {sub === "network" && countries.length > 0 && (
+        <PickNetwork country={countries[0]} onSelect={n => { setNetwork(n); setSub("speed"); }} />
       )}
-      {sub === "speed" && country && (
+      {sub === "speed" && countries.length > 0 && (
         <ScanConfig
-          country={country}
+          countries={countries}
           network={network}
           onStart={onStartRunning}
         />
@@ -276,41 +295,132 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   );
 }
 
-// ─── Pick Country ────────────────────────────────────────────
-function PickCountry({ search, onSearchChange, onSelect }: {
+// ─── Pick Country (multi-select) ─────────────────────────────
+function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onConfirm }: {
   search: string;
   onSearchChange: (s: string) => void;
-  onSelect: (code: string, name: string) => void;
+  selected: { code: string; name: string }[];
+  onToggle: (code: string, name: string) => void;
+  onRemove: (code: string) => void;
+  onConfirm: () => void;
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const filtered = WCA_COUNTRIES.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const [showOnlyMissing, setShowOnlyMissing] = useState(false);
+
+  // Fetch which countries already have partners in DB
+  const { data: exploredCodes = [] } = useQuery({
+    queryKey: ["explored-countries"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("country_code")
+        .not("country_code", "is", null);
+      const unique = new Set((data || []).map(r => r.country_code));
+      return Array.from(unique);
+    },
+    staleTime: 60_000,
+  });
+
+  const selectedCodes = new Set(selected.map(c => c.code));
+  const exploredSet = new Set(exploredCodes);
+
+  const filtered = WCA_COUNTRIES.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+    if (showOnlyMissing) return !exploredSet.has(c.code);
+    return true;
+  });
+
+  const missingCount = WCA_COUNTRIES.filter(c => !exploredSet.has(c.code)).length;
 
   return (
-    <div className="flex-1 flex flex-col items-center gap-4">
+    <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
       <div className="text-center">
-        <h2 className={`text-xl mb-1 ${th.h2}`}>Che paese vuoi esplorare?</h2>
-        <p className={`text-sm ${th.sub}`}>Seleziona il paese dalla lista</p>
+        <h2 className={`text-xl mb-1 ${th.h2}`}>Quali paesi vuoi esplorare?</h2>
+        <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
       </div>
-      <div className="relative w-full max-w-xl">
-        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
-        <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="w-full max-w-xl">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`text-xs ${th.label}`}>Selezionati:</span>
+            <Badge variant="secondary" className="text-xs">{selected.length}</Badge>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {selected.map(c => (
+              <Badge
+                key={c.code}
+                className={`flex items-center gap-1 cursor-pointer ${isDark ? "bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30" : "bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-200"}`}
+                onClick={() => onRemove(c.code)}
+              >
+                {getCountryFlag(c.code)} {c.name} ✕
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search + filters */}
+      <div className="w-full max-w-xl flex gap-2">
+        <div className="relative flex-1">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
+          <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
+        </div>
+        <button
+          onClick={() => setShowOnlyMissing(!showOnlyMissing)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
+            showOnlyMissing
+              ? isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-sky-100 border-sky-300 text-sky-700"
+              : th.optCard
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          Mai esplorati ({missingCount})
+        </button>
       </div>
+
+      {/* Country grid */}
       <ScrollArea className="flex-1 w-full max-w-xl">
         <div className="grid grid-cols-2 gap-2 pr-4">
-          {filtered.map(c => (
-            <button key={c.code} onClick={() => onSelect(c.code, c.name)} className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${th.optCard}`}>
-              <span className="text-lg">{getCountryFlag(c.code)}</span>
-              <div className="min-w-0">
-                <p className="text-sm truncate">{c.name}</p>
-                <p className={`text-xs ${th.dim}`}>{c.code}</p>
-              </div>
-            </button>
-          ))}
+          {filtered.map(c => {
+            const isSelected = selectedCodes.has(c.code);
+            const isExplored = exploredSet.has(c.code);
+            return (
+              <button
+                key={c.code}
+                onClick={() => onToggle(c.code, c.name)}
+                className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${
+                  isSelected
+                    ? isDark ? "bg-amber-500/15 border-amber-500/40 ring-1 ring-amber-500/30" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300"
+                    : th.optCard
+                }`}
+              >
+                <span className="text-lg">{getCountryFlag(c.code)}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm truncate">{c.name}</p>
+                  <p className={`text-xs ${th.dim}`}>{c.code}</p>
+                </div>
+                {isSelected && <CheckCircle className={`w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
+                {!isSelected && isExplored && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-50 text-emerald-600"}`}>DB</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </ScrollArea>
+
+      {/* Confirm button */}
+      {selected.length > 0 && (
+        <div className="w-full max-w-xl">
+          <Button onClick={onConfirm} className={`w-full ${th.btnPri}`}>
+            <ArrowRight className="w-4 h-4 mr-2" />
+            Prosegui con {selected.length} {selected.length === 1 ? "paese" : "paesi"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -351,8 +461,8 @@ function PickNetwork({ country, onSelect }: {
 }
 
 // ─── Scan Config (replaces DirectoryListing + SpeedConfig) ───
-function ScanConfig({ country, network, onStart }: {
-  country: { code: string; name: string };
+function ScanConfig({ countries, network, onStart }: {
+  countries: { code: string; name: string }[];
   network: string;
   onStart: () => void;
 }) {
@@ -366,12 +476,17 @@ function ScanConfig({ country, network, onStart }: {
   const [startId, setStartId] = useState("1");
   const [endId, setEndId] = useState("500");
 
-  // Get existing partner count for this country + max known ID
+  const countryCodes = countries.map(c => c.code);
+  const countryLabel = countries.length === 1
+    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
+    : `${countries.length} paesi`;
+
+  // Get existing partner count for these countries + max known ID
   const { data: dbInfo } = useQuery({
-    queryKey: ["db-scan-info", country.code],
+    queryKey: ["db-scan-info", countryCodes.join(",")],
     queryFn: async () => {
       const [countResult, maxResult] = await Promise.all([
-        supabase.from("partners").select("id", { count: "exact", head: true }).eq("country_code", country.code),
+        supabase.from("partners").select("id", { count: "exact", head: true }).in("country_code", countryCodes),
         supabase.from("partners").select("wca_id").not("wca_id", "is", null).order("wca_id", { ascending: false }).limit(1).maybeSingle(),
       ]);
       return {
@@ -412,8 +527,8 @@ function ScanConfig({ country, network, onStart }: {
       nightPauseEnabled,
       nightPauseMs: parseInt(nightPauseMinutes, 10) * 60 * 1000,
       filterNetwork: network,
-      filterCountry: country.code,
-      filterCountryName: country.name,
+      filterCountries: countryCodes,
+      filterCountryNames: countries.map(c => c.name),
     }));
     onStart();
   };
@@ -422,18 +537,25 @@ function ScanConfig({ country, network, onStart }: {
     <div className="flex-1 flex items-center justify-center">
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-8 max-w-lg w-full space-y-6`}>
         <div>
-          <h2 className={`text-xl mb-1 ${th.h2}`}>
-            {getCountryFlag(country.code)} {country.name}
-          </h2>
+          <h2 className={`text-xl mb-1 ${th.h2}`}>{countryLabel}</h2>
           <p className={`text-sm ${th.sub}`}>
             {network || "Tutti i network"} — Configura lo scan e avvia
           </p>
+          {countries.length > 1 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {countries.map(c => (
+                <span key={c.code} className={`text-xs px-2 py-0.5 rounded ${isDark ? "bg-amber-500/15 text-amber-300" : "bg-sky-50 text-sky-600"}`}>
+                  {getCountryFlag(c.code)} {c.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* DB info */}
         {dbInfo && (
           <div className={`p-3 rounded-lg border text-sm ${th.infoBox}`}>
-            <p><span className={`font-mono ${th.hi}`}>{dbInfo.countryPartners}</span> partner di {country.name} già nel database</p>
+            <p><span className={`font-mono ${th.hi}`}>{dbInfo.countryPartners}</span> partner {countries.length > 1 ? "dei paesi selezionati" : `di ${countries[0].name}`} già nel database</p>
             {dbInfo.maxGlobalId > 0 && (
               <p className={`text-xs ${th.dim} mt-1`}>Ultimo WCA ID conosciuto globalmente: <span className="font-mono">{dbInfo.maxGlobalId}</span></p>
             )}
@@ -447,7 +569,7 @@ function ScanConfig({ country, network, onStart }: {
             Range ID da scansionare
           </label>
           <p className={`text-xs mb-2 ${th.dim}`}>
-            Il sistema aprirà ogni profilo WCA in questo range e salverà quelli di <span className={th.hi}>{country.name}</span>
+            Il sistema aprirà ogni profilo WCA in questo range e salverà quelli di <span className={th.hi}>{countryLabel}</span>
           </p>
           <div className="flex gap-3">
             <div className="flex-1">
@@ -663,7 +785,7 @@ function DownloadRunning() {
             if (result.action === "inserted") localStats.inserted++;
             if (result.action === "updated") localStats.updated++;
             // Track country matches
-            if (config.filterCountry && result.partner?.country_code?.toUpperCase() === config.filterCountry.toUpperCase()) {
+            if (config.filterCountries?.length && result.partner?.country_code && config.filterCountries.includes(result.partner.country_code.toUpperCase())) {
               localCountryMatches++;
               if (mounted) setCountryMatches(localCountryMatches);
             }
@@ -738,7 +860,7 @@ function DownloadRunning() {
               <div>
                 <p className={`text-xs ${th.sub}`}>
                   {prolongedPause ? "PAUSA PROLUNGATA" : isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
-                  {config.filterCountryName && ` • ${config.filterCountryName}`}
+                  {config.filterCountryNames?.length > 0 && ` • ${config.filterCountryNames.length === 1 ? config.filterCountryNames[0] : config.filterCountryNames.length + " paesi"}`}
                   {config.filterNetwork && ` • ${config.filterNetwork}`}
                 </p>
                 <p className={`text-2xl font-mono ${th.mono}`}>
@@ -843,8 +965,8 @@ function DownloadRunning() {
         {/* Stats */}
         <div className="flex flex-wrap gap-3">
           <StatBadge label="Trovati" value={stats.found} color="amber" />
-          {config.filterCountry && (
-            <StatBadge label={config.filterCountryName || config.filterCountry} value={countryMatches} color="emerald" icon={<MapPin className="w-3 h-3" />} />
+          {config.filterCountries?.length > 0 && (
+            <StatBadge label={config.filterCountries.length === 1 ? (config.filterCountryNames?.[0] || config.filterCountries[0]) : `${config.filterCountries.length} paesi`} value={countryMatches} color="emerald" icon={<MapPin className="w-3 h-3" />} />
           )}
           <StatBadge label="Nuovi" value={stats.inserted} color="emerald" />
           <StatBadge label="Aggiornati" value={stats.updated} color="blue" />
