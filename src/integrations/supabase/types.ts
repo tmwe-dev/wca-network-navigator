@@ -71,6 +71,39 @@ export type Database = {
           },
         ]
       }
+      directory_cache: {
+        Row: {
+          country_code: string
+          id: string
+          members: Json
+          network_name: string
+          scanned_at: string
+          total_pages: number
+          total_results: number
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          id?: string
+          members?: Json
+          network_name?: string
+          scanned_at?: string
+          total_pages?: number
+          total_results?: number
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          id?: string
+          members?: Json
+          network_name?: string
+          scanned_at?: string
+          total_pages?: number
+          total_results?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       download_jobs: {
         Row: {
           completed_at: string | null

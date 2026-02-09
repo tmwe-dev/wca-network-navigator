@@ -513,6 +513,7 @@ function PickNetwork({ country, onSelect }: {
 
 // ═══════════════════════════════════════════════════════════════
 // FASE 1: Directory Scanner — scrapes the listing page by page
+// Uses directory_cache to remember previous scans
 // ═══════════════════════════════════════════════════════════════
 function DirectoryScanner({ countries, network, onComplete }: {
   countries: { code: string; name: string }[];
@@ -521,16 +522,30 @@ function DirectoryScanner({ countries, network, onComplete }: {
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-
   const countryCodes = countries.map(c => c.code);
+  const networkKey = network || "";
 
-  // Pre-load existing partners from DB for these countries
+  // 1) Load cached directory scan for these countries
+  const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
+    queryKey: ["directory-cache", countryCodes, networkKey],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("directory_cache")
+        .select("*")
+        .in("country_code", countryCodes)
+        .eq("network_name", networkKey);
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+
+  // 2) Load partners already in DB for these countries
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")
-        .select("wca_id, company_name, city, country_code, country_name, updated_at")
+        .select("wca_id, company_name, city, country_code, country_name, updated_at, rating, partner_type")
         .in("country_code", countryCodes)
         .not("wca_id", "is", null)
         .order("company_name");
@@ -538,14 +553,77 @@ function DirectoryScanner({ countries, network, onComplete }: {
         wca_id: p.wca_id!,
         company_name: p.company_name,
         city: p.city,
-        country: p.country_name,
         country_code: p.country_code,
+        country_name: p.country_name,
         updated_at: p.updated_at,
+        rating: p.rating,
+        partner_type: p.partner_type,
       }));
     },
     staleTime: 30_000,
   });
 
+  // Build cached members from directory_cache
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+    const members = entry.members as any[];
+    return (members || []).map((m: any) => ({
+      company_name: m.company_name,
+      city: m.city,
+      country: m.country,
+      wca_id: m.wca_id,
+    }));
+  });
+
+  const cachedTotalResults = cachedEntries.reduce((sum: number, e: any) => sum + (e.total_results || 0), 0);
+  const cachedAt = cachedEntries.length > 0
+    ? cachedEntries.reduce((latest: string, e: any) => e.scanned_at > latest ? e.scanned_at : latest, cachedEntries[0].scanned_at)
+    : null;
+
+  // Cross-reference: which cached members are already downloaded?
+  const dbWcaSet = new Set(dbPartners.map(p => p.wca_id));
+  const dbPartnerMap = new Map(dbPartners.map(p => [p.wca_id, p]));
+
+  // The authoritative member list: cached if available, otherwise DB-only
+  const hasCache = cachedMembers.length > 0;
+
+  // Build unified list with status
+  type MemberWithStatus = DirectoryMember & { inDb: boolean; updatedAt?: string | null; rating?: number | null; partnerType?: string | null };
+
+  const buildMemberList = (source: DirectoryMember[]): MemberWithStatus[] => {
+    const seen = new Set<number>();
+    const result: MemberWithStatus[] = [];
+    for (const m of source) {
+      if (m.wca_id && seen.has(m.wca_id)) continue;
+      if (m.wca_id) seen.add(m.wca_id);
+      const dbP = m.wca_id ? dbPartnerMap.get(m.wca_id) : undefined;
+      result.push({
+        ...m,
+        inDb: m.wca_id ? dbWcaSet.has(m.wca_id) : false,
+        updatedAt: dbP?.updated_at,
+        rating: dbP?.rating,
+        partnerType: dbP?.partner_type,
+      });
+    }
+    // Also add DB partners not in the source list
+    for (const p of dbPartners) {
+      if (!seen.has(p.wca_id)) {
+        seen.add(p.wca_id);
+        result.push({
+          company_name: p.company_name,
+          city: p.city,
+          country: p.country_name,
+          wca_id: p.wca_id,
+          inDb: true,
+          updatedAt: p.updated_at,
+          rating: p.rating,
+          partnerType: p.partner_type,
+        });
+      }
+    }
+    return result;
+  };
+
+  // Scanning state
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
@@ -558,29 +636,54 @@ function DirectoryScanner({ countries, network, onComplete }: {
   const [isComplete, setIsComplete] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
 
-  // Merge: show DB partners immediately, add scanned ones on top
-  const dbAsMembers: DirectoryMember[] = dbPartners.map(p => ({
-    company_name: p.company_name,
-    city: p.city,
-    country: p.country,
-    wca_id: p.wca_id,
-  }));
+  // Which list to show
+  const sourceMembers = hasScanned ? scannedMembers : (hasCache ? cachedMembers : []);
+  const members = buildMemberList(sourceMembers);
 
-  // After scanning, use scanned list (it's the authoritative directory); before scanning, show DB
-  const members = hasScanned ? scannedMembers : dbAsMembers;
+  const downloadedCount = members.filter(m => m.inDb).length;
+  const missingCount = members.filter(m => !m.inDb && m.wca_id).length;
+  const totalCount = members.length;
 
-  // Speed control for listing phase
-  const [listingDelayIdx, setListingDelayIdx] = useState(3); // default 3s
+  // Detail dialog
+  const [selectedMember, setSelectedMember] = useState<MemberWithStatus | null>(null);
+
+  // Speed control
+  const [listingDelayIdx, setListingDelayIdx] = useState(3);
   const listingDelayRef = useRef(DELAY_VALUES[3] * 1000);
   useEffect(() => { listingDelayRef.current = DELAY_VALUES[listingDelayIdx] * 1000; }, [listingDelayIdx]);
 
   const abortRef = useRef(false);
   const pauseRef = useRef(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const waitWhilePaused = useCallback(async () => {
     while (pauseRef.current && !abortRef.current) await new Promise(r => setTimeout(r, 300));
   }, []);
+
+  // Save scan results to directory_cache
+  const saveScanToCache = useCallback(async (countryCode: string, scanned: DirectoryMember[], total: number, pages: number) => {
+    const membersJson = scanned.map(m => ({
+      company_name: m.company_name,
+      city: m.city,
+      country: m.country,
+      wca_id: m.wca_id,
+    }));
+
+    await supabase
+      .from("directory_cache")
+      .upsert({
+        country_code: countryCode,
+        network_name: networkKey,
+        members: membersJson as any,
+        total_results: total,
+        total_pages: pages,
+        scanned_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "country_code,network_name" });
+
+    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+  }, [networkKey, queryClient]);
 
   const handleStart = useCallback(async () => {
     setIsRunning(true);
@@ -595,6 +698,9 @@ function DirectoryScanner({ countries, network, onComplete }: {
       const country = countries[ci];
       let page = 1;
       let hasNext = true;
+      let countryTotal = 0;
+      let countryPages = 0;
+      const countryMembers: DirectoryMember[] = [];
 
       while (hasNext && !abortRef.current) {
         await waitWhilePaused();
@@ -618,10 +724,13 @@ function DirectoryScanner({ countries, network, onComplete }: {
               ...m,
               country: m.country || country.name,
             }));
+            countryMembers.push(...newMembers);
             allMembers.push(...newMembers);
             setScannedMembers([...allMembers]);
           }
 
+          countryTotal = result.pagination.total_results;
+          countryPages = result.pagination.total_pages;
           setTotalResults(result.pagination.total_results);
           setTotalPages(result.pagination.total_pages);
           hasNext = result.pagination.has_next_page;
@@ -631,16 +740,20 @@ function DirectoryScanner({ countries, network, onComplete }: {
           break;
         }
 
-        // Wait between pages
         if (hasNext && !abortRef.current) {
           await new Promise(r => setTimeout(r, listingDelayRef.current));
         }
+      }
+
+      // Save this country's results to cache
+      if (countryMembers.length > 0) {
+        await saveScanToCache(country.code, countryMembers, countryTotal, countryPages);
       }
     }
 
     setIsRunning(false);
     setIsComplete(true);
-  }, [countries, network, waitWhilePaused]);
+  }, [countries, network, waitWhilePaused, saveScanToCache]);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -651,15 +764,29 @@ function DirectoryScanner({ countries, network, onComplete }: {
     : `${countries.length} paesi`;
 
   const membersWithId = members.filter(m => m.wca_id);
+  const missingMembers = members.filter(m => !m.inDb && m.wca_id);
 
-  if (loadingDb) {
+  const isLoading = loadingCache || loadingDb;
+
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loader2 className={`w-6 h-6 animate-spin ${th.sub}`} />
-        <span className={`ml-2 text-sm ${th.sub}`}>Caricamento partner dal database...</span>
+        <span className={`ml-2 text-sm ${th.sub}`}>Caricamento dati...</span>
       </div>
     );
   }
+
+  // Determine header status text
+  const headerStatus = isComplete
+    ? "COMPLETATA"
+    : isRunning
+      ? "SCANSIONE LISTA"
+      : hasCache
+        ? "DATI DALLA CACHE"
+        : dbPartners.length > 0
+          ? "SOLO DATABASE"
+          : "PRONTO";
 
   return (
     <div className="flex-1 flex gap-6 min-h-0">
@@ -673,16 +800,30 @@ function DirectoryScanner({ countries, network, onComplete }: {
               {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
               <div>
                 <p className={`text-xs ${th.sub}`}>
-                  FASE 1 — {isComplete ? "COMPLETATA" : isRunning ? "SCANSIONE LISTA" : dbPartners.length > 0 ? "DATI DAL DATABASE" : "PRONTO"}
-                  {` • ${countryLabel}`}
+                  FASE 1 — {headerStatus} • {countryLabel}
                   {network && ` • ${network}`}
                 </p>
-                {!isRunning && !isComplete && !hasScanned && dbPartners.length > 0 && (
-                  <p className={`text-2xl font-mono ${th.mono}`}>
-                    {dbPartners.length} partner nel DB
-                    <span className={`text-sm ml-3 ${th.dim}`}>({dbAsMembers.filter(m => m.wca_id).length} con WCA ID)</span>
-                  </p>
+
+                {/* Summary numbers */}
+                {!isRunning && !isComplete && totalCount > 0 && (
+                  <div>
+                    <p className={`text-2xl font-mono ${th.mono}`}>
+                      {totalCount} partner
+                      {hasCache && <span className={`text-sm ml-2 ${th.dim}`}>(dalla directory)</span>}
+                    </p>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className={`text-sm font-medium ${th.acEm}`}>✓ {downloadedCount} scaricati</span>
+                      {missingCount > 0 && (
+                        <span className={`text-sm font-medium ${th.hi}`}>↓ {missingCount} da scaricare</span>
+                      )}
+                    </div>
+                  </div>
                 )}
+
+                {!isRunning && !isComplete && totalCount === 0 && (
+                  <p className={`text-lg ${th.mono}`}>Nessun dato disponibile — avvia la scansione</p>
+                )}
+
                 {isRunning && (
                   <p className={`text-2xl font-mono ${th.mono}`}>
                     Pagina {currentPage}
@@ -691,29 +832,43 @@ function DirectoryScanner({ countries, network, onComplete }: {
                   </p>
                 )}
                 {isComplete && (
-                  <p className={`text-2xl font-mono ${th.mono}`}>
-                    {members.length} partner trovati
-                    <span className={`text-sm ml-3 ${th.dim}`}>({membersWithId.length} con WCA ID)</span>
-                  </p>
+                  <div>
+                    <p className={`text-2xl font-mono ${th.mono}`}>
+                      {totalCount} partner nella directory
+                    </p>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className={`text-sm font-medium ${th.acEm}`}>✓ {downloadedCount} scaricati</span>
+                      {missingCount > 0 && (
+                        <span className={`text-sm font-medium ${th.hi}`}>↓ {missingCount} da scaricare</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {pageTime !== null && isRunning && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border mt-2 w-fit ${th.cdBg}`}>
+                    <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
+                    <span className={`font-mono text-xs ${th.cdText}`}>{(pageTime / 1000).toFixed(1)}s/pagina</span>
+                  </div>
                 )}
               </div>
-              {pageTime !== null && isRunning && (
-                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
-                  <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
-                  <span className={`font-mono text-xs ${th.cdText}`}>{(pageTime / 1000).toFixed(1)}s/pagina</span>
-                </div>
-              )}
             </div>
             <div className="flex gap-2 flex-wrap">
-              {/* If DB has data, allow skipping to Phase 2 directly */}
-              {!isRunning && !isComplete && dbPartners.length > 0 && (
-                <Button onClick={() => onComplete(dbAsMembers.filter(m => m.wca_id))} variant="outline" className={th.btnPause}>
-                  <FileDown className="w-4 h-4 mr-1" /> Usa dati dal DB ({dbAsMembers.filter(m => m.wca_id).length})
+              {/* Main actions */}
+              {!isRunning && !isComplete && missingCount > 0 && (
+                <Button onClick={() => onComplete(missingMembers as DirectoryMember[])} className={th.btnPri}>
+                  <Download className="w-4 h-4 mr-1" /> Scarica {missingCount} mancanti
                 </Button>
               )}
-              {!isRunning && !isComplete && (
-                <Button onClick={handleStart} className={th.btnPri}>
-                  <Play className="w-4 h-4 mr-1" /> {dbPartners.length > 0 ? "Ri-scansiona Directory" : "Avvia Scansione Lista"}
+              {!isRunning && !isComplete && downloadedCount > 0 && missingCount === 0 && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50 text-emerald-700"}`}>
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm">Tutti scaricati ✓</span>
+                </div>
+              )}
+              {!isRunning && (
+                <Button onClick={handleStart} variant="outline" className={th.btnPause}>
+                  <Play className="w-4 h-4 mr-1" /> {hasCache || dbPartners.length > 0 ? "Ri-scansiona" : "Avvia Scansione"}
                 </Button>
               )}
               {isRunning && !isPaused && (
@@ -731,18 +886,23 @@ function DirectoryScanner({ countries, network, onComplete }: {
                   <Square className="w-4 h-4 mr-1" /> Stop
                 </Button>
               )}
-              {isComplete && membersWithId.length > 0 && (
-                <Button onClick={() => onComplete(membersWithId)} className={th.btnPri}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Scarica Dettagli ({membersWithId.length})
+              {isComplete && missingCount > 0 && (
+                <Button onClick={() => onComplete(missingMembers as DirectoryMember[])} className={th.btnPri}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Scarica {missingCount} mancanti
+                </Button>
+              )}
+              {isComplete && downloadedCount > 0 && missingCount === 0 && (
+                <Button onClick={() => onComplete(membersWithId as DirectoryMember[])} variant="outline" className={th.btnPause}>
+                  <FileDown className="w-4 h-4 mr-1" /> Aggiorna tutti ({downloadedCount})
                 </Button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Speed control for listing */}
-        {(isRunning || (!isRunning && !isComplete)) && (
+        {/* Speed control */}
+        {isRunning && (
           <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4`}>
             <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
               <Timer className="w-3.5 h-3.5" />
@@ -757,7 +917,7 @@ function DirectoryScanner({ countries, network, onComplete }: {
         )}
 
         {/* Progress bar */}
-        {totalPages !== null && totalPages > 0 && (
+        {totalPages !== null && totalPages > 0 && isRunning && (
           <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
             <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${(currentPage / totalPages) * 100}%` }} />
           </div>
@@ -769,27 +929,47 @@ function DirectoryScanner({ countries, network, onComplete }: {
           </div>
         )}
 
+        {/* Cache info */}
+        {!isRunning && !isComplete && cachedAt && (
+          <div className={`px-3 py-2 rounded-lg border text-xs ${th.infoBox}`}>
+            📋 Ultima scansione directory: {new Date(cachedAt).toLocaleString("it-IT")}
+            {cachedTotalResults > 0 && ` • ${cachedTotalResults} risultati trovati`}
+          </div>
+        )}
+
         {/* Live member list */}
         <div className={`flex-1 ${th.panel} border ${th.panelSlate} rounded-2xl p-4 min-h-0 overflow-hidden flex flex-col`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-xs ${th.dim}`}>
               <List className="w-3 h-3 inline mr-1" />
-              {!hasScanned && dbPartners.length > 0 ? `Partner nel DB (${members.length})` : `Partner trovati (${members.length})`}
+              Partner ({totalCount})
+              {downloadedCount > 0 && <span className={`ml-2 ${th.acEm}`}>• {downloadedCount} nel DB</span>}
+              {missingCount > 0 && <span className={`ml-2 ${th.hi}`}>• {missingCount} mancanti</span>}
             </p>
-            {totalResults !== null && (
-              <p className={`text-xs ${th.dim}`}>Totale directory: {totalResults}</p>
-            )}
           </div>
           <ScrollArea className="flex-1">
-            <div className="space-y-1 text-xs font-mono pr-4">
+            <div className="space-y-0.5 text-xs font-mono pr-4">
               {members.map((m, i) => (
-                <div key={`${m.wca_id || i}-${i}`} className={`flex items-center gap-2 py-1 px-2 rounded animate-fade-in ${th.hover}`}>
+                <div
+                  key={`${m.wca_id || i}-${i}`}
+                  onClick={() => setSelectedMember(m)}
+                  className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors ${th.hover} ${m.inDb ? "" : isDark ? "opacity-60" : "opacity-50"}`}
+                >
                   <span className={`w-12 text-right ${th.logId}`}>{m.wca_id ? `#${m.wca_id}` : "—"}</span>
-                  <span className="text-sm">{m.country ? getCountryFlag(m.country) : "🌍"}</span>
+                  {m.inDb ? (
+                    <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${th.acEm}`} />
+                  ) : (
+                    <Download className={`w-3.5 h-3.5 flex-shrink-0 ${th.dim}`} />
+                  )}
                   <span className={`flex-1 truncate ${th.logName}`}>{m.company_name}</span>
                   <span className={`${th.dim}`}>{m.city || ""}</span>
                 </div>
               ))}
+              {members.length === 0 && (
+                <p className={`text-center text-sm py-6 ${th.dim}`}>
+                  Nessun partner trovato. Avvia la scansione per cercare nella directory WCA.
+                </p>
+              )}
               <div ref={logsEndRef} />
             </div>
           </ScrollArea>
@@ -801,28 +981,27 @@ function DirectoryScanner({ countries, network, onComplete }: {
         <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4 space-y-3`}>
           <p className={`text-xs font-medium ${th.label}`}>Riepilogo</p>
           <div className="space-y-2">
-            {!hasScanned && dbPartners.length > 0 && (
-              <div className="flex justify-between">
-                <span className={`text-xs font-medium ${th.acEm}`}>✓ Dal database</span>
-                <span className={`font-mono font-bold ${th.acEm}`}>{dbPartners.length}</span>
-              </div>
-            )}
             <div className="flex justify-between">
-              <span className={`text-xs ${th.body}`}>{hasScanned ? "Partner trovati" : "Totale"}</span>
-              <span className={`font-mono font-bold ${th.hi}`}>{members.length}</span>
+              <span className={`text-xs font-medium ${th.acEm}`}>✓ Scaricati</span>
+              <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className={`text-xs font-medium ${th.hi}`}>↓ Mancanti</span>
+              <span className={`font-mono font-bold ${th.hi}`}>{missingCount}</span>
+            </div>
+            <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
+            <div className="flex justify-between">
+              <span className={`text-xs ${th.body}`}>Totale</span>
+              <span className={`font-mono font-bold ${th.mono}`}>{totalCount}</span>
             </div>
             <div className="flex justify-between">
               <span className={`text-xs ${th.body}`}>Con WCA ID</span>
-              <span className={`font-mono ${th.acEm}`}>{membersWithId.length}</span>
+              <span className={`font-mono ${th.mono}`}>{membersWithId.length}</span>
             </div>
-            <div className="flex justify-between">
-              <span className={`text-xs ${th.body}`}>Pagine lette</span>
-              <span className={`font-mono ${th.mono}`}>{currentPage}</span>
-            </div>
-            {countries.length > 1 && (
+            {isRunning && (
               <div className="flex justify-between">
-                <span className={`text-xs ${th.body}`}>Paese corrente</span>
-                <span className={`text-xs ${th.mono}`}>{countries[currentCountryIdx]?.name || "—"}</span>
+                <span className={`text-xs ${th.body}`}>Pagine lette</span>
+                <span className={`font-mono ${th.mono}`}>{currentPage}</span>
               </div>
             )}
           </div>
@@ -835,16 +1014,48 @@ function DirectoryScanner({ countries, network, onComplete }: {
             <div className="space-y-1">
               {countries.map((c, i) => {
                 const countForCountry = members.filter(m => m.country === c.name || m.country === c.code).length;
+                const dlCount = members.filter(m => (m.country === c.name || m.country === c.code) && m.inDb).length;
                 return (
                   <div key={c.code} className="flex items-center justify-between">
                     <span className={`text-xs ${th.body}`}>{getCountryFlag(c.code)} {c.name}</span>
-                    <span className={`font-mono text-xs ${i < currentCountryIdx ? th.acEm : i === currentCountryIdx && isRunning ? th.hi : th.dim}`}>
-                      {countForCountry}
+                    <span className={`font-mono text-xs ${th.dim}`}>
+                      <span className={th.acEm}>{dlCount}</span>/{countForCountry}
                     </span>
                   </div>
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Selected partner detail */}
+        {selectedMember && (
+          <div className={`${th.panel} border ${th.panelAmber} rounded-xl p-4 space-y-2`}>
+            <p className={`text-xs font-medium ${th.label}`}>Dettaglio</p>
+            <p className={`text-sm font-medium ${th.h2}`}>{selectedMember.company_name}</p>
+            {selectedMember.wca_id && <p className={`text-xs ${th.dim}`}>WCA ID: #{selectedMember.wca_id}</p>}
+            {selectedMember.city && <p className={`text-xs ${th.body}`}><MapPin className="w-3 h-3 inline mr-1" />{selectedMember.city}</p>}
+            {selectedMember.country && <p className={`text-xs ${th.body}`}>{selectedMember.country}</p>}
+            {selectedMember.inDb && (
+              <div className={`mt-2 p-2 rounded-lg ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
+                <p className={`text-xs font-medium ${th.acEm}`}>✓ Nel database</p>
+                {selectedMember.updatedAt && (
+                  <p className={`text-xs ${th.dim}`}>Aggiornato: {new Date(selectedMember.updatedAt).toLocaleDateString("it-IT")}</p>
+                )}
+                {selectedMember.partnerType && (
+                  <p className={`text-xs ${th.dim}`}>Tipo: {selectedMember.partnerType}</p>
+                )}
+                {selectedMember.rating && (
+                  <p className={`text-xs ${th.dim}`}>Rating: {selectedMember.rating}/5</p>
+                )}
+              </div>
+            )}
+            {!selectedMember.inDb && (
+              <div className={`mt-2 p-2 rounded-lg ${isDark ? "bg-amber-500/10" : "bg-amber-50"}`}>
+                <p className={`text-xs ${th.hi}`}>↓ Non ancora scaricato</p>
+              </div>
+            )}
+            <button onClick={() => setSelectedMember(null)} className={`text-xs mt-1 ${th.back}`}>Chiudi</button>
           </div>
         )}
       </div>
