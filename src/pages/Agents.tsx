@@ -188,6 +188,7 @@ export default function Agents() {
         count={selectedIds.size}
         onClear={() => setSelectedIds(new Set())}
         onAssignActivity={() => setAssignDialogOpen(true)}
+        partnerIds={Array.from(selectedIds)}
       />
 
       <AssignActivityDialog
