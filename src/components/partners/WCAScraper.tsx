@@ -22,6 +22,7 @@ interface ScrapeLog {
   partner?: ScrapeSingleResult["partner"];
   partnerId?: string;
   aiClassification?: AIClassification;
+  hasContactDetails?: boolean;
   error?: string;
 }
 
@@ -118,6 +119,9 @@ export function WCAScraper() {
           log.partner = result.partner;
           log.partnerId = result.partnerId;
           log.aiClassification = result.aiClassification;
+          // Check if contacts have email or phone
+          const contacts = result.partner?.contacts || [];
+          log.hasContactDetails = contacts.some((c: any) => c.email || c.phone || c.direct_phone || c.mobile);
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
@@ -280,7 +284,11 @@ export function WCAScraper() {
                 <div
                   key={i}
                   className={`flex items-center justify-between text-sm py-2 px-3 border-b last:border-0 ${
-                    log.status === "success" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
+                    log.status === "success" && log.hasContactDetails
+                      ? "cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/20 border-l-2 border-l-emerald-500 transition-colors"
+                      : log.status === "success"
+                        ? "cursor-pointer hover:bg-muted/50 transition-colors"
+                        : ""
                   }`}
                   onClick={() => handleLogClick(log)}
                 >
@@ -296,6 +304,11 @@ export function WCAScraper() {
                             {log.city}{log.countryCode ? `, ${log.countryCode}` : ""}
                           </span>
                         </div>
+                        {log.hasContactDetails && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                            📧 Contatti completi
+                          </Badge>
+                        )}
                         {log.aiClassification?.summary && (
                           <p className="text-xs text-muted-foreground truncate max-w-[400px]">
                             {log.aiClassification.summary}
