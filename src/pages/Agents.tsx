@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,13 @@ import {
   ChevronRight,
   Users,
   ExternalLink,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { PartnerRating } from "@/components/partners/PartnerRating";
 import {
   getCountryFlag,
@@ -226,13 +231,55 @@ export default function Agents() {
 
 function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavorite: () => void }) {
   const status = getContactStatus(partner.interactions);
+  const [deepSearching, setDeepSearching] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleDeepSearch = useCallback(async () => {
+    setDeepSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('deep-search-partner', {
+        body: { partnerId: partner.id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(
+          `Deep Search completata: ${data.socialLinksFound} link social trovati${data.logoFound ? ', logo trovato' : ''}`,
+        );
+        queryClient.invalidateQueries({ queryKey: ['partner', partner.id] });
+        queryClient.invalidateQueries({ queryKey: ['social-links', partner.id] });
+      } else {
+        toast.error(data?.error || 'Errore nella Deep Search');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Errore nella Deep Search');
+    } finally {
+      setDeepSearching(false);
+    }
+  }, [partner.id, queryClient]);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <span className="text-5xl">{getCountryFlag(partner.country_code)}</span>
+          <div className="relative">
+            {partner.logo_url ? (
+              <img
+                src={partner.logo_url}
+                alt={partner.company_name}
+                className="w-12 h-12 rounded-lg object-contain bg-muted border"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+              />
+            ) : null}
+            <span className={cn("text-5xl", partner.logo_url && "hidden")}>
+              {getCountryFlag(partner.country_code)}
+            </span>
+            {partner.logo_url && (
+              <span className="absolute -bottom-1 -right-1 text-lg leading-none">
+                {getCountryFlag(partner.country_code)}
+              </span>
+            )}
+          </div>
           <div>
             <h2 className="text-xl font-bold">{partner.company_name}</h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
@@ -272,6 +319,19 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
               <ExternalLink className="w-4 h-4 mr-1" />
               Scheda completa
             </Link>
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleDeepSearch}
+            disabled={deepSearching}
+          >
+            {deepSearching ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-1" />
+            )}
+            Deep Search
           </Button>
         </div>
       </div>
