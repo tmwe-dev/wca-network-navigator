@@ -1,74 +1,65 @@
 
 
-# Download a Due Fasi con Velocita Separate
+# Miglioramenti alla Selezione Paesi e Fase "Solo ID"
 
-## Problema Attuale
-Il sistema salta la fase di lettura della directory WCA e va direttamente a scansionare ID alla cieca. L'utente vuole vedere due operazioni distinte, ciascuna con i propri controlli di velocita:
-1. **Fase 1 - Lettura Lista**: leggere la pagina directory WCA pagina per pagina, vedere i nomi apparire riga per riga
-2. **Fase 2 - Download Profili**: scaricare i dettagli uno per uno dagli ID raccolti
+## Cosa cambia
 
-## Soluzione
+### 1. Paesi: informazioni dettagliate e ordinamento
 
-### Nuovo flusso del wizard (4 step invece di 3)
+Nella griglia di selezione paesi (Step 1), ogni card mostrera:
+- **Flag + nome** (come ora)
+- **Numero di partner nel DB** (es. "7 partner")  
+- **Numero di ID nella cache** (es. "11 nella directory")
+- **Stato completamento**: badge "Completo" se tutti gli ID della directory sono stati scaricati, oppure "7/11" se parziale
+- **Filtro "Ordinamento"**: un selettore in alto che permette di ordinare per:
+  - Nome paese (A-Z)
+  - Numero partner scaricati (decrescente)
+  - Paesi mai esplorati prima
 
-```text
-Paesi --> Network --> FASE 1: Scansione Lista --> FASE 2: Download Profili
-                      (pagina per pagina,          (profilo per profilo,
-                       velocita configurabile)       velocita configurabile)
-```
+Per fare questo, la query `explored-countries` verra ampliata per restituire anche il conteggio dei partner per paese e i dati dalla `directory_cache`.
 
-### Fase 1 - Scansione Directory (nuovo step "listing")
+### 2. Anche i paesi gia esplorati selezionabili facilmente
 
-- Dopo la selezione di paese e network, parte la scansione della directory WCA
-- Usa la edge function `scrape-wca-directory` gia esistente, ma con l'URL corretto: `https://www.wcaworld.com/Directory?siteID=24&country=AL&pageIndex=1&pageSize=50&networkIds=...`
-- **Controllo velocita dedicato**: slider per decidere il ritardo tra una pagina e l'altra (es. 5s, 10s, 30s)
-- **Visualizzazione live**: ogni partner trovato appare riga per riga nella lista, con contatore "Pagina 1/N - Trovati: 12"
-- Al termine si mostra il riepilogo: "Trovati 47 partner in 3 pagine per Albania"
-- Pulsante "Avvia Download Dettagli" per passare alla Fase 2
+Un filtro aggiuntivo "Gia esplorati" (oltre al "Mai esplorati" esistente) che mostra solo i paesi con dati nel DB, utile per andare a completare download parziali o aggiornare.
 
-### Fase 2 - Download Profili (step "running" esistente, migliorato)
+### 3. Nuova azione: "Salva solo ID"
 
-- Riceve la lista di WCA ID dalla Fase 1 (non piu range cieco)
-- **Controllo velocita dedicato separato**: slider identico ma indipendente, con i suoi parametri di pausa
-- Funzionamento identico a quello attuale ma con gli ID precisi raccolti dalla directory
+Nella **Fase 1 (DirectoryScanner)**, dopo la scansione della directory (o usando i dati dalla cache), apparira un nuovo pulsante:
 
-### Modifiche alla Edge Function `scrape-wca-directory`
+**"Salva solo lista ID"** -- questo:
+- Salva i risultati nella `directory_cache` (gia avviene)
+- NON avvia la Fase 2 di download profili
+- Mostra un messaggio di conferma: "Salvati X ID per [Paese]. Potrai scaricare i profili completi in futuro."
+- Torna alla schermata iniziale
 
-Aggiornare l'URL per usare il formato corretto fornito dall'utente:
-- URL base: `https://www.wcaworld.com/Directory`
-- Parametri: `siteID=24`, `pageIndex`, `pageSize=50`, `searchby=CountryCode`, `country=AL`, `networkIds=1,2,3...`, `orderby=CountryCity`, `layout=v1`, `submitted=search`
-- Mapping dei network names ai networkIds numerici
+Questo permette di "preparare il terreno" per molti paesi senza consumare crediti Firecrawl, raccogliendo solo la lista degli ID dalla directory WCA.
 
-### Dettagli Tecnici
+### 4. Nella Fase 2, riconoscere i paesi con ID pre-salvati
 
-**File da modificare:**
+Quando si seleziona un paese che ha gia gli ID nella `directory_cache` ma nessun partner scaricato, il sistema saltera automaticamente la Fase 1 e proporra direttamente la Fase 2 con gli ID pronti.
 
-1. **`supabase/functions/scrape-wca-directory/index.ts`**
-   - Aggiornare URL da `/MemberDirectory` a `/Directory` con i parametri corretti (`siteID=24`, `pageSize=50`, `pageIndex`, `searchby=CountryCode`, `networkIds`)
-   - Aggiungere mapping network name -> networkId numerico
-   - Migliorare il prompt di estrazione per il nuovo formato pagina
+---
 
-2. **`src/lib/api/wcaScraper.ts`**
-   - Aggiornare parametri di `scrapeWcaDirectory` per accettare `countryCode` (es. "AL") invece di country name, e `pageIndex`
+## Dettagli Tecnici
 
-3. **`src/pages/DownloadManagement.tsx`**
-   - Aggiungere sub-step `"listing"` al wizard tra `"network"` e `"speed"`
-   - Nuovo componente `DirectoryScanner`:
-     - Slider velocita per la scansione lista (ritardo tra pagine)
-     - Tabella live che si popola riga per riga con i partner trovati
-     - Contatore pagine: "Pagina 2/5 - Letta in 3.2s"
-     - Contatore partner: numero che sale in tempo reale
-     - Pulsanti Pausa/Riprendi/Stop
-     - Al completamento: riepilogo + pulsante "Scarica Dettagli"
-   - Modificare `ScanConfig` per ricevere la lista ID dalla Fase 1 invece di calcolare range
-   - Aggiungere label "Velocita Fase 2" per distinguere i due slider
-   - Il `DownloadRunning` riceve `config.ids` (array preciso) invece di `config.mode === "range"`
+### File modificato: `src/pages/DownloadManagement.tsx`
 
-**Step del wizard aggiornati:**
-```text
-Paesi --> Network --> Scansione Lista --> Configura & Scarica
-  (1)       (2)           (3)                  (4)
-```
+**PickCountry** (linee ~347-476):
+- Ampliare la query `explored-countries` per fare un `GROUP BY country_code` con `COUNT(*)` sulla tabella `partners`
+- Aggiungere una query per `directory_cache` per sapere quanti ID sono nella cache per paese
+- Aggiungere un `Select` per l'ordinamento (nome, n. partner, stato)
+- Mostrare contatori su ogni card paese
+- Aggiungere filtro "Gia esplorati"
 
-Il passo 3 e la parte dinamica dove l'utente vede i partner apparire. Il passo 4 configura la velocita del download dettagliato e avvia.
+**DirectoryScanner** (linee ~518-1063):
+- Aggiungere pulsante **"Salva solo lista ID"** accanto a "Scarica X mancanti"
+- Il pulsante salva nella cache (gia implementato) e mostra un toast di conferma
+- Aggiungere callback `onSaveIdsOnly` che riporta al wizard step iniziale
+
+**DownloadWizard** (linee ~260-343):
+- Aggiungere prop e logica per gestire il ritorno allo step "choose" dopo il salvataggio ID
+- Se un paese ha gia gli ID in cache, mostrare opzione per saltare la Fase 1
+
+### Nessuna modifica al database
+La tabella `directory_cache` contiene gia tutto il necessario (`members` JSONB con gli ID).
 
