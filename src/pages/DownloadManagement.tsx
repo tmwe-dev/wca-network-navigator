@@ -1228,32 +1228,51 @@ function NetworkConfigure() {
           <p className={`text-sm ${th.sub}`}>Seleziona i gruppi WCA di cui sei membro e testa la visibilità dei dati</p>
         </div>
         <div className="space-y-2">
-          {configs?.map(config => (
-            <div key={config.id} className={`flex items-center justify-between p-4 rounded-xl border ${th.cardBg}`}>
-              <div className="flex items-center gap-3">
-                <Checkbox checked={config.is_member} onCheckedChange={() => updateConfig.mutate({ id: config.id, is_member: !config.is_member })} />
-                <div>
-                  <p className={`text-sm ${th.chipName}`}>{config.network_name}</p>
-                  {config.sample_tested_at && <p className={`text-xs ${th.dim}`}>Testato: {new Date(config.sample_tested_at).toLocaleDateString("it-IT")}</p>}
+          {configs?.map(config => {
+            const tested = !!config.sample_tested_at;
+            const allOk = tested && config.has_contact_emails && config.has_contact_names && config.has_contact_phones;
+            const cardBorder = tested
+              ? (allOk
+                ? (isDark ? "border-emerald-500/40 bg-emerald-500/5" : "border-emerald-300 bg-emerald-50/50")
+                : (isDark ? "border-amber-500/40 bg-amber-500/5" : "border-amber-300 bg-amber-50/50"))
+              : th.cardBg;
+            return (
+              <div key={config.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${cardBorder}`}>
+                <div className="flex items-center gap-3">
+                  <Checkbox checked={config.is_member} onCheckedChange={() => updateConfig.mutate({ id: config.id, is_member: !config.is_member })} />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm ${th.chipName}`}>{config.network_name}</p>
+                      {tested && (
+                        <Badge className={`text-[10px] px-1.5 py-0 ${allOk
+                          ? (isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-100 text-emerald-700 border-emerald-200")
+                          : (isDark ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-amber-100 text-amber-700 border-amber-200")
+                        }`}>
+                          {allOk ? <><CheckCircle className="w-3 h-3 mr-0.5" /> Verificato</> : "Parziale"}
+                        </Badge>
+                      )}
+                    </div>
+                    {tested && <p className={`text-xs ${th.dim}`}>Testato: {new Date(config.sample_tested_at!).toLocaleDateString("it-IT")}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {tested && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <StatusDot ok={config.has_contact_emails} label="Email" />
+                      <StatusDot ok={config.has_contact_names} label="Nomi" />
+                      <StatusDot ok={config.has_contact_phones} label="Tel" />
+                    </div>
+                  )}
+                  {config.is_member && (
+                    <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing !== null} className={th.btnTest}>
+                      {testing === config.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+                      <span className="ml-1">{tested ? "Ri-testa" : "Test"}</span>
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {config.sample_tested_at && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <StatusDot ok={config.has_contact_emails} label="Email" />
-                    <StatusDot ok={config.has_contact_names} label="Nomi" />
-                    <StatusDot ok={config.has_contact_phones} label="Tel" />
-                  </div>
-                )}
-                {config.is_member && (
-                  <Button size="sm" variant="outline" onClick={() => handleTest(config)} disabled={testing !== null} className={th.btnTest}>
-                    {testing === config.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-                    <span className="ml-1">Test</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
