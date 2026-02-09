@@ -22,7 +22,7 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   // Detect 404 / not found
 
   // Detect 404 / not found
-  if (/page\s*(not|was not)\s*found|404|no\s*results?\s*found/i.test(content) && content.length < 2000) {
+  if (/page\s*(not|was not)\s*found|member\s*not\s*found|404|no\s*results?\s*found/i.test(content)) {
     return null
   }
 
@@ -38,6 +38,7 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   ])
 
   if (!companyName) return null
+  if (/not\s*found|try\s*again/i.test(companyName)) return null
 
   // ── City & Office Type from "(City, Head Office)" pattern ──
   let city: string | null = null
