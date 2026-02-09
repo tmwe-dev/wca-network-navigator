@@ -1,69 +1,55 @@
 
 
-# WCA Browser integrato + Scraping diretto (senza Firecrawl)
+# Fix: Partner non visibili e "Scarica mancanti" non funziona
 
-## Problema
+## Problemi trovati
 
-Il cookie di sessione salvato contiene solo tracking cookies (Google Analytics, HubSpot), non il cookie di autenticazione `.ASPXAUTH`. Firecrawl inoltre usa i propri IP/fingerprint, quindi anche passando cookie corretti il sito WCA li rifiuta. Risultato: tutti i contatti risultano "Members only".
+Ho investigato a fondo e trovato **4 problemi interconnessi** che causano il malfunzionamento:
 
-## Soluzione in 2 parti
+### 1. Country code salvato come 'XX' (54 partner coinvolti)
+Lo scraper non riesce a rilevare il paese dalla pagina WCA e salva `country_code = 'XX'` come default. I 3 partner afghani sono nel database ma con `country_code = 'XX'` invece di `'AF'`. Questo causa un effetto a catena su tutto il sistema.
 
-### Parte 1: Scraping diretto dalla Edge Function
+### 2. "Scarica 3 mancanti" crea un loop infinito
+Il pulsante avvia questo ciclo senza fine:
+- La lista cerca partner con `country_code = 'AF'` nel DB
+- Non li trova (sono salvati come 'XX')
+- Li mostra come "mancanti"
+- Cliccando "Scarica", li ri-scarica, ma li salva di nuovo come 'XX'
+- Il ciclo ricomincia
 
-Eliminare Firecrawl dal flusso principale e fare login + fetch direttamente dal server:
+### 3. 25 contatti con email spazzatura
+Email come "Members only - please Login to view information." (con e senza parentesi quadre, con e senza grassetto) sono state salvate nel database. Il filtro di validazione non le intercetta.
 
-```text
-FLUSSO ATTUALE (non funziona):
-  Settings cookie -> Firecrawl(url + cookie) -> WCA rifiuta -> "Members only"
+### 4. Record "Member not found" nel database
+Almeno 2 record hanno `company_name = 'Member not found. Please try again.'` - il controllo anti-404 non li ha bloccati.
 
-NUOVO FLUSSO:
-  Edge function -> Login HTTP diretto -> Cookie .ASPXAUTH -> fetch() pagina -> HTML completo
-```
+## Piano di correzione
 
-Passaggi del login diretto:
-1. GET wcaworld.com/Account/Login -- prende token anti-CSRF e cookie iniziali
-2. POST /Account/Login con username, password, token -- riceve cookie .ASPXAUTH
-3. GET /directory/members/{id} con .ASPXAUTH -- pagina completa con contatti
-4. Cookie .ASPXAUTH viene salvato in DB (app_settings chiave `wca_auth_cookie`) per riuso
-5. Se il cookie salvato risulta scaduto (pagina contiene "Members only"), rifà login automaticamente
+### Modifica 1: Edge function `scrape-wca-partners/index.ts`
+- Accettare un nuovo parametro `countryCode` nel body della richiesta
+- In `saveAndRespond`, se il `country_code` parsato e' 'XX' e un `countryCode` e' stato passato dal chiamante, usare quest'ultimo
+- Migliorare la validazione email per rifiutare pattern come:
+  - `Members only`
+  - `[Members only...]`
+  - `please **Login** to view`
+  - `Login to view information`
+- Migliorare il filtro "not found" per catturare `Member not found. Please try again.`
 
-Firecrawl resta come fallback solo se il login diretto fallisce completamente.
+### Modifica 2: Edge function `process-download-job/index.ts`
+- Passare `country_code` del job allo scraper: `body: { wcaId, countryCode: job.country_code }`
+- Aggiornare la verifica completamento per cercare partner sia per `country_code` che per `wca_id` (in modo che funzioni anche se il country code non corrisponde)
 
-### Parte 2: WCA Preview nel frontend
+### Modifica 3: `src/pages/DownloadManagement.tsx` - DirectoryScanner
+- Nella query dei partner dal DB (linee 803-823), aggiungere una ricerca alternativa per `wca_id` oltre che per `country_code`, cosi' i partner con 'XX' vengono trovati se il loro `wca_id` e' nella cache della directory
 
-Un pannello "WCA Browser" accessibile dalla pagina Download Management che permette di:
-- Inserire un WCA ID e vedere in anteprima cosa scarica il sistema
-- Mostra stato autenticazione: "Autenticato" (verde) o "Non autenticato" (rosso)
-- Mostra i dati estratti: contatti trovati, email, telefoni
-- Mostra l'HTML raw della pagina per debug
-- Pulsante "Test connessione" che verifica se il login funziona
+### Modifica 4: Pulizia dati esistenti (migrazione SQL)
+- Aggiornare i 54 partner con `country_code = 'XX'` ai codici corretti usando i dati dalla `directory_cache`
+- Cancellare i 25 contatti con email "Members only" spazzatura
+- Cancellare i record con `company_name = 'Member not found...'`
 
-## Dettagli tecnici
+## Sequenza implementazione
 
-### File: `supabase/functions/scrape-wca-partners/index.ts`
-
-Modifiche al main handler:
-- Nuova funzione `directLogin()`: esegue login HTTP, restituisce cookie .ASPXAUTH
-- Nuova funzione `directFetch(url, cookies)`: fetch diretto della pagina con cookie di sessione
-- Cache cookie: dopo login riuscito, salva `wca_auth_cookie` in app_settings
-- Verifica post-fetch: se HTML contiene "Members only" nei contatti, cookie scaduto, rifà login
-- Firecrawl diventa fallback opzionale
-
-### Nuovo endpoint: modalita' `preview`
-
-Lo stesso edge function accetta un parametro `preview: true` che restituisce anche l'HTML raw e i metadati di autenticazione nella risposta, per il pannello WCA Browser.
-
-### File: `src/pages/DownloadManagement.tsx`
-
-Aggiunta di un pannello "WCA Browser" con:
-- Input per WCA ID
-- Pulsante "Anteprima" che chiama l'edge function con `preview: true`
-- Visualizzazione dello stato auth (badge verde/rosso)
-- Tabella dei contatti estratti con evidenziazione email/telefono
-- Area espandibile con HTML raw per debug
-- Pulsante "Test Login" che verifica le credenziali
-
-### File: `src/lib/api/wcaScraper.ts`
-
-Nuova funzione `previewWcaProfile(wcaId)` che chiama l'edge function in modalita' preview.
+1. Prima la migrazione SQL per pulire i dati esistenti
+2. Poi le modifiche alle edge functions (scraper + processor)
+3. Infine la modifica al frontend (DirectoryScanner query)
 
