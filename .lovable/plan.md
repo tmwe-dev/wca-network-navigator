@@ -1,97 +1,63 @@
 
+# Piano: KPI Visivi + Arricchimento Dati dal Sito Web del Partner
 
-# Scraper Automatico WCA Partners con Firecrawl
+## Cosa faremo
 
-## Panoramica
+### 1. Badge KPI nella testata della scheda partner (Agents)
 
-Creare una funzionalita' che scarica automaticamente i partner dalla directory pubblica del sito wcaworld.com e li salva nel database. Lo scraper itererera' paese per paese, estraendo i dati dei membri dalla directory pubblica.
+Sotto il nome azienda, aggiungeremo una riga di **badge grandi e colorati** con le informazioni chiave per una valutazione rapida:
 
-## Prerequisiti
+- **Anni WCA** - es. "22 anni" con icona calendario
+- **Filiali** - es. "3 sedi" con icona edificio (numero di branch offices)
+- **Paesi** - es. "2 paesi" con icona mappamondo (paesi distinti dalle filiali)
+- **Rating** - stelline come gia presente
+- **Gold Medallion** - badge dorato se presente
+- **Certificazioni** - conteggio (es. "3 cert.")
 
-Prima di tutto va collegato il **connettore Firecrawl** al progetto per ottenere la chiave API necessaria per lo scraping.
+Questi badge saranno visibili sia nella lista a sinistra (in versione compatta) che nel pannello dettaglio a destra (in versione grande).
 
-## Come funziona il sito WCA
+### 2. Arricchimento dal sito web del partner (Firecrawl)
 
-La directory su wcaworld.com ha un form di ricerca che permette di filtrare per paese (codice ISO a 2 lettere). I risultati vengono caricati dinamicamente via JavaScript. Firecrawl puo' gestire il rendering JavaScript e restituire il contenuto completo della pagina.
+Creeremo una nuova Edge Function `enrich-partner-website` che:
+- Prende il sito web del partner (campo `website` nel DB)
+- Usa Firecrawl per fare scraping della homepage
+- Usa l'AI (Gemini) per estrarre informazioni aggiuntive:
+  - Fatturato (se menzionato)
+  - Numero dipendenti
+  - Flotta propria (mezzi di proprieta)
+  - Magazzini propri (mq se indicato)
+  - Anno di fondazione
+  - Specializzazioni aggiuntive non presenti nel profilo WCA
+- Salva queste informazioni in un nuovo campo `enrichment_data` (jsonb) nella tabella `partners`
 
-Lo scraper:
-1. Per ogni paese (dalla lista dei ~200 codici ISO disponibili nel dropdown), invia una richiesta di scraping alla pagina directory
-2. Usa Firecrawl con formato JSON + prompt per estrarre strutturalmente i dati dei partner (nome, citta', email, telefono, ecc.)
-3. Esegue upsert nel database basandosi su `company_name` + `country_code` per evitare duplicati
+### 3. Bottone "Arricchisci dati" nella scheda
 
-## Cosa verra' creato
+Nel pannello dettaglio dell'agente, aggiungeremo un bottone che avvia lo scraping del sito web del partner e mostra i risultati trovati.
 
-### 1. Connettore Firecrawl
-- Collegamento del connettore Firecrawl al progetto tramite il tool `connect`
+---
 
-### 2. Backend Function: `scrape-wca-partners`
-File: `supabase/functions/scrape-wca-partners/index.ts`
+## Dettagli Tecnici
 
-Questa funzione:
-- Riceve un parametro opzionale `countryCodes` (array di codici paese da scaricare; se vuoto, scarica tutti)
-- Per ogni paese, usa Firecrawl per fare scraping della pagina directory WCA con il filtro paese
-- Usa il formato `json` con uno schema per estrarre strutturalmente: company_name, city, email, phone, website, WCA ID
-- Esegue upsert nel database (insert o update basato su company_name + country_code)
-- Restituisce un report con contatori: trovati, inseriti, aggiornati, errori
+### Database
+- Aggiungere colonna `enrichment_data` (jsonb, nullable) alla tabella `partners`
+- Aggiungere colonna `enriched_at` (timestamp, nullable) per sapere quando e stato arricchito
 
-### 3. API Client Frontend
-File: `src/lib/api/wcaScraper.ts`
+### Nuova Edge Function: `enrich-partner-website`
+- Input: `partnerId`
+- Legge il partner dal DB, prende il `website`
+- Chiama Firecrawl con formato `markdown` sulla homepage
+- Passa il markdown a Gemini per estrarre dati strutturati (fatturato, dipendenti, flotta, magazzini, anno fondazione)
+- Aggiorna il record partner con i dati trovati in `enrichment_data`
 
-Funzione wrapper per chiamare la backend function dal frontend.
+### UI - Pagina Agents (`src/pages/Agents.tsx`)
+- **Header KPI row**: Riga di badge colorati sotto il nome azienda con:
+  - Anni WCA (calcolato da `member_since`)
+  - Numero filiali (da `branch_cities`)
+  - Paesi coperti (paesi unici dalle filiali)
+  - Numero certificazioni
+  - Gold Medallion (se presente)
+- **Sezione "Dati dal sito web"**: Card dedicata che mostra i dati arricchiti (fatturato, dipendenti, flotta, magazzini)
+- **Bottone "Arricchisci dal sito"**: Disponibile solo se il partner ha un sito web, lancia lo scraping
 
-### 4. Componente UI: WCAScraper
-File: `src/components/partners/WCAScraper.tsx`
-
-Interfaccia nella pagina Import/Export con:
-- Selezione paese (dropdown multi-select o "Tutti i paesi")
-- Bottone "Scarica da WCA"
-- Barra di progresso durante lo scraping
-- Report finale: partner trovati, nuovi, aggiornati
-
-### 5. Integrazione nella pagina Export
-File: `src/pages/Export.tsx`
-
-Aggiunta di un terzo tab "Scarica da WCA" accanto a "Importa" e "Esporta".
-
-## Dettagli tecnici
-
-### Backend Function - Logica principale
-
-```text
-Per ogni countryCode:
-  1. Chiama Firecrawl scrape su https://www.wcaworld.com/Directory
-     con waitFor per il rendering JavaScript
-     usando formato JSON con schema per estrarre i dati dei partner
-  2. Parse dei risultati estratti
-  3. Per ogni partner trovato:
-     - Cerca nel DB per company_name + country_code
-     - Se esiste: aggiorna i campi
-     - Se non esiste: inserisci nuovo record
-  4. Accumula statistiche (nuovi, aggiornati, errori)
-```
-
-### Schema di estrazione Firecrawl
-
-Lo schema JSON definira' i campi da estrarre:
-- company_name (obbligatorio)
-- city (obbligatorio)
-- country_code / country_name
-- email, phone, website
-- WCA ID (se visibile)
-- Networks/certificazioni
-
-### Gestione limiti e rate limiting
-
-- Lo scraping avverra' un paese alla volta per evitare sovraccarichi
-- Timeout configurabile per ogni richiesta
-- Possibilita' di riprendere lo scraping da dove si era interrotto in caso di errore
-
-### Sequenza dei file da creare/modificare
-
-1. Collegare connettore Firecrawl
-2. Creare `supabase/functions/scrape-wca-partners/index.ts`
-3. Aggiornare `supabase/config.toml` per JWT verification
-4. Creare `src/lib/api/wcaScraper.ts`
-5. Creare `src/components/partners/WCAScraper.tsx`
-6. Modificare `src/pages/Export.tsx` (aggiungere tab "Scarica da WCA")
-
+### Lista laterale
+- Aggiungere mini-badge con anni WCA e numero filiali per ogni partner nella lista a sinistra
