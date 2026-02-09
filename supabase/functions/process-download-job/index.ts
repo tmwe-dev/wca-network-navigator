@@ -100,7 +100,17 @@ Deno.serve(async (req) => {
         lastCompany = result.partner?.company_name || ''
       }
 
-      // Update job progress
+      // Determine contact extraction result
+      const hasEmail = !!(result.partner?.email)
+      const hasPhone = !!(result.partner?.phone)
+      const contactResult = hasEmail && hasPhone ? 'email+phone'
+        : hasEmail ? 'email_only'
+        : hasPhone ? 'phone_only'
+        : 'no_contacts'
+      const contactFound = (hasEmail || hasPhone) ? 1 : 0
+      const contactMissing = (!hasEmail && !hasPhone) ? 1 : 0
+
+      // Update job progress with contact tracking
       const processedIds = [...(job.processed_ids || []), wcaId]
       await supabase
         .from('download_jobs')
@@ -109,6 +119,9 @@ Deno.serve(async (req) => {
           processed_ids: processedIds,
           last_processed_wca_id: wcaId,
           last_processed_company: lastCompany || null,
+          last_contact_result: contactResult,
+          contacts_found_count: (job.contacts_found_count || 0) + contactFound,
+          contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
         })
         .eq('id', jobId)
 

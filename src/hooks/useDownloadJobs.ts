@@ -20,6 +20,9 @@ export interface DownloadJob {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  contacts_found_count: number;
+  contacts_missing_count: number;
+  last_contact_result: string | null;
 }
 
 export function useDownloadJobs() {

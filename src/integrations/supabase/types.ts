@@ -137,6 +137,8 @@ export type Database = {
       download_jobs: {
         Row: {
           completed_at: string | null
+          contacts_found_count: number
+          contacts_missing_count: number
           country_code: string
           country_name: string
           created_at: string
@@ -145,6 +147,7 @@ export type Database = {
           error_message: string | null
           id: string
           job_type: string
+          last_contact_result: string | null
           last_processed_company: string | null
           last_processed_wca_id: number | null
           network_name: string
@@ -156,6 +159,8 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          contacts_found_count?: number
+          contacts_missing_count?: number
           country_code: string
           country_name: string
           created_at?: string
@@ -164,6 +169,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           job_type?: string
+          last_contact_result?: string | null
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string
@@ -175,6 +181,8 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          contacts_found_count?: number
+          contacts_missing_count?: number
           country_code?: string
           country_name?: string
           created_at?: string
@@ -183,6 +191,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           job_type?: string
+          last_contact_result?: string | null
           last_processed_company?: string | null
           last_processed_wca_id?: number | null
           network_name?: string

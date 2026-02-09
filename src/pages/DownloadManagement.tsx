@@ -11,7 +11,8 @@ import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
-  Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw
+  Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw,
+  Mail, Phone, XCircle
 } from "lucide-react";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import {
@@ -1748,13 +1749,45 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         );
       })()}
 
-      {/* Last processed */}
+      {/* Last processed + contact result badge */}
       {job.last_processed_company && (
-        <p className={`text-xs ${th.dim}`}>
-          Ultimo: <span className={th.logName}>{job.last_processed_company}</span>
-          <span className={`ml-2 ${th.logId}`}>#{job.last_processed_wca_id}</span>
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className={`text-xs ${th.dim}`}>
+            Ultimo: <span className={th.logName}>{job.last_processed_company}</span>
+            <span className={`ml-2 ${th.logId}`}>#{job.last_processed_wca_id}</span>
+          </p>
+          {(job as any).last_contact_result && (() => {
+            const r = (job as any).last_contact_result;
+            if (r === 'email+phone') return <Badge className="text-[10px] px-1.5 py-0 bg-emerald-600 text-white border-0"><Mail className="w-3 h-3 mr-0.5" /><Phone className="w-3 h-3 mr-0.5" /> Email + Tel</Badge>;
+            if (r === 'email_only') return <Badge className="text-[10px] px-1.5 py-0 bg-blue-500 text-white border-0"><Mail className="w-3 h-3 mr-0.5" /> Solo Email</Badge>;
+            if (r === 'phone_only') return <Badge className="text-[10px] px-1.5 py-0 bg-blue-500 text-white border-0"><Phone className="w-3 h-3 mr-0.5" /> Solo Tel</Badge>;
+            return <Badge className="text-[10px] px-1.5 py-0 bg-red-500/80 text-white border-0"><XCircle className="w-3 h-3 mr-0.5" /> No contatti</Badge>;
+          })()}
+        </div>
       )}
+
+      {/* Contact extraction summary */}
+      {((job as any).contacts_found_count > 0 || (job as any).contacts_missing_count > 0) && (() => {
+        const found = (job as any).contacts_found_count || 0;
+        const missing = (job as any).contacts_missing_count || 0;
+        const total = found + missing;
+        const pct = total > 0 ? Math.round((found / total) * 100) : 0;
+        return (
+          <div className={`text-xs p-2 rounded-lg border ${th.infoBox}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className={th.body}>
+                Contatti trovati: <span className="font-mono font-bold text-emerald-500">{found}</span>/{total} ({pct}%)
+                <span className="mx-2">|</span>
+                Mancanti: <span className="font-mono font-bold text-red-400">{missing}</span>
+              </span>
+            </div>
+            <div className={`w-full h-1.5 rounded-full flex overflow-hidden ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
+              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-red-500/60 transition-all" style={{ width: `${100 - pct}%` }} />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Speed control */}
       {showSpeed && (isActive || isPaused) && (
