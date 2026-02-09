@@ -522,9 +522,33 @@ function DirectoryScanner({ countries, network, onComplete }: {
   const isDark = useTheme();
   const th = t(isDark);
 
+  const countryCodes = countries.map(c => c.code);
+
+  // Pre-load existing partners from DB for these countries
+  const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
+    queryKey: ["db-partners-for-countries", countryCodes],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("wca_id, company_name, city, country_code, country_name, updated_at")
+        .in("country_code", countryCodes)
+        .not("wca_id", "is", null)
+        .order("company_name");
+      return (data || []).map(p => ({
+        wca_id: p.wca_id!,
+        company_name: p.company_name,
+        city: p.city,
+        country: p.country_name,
+        country_code: p.country_code,
+        updated_at: p.updated_at,
+      }));
+    },
+    staleTime: 30_000,
+  });
+
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [members, setMembers] = useState<DirectoryMember[]>([]);
+  const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [totalResults, setTotalResults] = useState<number | null>(null);
@@ -532,6 +556,18 @@ function DirectoryScanner({ countries, network, onComplete }: {
   const [pageTime, setPageTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [hasScanned, setHasScanned] = useState(false);
+
+  // Merge: show DB partners immediately, add scanned ones on top
+  const dbAsMembers: DirectoryMember[] = dbPartners.map(p => ({
+    company_name: p.company_name,
+    city: p.city,
+    country: p.country,
+    wca_id: p.wca_id,
+  }));
+
+  // After scanning, use scanned list (it's the authoritative directory); before scanning, show DB
+  const members = hasScanned ? scannedMembers : dbAsMembers;
 
   // Speed control for listing phase
   const [listingDelayIdx, setListingDelayIdx] = useState(3); // default 3s
@@ -548,6 +584,7 @@ function DirectoryScanner({ countries, network, onComplete }: {
 
   const handleStart = useCallback(async () => {
     setIsRunning(true);
+    setHasScanned(true);
     setError(null);
     abortRef.current = false;
     const allMembers: DirectoryMember[] = [];
@@ -582,7 +619,7 @@ function DirectoryScanner({ countries, network, onComplete }: {
               country: m.country || country.name,
             }));
             allMembers.push(...newMembers);
-            setMembers([...allMembers]);
+            setScannedMembers([...allMembers]);
           }
 
           setTotalResults(result.pagination.total_results);
@@ -615,6 +652,15 @@ function DirectoryScanner({ countries, network, onComplete }: {
 
   const membersWithId = members.filter(m => m.wca_id);
 
+  if (loadingDb) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className={`w-6 h-6 animate-spin ${th.sub}`} />
+        <span className={`ml-2 text-sm ${th.sub}`}>Caricamento partner dal database...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex gap-6 min-h-0">
       {/* Left: controls + log */}
@@ -627,15 +673,21 @@ function DirectoryScanner({ countries, network, onComplete }: {
               {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
               <div>
                 <p className={`text-xs ${th.sub}`}>
-                  FASE 1 — {isComplete ? "COMPLETATA" : isRunning ? "SCANSIONE LISTA" : "PRONTO"}
+                  FASE 1 — {isComplete ? "COMPLETATA" : isRunning ? "SCANSIONE LISTA" : dbPartners.length > 0 ? "DATI DAL DATABASE" : "PRONTO"}
                   {` • ${countryLabel}`}
                   {network && ` • ${network}`}
                 </p>
+                {!isRunning && !isComplete && !hasScanned && dbPartners.length > 0 && (
+                  <p className={`text-2xl font-mono ${th.mono}`}>
+                    {dbPartners.length} partner nel DB
+                    <span className={`text-sm ml-3 ${th.dim}`}>({dbAsMembers.filter(m => m.wca_id).length} con WCA ID)</span>
+                  </p>
+                )}
                 {isRunning && (
                   <p className={`text-2xl font-mono ${th.mono}`}>
                     Pagina {currentPage}
                     {totalPages !== null && <span className={`text-sm ml-1 ${th.dim}`}>/{totalPages}</span>}
-                    <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {members.length}</span>
+                    <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {scannedMembers.length}</span>
                   </p>
                 )}
                 {isComplete && (
@@ -653,9 +705,15 @@ function DirectoryScanner({ countries, network, onComplete }: {
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
+              {/* If DB has data, allow skipping to Phase 2 directly */}
+              {!isRunning && !isComplete && dbPartners.length > 0 && (
+                <Button onClick={() => onComplete(dbAsMembers.filter(m => m.wca_id))} variant="outline" className={th.btnPause}>
+                  <FileDown className="w-4 h-4 mr-1" /> Usa dati dal DB ({dbAsMembers.filter(m => m.wca_id).length})
+                </Button>
+              )}
               {!isRunning && !isComplete && (
                 <Button onClick={handleStart} className={th.btnPri}>
-                  <Play className="w-4 h-4 mr-1" /> Avvia Scansione Lista
+                  <Play className="w-4 h-4 mr-1" /> {dbPartners.length > 0 ? "Ri-scansiona Directory" : "Avvia Scansione Lista"}
                 </Button>
               )}
               {isRunning && !isPaused && (
@@ -716,7 +774,7 @@ function DirectoryScanner({ countries, network, onComplete }: {
           <div className="flex items-center justify-between mb-2">
             <p className={`text-xs ${th.dim}`}>
               <List className="w-3 h-3 inline mr-1" />
-              Partner trovati ({members.length})
+              {!hasScanned && dbPartners.length > 0 ? `Partner nel DB (${members.length})` : `Partner trovati (${members.length})`}
             </p>
             {totalResults !== null && (
               <p className={`text-xs ${th.dim}`}>Totale directory: {totalResults}</p>
@@ -743,8 +801,14 @@ function DirectoryScanner({ countries, network, onComplete }: {
         <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4 space-y-3`}>
           <p className={`text-xs font-medium ${th.label}`}>Riepilogo</p>
           <div className="space-y-2">
+            {!hasScanned && dbPartners.length > 0 && (
+              <div className="flex justify-between">
+                <span className={`text-xs font-medium ${th.acEm}`}>✓ Dal database</span>
+                <span className={`font-mono font-bold ${th.acEm}`}>{dbPartners.length}</span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className={`text-xs ${th.body}`}>Partner trovati</span>
+              <span className={`text-xs ${th.body}`}>{hasScanned ? "Partner trovati" : "Totale"}</span>
               <span className={`font-mono font-bold ${th.hi}`}>{members.length}</span>
             </div>
             <div className="flex justify-between">
