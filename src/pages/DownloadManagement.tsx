@@ -12,8 +12,9 @@ import {
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
   Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw,
-  Mail, Phone, XCircle
+  Mail, Phone, XCircle, UserCheck, UserX
 } from "lucide-react";
+import { useContactCompleteness } from "@/hooks/useContactCompleteness";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import {
   scrapeWcaPartnerById,
@@ -424,6 +425,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const cacheCounts: Record<string, number> = {};
   Object.entries(cacheData).forEach(([k, v]) => { cacheCounts[k] = v.count; });
 
+  const { data: completeness } = useContactCompleteness();
+
   const exploredSet = new Set(Object.keys(cacheCounts)); // Explored = has directory scan
   const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k])); // DB only, no scan
   const selectedCodes = new Set(selected.map(c => c.code));
@@ -600,6 +603,18 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                       <span className={`text-[10px] ${th.dim}`}>{c.code}</span>
                     )}
                   </div>
+                  {/* Contact quality indicator */}
+                  {completeness?.byCountry[c.code] && (() => {
+                    const cs = completeness.byCountry[c.code];
+                    const pctEmail = cs.total_partners > 0 ? Math.round((cs.with_personal_email / cs.total_partners) * 100) : 0;
+                    const color = pctEmail >= 60 ? "text-emerald-500" : pctEmail >= 30 ? "text-amber-500" : "text-red-500";
+                    return (
+                      <div className={`flex items-center gap-1 text-[9px] ${color} mt-0.5`}>
+                        {pctEmail >= 60 ? <UserCheck className="w-2.5 h-2.5" /> : <UserX className="w-2.5 h-2.5" />}
+                        <span>{pctEmail}% contatti</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
                 {!isSelected && isComplete && (

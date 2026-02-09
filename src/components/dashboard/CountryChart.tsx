@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { usePartnerStats } from "@/hooks/usePartners";
+import { useContactCompleteness } from "@/hooks/useContactCompleteness";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const COLORS = [
@@ -11,8 +12,16 @@ const COLORS = [
   "hsl(0, 84%, 60%)",
 ];
 
+function QualityDot({ pct }: { pct: number }) {
+  const color = pct >= 60 ? "bg-emerald-500" : pct >= 30 ? "bg-amber-500" : "bg-red-500";
+  return (
+    <span className={`inline-block w-2 h-2 rounded-full ${color}`} title={`${pct}% con email personale`} />
+  );
+}
+
 export function CountryChart() {
   const { data: stats, isLoading } = usePartnerStats();
+  const { data: completeness } = useContactCompleteness();
 
   if (isLoading) {
     return (
@@ -29,11 +38,18 @@ export function CountryChart() {
 
   const chartData = stats?.countryCounts
     ? Object.entries(stats.countryCounts)
-        .map(([code, data]) => ({
-          country: data.name,
-          code,
-          count: data.count,
-        }))
+        .map(([code, data]) => {
+          const cStats = completeness?.byCountry[code];
+          const emailPct = cStats && cStats.total_partners > 0
+            ? Math.round((cStats.with_personal_email / cStats.total_partners) * 100)
+            : 0;
+          return {
+            country: data.name,
+            code,
+            count: data.count,
+            emailPct,
+          };
+        })
         .sort((a, b) => b.count - a.count)
         .slice(0, 8)
     : [];
@@ -63,7 +79,10 @@ export function CountryChart() {
                   borderRadius: "8px",
                 }}
                 labelStyle={{ fontWeight: 600 }}
-                formatter={(value: number) => [`${value} partners`, "Count"]}
+                formatter={(value: number, name: string) => {
+                  if (name === "count") return [`${value} partners`, "Totale"];
+                  return [`${value}%`, "Email personale"];
+                }}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((_, index) => (
@@ -72,6 +91,16 @@ export function CountryChart() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+        {/* Quality summary per country */}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          {chartData.map((c) => (
+            <div key={c.code} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <QualityDot pct={c.emailPct} />
+              <span>{c.code}</span>
+              <span className="font-mono">{c.emailPct}%</span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
