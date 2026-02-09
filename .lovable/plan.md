@@ -1,44 +1,56 @@
 
-# Fix associazione paese-ID nei download job
 
-## Problema confermato
+# Fix: errore singolo interrompe scansione multi-paese
 
-I dati nel database lo dimostrano chiaramente: **tutti i job hanno 311 ID identici**, indipendentemente dal paese. "American Samoa" sta processando "Andes Logistics Argentina" perche' ogni job ha ricevuto la stessa lista globale.
+## Problema
 
-Il raggruppamento per paese introdotto nell'ultimo fix non funziona perche' il campo `country` nei members contiene il **nome** restituito dal server WCA (che puo' differire dal nome usato nell'app), e non esiste un campo `country_code` affidabile sui membri.
+Quando una richiesta di scansione fallisce (es. errore di rete temporaneo `Connection refused`), il codice esegue un `break` che:
+1. Esce dal ciclo delle pagine per quel paese/network
+2. Passa al network/paese successivo senza ritentare
+3. Se Firecrawl e' temporaneamente irraggiungibile, TUTTI i paesi successivi falliscono a catena
 
-## Causa radice
-
-Durante la scansione directory (Fase 1), il sistema sa esattamente quale paese sta scansionando (`country.code`), ma questa informazione viene persa: il member riceve solo `country: m.country || country.name` (un nome testuale). Quando poi in Fase 2 si tenta di raggruppare per paese, il match per nome fallisce per differenze di formato.
+Inoltre, il messaggio d'errore viene impostato (`setError`) ma mai resettato all'inizio di ogni paese, quindi l'errore di un paese potrebbe influenzare la visualizzazione dei successivi.
 
 ## Soluzione
 
-Salvare il `country_code` direttamente su ogni member durante la scansione, poi usarlo nel raggruppamento.
+### 1. Aggiungere retry con backoff nella scansione (DownloadManagement.tsx, ~riga 930)
 
-### Modifiche
-
-**1. Interfaccia `DirectoryMember`** (`src/lib/api/wcaScraper.ts`)
-- Aggiungere campo opzionale `country_code?: string`
-
-**2. Scansione directory** (`src/pages/DownloadManagement.tsx`, ~riga 940)
-- Quando si creano i newMembers, aggiungere `country_code: country.code`
-- Salvare `country_code` anche nella cache
-
-**3. Cache members** (~riga 879)
-- Includere `country_code: m.country_code` nell'oggetto salvato in cache
-- Includere `country_code` anche nel recupero dalla cache (~riga 780)
-
-**4. Raggruppamento Phase2** (~riga 1387)
-- Usare `m.country_code` invece di cercare di matchare per nome:
+Invece di fare `break` al primo errore, ritentare la richiesta fino a 3 volte con attesa crescente (2s, 4s, 8s). Solo dopo 3 fallimenti consecutivi, saltare quel paese e proseguire con il successivo (senza `break` che blocca tutto).
 
 ```text
-const idsByCountry = new Map<string, number[]>();
-for (const m of members) {
-  if (!m.wca_id || !m.country_code) continue;
-  if (!idsByCountry.has(m.country_code)) idsByCountry.set(m.country_code, []);
-  idsByCountry.get(m.country_code)!.push(m.wca_id);
+// Retry logic per singola pagina
+let retries = 0;
+const maxRetries = 3;
+let result = null;
+
+while (retries < maxRetries) {
+  try {
+    result = await scrapeWcaDirectory(country.code, netKey, page);
+    if (result.success) break;
+    retries++;
+    if (retries < maxRetries) await new Promise(r => setTimeout(r, 2000 * retries));
+  } catch (err) {
+    retries++;
+    if (retries < maxRetries) await new Promise(r => setTimeout(r, 2000 * retries));
+  }
+}
+
+if (!result?.success) {
+  // Log errore ma CONTINUA con il prossimo paese
+  console.warn(`Paese ${country.code} fallito dopo ${maxRetries} tentativi`);
+  break; // esce solo dal while delle pagine, non dal for dei paesi
 }
 ```
 
-**5. Cancellare i job errati**
-- I job attualmente in corso con 311 ID ciascuno sono tutti sbagliati e vanno cancellati o fermati prima di rilanciare
+### 2. Resettare l'errore all'inizio di ogni paese (~riga 912)
+
+Aggiungere `setError(null)` all'inizio del ciclo di ogni paese, cosi' un errore temporaneo non persiste visivamente.
+
+### 3. Contatore errori visibile
+
+Aggiungere un contatore di "paesi saltati per errore" visibile nell'UI, cosi' l'utente sa se qualche paese e' stato saltato e puo' riprovarlo.
+
+### File modificati
+
+- `src/pages/DownloadManagement.tsx`: retry logic + reset errore + contatore skip
+
