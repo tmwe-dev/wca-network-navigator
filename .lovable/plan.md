@@ -1,68 +1,64 @@
 
+# Fix: Paginazione Directory e Distinzione HQ/Branch
 
-# Fix: Stato Esplorazione Reale e "Salva Solo ID" Funzionante
+## Problema 1: La scansione si ferma troppo presto
 
-## Problemi Identificati
+La scansione degli Stati Uniti si e fermata alla pagina 3 (150 membri trovati), ma in realta ce ne sono molti di piu. Il motivo:
 
-### 1. "Esplorato" mostrato in modo ingannevole
-Il sistema segna un paese come "esplorato" (sfondo verde) se ha **qualsiasi** partner nel DB (`pCount > 0 || cCount > 0`). Gli Stati Uniti hanno 1 solo partner importato manualmente, ma non sono mai stati scansionati. Il sistema li mostra come "esplorati" ingannando l'utente.
+- Il sistema si affida al LLM di Firecrawl per estrarre i dati di paginazione (`total_results`, `total_pages`, `has_next_page`)
+- Il LLM ha restituito `total_results: 47` e `total_pages: 1` — dati completamente sbagliati
+- Con `total_pages: 1`, la formula `has_next_page = currentPage(3) < totalPages(1)` = `false`, quindi la scansione si ferma
 
-**Fix**: Un paese e "esplorato" SOLO se ha una entry nella `directory_cache` (cioe la lista directory e stata effettivamente scaricata). Avere partner nel DB senza directory cache significa "dati parziali, lista non scaricata".
+**Soluzione**: Non fidarsi del LLM per la paginazione. Usare un approccio deterministico:
+- Se una pagina restituisce esattamente `pageSize` (50) membri, c'e sicuramente una pagina successiva
+- Fermarsi solo quando una pagina restituisce meno di `pageSize` membri (o zero)
+- Mantenere i dati del LLM (`total_results`, `total_pages`) solo come informazione indicativa, mai come criterio di stop
 
-### 2. Informazioni nelle card paese insufficienti
-Attualmente si vede "1 partner" per US ma non si sa quanti ce ne sono realmente nella directory WCA. Il badge "DB" e poco chiaro.
+## Problema 2: Branch Office vs Headquarter
 
-**Fix**: Tre stati distinti nelle card:
-- **Nessun dato**: solo codice paese (come ora)
-- **Partner nel DB ma lista non scaricata**: mostra "1 partner (lista ?)" con colore diverso (arancione/warning) per indicare dati incompleti
-- **Lista scaricata**: mostra "X/Y" (partner scaricati / totale nella directory) con il badge verificato se `download_verified = true`
+La directory WCA di un paese include sia gli headquarter di aziende locali che le filiali (branch) di aziende di altri paesi. Il sistema gia estrae `office_type` ("head_office" o "branch") quando scarica il profilo dettagliato di ogni partner, ma nella fase di scansione directory questa distinzione non e visibile.
 
-### 3. "Salva solo lista ID" non fa nulla di utile
-Il bottone appare solo se ci sono gia dati in cache, e cliccandolo mostra un toast e torna indietro senza fare nulla di nuovo. La cache e gia stata salvata durante la scansione.
-
-**Fix**: Il bottone "Salva solo lista ID" deve:
-- Se la cache esiste gia: confermare e tornare alla selezione (comportamento attuale, corretto)
-- Se la cache NON esiste: la scansione deve essere avviata PRIMA. Il bottone appare solo dopo la scansione o se ci sono dati dalla cache.
-- Rendere piu chiaro il flusso: dopo la scansione, il bottone "Salva solo lista ID" conferma che i dati sono salvati e torna indietro. Il toast dice esplicitamente che la lista e stata salvata nella cache.
-
-### 4. Filtro "Gia esplorati" include paesi non scansionati
-Il filtro conta come "esplorati" paesi che hanno solo partner nel DB ma nessuna scansione.
-
-**Fix**: "Gia esplorati" = ha entry in `directory_cache`. Aggiungere un nuovo filtro "Dati parziali" per paesi con partner ma senza directory cache.
+**Soluzione**: Dopo il download dei profili, mostrare nella UI quanti sono HQ e quanti branch per dare consapevolezza all'utente.
 
 ---
 
 ## Dettagli Tecnici
 
-### File: `src/pages/DownloadManagement.tsx`
+### File: `supabase/functions/scrape-wca-directory/index.ts`
 
-**PickCountry** (linee ~496-548):
+Cambiare la logica di paginazione (linee 145-148):
 
-Cambiare la definizione di `isExplored`:
 ```text
-// PRIMA (sbagliato):
-const isExplored = pCount > 0 || cCount > 0;
+// PRIMA (inaffidabile - si affida al LLM):
+const totalResults = extracted.total_results || members.length
+const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
+const hasNextPage = extracted.has_next_page ?? (currentPage < totalPages)
 
-// DOPO (corretto):
-const hasDirectoryScan = cCount > 0;  // Ha la lista dalla directory
-const hasDbOnly = pCount > 0 && cCount === 0;  // Solo partner nel DB, mai scansionato
+// DOPO (deterministico):
+const totalResults = extracted.total_results || members.length
+const totalPages = extracted.total_pages || Math.ceil(totalResults / size) || 1
+// Regola deterministica: se abbiamo ricevuto esattamente pageSize risultati,
+// quasi sicuramente c'e un'altra pagina
+const hasNextPage = members.length >= size
 ```
 
-Aggiornare le card:
-- Sfondo verde gradient: solo se `hasDirectoryScan`
-- Per `hasDbOnly`: mostrare "X partner (lista ?)" con sfondo arancione/warning per indicare che non si sa il totale
-- Per `hasDirectoryScan`: mostrare "X/Y" come ora
-- Badge "Completo" con checkmark: solo se `download_verified === true`
+Il valore `totalResults` e `totalPages` dal LLM vengono ancora restituiti come informazione indicativa, ma `has_next_page` si basa solo sul numero di risultati effettivamente ricevuti.
 
-Aggiornare i filtri (linee ~406, 424-425):
-- `exploredSet` basato solo su `directory_cache` (non `partners`)
-- Aggiungere filtro "Dati parziali" per paesi con partner ma senza scansione
+### File: `src/pages/DownloadManagement.tsx`
 
-**DirectoryScanner** (linee ~950-957):
-- Il bottone "Salva solo lista ID" rimane visibile quando `totalCount > 0` (post-scansione o da cache)
-- Nessun cambiamento necessario al bottone in se — il comportamento attuale (toast + torna indietro) e corretto perche la cache viene gia salvata automaticamente durante la scansione
-- Migliorare il testo del toast per essere piu esplicito
+**DirectoryScanner** — aggiungere sicurezza anche lato client (linea ~838):
 
-### Nessuna modifica al database
-Le colonne `download_verified` e `verified_at` esistono gia nella `directory_cache`.
+Anche nel loop del client, aggiungere un fallback: se `members.length >= pageSize` ma `has_next_page` e `false`, forzare il continuo. Questo come doppia sicurezza nel caso il backend non venga aggiornato.
 
+```text
+// Doppia sicurezza: se la pagina ha restituito 50 risultati,
+// continua anche se il server dice has_next_page: false
+hasNext = result.pagination.has_next_page || result.members.length >= 50;
+```
+
+**PickCountry** — aggiungere conteggio HQ/Branch nei badge paese:
+
+Nella query che conta i partner per paese, aggiungere il breakdown per `office_type`. Mostrare nelle card qualcosa come "150 (120 HQ + 30 Branch)" per dare all'utente piena visibilita.
+
+- Query aggiuntiva: raggruppare per `office_type` nella stessa query partner per paese
+- Badge aggiuntivo nelle card paese: mostrare il rapporto HQ/Branch sotto il conteggio totale
