@@ -1,120 +1,74 @@
 
 
-# Download Management - Pagina Unica a Flusso Guidato
+# Download a Due Fasi con Velocita Separate
 
-Riprogettazione completa della pagina Download Management: da 4 tab separati a un'unica esperienza guidata passo-passo, con lo stile visivo della pagina Campaigns (sfondo scuro, glassmorphism, tema spaziale).
+## Problema Attuale
+Il sistema salta la fase di lettura della directory WCA e va direttamente a scansionare ID alla cieca. L'utente vuole vedere due operazioni distinte, ciascuna con i propri controlli di velocita:
+1. **Fase 1 - Lettura Lista**: leggere la pagina directory WCA pagina per pagina, vedere i nomi apparire riga per riga
+2. **Fase 2 - Download Profili**: scaricare i dettagli uno per uno dagli ID raccolti
 
----
+## Soluzione
 
-## Concetto
-
-L'utente viene guidato attraverso un flusso lineare. Ogni passo si espande al centro della pagina, mentre a destra appare un elenco sospeso (floating) dei partner scaricati in tempo reale, cliccabile per vedere i dettagli in un popup.
+### Nuovo flusso del wizard (4 step invece di 3)
 
 ```text
-+-----------------------------+-----------------------+
-|                             |                       |
-|   AREA CENTRALE             |  LISTA SOSPESA        |
-|                             |  (partner scaricati)  |
-|   Step 1: Cosa vuoi fare?   |                       |
-|   Step 2: Configura         |  [Partner 1]  [x]     |
-|   Step 3: Processo LIVE     |  [Partner 2]  [x]     |
-|                             |  [Partner 3]  [x]     |
-|   [statistiche live]        |  ...                  |
-|   [log in tempo reale]      |                       |
-|                             |                       |
-+-----------------------------+-----------------------+
+Paesi --> Network --> FASE 1: Scansione Lista --> FASE 2: Download Profili
+                      (pagina per pagina,          (profilo per profilo,
+                       velocita configurabile)       velocita configurabile)
 ```
 
----
+### Fase 1 - Scansione Directory (nuovo step "listing")
 
-## Step 1 - "Cosa vuoi fare?"
+- Dopo la selezione di paese e network, parte la scansione della directory WCA
+- Usa la edge function `scrape-wca-directory` gia esistente, ma con l'URL corretto: `https://www.wcaworld.com/Directory?siteID=24&country=AL&pageIndex=1&pageSize=50&networkIds=...`
+- **Controllo velocita dedicato**: slider per decidere il ritardo tra una pagina e l'altra (es. 5s, 10s, 30s)
+- **Visualizzazione live**: ogni partner trovato appare riga per riga nella lista, con contatore "Pagina 1/N - Trovati: 12"
+- Al termine si mostra il riepilogo: "Trovati 47 partner in 3 pagine per Albania"
+- Pulsante "Avvia Download Dettagli" per passare alla Fase 2
 
-Tre opzioni presentate come card grandi con icone:
+### Fase 2 - Download Profili (step "running" esistente, migliorato)
 
-- **Scarica Partner** - Download sequenziale dalla directory WCA (manuale o automatico)
-- **Arricchisci dal Sito** - Leggi siti web di partner gia scaricati con AI
-- **Analisi Network** - Verifica a quali gruppi WCA hai accesso ai dati
+- Riceve la lista di WCA ID dalla Fase 1 (non piu range cieco)
+- **Controllo velocita dedicato separato**: slider identico ma indipendente, con i suoi parametri di pausa
+- Funzionamento identico a quello attuale ma con gli ID precisi raccolti dalla directory
 
-Cliccando su un'opzione, si passa allo Step 2.
+### Modifiche alla Edge Function `scrape-wca-directory`
 
-## Step 2 - Configurazione (varia in base alla scelta)
+Aggiornare l'URL per usare il formato corretto fornito dall'utente:
+- URL base: `https://www.wcaworld.com/Directory`
+- Parametri: `siteID=24`, `pageIndex`, `pageSize=50`, `searchby=CountryCode`, `country=AL`, `networkIds=1,2,3...`, `orderby=CountryCity`, `layout=v1`, `submitted=search`
+- Mapping dei network names ai networkIds numerici
 
-### Se "Scarica Partner":
-- Modalita: Manuale (range ID) / Automatico (riprendi da ultimo ID)
-- Slider o input per **tempo di attesa** tra un download e l'altro (es. 1s, 3s, 5s, 10s, 30s)
-- Pausa extra ogni N partner (configurabile)
-- Pulsante "Avvia"
+### Dettagli Tecnici
 
-### Se "Arricchisci dal Sito":
-- Filtri per paese, tipo partner, solo non arricchiti
-- Selezione partner con checkbox
-- Pulsante "Avvia Arricchimento"
+**File da modificare:**
 
-### Se "Analisi Network":
-- Lista gruppi WCA con toggle membro/non membro
-- Bottone test a campione
+1. **`supabase/functions/scrape-wca-directory/index.ts`**
+   - Aggiornare URL da `/MemberDirectory` a `/Directory` con i parametri corretti (`siteID=24`, `pageSize=50`, `pageIndex`, `searchby=CountryCode`, `networkIds`)
+   - Aggiungere mapping network name -> networkId numerico
+   - Migliorare il prompt di estrazione per il nuovo formato pagina
 
-## Step 3 - Processo LIVE
+2. **`src/lib/api/wcaScraper.ts`**
+   - Aggiornare parametri di `scrapeWcaDirectory` per accettare `countryCode` (es. "AL") invece di country name, e `pageIndex`
 
-Quando l'utente avvia il processo, la pagina si trasforma in una dashboard live:
+3. **`src/pages/DownloadManagement.tsx`**
+   - Aggiungere sub-step `"listing"` al wizard tra `"network"` e `"speed"`
+   - Nuovo componente `DirectoryScanner`:
+     - Slider velocita per la scansione lista (ritardo tra pagine)
+     - Tabella live che si popola riga per riga con i partner trovati
+     - Contatore pagine: "Pagina 2/5 - Letta in 3.2s"
+     - Contatore partner: numero che sale in tempo reale
+     - Pulsanti Pausa/Riprendi/Stop
+     - Al completamento: riepilogo + pulsante "Scarica Dettagli"
+   - Modificare `ScanConfig` per ricevere la lista ID dalla Fase 1 invece di calcolare range
+   - Aggiungere label "Velocita Fase 2" per distinguere i due slider
+   - Il `DownloadRunning` riceve `config.ids` (array preciso) invece di `config.mode === "range"`
 
-### Pannello centrale:
-- **Indicatore attuale**: "Scaricando ID #11472..." con animazione pulsante
-- **Countdown**: timer visibile prima del prossimo download
-- **Statistiche live** in badge luminosi (come i badge della pagina Campaigns): Trovati, Nuovi, Aggiornati, Errori, Velocita (partner/min)
-- **Log scorrevole**: ultime righe di attivita con colori per stato (verde = nuovo, blu = aggiornato, grigio = non trovato, rosso = errore)
-- **Pulsanti**: Pausa / Riprendi / Stop
+**Step del wizard aggiornati:**
+```text
+Paesi --> Network --> Scansione Lista --> Configura & Scarica
+  (1)       (2)           (3)                  (4)
+```
 
-### Pannello destro flottante:
-- Lista verticale sospesa (stile identico ai partner selezionati nella pagina Campaigns)
-- Ogni chip mostra: nome azienda, bandiera paese, badge "Nuovo"/"Aggiornato"
-- Click su un chip = apri popup con tutti i dati scaricati
-- Il pannello si popola in tempo reale mentre i download avvengono
-- Scroll automatico verso il basso per i nuovi arrivi
-
-### Popup dettaglio partner:
-- Dialog con glassmorphism
-- Mostra: nome, citta, paese, email, telefono, sito web, network, servizi, riassunto AI, rating
-- JSON raw collassabile per dati completi
-
----
-
-## Stile Visivo
-
-La pagina adotta lo stesso approccio della pagina Campaigns:
-- Sfondo scuro pieno (`bg-slate-950`) senza il globo 3D, ma con un gradiente sottile
-- Pannelli in glassmorphism (`bg-black/40 backdrop-blur-xl border-amber-500/20`)
-- Testi in `amber`, `emerald`, `blue` per i diversi stati
-- Badge luminosi come nella barra delle statistiche Campaigns
-- Header della pagina con sfondo scuro solido come quello delle Campaigns (`bg-slate-900/95`)
-- Animazioni fade-in per nuovi elementi nella lista
-
----
-
-## Dettagli Tecnici
-
-### File da creare
-- `src/pages/DownloadManagement.tsx` - riscrittura completa come pagina unica a flusso guidato
-
-### File da modificare
-- `src/components/layout/AppLayout.tsx` - aggiungere la rotta `/download-management` al trattamento "sfondo scuro" come `/campaigns`
-
-### File da mantenere (riutilizzati internamente)
-- `src/data/wcaFilters.ts` - costanti network/regioni/servizi
-- `src/hooks/useNetworkConfigs.ts` - per la sezione Analisi Network
-- `src/hooks/useDownloadQueue.ts` - puo servire per persistenza stato
-- `src/lib/api/wcaScraper.ts` - funzione di scraping
-
-### File da eliminare (logica integrata nella pagina unica)
-- `src/components/download/NetworkAnalysis.tsx`
-- `src/components/download/DownloadQueue.tsx`
-- `src/components/download/DownloadRunner.tsx`
-- `src/components/download/BatchEnrichment.tsx`
-
-### Delay configurabile
-L'utente sceglie il tempo di attesa tramite uno slider con valori predefiniti: 0s, 1s, 3s, 5s, 10s, 30s. Opzione separata per "pausa lunga ogni N partner" (es. 30s ogni 10 partner).
-
-### Persistenza
-- Ultimo ID processato salvato in `localStorage` (come ora)
-- Stato dei network configs nel database (come ora)
+Il passo 3 e la parte dinamica dove l'utente vede i partner apparire. Il passo 4 configura la velocita del download dettagliato e avvia.
 
