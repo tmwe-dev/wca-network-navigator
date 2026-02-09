@@ -4,19 +4,22 @@ import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { EmailPreview } from "@/components/campaigns/EmailPreview";
-import { RefreshCw, Building2, Send, Users, Mail, X } from "lucide-react";
+import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown } from "lucide-react";
 import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
 import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import { getCountryFlag } from "@/lib/countries";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface CampaignPartner {
   id: string;
@@ -45,34 +48,58 @@ function CampaignHeaderControls({
   campaignPartners: CampaignPartner[];
   onGenerateEmail: () => void;
 }) {
+  const [comboOpen, setComboOpen] = useState(false);
+  const sortedCountries = useMemo(() => [...countries].sort((a, b) => a.name.localeCompare(b.name)), [countries]);
+  const selectedName = selectedCountry ? WCA_COUNTRIES_MAP[selectedCountry]?.name : null;
   const totalWithEmail = campaignPartners.filter(p => p.email).length;
   const uniqueCountries = new Set(campaignPartners.map(p => p.country_code)).size;
 
   return (
     <>
-      {/* Country selector */}
-      <Select value={selectedCountry || ""} onValueChange={(val) => onCountrySelect(val || null)}>
-        <SelectTrigger className="w-56 bg-black/40 border-amber-500/30 text-amber-100 focus:ring-amber-500/50">
-          <SelectValue placeholder="🌍 Seleziona paese..." />
-        </SelectTrigger>
-        <SelectContent className="max-h-80 bg-black/90 backdrop-blur-xl border-amber-500/30">
-          {countries.map((country) => (
-            <SelectItem 
-              key={country.code} 
-              value={country.code}
-              className="text-slate-200 focus:bg-amber-500/20 focus:text-amber-100"
-            >
-              <div className="flex items-center gap-2">
-                <span>{getCountryFlag(country.code)}</span>
-                <span className="truncate">{country.name}</span>
-                <span className={`ml-auto text-xs ${country.count > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
-                  {country.count}
-                </span>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* Country combobox */}
+      <Popover open={comboOpen} onOpenChange={setComboOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={comboOpen}
+            className="w-56 justify-between bg-black/40 border-amber-500/30 text-amber-100 hover:bg-black/60 hover:text-amber-50"
+          >
+            {selectedName
+              ? <span className="truncate">{getCountryFlag(selectedCountry!)} {selectedName}</span>
+              : <span className="text-slate-400">🌍 Cerca paese...</span>}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-0 bg-black/95 backdrop-blur-xl border-amber-500/30 z-50" align="start">
+          <Command className="bg-transparent">
+            <CommandInput placeholder="Cerca paese..." className="text-amber-100" />
+            <CommandList className="max-h-60">
+              <CommandEmpty className="text-slate-400">Nessun paese trovato</CommandEmpty>
+              <CommandGroup>
+                {sortedCountries.map((country) => (
+                  <CommandItem
+                    key={country.code}
+                    value={country.name}
+                    onSelect={() => {
+                      onCountrySelect(country.code);
+                      setComboOpen(false);
+                    }}
+                    className="text-slate-200 aria-selected:bg-amber-500/20 aria-selected:text-amber-100"
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", selectedCountry === country.code ? "opacity-100 text-amber-400" : "opacity-0")} />
+                    <span>{getCountryFlag(country.code)}</span>
+                    <span className="ml-1.5 truncate">{country.name}</span>
+                    <span className={cn("ml-auto text-xs", country.count > 0 ? "text-amber-400" : "text-slate-600")}>
+                      {country.count}
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       {/* Divider */}
       <div className="w-px h-6 bg-amber-500/30" />
