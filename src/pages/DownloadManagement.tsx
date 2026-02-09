@@ -403,20 +403,28 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
               <button
                 key={c.code}
                 onClick={() => onToggle(c.code, c.name)}
-                className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${
+                className={`relative flex items-center gap-2 p-3 rounded-lg border transition-all text-left overflow-hidden ${
                   isSelected
                     ? isDark ? "bg-amber-500/15 border-amber-500/40 ring-1 ring-amber-500/30" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300"
                     : th.optCard
                 }`}
               >
-                <span className="text-lg">{getCountryFlag(c.code)}</span>
-                <div className="min-w-0 flex-1">
+                {/* Elegant gradient overlay for explored countries */}
+                {isExplored && !isSelected && (
+                  <div className={`absolute inset-0 pointer-events-none ${
+                    isDark
+                      ? "bg-gradient-to-l from-emerald-500/12 via-emerald-500/5 to-transparent"
+                      : "bg-gradient-to-l from-emerald-100/80 via-emerald-50/40 to-transparent"
+                  }`} />
+                )}
+                <span className="relative text-lg">{getCountryFlag(c.code)}</span>
+                <div className="relative min-w-0 flex-1">
                   <p className="text-sm truncate">{c.name}</p>
                   <p className={`text-xs ${th.dim}`}>{c.code}</p>
                 </div>
-                {isSelected && <CheckCircle className={`w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
+                {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
                 {!isSelected && isExplored && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-50 text-emerald-600"}`}>DB</span>
+                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>DB</span>
                 )}
               </button>
             );
