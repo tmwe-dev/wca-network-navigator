@@ -6,6 +6,7 @@ import { Building2, MapPin, Mail, Phone, Globe, ExternalLink, Award, Users, Netw
 import { useNavigate } from "react-router-dom";
 import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
 import { formatServiceCategory } from "@/lib/countries";
+import { PartnerRating } from "./PartnerRating";
 
 interface PartnerDetailModalProps {
   partner: ScrapedPartner | null;
@@ -39,6 +40,15 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
                   <Badge variant="outline" className="ml-2 text-xs">{partner.office_type === "head_office" ? "Sede Principale" : "Filiale"}</Badge>
                 )}
               </p>
+              {aiClassification?.rating && (
+                <div className="mt-1">
+                  <PartnerRating
+                    rating={aiClassification.rating}
+                    ratingDetails={aiClassification.rating_details}
+                    size="md"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </DialogHeader>

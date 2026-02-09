@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
       )
     }
 
+    const memberYears = profileData.member_since 
+      ? Math.floor((Date.now() - new Date(profileData.member_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : 0
+    const branchCount = profileData.branch_offices?.length || 0
+    const certCount = profileData.certifications?.length || 0
+    const networkCount = profileData.networks?.length || 0
+    const hasContacts = (profileData.contacts?.length || 0) > 0
+
     const prompt = `You are a logistics industry expert. Analyze this freight forwarding company profile and provide:
 
 1. A concise summary (2-3 sentences, in Italian) of what this company does, their strengths, and specialties.
@@ -49,12 +57,23 @@ Deno.serve(async (req) => {
    ${VALID_SERVICES.join(', ')}
 3. Classify their partner type from this EXACT list (return only ONE):
    ${VALID_PARTNER_TYPES.join(', ')}
+4. Rate this partner from 1.0 to 5.0 (with 0.5 increments) based on these criteria:
+   - RELIABILITY (affidabilità): years in WCA (${memberYears} years), certifications (${certCount}: ${(profileData.certifications || []).join(', ')}), Gold Medallion: ${profileData.gold_medallion || false}
+   - COMPLETENESS (completezza profilo): how detailed is their profile description, do they have contacts listed (${hasContacts}), email/phone/website provided
+   - SENIORITY (anzianità WCA): member since ${profileData.member_since || 'unknown'}. >20y=excellent, >10y=good, >5y=fair, <5y=new
+   - NETWORK SIZE (dimensione): ${branchCount} branch offices, networks: ${networkCount}
+   - INFRASTRUCTURE: do they mention warehousing, own fleet/vehicles, CFS facilities in their profile?
+   - SPECIALTIES: how many distinct service areas they cover
+   
+   Provide a rating breakdown with a score (1-5) for each of these 6 criteria, plus an overall weighted average.
 
 Company: ${profileData.company_name}
 City: ${profileData.city}, ${profileData.country_name}
 Profile: ${profileData.profile_description || 'No description available'}
 Certifications: ${(profileData.certifications || []).join(', ') || 'None'}
 Networks: ${(profileData.networks || []).map((n: any) => n.name).join(', ') || 'None'}
+Branch offices: ${branchCount}
+Gold Medallion: ${profileData.gold_medallion || false}
 
 IMPORTANT: Only use service codes from the exact list above. Be conservative - only assign services clearly indicated by the profile.`
 
@@ -75,7 +94,7 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
           type: 'function',
           function: {
             name: 'classify_partner',
-            description: 'Classify a logistics partner with summary, services, and type',
+            description: 'Classify a logistics partner with summary, services, type, and rating',
             parameters: {
               type: 'object',
               properties: {
@@ -90,8 +109,21 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
                   enum: VALID_PARTNER_TYPES,
                   description: 'Primary partner type',
                 },
+                rating: { type: 'number', description: 'Overall rating 1.0-5.0 in 0.5 increments' },
+                rating_details: {
+                  type: 'object',
+                  properties: {
+                    reliability: { type: 'number', description: 'Affidabilità score 1-5' },
+                    completeness: { type: 'number', description: 'Completezza profilo score 1-5' },
+                    seniority: { type: 'number', description: 'Anzianità WCA score 1-5' },
+                    network_size: { type: 'number', description: 'Dimensione network score 1-5' },
+                    infrastructure: { type: 'number', description: 'Infrastruttura score 1-5' },
+                    specialties: { type: 'number', description: 'Specializzazioni score 1-5' },
+                  },
+                  required: ['reliability', 'completeness', 'seniority', 'network_size', 'infrastructure', 'specialties'],
+                },
               },
-              required: ['summary', 'services', 'partner_type'],
+              required: ['summary', 'services', 'partner_type', 'rating', 'rating_details'],
               additionalProperties: false,
             },
           },
@@ -129,12 +161,14 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     const classification = JSON.parse(toolCall.function.arguments)
     console.log(`Classification for ${partnerId}:`, JSON.stringify(classification))
 
-    // Update partner with summary and type
+    // Update partner with summary, type, and rating
     await supabase
       .from('partners')
       .update({
         profile_description: classification.summary + '\n\n---\n\n' + (profileData.profile_description || ''),
         partner_type: classification.partner_type,
+        rating: classification.rating || null,
+        rating_details: classification.rating_details || null,
       })
       .eq('id', partnerId)
 

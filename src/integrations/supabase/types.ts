@@ -215,6 +215,8 @@ export type Database = {
           partner_type: Database["public"]["Enums"]["partner_type"] | null
           phone: string | null
           profile_description: string | null
+          rating: number | null
+          rating_details: Json | null
           updated_at: string | null
           wca_id: number | null
           website: string | null
@@ -241,6 +243,8 @@ export type Database = {
           partner_type?: Database["public"]["Enums"]["partner_type"] | null
           phone?: string | null
           profile_description?: string | null
+          rating?: number | null
+          rating_details?: Json | null
           updated_at?: string | null
           wca_id?: number | null
           website?: string | null
@@ -267,6 +271,8 @@ export type Database = {
           partner_type?: Database["public"]["Enums"]["partner_type"] | null
           phone?: string | null
           profile_description?: string | null
+          rating?: number | null
+          rating_details?: Json | null
           updated_at?: string | null
           wca_id?: number | null
           website?: string | null
