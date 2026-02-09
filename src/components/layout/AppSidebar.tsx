@@ -7,6 +7,7 @@ import {
   Download,
   Mail,
   Globe,
+  HardDriveDownload,
   ChevronLeft,
   ChevronRight,
   Moon,
@@ -21,6 +22,7 @@ const navItems = [
   { title: "Agenti", url: "/agents", icon: Users },
   { title: "Partners", url: "/partners", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
+  { title: "Download", url: "/download-management", icon: HardDriveDownload },
   { title: "Reminders", url: "/reminders", icon: Calendar },
   { title: "Export", url: "/export", icon: Download },
 ];

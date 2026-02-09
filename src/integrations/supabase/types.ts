@@ -71,6 +71,54 @@ export type Database = {
           },
         ]
       }
+      download_queue: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          id: string
+          id_range_end: number | null
+          id_range_start: number | null
+          last_processed_id: number | null
+          network_name: string
+          priority: number
+          status: Database["public"]["Enums"]["download_queue_status"]
+          total_found: number
+          total_processed: number
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          id?: string
+          id_range_end?: number | null
+          id_range_start?: number | null
+          last_processed_id?: number | null
+          network_name: string
+          priority?: number
+          status?: Database["public"]["Enums"]["download_queue_status"]
+          total_found?: number
+          total_processed?: number
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          id?: string
+          id_range_end?: number | null
+          id_range_start?: number | null
+          last_processed_id?: number | null
+          network_name?: string
+          priority?: number
+          status?: Database["public"]["Enums"]["download_queue_status"]
+          total_found?: number
+          total_processed?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       interactions: {
         Row: {
           created_at: string | null
@@ -111,6 +159,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      network_configs: {
+        Row: {
+          created_at: string
+          has_contact_emails: boolean
+          has_contact_names: boolean
+          has_contact_phones: boolean
+          id: string
+          is_member: boolean
+          network_name: string
+          notes: string | null
+          sample_tested_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          has_contact_emails?: boolean
+          has_contact_names?: boolean
+          has_contact_phones?: boolean
+          id?: string
+          is_member?: boolean
+          network_name: string
+          notes?: string | null
+          sample_tested_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          has_contact_emails?: boolean
+          has_contact_names?: boolean
+          has_contact_phones?: boolean
+          id?: string
+          is_member?: boolean
+          network_name?: string
+          notes?: string | null
+          sample_tested_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       partner_certifications: {
         Row: {
@@ -472,6 +559,7 @@ export type Database = {
         | "follow_up"
         | "other"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
+      download_queue_status: "pending" | "in_progress" | "completed" | "paused"
       interaction_type: "call" | "email" | "meeting" | "note"
       office_type: "head_office" | "branch"
       partner_type:
@@ -641,6 +729,7 @@ export const Constants = {
         "other",
       ],
       certification_type: ["IATA", "BASC", "ISO", "C-TPAT", "AEO"],
+      download_queue_status: ["pending", "in_progress", "completed", "paused"],
       interaction_type: ["call", "email", "meeting", "note"],
       office_type: ["head_office", "branch"],
       partner_type: [
