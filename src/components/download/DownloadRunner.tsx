@@ -1,14 +1,19 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Play, Square, Pause, Building2, MapPin, CheckCircle, AlertCircle } from "lucide-react";
-import { useDownloadQueue, type DownloadQueueItem } from "@/hooks/useDownloadQueue";
-import { scrapeWcaPartnerById, type ScrapeSingleResult, type AIClassification } from "@/lib/api/wcaScraper";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Loader2, Play, Square, Building2, MapPin, CheckCircle, AlertCircle, Search, Timer, TrendingUp
+} from "lucide-react";
+import { scrapeWcaPartnerById, type ScrapeSingleResult } from "@/lib/api/wcaScraper";
+import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { WCA_NETWORKS, WCA_REGIONS, WCA_SERVICES } from "@/data/wcaFilters";
 
 interface ScrapeLog {
   wcaId: number;
@@ -17,24 +22,50 @@ interface ScrapeLog {
   companyName?: string;
   city?: string;
   countryCode?: string;
+  network?: string;
+  services?: string[];
   aiSummary?: string;
   error?: string;
+  partner?: any;
 }
 
+type ScrapingMode = "manual" | "auto";
+
 export function DownloadRunner() {
-  const { data: queue, updateItem } = useDownloadQueue();
   const queryClient = useQueryClient();
 
-  const [selectedQueueId, setSelectedQueueId] = useState<string>("");
+  // Scraping mode
+  const [mode, setMode] = useState<ScrapingMode>("manual");
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
+
+  // State
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<ScrapeLog[]>([]);
   const [stats, setStats] = useState({ found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 });
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const abortRef = useRef(false);
 
-  const pendingItems = queue?.filter(q => q.status === "pending" || q.status === "paused" || q.status === "in_progress") || [];
-  const selectedItem = queue?.find(q => q.id === selectedQueueId);
+  // Saved last processed ID (persisted in localStorage)
+  const [savedLastId, setSavedLastId] = useState<number>(() => {
+    const saved = localStorage.getItem("wca_scraper_last_id");
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // Cataloging filters
+  const [filterNetwork, setFilterNetwork] = useState<string>("__all__");
+  const [filterRegion, setFilterRegion] = useState<string>("__all__");
+  const [filterServices, setFilterServices] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Detail modal
+  const [detailPartner, setDetailPartner] = useState<any | null>(null);
+
+  // Speed calc
+  const elapsed = startTime ? (Date.now() - startTime) / 1000 / 60 : 0;
+  const speed = elapsed > 0 ? (stats.found / elapsed).toFixed(1) : "0";
 
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
@@ -56,22 +87,26 @@ export function DownloadRunner() {
   }, []);
 
   const handleStart = async () => {
-    if (!selectedItem) return;
-
     abortRef.current = false;
     setIsRunning(true);
     setLogs([]);
     setStats({ found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 });
+    setStartTime(Date.now());
 
-    const startId = selectedItem.last_processed_id
-      ? selectedItem.last_processed_id + 1
-      : selectedItem.id_range_start || 1;
-    const endId = selectedItem.id_range_end || 99999;
+    let startId: number;
+    let endId: number;
 
-    updateItem.mutate({ id: selectedItem.id, status: "in_progress" });
+    if (mode === "manual") {
+      startId = parseInt(rangeStart, 10) || 1;
+      endId = parseInt(rangeEnd, 10) || startId + 100;
+    } else {
+      // Auto mode: resume from last saved ID
+      startId = savedLastId > 0 ? savedLastId + 1 : 1;
+      endId = 999999; // effectively infinite
+    }
 
     let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
-    let processed = selectedItem.total_processed;
+    let processed = 0;
     let consecutiveNotFound = 0;
 
     for (let id = startId; id <= endId; id++) {
@@ -84,22 +119,15 @@ export function DownloadRunner() {
         const log: ScrapeLog = { wcaId: id, status: "error" };
 
         if (result.success && result.found) {
-          const partner = result.partner;
-          // Filter by country if this queue item has a specific country
-          if (partner && partner.country_code?.trim().toUpperCase() !== selectedItem.country_code.trim().toUpperCase()) {
-            // Different country, skip but log
-            consecutiveNotFound++;
-            if (consecutiveNotFound > 100) break; // stop if too many misses
-            continue;
-          }
-
           consecutiveNotFound = 0;
+          const partner = result.partner;
           log.status = "success";
           log.action = result.action;
           log.companyName = partner?.company_name;
           log.city = partner?.city;
           log.countryCode = partner?.country_code;
           log.aiSummary = result.aiClassification?.summary;
+          log.partner = partner;
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
@@ -107,29 +135,24 @@ export function DownloadRunner() {
           log.status = "not_found";
           localStats.notFound++;
           consecutiveNotFound++;
-          if (consecutiveNotFound > 200) break;
+          // In auto mode, don't stop on not-found streaks as easily
+          if (mode === "manual" && consecutiveNotFound > 200) break;
+          if (mode === "auto" && consecutiveNotFound > 500) break;
         } else {
           log.status = "error";
           log.error = result.error;
           localStats.errors++;
         }
 
-        setLogs(prev => [log, ...prev].slice(0, 200));
+        setLogs(prev => [log, ...prev].slice(0, 500));
         setStats({ ...localStats });
-        processed++;
 
-        // Update queue progress every 5 partners
-        if (processed % 5 === 0) {
-          updateItem.mutate({
-            id: selectedItem.id,
-            total_processed: processed,
-            total_found: localStats.found,
-            last_processed_id: id,
-          });
-        }
+        // Save last processed ID
+        setSavedLastId(id);
+        localStorage.setItem("wca_scraper_last_id", String(id));
       } catch (err) {
         const errLog: ScrapeLog = { wcaId: id, status: "error", error: String(err) };
-        setLogs(prev => [errLog, ...prev].slice(0, 200));
+        setLogs(prev => [errLog, ...prev].slice(0, 500));
         localStats.errors++;
         setStats({ ...localStats });
       }
@@ -145,15 +168,6 @@ export function DownloadRunner() {
       }
     }
 
-    // Final update
-    updateItem.mutate({
-      id: selectedItem.id,
-      total_processed: processed,
-      total_found: localStats.found,
-      last_processed_id: currentId || startId,
-      status: abortRef.current ? "paused" : "completed",
-    });
-
     setIsRunning(false);
     setCurrentId(null);
     setCountdown(0);
@@ -165,145 +179,333 @@ export function DownloadRunner() {
     });
   };
 
+  // Filter logs for display
+  const filteredLogs = logs.filter(log => {
+    if (log.status !== "success") return true; // always show errors/not-found
+    if (searchQuery && !log.companyName?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    // Note: network/region/services filters are for cataloging display, not scraping
+    return true;
+  });
+
+  const successLogs = logs.filter(l => l.status === "success");
+
   return (
     <div className="space-y-6">
+      {/* Scraping Controls */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Play className="w-5 h-5" />
-            Download Sequenziale
+            Scarica da WCA
           </CardTitle>
           <CardDescription>
-            Seleziona un paese dalla coda e avvia il download uno per uno con classificazione AI automatica.
+            Scarica profili dalla directory WCA uno per uno. URL: wcaworld.com/directory/members/&#123;ID&#125;
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedQueueId} onValueChange={setSelectedQueueId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleziona paese dalla coda..." />
-            </SelectTrigger>
-            <SelectContent>
-              {pendingItems.map(item => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.country_code} — {item.country_name} ({item.network_name})
-                  {item.last_processed_id && ` • riprende da #${item.last_processed_id}`}
-                </SelectItem>
-              ))}
-              {pendingItems.length === 0 && (
-                <SelectItem value="none" disabled>Nessun paese in coda</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          {/* Mode selection */}
+          <div className="flex gap-2">
+            <Button
+              variant={mode === "manual" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("manual")}
+              disabled={isRunning}
+            >
+              Manuale
+            </Button>
+            <Button
+              variant={mode === "auto" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("auto")}
+              disabled={isRunning}
+            >
+              Automatico
+            </Button>
+          </div>
 
+          {mode === "manual" ? (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">ID Inizio</label>
+                <Input
+                  type="number"
+                  placeholder="es. 11470"
+                  value={rangeStart}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                  disabled={isRunning}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">ID Fine</label>
+                <Input
+                  type="number"
+                  placeholder="es. 11500"
+                  value={rangeEnd}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                  disabled={isRunning}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-muted text-sm">
+              <p>
+                Modalità automatica: parte da ID <strong>{savedLastId > 0 ? savedLastId + 1 : 1}</strong> e
+                procede fino a quando non lo fermi.
+              </p>
+              {savedLastId > 0 && (
+                <p className="text-muted-foreground mt-1">
+                  Ultimo ID processato: <strong>#{savedLastId}</strong>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="ml-2 h-auto p-0 text-xs"
+                    onClick={() => { setSavedLastId(0); localStorage.removeItem("wca_scraper_last_id"); }}
+                  >
+                    Reset
+                  </Button>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Start/Stop */}
           <div className="flex gap-2">
             <Button
               onClick={handleStart}
-              disabled={isRunning || !selectedQueueId}
+              disabled={isRunning || (mode === "manual" && !rangeStart)}
               className="flex-1"
             >
               {isRunning ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Scaricando...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scaricando...</>
               ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  {selectedItem?.last_processed_id ? "Riprendi Download" : "Avvia Download"}
-                </>
+                <><Play className="w-4 h-4 mr-2" />{mode === "auto" && savedLastId > 0 ? "Riprendi" : "Avvia Download"}</>
               )}
             </Button>
             {isRunning && (
               <Button variant="destructive" onClick={handleStop}>
                 <Square className="w-4 h-4 mr-1" />
-                Stop
+                Pausa
               </Button>
             )}
           </div>
 
+          {/* Live status */}
           {isRunning && (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground text-center">
-                ID: #{currentId} — Trovati: {stats.found} — Nuovi: {stats.inserted}
-                {countdown > 0 && ` — Prossimo tra ${countdown}s`}
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              ID: #{currentId}
+              {countdown > 0 && ` — Prossimo tra ${countdown}s`}
+            </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      {logs.length > 0 && (
+      {/* Live Stats */}
+      {(isRunning || logs.length > 0) && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-primary" />
-              Risultati ({stats.found} trovati)
+              <TrendingUp className="w-5 h-5" />
+              Statistiche Live
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
               <StatBox label="Trovati" value={stats.found} />
               <StatBox label="Nuovi" value={stats.inserted} className="text-green-600" />
               <StatBox label="Aggiornati" value={stats.updated} className="text-blue-600" />
               <StatBox label="Non trovati" value={stats.notFound} className="text-yellow-600" />
-              <StatBox label="Errori" value={stats.errors} className="text-red-600" />
+              <StatBox label="Errori" value={stats.errors} className="text-destructive" />
+              <StatBox label="Partner/min" value={speed} icon={<Timer className="w-3.5 h-3.5 text-muted-foreground" />} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cataloging Filters + Partner List */}
+      {successLogs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Partner Trovati ({successLogs.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Filters for cataloging */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Select value={filterNetwork} onValueChange={setFilterNetwork}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti i Network" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti i Network</SelectItem>
+                  {WCA_NETWORKS.map(n => (
+                    <SelectItem key={n} value={n}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterRegion} onValueChange={setFilterRegion}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutte le Regioni" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutte le Regioni</SelectItem>
+                  {WCA_REGIONS.map(r => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca partner..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1 max-h-80 overflow-y-auto border rounded-lg">
-              {logs.map((log, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-2 px-3 border-b last:border-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono text-xs text-muted-foreground shrink-0">#{log.wcaId}</span>
-                    {log.status === "success" && (
-                      <div className="flex flex-col min-w-0 gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span className="font-medium truncate">{log.companyName}</span>
-                          <span className="text-muted-foreground text-xs hidden sm:inline">
-                            <MapPin className="w-3 h-3 inline mr-0.5" />
-                            {log.city}, {log.countryCode}
-                          </span>
-                        </div>
-                        {log.aiSummary && (
-                          <p className="text-xs text-muted-foreground truncate max-w-[400px]">
-                            {log.aiSummary}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {log.status === "not_found" && <span className="text-muted-foreground">Non trovato</span>}
-                    {log.status === "error" && (
-                      <span className="text-destructive text-xs truncate">{log.error || "Errore"}</span>
-                    )}
-                  </div>
-                  <div className="shrink-0 ml-2">
-                    {log.status === "success" && (
-                      <Badge variant={log.action === "inserted" ? "default" : "secondary"} className="text-xs">
-                        {log.action === "inserted" ? "Nuovo" : "Aggiornato"}
-                      </Badge>
-                    )}
-                    {log.status === "not_found" && <Badge variant="outline" className="text-xs">Skip</Badge>}
-                    {log.status === "error" && (
-                      <Badge variant="destructive" className="text-xs">
-                        <AlertCircle className="w-3 h-3 mr-1" />Errore
-                      </Badge>
-                    )}
-                  </div>
+            {/* Services multi-select */}
+            <div className="flex flex-wrap gap-2">
+              {WCA_SERVICES.map(service => (
+                <label
+                  key={service}
+                  className="flex items-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <Checkbox
+                    checked={filterServices.has(service)}
+                    onCheckedChange={(checked) => {
+                      setFilterServices(prev => {
+                        const next = new Set(prev);
+                        checked ? next.add(service) : next.delete(service);
+                        return next;
+                      });
+                    }}
+                  />
+                  {service}
+                </label>
+              ))}
+            </div>
+
+            {/* Partner table */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">ID</th>
+                      <th className="px-3 py-2 font-medium">Nome Azienda</th>
+                      <th className="px-3 py-2 font-medium">Paese</th>
+                      <th className="px-3 py-2 font-medium">Città</th>
+                      <th className="px-3 py-2 font-medium">Stato</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredLogs
+                      .filter(l => l.status === "success")
+                      .filter(l => !searchQuery || l.companyName?.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((log, i) => (
+                        <tr
+                          key={`${log.wcaId}-${i}`}
+                          className="hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => setDetailPartner(log)}
+                        >
+                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">#{log.wcaId}</td>
+                          <td className="px-3 py-2 font-medium">{log.companyName}</td>
+                          <td className="px-3 py-2">{log.countryCode}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{log.city}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant={log.action === "inserted" ? "default" : "secondary"} className="text-xs">
+                              {log.action === "inserted" ? "Nuovo" : "Aggiornato"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredLogs.filter(l => l.status === "success").length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-6">Nessun partner trovato</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error/not-found logs */}
+      {logs.filter(l => l.status !== "success").length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground">Log errori / non trovati</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
+              {logs.filter(l => l.status !== "success").slice(0, 50).map((log, i) => (
+                <div key={i} className="flex items-center gap-2 py-1">
+                  <span className="font-mono text-muted-foreground">#{log.wcaId}</span>
+                  {log.status === "not_found" && <span className="text-muted-foreground">Non trovato</span>}
+                  {log.status === "error" && <span className="text-destructive">{log.error || "Errore"}</span>}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Detail modal */}
+      <Dialog open={!!detailPartner} onOpenChange={() => setDetailPartner(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {detailPartner?.companyName}
+            </DialogTitle>
+          </DialogHeader>
+          {detailPartner && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-muted-foreground">WCA ID:</span> #{detailPartner.wcaId}</div>
+                <div><span className="text-muted-foreground">Paese:</span> {detailPartner.countryCode}</div>
+                <div><span className="text-muted-foreground">Città:</span> {detailPartner.city}</div>
+                <div>
+                  <span className="text-muted-foreground">Stato:</span>{" "}
+                  <Badge variant={detailPartner.action === "inserted" ? "default" : "secondary"} className="text-xs">
+                    {detailPartner.action === "inserted" ? "Nuovo" : "Aggiornato"}
+                  </Badge>
+                </div>
+              </div>
+              {detailPartner.aiSummary && (
+                <div>
+                  <p className="text-muted-foreground mb-1">Riassunto AI:</p>
+                  <p className="bg-muted rounded-lg p-3 text-sm">{detailPartner.aiSummary}</p>
+                </div>
+              )}
+              {detailPartner.partner && (
+                <div>
+                  <p className="text-muted-foreground mb-1">Dati completi:</p>
+                  <pre className="bg-muted rounded-lg p-3 text-xs overflow-x-auto max-h-60">
+                    {JSON.stringify(detailPartner.partner, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function StatBox({ label, value, className }: { label: string; value: number; className?: string }) {
+function StatBox({ label, value, className, icon }: { label: string; value: number | string; className?: string; icon?: React.ReactNode }) {
   return (
     <div className="text-center p-3 rounded-lg bg-muted">
-      <p className={`text-2xl font-bold ${className || ""}`}>{value}</p>
+      <div className="flex items-center justify-center gap-1">
+        {icon}
+        <p className={`text-2xl font-bold ${className || ""}`}>{value}</p>
+      </div>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
