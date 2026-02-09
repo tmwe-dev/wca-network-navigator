@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound } from "lucide-react";
+import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ export default function Settings() {
   const [wcaUsername, setWcaUsername] = useState("");
   const [wcaPassword, setWcaPassword] = useState("");
   const [wcaCookie, setWcaCookie] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +26,7 @@ export default function Settings() {
       setWcaUsername(settings["wca_username"] || "");
       setWcaPassword(settings["wca_password"] || "");
       setWcaCookie(settings["wca_session_cookie"] || "");
+      setWhatsappNumber(settings["whatsapp_number"] || "");
     }
   }, [settings]);
 
@@ -201,6 +203,79 @@ export default function Settings() {
             >
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salva Cookie
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Numero WhatsApp</CardTitle>
+                <CardDescription>
+                  Il tuo numero WhatsApp per effettuare chiamate e messaggi direttamente dal sistema
+                </CardDescription>
+              </div>
+            </div>
+            {settings?.["whatsapp_number"] ? (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Configurato
+              </Badge>
+            ) : (
+              <Badge variant="secondary">Non impostato</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp-number">Numero di telefono</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="whatsapp-number"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="+39 333 1234567"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia). Verrà usato come mittente per i link WhatsApp.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5" />
+              Il numero viene salvato nelle impostazioni dell'app
+            </div>
+            <Button
+              onClick={async () => {
+                if (!whatsappNumber.trim()) return;
+                setSaving(true);
+                try {
+                  await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() });
+                  toast.success("Numero WhatsApp salvato");
+                } catch {
+                  toast.error("Errore nel salvataggio");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving || !whatsappNumber.trim()}
+              variant="outline"
+            >
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Salva Numero
             </Button>
           </div>
         </CardContent>
