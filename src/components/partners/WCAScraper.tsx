@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square } from "lucide-react";
+import { Globe, Download, CheckCircle, AlertCircle, Loader2, Square, Building2, MapPin } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { scrapeWcaPartnerById, type ScrapeSingleResult } from "@/lib/api/wcaScraper";
 import { useQueryClient } from "@tanstack/react-query";
+import { PartnerDetailModal } from "./PartnerDetailModal";
 
 interface ScrapeLog {
   wcaId: number;
   status: "success" | "not_found" | "error";
   action?: string;
   companyName?: string;
+  city?: string;
+  countryCode?: string;
+  countryName?: string;
+  partner?: ScrapeSingleResult["partner"];
+  partnerId?: string;
   error?: string;
 }
 
@@ -24,8 +30,11 @@ export function WCAScraper() {
   const [progress, setProgress] = useState(0);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [processedCount, setProcessedCount] = useState(0);
   const [logs, setLogs] = useState<ScrapeLog[]>([]);
   const [stats, setStats] = useState({ found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 });
+  const [selectedLog, setSelectedLog] = useState<ScrapeLog | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
 
@@ -72,13 +81,17 @@ export function WCAScraper() {
 
       try {
         const result = await scrapeWcaPartnerById(id);
-
         const log: ScrapeLog = { wcaId: id, status: "error" };
 
         if (result.success && result.found) {
           log.status = "success";
           log.action = result.action;
           log.companyName = result.partner?.company_name;
+          log.city = result.partner?.city;
+          log.countryCode = result.partner?.country_code;
+          log.countryName = result.partner?.country_name;
+          log.partner = result.partner;
+          log.partnerId = result.partnerId;
           localStats.found++;
           if (result.action === "inserted") localStats.inserted++;
           if (result.action === "updated") localStats.updated++;
@@ -101,9 +114,9 @@ export function WCAScraper() {
       }
 
       processed++;
+      setProcessedCount(processed);
 
       if (id < endId && !abortRef.current) {
-        // Every 10 partners: 30s pause, otherwise 5s
         if (processed % 10 === 0) {
           await sleep(30000);
         } else {
@@ -120,11 +133,19 @@ export function WCAScraper() {
 
     toast({
       title: abortRef.current ? "Scraping interrotto" : "Scraping completato",
-      description: `Trovati: ${localStats.found}, Nuovi: ${localStats.inserted}, Aggiornati: ${localStats.updated}, Non trovati: ${localStats.notFound}, Errori: ${localStats.errors}`,
+      description: `Trovati: ${localStats.found}, Nuovi: ${localStats.inserted}, Aggiornati: ${localStats.updated}`,
     });
   };
 
+  const handleLogClick = (log: ScrapeLog) => {
+    if (log.status === "success" && log.partner) {
+      setSelectedLog(log);
+      setModalOpen(true);
+    }
+  };
+
   const total = Math.max(0, endId - startId + 1);
+  const foundLogs = logs.filter((l) => l.status === "success");
 
   return (
     <div className="space-y-6">
@@ -188,76 +209,101 @@ export function WCAScraper() {
             <div className="space-y-2">
               <Progress value={progress} />
               <p className="text-sm text-muted-foreground text-center">
-                {currentId && `ID: ${currentId}`}
+                ID: {currentId} — Trovati: {stats.found} — {processedCount} di {total}
                 {countdown > 0 && ` — Prossimo tra ${countdown}s`}
-                {" — "}{progress}%
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Stats summary */}
       {logs.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              Risultati
+              <CheckCircle className="w-5 h-5 text-primary" />
+              Risultati ({foundLogs.length} partner trovati)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold">{stats.found}</p>
-                <p className="text-xs text-muted-foreground">Trovati</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-green-600">{stats.inserted}</p>
-                <p className="text-xs text-muted-foreground">Nuovi</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-blue-600">{stats.updated}</p>
-                <p className="text-xs text-muted-foreground">Aggiornati</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-yellow-600">{stats.notFound}</p>
-                <p className="text-xs text-muted-foreground">Non trovati</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-red-600">{stats.errors}</p>
-                <p className="text-xs text-muted-foreground">Errori</p>
-              </div>
+              <StatBox label="Trovati" value={stats.found} />
+              <StatBox label="Nuovi" value={stats.inserted} className="text-green-600" />
+              <StatBox label="Aggiornati" value={stats.updated} className="text-blue-600" />
+              <StatBox label="Non trovati" value={stats.notFound} className="text-yellow-600" />
+              <StatBox label="Errori" value={stats.errors} className="text-red-600" />
             </div>
 
-            <div className="space-y-1 max-h-60 overflow-y-auto">
+            {/* Real-time partner list */}
+            <div className="space-y-1 max-h-80 overflow-y-auto border rounded-lg">
               {logs.map((log, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
-                  <span className="font-mono text-xs">ID {log.wcaId}</span>
-                  <div className="flex items-center gap-2">
+                <div
+                  key={i}
+                  className={`flex items-center justify-between text-sm py-2 px-3 border-b last:border-0 ${
+                    log.status === "success" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
+                  }`}
+                  onClick={() => handleLogClick(log)}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs text-muted-foreground shrink-0">#{log.wcaId}</span>
                     {log.status === "success" && (
                       <>
-                        <span className="text-xs truncate max-w-[200px]">{log.companyName}</span>
-                        <Badge className={log.action === "inserted" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                          {log.action === "inserted" ? "Nuovo" : "Aggiornato"}
-                        </Badge>
+                        <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="font-medium truncate">{log.companyName}</span>
+                        <span className="text-muted-foreground text-xs hidden sm:inline">
+                          <MapPin className="w-3 h-3 inline mr-0.5" />
+                          {log.city}{log.countryCode ? `, ${log.countryCode}` : ""}
+                        </span>
                       </>
                     )}
                     {log.status === "not_found" && (
-                      <Badge variant="secondary">Non trovato</Badge>
+                      <span className="text-muted-foreground">Non trovato</span>
                     )}
                     {log.status === "error" && (
-                      <Badge variant="destructive">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Errore
+                      <span className="text-destructive text-xs truncate">{log.error || "Errore"}</span>
+                    )}
+                  </div>
+                  <div className="shrink-0 ml-2">
+                    {log.status === "success" && (
+                      <Badge variant={log.action === "inserted" ? "default" : "secondary"} className="text-xs">
+                        {log.action === "inserted" ? "Nuovo" : "Aggiornato"}
+                      </Badge>
+                    )}
+                    {log.status === "not_found" && <Badge variant="outline" className="text-xs">Skip</Badge>}
+                    {log.status === "error" && (
+                      <Badge variant="destructive" className="text-xs">
+                        <AlertCircle className="w-3 h-3 mr-1" />Errore
                       </Badge>
                     )}
                   </div>
                 </div>
               ))}
+              {logs.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-6">
+                  I partner appariranno qui durante lo scraping
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
+
+      <PartnerDetailModal
+        partner={selectedLog?.partner ?? null}
+        partnerId={selectedLog?.partnerId}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
+    </div>
+  );
+}
+
+function StatBox({ label, value, className }: { label: string; value: number; className?: string }) {
+  return (
+    <div className="text-center p-3 rounded-lg bg-muted">
+      <p className={`text-2xl font-bold ${className || ""}`}>{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

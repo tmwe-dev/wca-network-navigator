@@ -5,6 +5,7 @@ export interface ScrapeSingleResult {
   found?: boolean;
   wcaId: number;
   action?: "inserted" | "updated" | "skipped";
+  partnerId?: string;
   partner?: {
     company_name: string;
     city: string;

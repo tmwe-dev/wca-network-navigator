@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     let action = 'skipped'
+    let partnerId = existingById?.id
 
     if (existingById) {
       const { error } = await supabase
@@ -123,9 +124,11 @@ Deno.serve(async (req) => {
       }
       action = 'updated'
     } else {
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('partners')
         .insert(partnerRecord)
+        .select('id')
+        .single()
       if (error) {
         console.error(`Insert error for ID ${wcaId}:`, error)
         return new Response(
@@ -133,6 +136,7 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      partnerId = inserted.id
       action = 'inserted'
     }
 
@@ -142,6 +146,7 @@ Deno.serve(async (req) => {
         found: true,
         wcaId,
         action,
+        partnerId,
         partner: partnerRecord,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
