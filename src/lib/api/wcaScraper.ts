@@ -20,6 +20,15 @@ export interface AIClassification {
   summary: string;
   services: string[];
   partner_type: string;
+  rating?: number;
+  rating_details?: {
+    reliability: number;
+    completeness: number;
+    seniority: number;
+    network_size: number;
+    infrastructure: number;
+    specialties: number;
+  };
 }
 
 export interface ScrapedPartner {

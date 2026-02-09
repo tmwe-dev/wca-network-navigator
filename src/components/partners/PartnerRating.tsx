@@ -1,0 +1,94 @@
+import { Star, StarHalf } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface RatingDetails {
+  reliability: number;
+  completeness: number;
+  seniority: number;
+  network_size: number;
+  infrastructure: number;
+  specialties: number;
+}
+
+interface PartnerRatingProps {
+  rating: number | null;
+  ratingDetails?: RatingDetails | null;
+  size?: "sm" | "md" | "lg";
+  showLabel?: boolean;
+}
+
+const CRITERIA_LABELS: Record<string, string> = {
+  reliability: "Affidabilità",
+  completeness: "Completezza",
+  seniority: "Anzianità WCA",
+  network_size: "Dimensione Network",
+  infrastructure: "Infrastruttura",
+  specialties: "Specializzazioni",
+};
+
+function StarDisplay({ rating, size }: { rating: number; size: "sm" | "md" | "lg" }) {
+  const sizeClass = size === "sm" ? "w-3.5 h-3.5" : size === "md" ? "w-4 h-4" : "w-5 h-5";
+  const stars = [];
+
+  for (let i = 1; i <= 5; i++) {
+    if (i <= Math.floor(rating)) {
+      stars.push(<Star key={i} className={`${sizeClass} fill-amber-400 text-amber-400`} />);
+    } else if (i - 0.5 <= rating) {
+      stars.push(<StarHalf key={i} className={`${sizeClass} fill-amber-400 text-amber-400`} />);
+    } else {
+      stars.push(<Star key={i} className={`${sizeClass} text-muted-foreground/30`} />);
+    }
+  }
+
+  return <div className="flex items-center gap-0.5">{stars}</div>;
+}
+
+function MiniBar({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-28 text-muted-foreground truncate">{label}</span>
+      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full bg-amber-400 rounded-full transition-all"
+          style={{ width: `${(value / 5) * 100}%` }}
+        />
+      </div>
+      <span className="w-6 text-right font-medium">{value.toFixed(1)}</span>
+    </div>
+  );
+}
+
+export function PartnerRating({ rating, ratingDetails, size = "md", showLabel = true }: PartnerRatingProps) {
+  if (!rating) return null;
+
+  const content = (
+    <div className="flex items-center gap-1.5">
+      <StarDisplay rating={rating} size={size} />
+      {showLabel && (
+        <span className={`font-semibold ${size === "sm" ? "text-xs" : "text-sm"}`}>
+          {rating.toFixed(1)}
+        </span>
+      )}
+    </div>
+  );
+
+  if (!ratingDetails) return content;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="cursor-help">{content}</div>
+        </TooltipTrigger>
+        <TooltipContent className="w-64 p-3" side="bottom">
+          <p className="font-semibold mb-2 text-sm">Valutazione Partner</p>
+          <div className="space-y-1.5">
+            {Object.entries(ratingDetails).map(([key, val]) => (
+              <MiniBar key={key} value={val as number} label={CRITERIA_LABELS[key] || key} />
+            ))}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
