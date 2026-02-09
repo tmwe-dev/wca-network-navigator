@@ -363,7 +363,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored">("all");
+  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
 
   // Partner counts per country
@@ -403,14 +403,16 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const cacheCounts: Record<string, number> = {};
   Object.entries(cacheData).forEach(([k, v]) => { cacheCounts[k] = v.count; });
 
-  const exploredSet = new Set(Object.keys(partnerCounts).concat(Object.keys(cacheCounts)));
+  const exploredSet = new Set(Object.keys(cacheCounts)); // Explored = has directory scan
+  const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k])); // DB only, no scan
   const selectedCodes = new Set(selected.map(c => c.code));
 
   const filtered = WCA_COUNTRIES.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
-    if (filterMode === "missing") return !exploredSet.has(c.code);
+    if (filterMode === "missing") return !exploredSet.has(c.code) && !partialSet.has(c.code);
     if (filterMode === "explored") return exploredSet.has(c.code);
+    if (filterMode === "partial") return partialSet.has(c.code);
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -421,8 +423,9 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
     return compA - compB;
   });
 
-  const missingCount = WCA_COUNTRIES.filter(c => !exploredSet.has(c.code)).length;
+  const missingCount = WCA_COUNTRIES.filter(c => !exploredSet.has(c.code) && !partialSet.has(c.code)).length;
   const exploredCount = WCA_COUNTRIES.filter(c => exploredSet.has(c.code)).length;
+  const partialCount = WCA_COUNTRIES.filter(c => partialSet.has(c.code)).length;
 
   return (
     <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
@@ -458,8 +461,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
           <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
         </div>
         {/* Filter buttons */}
-        {(["all", "explored", "missing"] as const).map(mode => {
-          const labels = { all: `Tutti (${WCA_COUNTRIES.length})`, explored: `Già esplorati (${exploredCount})`, missing: `Mai esplorati (${missingCount})` };
+        {(["all", "explored", "partial", "missing"] as const).map(mode => {
+          const labels = { all: `Tutti (${WCA_COUNTRIES.length})`, explored: `Scansionati (${exploredCount})`, partial: `Dati parziali (${partialCount})`, missing: `Mai esplorati (${missingCount})` };
           const active = filterMode === mode;
           return (
             <button
@@ -473,6 +476,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             >
               {mode === "all" && <Globe className="w-3.5 h-3.5" />}
               {mode === "explored" && <CheckCircle className="w-3.5 h-3.5" />}
+              {mode === "partial" && <Activity className="w-3.5 h-3.5" />}
               {mode === "missing" && <Download className="w-3.5 h-3.5" />}
               {labels[mode]}
             </button>
@@ -497,7 +501,9 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             const isSelected = selectedCodes.has(c.code);
             const pCount = partnerCounts[c.code] || 0;
             const cCount = cacheCounts[c.code] || 0;
-            const isExplored = pCount > 0 || cCount > 0;
+            const hasDirectoryScan = cCount > 0;
+            const hasDbOnly = pCount > 0 && cCount === 0;
+            const isExplored = hasDirectoryScan;
             const isVerified = cacheData[c.code]?.verified === true;
             const isComplete = isVerified;
             return (
@@ -510,6 +516,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                     : th.optCard
                 }`}
               >
+                {/* Green gradient only for scanned countries */}
                 {isExplored && !isSelected && (
                   <div className={`absolute inset-0 pointer-events-none ${
                     isDark
@@ -517,17 +524,25 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                       : "bg-gradient-to-l from-emerald-100/80 via-emerald-50/40 to-transparent"
                   }`} />
                 )}
+                {/* Orange gradient for DB-only (partial data) */}
+                {hasDbOnly && !isSelected && (
+                  <div className={`absolute inset-0 pointer-events-none ${
+                    isDark
+                      ? "bg-gradient-to-l from-orange-500/10 via-orange-500/3 to-transparent"
+                      : "bg-gradient-to-l from-orange-100/60 via-orange-50/30 to-transparent"
+                  }`} />
+                )}
                 <span className="relative text-lg">{getCountryFlag(c.code)}</span>
                 <div className="relative min-w-0 flex-1">
                   <p className="text-sm truncate">{c.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    {pCount > 0 && (
-                      <span className={`text-[10px] ${th.acEm}`}>{pCount} partner</span>
+                    {hasDirectoryScan && (
+                      <span className={`text-[10px] ${th.acEm}`}>{pCount}/{cCount}</span>
                     )}
-                    {cCount > 0 && (
-                      <span className={`text-[10px] ${th.dim}`}>{cCount} in directory</span>
+                    {hasDbOnly && (
+                      <span className={`text-[10px] ${isDark ? "text-orange-400" : "text-orange-600"}`}>{pCount} partner (lista ?)</span>
                     )}
-                    {pCount === 0 && cCount === 0 && (
+                    {!hasDirectoryScan && !hasDbOnly && (
                       <span className={`text-[10px] ${th.dim}`}>{c.code}</span>
                     )}
                   </div>
@@ -535,14 +550,14 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                 {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
                 {!isSelected && isComplete && (
                   <span className={`relative text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
-                    <CheckCircle className="w-3 h-3" /> {pCount}/{cCount}
+                    <CheckCircle className="w-3 h-3" /> Completo
                   </span>
                 )}
-                {!isSelected && !isComplete && cCount > 0 && (
+                {!isSelected && !isComplete && hasDirectoryScan && (
                   <span className={`relative text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{pCount}/{cCount}</span>
                 )}
-                {!isSelected && !isComplete && cCount === 0 && pCount > 0 && (
-                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>DB</span>
+                {!isSelected && hasDbOnly && (
+                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-orange-500/15 text-orange-400 border border-orange-500/30" : "bg-orange-50 text-orange-600 border border-orange-200"}`}>Parziale</span>
                 )}
               </button>
             );
@@ -949,7 +964,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
               )}
               {!isRunning && !isComplete && totalCount > 0 && onSaveIdsOnly && (
                 <Button variant="outline" onClick={() => {
-                  toast({ title: "Lista ID salvata", description: `Salvati ${totalCount} ID per ${countryLabel}. Potrai scaricare i profili completi in futuro.` });
+                  toast({ title: "✅ Lista ID salvata nella cache", description: `${totalCount} ID dalla directory sono stati salvati per ${countryLabel}. Torna qui quando vuoi scaricare i profili completi.` });
                   onSaveIdsOnly();
                 }} className={th.btnPause}>
                   <List className="w-4 h-4 mr-1" /> Salva solo lista ID
@@ -989,7 +1004,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
               )}
               {isComplete && totalCount > 0 && onSaveIdsOnly && (
                 <Button variant="outline" onClick={() => {
-                  toast({ title: "Lista ID salvata", description: `Salvati ${totalCount} ID per ${countryLabel}. Potrai scaricare i profili completi in futuro.` });
+                  toast({ title: "✅ Lista ID salvata nella cache", description: `${totalCount} ID dalla directory sono stati salvati per ${countryLabel}. Torna qui quando vuoi scaricare i profili completi.` });
                   onSaveIdsOnly();
                 }} className={th.btnPause}>
                   <List className="w-4 h-4 mr-1" /> Salva solo lista ID
