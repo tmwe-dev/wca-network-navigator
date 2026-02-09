@@ -131,24 +131,24 @@ export function BatchEnrichment() {
         <CardContent className="space-y-4">
           {/* Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Select value={filterCountry} onValueChange={setFilterCountry}>
+            <Select value={filterCountry || "__all__"} onValueChange={(v) => setFilterCountry(v === "__all__" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Tutti i paesi" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tutti i paesi</SelectItem>
+                <SelectItem value="__all__">Tutti i paesi</SelectItem>
                 {WCA_COUNTRIES.map(c => (
                   <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={filterType} onValueChange={setFilterType}>
+            <Select value={filterType || "__all__"} onValueChange={(v) => setFilterType(v === "__all__" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Tutti i tipi" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tutti i tipi</SelectItem>
+                <SelectItem value="__all__">Tutti i tipi</SelectItem>
                 <SelectItem value="freight_forwarder">Freight Forwarder</SelectItem>
                 <SelectItem value="customs_broker">Customs Broker</SelectItem>
                 <SelectItem value="carrier">Carrier</SelectItem>
