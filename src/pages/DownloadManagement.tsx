@@ -274,7 +274,7 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const th = t(isDark);
   const [sub, setSub] = useState<DlSub>("country");
   const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
-  const [network, setNetwork] = useState("");
+  const [networks, setNetworks] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [discoveredMembers, setDiscoveredMembers] = useState<DirectoryMember[]>([]);
 
@@ -305,7 +305,7 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
     // Return to country selection after saving IDs
     setSub("country");
     setCountries([]);
-    setNetwork("");
+    setNetworks([]);
     setDiscoveredMembers([]);
   };
 
@@ -342,12 +342,12 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
         />
       )}
       {sub === "network" && countries.length > 0 && (
-        <PickNetwork country={countries[0]} onSelect={n => { setNetwork(n); setSub("listing"); }} />
+        <PickNetwork countries={countries} onConfirm={n => { setNetworks(n); setSub("listing"); }} />
       )}
       {sub === "listing" && countries.length > 0 && (
         <DirectoryScanner
           countries={countries}
-          network={network}
+          networks={networks}
           onComplete={handleListingComplete}
           onSaveIdsOnly={handleSaveIdsOnly}
         />
@@ -355,7 +355,7 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
       {sub === "details" && discoveredMembers.length > 0 && (
         <Phase2Config
           countries={countries}
-          network={network}
+          networks={networks}
           members={discoveredMembers}
           onStart={onStartRunning}
         />
@@ -606,37 +606,91 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   );
 }
 
-// ─── Pick Network ────────────────────────────────────────────
-function PickNetwork({ country, onSelect }: {
-  country: { code: string; name: string };
-  onSelect: (n: string) => void;
+// ─── Pick Network (multi-select) ─────────────────────────────
+function PickNetwork({ countries, onConfirm }: {
+  countries: { code: string; name: string }[];
+  onConfirm: (networks: string[]) => void;
 }) {
   const isDark = useTheme();
   const th = t(isDark);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [allSelected, setAllSelected] = useState(false);
+
+  const countryLabel = countries.length === 1
+    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
+    : `${countries.length} paesi`;
+
+  const toggleNetwork = (n: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n); else next.add(n);
+      return next;
+    });
+    setAllSelected(false);
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setAllSelected(false);
+      setSelected(new Set());
+    } else {
+      setAllSelected(true);
+      setSelected(new Set());
+    }
+  };
+
+  const handleConfirm = () => {
+    if (allSelected || selected.size === 0) {
+      onConfirm([]);  // empty = all networks
+    } else {
+      onConfirm(Array.from(selected));
+    }
+  };
+
+  const canProceed = allSelected || selected.size > 0;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6">
       <div className="text-center">
         <h2 className={`text-xl mb-1 ${th.h2}`}>Quale network?</h2>
         <p className={`text-sm ${th.sub}`}>
-          {getCountryFlag(country.code)} {country.name} — Vuoi filtrare per un gruppo WCA specifico?
+          {countryLabel} — Seleziona uno o più gruppi WCA
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full">
-        <button onClick={() => onSelect("")} className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${th.optCard}`}>
+        <button
+          onClick={toggleAll}
+          className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${allSelected ? (isDark ? "border-amber-500/60 bg-amber-500/10" : "border-sky-400 bg-sky-50") : th.optCard}`}
+        >
+          <Checkbox checked={allSelected} className="pointer-events-none" />
           <Globe className={`w-5 h-5 ${th.acAmber}`} />
           <div className="text-left">
             <p className="text-sm font-medium">Tutti i Network</p>
             <p className={`text-xs ${th.dim}`}>Cerca tutti i partner WCA</p>
           </div>
         </button>
-        {WCA_NETWORKS.map(n => (
-          <button key={n} onClick={() => onSelect(n)} className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${th.optCard}`}>
-            <Users className={`w-5 h-5 flex-shrink-0 ${th.acAmber}`} />
-            <span className="text-sm text-left">{n}</span>
-          </button>
-        ))}
+        {WCA_NETWORKS.map(n => {
+          const isChecked = !allSelected && selected.has(n);
+          return (
+            <button
+              key={n}
+              onClick={() => toggleNetwork(n)}
+              className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${isChecked ? (isDark ? "border-amber-500/60 bg-amber-500/10" : "border-sky-400 bg-sky-50") : th.optCard} ${allSelected ? "opacity-50" : ""}`}
+              disabled={allSelected}
+            >
+              <Checkbox checked={isChecked} className="pointer-events-none" />
+              <Users className={`w-5 h-5 flex-shrink-0 ${th.acAmber}`} />
+              <span className="text-sm text-left">{n}</span>
+            </button>
+          );
+        })}
       </div>
+      {canProceed && (
+        <Button onClick={handleConfirm} className={th.btnPri}>
+          <ArrowRight className="w-4 h-4 mr-2" />
+          Prosegui con {allSelected ? "tutti i network" : `${selected.size} network`}
+        </Button>
+      )}
     </div>
   );
 }
@@ -645,26 +699,31 @@ function PickNetwork({ country, onSelect }: {
 // FASE 1: Directory Scanner — scrapes the listing page by page
 // Uses directory_cache to remember previous scans
 // ═══════════════════════════════════════════════════════════════
-function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
+function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
   countries: { code: string; name: string }[];
-  network: string;
+  networks: string[];
   onComplete: (members: DirectoryMember[]) => void;
   onSaveIdsOnly?: () => void;
 }) {
   const isDark = useTheme();
   const th = t(isDark);
   const countryCodes = countries.map(c => c.code);
-  const networkKey = network || "";
+  const networkKeys = networks.length > 0 ? networks : [""];
 
   // 1) Load cached directory scan for these countries
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
-    queryKey: ["directory-cache", countryCodes, networkKey],
+    queryKey: ["directory-cache", countryCodes, networkKeys],
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("directory_cache")
         .select("*")
-        .in("country_code", countryCodes)
-        .eq("network_name", networkKey);
+        .in("country_code", countryCodes);
+      if (networks.length > 0) {
+        q = q.in("network_name", networks);
+      } else {
+        q = q.eq("network_name", "");
+      }
+      const { data } = await q;
       return data || [];
     },
     staleTime: 30_000,
@@ -793,7 +852,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
   }, []);
 
   // Save scan results to directory_cache
-  const saveScanToCache = useCallback(async (countryCode: string, scanned: DirectoryMember[], total: number, pages: number) => {
+  const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({
       company_name: m.company_name,
       city: m.city,
@@ -805,7 +864,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
       .from("directory_cache")
       .upsert({
         country_code: countryCode,
-        network_name: networkKey,
+        network_name: netKey,
         members: membersJson as any,
         total_results: total,
         total_pages: pages,
@@ -814,7 +873,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
       }, { onConflict: "country_code,network_name" });
 
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
-  }, [networkKey, queryClient]);
+  }, [queryClient]);
 
   const handleStart = useCallback(async () => {
     setIsRunning(true);
@@ -827,65 +886,69 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
       if (abortRef.current) break;
       setCurrentCountryIdx(ci);
       const country = countries[ci];
-      let page = 1;
-      let hasNext = true;
-      let countryTotal = 0;
-      let countryPages = 0;
-      const countryMembers: DirectoryMember[] = [];
 
-      while (hasNext && !abortRef.current) {
-        await waitWhilePaused();
+      // Iterate over each selected network (or just "" for all)
+      for (const netKey of networkKeys) {
         if (abortRef.current) break;
+        let page = 1;
+        let hasNext = true;
+        let countryTotal = 0;
+        let countryPages = 0;
+        const countryMembers: DirectoryMember[] = [];
 
-        setCurrentPage(page);
-        const start = Date.now();
+        while (hasNext && !abortRef.current) {
+          await waitWhilePaused();
+          if (abortRef.current) break;
 
-        try {
-          const result = await scrapeWcaDirectory(country.code, network, page);
-          const elapsed = Date.now() - start;
-          setPageTime(elapsed);
+          setCurrentPage(page);
+          const start = Date.now();
 
-          if (!result.success) {
-            setError(result.error || "Errore sconosciuto");
+          try {
+            const result = await scrapeWcaDirectory(country.code, netKey, page);
+            const elapsed = Date.now() - start;
+            setPageTime(elapsed);
+
+            if (!result.success) {
+              setError(result.error || "Errore sconosciuto");
+              break;
+            }
+
+            if (result.members.length > 0) {
+              const newMembers = result.members.map(m => ({
+                ...m,
+                country: m.country || country.name,
+              }));
+              countryMembers.push(...newMembers);
+              allMembers.push(...newMembers);
+              setScannedMembers([...allMembers]);
+            }
+
+            countryTotal = result.pagination.total_results;
+            countryPages = result.pagination.total_pages;
+            setTotalResults(result.pagination.total_results);
+            setTotalPages(result.pagination.total_pages);
+            hasNext = result.pagination.has_next_page || result.members.length >= 50;
+            page++;
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Errore di rete");
             break;
           }
 
-          if (result.members.length > 0) {
-            const newMembers = result.members.map(m => ({
-              ...m,
-              country: m.country || country.name,
-            }));
-            countryMembers.push(...newMembers);
-            allMembers.push(...newMembers);
-            setScannedMembers([...allMembers]);
+          if (hasNext && !abortRef.current) {
+            await new Promise(r => setTimeout(r, listingDelayRef.current));
           }
-
-          countryTotal = result.pagination.total_results;
-          countryPages = result.pagination.total_pages;
-          setTotalResults(result.pagination.total_results);
-          setTotalPages(result.pagination.total_pages);
-          // Deterministic: if we got 50 results, assume there's more
-          hasNext = result.pagination.has_next_page || result.members.length >= 50;
-          page++;
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Errore di rete");
-          break;
         }
 
-        if (hasNext && !abortRef.current) {
-          await new Promise(r => setTimeout(r, listingDelayRef.current));
+        // Save this country+network results to cache
+        if (countryMembers.length > 0) {
+          await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
         }
-      }
-
-      // Save this country's results to cache
-      if (countryMembers.length > 0) {
-        await saveScanToCache(country.code, countryMembers, countryTotal, countryPages);
       }
     }
 
     setIsRunning(false);
     setIsComplete(true);
-  }, [countries, network, waitWhilePaused, saveScanToCache]);
+  }, [countries, networkKeys, waitWhilePaused, saveScanToCache]);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -933,7 +996,7 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
               <div>
                 <p className={`text-xs ${th.sub}`}>
                   FASE 1 — {headerStatus} • {countryLabel}
-                  {network && ` • ${network}`}
+                  {networks.length > 0 && ` • ${networks.join(", ")}`}
                 </p>
 
                 {/* Summary numbers */}
@@ -1214,9 +1277,9 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
 // ═══════════════════════════════════════════════════════════════
 // FASE 2 Config: Speed settings before downloading details
 // ═══════════════════════════════════════════════════════════════
-function Phase2Config({ countries, network, members, onStart }: {
+function Phase2Config({ countries, networks, members, onStart }: {
   countries: { code: string; name: string }[];
-  network: string;
+  networks: string[];
   members: DirectoryMember[];
   onStart: () => void;
 }) {
@@ -1277,7 +1340,7 @@ function Phase2Config({ countries, network, members, onStart }: {
       await createJob.mutateAsync({
         country_code: country.code,
         country_name: country.name,
-        network_name: network || "Tutti",
+        network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
         wca_ids: idsToDownload,
         delay_seconds: delay,
       });
@@ -1291,7 +1354,7 @@ function Phase2Config({ countries, network, members, onStart }: {
         <div>
           <h2 className={`text-xl mb-1 ${th.h2}`}>Fase 2 — Download Dettagli</h2>
           <p className={`text-sm ${th.sub}`}>
-            {countryLabel} • {network || "Tutti i network"}
+            {countryLabel} • {networks.length > 0 ? networks.join(", ") : "Tutti i network"}
           </p>
         </div>
 
