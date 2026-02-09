@@ -82,9 +82,9 @@ export function usePartnersForGlobe() {
         countriesMap,
       };
     },
-    staleTime: 10_000, // 10 seconds
+    staleTime: 5_000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 15_000, // Auto-refresh every 15s
+    refetchInterval: 8_000, // Auto-refresh every 8s for near-realtime
   });
 }
 
@@ -113,8 +113,8 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
       }));
     },
     enabled: !!countryCode,
-    staleTime: 10_000,
+    staleTime: 5_000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 15_000,
+    refetchInterval: 8_000,
   });
 }
