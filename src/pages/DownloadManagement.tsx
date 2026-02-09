@@ -153,7 +153,7 @@ export default function DownloadManagement() {
 
   const goBack = useCallback(() => {
     if (step === "configure") { setStep("choose"); setAction(null); }
-    if (step === "running") { setStep("configure"); }
+    if (step === "running") { setStep("choose"); setAction(null); }
   }, [step]);
 
   const th = t(isDark);
@@ -180,7 +180,7 @@ export default function DownloadManagement() {
 
           {/* Content area — scrollable */}
           <div className="flex-1 flex flex-col min-h-0 px-6 pb-6 overflow-auto">
-            {step === "choose" && <StepChoose onSelect={a => { setAction(a); setStep("configure"); }} />}
+            {step === "choose" && <StepChoose onSelect={a => { setAction(a); setStep("configure"); }} onGoToJobs={() => { setAction("download"); setStep("running"); }} />}
             {step === "configure" && action === "download" && <DownloadWizard onStartRunning={() => setStep("running")} />}
             {step === "configure" && action === "enrich" && <EnrichConfigure onStart={() => setStep("running")} />}
             {step === "configure" && action === "network" && <NetworkConfigure />}
@@ -196,7 +196,7 @@ export default function DownloadManagement() {
 // ═══════════════════════════════════════════════════════════════
 // STEP 1 - Choose Action
 // ═══════════════════════════════════════════════════════════════
-function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
+function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => void; onGoToJobs: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
   const { data: jobs } = useDownloadJobs();
@@ -214,14 +214,22 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8">
-      {/* Active jobs banner */}
+      {/* Active jobs banner — clickable */}
       {activeJobs.length > 0 && (
-        <div className={`w-full max-w-3xl ${th.panel} border ${th.panelAmber} rounded-2xl p-4`}>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${th.pulse}`} />
-            <p className={`text-sm font-medium ${th.h2}`}>
-              {activeJobs.length} job {activeJobs.length === 1 ? "attivo" : "attivi"} in background
-            </p>
+        <button
+          onClick={onGoToJobs}
+          className={`w-full max-w-3xl ${th.panel} border ${th.panelAmber} rounded-2xl p-4 text-left cursor-pointer transition-all hover:scale-[1.01] ${isDark ? "hover:border-amber-400/60" : "hover:border-sky-400"}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${th.pulse}`} />
+              <p className={`text-sm font-medium ${th.h2}`}>
+                {activeJobs.length} job {activeJobs.length === 1 ? "attivo" : "attivi"} in background
+              </p>
+            </div>
+            <div className={`flex items-center gap-1 text-xs font-medium ${isDark ? "text-amber-400" : "text-sky-600"}`}>
+              Visualizza <ArrowRight className="w-3.5 h-3.5" />
+            </div>
           </div>
           <div className="space-y-1.5">
             {activeJobs.map(j => (
@@ -231,7 +239,7 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
               </div>
             ))}
           </div>
-        </div>
+        </button>
       )}
 
       <div className="text-center">
@@ -1503,6 +1511,43 @@ function JobCard({ job, pauseResume, updateSpeed }: {
       <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
         <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
       </div>
+
+      {/* Timing metrics */}
+      {(isActive || isPaused) && job.current_index > 0 && (() => {
+        const elapsedMs = new Date(job.updated_at).getTime() - new Date(job.created_at).getTime();
+        const elapsedSec = Math.max(elapsedMs / 1000, 1);
+        const avgSec = elapsedSec / job.current_index;
+        const netSec = Math.max(avgSec - job.delay_seconds, 0);
+        const remainingSec = avgSec * (job.total_count - job.current_index);
+        const perMin = (job.current_index / elapsedSec) * 60;
+
+        const fmtTime = (s: number) => {
+          if (s >= 3600) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}min`;
+          if (s >= 60) return `${Math.floor(s / 60)}min ${Math.floor(s % 60)}s`;
+          return `${Math.floor(s)}s`;
+        };
+
+        return (
+          <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs p-3 rounded-lg border ${th.infoBox}`}>
+            <div className={`flex items-center gap-1.5 ${th.body}`}>
+              <Timer className="w-3 h-3 flex-shrink-0" />
+              <span>Media: <span className={`font-mono font-bold ${th.hi}`}>{avgSec.toFixed(1)}s</span>/profilo</span>
+            </div>
+            <div className={`flex items-center gap-1.5 ${th.body}`}>
+              <Zap className="w-3 h-3 flex-shrink-0" />
+              <span>Scraping netto: <span className={`font-mono font-bold ${th.hi}`}>{netSec.toFixed(1)}s</span></span>
+            </div>
+            <div className={`flex items-center gap-1.5 ${th.body}`}>
+              <Activity className="w-3 h-3 flex-shrink-0" />
+              <span>Velocità: <span className={`font-mono font-bold ${th.hi}`}>{perMin.toFixed(1)}</span>/min</span>
+            </div>
+            <div className={`flex items-center gap-1.5 ${th.body}`}>
+              <ArrowRight className="w-3 h-3 flex-shrink-0" />
+              <span>Rimanenti: <span className={`font-mono font-bold ${th.hi}`}>~{fmtTime(remainingSec)}</span></span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Last processed */}
       {job.last_processed_company && (
