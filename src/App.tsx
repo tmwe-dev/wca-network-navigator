@@ -12,6 +12,7 @@ import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
 import Export from "./pages/Export";
 import DownloadManagement from "./pages/DownloadManagement";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/export" element={<Export />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

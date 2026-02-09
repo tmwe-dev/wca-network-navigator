@@ -359,16 +359,50 @@ Deno.serve(async (req) => {
     const url = `https://www.wcaworld.com/directory/members/${wcaId}`
     console.log(`Scraping WCA member profile: ${url}`)
 
-    // ── Step 1: Firecrawl with markdown (with WCA auth cookie if available) ──
-    const wcaCookie = Deno.env.get('WCA_SESSION_COOKIE')
+    // ── Step 1: Get WCA credentials from app_settings ──
+    let wcaUsername: string | null = null
+    let wcaPassword: string | null = null
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['wca_username', 'wca_password'])
+    if (settingsData) {
+      for (const s of settingsData) {
+        if (s.key === 'wca_username') wcaUsername = s.value
+        if (s.key === 'wca_password') wcaPassword = s.value
+      }
+    }
+
+    // ── Step 2: Firecrawl scrape with login actions if credentials available ──
     const scrapeBody: any = {
       url,
       formats: ['markdown', 'rawHtml'],
     }
-    if (wcaCookie) {
-      scrapeBody.headers = { 'Cookie': wcaCookie }
-      console.log('Using WCA session cookie for authenticated scraping')
+
+    // If we have WCA credentials, use Firecrawl actions to login first
+    if (wcaUsername && wcaPassword) {
+      console.log('Using WCA credentials for authenticated scraping via Firecrawl actions')
+      scrapeBody.url = 'https://www.wcaworld.com/Account/Login'
+      scrapeBody.actions = [
+        { type: 'wait', milliseconds: 1000 },
+        { type: 'write', selector: 'input[name="usr"]', text: wcaUsername },
+        { type: 'write', selector: 'input[name="pwd"]', text: wcaPassword },
+        { type: 'click', selector: 'button[type="submit"], input[type="submit"], .btn-login, form button' },
+        { type: 'wait', milliseconds: 3000 },
+        { type: 'navigate', url },
+        { type: 'wait', milliseconds: 2000 },
+      ]
+    } else {
+      // Fallback: try WCA_SESSION_COOKIE env var
+      const wcaCookie = Deno.env.get('WCA_SESSION_COOKIE')
+      if (wcaCookie) {
+        scrapeBody.headers = { 'Cookie': wcaCookie }
+        console.log('Using WCA session cookie for authenticated scraping')
+      } else {
+        console.log('No WCA credentials or cookie - scraping without auth')
+      }
     }
+
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
