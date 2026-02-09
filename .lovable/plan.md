@@ -1,63 +1,126 @@
 
-# Piano: KPI Visivi + Arricchimento Dati dal Sito Web del Partner
+# Piano: Social Links, Selezione Multipla, Attivita e Rappresentanti
 
-## Cosa faremo
+## Panoramica
 
-### 1. Badge KPI nella testata della scheda partner (Agents)
+Tre grandi novita per la pagina Agenti:
 
-Sotto il nome azienda, aggiungeremo una riga di **badge grandi e colorati** con le informazioni chiave per una valutazione rapida:
+1. **Link social** (Instagram, Facebook, LinkedIn) per ogni partner/contatto
+2. **Selezione multipla** di agenti dalla lista con azioni di massa
+3. **Sistema attivita** con assegnazione a rappresentanti interni
 
-- **Anni WCA** - es. "22 anni" con icona calendario
-- **Filiali** - es. "3 sedi" con icona edificio (numero di branch offices)
-- **Paesi** - es. "2 paesi" con icona mappamondo (paesi distinti dalle filiali)
-- **Rating** - stelline come gia presente
-- **Gold Medallion** - badge dorato se presente
-- **Certificazioni** - conteggio (es. "3 cert.")
+---
 
-Questi badge saranno visibili sia nella lista a sinistra (in versione compatta) che nel pannello dettaglio a destra (in versione grande).
+## 1. Link Social per Partner
 
-### 2. Arricchimento dal sito web del partner (Firecrawl)
+Aggiungiamo i profili social direttamente nella tabella `partner_contacts` (dove gia esistono i contatti delle persone) e nella tabella `partners` (per i profili aziendali).
 
-Creeremo una nuova Edge Function `enrich-partner-website` che:
-- Prende il sito web del partner (campo `website` nel DB)
-- Usa Firecrawl per fare scraping della homepage
-- Usa l'AI (Gemini) per estrarre informazioni aggiuntive:
-  - Fatturato (se menzionato)
-  - Numero dipendenti
-  - Flotta propria (mezzi di proprieta)
-  - Magazzini propri (mq se indicato)
-  - Anno di fondazione
-  - Specializzazioni aggiuntive non presenti nel profilo WCA
-- Salva queste informazioni in un nuovo campo `enrichment_data` (jsonb) nella tabella `partners`
+**Database:**
+- Nuova tabella `partner_social_links` con colonne:
+  - `id` (uuid, PK)
+  - `partner_id` (uuid, FK -> partners)
+  - `contact_id` (uuid, FK -> partner_contacts, nullable - se associato a una persona specifica)
+  - `platform` (enum: `linkedin`, `facebook`, `instagram`, `twitter`, `whatsapp`)
+  - `url` (text)
+  - `created_at` (timestamp)
+- RLS: accesso pubblico come le altre tabelle
 
-### 3. Bottone "Arricchisci dati" nella scheda
+**UI nella scheda Agente:**
+- Sezione "Social" con icone cliccabili per ogni piattaforma
+- Possibilita di aggiungere/modificare link social manualmente
+- Nella card "Contatti Ufficio", ogni persona mostra le sue icone social
 
-Nel pannello dettaglio dell'agente, aggiungeremo un bottone che avvia lo scraping del sito web del partner e mostra i risultati trovati.
+---
+
+## 2. Selezione Multipla Agenti
+
+Nella lista a sinistra, aggiungiamo checkbox per selezionare piu agenti contemporaneamente.
+
+**UI:**
+- Checkbox accanto a ogni agente nella lista
+- Barra azioni flottante in basso quando ci sono selezioni attive, con:
+  - Contatore: "X agenti selezionati"
+  - Bottoni azione: "Invia Email", "Inserisci in Campagna", "Assegna Attivita", "Registra Telefonata"
+  - "Seleziona tutti" / "Deseleziona"
+- Stato gestito con `useState<Set<string>>` come gia fatto nella pagina Campaigns
+
+---
+
+## 3. Sistema Attivita e Rappresentanti
+
+**Database - Nuove tabelle:**
+
+Tabella `team_members` (i rappresentanti interni):
+- `id` (uuid, PK)
+- `name` (text)
+- `email` (text, nullable)
+- `role` (text, nullable - es. "Sales", "Account Manager")
+- `is_active` (boolean, default true)
+- `created_at` (timestamp)
+
+Tabella `activities` (le attivita assegnate):
+- `id` (uuid, PK)
+- `partner_id` (uuid, FK -> partners)
+- `assigned_to` (uuid, FK -> team_members, nullable)
+- `activity_type` (enum: `send_email`, `phone_call`, `add_to_campaign`, `meeting`, `follow_up`, `other`)
+- `title` (text)
+- `description` (text, nullable)
+- `status` (enum: `pending`, `in_progress`, `completed`, `cancelled`)
+- `priority` (enum: `low`, `medium`, `high`)
+- `due_date` (date, nullable)
+- `completed_at` (timestamp, nullable)
+- `created_at` (timestamp)
+
+RLS: accesso pubblico come le altre tabelle.
+
+**UI - Dialogo "Assegna Attivita":**
+- Modale con:
+  - Tipo attivita (dropdown)
+  - Titolo (precompilato in base al tipo, es. "Inviare email a [N] agenti")
+  - Descrizione/note
+  - Priorita
+  - Data scadenza
+  - Assegna a (dropdown con lista rappresentanti, con opzione "Aggiungi nuovo")
+- Crea una riga in `activities` per ciascun partner selezionato
+
+**UI - Gestione Rappresentanti:**
+- Piccolo dialog accessibile dal dropdown "Assegna a" per aggiungere nuovi rappresentanti
+- Lista editabile dei rappresentanti (nome, email, ruolo)
+
+**UI - Vista attivita nel dettaglio agente:**
+- Nuova card "Attivita" nel pannello destro che mostra le attivita pendenti e completate per quel partner
+- Badge con contatore attivita nella lista laterale
 
 ---
 
 ## Dettagli Tecnici
 
-### Database
-- Aggiungere colonna `enrichment_data` (jsonb, nullable) alla tabella `partners`
-- Aggiungere colonna `enriched_at` (timestamp, nullable) per sapere quando e stato arricchito
+### Migrazione SQL
+Una singola migrazione con:
+- Enum `social_platform` (linkedin, facebook, instagram, twitter, whatsapp)
+- Tabella `partner_social_links`
+- Tabella `team_members`
+- Enum `activity_type` (send_email, phone_call, add_to_campaign, meeting, follow_up, other)
+- Enum `activity_status` (pending, in_progress, completed, cancelled)
+- Tabella `activities`
+- RLS policies per tutte le nuove tabelle
 
-### Nuova Edge Function: `enrich-partner-website`
-- Input: `partnerId`
-- Legge il partner dal DB, prende il `website`
-- Chiama Firecrawl con formato `markdown` sulla homepage
-- Passa il markdown a Gemini per estrarre dati strutturati (fatturato, dipendenti, flotta, magazzini, anno fondazione)
-- Aggiorna il record partner con i dati trovati in `enrichment_data`
+### File da creare
+- `src/components/agents/SocialLinks.tsx` - Componente per visualizzare/editare link social
+- `src/components/agents/BulkActionBar.tsx` - Barra azioni per selezione multipla
+- `src/components/agents/AssignActivityDialog.tsx` - Modale assegnazione attivita
+- `src/components/agents/ActivityList.tsx` - Lista attivita nel dettaglio partner
+- `src/hooks/useTeamMembers.ts` - Hook per CRUD rappresentanti
+- `src/hooks/useActivities.ts` - Hook per CRUD attivita
 
-### UI - Pagina Agents (`src/pages/Agents.tsx`)
-- **Header KPI row**: Riga di badge colorati sotto il nome azienda con:
-  - Anni WCA (calcolato da `member_since`)
-  - Numero filiali (da `branch_cities`)
-  - Paesi coperti (paesi unici dalle filiali)
-  - Numero certificazioni
-  - Gold Medallion (se presente)
-- **Sezione "Dati dal sito web"**: Card dedicata che mostra i dati arricchiti (fatturato, dipendenti, flotta, magazzini)
-- **Bottone "Arricchisci dal sito"**: Disponibile solo se il partner ha un sito web, lancia lo scraping
+### File da modificare
+- `src/pages/Agents.tsx` - Aggiungere checkbox, stato selezione multipla, barra azioni, social links nel dettaglio, card attivita
+- `src/hooks/usePartners.ts` - Includere `partner_social_links` nella query di dettaglio
 
-### Lista laterale
-- Aggiungere mini-badge con anni WCA e numero filiali per ogni partner nella lista a sinistra
+### Flusso operativo tipico
+1. L'utente filtra gli agenti per paese/servizio
+2. Seleziona 20 agenti con le checkbox
+3. Clicca "Assegna Attivita"
+4. Sceglie tipo "Inviare Email", assegna a "Luca", data scadenza domani
+5. Il sistema crea 20 righe in `activities`, una per partner
+6. Luca apre la pagina e vede le sue 20 attivita da completare
