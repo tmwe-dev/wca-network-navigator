@@ -289,6 +289,14 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
     setSub("details");
   };
 
+  const handleSaveIdsOnly = () => {
+    // Return to country selection after saving IDs
+    setSub("country");
+    setCountries([]);
+    setNetwork("");
+    setDiscoveredMembers([]);
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Compact stepper + back in one row */}
@@ -329,6 +337,7 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
           countries={countries}
           network={network}
           onComplete={handleListingComplete}
+          onSaveIdsOnly={handleSaveIdsOnly}
         />
       )}
       {sub === "details" && discoveredMembers.length > 0 && (
@@ -354,32 +363,58 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const [showOnlyMissing, setShowOnlyMissing] = useState(false);
+  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored">("all");
+  const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
 
-  const { data: exploredCodes = [] } = useQuery({
-    queryKey: ["explored-countries"],
+  // Partner counts per country
+  const { data: partnerCounts = {} } = useQuery({
+    queryKey: ["partner-counts-by-country"],
     queryFn: async () => {
       const { data } = await supabase
         .from("partners")
         .select("country_code")
         .not("country_code", "is", null);
-      const unique = new Set((data || []).map(r => r.country_code));
-      return Array.from(unique);
+      const counts: Record<string, number> = {};
+      (data || []).forEach(r => { counts[r.country_code] = (counts[r.country_code] || 0) + 1; });
+      return counts;
     },
     staleTime: 60_000,
   });
 
+  // Directory cache counts per country
+  const { data: cacheCounts = {} } = useQuery({
+    queryKey: ["cache-counts-by-country"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("directory_cache")
+        .select("country_code, total_results");
+      const counts: Record<string, number> = {};
+      (data || []).forEach((r: any) => { counts[r.country_code] = (counts[r.country_code] || 0) + (r.total_results || 0); });
+      return counts;
+    },
+    staleTime: 60_000,
+  });
+
+  const exploredSet = new Set(Object.keys(partnerCounts).concat(Object.keys(cacheCounts)));
   const selectedCodes = new Set(selected.map(c => c.code));
-  const exploredSet = new Set(exploredCodes);
 
   const filtered = WCA_COUNTRIES.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
-    if (showOnlyMissing) return !exploredSet.has(c.code);
+    if (filterMode === "missing") return !exploredSet.has(c.code);
+    if (filterMode === "explored") return exploredSet.has(c.code);
     return true;
+  }).sort((a, b) => {
+    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "partners") return (partnerCounts[b.code] || 0) - (partnerCounts[a.code] || 0);
+    // completion: show incomplete first (have cache but not fully downloaded)
+    const compA = cacheCounts[a.code] ? (partnerCounts[a.code] || 0) / cacheCounts[a.code] : exploredSet.has(a.code) ? 1 : -1;
+    const compB = cacheCounts[b.code] ? (partnerCounts[b.code] || 0) / cacheCounts[b.code] : exploredSet.has(b.code) ? 1 : -1;
+    return compA - compB;
   });
 
   const missingCount = WCA_COUNTRIES.filter(c => !exploredSet.has(c.code)).length;
+  const exploredCount = WCA_COUNTRIES.filter(c => exploredSet.has(c.code)).length;
 
   return (
     <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
@@ -389,7 +424,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
       </div>
 
       {selected.length > 0 && (
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-3xl">
           <div className="flex items-center gap-2 mb-2">
             <span className={`text-xs ${th.label}`}>Selezionati:</span>
             <Badge variant="secondary" className="text-xs">{selected.length}</Badge>
@@ -408,29 +443,54 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
         </div>
       )}
 
-      <div className="w-full max-w-xl flex gap-2">
-        <div className="relative flex-1">
+      {/* Search + Filters + Sort */}
+      <div className="w-full max-w-3xl flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
           <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
         </div>
-        <button
-          onClick={() => setShowOnlyMissing(!showOnlyMissing)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
-            showOnlyMissing
-              ? isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-sky-100 border-sky-300 text-sky-700"
-              : th.optCard
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          Mai esplorati ({missingCount})
-        </button>
+        {/* Filter buttons */}
+        {(["all", "explored", "missing"] as const).map(mode => {
+          const labels = { all: `Tutti (${WCA_COUNTRIES.length})`, explored: `Già esplorati (${exploredCount})`, missing: `Mai esplorati (${missingCount})` };
+          const active = filterMode === mode;
+          return (
+            <button
+              key={mode}
+              onClick={() => setFilterMode(mode)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs transition-all whitespace-nowrap ${
+                active
+                  ? isDark ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                  : th.optCard
+              }`}
+            >
+              {mode === "all" && <Globe className="w-3.5 h-3.5" />}
+              {mode === "explored" && <CheckCircle className="w-3.5 h-3.5" />}
+              {mode === "missing" && <Download className="w-3.5 h-3.5" />}
+              {labels[mode]}
+            </button>
+          );
+        })}
+        {/* Sort */}
+        <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+          <SelectTrigger className={`w-[160px] h-9 text-xs ${th.selTrigger}`}>
+            <SelectValue placeholder="Ordina per..." />
+          </SelectTrigger>
+          <SelectContent className={th.selContent}>
+            <SelectItem value="name">Nome A-Z</SelectItem>
+            <SelectItem value="partners">N° partner ↓</SelectItem>
+            <SelectItem value="completion">Completamento</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <ScrollArea className="flex-1 w-full max-w-xl">
-        <div className="grid grid-cols-2 gap-2 pr-4">
+      <ScrollArea className="flex-1 w-full max-w-3xl">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pr-4">
           {filtered.map(c => {
             const isSelected = selectedCodes.has(c.code);
-            const isExplored = exploredSet.has(c.code);
+            const pCount = partnerCounts[c.code] || 0;
+            const cCount = cacheCounts[c.code] || 0;
+            const isExplored = pCount > 0 || cCount > 0;
+            const isComplete = cCount > 0 && pCount >= cCount;
             return (
               <button
                 key={c.code}
@@ -441,7 +501,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                     : th.optCard
                 }`}
               >
-                {/* Elegant gradient overlay for explored countries */}
                 {isExplored && !isSelected && (
                   <div className={`absolute inset-0 pointer-events-none ${
                     isDark
@@ -452,10 +511,26 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                 <span className="relative text-lg">{getCountryFlag(c.code)}</span>
                 <div className="relative min-w-0 flex-1">
                   <p className="text-sm truncate">{c.name}</p>
-                  <p className={`text-xs ${th.dim}`}>{c.code}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {pCount > 0 && (
+                      <span className={`text-[10px] ${th.acEm}`}>{pCount} partner</span>
+                    )}
+                    {cCount > 0 && (
+                      <span className={`text-[10px] ${th.dim}`}>{cCount} in directory</span>
+                    )}
+                    {pCount === 0 && cCount === 0 && (
+                      <span className={`text-[10px] ${th.dim}`}>{c.code}</span>
+                    )}
+                  </div>
                 </div>
                 {isSelected && <CheckCircle className={`relative w-4 h-4 flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-500"}`} />}
-                {!isSelected && isExplored && (
+                {!isSelected && isComplete && (
+                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>Completo</span>
+                )}
+                {!isSelected && !isComplete && cCount > 0 && (
+                  <span className={`relative text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{pCount}/{cCount}</span>
+                )}
+                {!isSelected && !isComplete && cCount === 0 && pCount > 0 && (
                   <span className={`relative text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>DB</span>
                 )}
               </button>
@@ -465,7 +540,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
       </ScrollArea>
 
       {selected.length > 0 && (
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-3xl">
           <Button onClick={onConfirm} className={`w-full ${th.btnPri}`}>
             <ArrowRight className="w-4 h-4 mr-2" />
             Prosegui con {selected.length} {selected.length === 1 ? "paese" : "paesi"}
@@ -515,10 +590,11 @@ function PickNetwork({ country, onSelect }: {
 // FASE 1: Directory Scanner — scrapes the listing page by page
 // Uses directory_cache to remember previous scans
 // ═══════════════════════════════════════════════════════════════
-function DirectoryScanner({ countries, network, onComplete }: {
+function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
   countries: { code: string; name: string }[];
   network: string;
   onComplete: (members: DirectoryMember[]) => void;
+  onSaveIdsOnly?: () => void;
 }) {
   const isDark = useTheme();
   const th = t(isDark);
@@ -860,6 +936,14 @@ function DirectoryScanner({ countries, network, onComplete }: {
                   <Download className="w-4 h-4 mr-1" /> Scarica {missingCount} mancanti
                 </Button>
               )}
+              {!isRunning && !isComplete && totalCount > 0 && onSaveIdsOnly && (
+                <Button variant="outline" onClick={() => {
+                  toast({ title: "Lista ID salvata", description: `Salvati ${totalCount} ID per ${countryLabel}. Potrai scaricare i profili completi in futuro.` });
+                  onSaveIdsOnly();
+                }} className={th.btnPause}>
+                  <List className="w-4 h-4 mr-1" /> Salva solo lista ID
+                </Button>
+              )}
               {!isRunning && !isComplete && downloadedCount > 0 && missingCount === 0 && (
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50 text-emerald-700"}`}>
                   <CheckCircle className="w-4 h-4" />
@@ -890,6 +974,14 @@ function DirectoryScanner({ countries, network, onComplete }: {
                 <Button onClick={() => onComplete(missingMembers as DirectoryMember[])} className={th.btnPri}>
                   <Download className="w-4 h-4 mr-2" />
                   Scarica {missingCount} mancanti
+                </Button>
+              )}
+              {isComplete && totalCount > 0 && onSaveIdsOnly && (
+                <Button variant="outline" onClick={() => {
+                  toast({ title: "Lista ID salvata", description: `Salvati ${totalCount} ID per ${countryLabel}. Potrai scaricare i profili completi in futuro.` });
+                  onSaveIdsOnly();
+                }} className={th.btnPause}>
+                  <List className="w-4 h-4 mr-1" /> Salva solo lista ID
                 </Button>
               )}
               {isComplete && downloadedCount > 0 && missingCount === 0 && (
