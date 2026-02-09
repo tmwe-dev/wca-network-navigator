@@ -458,108 +458,87 @@ Deno.serve(async (req) => {
     const url = `https://www.wcaworld.com/directory/members/${wcaId}`
     console.log(`Scraping WCA member profile: ${url}`)
 
-    // ── Step 1: Get WCA credentials from app_settings ──
+    // ── Step 1: Get WCA settings from app_settings ──
     let wcaUsername: string | null = null
     let wcaPassword: string | null = null
+    let wcaSessionCookie: string | null = null
     const { data: settingsData } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['wca_username', 'wca_password'])
+      .in('key', ['wca_username', 'wca_password', 'wca_session_cookie'])
     if (settingsData) {
       for (const s of settingsData) {
         if (s.key === 'wca_username') wcaUsername = s.value
         if (s.key === 'wca_password') wcaPassword = s.value
+        if (s.key === 'wca_session_cookie') wcaSessionCookie = s.value
       }
     }
 
-    // ── Step 2: Firecrawl scrape with login actions if credentials available ──
+    // ── Step 2: Determine auth method (priority: DB cookie > env cookie > HTTP login > none) ──
     const scrapeBody: any = {
       url,
       formats: ['markdown', 'rawHtml'],
     }
 
-    // If we have WCA credentials, do HTTP login to get session cookies, then pass to Firecrawl
-    if (wcaUsername && wcaPassword) {
-      console.log('Using WCA credentials for authenticated scraping (HTTP login)')
-      
-      try {
-        // Step A: Get login page to capture __RequestVerificationToken and initial cookies
-        const loginPageRes = await fetch('https://www.wcaworld.com/Account/Login', {
-          method: 'GET',
-          redirect: 'manual',
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        })
-        const loginPageHtml = await loginPageRes.text()
-        const setCookies1 = loginPageRes.headers.getSetCookie?.() || []
-        
-        // Debug: find all input fields in the login form
-        const inputFields = [...loginPageHtml.matchAll(/<input[^>]*name="([^"]+)"[^>]*/gi)].map(m => m[1])
-        console.log('Login page input fields:', inputFields.join(', '))
-        console.log('Login page status:', loginPageRes.status, 'cookies:', setCookies1.length)
-        
-        // Extract verification token
-        const tokenMatch = loginPageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)
-        const token = tokenMatch?.[1] || ''
-        console.log('Token found:', !!token, token ? token.substring(0, 20) + '...' : 'none')
-        
-        // Collect cookies from login page
-        const cookieJar: string[] = []
-        for (const sc of setCookies1) {
-          const name = sc.split('=')[0]
-          const val = sc.split(';')[0]
-          cookieJar.push(val)
-        }
-        
-        // Step B: POST login form
-        const formBody = new URLSearchParams({
-          usr: wcaUsername,
-          pwd: wcaPassword,
-          __RequestVerificationToken: token,
-        })
-        
-        const loginRes = await fetch('https://www.wcaworld.com/Account/Login', {
-          method: 'POST',
-          redirect: 'manual',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Cookie': cookieJar.join('; '),
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer': 'https://www.wcaworld.com/Account/Login',
-          },
-          body: formBody.toString(),
-        })
-        
-        // Collect all Set-Cookie from response (including redirects)
-        const setCookies2 = loginRes.headers.getSetCookie?.() || []
-        for (const sc of setCookies2) {
-          const val = sc.split(';')[0]
-          // Replace existing or add new
-          const name = val.split('=')[0]
-          const idx = cookieJar.findIndex(c => c.startsWith(name + '='))
-          if (idx >= 0) cookieJar[idx] = val
-          else cookieJar.push(val)
-        }
-        
-        const sessionCookieStr = cookieJar.join('; ')
-        console.log(`Login response status: ${loginRes.status}, cookies: ${cookieJar.length}, new cookies: ${setCookies2.length}`)
-        console.log('Login response headers:', [...loginRes.headers.entries()].filter(([k]) => k.startsWith('set-cookie') || k === 'location').map(([k,v]) => `${k}: ${v.substring(0, 80)}`).join(' | '))
-        // Check if login was successful by following redirect or checking response
-        const loginResBody = await loginRes.text()
-        console.log('Login response body preview:', loginResBody.substring(0, 300))
-        
-        // Step C: Use cookies in Firecrawl to scrape authenticated profile
-        scrapeBody.headers = { 'Cookie': sessionCookieStr }
-      } catch (loginErr) {
-        console.warn('HTTP login failed, falling back to unauthenticated:', loginErr)
-      }
+    if (wcaSessionCookie) {
+      // Priority 1: Session cookie from Settings page
+      scrapeBody.headers = { 'Cookie': wcaSessionCookie }
+      console.log('Using WCA session cookie from app_settings for authenticated scraping')
     } else {
-      // Fallback: try WCA_SESSION_COOKIE env var
-      const wcaCookie = Deno.env.get('WCA_SESSION_COOKIE')
-      if (wcaCookie) {
-        scrapeBody.headers = { 'Cookie': wcaCookie }
-        console.log('Using WCA session cookie for authenticated scraping')
+      const envCookie = Deno.env.get('WCA_SESSION_COOKIE')
+      if (envCookie) {
+        // Priority 2: Environment variable
+        scrapeBody.headers = { 'Cookie': envCookie }
+        console.log('Using WCA session cookie from env for authenticated scraping')
+      } else if (wcaUsername && wcaPassword) {
+        // Priority 3: HTTP login attempt
+        console.log('Attempting HTTP login with WCA credentials')
+        try {
+          const loginPageRes = await fetch('https://www.wcaworld.com/Account/Login', {
+            method: 'GET',
+            redirect: 'manual',
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          })
+          const loginPageHtml = await loginPageRes.text()
+          const setCookies1 = loginPageRes.headers.getSetCookie?.() || []
+          const tokenMatch = loginPageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)
+          const token = tokenMatch?.[1] || ''
+          const cookieJar: string[] = setCookies1.map(sc => sc.split(';')[0])
+
+          const formBody = new URLSearchParams({
+            usr: wcaUsername,
+            pwd: wcaPassword,
+            __RequestVerificationToken: token,
+          })
+
+          const loginRes = await fetch('https://www.wcaworld.com/Account/Login', {
+            method: 'POST',
+            redirect: 'manual',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Cookie': cookieJar.join('; '),
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Referer': 'https://www.wcaworld.com/Account/Login',
+            },
+            body: formBody.toString(),
+          })
+
+          const setCookies2 = loginRes.headers.getSetCookie?.() || []
+          for (const sc of setCookies2) {
+            const val = sc.split(';')[0]
+            const name = val.split('=')[0]
+            const idx = cookieJar.findIndex(c => c.startsWith(name + '='))
+            if (idx >= 0) cookieJar[idx] = val
+            else cookieJar.push(val)
+          }
+
+          scrapeBody.headers = { 'Cookie': cookieJar.join('; ') }
+          console.log(`HTTP login status: ${loginRes.status}, cookies: ${cookieJar.length}`)
+        } catch (loginErr) {
+          console.warn('HTTP login failed, scraping without auth:', loginErr)
+        }
       } else {
-        console.log('No WCA credentials or cookie - scraping without auth')
+        console.log('No WCA auth available - scraping without auth')
       }
     }
 
