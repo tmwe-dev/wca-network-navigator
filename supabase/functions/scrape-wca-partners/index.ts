@@ -191,6 +191,20 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
 
   // ── Contacts ──
   const contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[] = []
+
+  function extractMultiLineField(block: string, fieldName: string): string | null {
+    const sameLineRegex = new RegExp(fieldName + '\\s*:\\s*(.+)', 'i')
+    const sameLineMatch = block.match(sameLineRegex)
+    if (sameLineMatch && sameLineMatch[1].trim().length > 0) {
+      return sameLineMatch[1].trim()
+    }
+    const multiLineRegex = new RegExp(fieldName + '\\s*:\\s*\\n+\\s*(.+)', 'i')
+    const multiLineMatch = block.match(multiLineRegex)
+    if (multiLineMatch && multiLineMatch[1].trim().length > 0) {
+      return multiLineMatch[1].trim()
+    }
+    return null
+  }
   
   // Strategy 1: Split by "Name:" to handle WCA inline format (Name:X Title:Y Email:Z all on one line)
   const nameBasedBlocks = content.split(/(?=Name\s*:)/i).slice(1)
