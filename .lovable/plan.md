@@ -1,66 +1,51 @@
 
 
-# Ottimizzazione Velocita Download: da 29s a ~5s per profilo
+# Fix: Slider Delay nel JobCard
 
-## Analisi del collo di bottiglia
+## Problema
+Il cursore della velocita (delay) nel pannello di un job attivo ha due bug:
 
-Il tempo attuale di ~29 secondi per profilo e causato da 3 operazioni sequenziali:
+1. **Nessun debounce**: `handleSpeedChange` chiama `updateSpeed.mutate()` ad ogni micro-movimento del cursore, inviando decine di richieste al database in un secondo
+2. **Nessuna invalidazione cache**: `useUpdateJobSpeed` non invalida la query `download-jobs`, quindi quando arriva il prossimo aggiornamento realtime, il valore del cursore torna indietro alla posizione precedente (effetto "snap-back")
 
-| Fase | Tempo stimato | Causa |
-|------|--------------|-------|
-| Firecrawl con estrazione LLM | 15-20s | Usa `formats: ['extract']` che attiva un LLM lato Firecrawl per estrarre i dati |
-| Analisi AI (Lovable gateway) | 5-10s | Chiamata sincrona ad `analyze-partner`, attesa completa prima di rispondere |
-| Query DB sequenziali | 2-3s | Ogni certificazione, network e contatto viene verificato uno per uno |
+## Soluzione
 
-## Strategia di ottimizzazione
+### File: `src/hooks/useDownloadJobs.ts`
+- Aggiungere `queryClient` e `onSuccess` con invalidazione della query `download-jobs` in `useUpdateJobSpeed`
 
-### 1. Firecrawl: da `extract` a `markdown` + parsing regex (risparmio: ~12-15s)
+### File: `src/pages/DownloadManagement.tsx` (componente `JobCard`)
+- Aggiungere uno stato locale `localDelayIdx` per tracciare la posizione del cursore durante il drag
+- Usare `onValueCommit` invece di `onValueChange` per inviare la mutazione solo quando l'utente rilascia il cursore (il componente Radix Slider supporta nativamente `onValueCommit`)
+- Usare `onValueChange` solo per aggiornare lo stato locale visivo
+- Questo elimina completamente il flooding di richieste e il problema dello snap-back
 
-Invece di chiedere a Firecrawl di usare un LLM per estrarre i dati (lento e costoso), scarichiamo solo il markdown della pagina e facciamo il parsing noi con regex/string matching deterministico. Questo e lo stesso approccio gia usato con successo per `scrape-wca-directory`.
+### Dettaglio tecnico
 
-- Cambiare `formats: ['extract']` in `formats: ['markdown']`
-- Rimuovere `waitFor: 5000` (non serve per markdown)
-- Rimuovere tutto il blocco `extract: { prompt, schema }`
-- Implementare funzioni di parsing regex per estrarre: company_name, city, country, email, phone, website, address, profile_description, member_since, certifications, networks, contacts, branch_offices
-- Il formato delle pagine WCA e strutturato e prevedibile, ideale per regex
+Nel `JobCard`, il codice attuale:
+```
+<Slider value={[delayIdx]} onValueChange={([v]) => handleSpeedChange(v)} />
+```
 
-### 2. Analisi AI: da sincrona a fire-and-forget (risparmio: ~5-10s)
+Diventa:
+```
+const [localDelayIdx, setLocalDelayIdx] = useState(delayIdx);
 
-Attualmente `scrape-wca-partners` chiama `analyze-partner` e ATTENDE la risposta prima di restituire il risultato. Questo raddoppia inutilmente il tempo.
+// Sync when job data updates from realtime
+useEffect(() => setLocalDelayIdx(delayIdx), [delayIdx]);
 
-- Cambiare la chiamata ad `analyze-partner` da `await fetch(...)` + `await response.json()` a un semplice `fetch(...).catch(...)` senza await
-- L'analisi AI viene comunque eseguita in background e aggiorna il DB autonomamente
-- Il profilo base e immediatamente disponibile, l'arricchimento AI arriva dopo qualche secondo
+<Slider 
+  value={[localDelayIdx]} 
+  onValueChange={([v]) => setLocalDelayIdx(v)}        // solo visivo
+  onValueCommit={([v]) => handleSpeedChange(v)}        // salva al rilascio
+/>
+```
 
-### 3. DB: da query sequenziali a batch (risparmio: ~1-2s)
+In `useUpdateJobSpeed`, aggiungere invalidazione:
+```
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+}
+```
 
-- Certificazioni: invece di verificare una per una se esistono, fare un'unica query per ottenere quelle esistenti, filtrare le nuove, e inserirle tutte con un singolo `insert`
-- Networks e Contacts: stessa logica batch
-- Per gli update, usare `upsert` dove possibile
-
-## Tempo stimato dopo ottimizzazione
-
-| Fase | Tempo stimato |
-|------|--------------|
-| Firecrawl markdown (no LLM) | 2-3s |
-| Parsing regex locale | <0.1s |
-| DB batch insert/upsert | 0.5-1s |
-| AI analysis (fire-and-forget) | 0s (non bloccante) |
-| **Totale** | **~3-4s** |
-
-## File da modificare
-
-### `supabase/functions/scrape-wca-partners/index.ts`
-- Sostituire la chiamata Firecrawl `extract` con `markdown`
-- Aggiungere funzioni di parsing regex per tutti i campi
-- Rendere la chiamata ad `analyze-partner` non bloccante (fire-and-forget)
-- Batch delle query DB per certificazioni, network e contatti
-
-### `supabase/functions/process-download-job/index.ts`
-- Ridurre il `delay_seconds` di default da 10 a 3 secondi (dato che il processo e ora molto piu veloce)
-
-## Rischi e mitigazioni
-
-- **Parsing regex meno preciso del LLM**: le pagine WCA hanno un formato fisso e prevedibile, quindi il parsing deterministico e in realta piu affidabile. Eventuali campi non trovati vengono semplicemente lasciati null.
-- **AI analysis asincrona**: il rating e il summary arriveranno qualche secondo dopo il profilo base. La UI gia gestisce campi null, quindi non ci sono problemi di visualizzazione.
+Nessuna modifica al database o alle edge function.
 
