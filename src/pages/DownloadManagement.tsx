@@ -767,8 +767,8 @@ function DirectoryScanner({ countries, network, onComplete, onSaveIdsOnly }: {
   const [selectedMember, setSelectedMember] = useState<MemberWithStatus | null>(null);
 
   // Speed control
-  const [listingDelayIdx, setListingDelayIdx] = useState(3);
-  const listingDelayRef = useRef(DELAY_VALUES[3] * 1000);
+  const [listingDelayIdx, setListingDelayIdx] = useState(0);
+  const listingDelayRef = useRef(DELAY_VALUES[0] * 1000);
   useEffect(() => { listingDelayRef.current = DELAY_VALUES[listingDelayIdx] * 1000; }, [listingDelayIdx]);
 
   const abortRef = useRef(false);
