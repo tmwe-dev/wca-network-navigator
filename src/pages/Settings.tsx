@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2 } from "lucide-react";
+import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, Cookie } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export default function Settings() {
 
   const [wcaUsername, setWcaUsername] = useState("");
   const [wcaPassword, setWcaPassword] = useState("");
+  const [wcaCookie, setWcaCookie] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -22,6 +24,7 @@ export default function Settings() {
     if (settings) {
       setWcaUsername(settings["wca_username"] || "");
       setWcaPassword(settings["wca_password"] || "");
+      setWcaCookie(settings["wca_session_cookie"] || "");
     }
   }, [settings]);
 
@@ -30,6 +33,9 @@ export default function Settings() {
     try {
       await updateSetting.mutateAsync({ key: "wca_username", value: wcaUsername });
       await updateSetting.mutateAsync({ key: "wca_password", value: wcaPassword });
+      if (wcaCookie) {
+        await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
+      }
       toast.success("Credenziali WCA salvate con successo");
     } catch (err) {
       toast.error("Errore nel salvataggio delle credenziali");
@@ -39,6 +45,7 @@ export default function Settings() {
   };
 
   const isConfigured = !!settings?.["wca_username"] && !!settings?.["wca_password"];
+  const hasCookie = !!settings?.["wca_session_cookie"];
 
   if (isLoading) {
     return (
@@ -130,6 +137,70 @@ export default function Settings() {
                 <Save className="w-4 h-4 mr-2" />
               )}
               Salva Credenziali
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Cookie className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Cookie di Sessione WCA</CardTitle>
+                <CardDescription>
+                  Metodo alternativo: incolla il cookie dal browser dopo il login manuale su wcaworld.com
+                </CardDescription>
+              </div>
+            </div>
+            {hasCookie ? (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Presente
+              </Badge>
+            ) : (
+              <Badge variant="secondary">Non impostato</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="wca-cookie">Cookie di sessione</Label>
+            <Textarea
+              id="wca-cookie"
+              value={wcaCookie}
+              onChange={(e) => setWcaCookie(e.target.value)}
+              placeholder="Vai su wcaworld.com → Login → F12 → Console → document.cookie → Incolla qui"
+              rows={3}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Il cookie viene usato come metodo primario per lo scraping autenticato. Se assente, il sistema tenterà il login automatico con le credenziali sopra.
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={async () => {
+                if (!wcaCookie) return;
+                setSaving(true);
+                try {
+                  await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
+                  toast.success("Cookie di sessione salvato");
+                } catch {
+                  toast.error("Errore nel salvataggio");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving || !wcaCookie}
+              variant="outline"
+            >
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Salva Cookie
             </Button>
           </div>
         </CardContent>
