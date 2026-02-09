@@ -1,76 +1,66 @@
 
 
-# Fase 1: Filtri Popup + Logo Azienda + WhatsApp + Design Migliorato
+# Ottimizzazione Velocita Download: da 29s a ~5s per profilo
 
-## Panoramica
-Trasformare la pagina Partners per dare piu spazio alle schede, aggiungere il logo aziendale, integrare WhatsApp come canale di contatto rapido, e migliorare il design visivo delle card.
+## Analisi del collo di bottiglia
 
----
+Il tempo attuale di ~29 secondi per profilo e causato da 3 operazioni sequenziali:
 
-## 1. Filtri come Popup (non piu sidebar)
+| Fase | Tempo stimato | Causa |
+|------|--------------|-------|
+| Firecrawl con estrazione LLM | 15-20s | Usa `formats: ['extract']` che attiva un LLM lato Firecrawl per estrarre i dati |
+| Analisi AI (Lovable gateway) | 5-10s | Chiamata sincrona ad `analyze-partner`, attesa completa prima di rispondere |
+| Query DB sequenziali | 2-3s | Ogni certificazione, network e contatto viene verificato uno per uno |
 
-Rimuovere la sidebar laterale fissa dei filtri e sostituirla con un **Dialog/Sheet** che si apre cliccando il pulsante Filtri.
+## Strategia di ottimizzazione
 
-- Il pulsante Filtri nella barra di ricerca apre un pannello laterale (Sheet) o una modale
-- Dentro ci sono gli stessi filtri attuali: paese (con combobox ricercabile come fatto per Campaigns), preferiti, tipo partner, servizi
-- Quando si chiude, i filtri applicati restano attivi
-- Badge con conteggio filtri attivi visibile sul pulsante
-- Risultato: tutta la larghezza della pagina e disponibile per le card dei partner
+### 1. Firecrawl: da `extract` a `markdown` + parsing regex (risparmio: ~12-15s)
 
-### File: `src/pages/Partners.tsx`
-- Rimuovere il blocco `<aside>` con la sidebar
-- Importare `Sheet`, `SheetContent`, `SheetHeader`, `SheetTitle`, `SheetTrigger` da `@/components/ui/sheet`
-- Spostare il contenuto dei filtri dentro lo `SheetContent`
-- Sostituire il `Select` paese con Combobox ricercabile (Popover + Command) come gia fatto per Campaigns
-- Aggiungere badge conteggio filtri attivi sul pulsante Filter
-- Cambiare la griglia da `sm:grid-cols-2 xl:grid-cols-3` a `sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` per sfruttare lo spazio
+Invece di chiedere a Firecrawl di usare un LLM per estrarre i dati (lento e costoso), scarichiamo solo il markdown della pagina e facciamo il parsing noi con regex/string matching deterministico. Questo e lo stesso approccio gia usato con successo per `scrape-wca-directory`.
 
----
+- Cambiare `formats: ['extract']` in `formats: ['markdown']`
+- Rimuovere `waitFor: 5000` (non serve per markdown)
+- Rimuovere tutto il blocco `extract: { prompt, schema }`
+- Implementare funzioni di parsing regex per estrarre: company_name, city, country, email, phone, website, address, profile_description, member_since, certifications, networks, contacts, branch_offices
+- Il formato delle pagine WCA e strutturato e prevedibile, ideale per regex
 
-## 2. Logo Aziendale dalla Favicon del Sito Web
+### 2. Analisi AI: da sincrona a fire-and-forget (risparmio: ~5-10s)
 
-Mostrare il logo dell'azienda nella card usando la **favicon del sito web** tramite il servizio Google Favicons. Se il partner non ha un sito web, mostrare un'icona di avviso.
+Attualmente `scrape-wca-partners` chiama `analyze-partner` e ATTENDE la risposta prima di restituire il risultato. Questo raddoppia inutilmente il tempo.
 
-### File: `src/pages/Partners.tsx` (componente card)
-- Se `partner.website` esiste: mostrare `<img src="https://www.google.com/s2/favicons?domain=DOMINIO&sz=64" />` dentro un contenitore 48x48 con bordo arrotondato
-- Se `partner.website` non esiste: mostrare un'icona `Globe` barrata o un indicatore rosso "No web" come segnale negativo
-- Fallback con `onError`: se la favicon non carica, mostrare la bandiera del paese come attualmente
-- Questo non richiede modifiche al database ne edge function
+- Cambiare la chiamata ad `analyze-partner` da `await fetch(...)` + `await response.json()` a un semplice `fetch(...).catch(...)` senza await
+- L'analisi AI viene comunque eseguita in background e aggiorna il DB autonomamente
+- Il profilo base e immediatamente disponibile, l'arricchimento AI arriva dopo qualche secondo
 
----
+### 3. DB: da query sequenziali a batch (risparmio: ~1-2s)
 
-## 3. Pulsante WhatsApp nelle Card
+- Certificazioni: invece di verificare una per una se esistono, fare un'unica query per ottenere quelle esistenti, filtrare le nuove, e inserirle tutte con un singolo `insert`
+- Networks e Contacts: stessa logica batch
+- Per gli update, usare `upsert` dove possibile
 
-Aggiungere un pulsante WhatsApp nelle azioni rapide di ogni card.
+## Tempo stimato dopo ottimizzazione
 
-### File: `src/pages/Partners.tsx`
-- Aggiungere il pulsante WhatsApp usando `https://wa.me/NUMERO` (dopo aver pulito il numero da spazi, trattini, parentesi)
-- Usare il campo `partner.phone` o `partner.mobile` (preferire mobile se disponibile)
-- Icona: `MessageCircle` da lucide-react con colore verde WhatsApp
-- Il pulsante apre direttamente WhatsApp Web/App con il numero pre-compilato
+| Fase | Tempo stimato |
+|------|--------------|
+| Firecrawl markdown (no LLM) | 2-3s |
+| Parsing regex locale | <0.1s |
+| DB batch insert/upsert | 0.5-1s |
+| AI analysis (fire-and-forget) | 0s (non bloccante) |
+| **Totale** | **~3-4s** |
 
----
+## File da modificare
 
-## 4. Design Migliorato delle Card
+### `supabase/functions/scrape-wca-partners/index.ts`
+- Sostituire la chiamata Firecrawl `extract` con `markdown`
+- Aggiungere funzioni di parsing regex per tutti i campi
+- Rendere la chiamata ad `analyze-partner` non bloccante (fire-and-forget)
+- Batch delle query DB per certificazioni, network e contatti
 
-Rendere le card piu eleganti e informative a colpo d'occhio.
+### `supabase/functions/process-download-job/index.ts`
+- Ridurre il `delay_seconds` di default da 10 a 3 secondi (dato che il processo e ora molto piu veloce)
 
-### File: `src/pages/Partners.tsx`
-- **Header card**: logo a sinistra, nome azienda + citta/paese a destra, stellina favorito in alto a destra
-- **Rating visivo**: se `partner.rating` esiste, mostrare stelle colorate (1-5) sotto il nome
-- **Badge servizi migliorati**: usare icone piccole colorate invece di solo testo, con tooltip per il nome completo
-- **Indicatore sito web**: bordo verde sottile se ha website, bordo grigio/rosso se non ce l'ha
-- **Anni WCA**: mostrare con un piccolo badge colorato graduato (verde scuro = 10+ anni, verde = 5+, giallo = 2+, grigio = nuovo)
-- **Tipo ufficio**: piccola etichetta "HQ" o "Branch" nell'angolo della card
-- **Azioni rapide ridisegnate**: icone piu grandi, disposte in una riga uniforme con separatori, colori specifici per canale (verde WhatsApp, blu email, grigio telefono, azzurro web)
+## Rischi e mitigazioni
 
----
-
-## Riepilogo File Modificati
-
-| File | Modifiche |
-|------|-----------|
-| `src/pages/Partners.tsx` | Sidebar -> Sheet popup, logo favicon, WhatsApp, redesign card |
-
-Nessuna modifica al database. Nessuna nuova edge function. Tutto frontend.
+- **Parsing regex meno preciso del LLM**: le pagine WCA hanno un formato fisso e prevedibile, quindi il parsing deterministico e in realta piu affidabile. Eventuali campi non trovati vengono semplicemente lasciati null.
+- **AI analysis asincrona**: il rating e il summary arriveranno qualche secondo dopo il profilo base. La UI gia gestisce campi null, quindi non ci sono problemi di visualizzazione.
 
