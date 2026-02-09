@@ -11,7 +11,7 @@ import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
-  Search, Users, MapPin, Settings2, List, FileDown
+  Search, Users, MapPin, Settings2, List, FileDown, Activity
 } from "lucide-react";
 import {
   scrapeWcaPartnerById,
@@ -26,6 +26,10 @@ import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
 import { getCountryFlag } from "@/lib/countries";
+import {
+  useDownloadJobs, useCreateDownloadJob, usePauseResumeJob,
+  useUpdateJobSpeed, type DownloadJob
+} from "@/hooks/useDownloadJobs";
 
 // ─── Types ────────────────────────────────────────────────────
 type ActionType = "download" | "enrich" | "network";
@@ -195,6 +199,9 @@ export default function DownloadManagement() {
 function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
   const isDark = useTheme();
   const th = t(isDark);
+  const { data: jobs } = useDownloadJobs();
+  const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
+
   const actions = [
     { type: "download" as ActionType, icon: Download, title: "Scarica Partner", desc: "Scegli paese e network, cerca la lista, poi scarica i dettagli", color: "amber" },
     { type: "enrich" as ActionType, icon: Sparkles, title: "Arricchisci dal Sito", desc: "Leggi siti web di partner già scaricati con AI", color: "emerald" },
@@ -207,6 +214,26 @@ function StepChoose({ onSelect }: { onSelect: (a: ActionType) => void }) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8">
+      {/* Active jobs banner */}
+      {activeJobs.length > 0 && (
+        <div className={`w-full max-w-3xl ${th.panel} border ${th.panelAmber} rounded-2xl p-4`}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${th.pulse}`} />
+            <p className={`text-sm font-medium ${th.h2}`}>
+              {activeJobs.length} job {activeJobs.length === 1 ? "attivo" : "attivi"} in background
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {activeJobs.map(j => (
+              <div key={j.id} className={`flex items-center justify-between text-xs ${th.body}`}>
+                <span>{getCountryFlag(j.country_code)} {j.country_name} • {j.network_name}</span>
+                <span className={`font-mono ${th.hi}`}>{j.current_index}/{j.total_count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="text-center">
         <h1 className={`text-2xl mb-2 ${th.h1}`}>Cosa vuoi fare?</h1>
         <p className={`text-sm ${th.sub}`}>Scegli un'azione per iniziare</p>
@@ -772,49 +799,40 @@ function Phase2Config({ countries, network, members, onStart }: {
 }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const [delayIndex, setDelayIndex] = useState(4);
-  const [pauseEvery, setPauseEvery] = useState("10");
-  const [pauseDurationIndex, setPauseDurationIndex] = useState(1);
-  const [nightPauseEnabled, setNightPauseEnabled] = useState(false);
-  const [nightPauseMinutes, setNightPauseMinutes] = useState("60");
+  const createJob = useCreateDownloadJob();
 
-  const delay = DELAY_VALUES[delayIndex];
-  const pauseDur = PAUSE_DURATION_VALUES[pauseDurationIndex];
-  const pauseEveryN = parseInt(pauseEvery, 10) || 0;
   const totalIds = members.length;
-
   const ids = members.filter(m => m.wca_id).map(m => m.wca_id!);
 
-  const estimateSeconds = (() => {
-    const avgDownloadTime = 3;
-    let total = totalIds * (delay + avgDownloadTime);
-    if (pauseEveryN > 0) total += Math.floor(totalIds / pauseEveryN) * pauseDur;
-    return total;
-  })();
+  // Speed
+  const [delayIndex, setDelayIndex] = useState(4);
+  const delay = DELAY_VALUES[delayIndex];
 
-  const estimateLabel = estimateSeconds >= 3600
-    ? `~${(estimateSeconds / 3600).toFixed(1)} ore`
-    : estimateSeconds >= 60
-    ? `~${Math.ceil(estimateSeconds / 60)} minuti`
-    : `~${estimateSeconds} secondi`;
+  // Time estimate
+  const avgScrapeTime = 15; // ~15s per profile
+  const totalTime = ids.length * (delay + avgScrapeTime);
+  const estimateLabel = totalTime >= 3600
+    ? `~${(totalTime / 3600).toFixed(1)} ore`
+    : totalTime >= 60
+      ? `~${Math.ceil(totalTime / 60)} minuti`
+      : `~${totalTime}s`;
 
   const countryLabel = countries.length === 1
     ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
     : `${countries.length} paesi`;
 
-  const handleStart = () => {
-    sessionStorage.setItem("dl_config", JSON.stringify({
-      mode: "ids",
-      ids,
-      delay: delay * 1000,
-      pauseEvery: pauseEveryN,
-      pauseDuration: pauseDur * 1000,
-      nightPauseEnabled,
-      nightPauseMs: parseInt(nightPauseMinutes, 10) * 60 * 1000,
-      filterNetwork: network,
-      filterCountries: countries.map(c => c.code),
-      filterCountryNames: countries.map(c => c.name),
-    }));
+  const handleStart = async () => {
+    // Create one job per country (or a single combined job)
+    for (const country of countries) {
+      const countryIds = ids; // In a multi-country scenario, you'd filter per country
+      await createJob.mutateAsync({
+        country_code: country.code,
+        country_name: country.name,
+        network_name: network || "Tutti",
+        wca_ids: countryIds,
+        delay_seconds: delay,
+      });
+    }
     onStart();
   };
 
@@ -840,6 +858,11 @@ function Phase2Config({ countries, network, members, onStart }: {
           </div>
         </div>
 
+        {/* Info: background processing */}
+        <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+          🚀 Il download proseguirà in background anche se navighi altrove. Un badge nella sidebar ti mostrerà i job attivi.
+        </div>
+
         {/* Speed */}
         <div>
           <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
@@ -853,460 +876,181 @@ function Phase2Config({ countries, network, members, onStart }: {
           </div>
         </div>
 
-        {/* Pause every N */}
-        <div>
-          <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
-            <Pause className="w-3.5 h-3.5" />
-            Pausa extra ogni N download
-          </label>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <p className={`text-xs mb-1 ${th.dim}`}>Ogni quanti</p>
-              <Input type="number" value={pauseEvery} onChange={e => setPauseEvery(e.target.value)} className={th.input} placeholder="10" min={0} />
-            </div>
-            <div className="flex-1">
-              <p className={`text-xs mb-1 ${th.dim}`}>Durata: <span className={`font-mono ${th.hi}`}>{formatDuration(pauseDur)}</span></p>
-              <Slider value={[pauseDurationIndex]} onValueChange={([v]) => setPauseDurationIndex(v)} min={0} max={PAUSE_DURATION_VALUES.length - 1} step={1} className="w-full mt-2" />
-            </div>
-          </div>
-        </div>
-
-        {/* Night pause */}
-        <div className={`p-4 rounded-xl border ${nightPauseEnabled ? (isDark ? "border-amber-500/30 bg-amber-500/5" : "border-sky-300 bg-sky-50") : th.panelSlate}`}>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox checked={nightPauseEnabled} onCheckedChange={v => setNightPauseEnabled(!!v)} />
-            <div>
-              <p className={`text-sm ${th.body}`}>Pausa prolungata (notturna)</p>
-              <p className={`text-xs ${th.dim}`}>Pausa automatica dopo ciclo completato</p>
-            </div>
-          </label>
-          {nightPauseEnabled && (
-            <div className="mt-3 flex items-center gap-2">
-              <p className={`text-xs ${th.label}`}>Durata:</p>
-              <Input type="number" value={nightPauseMinutes} onChange={e => setNightPauseMinutes(e.target.value)} className={`w-20 ${th.input}`} min={1} />
-              <span className={`text-xs ${th.dim}`}>minuti</span>
-            </div>
-          )}
-        </div>
-
         {/* Time estimate */}
         <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
           <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
           <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
         </div>
 
-        <Button onClick={handleStart} disabled={ids.length === 0} className={`w-full ${th.btnPri}`}>
-          <Zap className="w-4 h-4 mr-2" />
-          Avvia Download Dettagli ({ids.length})
+        <Button onClick={handleStart} disabled={ids.length === 0 || createJob.isPending} className={`w-full ${th.btnPri}`}>
+          {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+          Avvia Download in Background ({ids.length})
         </Button>
       </div>
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════
-// DOWNLOAD RUNNING (Phase 2: download details by specific IDs)
+// DOWNLOAD RUNNING — Server-side job monitor (realtime)
 // ═══════════════════════════════════════════════════════════════
 function DownloadRunning() {
   const isDark = useTheme();
   const th = t(isDark);
-  const queryClient = useQueryClient();
-  const config = JSON.parse(sessionStorage.getItem("dl_config") || "{}");
+  const { data: jobs } = useDownloadJobs();
+  const pauseResume = usePauseResumeJob();
+  const updateSpeed = useUpdateJobSpeed();
 
-  const [isRunning, setIsRunning] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
-  const [logs, setLogs] = useState<ScrapeLog[]>([]);
-  const [stats, setStats] = useState({ found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 });
-  const [currentId, setCurrentId] = useState<number | null>(null);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [countdown, setCountdown] = useState(0);
-  const [startTime] = useState(Date.now());
-  const [lastDownloadMs, setLastDownloadMs] = useState<number | null>(null);
-  const [avgDownloadMs, setAvgDownloadMs] = useState(0);
-  const [detailPartner, setDetailPartner] = useState<ScrapeLog | null>(null);
-  const [jsonOpen, setJsonOpen] = useState(false);
-  const [showSpeedPanel, setShowSpeedPanel] = useState(false);
+  const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
+  const recentCompleted = (jobs || []).filter(j => j.status === "completed" || j.status === "cancelled").slice(0, 5);
 
-  // Live-adjustable speed via refs
-  const delayRef = useRef(config.delay || 5000);
-  const pauseEveryRef = useRef(config.pauseEvery || 0);
-  const pauseDurationRef = useRef(config.pauseDuration || 30000);
-  const [liveDelay, setLiveDelay] = useState(() => {
-    const ms = config.delay || 5000;
-    const idx = DELAY_VALUES.findIndex(v => v * 1000 >= ms);
-    return idx >= 0 ? idx : 4;
-  });
-  const [livePauseEvery, setLivePauseEvery] = useState(String(config.pauseEvery || 10));
-  const [livePauseDurIdx, setLivePauseDurIdx] = useState(() => {
-    const s = (config.pauseDuration || 30000) / 1000;
-    const idx = PAUSE_DURATION_VALUES.findIndex(v => v >= s);
-    return idx >= 0 ? idx : 1;
-  });
-
-  useEffect(() => { delayRef.current = DELAY_VALUES[liveDelay] * 1000; }, [liveDelay]);
-  useEffect(() => { pauseEveryRef.current = parseInt(livePauseEvery, 10) || 0; }, [livePauseEvery]);
-  useEffect(() => { pauseDurationRef.current = PAUSE_DURATION_VALUES[livePauseDurIdx] * 1000; }, [livePauseDurIdx]);
-
-  const abortRef = useRef(false);
-  const pauseRef = useRef(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-  const downloadTimesRef = useRef<number[]>([]);
-
-  const totalIds = config.ids?.length || 0;
-  const [countryMatches, setCountryMatches] = useState(0);
-  const elapsed = (Date.now() - startTime) / 1000 / 60;
-  const speed = elapsed > 0.01 ? (stats.found / elapsed).toFixed(1) : "—";
-  const successLogs = logs.filter(l => l.status === "success");
-
-  // Prolonged pause
-  const [prolongedPause, setProlongedPause] = useState(false);
-  const [prolongedCountdown, setProlongedCountdown] = useState(0);
-  const prolongedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const handleProlongedPause = useCallback((minutes: number) => {
-    pauseRef.current = true;
-    setIsPaused(true);
-    setProlongedPause(true);
-    let remaining = minutes * 60;
-    setProlongedCountdown(remaining);
-    if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current);
-    prolongedIntervalRef.current = setInterval(() => {
-      remaining--;
-      setProlongedCountdown(remaining);
-      if (remaining <= 0) {
-        if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current);
-        setProlongedPause(false);
-        pauseRef.current = false;
-        setIsPaused(false);
-        setProlongedCountdown(0);
-      }
-    }, 1000);
-  }, []);
-
-  const sleep = useCallback((ms: number) =>
-    new Promise<void>((resolve) => {
-      if (ms <= 0) { resolve(); return; }
-      let remaining = Math.ceil(ms / 1000);
-      setCountdown(remaining);
-      const interval = setInterval(() => { remaining--; setCountdown(remaining); if (remaining <= 0) { clearInterval(interval); resolve(); } }, 1000);
-    }), []);
-
-  const waitWhilePaused = useCallback(async () => {
-    while (pauseRef.current && !abortRef.current) await new Promise(r => setTimeout(r, 300));
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      const ids: number[] = config.ids || [];
-      let localStats = { found: 0, inserted: 0, updated: 0, notFound: 0, errors: 0 };
-      let localCountryMatches = 0;
-
-      for (let i = 0; i < ids.length; i++) {
-        if (abortRef.current || !mounted) break;
-        await waitWhilePaused();
-        if (abortRef.current) break;
-
-        const id = ids[i];
-        setCurrentId(id);
-        setCurrentIdx(i + 1);
-
-        const dlStart = Date.now();
-        try {
-          const result = await scrapeWcaPartnerById(id);
-          const dlTime = Date.now() - dlStart;
-          downloadTimesRef.current.push(dlTime);
-          if (mounted) {
-            setLastDownloadMs(dlTime);
-            setAvgDownloadMs(Math.round(downloadTimesRef.current.reduce((a, b) => a + b, 0) / downloadTimesRef.current.length));
-          }
-
-          const log: ScrapeLog = { wcaId: id, status: "error" };
-
-          if (result.success && result.found) {
-            log.status = "success";
-            log.action = result.action;
-            log.companyName = result.partner?.company_name;
-            log.city = result.partner?.city;
-            log.countryCode = result.partner?.country_code;
-            log.aiSummary = result.aiClassification?.summary;
-            log.partner = result.partner;
-            localStats.found++;
-            if (result.action === "inserted") localStats.inserted++;
-            if (result.action === "updated") localStats.updated++;
-            if (config.filterCountries?.length && result.partner?.country_code && config.filterCountries.includes(result.partner.country_code.toUpperCase())) {
-              localCountryMatches++;
-              if (mounted) setCountryMatches(localCountryMatches);
-            }
-          } else if (result.success && !result.found) {
-            log.status = "not_found";
-            localStats.notFound++;
-          } else {
-            log.status = "error";
-            log.error = result.error;
-            localStats.errors++;
-          }
-
-          if (mounted) {
-            setLogs(prev => [...prev, log].slice(-500));
-            setStats({ ...localStats });
-          }
-        } catch (err) {
-          const dlTime = Date.now() - dlStart;
-          downloadTimesRef.current.push(dlTime);
-          if (mounted) {
-            setLastDownloadMs(dlTime);
-            setLogs(prev => [...prev, { wcaId: id, status: "error" as const, error: String(err) }].slice(-500));
-            localStats.errors++;
-            setStats({ ...localStats });
-          }
-        }
-
-        if (!abortRef.current && mounted && i < ids.length - 1) {
-          const pe = pauseEveryRef.current;
-          if (pe > 0 && (i + 1) % pe === 0) {
-            if (config.nightPauseEnabled && (i + 1) % (pe * 5) === 0) {
-              handleProlongedPause(config.nightPauseMs / 60000);
-              await waitWhilePaused();
-            } else {
-              await sleep(pauseDurationRef.current);
-            }
-          } else {
-            await sleep(delayRef.current);
-          }
-        }
-      }
-
-      if (mounted) {
-        setIsRunning(false);
-        setCurrentId(null);
-        setCountdown(0);
-        queryClient.invalidateQueries({ queryKey: ["partners"] });
-        toast({
-          title: abortRef.current ? "Download fermato" : "Download completato",
-          description: `Trovati: ${localStats.found}, Nuovi: ${localStats.inserted}, Aggiornati: ${localStats.updated}`,
-        });
-      }
-    };
-    run();
-    return () => { mounted = false; abortRef.current = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [logs.length]);
-
-  const formatMs = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+  if (activeJobs.length === 0 && recentCompleted.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className={`${th.panel} border ${th.panelSlate} rounded-2xl p-8 text-center space-y-4`}>
+          <CheckCircle className={`w-10 h-10 mx-auto ${th.acEm}`} />
+          <p className={`text-lg ${th.h2}`}>Nessun job attivo</p>
+          <p className={`text-sm ${th.sub}`}>Torna indietro per avviare un nuovo download</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 flex gap-6 min-h-0">
-      <div className="flex-1 flex flex-col gap-4 min-h-0">
-        {/* Header */}
-        <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6`}>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-4">
-              {isRunning && !isPaused && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
-              {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
-              <div>
-                <p className={`text-xs ${th.sub}`}>
-                  FASE 2 — {prolongedPause ? "PAUSA PROLUNGATA" : isPaused ? "IN PAUSA" : isRunning ? "SCARICANDO DETTAGLI" : "COMPLETATO"}
-                  {config.filterCountryNames?.length > 0 && ` • ${config.filterCountryNames.length === 1 ? config.filterCountryNames[0] : config.filterCountryNames.length + " paesi"}`}
-                  {config.filterNetwork && ` • ${config.filterNetwork}`}
-                </p>
-                <p className={`text-2xl font-mono ${th.mono}`}>
-                  {currentId ? `ID #${currentId}` : "—"}
-                  <span className={`text-sm ml-3 ${th.dim}`}>{currentIdx}/{totalIds}</span>
-                </p>
-              </div>
-              {prolongedPause && prolongedCountdown > 0 && (
-                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isDark ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-50 border-sky-200"}`}>
-                  <Timer className={`w-3.5 h-3.5 ${th.acAmber}`} />
-                  <span className={`font-mono text-sm ${th.acAmber}`}>{formatDuration(prolongedCountdown)}</span>
-                </div>
-              )}
-              {!prolongedPause && countdown > 0 && (
-                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
-                  <Timer className={`w-3.5 h-3.5 ${th.cdIcon}`} />
-                  <span className={`font-mono text-sm ${th.cdText}`}>{countdown}s</span>
-                </div>
-              )}
-              {lastDownloadMs !== null && (
-                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${th.cdBg}`}>
-                  <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
-                  <span className={`font-mono text-xs ${th.cdText}`}>{formatMs(lastDownloadMs)}</span>
-                  <span className={`text-xs ${th.dim}`}>media {formatMs(avgDownloadMs)}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {isRunning && (
-                <Button size="sm" variant="outline" onClick={() => setShowSpeedPanel(!showSpeedPanel)} className={th.btnPause}>
-                  <Settings2 className="w-4 h-4 mr-1" /> Velocità
-                </Button>
-              )}
-              {isRunning && !isPaused && (
-                <Button size="sm" variant="outline" onClick={() => { pauseRef.current = true; setIsPaused(true); }} className={th.btnPause}>
-                  <Pause className="w-4 h-4 mr-1" /> Pausa
-                </Button>
-              )}
-              {isPaused && !prolongedPause && (
-                <Button size="sm" onClick={() => { pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
-                  <Play className="w-4 h-4 mr-1" /> Riprendi
-                </Button>
-              )}
-              {prolongedPause && (
-                <Button size="sm" onClick={() => { if (prolongedIntervalRef.current) clearInterval(prolongedIntervalRef.current); setProlongedPause(false); setProlongedCountdown(0); pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
-                  <Play className="w-4 h-4 mr-1" /> Interrompi pausa
-                </Button>
-              )}
-              {isRunning && !isPaused && (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => handleProlongedPause(30)} className={th.btnPause}>
-                    <Timer className="w-4 h-4 mr-1" /> 30min
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleProlongedPause(60)} className={th.btnPause}>
-                    <Timer className="w-4 h-4 mr-1" /> 1h
-                  </Button>
-                </>
-              )}
-              {isRunning && (
-                <Button size="sm" variant="outline" onClick={() => { abortRef.current = true; setIsRunning(false); }} className={th.btnStop}>
-                  <Square className="w-4 h-4 mr-1" /> Stop
-                </Button>
-              )}
-            </div>
+    <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-auto">
+      {activeJobs.length > 0 && (
+        <p className={`text-sm font-medium ${th.h2}`}>
+          <Activity className="w-4 h-4 inline mr-1" />
+          Job Attivi ({activeJobs.length})
+        </p>
+      )}
+
+      {activeJobs.map(job => (
+        <JobCard key={job.id} job={job} pauseResume={pauseResume} updateSpeed={updateSpeed} />
+      ))}
+
+      {recentCompleted.length > 0 && (
+        <>
+          <p className={`text-sm font-medium mt-4 ${th.dim}`}>Completati di recente</p>
+          {recentCompleted.map(job => (
+            <JobCard key={job.id} job={job} pauseResume={pauseResume} updateSpeed={updateSpeed} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function JobCard({ job, pauseResume, updateSpeed }: {
+  job: DownloadJob;
+  pauseResume: ReturnType<typeof usePauseResumeJob>;
+  updateSpeed: ReturnType<typeof useUpdateJobSpeed>;
+}) {
+  const isDark = useTheme();
+  const th = t(isDark);
+  const [showSpeed, setShowSpeed] = useState(false);
+
+  const progress = job.total_count > 0 ? (job.current_index / job.total_count) * 100 : 0;
+  const isActive = job.status === "running" || job.status === "pending";
+  const isPaused = job.status === "paused";
+
+  const statusLabel: Record<string, string> = {
+    pending: "In attesa",
+    running: "In corso",
+    paused: "In pausa",
+    completed: "Completato",
+    cancelled: "Cancellato",
+    error: "Errore",
+  };
+
+  const statusColor = isDark
+    ? { running: "text-amber-400", paused: "text-yellow-400", completed: "text-emerald-400", cancelled: "text-slate-500", error: "text-red-400", pending: "text-blue-400" }
+    : { running: "text-sky-600", paused: "text-yellow-600", completed: "text-emerald-600", cancelled: "text-slate-400", error: "text-red-600", pending: "text-blue-600" };
+
+  const handleSpeedChange = (delayIdx: number) => {
+    updateSpeed.mutate({ jobId: job.id, delay_seconds: DELAY_VALUES[delayIdx] });
+  };
+
+  const currentDelayIdx = DELAY_VALUES.findIndex(v => v >= job.delay_seconds);
+  const delayIdx = currentDelayIdx >= 0 ? currentDelayIdx : 4;
+
+  return (
+    <div className={`${th.panel} border ${isActive ? th.panelAmber : isPaused ? th.panelAmber : th.panelSlate} rounded-2xl p-5 space-y-3`}>
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          {isActive && <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${th.pulse}`} />}
+          <div>
+            <p className={`text-sm font-medium ${th.h2}`}>
+              {getCountryFlag(job.country_code)} {job.country_name}
+              <span className={`ml-2 text-xs ${th.dim}`}>{job.network_name}</span>
+            </p>
+            <p className={`text-xs ${(statusColor as any)[job.status] || th.dim}`}>
+              {statusLabel[job.status] || job.status} • {job.current_index}/{job.total_count}
+            </p>
           </div>
         </div>
-
-        {/* Live speed adjustment panel */}
-        {showSpeedPanel && (
-          <div className={`${th.panel} border ${th.panelAmber} rounded-xl p-4 space-y-3`}>
-            <p className={`text-xs font-medium ${th.label}`}>⚡ Calibrazione velocità Fase 2</p>
-            <div>
-              <label className={`text-xs flex items-center gap-1 mb-2 ${th.dim}`}>
-                Attesa tra download: <span className={`font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[liveDelay]]}</span>
-              </label>
-              <Slider value={[liveDelay]} onValueChange={([v]) => setLiveDelay(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
-              <div className={`flex justify-between text-xs mt-1 ${th.dim}`}><span>Veloce</span><span>Lento</span></div>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className={`text-xs ${th.dim}`}>Pausa ogni</label>
-                <Input type="number" value={livePauseEvery} onChange={e => setLivePauseEvery(e.target.value)} className={`${th.input} h-8 text-sm`} min={0} />
-              </div>
-              <div className="flex-1">
-                <label className={`text-xs ${th.dim}`}>Durata: {formatDuration(PAUSE_DURATION_VALUES[livePauseDurIdx])}</label>
-                <Slider value={[livePauseDurIdx]} onValueChange={([v]) => setLivePauseDurIdx(v)} min={0} max={PAUSE_DURATION_VALUES.length - 1} step={1} className="w-full mt-2" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Progress bar */}
-        {totalIds > 0 && (
-          <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
-            <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${(currentIdx / totalIds) * 100}%` }} />
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="flex flex-wrap gap-3">
-          <StatBadge label="Trovati" value={stats.found} color="amber" />
-          {config.filterCountries?.length > 0 && (
-            <StatBadge label={config.filterCountries.length === 1 ? (config.filterCountryNames?.[0] || config.filterCountries[0]) : `${config.filterCountries.length} paesi`} value={countryMatches} color="emerald" icon={<MapPin className="w-3 h-3" />} />
+        <div className="flex gap-2 flex-wrap">
+          {isActive && (
+            <>
+              <Button size="sm" variant="outline" onClick={() => setShowSpeed(!showSpeed)} className={th.btnPause}>
+                <Settings2 className="w-3.5 h-3.5" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "pause" })} className={th.btnPause}>
+                <Pause className="w-3.5 h-3.5 mr-1" /> Pausa
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={th.btnStop}>
+                <Square className="w-3.5 h-3.5 mr-1" /> Stop
+              </Button>
+            </>
           )}
-          <StatBadge label="Nuovi" value={stats.inserted} color="emerald" />
-          <StatBadge label="Aggiornati" value={stats.updated} color="blue" />
-          <StatBadge label="Vuoti" value={stats.notFound} color="slate" />
-          <StatBadge label="Errori" value={stats.errors} color="red" />
-          <StatBadge label="Partner/min" value={speed} color="slate" icon={<Zap className="w-3 h-3" />} />
-        </div>
-
-        {/* Log */}
-        <div className={`flex-1 ${th.panel} border ${th.panelSlate} rounded-2xl p-4 min-h-0 overflow-hidden flex flex-col`}>
-          <p className={`text-xs mb-2 ${th.dim}`}>Log attività — Fase 2</p>
-          <ScrollArea className="flex-1">
-            <div className="space-y-1 text-xs font-mono pr-4">
-              {logs.map((log, i) => (
-                <div key={`${log.wcaId}-${i}`} className="flex items-center gap-2 py-0.5 animate-fade-in">
-                  <span className={`w-16 text-right ${th.logId}`}>#{log.wcaId}</span>
-                  {log.status === "success" && log.action === "inserted" && <span className={th.logNew}>● NUOVO</span>}
-                  {log.status === "success" && log.action === "updated" && <span className={th.logUpd}>● AGG.</span>}
-                  {log.status === "not_found" && <span className={th.logEmpty}>○ vuoto</span>}
-                  {log.status === "error" && <span className={th.logErr}>✕ errore</span>}
-                  {log.companyName && <span className={`truncate ${th.logName}`}>{log.companyName}</span>}
-                </div>
-              ))}
-              <div ref={logsEndRef} />
-            </div>
-          </ScrollArea>
+          {isPaused && (
+            <>
+              <Button size="sm" onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })} className={th.btnResume}>
+                <Play className="w-3.5 h-3.5 mr-1" /> Riprendi
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={th.btnStop}>
+                <Square className="w-3.5 h-3.5 mr-1" /> Annulla
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="w-72 flex flex-col min-h-0">
-        <p className={`text-xs mb-2 ${th.dim}`}>Partner scaricati ({successLogs.length})</p>
-        <ScrollArea className="flex-1">
-          <div className="space-y-1.5 pr-2">
-            {successLogs.map((log, i) => (
-              <button key={`${log.wcaId}-${i}`} onClick={() => setDetailPartner(log)} className={`w-full flex items-center gap-2 border rounded-lg px-3 py-2 text-left transition-all animate-fade-in ${th.chipBg}`}>
-                <span className="text-sm">{log.countryCode ? getCountryFlag(log.countryCode) : "🌍"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate ${th.chipName}`}>{log.companyName}</p>
-                  <p className={`text-xs ${th.chipSub}`}>{log.city}</p>
-                </div>
-                <Badge className={`text-[10px] px-1.5 py-0 ${log.action === "inserted" ? th.bdgNew : th.bdgUpd}`}>
-                  {log.action === "inserted" ? "Nuovo" : "Agg."}
-                </Badge>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
+      {/* Progress bar */}
+      <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
+        <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Detail dialog */}
-      <Dialog open={!!detailPartner} onOpenChange={() => setDetailPartner(null)}>
-        <DialogContent className={`max-w-lg max-h-[80vh] overflow-y-auto ${th.dlgBg}`}>
-          <DialogHeader>
-            <DialogTitle className={`flex items-center gap-2 ${th.dlgTitle}`}>
-              <Building2 className={`w-5 h-5 ${th.acAmber}`} />
-              {detailPartner?.companyName}
-            </DialogTitle>
-            <DialogDescription className={th.dlgSub}>WCA ID #{detailPartner?.wcaId}</DialogDescription>
-          </DialogHeader>
-          {detailPartner?.partner && (
-            <div className="space-y-3 text-sm">
-              <div className={`grid grid-cols-2 gap-2 ${th.dlgVal}`}>
-                <div><span className={th.dlgField}>Paese:</span> {detailPartner.partner.country_name}</div>
-                <div><span className={th.dlgField}>Città:</span> {detailPartner.partner.city}</div>
-                {detailPartner.partner.email && <div><span className={th.dlgField}>Email:</span> {detailPartner.partner.email}</div>}
-                {detailPartner.partner.phone && <div><span className={th.dlgField}>Tel:</span> {detailPartner.partner.phone}</div>}
-                {detailPartner.partner.website && <div className="col-span-2"><span className={th.dlgField}>Sito:</span> {detailPartner.partner.website}</div>}
-              </div>
-              {detailPartner.partner.networks && detailPartner.partner.networks.length > 0 && (
-                <div>
-                  <p className={`text-xs mb-1 ${th.dlgField}`}>Network</p>
-                  <div className="flex flex-wrap gap-1">
-                    {detailPartner.partner.networks.map((n, i) => <Badge key={i} className={`text-xs ${th.bdgNet}`}>{n.name}</Badge>)}
-                  </div>
-                </div>
-              )}
-              {detailPartner.aiSummary && (
-                <div>
-                  <p className={`text-xs mb-1 ${th.dlgField}`}>Riassunto AI</p>
-                  <p className={`rounded-lg p-3 text-sm ${th.dlgBox} ${th.body}`}>{detailPartner.aiSummary}</p>
-                </div>
-              )}
-              <div>
-                <button onClick={() => setJsonOpen(!jsonOpen)} className={`flex items-center gap-1 text-xs ${th.dim} hover:opacity-80`}>
-                  {jsonOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  Dati JSON
-                </button>
-                {jsonOpen && <pre className={`rounded-lg p-3 text-xs overflow-x-auto max-h-60 mt-1 ${th.dlgBox} ${th.dim}`}>{JSON.stringify(detailPartner.partner, null, 2)}</pre>}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Last processed */}
+      {job.last_processed_company && (
+        <p className={`text-xs ${th.dim}`}>
+          Ultimo: <span className={th.logName}>{job.last_processed_company}</span>
+          <span className={`ml-2 ${th.logId}`}>#{job.last_processed_wca_id}</span>
+        </p>
+      )}
+
+      {/* Speed control */}
+      {showSpeed && (isActive || isPaused) && (
+        <div className={`p-3 rounded-lg border ${th.infoBox}`}>
+          <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
+            <Timer className="w-3 h-3" />
+            Delay: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[delayIdx]]}</span>
+          </label>
+          <Slider value={[delayIdx]} onValueChange={([v]) => handleSpeedChange(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+        </div>
+      )}
+
+      {/* Error */}
+      {job.error_message && (
+        <p className={`text-xs ${th.logErr}`}>⚠️ {job.error_message}</p>
+      )}
+
+      {/* Completed info */}
+      {job.status === "completed" && job.completed_at && (
+        <p className={`text-xs ${th.dim}`}>
+          Completato il {new Date(job.completed_at).toLocaleString("it-IT")}
+        </p>
+      )}
     </div>
   );
 }

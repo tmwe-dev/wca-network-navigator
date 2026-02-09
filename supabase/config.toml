@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.scrape-wca-directory]
 verify_jwt = false
+
+[functions.process-download-job]
+verify_jwt = false
