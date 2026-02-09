@@ -332,6 +332,40 @@ function countryNameToCode(name: string | null): string | null {
   return map[name.toLowerCase().trim()] || null
 }
 
+function countryCodeToName(code: string): string {
+  const map: Record<string, string> = {
+    'US': 'United States of America', 'GB': 'United Kingdom', 'CA': 'Canada',
+    'AU': 'Australia', 'DE': 'Germany', 'FR': 'France', 'IT': 'Italy',
+    'ES': 'Spain', 'CN': 'China', 'IN': 'India', 'JP': 'Japan', 'BR': 'Brazil',
+    'MX': 'Mexico', 'AR': 'Argentina', 'CO': 'Colombia', 'CL': 'Chile',
+    'PE': 'Peru', 'KR': 'South Korea', 'TH': 'Thailand', 'ID': 'Indonesia',
+    'MY': 'Malaysia', 'VN': 'Vietnam', 'PH': 'Philippines', 'SG': 'Singapore',
+    'HK': 'Hong Kong', 'TW': 'Taiwan', 'TR': 'Turkey', 'SA': 'Saudi Arabia',
+    'AE': 'United Arab Emirates', 'ZA': 'South Africa', 'NG': 'Nigeria',
+    'KE': 'Kenya', 'EG': 'Egypt', 'NL': 'Netherlands', 'BE': 'Belgium',
+    'CH': 'Switzerland', 'AT': 'Austria', 'SE': 'Sweden', 'NO': 'Norway',
+    'DK': 'Denmark', 'FI': 'Finland', 'PL': 'Poland', 'CZ': 'Czech Republic',
+    'PT': 'Portugal', 'GR': 'Greece', 'IE': 'Ireland', 'NZ': 'New Zealand',
+    'IL': 'Israel', 'RU': 'Russia', 'UA': 'Ukraine', 'RO': 'Romania',
+    'HU': 'Hungary', 'PK': 'Pakistan', 'BD': 'Bangladesh', 'LK': 'Sri Lanka',
+    'NP': 'Nepal', 'PA': 'Panama', 'CR': 'Costa Rica', 'EC': 'Ecuador',
+    'BO': 'Bolivia', 'PY': 'Paraguay', 'UY': 'Uruguay', 'VE': 'Venezuela',
+    'GT': 'Guatemala', 'HN': 'Honduras', 'DO': 'Dominican Republic',
+    'SV': 'El Salvador', 'NI': 'Nicaragua', 'CU': 'Cuba', 'JM': 'Jamaica',
+    'TT': 'Trinidad and Tobago', 'PR': 'Puerto Rico', 'MA': 'Morocco',
+    'TN': 'Tunisia', 'DZ': 'Algeria', 'GH': 'Ghana', 'ET': 'Ethiopia',
+    'TZ': 'Tanzania', 'UG': 'Uganda', 'MZ': 'Mozambique', 'KH': 'Cambodia',
+    'MM': 'Myanmar', 'LA': 'Laos', 'MN': 'Mongolia', 'JO': 'Jordan',
+    'LB': 'Lebanon', 'KW': 'Kuwait', 'QA': 'Qatar', 'BH': 'Bahrain',
+    'OM': 'Oman', 'IQ': 'Iraq', 'IR': 'Iran', 'HR': 'Croatia', 'RS': 'Serbia',
+    'BG': 'Bulgaria', 'SK': 'Slovakia', 'SI': 'Slovenia', 'LT': 'Lithuania',
+    'LV': 'Latvia', 'EE': 'Estonia', 'LU': 'Luxembourg', 'MT': 'Malta',
+    'CY': 'Cyprus', 'IS': 'Iceland', 'AF': 'Afghanistan', 'AL': 'Albania',
+    'AM': 'Armenia', 'AZ': 'Azerbaijan', 'AW': 'Aruba', 'GM': 'Gambia',
+  }
+  return map[code.toUpperCase()] || ''
+}
+
 function parseDateString(dateStr: string): string | null {
   try {
     const d = new Date(dateStr)
@@ -474,7 +508,7 @@ async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: s
     company_name: parsed.company_name,
     city: parsed.city,
     country_code: finalCountryCode,
-    country_name: parsed.country,
+    country_name: parsed.country || countryCodeToName(finalCountryCode),
     email: parsed.email,
     phone: parsed.phone,
     fax: parsed.fax,
