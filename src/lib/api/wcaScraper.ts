@@ -100,6 +100,42 @@ export interface DirectoryResult {
   error?: string;
 }
 
+export interface PreviewResult {
+  success: boolean;
+  found?: boolean;
+  wcaId: number;
+  authStatus: "authenticated" | "members_only" | "no_credentials" | "login_failed";
+  authDetails?: string;
+  partner?: {
+    company_name: string;
+    city: string;
+    country: string;
+    country_code: string;
+    office_type: string;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    networks: { name: string; expires?: string }[];
+    contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[];
+  };
+  contactsFound?: number;
+  totalContacts?: number;
+  htmlSnippet?: string;
+  error?: string;
+}
+
+export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
+  const { data, error } = await supabase.functions.invoke("scrape-wca-partners", {
+    body: { wcaId, preview: true },
+  });
+
+  if (error) {
+    return { success: false, wcaId, authStatus: "login_failed", error: error.message };
+  }
+
+  return data as PreviewResult;
+}
+
 export async function scrapeWcaDirectory(
   countryCode: string,
   network?: string,

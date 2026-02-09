@@ -14,6 +14,7 @@ import {
   Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw,
   Mail, Phone, XCircle, UserCheck, UserX
 } from "lucide-react";
+import { WcaBrowser } from "@/components/download/WcaBrowser";
 import { useContactCompleteness } from "@/hooks/useContactCompleteness";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import {
@@ -262,6 +263,11 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
             <ArrowRight className={`w-4 h-4 mt-4 transition-colors ${isDark ? "text-slate-600 group-hover:text-slate-300" : "text-slate-300 group-hover:text-slate-600"}`} />
           </button>
         ))}
+      </div>
+
+      {/* WCA Browser Panel */}
+      <div className="w-full max-w-3xl mt-4">
+        <WcaBrowser isDark={isDark} />
       </div>
     </div>
   );
