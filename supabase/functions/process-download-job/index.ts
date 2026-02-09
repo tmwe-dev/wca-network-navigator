@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
           'Authorization': `Bearer ${supabaseKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ wcaId }),
+        body: JSON.stringify({ wcaId, countryCode: job.country_code }),
       })
 
       const result = await scrapeResponse.json()
@@ -231,11 +231,10 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
       const wcaIds: number[] = members.map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean)
       if (wcaIds.length === 0) continue
 
-      // Check which IDs exist in partners
+      // Check which IDs exist in partners (by wca_id, regardless of country_code)
       const { data: partners } = await supabase
         .from('partners')
         .select('wca_id')
-        .eq('country_code', countryCode)
         .in('wca_id', wcaIds)
 
       const foundIds = new Set((partners || []).map((p: any) => p.wca_id))
