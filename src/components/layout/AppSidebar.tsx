@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Moon,
   Sun,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Download", url: "/download-management", icon: HardDriveDownload, badgeKey: "download" },
   { title: "Reminders", url: "/reminders", icon: Calendar },
   { title: "Export", url: "/export", icon: Download },
+  { title: "Impostazioni", url: "/settings", icon: Settings },
 ];
 
 interface AppSidebarProps {
