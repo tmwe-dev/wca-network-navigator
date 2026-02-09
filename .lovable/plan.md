@@ -1,65 +1,68 @@
 
 
-# Miglioramenti alla Selezione Paesi e Fase "Solo ID"
+# Completamento verificato con flag esplicito
 
-## Cosa cambia
+## Problema
+Il sistema determina "Completo" confrontando semplicemente il numero di partner nel DB con il numero di ID nella directory cache (`pCount >= cCount`). Questo e inaffidabile perche:
+- I conteggi possono non corrispondere (partner importati da altre fonti, ID duplicati, ecc.)
+- Non c'e nessuna verifica che **ogni singolo ID** della directory sia stato effettivamente scaricato
+- L'utente viene ingannato con un badge "Completo" che non e garantito
 
-### 1. Paesi: informazioni dettagliate e ordinamento
+## Soluzione
 
-Nella griglia di selezione paesi (Step 1), ogni card mostrera:
-- **Flag + nome** (come ora)
-- **Numero di partner nel DB** (es. "7 partner")  
-- **Numero di ID nella cache** (es. "11 nella directory")
-- **Stato completamento**: badge "Completo" se tutti gli ID della directory sono stati scaricati, oppure "7/11" se parziale
-- **Filtro "Ordinamento"**: un selettore in alto che permette di ordinare per:
-  - Nome paese (A-Z)
-  - Numero partner scaricati (decrescente)
-  - Paesi mai esplorati prima
+### 1. Aggiungere colonna `download_verified` alla tabella `directory_cache`
 
-Per fare questo, la query `explored-countries` verra ampliata per restituire anche il conteggio dei partner per paese e i dati dalla `directory_cache`.
+Nuova colonna booleana `download_verified` (default `false`) che viene impostata a `true` **solo** quando il sistema verifica, ID per ID, che tutti i membri della cache sono presenti nella tabella `partners`.
 
-### 2. Anche i paesi gia esplorati selezionabili facilmente
+Aggiungere anche `verified_at` (timestamp) per sapere quando e stata fatta la verifica.
 
-Un filtro aggiuntivo "Gia esplorati" (oltre al "Mai esplorati" esistente) che mostra solo i paesi con dati nel DB, utile per andare a completare download parziali o aggiornare.
+### 2. Verifica reale nel codice (PickCountry)
 
-### 3. Nuova azione: "Salva solo ID"
+Invece di confrontare conteggi, la query di completamento:
+- Legge la lista di WCA ID dalla `directory_cache.members` (JSONB)
+- Controlla nella tabella `partners` quali di quegli ID esistono effettivamente
+- Marca come "Completo" solo se **tutti** gli ID della cache hanno un corrispondente partner
+- Se verificato, aggiorna `download_verified = true` nella cache
 
-Nella **Fase 1 (DirectoryScanner)**, dopo la scansione della directory (o usando i dati dalla cache), apparira un nuovo pulsante:
+### 3. Il badge "Completo" appare SOLO con flag verificato
 
-**"Salva solo lista ID"** -- questo:
-- Salva i risultati nella `directory_cache` (gia avviene)
-- NON avvia la Fase 2 di download profili
-- Mostra un messaggio di conferma: "Salvati X ID per [Paese]. Potrai scaricare i profili completi in futuro."
-- Torna alla schermata iniziale
+Nella griglia paesi:
+- **Senza flag**: mostra sempre il rapporto numerico (es. "7/11") anche se i numeri coincidono
+- **Con flag**: mostra "Completo" in verde con icona di verifica
 
-Questo permette di "preparare il terreno" per molti paesi senza consumare crediti Firecrawl, raccogliendo solo la lista degli ID dalla directory WCA.
+### 4. Verifica automatica post-download
 
-### 4. Nella Fase 2, riconoscere i paesi con ID pre-salvati
-
-Quando si seleziona un paese che ha gia gli ID nella `directory_cache` ma nessun partner scaricato, il sistema saltera automaticamente la Fase 1 e proporra direttamente la Fase 2 con gli ID pronti.
+Nel `process-download-job`, quando un job raggiunge lo stato `completed`, il sistema esegue automaticamente la verifica e aggiorna il flag nella `directory_cache`.
 
 ---
 
 ## Dettagli Tecnici
 
-### File modificato: `src/pages/DownloadManagement.tsx`
+### Migrazione SQL
+```text
+ALTER TABLE directory_cache
+  ADD COLUMN download_verified boolean NOT NULL DEFAULT false,
+  ADD COLUMN verified_at timestamptz;
+```
 
-**PickCountry** (linee ~347-476):
-- Ampliare la query `explored-countries` per fare un `GROUP BY country_code` con `COUNT(*)` sulla tabella `partners`
-- Aggiungere una query per `directory_cache` per sapere quanti ID sono nella cache per paese
-- Aggiungere un `Select` per l'ordinamento (nome, n. partner, stato)
-- Mostrare contatori su ogni card paese
-- Aggiungere filtro "Gia esplorati"
+### File: `src/pages/DownloadManagement.tsx`
 
-**DirectoryScanner** (linee ~518-1063):
-- Aggiungere pulsante **"Salva solo lista ID"** accanto a "Scarica X mancanti"
-- Il pulsante salva nella cache (gia implementato) e mostra un toast di conferma
-- Aggiungere callback `onSaveIdsOnly` che riporta al wizard step iniziale
+**PickCountry** (~linee 385-493):
+- Nuova query per `directory_cache` che include anche `download_verified`
+- Cambiare la logica del badge:
+  - `isComplete` diventa `cacheRow.download_verified === true` (non piu un confronto numerico)
+  - Il rapporto numerico viene mostrato sempre (es. "11/11" oppure "7/11")
+  - Il badge "Completo" appare solo se `download_verified === true`
 
-**DownloadWizard** (linee ~260-343):
-- Aggiungere prop e logica per gestire il ritorno allo step "choose" dopo il salvataggio ID
-- Se un paese ha gia gli ID in cache, mostrare opzione per saltare la Fase 1
+**DirectoryScanner** (~azioni post-scansione):
+- Dopo che tutti i partner sono scaricati, eseguire una funzione di verifica che:
+  1. Legge tutti i `wca_id` dalla `directory_cache.members`
+  2. Controlla quali esistono in `partners`
+  3. Se tutti presenti, aggiorna `download_verified = true, verified_at = now()`
 
-### Nessuna modifica al database
-La tabella `directory_cache` contiene gia tutto il necessario (`members` JSONB con gli ID).
+### File: `supabase/functions/process-download-job/index.ts`
+
+Quando il job raggiunge `status = 'completed'`:
+- Dopo aver aggiornato lo stato, eseguire la verifica cross-referencing
+- Aggiornare `directory_cache.download_verified` di conseguenza
 
