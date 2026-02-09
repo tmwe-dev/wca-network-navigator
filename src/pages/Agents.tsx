@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Search,
   Star,
@@ -37,6 +38,10 @@ import { it } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { KpiBadges } from "@/components/agents/KpiBadges";
 import { EnrichmentCard } from "@/components/agents/EnrichmentCard";
+import { SocialLinks } from "@/components/agents/SocialLinks";
+import { BulkActionBar } from "@/components/agents/BulkActionBar";
+import { AssignActivityDialog } from "@/components/agents/AssignActivityDialog";
+import { ActivityList } from "@/components/agents/ActivityList";
 
 function getContactStatus(interactions: any[] | undefined) {
   if (!interactions || interactions.length === 0) {
@@ -51,17 +56,28 @@ function getContactStatus(interactions: any[] | undefined) {
 export default function Agents() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   const { data: partners, isLoading } = usePartners({
     search: search.length >= 2 ? search : undefined,
   });
   const toggleFavorite = useToggleFavorite();
 
-  // Load full detail for selected partner
   const { data: selectedPartner, isLoading: detailLoading } = usePartner(selectedId || "");
 
+  const toggleSelection = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
-    <div className="flex h-[calc(100vh-5rem)] gap-0 -m-6">
+    <div className="flex h-[calc(100vh-5rem)] gap-0 -m-6 relative">
       {/* Left panel: Agent list */}
       <div className="w-96 flex-shrink-0 border-r flex flex-col bg-card">
         <div className="p-4 border-b space-y-3">
@@ -93,15 +109,19 @@ export default function Agents() {
                   </div>
                 ))
               : partners?.map((partner) => (
-                  <button
+                  <div
                     key={partner.id}
                     onClick={() => setSelectedId(partner.id)}
                     className={cn(
-                      "w-full text-left p-4 hover:bg-accent/50 transition-colors",
-                      selectedId === partner.id && "bg-accent"
+                      "w-full text-left p-4 hover:bg-accent/50 transition-colors cursor-pointer",
+                      selectedId === partner.id && "bg-accent",
+                      selectedIds.has(partner.id) && "bg-primary/5"
                     )}
                   >
                     <div className="flex items-start gap-3">
+                      <div className="mt-1" onClick={(e) => toggleSelection(partner.id, e)}>
+                        <Checkbox checked={selectedIds.has(partner.id)} />
+                      </div>
                       <span className="text-2xl leading-none mt-0.5">
                         {getCountryFlag(partner.country_code)}
                       </span>
@@ -152,11 +172,27 @@ export default function Agents() {
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
                     </div>
-                  </button>
+                  </div>
                 ))}
           </div>
         </ScrollArea>
       </div>
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        onAssignActivity={() => setAssignDialogOpen(true)}
+      />
+
+      <AssignActivityDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        partnerIds={Array.from(selectedIds)}
+        onSuccess={() => setSelectedIds(new Set())}
+      />
+
+
 
       {/* Right panel: Detail */}
       <div className="flex-1 overflow-y-auto bg-background">
@@ -220,6 +256,7 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
               )}
             </div>
             <KpiBadges partner={partner} />
+            <SocialLinks partnerId={partner.id} />
           </div>
         </div>
         <div className="flex gap-2">
@@ -325,6 +362,9 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
       {/* Enrichment from website */}
       <EnrichmentCard partner={partner} />
 
+      {/* Activities */}
+      <ActivityList partnerId={partner.id} />
+
       {/* Services */}
       {partner.partner_services?.length > 0 && (
         <Card>
@@ -398,7 +438,8 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
                     <p className="font-medium text-sm">{c.name}</p>
                     {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-1">
+                    <SocialLinks partnerId={partner.id} contactId={c.id} compact />
                     {c.email && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
                         <a href={`mailto:${c.email}`}><Mail className="w-3.5 h-3.5" /></a>

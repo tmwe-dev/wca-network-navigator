@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          partner_id: string
+          priority: string
+          status: Database["public"]["Enums"]["activity_status"]
+          title: string
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          partner_id: string
+          priority?: string
+          status?: Database["public"]["Enums"]["activity_status"]
+          title: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          partner_id?: string
+          priority?: string
+          status?: Database["public"]["Enums"]["activity_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interactions: {
         Row: {
           created_at: string | null
@@ -192,6 +249,48 @@ export type Database = {
           },
         ]
       }
+      partner_social_links: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          id: string
+          partner_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          url: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          url: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_social_links_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "partner_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_social_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           address: string | null
@@ -329,6 +428,33 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -337,6 +463,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      activity_status: "pending" | "in_progress" | "completed" | "cancelled"
+      activity_type:
+        | "send_email"
+        | "phone_call"
+        | "add_to_campaign"
+        | "meeting"
+        | "follow_up"
+        | "other"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
       interaction_type: "call" | "email" | "meeting" | "note"
       office_type: "head_office" | "branch"
@@ -364,6 +498,12 @@ export type Database = {
         | "customs_broker"
         | "warehousing"
         | "nvocc"
+      social_platform:
+        | "linkedin"
+        | "facebook"
+        | "instagram"
+        | "twitter"
+        | "whatsapp"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -491,6 +631,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_status: ["pending", "in_progress", "completed", "cancelled"],
+      activity_type: [
+        "send_email",
+        "phone_call",
+        "add_to_campaign",
+        "meeting",
+        "follow_up",
+        "other",
+      ],
       certification_type: ["IATA", "BASC", "ISO", "C-TPAT", "AEO"],
       interaction_type: ["call", "email", "meeting", "note"],
       office_type: ["head_office", "branch"],
@@ -519,6 +668,13 @@ export const Constants = {
         "customs_broker",
         "warehousing",
         "nvocc",
+      ],
+      social_platform: [
+        "linkedin",
+        "facebook",
+        "instagram",
+        "twitter",
+        "whatsapp",
       ],
     },
   },
