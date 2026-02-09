@@ -203,6 +203,8 @@ export type Database = {
           created_at: string | null
           email: string | null
           emergency_phone: string | null
+          enriched_at: string | null
+          enrichment_data: Json | null
           fax: string | null
           has_branches: boolean | null
           id: string
@@ -231,6 +233,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           emergency_phone?: string | null
+          enriched_at?: string | null
+          enrichment_data?: Json | null
           fax?: string | null
           has_branches?: boolean | null
           id?: string
@@ -259,6 +263,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           emergency_phone?: string | null
+          enriched_at?: string | null
+          enrichment_data?: Json | null
           fax?: string | null
           has_branches?: boolean | null
           id?: string

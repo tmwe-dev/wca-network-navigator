@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Link } from "react-router-dom";
+import { KpiBadges } from "@/components/agents/KpiBadges";
+import { EnrichmentCard } from "@/components/agents/EnrichmentCard";
 
 function getContactStatus(interactions: any[] | undefined) {
   if (!interactions || interactions.length === 0) {
@@ -125,6 +127,7 @@ export default function Agents() {
                             </span>
                           )}
                         </div>
+                        <KpiBadges partner={partner} compact />
                         {/* Service tags */}
                         {partner.partner_services && partner.partner_services.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -216,6 +219,7 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
                 />
               )}
             </div>
+            <KpiBadges partner={partner} />
           </div>
         </div>
         <div className="flex gap-2">
@@ -317,6 +321,9 @@ function AgentDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavo
           </CardContent>
         </Card>
       </div>
+
+      {/* Enrichment from website */}
+      <EnrichmentCard partner={partner} />
 
       {/* Services */}
       {partner.partner_services?.length > 0 && (
