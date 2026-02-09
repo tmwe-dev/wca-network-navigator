@@ -22,7 +22,8 @@ export function AppLayout() {
   // Get current page info
   const currentPath = location.pathname;
   const pageInfo = PAGE_INFO[currentPath] || PAGE_INFO["/"];
-  const isCampaignsPage = currentPath === "/campaigns";
+  const isDarkPage = currentPath === "/campaigns" || currentPath === "/download-management";
+  const isCampaignsPage = isDarkPage;
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
