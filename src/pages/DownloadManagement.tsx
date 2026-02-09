@@ -1440,6 +1440,29 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const th = t(isDark);
   const [showSpeed, setShowSpeed] = useState(false);
 
+  // Track recent speed: store timestamps of last N updates to compute rolling avg
+  const prevIndexRef = useRef(job.current_index);
+  const recentTimesRef = useRef<number[]>([]);
+  const lastUpdateRef = useRef(Date.now());
+
+  useEffect(() => {
+    const now = Date.now();
+    const diff = job.current_index - prevIndexRef.current;
+    if (diff > 0 && prevIndexRef.current > 0) {
+      const elapsed = now - lastUpdateRef.current;
+      const perProfile = elapsed / diff;
+      recentTimesRef.current.push(perProfile);
+      // Keep last 10 measurements
+      if (recentTimesRef.current.length > 10) recentTimesRef.current.shift();
+    }
+    prevIndexRef.current = job.current_index;
+    lastUpdateRef.current = now;
+  }, [job.current_index]);
+
+  const recentAvgMs = recentTimesRef.current.length > 0
+    ? recentTimesRef.current.reduce((a, b) => a + b, 0) / recentTimesRef.current.length
+    : null;
+
   const progress = job.total_count > 0 ? (job.current_index / job.total_count) * 100 : 0;
   const isActive = job.status === "running" || job.status === "pending";
   const isPaused = job.status === "paused";
@@ -1520,8 +1543,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         const elapsedMs = new Date(job.updated_at).getTime() - new Date(job.created_at).getTime();
         const elapsedSec = Math.max(elapsedMs / 1000, 1);
         const avgSec = elapsedSec / job.current_index;
-        const netSec = Math.max(avgSec - job.delay_seconds, 0);
-        const remainingSec = avgSec * (job.total_count - job.current_index);
         const perMin = (job.current_index / elapsedSec) * 60;
 
         const fmtTime = (s: number) => {
@@ -1530,19 +1551,23 @@ function JobCard({ job, pauseResume, updateSpeed }: {
           return `${Math.floor(s)}s`;
         };
 
+        const recentAvgSec = recentAvgMs ? recentAvgMs / 1000 : null;
+        const etaBaseSec = recentAvgSec ?? avgSec;
+        const remainingSec = etaBaseSec * (job.total_count - job.current_index);
+
         return (
           <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs p-3 rounded-lg border ${th.infoBox}`}>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Timer className="w-3 h-3 flex-shrink-0" />
-              <span>Media: <span className={`font-mono font-bold ${th.hi}`}>{avgSec.toFixed(1)}s</span>/profilo</span>
+              <span>Media globale: <span className={`font-mono font-bold ${th.dim}`}>{avgSec.toFixed(1)}s</span>/profilo</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Zap className="w-3 h-3 flex-shrink-0" />
-              <span>Scraping netto: <span className={`font-mono font-bold ${th.hi}`}>{netSec.toFixed(1)}s</span></span>
+              <span>Media corrente: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${recentAvgSec.toFixed(1)}s` : "—"}</span>/profilo</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Activity className="w-3 h-3 flex-shrink-0" />
-              <span>Velocità: <span className={`font-mono font-bold ${th.hi}`}>{perMin.toFixed(1)}</span>/min</span>
+              <span>Velocità: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${(60 / recentAvgSec).toFixed(1)}` : perMin.toFixed(1)}</span>/min</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <ArrowRight className="w-3 h-3 flex-shrink-0" />
