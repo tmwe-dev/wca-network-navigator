@@ -460,7 +460,7 @@ function PickNetwork({ country, onSelect }: {
   );
 }
 
-// ─── Scan Config (replaces DirectoryListing + SpeedConfig) ───
+// ─── Scan Config (simplified — no ID range input) ───────────
 function ScanConfig({ countries, network, onStart }: {
   countries: { code: string; name: string }[];
   network: string;
@@ -473,25 +473,35 @@ function ScanConfig({ countries, network, onStart }: {
   const [pauseDurationIndex, setPauseDurationIndex] = useState(1);
   const [nightPauseEnabled, setNightPauseEnabled] = useState(false);
   const [nightPauseMinutes, setNightPauseMinutes] = useState("60");
-  const [startId, setStartId] = useState("1");
-  const [endId, setEndId] = useState("500");
 
   const countryCodes = countries.map(c => c.code);
   const countryLabel = countries.length === 1
     ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
     : `${countries.length} paesi`;
 
-  // Get existing partner count for these countries + max known ID
-  const { data: dbInfo } = useQuery({
+  // Auto-determine scan range from DB
+  const { data: dbInfo, isLoading: dbLoading } = useQuery({
     queryKey: ["db-scan-info", countryCodes.join(",")],
     queryFn: async () => {
-      const [countResult, maxResult] = await Promise.all([
+      const [countResult, maxResult, lastScannedResult] = await Promise.all([
         supabase.from("partners").select("id", { count: "exact", head: true }).in("country_code", countryCodes),
         supabase.from("partners").select("wca_id").not("wca_id", "is", null).order("wca_id", { ascending: false }).limit(1).maybeSingle(),
+        // Check download_queue for last processed ID for these countries
+        supabase.from("download_queue").select("last_processed_id, id_range_end").in("country_code", countryCodes).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
+      const maxGlobalId = maxResult.data?.wca_id || 0;
+      const lastProcessed = lastScannedResult.data?.last_processed_id || 0;
+      // Start from after the last processed, or from 1
+      const rangeStart = lastProcessed > 0 ? lastProcessed + 1 : 1;
+      // Scan up to max known + 500 buffer, minimum 500
+      const rangeEnd = Math.max(maxGlobalId + 500, rangeStart + 499);
       return {
         countryPartners: countResult.count || 0,
-        maxGlobalId: maxResult.data?.wca_id || 0,
+        maxGlobalId,
+        lastProcessed,
+        rangeStart,
+        rangeEnd,
+        totalIds: rangeEnd - rangeStart + 1,
       };
     },
   });
@@ -499,9 +509,7 @@ function ScanConfig({ countries, network, onStart }: {
   const delay = DELAY_VALUES[delayIndex];
   const pauseDur = PAUSE_DURATION_VALUES[pauseDurationIndex];
   const pauseEveryN = parseInt(pauseEvery, 10) || 0;
-  const rangeStart = parseInt(startId, 10) || 1;
-  const rangeEnd = parseInt(endId, 10) || 500;
-  const totalIds = Math.max(0, rangeEnd - rangeStart + 1);
+  const totalIds = dbInfo?.totalIds || 500;
 
   const estimateSeconds = (() => {
     const avgDownloadTime = 3;
@@ -519,8 +527,8 @@ function ScanConfig({ countries, network, onStart }: {
   const handleStart = () => {
     sessionStorage.setItem("dl_config", JSON.stringify({
       mode: "range",
-      rangeStart,
-      rangeEnd,
+      rangeStart: dbInfo?.rangeStart || 1,
+      rangeEnd: dbInfo?.rangeEnd || 500,
       delay: delay * 1000,
       pauseEvery: pauseEveryN,
       pauseDuration: pauseDur * 1000,
@@ -539,7 +547,7 @@ function ScanConfig({ countries, network, onStart }: {
         <div>
           <h2 className={`text-xl mb-1 ${th.h2}`}>{countryLabel}</h2>
           <p className={`text-sm ${th.sub}`}>
-            {network || "Tutti i network"} — Configura lo scan e avvia
+            {network || "Tutti i network"} — Pronto per la scansione
           </p>
           {countries.length > 1 && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -552,43 +560,42 @@ function ScanConfig({ countries, network, onStart }: {
           )}
         </div>
 
-        {/* DB info */}
-        {dbInfo && (
-          <div className={`p-3 rounded-lg border text-sm ${th.infoBox}`}>
-            <p><span className={`font-mono ${th.hi}`}>{dbInfo.countryPartners}</span> partner {countries.length > 1 ? "dei paesi selezionati" : `di ${countries[0].name}`} già nel database</p>
-            {dbInfo.maxGlobalId > 0 && (
-              <p className={`text-xs ${th.dim} mt-1`}>Ultimo WCA ID conosciuto globalmente: <span className="font-mono">{dbInfo.maxGlobalId}</span></p>
+        {/* Auto-calculated info */}
+        {dbLoading ? (
+          <div className="flex items-center gap-2 py-4 justify-center">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className={`text-sm ${th.dim}`}>Analisi database...</span>
+          </div>
+        ) : dbInfo && (
+          <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${th.body}`}>Partner già nel database</span>
+              <span className={`font-mono font-bold ${th.hi}`}>{dbInfo.countryPartners}</span>
+            </div>
+            {dbInfo.lastProcessed > 0 && (
+              <div className="flex items-center justify-between">
+                <span className={`text-sm ${th.body}`}>Ultima scansione fino a ID</span>
+                <span className={`font-mono ${th.hi}`}>{dbInfo.lastProcessed}</span>
+              </div>
             )}
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${th.body}`}>Profili da scansionare</span>
+              <span className={`font-mono font-bold ${th.hi}`}>{dbInfo.totalIds.toLocaleString()}</span>
+            </div>
+            <p className={`text-xs ${th.dim} pt-1`}>
+              {dbInfo.lastProcessed > 0
+                ? `Riprendo da ID ${dbInfo.rangeStart} (dove avevi interrotto)`
+                : `Scansione completa da ID ${dbInfo.rangeStart} a ${dbInfo.rangeEnd}`
+              }
+            </p>
           </div>
         )}
 
-        {/* ID Range */}
-        <div>
-          <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
-            <Search className="w-3.5 h-3.5" />
-            Range ID da scansionare
-          </label>
-          <p className={`text-xs mb-2 ${th.dim}`}>
-            Il sistema aprirà ogni profilo WCA in questo range e salverà quelli di <span className={th.hi}>{countryLabel}</span>
-          </p>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <p className={`text-xs mb-1 ${th.dim}`}>Da ID</p>
-              <Input type="number" value={startId} onChange={e => setStartId(e.target.value)} className={th.input} min={1} />
-            </div>
-            <div className="flex-1">
-              <p className={`text-xs mb-1 ${th.dim}`}>A ID</p>
-              <Input type="number" value={endId} onChange={e => setEndId(e.target.value)} className={th.input} min={1} />
-            </div>
-          </div>
-          <p className={`text-xs mt-1 ${th.dim}`}>{totalIds} profili da controllare</p>
-        </div>
-
-        {/* Delay slider */}
+        {/* Speed — simple presets */}
         <div>
           <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
             <Timer className="w-3.5 h-3.5" />
-            Attesa tra un download e l'altro: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
+            Velocità: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
           </label>
           <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
           <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
@@ -637,10 +644,9 @@ function ScanConfig({ countries, network, onStart }: {
         <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
           <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
           <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
-          <p className={`text-xs ${th.dim}`}>{totalIds} profili × ({delay}s attesa + ~3s download)</p>
         </div>
 
-        <Button onClick={handleStart} disabled={totalIds === 0} className={`w-full ${th.btnPri}`}>
+        <Button onClick={handleStart} disabled={dbLoading || !dbInfo} className={`w-full ${th.btnPri}`}>
           <Zap className="w-4 h-4 mr-2" />
           Avvia Scansione
         </Button>
@@ -648,7 +654,6 @@ function ScanConfig({ countries, network, onStart }: {
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════
 // DOWNLOAD RUNNING (Phase 2: download details)
 // ═══════════════════════════════════════════════════════════════
