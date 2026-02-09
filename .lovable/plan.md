@@ -1,51 +1,46 @@
 
 
-# Fix: Slider Delay nel JobCard
+# Fix: Rilevamento "Member not found" nel parser WCA
 
 ## Problema
-Il cursore della velocita (delay) nel pannello di un job attivo ha due bug:
 
-1. **Nessun debounce**: `handleSpeedChange` chiama `updateSpeed.mutate()` ad ogni micro-movimento del cursore, inviando decine di richieste al database in un secondo
-2. **Nessuna invalidazione cache**: `useUpdateJobSpeed` non invalida la query `download-jobs`, quindi quando arriva il prossimo aggiornamento realtime, il valore del cursore torna indietro alla posizione precedente (effetto "snap-back")
+Il sito WCA, quando un profilo non esiste o e scaduto, restituisce una pagina HTTP 200 con il testo "Member not found. Please try again." invece di un vero errore 404.
+
+Il parser attuale (riga 25 di `scrape-wca-partners`) cerca solo:
+- `page not found`
+- `404`
+- `no results found`
+
+Non riconosce "Member not found", quindi lo tratta come un profilo valido e salva "Member not found. Please try again." come nome dell'azienda.
 
 ## Soluzione
 
-### File: `src/hooks/useDownloadJobs.ts`
-- Aggiungere `queryClient` e `onSuccess` con invalidazione della query `download-jobs` in `useUpdateJobSpeed`
+### File: `supabase/functions/scrape-wca-partners/index.ts`
 
-### File: `src/pages/DownloadManagement.tsx` (componente `JobCard`)
-- Aggiungere uno stato locale `localDelayIdx` per tracciare la posizione del cursore durante il drag
-- Usare `onValueCommit` invece di `onValueChange` per inviare la mutazione solo quando l'utente rilascia il cursore (il componente Radix Slider supporta nativamente `onValueCommit`)
-- Usare `onValueChange` solo per aggiornare lo stato locale visivo
-- Questo elimina completamente il flooding di richieste e il problema dello snap-back
+1. **Aggiungere "member not found" alla regex di rilevamento 404** (riga 25):
+   - Aggiungere il pattern `member\s*not\s*found` alla regex esistente
+   - Rimuovere il vincolo `content.length < 2000` perche il messaggio potrebbe essere dentro una pagina piu lunga con navigazione
+
+2. **Aggiungere un controllo aggiuntivo sul company_name** (dopo riga 40):
+   - Se il `company_name` estratto contiene "not found" o "try again", trattarlo come profilo non trovato
+   - Questo e un fallback di sicurezza nel caso la regex principale non intercetti varianti del messaggio
 
 ### Dettaglio tecnico
 
-Nel `JobCard`, il codice attuale:
+Riga 25 attuale:
 ```
-<Slider value={[delayIdx]} onValueChange={([v]) => handleSpeedChange(v)} />
+if (/page\s*(not|was not)\s*found|404|no\s*results?\s*found/i.test(content) && content.length < 2000) {
 ```
 
 Diventa:
 ```
-const [localDelayIdx, setLocalDelayIdx] = useState(delayIdx);
-
-// Sync when job data updates from realtime
-useEffect(() => setLocalDelayIdx(delayIdx), [delayIdx]);
-
-<Slider 
-  value={[localDelayIdx]} 
-  onValueChange={([v]) => setLocalDelayIdx(v)}        // solo visivo
-  onValueCommit={([v]) => handleSpeedChange(v)}        // salva al rilascio
-/>
+if (/page\s*(not|was not)\s*found|member\s*not\s*found|404|no\s*results?\s*found/i.test(content)) {
 ```
 
-In `useUpdateJobSpeed`, aggiungere invalidazione:
+Dopo riga 40, aggiungere:
 ```
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
-}
+if (/not\s*found|try\s*again/i.test(companyName)) return null
 ```
 
-Nessuna modifica al database o alle edge function.
+Nessuna modifica al database o ad altri file.
 
