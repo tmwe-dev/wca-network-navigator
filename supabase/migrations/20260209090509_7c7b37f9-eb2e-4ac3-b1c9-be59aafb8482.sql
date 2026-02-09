@@ -1,0 +1,1 @@
+ALTER TABLE public.download_jobs ADD COLUMN job_type text NOT NULL DEFAULT 'download';
