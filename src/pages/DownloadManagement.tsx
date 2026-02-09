@@ -803,12 +803,36 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
-      const { data } = await supabase
+      // Query by country_code OR by wca_id (to catch partners saved with 'XX')
+      const allWcaIds = cachedEntries.flatMap((e: any) =>
+        ((e.members as any[]) || []).map((m: any) => m.wca_id || m.id).filter(Boolean)
+      );
+      
+      let allPartners: any[] = [];
+      
+      // First: by country_code
+      const { data: byCountry } = await supabase
         .from("partners")
         .select("wca_id, company_name, city, country_code, country_name, updated_at, rating, partner_type")
         .in("country_code", countryCodes)
         .not("wca_id", "is", null)
         .order("company_name");
+      allPartners = byCountry || [];
+      
+      // Second: by wca_id for any cached members not found by country_code
+      if (allWcaIds.length > 0) {
+        const foundWcaIds = new Set(allPartners.map(p => p.wca_id));
+        const missingWcaIds = allWcaIds.filter((id: number) => !foundWcaIds.has(id));
+        if (missingWcaIds.length > 0) {
+          const { data: byWcaId } = await supabase
+            .from("partners")
+            .select("wca_id, company_name, city, country_code, country_name, updated_at, rating, partner_type")
+            .in("wca_id", missingWcaIds);
+          if (byWcaId) allPartners = [...allPartners, ...byWcaId];
+        }
+      }
+      
+      const data = allPartners;
       return (data || []).map(p => ({
         wca_id: p.wca_id!,
         company_name: p.company_name,

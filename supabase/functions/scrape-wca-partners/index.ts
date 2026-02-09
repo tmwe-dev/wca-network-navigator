@@ -19,8 +19,8 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   const content = html || markdown || ''
   const md = markdown || ''
 
-  // Detect 404 / not found
-  if (/page\s*(not|was not)\s*found|member\s*not\s*found|404|no\s*results?\s*found/i.test(content)) {
+  // Detect 404 / not found / error pages
+  if (/page\s*(not|was not)\s*found|member\s*not\s*found|404|no\s*results?\s*found|please\s*try\s*again/i.test(content)) {
     return null
   }
 
@@ -76,7 +76,11 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
     /(?:Email|E-mail)\s*[:：]\s*\[?([^\s\]<>]+@[^\s\]<>]+)/im,
     /\[([^\]]+@[^\]]+)\]\(mailto:/im,
   ])
-  const email = rawEmail && !rawEmail.includes('wcaworld.com') ? rawEmail : null
+  // Validate email: reject garbage like "Members only", "[Members only...]", "Login to view"
+  function isGarbageEmail(e: string): boolean {
+    return /members\s*only|login\s*to\s*view|please\s*login|view\s*information/i.test(e)
+  }
+  const email = rawEmail && !rawEmail.includes('wcaworld.com') && !isGarbageEmail(rawEmail) ? rawEmail : null
 
   const phone = extractField(content, [
     /(?:Phone|Tel|Telephone)\s*[:：]\s*([+\d\s\-().]{7,25})/i,
@@ -206,7 +210,7 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
     if (rawContactEmail) {
       const linkMatch = rawContactEmail.match(/\[([^\]]+@[^\]]+)\]/)
       const contactEmail = linkMatch ? linkMatch[1].trim() : rawContactEmail.replace(/\*+/g, '').trim()
-      if (contactEmail && /\S+@\S+\.\S+/.test(contactEmail) && !/Members\s*only|Login|wcaworld/i.test(contactEmail)) {
+      if (contactEmail && /\S+@\S+\.\S+/.test(contactEmail) && !isGarbageEmail(contactEmail) && !/wcaworld/i.test(contactEmail)) {
         contact.email = contactEmail
       }
     }
@@ -458,11 +462,18 @@ function htmlToSimpleMarkdown(html: string): string {
 
 // ─── Save & Respond Helper ──────────────────────────────────
 
-async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: string, wcaId: number, parsed: any) {
+async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: string, wcaId: number, parsed: any, callerCountryCode?: string) {
+  // Use caller-provided country code if the parsed one is unknown
+  let finalCountryCode = parsed.country_code
+  if (finalCountryCode === 'XX' && callerCountryCode && callerCountryCode !== 'XX') {
+    finalCountryCode = callerCountryCode.toUpperCase()
+    console.log(`Country code override: XX -> ${finalCountryCode} (from caller)`)
+  }
+
   const partnerRecord = {
     company_name: parsed.company_name,
     city: parsed.city,
-    country_code: parsed.country_code,
+    country_code: finalCountryCode,
     country_name: parsed.country,
     email: parsed.email,
     phone: parsed.phone,
@@ -568,7 +579,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const body = await req.json()
-    const { wcaId, preview } = body
+    const { wcaId, preview, countryCode: callerCountryCode } = body
 
     if (!wcaId || typeof wcaId !== 'number') {
       return new Response(
@@ -712,7 +723,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, parsed)
+    return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, parsed, callerCountryCode)
   } catch (error) {
     console.error('Error:', error)
     return new Response(
