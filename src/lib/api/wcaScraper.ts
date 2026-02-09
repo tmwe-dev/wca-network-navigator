@@ -76,3 +76,46 @@ export async function scrapeWcaPartnerById(wcaId: number): Promise<ScrapeSingleR
 
   return data as ScrapeSingleResult;
 }
+
+// ─── Directory Listing Types ─────────────────────────────────
+
+export interface DirectoryMember {
+  company_name: string;
+  city?: string;
+  country?: string;
+  wca_id?: number;
+  network_memberships?: string[];
+}
+
+export interface DirectoryResult {
+  success: boolean;
+  members: DirectoryMember[];
+  pagination: {
+    total_results: number;
+    current_page: number;
+    total_pages: number;
+    has_next_page: boolean;
+  };
+  error?: string;
+}
+
+export async function scrapeWcaDirectory(
+  country: string,
+  network?: string,
+  page?: number
+): Promise<DirectoryResult> {
+  const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
+    body: { country, network: network || "", page: page || 1 },
+  });
+
+  if (error) {
+    return {
+      success: false,
+      members: [],
+      pagination: { total_results: 0, current_page: 1, total_pages: 1, has_next_page: false },
+      error: error.message,
+    };
+  }
+
+  return data as DirectoryResult;
+}
