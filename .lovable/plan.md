@@ -1,41 +1,36 @@
 
-# Fix: Permettere di Rientrare nella Vista Job Attivi
+# Fix: Partner Non Visibili in Tempo Reale + Combobox Ricercabile
 
-## Problema
-Quando l'utente esce dalla pagina di download management e torna, vede il banner "X job attivi in background" nella schermata iniziale, ma non puo cliccarci sopra per entrare nella vista dettagliata dei job. L'unico modo per vedere i job attivi e navigare attraverso tutto il wizard (Scarica Partner > selezione paese > ecc.), il che non ha senso.
+## Problema 1: Partner mancanti
+Le query che caricano i partner nella pagina Campagne usano una cache di 2-5 minuti (`staleTime`). Quando il sistema di download sta scaricando nuovi profili in background, questi non compaiono nella lista finche la cache non scade. L'utente vede solo 3 partner USA invece dei 18-19 gia presenti nel database.
 
-## Soluzione
-Rendere il banner dei job attivi **cliccabile** e aggiungere un **pulsante esplicito** per entrare direttamente nella vista `DownloadRunning` senza passare dal wizard.
+## Problema 2: Dropdown paese non ricercabile
+Il selettore paese in alto usa un `Select` standard senza possibilita di digitare per cercare. I paesi non sono ordinati per nome.
+
+---
 
 ## Modifiche
 
-### File: `src/pages/DownloadManagement.tsx`
+### File: `src/hooks/usePartnersForGlobe.ts`
 
-**1. Banner job attivi nella `StepChoose` (linee 218-235)**
+**Aggiungere `refetchInterval` a entrambe le query** per aggiornare automaticamente i dati ogni 15 secondi:
 
-Aggiungere un `onClick` al banner che imposta `step = "running"` e `action = "download"`:
-- Trasformare il `div` del banner in un elemento cliccabile con cursore pointer
-- Aggiungere un pulsante "Visualizza dettagli" o una freccia a destra per indicare che e cliccabile
-- Al click, chiamare `onSelect("download")` con un flag speciale oppure esporre direttamente la navigazione verso running
+- `usePartnersForGlobe`: aggiungere `refetchInterval: 15_000` e ridurre `staleTime` a 10 secondi
+- `usePartnersByCountryForGlobe`: aggiungere `refetchInterval: 15_000` e ridurre `staleTime` a 10 secondi
 
-**2. Esporre la navigazione diretta nel componente principale (linee 144-193)**
+Questo garantisce che i nuovi partner scaricati appaiano nella lista entro 15 secondi.
 
-Aggiungere una funzione `goToRunning` nel componente `DownloadManagement` che setta simultaneamente `step = "running"` e `action = "download"`, e passarla a `StepChoose`:
-```
-const goToRunning = () => { setAction("download"); setStep("running"); };
-```
+### File: `src/pages/Campaigns.tsx`
 
-Passare questa funzione come prop a `StepChoose`:
-```
-<StepChoose onSelect={...} onGoToJobs={goToRunning} />
-```
+**Sostituire il `Select` del paese con un Combobox ricercabile** usando `Popover` + `Command` (cmdk):
 
-**3. Aggiungere le metriche tempo medio (dal piano precedente approvato)**
+1. Rimuovere gli import di `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue`
+2. Aggiungere import di `Popover`, `PopoverContent`, `PopoverTrigger` e `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem`
+3. Aggiungere import di `Check`, `ChevronsUpDown` da lucide-react
+4. Aggiungere stato `open` per il popover e `searchQuery` per il filtro
+5. Ordinare i paesi per nome (`a.name.localeCompare(b.name)`)
+6. Il `CommandInput` permette di digitare per filtrare i paesi in tempo reale
+7. Ogni item mostra bandiera, nome paese e conteggio partner
+8. Al click, seleziona il paese e chiude il popover
 
-Nella `JobCard`, aggiungere sotto la progress bar:
-- **Tempo medio per profilo**: calcolato come `(updated_at - created_at) / current_index`
-- **Tempo netto di scraping**: tempo medio meno il delay configurato
-- **Tempo rimanente stimato**: tempo medio moltiplicato per i profili restanti
-- **Velocita**: profili al minuto
-
-Questi dati si aggiornano in tempo reale grazie alla subscription Realtime gia attiva.
+Stile coerente con il tema attuale (bg-black/90, border-amber-500/30, text-amber-100).
