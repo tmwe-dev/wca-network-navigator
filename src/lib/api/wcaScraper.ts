@@ -1,37 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export interface ScrapeResult {
-  country: string;
-  found: number;
-  inserted: number;
-  updated: number;
-  errors: number;
-}
-
-export interface ScrapeResponse {
+export interface ScrapeSingleResult {
   success: boolean;
-  error?: string;
-  summary?: {
-    totalCountries: number;
-    totalFound: number;
-    totalInserted: number;
-    totalUpdated: number;
-    totalErrors: number;
+  found?: boolean;
+  wcaId: number;
+  action?: "inserted" | "updated" | "skipped";
+  partner?: {
+    company_name: string;
+    city: string;
+    country_code: string;
+    country_name: string;
+    email?: string;
+    phone?: string;
+    website?: string;
+    wca_id?: number;
+    address?: string;
   };
-  results?: ScrapeResult[];
+  error?: string;
 }
 
-export async function scrapeWcaPartners(
-  countryCodes: string[],
-  countryNames: string[]
-): Promise<ScrapeResponse> {
+export async function scrapeWcaPartnerById(wcaId: number): Promise<ScrapeSingleResult> {
   const { data, error } = await supabase.functions.invoke("scrape-wca-partners", {
-    body: { countryCodes, countryNames },
+    body: { wcaId },
   });
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, wcaId, error: error.message };
   }
 
-  return data as ScrapeResponse;
+  return data as ScrapeSingleResult;
 }
