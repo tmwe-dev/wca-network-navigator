@@ -1,80 +1,30 @@
 
+# Fix: Selezione multipla dei Network nel Download Wizard
 
-# Piano: Re-download completo partner per recuperare contatti
+## Problema
+Nella schermata "Quale network?" del Download Wizard, cliccando su un singolo network (es. "China Global") il sistema avanza immediatamente alla fase successiva, impedendo di selezionare piu network contemporaneamente. Solo "Tutti i Network" funziona per coprire piu gruppi.
 
-## Situazione attuale
+## Soluzione
+Trasformare `PickNetwork` da selezione singola (click = avanza) a selezione multipla con checkbox, come gia fatto per la selezione paesi.
 
-- 290 partner nel database, quasi tutti senza email/telefoni dei responsabili
-- Solo ~21 partner hanno email dei contatti personali (7%)
-- Causa: i dati dei contatti sono protetti ("Members only") e servono le credenziali WCA attive
+## Modifiche
 
-## Cosa faremo
+### 1. Componente `PickNetwork` (DownloadManagement.tsx, righe 610-642)
+- Cambiare la prop `onSelect: (n: string) => void` in `onConfirm: (networks: string[]) => void`
+- Aggiungere uno stato interno `selected: Set<string>` per i network selezionati
+- Ogni network diventa un toggle (con checkbox visiva) invece di un click diretto
+- Aggiungere un pulsante "Continua" in basso (come per i paesi)
+- Mantenere "Tutti i Network" come opzione che seleziona/deseleziona tutto
 
-Creeremo una funzione "Re-sync Contatti" nella pagina Download Management che ri-scarica tutti i partner gia presenti nel DB, network per network, usando il cookie di sessione WCA per accedere ai dati riservati (email, telefoni diretti, cellulari).
+### 2. Stato nel `DownloadWizard` (righe 272-365)
+- Cambiare `network` da `string` a `string[]` (array di network selezionati)
+- Aggiornare il passaggio a `DirectoryScanner` e `Phase2Config` per gestire array di network
+- Se l'array e vuoto o contiene tutti, comportamento invariato (cerca tutto)
 
-## Flusso operativo
+### 3. Componenti a valle (`DirectoryScanner`, `Phase2Config`)
+- Aggiornare la prop `network` da `string` a `string[]`
+- Nella query al `directory_cache`, usare `.in("network_name", networks)` invece di `.eq("network_name", network)`
+- Nel job di download, passare i network come stringa concatenata (come gia fatto nel resync)
 
-1. L'utente va in **Impostazioni** e incolla il cookie di sessione WCA (gia implementato)
-2. Nella pagina **Download Management**, appare una nuova azione **"Aggiorna Contatti"**
-3. L'utente seleziona uno o piu network WCA da aggiornare
-4. Il sistema mostra per ogni network: quanti partner ci sono e quanti mancano di contatti completi
-5. Click su **Avvia** -> il sistema ri-scarica ogni partner tramite il suo `wca_id`, sovrascrivendo i contatti con quelli completi
-6. Il processo gira in background (stessa architettura `process-download-job`) e puo essere messo in pausa/ripreso
-
-## Dettagli tecnici
-
-### 1. Nuovo tipo di job: "resync"
-Estendere la tabella `download_jobs` per supportare un nuovo tipo di operazione. Aggiungere una colonna `job_type` (default `'download'`, nuovi valori: `'resync'`).
-
-### 2. Nuova sezione UI in Download Management
-Aggiungere una terza opzione nella schermata iniziale: **"Aggiorna Contatti"** (icona RefreshCw), accanto a "Scarica Partner" e "Arricchisci".
-
-La schermata di configurazione mostra:
-- Lista dei network con checkbox
-- Per ogni network: numero totale partner e numero con contatti mancanti
-- Badge visivo verde/arancione per indicare la completezza
-- Selezione della velocita (come per il download normale)
-
-### 3. Logica di re-sync
-- Recuperare tutti i `wca_id` dei partner nel DB, filtrati per network selezionati
-- Creare un `download_job` con `job_type = 'resync'` e la lista di `wca_id`
-- La edge function `process-download-job` chiama `scrape-wca-partners` come gia fa
-- Lo scraper sovrascrive/aggiorna i contatti esistenti (upsert gia implementato)
-
-### 4. Query per recuperare i WCA ID per network
-
-```text
-SELECT DISTINCT p.wca_id 
-FROM partners p 
-JOIN partner_networks pn ON pn.partner_id = p.id 
-WHERE pn.network_name = 'WCA Inter Global'
-AND p.wca_id IS NOT NULL
-```
-
-### 5. Prioritizzazione "senza contatti"
-Opzione per scaricare prima i partner che non hanno ancora contatti completi, poi quelli da aggiornare:
-
-```text
-ORDER BY (
-  EXISTS(SELECT 1 FROM partner_contacts pc 
-         WHERE pc.partner_id = p.id 
-         AND pc.email IS NOT NULL)
-) ASC
-```
-
-### 6. Monitoraggio risultati
-Durante il re-sync, il pannello di monitoraggio mostra:
-- Contatore "Contatti trovati" (quanti partner hanno ricevuto email/telefoni)
-- Contatore "Gia completi" (saltati perche avevano gia i dati)
-- Barra di progresso con percentuale
-
-### File da modificare/creare
-
-| File | Azione |
-|------|--------|
-| `src/pages/DownloadManagement.tsx` | Aggiungere action "resync", schermata configurazione per network, schermata running |
-| `supabase/functions/process-download-job/index.ts` | Nessuna modifica necessaria - gia gestisce liste di wca_id |
-| Migrazione DB | Aggiungere colonna `job_type` a `download_jobs` |
-
-### Prerequisito importante
-Il cookie di sessione WCA deve essere salvato nelle Impostazioni prima di avviare il re-sync, altrimenti i contatti non saranno visibili e il download produrra gli stessi dati incompleti.
+## Risultato
+L'utente potra selezionare "China Global" + "Dangerous Goods" (o qualsiasi combinazione) e poi cliccare "Continua" per procedere alla scansione directory con tutti i network selezionati.
