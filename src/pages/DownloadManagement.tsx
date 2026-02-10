@@ -7,12 +7,15 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Download, Sparkles, Globe, ArrowLeft, Play, Pause, Square,
   Loader2, Timer, Building2, CheckCircle, FlaskConical,
   ArrowRight, Zap, ChevronDown, ChevronRight, Sun, Moon,
   Search, Users, MapPin, Settings2, List, FileDown, Activity, RefreshCw,
-  Mail, Phone, XCircle, UserCheck, UserX
+  Mail, Phone, XCircle, UserCheck, UserX, Wrench, ShieldCheck, ShieldAlert
 } from "lucide-react";
 import { WcaBrowser } from "@/components/download/WcaBrowser";
 import { JobDataViewer } from "@/components/download/JobDataViewer";
@@ -36,22 +39,11 @@ import {
   useDownloadJobs, useCreateDownloadJob, usePauseResumeJob,
   useUpdateJobSpeed, type DownloadJob
 } from "@/hooks/useDownloadJobs";
+import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 // ─── Types ────────────────────────────────────────────────────
 type ActionType = "download" | "enrich" | "network" | "resync";
 type Step = "choose" | "configure" | "running";
-
-interface ScrapeLog {
-  wcaId: number;
-  status: "success" | "not_found" | "error";
-  action?: string;
-  companyName?: string;
-  city?: string;
-  countryCode?: string;
-  aiSummary?: string;
-  partner?: ScrapedPartner;
-  error?: string;
-}
 
 interface EnrichPartner {
   id: string;
@@ -143,8 +135,149 @@ function t(dark: boolean) {
 
 const DELAY_VALUES = [0, 1, 2, 3, 5, 8, 10, 15, 20, 30, 45, 60];
 const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 2: "2s", 3: "3s", 5: "5s", 8: "8s", 10: "10s", 15: "15s", 20: "20s", 30: "30s", 45: "45s", 60: "60s" };
-const PAUSE_DURATION_VALUES = [10, 30, 60, 120, 300, 600, 1800, 3600];
-const formatDuration = (s: number) => s >= 3600 ? `${(s / 3600).toFixed(0)}h` : s >= 60 ? `${(s / 60).toFixed(0)}min` : `${s}s`;
+
+// Bookmarklet for session capture
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const BOOKMARKLET = `javascript:void(fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message)))`;
+
+// ─── WCA Session Indicator ───────────────────────────────────
+function WcaSessionIndicator() {
+  const isDark = useTheme();
+  const { status, checkedAt, triggerCheck, isLoading } = useWcaSessionStatus();
+
+  const isOk = status === "ok";
+  const dotColor = isOk
+    ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
+    : (isDark ? "bg-red-400" : "bg-red-500");
+  const label = isOk ? "WCA Connesso" : status === "expired" ? "Sessione Scaduta" : "Non configurato";
+
+  return (
+    <TooltipProvider>
+      <Popover>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition-all ${
+                isDark
+                  ? "bg-white/[0.04] border-white/[0.1] hover:bg-white/[0.08] text-slate-300"
+                  : "bg-white/60 border-slate-200 hover:bg-white/80 text-slate-600"
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${dotColor} ${!isOk ? "animate-pulse" : ""}`} />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{label}</p>
+            {checkedAt && <p className="text-xs opacity-70">Ultimo check: {new Date(checkedAt).toLocaleString("it-IT")}</p>}
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent className={`w-80 ${isDark ? "bg-slate-900 border-slate-700 text-slate-200" : ""}`}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              {isOk ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <ShieldAlert className="w-5 h-5 text-red-500" />}
+              <span className="font-medium">{label}</span>
+            </div>
+            {!isOk && (
+              <div className="space-y-2">
+                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Per attivare la sessione, trascina il bottone qui sotto nella barra dei preferiti, poi cliccalo su wcaworld.com:
+                </p>
+                <a
+                  href={BOOKMARKLET}
+                  onClick={e => e.preventDefault()}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium cursor-grab active:cursor-grabbing ${
+                    isDark ? "bg-amber-600 text-white" : "bg-sky-600 text-white"
+                  }`}
+                >
+                  🔗 Cattura WCA
+                </a>
+              </div>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={triggerCheck}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+              Verifica ora
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
+  );
+}
+
+// ─── WCA Session Check Dialog ────────────────────────────────
+function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolean; onOpenChange: (o: boolean) => void; onRetry: () => void }) {
+  const isDark = useTheme();
+  const th = t(isDark);
+  const { status, triggerCheck, isLoading } = useWcaSessionStatus();
+
+  const handleRetry = async () => {
+    await triggerCheck();
+    // Short delay to let DB update, then re-check
+    setTimeout(() => {
+      onRetry();
+    }, 2000);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={th.dlgBg}>
+        <DialogHeader>
+          <DialogTitle className={th.dlgTitle}>
+            <ShieldAlert className="w-5 h-5 inline mr-2 text-red-500" />
+            Sessione WCA non attiva
+          </DialogTitle>
+          <DialogDescription className={th.dlgSub}>
+            Per scaricare i dati dei contatti è necessaria una sessione WCA attiva. Segui questi passaggi:
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <ol className={`text-sm space-y-3 ${th.body}`}>
+            <li className="flex gap-3">
+              <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepAct}`}>1</span>
+              <span>Trascina questo bottone nella barra dei preferiti:
+                <a
+                  href={BOOKMARKLET}
+                  onClick={e => e.preventDefault()}
+                  className={`inline-flex items-center gap-1 ml-2 px-2 py-1 rounded text-xs font-medium cursor-grab active:cursor-grabbing ${
+                    isDark ? "bg-amber-600 text-white" : "bg-sky-600 text-white"
+                  }`}
+                >
+                  🔗 Cattura WCA
+                </a>
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>2</span>
+              <span>Vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a> e fai login</span>
+            </li>
+            <li className="flex gap-3">
+              <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>3</span>
+              <span>Clicca il bookmark "Cattura WCA" — vedrai un alert "Done!"</span>
+            </li>
+          </ol>
+
+          <Button onClick={handleRetry} disabled={isLoading} className={`w-full ${th.btnPri}`}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Riprova verifica
+          </Button>
+
+          {status === "ok" && (
+            <div className={`p-3 rounded-lg border text-sm text-center ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+              <CheckCircle className="w-4 h-4 inline mr-1" /> Sessione attiva! Puoi procedere.
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ─── Main ────────────────────────────────────────────────────
 export default function DownloadManagement() {
@@ -170,7 +303,7 @@ export default function DownloadManagement() {
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
         <div className="relative z-10 h-full flex flex-col">
-          {/* Compact top bar: back + theme toggle */}
+          {/* Top bar: back + WCA session indicator + theme toggle */}
           <div className="flex items-center justify-between px-6 py-2 flex-shrink-0">
             <div>
               {step !== "choose" && (
@@ -179,9 +312,12 @@ export default function DownloadManagement() {
                 </button>
               )}
             </div>
-            <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <div className="flex items-center gap-3">
+              <WcaSessionIndicator />
+              <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {/* Content area — scrollable */}
@@ -202,20 +338,25 @@ export default function DownloadManagement() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STEP 1 - Choose Action
+// STEP 1 - Choose Action (Simplified: 2 primary + collapsible)
 // ═══════════════════════════════════════════════════════════════
 function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => void; onGoToJobs: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
   const { data: jobs } = useDownloadJobs();
   const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
+  const [toolsOpen, setToolsOpen] = useState(false);
 
-  const actions = [
-    { type: "download" as ActionType, icon: Download, title: "Scarica Partner", desc: "Scegli paese e network, cerca la lista, poi scarica i dettagli", color: "amber" },
-    { type: "resync" as ActionType, icon: RefreshCw, title: "Aggiorna Contatti", desc: "Ri-scarica partner esistenti per recuperare email e telefoni", color: "purple" },
-    { type: "enrich" as ActionType, icon: Sparkles, title: "Arricchisci dal Sito", desc: "Leggi siti web di partner già scaricati con AI", color: "emerald" },
-    { type: "network" as ActionType, icon: Globe, title: "Analisi Network", desc: "Verifica a quali gruppi WCA hai accesso ai dati", color: "blue" },
+  const primaryActions = [
+    { type: "download" as ActionType, icon: Download, title: "Scarica Partner", desc: "Cerca partner nella directory WCA per paese e network, poi scarica profili e contatti", color: "amber" },
+    { type: "resync" as ActionType, icon: RefreshCw, title: "Aggiorna Contatti", desc: "Ri-scarica partner già salvati per recuperare email e telefoni mancanti", color: "purple" },
   ];
+
+  const advancedActions = [
+    { type: "enrich" as ActionType, icon: Sparkles, title: "Arricchisci dal Sito", desc: "Analizza i siti web dei partner con AI", color: "emerald" },
+    { type: "network" as ActionType, icon: Globe, title: "Analisi Network", desc: "Verifica la visibilità dei dati per ogni gruppo WCA", color: "blue" },
+  ];
+
   const cMap: Record<string, string> = isDark
     ? { amber: "border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/5", emerald: "border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5", blue: "border-blue-500/30 hover:border-blue-500/60 hover:bg-blue-500/5", purple: "border-purple-500/30 hover:border-purple-500/60 hover:bg-purple-500/5" }
     : { amber: "border-sky-200 hover:border-sky-400 hover:bg-sky-50", emerald: "border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50", blue: "border-blue-200 hover:border-blue-400 hover:bg-blue-50", purple: "border-purple-200 hover:border-purple-400 hover:bg-purple-50" };
@@ -223,7 +364,7 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8">
-      {/* Active jobs banner — clickable */}
+      {/* Active jobs banner */}
       {activeJobs.length > 0 && (
         <button
           onClick={onGoToJobs}
@@ -255,8 +396,10 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
         <h1 className={`text-2xl mb-2 ${th.h1}`}>Cosa vuoi fare?</h1>
         <p className={`text-sm ${th.sub}`}>Scegli un'azione per iniziare</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl w-full">
-        {actions.map(a => (
+
+      {/* Primary actions — 2 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
+        {primaryActions.map(a => (
           <button key={a.type} onClick={() => onSelect(a.type)} className={`group ${th.panel} border rounded-2xl p-8 text-left transition-all duration-300 ${cMap[a.color]}`}>
             <a.icon className={`w-10 h-10 mb-4 ${iMap[a.color]}`} />
             <h3 className={`text-lg mb-2 ${th.h2}`}>{a.title}</h3>
@@ -266,18 +409,39 @@ function StepChoose({ onSelect, onGoToJobs }: { onSelect: (a: ActionType) => voi
         ))}
       </div>
 
-      {/* WCA Browser Panel */}
-      <div className="w-full max-w-3xl mt-4">
-        <WcaBrowser isDark={isDark} />
-      </div>
+      {/* Collapsible advanced tools */}
+      <Collapsible open={toolsOpen} onOpenChange={setToolsOpen} className="w-full max-w-2xl">
+        <CollapsibleTrigger className={`flex items-center gap-2 text-sm w-full justify-center py-2 transition-colors ${th.sub} hover:opacity-80`}>
+          <Wrench className="w-4 h-4" />
+          Strumenti avanzati
+          {toolsOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+            {advancedActions.map(a => (
+              <button key={a.type} onClick={() => onSelect(a.type)} className={`group ${th.panel} border rounded-xl p-5 text-left transition-all duration-300 ${cMap[a.color]}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <a.icon className={`w-6 h-6 ${iMap[a.color]}`} />
+                  <h3 className={`text-sm font-medium ${th.h2}`}>{a.title}</h3>
+                </div>
+                <p className={`text-xs ${th.sub}`}>{a.desc}</p>
+              </button>
+            ))}
+          </div>
+          {/* WCA Browser Panel */}
+          <div className="mt-4">
+            <WcaBrowser isDark={isDark} />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DOWNLOAD WIZARD — Country → Network → Fase1: Lista → Fase2: Dettagli
+// DOWNLOAD WIZARD — Country → Network → Avvia Download (3 steps)
 // ═══════════════════════════════════════════════════════════════
-type DlSub = "country" | "network" | "listing" | "details";
+type DlSub = "country" | "network" | "download";
 
 function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const isDark = useTheme();
@@ -286,10 +450,9 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
   const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
   const [networks, setNetworks] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const [discoveredMembers, setDiscoveredMembers] = useState<DirectoryMember[]>([]);
 
-  const labels = ["Paesi", "Network", "Fase 1: Lista", "Fase 2: Dettagli"];
-  const keys: DlSub[] = ["country", "network", "listing", "details"];
+  const labels = ["Scegli Paesi", "Scegli Network", "Avvia Download"];
+  const keys: DlSub[] = ["country", "network", "download"];
   const idx = keys.indexOf(sub);
 
   const goSubBack = () => { if (idx > 0) setSub(keys[idx - 1]); };
@@ -306,22 +469,9 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
     setCountries(prev => prev.filter(c => c.code !== code));
   };
 
-  const handleListingComplete = (members: DirectoryMember[]) => {
-    setDiscoveredMembers(members);
-    setSub("details");
-  };
-
-  const handleSaveIdsOnly = () => {
-    // Return to country selection after saving IDs
-    setSub("country");
-    setCountries([]);
-    setNetworks([]);
-    setDiscoveredMembers([]);
-  };
-
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Compact stepper + back in one row */}
+      {/* Stepper */}
       <div className="flex items-center gap-3 mb-4 flex-shrink-0">
         {idx > 0 && (
           <button onClick={goSubBack} className={`flex items-center gap-1 text-xs whitespace-nowrap ${th.back}`}>
@@ -352,22 +502,13 @@ function DownloadWizard({ onStartRunning }: { onStartRunning: () => void }) {
         />
       )}
       {sub === "network" && countries.length > 0 && (
-        <PickNetwork countries={countries} onConfirm={n => { setNetworks(n); setSub("listing"); }} />
+        <PickNetwork countries={countries} onConfirm={n => { setNetworks(n); setSub("download"); }} />
       )}
-      {sub === "listing" && countries.length > 0 && (
-        <DirectoryScanner
+      {sub === "download" && countries.length > 0 && (
+        <UnifiedDownloadStep
           countries={countries}
           networks={networks}
-          onComplete={handleListingComplete}
-          onSaveIdsOnly={handleSaveIdsOnly}
-        />
-      )}
-      {sub === "details" && discoveredMembers.length > 0 && (
-        <Phase2Config
-          countries={countries}
-          networks={networks}
-          members={discoveredMembers}
-          onStart={onStartRunning}
+          onStartRunning={onStartRunning}
         />
       )}
     </div>
@@ -388,7 +529,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
 
-  // Partner counts per country with office_type breakdown
   const { data: partnerData = {} } = useQuery({
     queryKey: ["partner-counts-by-country-with-type"],
     queryFn: async () => {
@@ -410,7 +550,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   const partnerCounts: Record<string, number> = {};
   Object.entries(partnerData).forEach(([k, v]) => { partnerCounts[k] = v.total; });
 
-  // Directory cache data per country (counts + verified flag)
   const { data: cacheData = {} } = useQuery({
     queryKey: ["cache-data-by-country"],
     queryFn: async () => {
@@ -434,8 +573,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
 
   const { data: completeness } = useContactCompleteness();
 
-  const exploredSet = new Set(Object.keys(cacheCounts)); // Explored = has directory scan
-  const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k])); // DB only, no scan
+  const exploredSet = new Set(Object.keys(cacheCounts));
+  const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k]));
   const selectedCodes = new Set(selected.map(c => c.code));
 
   const filtered = WCA_COUNTRIES.filter(c => {
@@ -448,7 +587,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "partners") return (partnerCounts[b.code] || 0) - (partnerCounts[a.code] || 0);
-    // completion: show incomplete first (have cache but not fully downloaded)
     const compA = cacheCounts[a.code] ? (partnerCounts[a.code] || 0) / cacheCounts[a.code] : exploredSet.has(a.code) ? 1 : -1;
     const compB = cacheCounts[b.code] ? (partnerCounts[b.code] || 0) / cacheCounts[b.code] : exploredSet.has(b.code) ? 1 : -1;
     return compA - compB;
@@ -462,7 +600,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
     <div className="flex-1 flex flex-col items-center gap-4 min-h-0">
       <div className="text-center">
         <h2 className={`text-xl font-semibold mb-1 ${th.h2}`}>Quali paesi vuoi esplorare?</h2>
-        <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
         <p className={`text-sm ${th.sub}`}>Seleziona uno o più paesi — poi prosegui</p>
       </div>
 
@@ -492,9 +629,8 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
           <Input placeholder="Cerca paese..." value={search} onChange={e => onSearchChange(e.target.value)} className={`pl-10 ${th.input}`} />
         </div>
-        {/* Filter buttons */}
         {(["all", "explored", "partial", "missing"] as const).map(mode => {
-          const labels = { all: `Tutti (${WCA_COUNTRIES.length})`, explored: `Scansionati (${exploredCount})`, partial: `Dati parziali (${partialCount})`, missing: `Mai esplorati (${missingCount})` };
+          const filterLabels = { all: `Tutti (${WCA_COUNTRIES.length})`, explored: `Scansionati (${exploredCount})`, partial: `Dati parziali (${partialCount})`, missing: `Mai esplorati (${missingCount})` };
           const active = filterMode === mode;
           return (
             <button
@@ -510,11 +646,10 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
               {mode === "explored" && <CheckCircle className="w-3.5 h-3.5" />}
               {mode === "partial" && <Activity className="w-3.5 h-3.5" />}
               {mode === "missing" && <Download className="w-3.5 h-3.5" />}
-              {labels[mode]}
+              {filterLabels[mode]}
             </button>
           );
         })}
-        {/* Sort */}
         <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
           <SelectTrigger className={`w-[160px] h-9 text-xs ${th.selTrigger}`}>
             <SelectValue placeholder="Ordina per..." />
@@ -525,7 +660,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             <SelectItem value="completion">Completamento</SelectItem>
           </SelectContent>
         </Select>
-        {/* Select All / Deselect All */}
         {(() => {
           const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCodes.has(c.code));
           return (
@@ -564,10 +698,7 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
             const contactsTotal = cs?.total_partners || 0;
             const withEmail = cs?.with_personal_email || 0;
             const withPhone = cs?.with_personal_phone || 0;
-            const withBoth = cs?.with_both || 0;
             const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
-
-            // Download completeness
             const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
 
             return (
@@ -582,7 +713,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                     : th.optCard
                 }`}
               >
-                {/* Header: flag + name + status */}
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl leading-none">{getCountryFlag(c.code)}</span>
                   <div className="flex-1 min-w-0">
@@ -591,7 +721,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                   {isSelected && <CheckCircle className={`w-4 h-4 flex-shrink-0 ${isDark ? "text-white/70" : "text-sky-500"}`} />}
                 </div>
 
-                {/* Status badge */}
                 {(hasDirectoryScan || hasDbOnly) && (
                   <div className="flex items-center gap-1.5 mb-2">
                     {isComplete && (
@@ -612,42 +741,24 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                   </div>
                 )}
 
-                {/* Contact stats — only show when we have data */}
                 {pCount > 0 && (
                   <div className={`rounded-lg p-2 space-y-1.5 ${isDark ? "bg-white/[0.03]" : "bg-slate-50/60"}`}>
-                    {/* People count */}
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className={`flex items-center gap-1 ${th.dim}`}>
-                        <Users className="w-3 h-3" /> Responsabili
-                      </span>
+                      <span className={`flex items-center gap-1 ${th.dim}`}><Users className="w-3 h-3" /> Responsabili</span>
                       <span className={`font-mono font-bold ${cs && (withEmail > 0 || withPhone > 0) ? (isDark ? "text-slate-200" : "text-slate-700") : (isDark ? "text-red-400" : "text-red-500")}`}>
                         {cs ? `${withEmail > 0 || withPhone > 0 ? Math.max(withEmail, withPhone) : 0}` : "0"}/{pCount}
                       </span>
                     </div>
-                    {/* Email count */}
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className={`flex items-center gap-1 ${th.dim}`}>
-                        <Mail className="w-3 h-3" /> Email personale
-                      </span>
-                      <span className={`font-mono font-bold ${withEmail > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>
-                        {withEmail}
-                      </span>
+                      <span className={`flex items-center gap-1 ${th.dim}`}><Mail className="w-3 h-3" /> Email personale</span>
+                      <span className={`font-mono font-bold ${withEmail > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>{withEmail}</span>
                     </div>
-                    {/* Phone count */}
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className={`flex items-center gap-1 ${th.dim}`}>
-                        <Phone className="w-3 h-3" /> Telefono diretto
-                      </span>
-                      <span className={`font-mono font-bold ${withPhone > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>
-                        {withPhone}
-                      </span>
+                      <span className={`flex items-center gap-1 ${th.dim}`}><Phone className="w-3 h-3" /> Telefono diretto</span>
+                      <span className={`font-mono font-bold ${withPhone > 0 ? (isDark ? "text-emerald-400" : "text-emerald-600") : (isDark ? "text-red-400" : "text-red-500")}`}>{withPhone}</span>
                     </div>
-                    {/* Quality bar */}
                     <div className={`w-full h-1 rounded-full overflow-hidden mt-1 ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-                      <div
-                        className={`h-full rounded-full transition-all ${pctEmail >= 60 ? "bg-emerald-500" : pctEmail >= 30 ? "bg-amber-500" : "bg-red-500"}`}
-                        style={{ width: `${pctEmail}%` }}
-                      />
+                      <div className={`h-full rounded-full transition-all ${pctEmail >= 60 ? "bg-emerald-500" : pctEmail >= 30 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${pctEmail}%` }} />
                     </div>
                     <p className={`text-[9px] text-right font-mono ${pctEmail >= 60 ? "text-emerald-500" : pctEmail >= 30 ? "text-amber-500" : "text-red-500"}`}>
                       {pctEmail}% copertura
@@ -655,7 +766,6 @@ function PickCountry({ search, onSearchChange, selected, onToggle, onRemove, onC
                   </div>
                 )}
 
-                {/* Empty state for unexplored countries */}
                 {pCount === 0 && !hasDirectoryScan && (
                   <p className={`text-[10px] ${th.dim}`}>{c.code} — mai esplorato</p>
                 )}
@@ -712,7 +822,7 @@ function PickNetwork({ countries, onConfirm }: {
 
   const handleConfirm = () => {
     if (allSelected || selected.size === 0) {
-      onConfirm([]);  // empty = all networks
+      onConfirm([]);
     } else {
       onConfirm(Array.from(selected));
     }
@@ -724,9 +834,7 @@ function PickNetwork({ countries, onConfirm }: {
     <div className="flex-1 flex flex-col items-center justify-center gap-6">
       <div className="text-center">
         <h2 className={`text-xl mb-1 ${th.h2}`}>Quale network?</h2>
-        <p className={`text-sm ${th.sub}`}>
-          {countryLabel} — Seleziona uno o più gruppi WCA
-        </p>
+        <p className={`text-sm ${th.sub}`}>{countryLabel} — Seleziona uno o più gruppi WCA</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full">
         <button
@@ -767,21 +875,23 @@ function PickNetwork({ countries, onConfirm }: {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FASE 1: Directory Scanner — scrapes the listing page by page
-// Uses directory_cache to remember previous scans
+// UNIFIED DOWNLOAD STEP — Auto-scan + download in one step
 // ═══════════════════════════════════════════════════════════════
-function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
+function UnifiedDownloadStep({ countries, networks, onStartRunning }: {
   countries: { code: string; name: string }[];
   networks: string[];
-  onComplete: (members: DirectoryMember[]) => void;
-  onSaveIdsOnly?: () => void;
+  onStartRunning: () => void;
 }) {
   const isDark = useTheme();
   const th = t(isDark);
   const countryCodes = countries.map(c => c.code);
   const networkKeys = networks.length > 0 ? networks : [""];
+  const queryClient = useQueryClient();
+  const createJob = useCreateDownloadJob();
+  const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
+  const [showSessionDialog, setShowSessionDialog] = useState(false);
 
-  // 1) Load cached directory scan for these countries
+  // Load cached directory scan
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
     queryKey: ["directory-cache", countryCodes, networkKeys],
     queryFn: async () => {
@@ -800,18 +910,14 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
     staleTime: 30_000,
   });
 
-  // 2) Load partners already in DB for these countries
+  // Load partners already in DB
   const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
-      // Query by country_code OR by wca_id (to catch partners saved with 'XX')
       const allWcaIds = cachedEntries.flatMap((e: any) =>
         ((e.members as any[]) || []).map((m: any) => m.wca_id || m.id).filter(Boolean)
       );
-      
       let allPartners: any[] = [];
-      
-      // First: by country_code
       const { data: byCountry } = await supabase
         .from("partners")
         .select("wca_id, company_name, city, country_code, country_name, updated_at, rating, partner_type")
@@ -819,8 +925,6 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         .not("wca_id", "is", null)
         .order("company_name");
       allPartners = byCountry || [];
-      
-      // Second: by wca_id for any cached members not found by country_code
       if (allWcaIds.length > 0) {
         const foundWcaIds = new Set(allPartners.map(p => p.wca_id));
         const missingWcaIds = allWcaIds.filter((id: number) => !foundWcaIds.has(id));
@@ -832,23 +936,19 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
           if (byWcaId) allPartners = [...allPartners, ...byWcaId];
         }
       }
-      
-      const data = allPartners;
-      return (data || []).map(p => ({
+      return (allPartners || []).map(p => ({
         wca_id: p.wca_id!,
         company_name: p.company_name,
         city: p.city,
         country_code: p.country_code,
         country_name: p.country_name,
         updated_at: p.updated_at,
-        rating: p.rating,
-        partner_type: p.partner_type,
       }));
     },
     staleTime: 30_000,
   });
 
-  // Build cached members from directory_cache
+  // Build cached members
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
     const members = entry.members as any[];
     return (members || []).map((m: any) => ({
@@ -860,94 +960,32 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
     }));
   });
 
-  const cachedTotalResults = cachedEntries.reduce((sum: number, e: any) => sum + (e.total_results || 0), 0);
   const cachedAt = cachedEntries.length > 0
     ? cachedEntries.reduce((latest: string, e: any) => e.scanned_at > latest ? e.scanned_at : latest, cachedEntries[0].scanned_at)
     : null;
 
-  // Cross-reference: which cached members are already downloaded?
-  const dbWcaSet = new Set(dbPartners.map(p => p.wca_id));
-  const dbPartnerMap = new Map(dbPartners.map(p => [p.wca_id, p]));
-
-  // The authoritative member list: cached if available, otherwise DB-only
   const hasCache = cachedMembers.length > 0;
+  const dbWcaSet = new Set(dbPartners.map(p => p.wca_id));
 
-  // Build unified list with status
-  type MemberWithStatus = DirectoryMember & { inDb: boolean; updatedAt?: string | null; rating?: number | null; partnerType?: string | null };
-
-  const buildMemberList = (source: DirectoryMember[]): MemberWithStatus[] => {
-    const seen = new Set<number>();
-    const result: MemberWithStatus[] = [];
-    for (const m of source) {
-      if (m.wca_id && seen.has(m.wca_id)) continue;
-      if (m.wca_id) seen.add(m.wca_id);
-      const dbP = m.wca_id ? dbPartnerMap.get(m.wca_id) : undefined;
-      result.push({
-        ...m,
-        inDb: m.wca_id ? dbWcaSet.has(m.wca_id) : false,
-        updatedAt: dbP?.updated_at,
-        rating: dbP?.rating,
-        partnerType: dbP?.partner_type,
-      });
-    }
-    // Also add DB partners not in the source list
-    for (const p of dbPartners) {
-      if (!seen.has(p.wca_id)) {
-        seen.add(p.wca_id);
-        result.push({
-          company_name: p.company_name,
-          city: p.city,
-          country: p.country_name,
-          wca_id: p.wca_id,
-          inDb: true,
-          updatedAt: p.updated_at,
-          rating: p.rating,
-          partnerType: p.partner_type,
-        });
-      }
-    }
-    return result;
-  };
-
-  // Scanning state
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  // Scanning state (auto-scan if no cache)
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
   const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState<number | null>(null);
-  const [totalResults, setTotalResults] = useState<number | null>(null);
   const [currentCountryIdx, setCurrentCountryIdx] = useState(0);
-  const [pageTime, setPageTime] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
-  const [hasScanned, setHasScanned] = useState(false);
-
-  // Which list to show
-  const sourceMembers = hasScanned ? scannedMembers : (hasCache ? cachedMembers : []);
-  const members = buildMemberList(sourceMembers);
-
-  const downloadedCount = members.filter(m => m.inDb).length;
-  const missingCount = members.filter(m => !m.inDb && m.wca_id).length;
-  const totalCount = members.length;
-
-  // Detail dialog
-  const [selectedMember, setSelectedMember] = useState<MemberWithStatus | null>(null);
-
-  // Speed control
-  const [listingDelayIdx, setListingDelayIdx] = useState(0);
-  const listingDelayRef = useRef(DELAY_VALUES[0] * 1000);
-  useEffect(() => { listingDelayRef.current = DELAY_VALUES[listingDelayIdx] * 1000; }, [listingDelayIdx]);
-
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
   const abortRef = useRef(false);
-  const pauseRef = useRef(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
+  const listingDelayRef = useRef(0);
 
-  const waitWhilePaused = useCallback(async () => {
-    while (pauseRef.current && !abortRef.current) await new Promise(r => setTimeout(r, 300));
-  }, []);
+  // Auto-start scan if no cache
+  useEffect(() => {
+    if (!loadingCache && !loadingDb && !hasCache && !isScanning && !scanComplete) {
+      handleStartScan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingCache, loadingDb, hasCache]);
 
-  // Save scan results to directory_cache
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({
       company_name: m.company_name,
@@ -956,7 +994,6 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
       country_code: m.country_code,
       wca_id: m.wca_id,
     }));
-
     await supabase
       .from("directory_cache")
       .upsert({
@@ -968,16 +1005,12 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         scanned_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: "country_code,network_name" });
-
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
   }, [queryClient]);
 
-  const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
-
-  const handleStart = useCallback(async () => {
-    setIsRunning(true);
-    setHasScanned(true);
-    setError(null);
+  const handleStartScan = useCallback(async () => {
+    setIsScanning(true);
+    setScanError(null);
     setSkippedCountries([]);
     abortRef.current = false;
     const allMembers: DirectoryMember[] = [];
@@ -987,9 +1020,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
       if (abortRef.current) break;
       setCurrentCountryIdx(ci);
       const country = countries[ci];
-      setError(null); // Reset errore ad ogni paese
 
-      // Iterate over each selected network (or just "" for all)
       for (const netKey of networkKeys) {
         if (abortRef.current) break;
         let page = 1;
@@ -1000,13 +1031,7 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         let countryFailed = false;
 
         while (hasNext && !abortRef.current) {
-          await waitWhilePaused();
-          if (abortRef.current) break;
-
           setCurrentPage(page);
-          const start = Date.now();
-
-          // Retry con backoff esponenziale (3 tentativi)
           const maxRetries = 3;
           let result: DirectoryResult | null = null;
           let lastError = "";
@@ -1022,21 +1047,15 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
               result = null;
             }
             if (attempt < maxRetries) {
-              const backoffMs = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
-              console.warn(`${country.code}/${netKey} p${page}: tentativo ${attempt}/${maxRetries} fallito, retry in ${backoffMs / 1000}s...`);
-              await new Promise(r => setTimeout(r, backoffMs));
+              await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
             }
           }
 
           if (!result || !result.success) {
-            console.warn(`${country.code}/${netKey} p${page}: fallito dopo ${maxRetries} tentativi - ${lastError}`);
-            setError(`${country.name}: ${lastError} (saltato dopo ${maxRetries} tentativi)`);
+            setScanError(`${country.name}: ${lastError}`);
             countryFailed = true;
-            break; // Esce dal while delle pagine, continua col prossimo network/paese
+            break;
           }
-
-          const elapsed = Date.now() - start;
-          setPageTime(elapsed);
 
           if (result.members.length > 0) {
             const newMembers = result.members.map(m => ({
@@ -1051,8 +1070,6 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
 
           countryTotal = result.pagination.total_results;
           countryPages = result.pagination.total_pages;
-          setTotalResults(result.pagination.total_results);
-          setTotalPages(result.pagination.total_pages);
           hasNext = result.pagination.has_next_page || result.members.length >= 50;
           page++;
 
@@ -1062,420 +1079,44 @@ function DirectoryScanner({ countries, networks, onComplete, onSaveIdsOnly }: {
         }
 
         if (countryFailed) {
-          const label = `${country.name} (${country.code})${netKey ? ` [${netKey}]` : ''}`;
+          const label = `${country.name} (${country.code})`;
           if (!skipped.includes(label)) {
             skipped.push(label);
             setSkippedCountries([...skipped]);
           }
         }
 
-        // Save this country+network results to cache
         if (countryMembers.length > 0) {
           await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
         }
       }
     }
 
-    setIsRunning(false);
-    setIsComplete(true);
-  }, [countries, networkKeys, waitWhilePaused, saveScanToCache]);
+    setIsScanning(false);
+    setScanComplete(true);
+    // Refetch cache after scan
+    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+    queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+  }, [countries, networkKeys, saveScanToCache, queryClient]);
 
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [members.length]);
+  // Determine which members to show
+  const sourceMembers = scanComplete ? scannedMembers : cachedMembers;
+  const allIds = sourceMembers.filter(m => m.wca_id).map(m => m.wca_id!);
+  const uniqueIds = [...new Set(allIds)];
+  const missingIds = uniqueIds.filter(id => !dbWcaSet.has(id));
+  const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
+  const totalCount = uniqueIds.length;
 
-  const countryLabel = countries.length === 1
-    ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
-    : `${countries.length} paesi`;
-
-  const membersWithId = members.filter(m => m.wca_id);
-  const missingMembers = members.filter(m => !m.inDb && m.wca_id);
-
-  const isLoading = loadingCache || loadingDb;
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className={`w-6 h-6 animate-spin ${th.sub}`} />
-        <span className={`ml-2 text-sm ${th.sub}`}>Caricamento dati...</span>
-      </div>
-    );
-  }
-
-  // Determine header status text
-  const headerStatus = isComplete
-    ? "COMPLETATA"
-    : isRunning
-      ? "SCANSIONE LISTA"
-      : hasCache
-        ? "DATI DALLA CACHE"
-        : dbPartners.length > 0
-          ? "SOLO DATABASE"
-          : "PRONTO";
-
-  return (
-    <div className="flex-1 flex gap-6 min-h-0">
-      {/* Left: controls + log */}
-      <div className="flex-1 flex flex-col gap-4 min-h-0">
-        {/* Header */}
-        <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6`}>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-4">
-              {isRunning && !isPaused && <div className={`w-3 h-3 rounded-full animate-pulse ${th.pulse}`} />}
-              {isPaused && <Pause className={`w-4 h-4 ${th.acAmber}`} />}
-              <div>
-                <p className={`text-xs ${th.sub}`}>
-                  FASE 1 — {headerStatus} • {countryLabel}
-                  {networks.length > 0 && ` • ${networks.join(", ")}`}
-                </p>
-
-                {/* Summary numbers */}
-                {!isRunning && !isComplete && totalCount > 0 && (
-                  <div>
-                    <p className={`text-2xl font-mono ${th.mono}`}>
-                      {totalCount} partner
-                      {hasCache && <span className={`text-sm ml-2 ${th.dim}`}>(dalla directory)</span>}
-                    </p>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className={`text-sm font-medium ${th.acEm}`}>✓ {downloadedCount} scaricati</span>
-                      {missingCount > 0 && (
-                        <span className={`text-sm font-medium ${th.hi}`}>↓ {missingCount} da scaricare</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!isRunning && !isComplete && totalCount === 0 && (
-                  <p className={`text-lg ${th.mono}`}>Nessun dato disponibile — avvia la scansione</p>
-                )}
-
-                {isRunning && (
-                  <div>
-                    {countries.length > 1 && (
-                      <p className={`text-xs mb-1 ${th.hi}`}>
-                        Paese {currentCountryIdx + 1}/{countries.length}: {getCountryFlag(countries[currentCountryIdx]?.code)} {countries[currentCountryIdx]?.name}
-                      </p>
-                    )}
-                    <p className={`text-2xl font-mono ${th.mono}`}>
-                      Pagina {currentPage}
-                      {totalPages !== null && <span className={`text-sm ml-1 ${th.dim}`}>/{totalPages}</span>}
-                      <span className={`text-sm ml-3 ${th.dim}`}>Trovati: {scannedMembers.length}</span>
-                    </p>
-                  </div>
-                )}
-                {isComplete && (
-                  <div>
-                    <p className={`text-2xl font-mono ${th.mono}`}>
-                      {totalCount} partner nella directory
-                    </p>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className={`text-sm font-medium ${th.acEm}`}>✓ {downloadedCount} scaricati</span>
-                      {missingCount > 0 && (
-                        <span className={`text-sm font-medium ${th.hi}`}>↓ {missingCount} da scaricare</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {pageTime !== null && isRunning && (
-                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border mt-2 w-fit ${th.cdBg}`}>
-                    <Zap className={`w-3.5 h-3.5 ${th.cdIcon}`} />
-                    <span className={`font-mono text-xs ${th.cdText}`}>{(pageTime / 1000).toFixed(1)}s/pagina</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {/* Main actions */}
-              {!isRunning && !isComplete && missingCount > 0 && (
-                <Button onClick={() => onComplete(missingMembers as DirectoryMember[])} className={th.btnPri}>
-                  <Download className="w-4 h-4 mr-1" /> Scarica {missingCount} mancanti
-                </Button>
-              )}
-              {!isRunning && !isComplete && totalCount > 0 && onSaveIdsOnly && (
-                <Button variant="outline" onClick={() => {
-                  toast({ title: "✅ Lista ID salvata nella cache", description: `${totalCount} ID dalla directory sono stati salvati per ${countryLabel}. Torna qui quando vuoi scaricare i profili completi.` });
-                  onSaveIdsOnly();
-                }} className={th.btnPause}>
-                  <List className="w-4 h-4 mr-1" /> Salva solo lista ID
-                </Button>
-              )}
-              {!isRunning && !isComplete && downloadedCount > 0 && missingCount === 0 && (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50 text-emerald-700"}`}>
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">Tutti scaricati ✓</span>
-                </div>
-              )}
-              {!isRunning && (
-                <Button onClick={handleStart} variant="outline" className={th.btnPause}>
-                  <Play className="w-4 h-4 mr-1" /> {hasCache || dbPartners.length > 0 ? "Ri-scansiona" : "Avvia Scansione"}
-                </Button>
-              )}
-              {isRunning && !isPaused && (
-                <Button size="sm" variant="outline" onClick={() => { pauseRef.current = true; setIsPaused(true); }} className={th.btnPause}>
-                  <Pause className="w-4 h-4 mr-1" /> Pausa
-                </Button>
-              )}
-              {isPaused && (
-                <Button size="sm" onClick={() => { pauseRef.current = false; setIsPaused(false); }} className={th.btnResume}>
-                  <Play className="w-4 h-4 mr-1" /> Riprendi
-                </Button>
-              )}
-              {isRunning && (
-                <Button size="sm" variant="outline" onClick={() => { abortRef.current = true; setIsRunning(false); setIsComplete(true); }} className={th.btnStop}>
-                  <Square className="w-4 h-4 mr-1" /> Stop
-                </Button>
-              )}
-              {isComplete && missingCount > 0 && (
-                <Button onClick={() => onComplete(missingMembers as DirectoryMember[])} className={th.btnPri}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Scarica {missingCount} mancanti
-                </Button>
-              )}
-              {isComplete && totalCount > 0 && onSaveIdsOnly && (
-                <Button variant="outline" onClick={() => {
-                  toast({ title: "✅ Lista ID salvata nella cache", description: `${totalCount} ID dalla directory sono stati salvati per ${countryLabel}. Torna qui quando vuoi scaricare i profili completi.` });
-                  onSaveIdsOnly();
-                }} className={th.btnPause}>
-                  <List className="w-4 h-4 mr-1" /> Salva solo lista ID
-                </Button>
-              )}
-              {isComplete && downloadedCount > 0 && missingCount === 0 && (
-                <Button onClick={() => onComplete(membersWithId as DirectoryMember[])} variant="outline" className={th.btnPause}>
-                  <FileDown className="w-4 h-4 mr-1" /> Aggiorna tutti ({downloadedCount})
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Speed control */}
-        {isRunning && (
-          <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4`}>
-            <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
-              <Timer className="w-3.5 h-3.5" />
-              Velocità Fase 1 (tra pagine): <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[listingDelayIdx]]}</span>
-            </label>
-            <Slider value={[listingDelayIdx]} onValueChange={([v]) => setListingDelayIdx(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
-            <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
-              <span>Veloce</span>
-              <span>Lento (sicuro)</span>
-            </div>
-          </div>
-        )}
-
-        {/* Progress bar */}
-        {totalPages !== null && totalPages > 0 && isRunning && (
-          <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
-            <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${(currentPage / totalPages) * 100}%` }} />
-          </div>
-        )}
-
-        {error && (
-          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {skippedCountries.length > 0 && (
-          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
-            ⚠️ {skippedCountries.length} paes{skippedCountries.length === 1 ? 'e saltato' : 'i saltati'} per errore: {skippedCountries.join(', ')}
-          </div>
-        )}
-
-        {/* Cache info */}
-        {!isRunning && !isComplete && cachedAt && (
-          <div className={`px-3 py-2 rounded-lg border text-xs ${th.infoBox}`}>
-            📋 Ultima scansione directory: {new Date(cachedAt).toLocaleString("it-IT")}
-            {cachedTotalResults > 0 && ` • ${cachedTotalResults} risultati trovati`}
-          </div>
-        )}
-
-        {/* Informational banner during scanning */}
-        {isRunning && (
-          <div className={`px-4 py-3 rounded-xl border text-sm flex items-start gap-3 ${isDark ? "bg-amber-500/10 border-amber-500/30 text-amber-200" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
-            <Loader2 className={`w-4 h-4 animate-spin flex-shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-sky-500"}`} />
-            <div>
-              <p className="font-medium">Scansione directory WCA in corso dal browser</p>
-              <p className={`text-xs mt-0.5 ${isDark ? "text-amber-300/70" : "text-sky-600"}`}>
-                {countries.length > 1
-                  ? `Paese ${currentCountryIdx + 1} di ${countries.length}: ${countries[currentCountryIdx]?.name}`
-                  : countries[0]?.name}
-                {" — "}Al termine, potrai avviare il download dei profili che proseguirà in background.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Live member list */}
-        <div className={`flex-1 ${th.panel} border ${th.panelSlate} rounded-2xl p-4 min-h-0 overflow-hidden flex flex-col`}>
-          <div className="flex items-center justify-between mb-2">
-            <p className={`text-xs ${th.dim}`}>
-              <List className="w-3 h-3 inline mr-1" />
-              Partner ({totalCount})
-              {downloadedCount > 0 && <span className={`ml-2 ${th.acEm}`}>• {downloadedCount} nel DB</span>}
-              {missingCount > 0 && <span className={`ml-2 ${th.hi}`}>• {missingCount} mancanti</span>}
-            </p>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="space-y-0.5 text-xs font-mono pr-4">
-              {members.map((m, i) => (
-                <div
-                  key={`${m.wca_id || i}-${i}`}
-                  onClick={() => setSelectedMember(m)}
-                  className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors ${th.hover} ${m.inDb ? "" : isDark ? "opacity-60" : "opacity-50"}`}
-                >
-                  <span className={`w-12 text-right ${th.logId}`}>{m.wca_id ? `#${m.wca_id}` : "—"}</span>
-                  {m.inDb ? (
-                    <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${th.acEm}`} />
-                  ) : (
-                    <Download className={`w-3.5 h-3.5 flex-shrink-0 ${th.dim}`} />
-                  )}
-                  <span className={`flex-1 truncate ${th.logName}`}>{m.company_name}</span>
-                  <span className={`${th.dim}`}>{m.city || ""}</span>
-                </div>
-              ))}
-              {members.length === 0 && (
-                <p className={`text-center text-sm py-6 ${th.dim}`}>
-                  Nessun partner trovato. Avvia la scansione per cercare nella directory WCA.
-                </p>
-              )}
-              <div ref={logsEndRef} />
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-
-      {/* Right: summary */}
-      <div className="w-64 flex flex-col gap-3 min-h-0">
-        <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4 space-y-3`}>
-          <p className={`text-xs font-medium ${th.label}`}>Riepilogo</p>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className={`text-xs font-medium ${th.acEm}`}>✓ Scaricati</span>
-              <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={`text-xs font-medium ${th.hi}`}>↓ Mancanti</span>
-              <span className={`font-mono font-bold ${th.hi}`}>{missingCount}</span>
-            </div>
-            <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
-            <div className="flex justify-between">
-              <span className={`text-xs ${th.body}`}>Totale</span>
-              <span className={`font-mono font-bold ${th.mono}`}>{totalCount}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={`text-xs ${th.body}`}>Con WCA ID</span>
-              <span className={`font-mono ${th.mono}`}>{membersWithId.length}</span>
-            </div>
-            {isRunning && (
-              <div className="flex justify-between">
-                <span className={`text-xs ${th.body}`}>Pagine lette</span>
-                <span className={`font-mono ${th.mono}`}>{currentPage}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Per-country breakdown */}
-        {countries.length > 0 && (
-          <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-4`}>
-            <p className={`text-xs font-medium mb-2 ${th.label}`}>Paesi</p>
-            <div className="space-y-1">
-              {countries.map((c, i) => {
-                const countForCountry = members.filter(m => m.country === c.name || m.country === c.code).length;
-                const dlCount = members.filter(m => (m.country === c.name || m.country === c.code) && m.inDb).length;
-                return (
-                  <div key={c.code} className="flex items-center justify-between">
-                    <span className={`text-xs ${th.body}`}>{getCountryFlag(c.code)} {c.name}</span>
-                    <span className={`font-mono text-xs ${th.dim}`}>
-                      <span className={th.acEm}>{dlCount}</span>/{countForCountry}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Selected partner detail */}
-        {selectedMember && (
-          <div className={`${th.panel} border ${th.panelAmber} rounded-xl p-4 space-y-2`}>
-            <p className={`text-xs font-medium ${th.label}`}>Dettaglio</p>
-            <p className={`text-sm font-medium ${th.h2}`}>{selectedMember.company_name}</p>
-            {selectedMember.wca_id && <p className={`text-xs ${th.dim}`}>WCA ID: #{selectedMember.wca_id}</p>}
-            {selectedMember.city && <p className={`text-xs ${th.body}`}><MapPin className="w-3 h-3 inline mr-1" />{selectedMember.city}</p>}
-            {selectedMember.country && <p className={`text-xs ${th.body}`}>{selectedMember.country}</p>}
-            {selectedMember.inDb && (
-              <div className={`mt-2 p-2 rounded-lg ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
-                <p className={`text-xs font-medium ${th.acEm}`}>✓ Nel database</p>
-                {selectedMember.updatedAt && (
-                  <p className={`text-xs ${th.dim}`}>Aggiornato: {new Date(selectedMember.updatedAt).toLocaleDateString("it-IT")}</p>
-                )}
-                {selectedMember.partnerType && (
-                  <p className={`text-xs ${th.dim}`}>Tipo: {selectedMember.partnerType}</p>
-                )}
-                {selectedMember.rating && (
-                  <p className={`text-xs ${th.dim}`}>Rating: {selectedMember.rating}/5</p>
-                )}
-              </div>
-            )}
-            {!selectedMember.inDb && (
-              <div className={`mt-2 p-2 rounded-lg ${isDark ? "bg-amber-500/10" : "bg-amber-50"}`}>
-                <p className={`text-xs ${th.hi}`}>↓ Non ancora scaricato</p>
-              </div>
-            )}
-            <button onClick={() => setSelectedMember(null)} className={`text-xs mt-1 ${th.back}`}>Chiudi</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// FASE 2 Config: Speed settings before downloading details
-// ═══════════════════════════════════════════════════════════════
-function Phase2Config({ countries, networks, members, onStart }: {
-  countries: { code: string; name: string }[];
-  networks: string[];
-  members: DirectoryMember[];
-  onStart: () => void;
-}) {
-  const isDark = useTheme();
-  const th = t(isDark);
-  const createJob = useCreateDownloadJob();
-  const [includeExisting, setIncludeExisting] = useState(false);
-
-  const allIds = members.filter(m => m.wca_id).map(m => m.wca_id!);
-
-  // Cross-reference with partners already in DB
-  const { data: existingWcaIds = [], isLoading: checkingDb } = useQuery({
-    queryKey: ["existing-wca-ids", allIds],
-    queryFn: async () => {
-      if (allIds.length === 0) return [];
-      const { data } = await supabase
-        .from("partners")
-        .select("wca_id, updated_at")
-        .in("wca_id", allIds);
-      return (data || []).map(r => ({ wca_id: r.wca_id!, updated_at: r.updated_at }));
-    },
-    staleTime: 30_000,
-  });
-
-  const existingSet = new Set(existingWcaIds.map(e => e.wca_id));
-  const missingIds = allIds.filter(id => !existingSet.has(id));
-  const alreadyDownloaded = allIds.filter(id => existingSet.has(id));
-  const idsToDownload = includeExisting ? allIds : missingIds;
-
-  // Oldest update date for existing partners
-  const oldestUpdate = existingWcaIds.length > 0
-    ? existingWcaIds.reduce((min, e) => (!min || (e.updated_at && e.updated_at < min) ? e.updated_at : min), existingWcaIds[0].updated_at)
+  // Oldest update
+  const oldestUpdate = dbPartners.length > 0
+    ? dbPartners.reduce((min, p) => (!min || (p.updated_at && p.updated_at < min) ? p.updated_at : min), dbPartners[0].updated_at)
     : null;
 
   // Speed
   const [delayIndex, setDelayIndex] = useState(4);
   const delay = DELAY_VALUES[delayIndex];
+  const [includeExisting, setIncludeExisting] = useState(false);
+  const idsToDownload = includeExisting ? uniqueIds : missingIds;
 
   // Time estimate
   const avgScrapeTime = 15;
@@ -1490,16 +1131,42 @@ function Phase2Config({ countries, networks, members, onStart }: {
     ? `${getCountryFlag(countries[0].code)} ${countries[0].name}`
     : `${countries.length} paesi`;
 
-  const handleStart = async () => {
+  const isLoading = loadingCache || loadingDb;
+
+  // Start download with session check
+  const handleStartDownload = async () => {
+    // First verify WCA session
+    await triggerCheck();
+    // Wait a moment for status to update
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Re-check status from DB
+    const { data: statusData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "wca_session_status")
+      .maybeSingle();
+
+    const currentStatus = statusData?.value || "no_cookie";
+    if (currentStatus !== "ok") {
+      setShowSessionDialog(true);
+      return;
+    }
+
+    // Proceed with download
+    await executeDownload();
+  };
+
+  const executeDownload = async () => {
     if (idsToDownload.length === 0) {
       toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
       return;
     }
 
-    // Group IDs by country_code using member data
     const idsByCountry = new Map<string, number[]>();
-    for (const m of members) {
+    for (const m of sourceMembers) {
       if (!m.wca_id) continue;
+      if (!idsToDownload.includes(m.wca_id)) continue;
       const cc = m.country_code || countries.find(c => c.name === m.country || c.code === m.country)?.code;
       if (!cc) continue;
       if (!idsByCountry.has(cc)) idsByCountry.set(cc, []);
@@ -1508,121 +1175,206 @@ function Phase2Config({ countries, networks, members, onStart }: {
 
     for (const country of countries) {
       const countryIds = idsByCountry.get(country.code) || [];
-      const filteredIds = includeExisting
-        ? countryIds
-        : countryIds.filter(id => !existingSet.has(id));
-      if (filteredIds.length === 0) continue;
+      if (countryIds.length === 0) continue;
       await createJob.mutateAsync({
         country_code: country.code,
         country_name: country.name,
         network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-        wca_ids: filteredIds,
+        wca_ids: countryIds,
         delay_seconds: delay,
       });
     }
-    onStart();
+    onStartRunning();
   };
 
+  const handleSessionRetry = async () => {
+    const { data: statusData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "wca_session_status")
+      .maybeSingle();
+
+    if (statusData?.value === "ok") {
+      setShowSessionDialog(false);
+      toast({ title: "Sessione attiva!", description: "Puoi procedere con il download." });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className={`w-6 h-6 animate-spin ${th.sub}`} />
+        <span className={`ml-2 text-sm ${th.sub}`}>Caricamento dati...</span>
+      </div>
+    );
+  }
+
+  // Scanning in progress
+  if (isScanning) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-8 max-w-lg w-full space-y-6 text-center`}>
+          <Loader2 className={`w-10 h-10 animate-spin mx-auto ${th.acAmber}`} />
+          <div>
+            <h2 className={`text-xl mb-2 ${th.h2}`}>Scansione directory in corso...</h2>
+            <p className={`text-sm ${th.sub}`}>
+              {countries.length > 1 && `Paese ${currentCountryIdx + 1}/${countries.length}: `}
+              {countries[currentCountryIdx]?.name} — Pagina {currentPage}
+            </p>
+            {scannedMembers.length > 0 && (
+              <p className={`text-lg font-mono mt-2 ${th.hi}`}>{scannedMembers.length} partner trovati</p>
+            )}
+          </div>
+          {scanError && (
+            <div className={`p-3 rounded-lg border text-sm text-left ${isDark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
+              ⚠️ {scanError}
+            </div>
+          )}
+          <Button variant="outline" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className={th.btnStop}>
+            <Square className="w-4 h-4 mr-1" /> Interrompi
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Ready to download (cache exists or scan complete)
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-8 max-w-lg w-full space-y-6`}>
         <div>
-          <h2 className={`text-xl mb-1 ${th.h2}`}>Fase 2 — Download Dettagli</h2>
+          <h2 className={`text-xl mb-1 ${th.h2}`}>Avvia Download</h2>
           <p className={`text-sm ${th.sub}`}>
             {countryLabel} • {networks.length > 0 ? networks.join(", ") : "Tutti i network"}
           </p>
         </div>
 
-        {checkingDb ? (
-          <div className="flex items-center justify-center py-4 gap-2">
-            <Loader2 className={`w-4 h-4 animate-spin ${th.sub}`} />
-            <span className={`text-sm ${th.sub}`}>Verifico partner già scaricati...</span>
+        {/* Summary */}
+        <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm ${th.body}`}>Partner nella directory</span>
+            <span className={`font-mono font-bold ${th.hi}`}>{totalCount}</span>
           </div>
-        ) : (
-          <>
-            {/* Summary from Phase 1 with DB cross-reference */}
-            <div className={`p-4 rounded-xl border space-y-2 ${th.infoBox}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${th.body}`}>Partner dalla Fase 1</span>
-                <span className={`font-mono font-bold ${th.hi}`}>{members.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${th.body}`}>Con WCA ID</span>
-                <span className={`font-mono ${th.mono}`}>{allIds.length}</span>
-              </div>
-              <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-medium ${th.acEm}`}>✓ Già nel database</span>
-                <span className={`font-mono font-bold ${th.acEm}`}>{alreadyDownloaded.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
-                <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
-              </div>
-              {oldestUpdate && (
-                <p className={`text-xs ${th.dim}`}>
-                  Ultimo aggiornamento più vecchio: {new Date(oldestUpdate).toLocaleDateString("it-IT")}
-                </p>
-              )}
+          <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-medium ${th.acEm}`}>✓ Già nel database</span>
+            <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
+            <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
+          </div>
+          {oldestUpdate && (
+            <p className={`text-xs ${th.dim}`}>
+              Ultimo aggiornamento più vecchio: {new Date(oldestUpdate).toLocaleDateString("it-IT")}
+            </p>
+          )}
+          {cachedAt && (
+            <p className={`text-xs ${th.dim}`}>
+              Scansione directory: {new Date(cachedAt).toLocaleString("it-IT")}
+            </p>
+          )}
+        </div>
+
+        {/* Option to include existing */}
+        {downloadedCount > 0 && (
+          <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
+            <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
+            Ri-scarica anche i {downloadedCount} già presenti (aggiorna dati)
+          </label>
+        )}
+
+        {/* All downloaded message */}
+        {missingIds.length === 0 && !includeExisting && (
+          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+            ✅ Tutti i partner sono già nel database! Spunta la casella sopra per aggiornare i profili.
+          </div>
+        )}
+
+        {/* Background info */}
+        {idsToDownload.length > 0 && (
+          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+            🚀 Il download proseguirà in background anche se navighi altrove.
+          </div>
+        )}
+
+        {/* Speed */}
+        {idsToDownload.length > 0 && (
+          <div>
+            <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
+              <Timer className="w-3.5 h-3.5" />
+              Velocità: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
+            </label>
+            <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
+            <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
+              <span>Veloce</span>
+              <span>Lento (sicuro)</span>
             </div>
+          </div>
+        )}
 
-            {/* Option to re-download existing */}
-            {alreadyDownloaded.length > 0 && (
-              <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
-                <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
-                Aggiorna anche i {alreadyDownloaded.length} già presenti nel DB
-              </label>
-            )}
+        {/* Time estimate */}
+        {idsToDownload.length > 0 && (
+          <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
+            <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
+            <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
+          </div>
+        )}
 
-            {/* Info: background processing */}
-            {idsToDownload.length > 0 && (
-              <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-                🚀 Il download proseguirà in background anche se navighi altrove.
-              </div>
-            )}
+        {/* Main action button */}
+        <Button
+          onClick={handleStartDownload}
+          disabled={idsToDownload.length === 0 || createJob.isPending}
+          className={`w-full ${th.btnPri}`}
+        >
+          {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+          {idsToDownload.length > 0
+            ? `Avvia Download (${idsToDownload.length} partner)`
+            : "Tutti già scaricati ✓"
+          }
+        </Button>
 
-            {idsToDownload.length === 0 && (
-              <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-                ✅ Tutti i partner sono già nel database! Spunta la casella sopra per aggiornare i profili esistenti.
-              </div>
-            )}
+        {/* Secondary: rescan */}
+        {hasCache && (
+          <Collapsible>
+            <CollapsibleTrigger className={`flex items-center gap-1.5 text-xs w-full justify-center ${th.sub} hover:opacity-80`}>
+              <Settings2 className="w-3.5 h-3.5" /> Opzioni avanzate <ChevronDown className="w-3 h-3" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setScanComplete(false);
+                  setScannedMembers([]);
+                  handleStartScan();
+                }}
+                className={`w-full text-xs ${th.btnPause}`}
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Aggiorna lista dalla directory
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
-            {/* Speed */}
-            {idsToDownload.length > 0 && (
-              <div>
-                <label className={`text-xs flex items-center gap-1.5 mb-3 ${th.label}`}>
-                  <Timer className="w-3.5 h-3.5" />
-                  Velocità Fase 2: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
-                </label>
-                <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} className="w-full" />
-                <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
-                  <span>Veloce</span>
-                  <span>Lento (sicuro)</span>
-                </div>
-              </div>
-            )}
-
-            {/* Time estimate */}
-            {idsToDownload.length > 0 && (
-              <div className={`p-3 rounded-lg border text-center ${th.infoBox}`}>
-                <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
-                <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
-              </div>
-            )}
-
-            <Button onClick={handleStart} disabled={idsToDownload.length === 0 || createJob.isPending} className={`w-full ${th.btnPri}`}>
-              {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-              {idsToDownload.length > 0
-                ? `Avvia Download in Background (${idsToDownload.length})`
-                : "Tutti già scaricati ✓"
-              }
-            </Button>
-          </>
+        {/* Skipped countries warning */}
+        {skippedCountries.length > 0 && (
+          <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
+            ⚠️ {skippedCountries.length} paes{skippedCountries.length === 1 ? 'e saltato' : 'i saltati'}: {skippedCountries.join(', ')}
+          </div>
         )}
       </div>
+
+      {/* Session check dialog */}
+      <WcaSessionDialog
+        open={showSessionDialog}
+        onOpenChange={setShowSessionDialog}
+        onRetry={handleSessionRetry}
+      />
     </div>
   );
 }
+
 // ═══════════════════════════════════════════════════════════════
 // DOWNLOAD RUNNING — Server-side job monitor (realtime)
 // ═══════════════════════════════════════════════════════════════
@@ -1656,11 +1408,9 @@ function DownloadRunning() {
           Job Attivi ({activeJobs.length})
         </p>
       )}
-
       {activeJobs.map(job => (
         <JobCard key={job.id} job={job} pauseResume={pauseResume} updateSpeed={updateSpeed} />
       ))}
-
       {recentCompleted.length > 0 && (
         <>
           <p className={`text-sm font-medium mt-4 ${th.dim}`}>Completati di recente</p>
@@ -1683,7 +1433,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const [showSpeed, setShowSpeed] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
 
-  // Track recent speed: store timestamps of last N updates to compute rolling avg
   const prevIndexRef = useRef(job.current_index);
   const recentTimesRef = useRef<number[]>([]);
   const lastUpdateRef = useRef(Date.now());
@@ -1695,7 +1444,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
       const elapsed = now - lastUpdateRef.current;
       const perProfile = elapsed / diff;
       recentTimesRef.current.push(perProfile);
-      // Keep last 10 measurements
       if (recentTimesRef.current.length > 10) recentTimesRef.current.shift();
     }
     prevIndexRef.current = job.current_index;
@@ -1711,12 +1459,8 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const isPaused = job.status === "paused";
 
   const statusLabel: Record<string, string> = {
-    pending: "In attesa",
-    running: "In corso",
-    paused: "In pausa",
-    completed: "Completato",
-    cancelled: "Cancellato",
-    error: "Errore",
+    pending: "In attesa", running: "In corso", paused: "In pausa",
+    completed: "Completato", cancelled: "Cancellato", error: "Errore",
   };
 
   const statusColor = isDark
@@ -1729,7 +1473,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
 
   const currentDelayIdx = DELAY_VALUES.findIndex(v => v >= job.delay_seconds);
   const delayIdx = currentDelayIdx >= 0 ? currentDelayIdx : 4;
-
   const [localDelayIdx, setLocalDelayIdx] = useState(delayIdx);
   useEffect(() => setLocalDelayIdx(delayIdx), [delayIdx]);
 
@@ -1750,7 +1493,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {/* Data viewer button — always visible if processed_ids exist */}
           {(job.processed_ids as number[])?.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => setShowViewer(true)} className={th.btnTest} title="Visualizza dati scaricati">
               <List className="w-3.5 h-3.5 mr-1" /> Dati
@@ -1792,31 +1534,27 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         const elapsedMs = new Date(job.updated_at).getTime() - new Date(job.created_at).getTime();
         const elapsedSec = Math.max(elapsedMs / 1000, 1);
         const avgSec = elapsedSec / job.current_index;
-        const perMin = (job.current_index / elapsedSec) * 60;
-
+        const recentAvgSec = recentAvgMs ? recentAvgMs / 1000 : null;
+        const etaBaseSec = recentAvgSec ?? avgSec;
+        const remainingSec = etaBaseSec * (job.total_count - job.current_index);
         const fmtTime = (s: number) => {
           if (s >= 3600) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}min`;
           if (s >= 60) return `${Math.floor(s / 60)}min ${Math.floor(s % 60)}s`;
           return `${Math.floor(s)}s`;
         };
-
-        const recentAvgSec = recentAvgMs ? recentAvgMs / 1000 : null;
-        const etaBaseSec = recentAvgSec ?? avgSec;
-        const remainingSec = etaBaseSec * (job.total_count - job.current_index);
-
         return (
           <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs p-3 rounded-lg border ${th.infoBox}`}>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Timer className="w-3 h-3 flex-shrink-0" />
-              <span>Media globale: <span className={`font-mono font-bold ${th.dim}`}>{avgSec.toFixed(1)}s</span>/profilo</span>
+              <span>Media: <span className={`font-mono font-bold ${th.dim}`}>{avgSec.toFixed(1)}s</span>/profilo</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Zap className="w-3 h-3 flex-shrink-0" />
-              <span>Media corrente: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${recentAvgSec.toFixed(1)}s` : "—"}</span>/profilo</span>
+              <span>Corrente: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${recentAvgSec.toFixed(1)}s` : "—"}</span>/profilo</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <Activity className="w-3 h-3 flex-shrink-0" />
-              <span>Velocità: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${(60 / recentAvgSec).toFixed(1)}` : perMin.toFixed(1)}</span>/min</span>
+              <span>Velocità: <span className={`font-mono font-bold ${th.hi}`}>{recentAvgSec ? `${(60 / recentAvgSec).toFixed(1)}` : (job.current_index / elapsedSec * 60).toFixed(1)}</span>/min</span>
             </div>
             <div className={`flex items-center gap-1.5 ${th.body}`}>
               <ArrowRight className="w-3 h-3 flex-shrink-0" />
@@ -1826,15 +1564,15 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         );
       })()}
 
-      {/* Last processed + contact result badge */}
+      {/* Last processed */}
       {job.last_processed_company && (
         <div className="flex items-center gap-2 flex-wrap">
           <p className={`text-xs ${th.dim}`}>
             Ultimo: <span className={th.logName}>{job.last_processed_company}</span>
             <span className={`ml-2 ${th.logId}`}>#{job.last_processed_wca_id}</span>
           </p>
-          {(job as any).last_contact_result && (() => {
-            const r = (job as any).last_contact_result;
+          {job.last_contact_result && (() => {
+            const r = job.last_contact_result;
             if (r === 'email+phone') return <Badge className="text-[10px] px-1.5 py-0 bg-emerald-600 text-white border-0"><Mail className="w-3 h-3 mr-0.5" /><Phone className="w-3 h-3 mr-0.5" /> Email + Tel</Badge>;
             if (r === 'email_only') return <Badge className="text-[10px] px-1.5 py-0 bg-blue-500 text-white border-0"><Mail className="w-3 h-3 mr-0.5" /> Solo Email</Badge>;
             if (r === 'phone_only') return <Badge className="text-[10px] px-1.5 py-0 bg-blue-500 text-white border-0"><Phone className="w-3 h-3 mr-0.5" /> Solo Tel</Badge>;
@@ -1844,9 +1582,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
       )}
 
       {/* Contact extraction summary */}
-      {((job as any).contacts_found_count > 0 || (job as any).contacts_missing_count > 0) && (() => {
-        const found = (job as any).contacts_found_count || 0;
-        const missing = (job as any).contacts_missing_count || 0;
+      {(job.contacts_found_count > 0 || job.contacts_missing_count > 0) && (() => {
+        const found = job.contacts_found_count || 0;
+        const missing = job.contacts_missing_count || 0;
         const total = found + missing;
         const pct = total > 0 ? Math.round((found / total) * 100) : 0;
         return (
@@ -1888,7 +1626,7 @@ function JobCard({ job, pauseResume, updateSpeed }: {
           Completato il {new Date(job.completed_at).toLocaleString("it-IT")}
         </p>
       )}
-      {/* Job Data Viewer Dialog */}
+
       <JobDataViewer
         open={showViewer}
         onOpenChange={setShowViewer}
@@ -2140,7 +1878,7 @@ function NetworkConfigure() {
 }
 
 // ─── Shared ──────────────────────────────────────────────────
-function StatBadge({ label, value, color, icon }: { label: string; value: number | string; color: string; icon?: React.ReactNode }) {
+function StatBadge({ label, value, color }: { label: string; value: number | string; color: string; icon?: React.ReactNode }) {
   const isDark = useTheme();
   const cc: Record<string, Record<string, string>> = {
     dark: { amber: "bg-amber-500/10 border-amber-500/30 text-amber-400", emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", blue: "bg-blue-500/10 border-blue-500/30 text-blue-400", red: "bg-red-500/10 border-red-500/30 text-red-400", slate: "bg-slate-500/10 border-slate-500/30 text-slate-400" },
@@ -2148,7 +1886,7 @@ function StatBadge({ label, value, color, icon }: { label: string; value: number
   };
   return (
     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${cc[isDark ? "dark" : "light"][color] || cc[isDark ? "dark" : "light"].slate}`}>
-      {icon}<span className="font-mono text-sm">{value}</span><span className="text-xs opacity-60">{label}</span>
+      <span className="font-mono text-sm">{value}</span><span className="text-xs opacity-60">{label}</span>
     </div>
   );
 }
