@@ -81,6 +81,82 @@ export default function Settings() {
         <p className="text-muted-foreground mt-1">Configurazione della piattaforma</p>
       </div>
 
+      {/* Session Status Card - NOW FIRST for visibility */}
+      <Card className="border-amber-200 bg-amber-50/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <KeyRound className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Sessione WCA</CardTitle>
+                <CardDescription>
+                  Cattura il cookie dalla tua sessione browser su wcaworld.com
+                </CardDescription>
+              </div>
+            </div>
+            {hasCookie ? (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Cookie presente
+              </Badge>
+            ) : (
+              <Badge variant="destructive">Mancante</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ProxySetupGuide
+            hasCredentials={isConfigured}
+            onVerify={handleVerifyAndLogin}
+            verifying={verifying}
+          />
+
+          {/* Manual cookie fallback */}
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground transition-colors font-medium">
+              ⚙️ Inserimento cookie manuale (fallback)
+            </summary>
+            <div className="mt-2 space-y-2">
+              <Label htmlFor="wca-cookie" className="text-xs">Cookie completo</Label>
+              <Textarea
+                id="wca-cookie"
+                value={wcaCookie}
+                onChange={(e) => setWcaCookie(e.target.value)}
+                placeholder=".ASPXAUTH=valore_copiato_da_devtools"
+                rows={3}
+                className="font-mono text-xs"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!wcaCookie) return;
+                    setSaving(true);
+                    try {
+                      await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
+                      toast.success("Cookie salvato, verifica in corso...");
+                      await triggerCheck();
+                    } catch {
+                      toast.error("Errore nel salvataggio");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving || !wcaCookie}
+                >
+                  {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                  Salva Cookie
+                </Button>
+              </div>
+            </div>
+          </details>
+        </CardContent>
+      </Card>
+
+      {/* Credentials Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -91,7 +167,7 @@ export default function Settings() {
               <div>
                 <CardTitle className="text-base">Credenziali WCA World</CardTitle>
                 <CardDescription>
-                  Utilizzate per accedere ai dati completi dei partner (email, telefoni, contatti)
+                  Salvate per riferimento (il login avviene dal tuo browser)
                 </CardDescription>
               </div>
             </div>
@@ -158,81 +234,6 @@ export default function Settings() {
               Salva Credenziali
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Session Status Card */}
-      <Card className="border-amber-200 bg-amber-50/30">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <KeyRound className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Sessione WCA</CardTitle>
-                <CardDescription>
-                  Stato della connessione a WCA World. Il login avviene automaticamente lato server.
-                </CardDescription>
-              </div>
-            </div>
-            {hasCookie ? (
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Cookie presente
-              </Badge>
-            ) : (
-              <Badge variant="destructive">Mancante</Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ProxySetupGuide
-            hasCredentials={isConfigured}
-            onVerify={handleVerifyAndLogin}
-            verifying={verifying}
-          />
-
-          {/* Manual cookie fallback */}
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer hover:text-foreground transition-colors font-medium">
-              ⚙️ Inserimento cookie manuale (fallback)
-            </summary>
-            <div className="mt-2 space-y-2">
-              <Label htmlFor="wca-cookie" className="text-xs">Cookie completo</Label>
-              <Textarea
-                id="wca-cookie"
-                value={wcaCookie}
-                onChange={(e) => setWcaCookie(e.target.value)}
-                placeholder=".ASPXAUTH=valore_copiato_da_devtools"
-                rows={3}
-                className="font-mono text-xs"
-              />
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    if (!wcaCookie) return;
-                    setSaving(true);
-                    try {
-                      await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
-                      toast.success("Cookie salvato, verifica in corso...");
-                      await triggerCheck();
-                    } catch {
-                      toast.error("Errore nel salvataggio");
-                    } finally {
-                      setSaving(false);
-                    }
-                  }}
-                  disabled={saving || !wcaCookie}
-                >
-                  {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
-                  Salva Cookie
-                </Button>
-              </div>
-            </div>
-          </details>
         </CardContent>
       </Card>
 

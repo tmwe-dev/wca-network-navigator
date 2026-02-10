@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.check-wca-session]
 verify_jwt = false
+
+[functions.save-wca-cookie]
+verify_jwt = false
