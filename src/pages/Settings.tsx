@@ -144,17 +144,17 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-amber-200 bg-amber-50/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <KeyRound className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <KeyRound className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <CardTitle className="text-base">Cookie di Sessione WCA</CardTitle>
+                <CardTitle className="text-base">Cookie di Sessione WCA (Obbligatorio)</CardTitle>
                 <CardDescription>
-                  Metodo alternativo: incolla il cookie dal browser dopo il login manuale su wcaworld.com
+                  Necessario per accedere ai dati contatti (email, telefoni). Senza cookie valido i dati sono nascosti.
                 </CardDescription>
               </div>
             </div>
@@ -164,27 +164,35 @@ export default function Settings() {
                 Presente
               </Badge>
             ) : (
-              <Badge variant="secondary">Non impostato</Badge>
+              <Badge variant="destructive">Mancante</Badge>
             )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-background p-3 space-y-2 text-sm">
+            <p className="font-medium">Come ottenere il cookie:</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+              <li>Apri <a href="https://www.wcaworld.com/Account/Login" target="_blank" rel="noopener" className="text-primary underline">wcaworld.com</a> e fai login</li>
+              <li>Premi <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">F12</kbd> → scheda <strong>Console</strong></li>
+              <li>Digita <code className="px-1 py-0.5 rounded bg-muted font-mono text-xs">document.cookie</code> e premi Invio</li>
+              <li>Copia tutto il testo e incollalo qui sotto</li>
+            </ol>
+            <p className="text-xs text-amber-600 mt-1">⚠️ Il cookie scade periodicamente — aggiornalo se il resync non trova email/telefoni</p>
+          </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="wca-cookie">Cookie di sessione</Label>
+            <Label htmlFor="wca-cookie">Cookie completo</Label>
             <Textarea
               id="wca-cookie"
               value={wcaCookie}
               onChange={(e) => setWcaCookie(e.target.value)}
-              placeholder="Vai su wcaworld.com → Login → F12 → Console → document.cookie → Incolla qui"
+              placeholder="Incolla qui l'output di document.cookie"
               rows={3}
               className="font-mono text-xs"
             />
-            <p className="text-xs text-muted-foreground">
-              Il cookie viene usato come metodo primario per lo scraping autenticato. Se assente, il sistema tenterà il login automatico con le credenziali sopra.
-            </p>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               onClick={async () => {
                 if (!wcaCookie) return;
@@ -199,7 +207,6 @@ export default function Settings() {
                 }
               }}
               disabled={saving || !wcaCookie}
-              variant="outline"
             >
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salva Cookie

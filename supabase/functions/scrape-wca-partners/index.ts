@@ -463,22 +463,56 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
     })
     const loginPageHtml = await loginPageRes.text()
     const setCookies1 = loginPageRes.headers.getSetCookie?.() || []
-    const tokenMatch = loginPageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)
-    const token = tokenMatch?.[1] || ''
     
-    if (!token) {
-      console.warn('Direct login: no CSRF token found')
-      return { cookies: '', success: false, error: 'No CSRF token found on login page' }
+    // Extract ALL hidden fields from the login form
+    const hiddenFields: Record<string, string> = {}
+    const hiddenRegex = /name="([^"]+)"[^>]*value="([^"]*)"/gi
+    let hm
+    while ((hm = hiddenRegex.exec(loginPageHtml)) !== null) {
+      const name = hm[1]
+      // Only capture hidden-like fields (tokens, viewstate, etc.)
+      if (name.startsWith('__') || name.includes('Token') || name.includes('token')) {
+        hiddenFields[name] = hm[2]
+      }
     }
     
+    console.log(`Direct login: hidden fields found: ${Object.keys(hiddenFields).join(', ') || 'NONE'}`)
+    
+    // Log form inputs to discover field names
+    const inputMatches = loginPageHtml.match(/<input[^>]*>/gi) || []
+    const formInputs = inputMatches
+      .filter((inp: string) => /type="(?:text|email|password)"/i.test(inp))
+      .map((inp: string) => {
+        const nameM = inp.match(/name="([^"]+)"/)
+        const typeM = inp.match(/type="([^"]+)"/)
+        const idM = inp.match(/id="([^"]+)"/)
+        return `${nameM?.[1] || idM?.[1] || '?'}(${typeM?.[1] || '?'})`
+      })
+    console.log(`Direct login: form text/password inputs: ${formInputs.join(', ') || 'NONE'}`)
+    
+    // Also check the form action
+    const formAction = loginPageHtml.match(/<form[^>]*action="([^"]*)"[^>]*>/i)?.[1]
+    const formMethod = loginPageHtml.match(/<form[^>]*method="([^"]*)"[^>]*>/i)?.[1]
+    console.log(`Direct login: form action=${formAction}, method=${formMethod}`)
+    
+    // Detect form field names
+    const usernameFieldMatch = loginPageHtml.match(/<input[^>]*type="(?:text|email)"[^>]*name="([^"]+)"/i)
+      || loginPageHtml.match(/<input[^>]*name="([^"]+)"[^>]*type="(?:text|email)"/i)
+    const passwordFieldMatch = loginPageHtml.match(/<input[^>]*type="password"[^>]*name="([^"]+)"/i)
+      || loginPageHtml.match(/<input[^>]*name="([^"]+)"[^>]*type="password"/i)
+    
+    const usernameField = usernameFieldMatch?.[1] || 'usr'
+    const passwordField = passwordFieldMatch?.[1] || 'pwd'
+    console.log(`Direct login: detected fields: username=${usernameField}, password=${passwordField}`)
+    
     const cookieJar: string[] = setCookies1.map(sc => sc.split(';')[0])
-    console.log(`Direct login: got ${cookieJar.length} initial cookies, token=${token.substring(0, 20)}...`)
+    console.log(`Direct login: got ${cookieJar.length} initial cookies`)
 
-    const formBody = new URLSearchParams({
-      usr: username,
-      pwd: password,
-      __RequestVerificationToken: token,
-    })
+    // Build form body with all hidden fields + credentials
+    const formParams: Record<string, string> = { ...hiddenFields }
+    formParams[usernameField] = username
+    formParams[passwordField] = password
+    const formBody = new URLSearchParams(formParams)
 
     const loginRes = await fetch('https://www.wcaworld.com/Account/Login', {
       method: 'POST',
@@ -494,6 +528,8 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
     })
 
     const setCookies2 = loginRes.headers.getSetCookie?.() || []
+    console.log(`Direct login: POST status=${loginRes.status}, setCookies=${setCookies2.length}, setCookieHeaders=${setCookies2.map(s => s.split('=')[0]).join(',')}`)
+    
     for (const sc of setCookies2) {
       const val = sc.split(';')[0]
       const name = val.split('=')[0]
@@ -502,15 +538,62 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
       else cookieJar.push(val)
     }
 
-    const hasAuthCookie = cookieJar.some(c => c.startsWith('.ASPXAUTH=') || c.startsWith('ASP.NET_SessionId='))
+    // Check for redirect (302/301) - ASP.NET login typically redirects on success
     const isRedirect = loginRes.status >= 300 && loginRes.status < 400
+    
+    if (isRedirect) {
+      // Follow the redirect chain to collect all cookies
+      const location = loginRes.headers.get('Location')
+      console.log(`Direct login: following redirect to ${location}`)
+      
+      if (location) {
+        const redirectUrl = location.startsWith('http') ? location : `https://www.wcaworld.com${location}`
+        const redirectRes = await fetch(redirectUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          headers: {
+            'Cookie': cookieJar.join('; '),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        })
+        
+        const setCookies3 = redirectRes.headers.getSetCookie?.() || []
+        for (const sc of setCookies3) {
+          const val = sc.split(';')[0]
+          const name = val.split('=')[0]
+          const idx = cookieJar.findIndex(c => c.startsWith(name + '='))
+          if (idx >= 0) cookieJar[idx] = val
+          else cookieJar.push(val)
+        }
+        console.log(`Direct login: redirect status=${redirectRes.status}, newCookies=${setCookies3.length}`)
+      }
+    }
+
+    const hasAuthCookie = cookieJar.some(c => c.startsWith('.ASPXAUTH='))
     const allCookies = cookieJar.join('; ')
     
-    console.log(`Direct login: status=${loginRes.status}, redirect=${isRedirect}, authCookie=${hasAuthCookie}, totalCookies=${cookieJar.length}`)
+    console.log(`Direct login: final cookies=${cookieJar.length}, hasASPXAUTH=${hasAuthCookie}, cookieNames=${cookieJar.map(c => c.split('=')[0]).join(',')}`)
     
-    if (hasAuthCookie || isRedirect) {
+    if (hasAuthCookie) {
       return { cookies: allCookies, success: true }
     }
+    
+    // Even without .ASPXAUTH, if we got a redirect it might have worked (some ASP.NET apps use different cookie names)
+    if (isRedirect) {
+      console.log('Direct login: got redirect without .ASPXAUTH - trying with current cookies anyway...')
+      return { cookies: allCookies, success: true }
+    }
+    
+    // Log response body snippet for debugging
+    try {
+      const bodyText = await loginRes.text()
+      const hasError = /invalid|incorrect|wrong|failed|error/i.test(bodyText.substring(0, 2000))
+      console.log(`Direct login: response body has error indicators: ${hasError}, bodyLength=${bodyText.length}`)
+      if (hasError) {
+        const errorSnippet = bodyText.substring(0, 500).replace(/\s+/g, ' ')
+        console.log(`Direct login: error snippet: ${errorSnippet}`)
+      }
+    } catch {}
     
     return { cookies: allCookies, success: false, error: `Login returned status ${loginRes.status}, no auth cookie found` }
   } catch (err) {
@@ -571,7 +654,7 @@ function htmlToSimpleMarkdown(html: string): string {
 
 // ─── Save & Respond Helper ──────────────────────────────────
 
-async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: string, wcaId: number, parsed: any, callerCountryCode?: string) {
+async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: string, wcaId: number, parsed: any, callerCountryCode?: string, aiParse?: boolean) {
   // Use caller-provided country code if the parsed one is unknown
   let finalCountryCode = parsed.country_code
   if (finalCountryCode === 'XX' && callerCountryCode && callerCountryCode !== 'XX') {
@@ -656,7 +739,7 @@ async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: s
     branch_offices: parsed.branch_offices,
   }
 
-  // Fire-and-forget AI analysis
+  // Fire-and-forget AI analysis (classify partner type, rating, etc.)
   const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-partner`
   fetch(analyzeUrl, {
     method: 'POST',
@@ -666,6 +749,19 @@ async function saveAndRespond(supabase: any, supabaseUrl: string, supabaseKey: s
     },
     body: JSON.stringify({ partnerId, profileData: fullPartner }),
   }).catch(err => console.error('AI analysis fire-and-forget error:', err))
+
+  // Fire-and-forget AI parse (extract contacts with AI from raw HTML/markdown)
+  if (aiParse && partnerId) {
+    const parseUrl = `${supabaseUrl}/functions/v1/parse-profile-ai`
+    fetch(parseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ partnerId, forceReparse: true }),
+    }).catch(err => console.error('AI parse fire-and-forget error:', err))
+  }
 
   return new Response(
     JSON.stringify({
@@ -694,7 +790,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const body = await req.json()
-    const { wcaId, preview, countryCode: callerCountryCode } = body
+    const { wcaId, preview, countryCode: callerCountryCode, aiParse } = body
 
     if (!wcaId || typeof wcaId !== 'number') {
       return new Response(
@@ -884,7 +980,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, parsed, callerCountryCode)
+    return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, parsed, callerCountryCode, aiParse)
   } catch (error) {
     console.error('Error:', error)
     return new Response(
