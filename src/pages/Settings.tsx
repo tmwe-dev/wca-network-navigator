@@ -38,15 +38,19 @@ export default function Settings() {
     }
     setAutoLogging(true);
     try {
+      console.log("[AutoLogin] Step 1: Login al proxy...");
       await wca.login(wcaUsername, wcaPassword);
+      console.log("[AutoLogin] Step 2: Recupero cookie...");
       const cookie = await wca.getCookie();
-      if (!cookie) throw new Error("Cookie non ottenuto dal proxy");
+      console.log("[AutoLogin] Cookie ricevuto:", cookie ? `${cookie.substring(0, 30)}...` : "NESSUNO");
+      if (!cookie) throw new Error("Il proxy non ha restituito il cookie. Controlla che il login WCA sia andato a buon fine nel terminale.");
       await updateSetting.mutateAsync({ key: "wca_session_cookie", value: cookie });
       setWcaCookie(cookie);
       toast.success("Cookie ottenuto e salvato automaticamente!");
       await triggerCheck();
     } catch (e: any) {
-      toast.error(e.message || "Errore nel login automatico");
+      console.error("[AutoLogin] Errore:", e);
+      toast.error(`Login fallito: ${e.message || "Errore sconosciuto"}. Controlla il terminale dove gira il proxy per dettagli.`);
     } finally {
       setAutoLogging(false);
     }
