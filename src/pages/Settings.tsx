@@ -8,11 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { toast } from "sonner";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
+  const { triggerCheck } = useWcaSessionStatus();
 
   const [wcaUsername, setWcaUsername] = useState("");
   const [wcaPassword, setWcaPassword] = useState("");
@@ -199,7 +201,9 @@ export default function Settings() {
                 setSaving(true);
                 try {
                   await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
-                  toast.success("Cookie di sessione salvato");
+                  toast.success("Cookie di sessione salvato, verifica in corso...");
+                  // Trigger WCA session check after saving
+                  await triggerCheck();
                 } catch {
                   toast.error("Errore nel salvataggio");
                 } finally {
