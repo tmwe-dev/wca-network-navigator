@@ -741,9 +741,55 @@ Deno.serve(async (req) => {
         loginDetails = 'Direct fetch with session cookie - contacts visible'
         console.log('AUTH OK: session cookie valid, contacts accessible')
       } else {
-        authStatus = 'members_only'
-        loginDetails = 'Cookie present but contacts blocked. Update cookie in Settings (copy from browser after login).'
-        console.log('AUTH PARTIAL: cookie present but Members only detected - cookie expired or incomplete')
+        console.log('AUTH PARTIAL: cookie expired, attempting auto-login...')
+        // Cookie expired → try auto-login with stored credentials
+        html = '' // reset so we try again below
+      }
+    }
+
+    // Try 2: Auto-login with stored WCA credentials if cookie missing or expired
+    if (!html || authStatus !== 'authenticated') {
+      const { data: credSettings } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['wca_username', 'wca_password'])
+      
+      const creds: Record<string, string> = {}
+      for (const s of (credSettings || [])) {
+        if (s.value) creds[s.key] = s.value
+      }
+      
+      if (creds.wca_username && creds.wca_password) {
+        console.log(`Auto-login: attempting with user ${creds.wca_username}...`)
+        const loginResult = await directWcaLogin(creds.wca_username, creds.wca_password)
+        
+        if (loginResult.success) {
+          console.log('Auto-login SUCCESS, fetching profile...')
+          const result = await directFetchPage(url, loginResult.cookies)
+          html = result.html
+          
+          if (!result.membersOnly) {
+            authStatus = 'authenticated'
+            loginDetails = 'Auto-login successful - contacts visible'
+            console.log('AUTH OK: auto-login worked, contacts accessible')
+            
+            // Save the fresh cookie for future requests
+            await supabase
+              .from('app_settings')
+              .upsert({ key: 'wca_auth_cookie', value: loginResult.cookies, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+            console.log('Saved fresh auth cookie to app_settings')
+          } else {
+            authStatus = 'members_only'
+            loginDetails = 'Auto-login succeeded but contacts still blocked (account may lack permissions)'
+            console.log('AUTH PARTIAL: logged in but still members_only')
+          }
+        } else {
+          console.log(`Auto-login FAILED: ${loginResult.error}`)
+          authStatus = 'login_failed'
+          loginDetails = `Auto-login failed: ${loginResult.error}`
+        }
+      } else if (!wcaSessionCookie) {
+        loginDetails = 'No WCA credentials configured. Go to Settings to add username/password.'
       }
     }
 
