@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Copy, Check, Terminal } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, RefreshCw, ClipboardPaste, Info } from "lucide-react";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WcaSessionCardProps {
   hasCredentials: boolean;
@@ -10,18 +12,15 @@ interface WcaSessionCardProps {
   verifying: boolean;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-const SNIPPET = `fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message))`;
-
 export function ProxySetupGuide({
   hasCredentials,
   onVerify,
   verifying,
 }: WcaSessionCardProps) {
   const { status, checkedAt } = useWcaSessionStatus();
-  const [copied, setCopied] = useState(false);
-  const [showSnippet, setShowSnippet] = useState(false);
+  const [cookieInput, setCookieInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const isOk = status === "ok";
   const statusLabel = isOk
@@ -34,14 +33,27 @@ export function ProxySetupGuide({
     ? "Verifica in corso..."
     : "Errore";
 
-  const handleCopy = async () => {
+  const handleSaveCookie = async () => {
+    const cookie = cookieInput.trim();
+    if (!cookie) return;
+    setSaving(true);
     try {
-      await navigator.clipboard.writeText(SNIPPET);
-      setCopied(true);
-      toast.success("Codice copiato! Ora incollalo nella console di wcaworld.com");
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      toast.error("Impossibile copiare, seleziona il testo manualmente");
+      const { data, error } = await supabase.functions.invoke("save-wca-cookie", {
+        body: { cookie },
+      });
+      if (error) throw error;
+      if (data?.authenticated) {
+        toast.success("✅ Cookie salvato e verificato!");
+        setCookieInput("");
+        setShowGuide(false);
+      } else {
+        toast.warning("⚠️ Cookie salvato ma verifica fallita. Copia l'header Cookie completo dal pannello Network.");
+      }
+      onVerify();
+    } catch (err: any) {
+      toast.error("Errore: " + (err.message || "Sconosciuto"));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -62,45 +74,49 @@ export function ProxySetupGuide({
         </div>
       </div>
 
-      {/* Primary action: Capture cookie */}
+      {/* Primary action */}
       <Button
-        onClick={() => setShowSnippet(!showSnippet)}
+        onClick={() => setShowGuide(!showGuide)}
         className="w-full"
         variant={isOk ? "outline" : "default"}
         size="sm"
       >
-        <Terminal className="w-4 h-4 mr-2" />
-        {isOk ? "Rinnova Cookie dal Browser" : "Cattura Cookie dal Browser"}
+        <ClipboardPaste className="w-4 h-4 mr-2" />
+        {isOk ? "Aggiorna Cookie" : "Inserisci Cookie WCA"}
       </Button>
 
-      {showSnippet && (
-        <div className="rounded-md border bg-muted/50 p-3 space-y-2">
-          <p className="text-xs font-medium">Procedura (30 secondi):</p>
+      {showGuide && (
+        <div className="rounded-md border bg-muted/50 p-3 space-y-3">
+          <div className="flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs font-medium">Copia il Cookie dal pannello Network</p>
+          </div>
           <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
             <li>Vai su <a href="https://www.wcaworld.com/MemberSection" target="_blank" rel="noopener noreferrer" className="underline text-primary">wcaworld.com</a> (devi essere loggato)</li>
-            <li>Premi <kbd className="px-1 py-0.5 rounded bg-muted border text-[10px] font-mono">F12</kbd> → apri la tab <strong>Console</strong></li>
-            <li>Incolla il codice qui sotto e premi <kbd className="px-1 py-0.5 rounded bg-muted border text-[10px] font-mono">Invio</kbd></li>
+            <li>Premi <kbd className="px-1 py-0.5 rounded bg-muted border text-[10px] font-mono">F12</kbd> → tab <strong>Network</strong> → ricarica pagina</li>
+            <li>Clicca la prima richiesta → <strong>Headers → Cookie</strong></li>
+            <li>Copia tutto il valore e incollalo qui sotto</li>
           </ol>
-          <div className="relative">
-            <pre className="text-[10px] font-mono bg-background border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all select-all">
-              {SNIPPET}
-            </pre>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Incolla l'header Cookie completo..."
+              value={cookieInput}
+              onChange={(e) => setCookieInput(e.target.value)}
+              className="font-mono text-[10px] h-8"
+            />
             <Button
-              size="icon"
-              variant="ghost"
-              className="absolute top-1 right-1 h-6 w-6"
-              onClick={handleCopy}
+              size="sm"
+              onClick={handleSaveCookie}
+              disabled={saving || !cookieInput.trim()}
+              className="shrink-0 h-8"
             >
-              {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Salva"}
             </Button>
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Vedrai un messaggio di conferma. Il semaforo si aggiornerà automaticamente.
-          </p>
         </div>
       )}
 
-      {/* Secondary: verify session */}
+      {/* Verify session */}
       <Button
         onClick={onVerify}
         disabled={verifying}
@@ -117,7 +133,7 @@ export function ProxySetupGuide({
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">
-        Il cookie viene catturato dalla tua sessione browser su wcaworld.com e salvato nel sistema.
+        I cookie di sessione WCA sono HttpOnly e richiedono copia manuale dal pannello Network.
       </p>
     </div>
   );
