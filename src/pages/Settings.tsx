@@ -10,14 +10,12 @@ import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, Mess
 import { ProxySetupGuide } from "@/components/settings/ProxySetupGuide";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
-import { useWCA } from "@/hooks/useWCA";
 import { toast } from "sonner";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
   const { triggerCheck } = useWcaSessionStatus();
-  const wca = useWCA();
 
   const [wcaUsername, setWcaUsername] = useState("");
   const [wcaPassword, setWcaPassword] = useState("");
@@ -25,34 +23,18 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [autoLogging, setAutoLogging] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
-  const handleAutoLogin = async () => {
-    if (!wcaUsername || !wcaPassword) {
-      toast.error("Inserisci prima username e password WCA");
-      return;
-    }
-    if (!wca.isProxyOnline) {
-      toast.error("Proxy offline. Avvia wca-auth-proxy.py sul tuo computer");
-      return;
-    }
-    setAutoLogging(true);
+  const handleVerifyAndLogin = async () => {
+    setVerifying(true);
     try {
-      console.log("[AutoLogin] Step 1: Login al proxy...");
-      await wca.login(wcaUsername, wcaPassword);
-      console.log("[AutoLogin] Step 2: Recupero cookie...");
-      const cookie = await wca.getCookie();
-      console.log("[AutoLogin] Cookie ricevuto:", cookie ? `${cookie.substring(0, 30)}...` : "NESSUNO");
-      if (!cookie) throw new Error("Il proxy non ha restituito il cookie. Controlla che il login WCA sia andato a buon fine nel terminale.");
-      await updateSetting.mutateAsync({ key: "wca_session_cookie", value: cookie });
-      setWcaCookie(cookie);
-      toast.success("Cookie ottenuto e salvato automaticamente!");
+      toast.info("Verifica sessione WCA in corso...");
       await triggerCheck();
+      toast.success("Verifica completata! Controlla lo stato della sessione.");
     } catch (e: any) {
-      console.error("[AutoLogin] Errore:", e);
-      toast.error(`Login fallito: ${e.message || "Errore sconosciuto"}. Controlla il terminale dove gira il proxy per dettagli.`);
+      toast.error(`Errore: ${e.message || "Sconosciuto"}`);
     } finally {
-      setAutoLogging(false);
+      setVerifying(false);
     }
   };
 
@@ -179,6 +161,7 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* Session Status Card */}
       <Card className="border-amber-200 bg-amber-50/30">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -187,16 +170,16 @@ export default function Settings() {
                 <KeyRound className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <CardTitle className="text-base">Cookie di Sessione WCA (Obbligatorio)</CardTitle>
+                <CardTitle className="text-base">Sessione WCA</CardTitle>
                 <CardDescription>
-                  Necessario per accedere ai dati contatti (email, telefoni). Senza cookie valido i dati sono nascosti.
+                  Stato della connessione a WCA World. Il login avviene automaticamente lato server.
                 </CardDescription>
               </div>
             </div>
             {hasCookie ? (
               <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                Presente
+                Cookie presente
               </Badge>
             ) : (
               <Badge variant="destructive">Mancante</Badge>
@@ -205,47 +188,51 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <ProxySetupGuide
-            isProxyOnline={wca.isProxyOnline}
-            hasCredentials={!!wcaUsername && !!wcaPassword && isConfigured}
-            hasCookie={hasCookie}
-            autoLogging={autoLogging}
-            onAutoLogin={handleAutoLogin}
+            hasCredentials={isConfigured}
+            onVerify={handleVerifyAndLogin}
+            verifying={verifying}
           />
 
-          <div className="space-y-2">
-            <Label htmlFor="wca-cookie">Cookie completo</Label>
-            <Textarea
-              id="wca-cookie"
-              value={wcaCookie}
-              onChange={(e) => setWcaCookie(e.target.value)}
-              placeholder="Incolla qui l'output di document.cookie"
-              rows={3}
-              className="font-mono text-xs"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={async () => {
-                if (!wcaCookie) return;
-                setSaving(true);
-                try {
-                  await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
-                  toast.success("Cookie di sessione salvato, verifica in corso...");
-                  // Trigger WCA session check after saving
-                  await triggerCheck();
-                } catch {
-                  toast.error("Errore nel salvataggio");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              disabled={saving || !wcaCookie}
-            >
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salva Cookie
-            </Button>
-          </div>
+          {/* Manual cookie fallback */}
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground transition-colors font-medium">
+              ⚙️ Inserimento cookie manuale (fallback)
+            </summary>
+            <div className="mt-2 space-y-2">
+              <Label htmlFor="wca-cookie" className="text-xs">Cookie completo</Label>
+              <Textarea
+                id="wca-cookie"
+                value={wcaCookie}
+                onChange={(e) => setWcaCookie(e.target.value)}
+                placeholder=".ASPXAUTH=valore_copiato_da_devtools"
+                rows={3}
+                className="font-mono text-xs"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!wcaCookie) return;
+                    setSaving(true);
+                    try {
+                      await updateSetting.mutateAsync({ key: "wca_session_cookie", value: wcaCookie });
+                      toast.success("Cookie salvato, verifica in corso...");
+                      await triggerCheck();
+                    } catch {
+                      toast.error("Errore nel salvataggio");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving || !wcaCookie}
+                >
+                  {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                  Salva Cookie
+                </Button>
+              </div>
+            </div>
+          </details>
         </CardContent>
       </Card>
 
