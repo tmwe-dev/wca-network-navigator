@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone, Wifi } from "lucide-react";
+import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone } from "lucide-react";
+import { ProxySetupGuide } from "@/components/settings/ProxySetupGuide";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useWCA } from "@/hooks/useWCA";
@@ -199,34 +200,13 @@ export default function Settings() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border bg-background p-3 space-y-2 text-sm">
-            <p className="font-medium">Come ottenere il cookie:</p>
-            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>Apri <a href="https://www.wcaworld.com/Account/Login" target="_blank" rel="noopener" className="text-primary underline">wcaworld.com</a> e fai login</li>
-              <li>Premi <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">F12</kbd> → scheda <strong>Console</strong></li>
-              <li>Digita <code className="px-1 py-0.5 rounded bg-muted font-mono text-xs">document.cookie</code> e premi Invio</li>
-              <li>Copia tutto il testo e incollalo qui sotto</li>
-            </ol>
-            <p className="text-xs text-amber-600 mt-1">⚠️ Il cookie scade periodicamente — aggiornalo se il resync non trova email/telefoni</p>
-          </div>
-          
-          <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-            <div className="flex items-center gap-2 flex-1">
-              <span className={`w-2 h-2 rounded-full ${wca.isProxyOnline ? 'bg-emerald-500' : 'bg-destructive'}`} />
-              <span className="text-sm text-muted-foreground">
-                Proxy {wca.isProxyOnline ? 'online' : 'offline'}
-              </span>
-            </div>
-            <Button
-              onClick={handleAutoLogin}
-              disabled={autoLogging || !wcaUsername || !wcaPassword || !wca.isProxyOnline}
-              variant="outline"
-              size="sm"
-            >
-              {autoLogging ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
-              Ottieni Cookie Automaticamente
-            </Button>
-          </div>
+          <ProxySetupGuide
+            isProxyOnline={wca.isProxyOnline}
+            hasCredentials={!!wcaUsername && !!wcaPassword && isConfigured}
+            hasCookie={hasCookie}
+            autoLogging={autoLogging}
+            onAutoLogin={handleAutoLogin}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="wca-cookie">Cookie completo</Label>
