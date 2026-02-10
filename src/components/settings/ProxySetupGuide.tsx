@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Terminal, Copy, CheckCircle2, Circle, Loader2, Wifi } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ExternalLink, Terminal, Copy, CheckCircle2, Circle, Loader2, Wifi, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProxySetupGuideProps {
@@ -29,6 +30,29 @@ export function ProxySetupGuide({
 
   return (
     <div className="rounded-lg border bg-background p-4 space-y-4">
+      {!isProxyOnline && (
+        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+          <AlertTriangle className="h-4 w-4 !text-amber-600" />
+          <AlertDescription className="space-y-2">
+            <p className="font-medium">
+              ⚠️ Proxy non raggiungibile — Apri l'app in una scheda separata!
+            </p>
+            <p className="text-xs">
+              Dentro l'editor Lovable il browser non riesce a contattare il proxy sul tuo computer. 
+              Apri questa pagina in una <strong>nuova scheda del browser</strong> per far funzionare tutto.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-400 hover:bg-amber-100"
+              onClick={() => window.open(window.location.origin + '/settings', '_blank')}
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+              Apri in Nuova Scheda
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       <p className="font-semibold text-sm">🚀 Configurazione rapida — segui questi passi nell'ordine:</p>
 
       {/* Step 1 */}
