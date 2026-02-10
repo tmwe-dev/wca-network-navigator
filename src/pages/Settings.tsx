@@ -6,15 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone } from "lucide-react";
+import { Save, Eye, EyeOff, Globe, Shield, CheckCircle2, Loader2, KeyRound, MessageCircle, Phone, Wifi } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useWCA } from "@/hooks/useWCA";
 import { toast } from "sonner";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
   const { triggerCheck } = useWcaSessionStatus();
+  const wca = useWCA();
 
   const [wcaUsername, setWcaUsername] = useState("");
   const [wcaPassword, setWcaPassword] = useState("");
@@ -22,6 +24,32 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoLogging, setAutoLogging] = useState(false);
+
+  const handleAutoLogin = async () => {
+    if (!wcaUsername || !wcaPassword) {
+      toast.error("Inserisci prima username e password WCA");
+      return;
+    }
+    if (!wca.isProxyOnline) {
+      toast.error("Proxy offline. Avvia wca-auth-proxy.py sul tuo computer");
+      return;
+    }
+    setAutoLogging(true);
+    try {
+      await wca.login(wcaUsername, wcaPassword);
+      const cookie = await wca.getCookie();
+      if (!cookie) throw new Error("Cookie non ottenuto dal proxy");
+      await updateSetting.mutateAsync({ key: "wca_session_cookie", value: cookie });
+      setWcaCookie(cookie);
+      toast.success("Cookie ottenuto e salvato automaticamente!");
+      await triggerCheck();
+    } catch (e: any) {
+      toast.error(e.message || "Errore nel login automatico");
+    } finally {
+      setAutoLogging(false);
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -182,6 +210,24 @@ export default function Settings() {
             <p className="text-xs text-amber-600 mt-1">⚠️ Il cookie scade periodicamente — aggiornalo se il resync non trova email/telefoni</p>
           </div>
           
+          <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+            <div className="flex items-center gap-2 flex-1">
+              <span className={`w-2 h-2 rounded-full ${wca.isProxyOnline ? 'bg-emerald-500' : 'bg-destructive'}`} />
+              <span className="text-sm text-muted-foreground">
+                Proxy {wca.isProxyOnline ? 'online' : 'offline'}
+              </span>
+            </div>
+            <Button
+              onClick={handleAutoLogin}
+              disabled={autoLogging || !wcaUsername || !wcaPassword || !wca.isProxyOnline}
+              variant="outline"
+              size="sm"
+            >
+              {autoLogging ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
+              Ottieni Cookie Automaticamente
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="wca-cookie">Cookie completo</Label>
             <Textarea
