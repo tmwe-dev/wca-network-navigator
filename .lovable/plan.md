@@ -1,41 +1,29 @@
 
 
-# Bottone "Login Automatico via Proxy" nella pagina Impostazioni
+## Problema
+Il bottone "Ottieni Cookie Automaticamente" resta disabilitato dentro l'editor Lovable perche' il proxy locale (`localhost:8001`) non e' raggiungibile dalla preview cloud. Il proxy funziona correttamente sul computer dell'utente.
 
-## Cosa cambia
+## Soluzione
+Aggiungere un **banner di avviso prominente** nella pagina Settings che appare quando il proxy non e' raggiungibile. Il banner:
 
-Aggiungere un bottone nella sezione "Cookie di Sessione WCA" della pagina Impostazioni che:
-1. Si connette al proxy locale (`localhost:8001`)
-2. Fa login automatico con le credenziali WCA gia salvate in pagina
-3. Recupera il cookie `.ASPXAUTH`
-4. Lo salva nel database come `wca_session_cookie`
-5. Triggera la verifica sessione (semaforo)
+1. Spiega in modo semplice che l'app va aperta in una **scheda separata del browser**
+2. Include un **bottone "Apri in Nuova Scheda"** che apre automaticamente il link della preview pubblicata
+3. Scompare automaticamente quando il proxy e' raggiungibile (cioe' quando l'utente sta gia' usando l'app dalla scheda separata)
 
-Cosi non serve piu copiare manualmente il cookie dal browser.
+## Modifiche
 
-## Comportamento
+### 1. `src/components/settings/ProxySetupGuide.tsx`
+- Aggiungere in cima alla guida un **Alert box giallo/arancione** visibile quando `isProxyOnline` e' `false`
+- Il box contiene:
+  - Testo: "Stai usando l'app dentro l'editor. Per far funzionare il proxy, apri questa pagina in una scheda separata del browser."
+  - Bottone: "Apri in Nuova Scheda" che apre `window.open()` con l'URL della preview pubblicata + `/settings`
+- L'alert scompare quando `isProxyOnline` diventa `true`
 
-- Il bottone appare nella card "Cookie di Sessione WCA", sopra il campo textarea
-- Se il proxy non e raggiungibile, il bottone mostra un avviso
-- Se username/password non sono compilati, il bottone e disabilitato
-- Flusso: Login via proxy -> Ottieni cookie -> Salva nel DB -> Verifica sessione
-- Mostra spinner durante l'operazione e toast di successo/errore
+### 2. Nessuna modifica al backend
+Non servono modifiche al database o alle edge functions.
 
 ## Dettagli tecnici
-
-**File modificato:** `src/pages/Settings.tsx`
-
-Modifiche:
-- Importare `useWCA` dal hook esistente
-- Aggiungere una funzione `handleAutoLogin` che:
-  1. Chiama `wca.login(wcaUsername, wcaPassword)` per autenticarsi via proxy
-  2. Chiama `wca.getCookie()` per ottenere il valore `.ASPXAUTH`
-  3. Salva il cookie nel DB con `updateSetting.mutateAsync({ key: "wca_session_cookie", value: cookie })`
-  4. Aggiorna lo stato locale `setWcaCookie(cookie)`
-  5. Chiama `triggerCheck()` per aggiornare il semaforo
-- Aggiungere il bottone "Ottieni Cookie Automaticamente" con icona `Wifi` nella card del cookie, con stati:
-  - Disabilitato se mancano username o password
-  - Spinner durante il caricamento
-  - Indicatore proxy online/offline (pallino verde/rosso)
-- Gestione errori: se il proxy e offline, mostra toast con istruzioni per avviarlo
+- L'URL della preview pubblicata verra' costruito usando `window.location.origin` per funzionare sia in ambiente Lovable che standalone
+- Il componente Alert di shadcn/ui verra' usato per coerenza visiva
+- Il bottone usera' `window.open(url, '_blank')` per aprire una nuova scheda
 
