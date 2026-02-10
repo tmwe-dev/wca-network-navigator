@@ -6,13 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, CheckCircle2, XCircle, Globe, Terminal, Copy, Check,
-  RefreshCw, Cookie, Shield, KeyRound,
+  RefreshCw, Cookie, Shield, KeyRound, Bookmark, ChevronDown,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+const BOOKMARKLET = `javascript:void(fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message)))`;
 
 const SNIPPET = `fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message))`;
 
@@ -22,7 +25,6 @@ export default function WCAIntegration() {
   const updateSetting = useUpdateSetting();
 
   const [copied, setCopied] = useState(false);
-  const [showSnippet, setShowSnippet] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [manualCookie, setManualCookie] = useState("");
   const [savingCookie, setSavingCookie] = useState(false);
@@ -44,10 +46,10 @@ export default function WCAIntegration() {
     try {
       await navigator.clipboard.writeText(SNIPPET);
       setCopied(true);
-      toast.success("Codice copiato! Ora incollalo nella console di wcaworld.com");
+      toast.success("Codice copiato!");
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      toast.error("Impossibile copiare, seleziona il testo manualmente");
+      toast.error("Impossibile copiare");
     }
   };
 
@@ -145,36 +147,99 @@ export default function WCAIntegration() {
         </Card>
       </div>
 
-      {/* Primary action: Cookie capture */}
-      <Card className={`border-2 ${isOk ? "border-emerald-500/30" : "border-amber-500/50"}`}>
+      {/* PRIMARY: Bookmarklet */}
+      <Card className={`border-2 ${isOk ? "border-emerald-500/30" : "border-primary/50"}`}>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
-              <KeyRound className="w-5 h-5 text-amber-600" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Bookmark className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">
-                {isOk ? "Rinnova Sessione" : "Cattura Cookie dal Browser"}
-              </CardTitle>
+              <CardTitle className="text-lg">Cattura Cookie — Un Click</CardTitle>
               <CardDescription>
-                Sincronizza la tua sessione WCA attiva con il sistema in 30 secondi
+                Trascina il bottone nei preferiti, poi cliccalo quando sei su wcaworld.com
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={() => setShowSnippet(!showSnippet)}
-            className="w-full"
-            variant={isOk ? "outline" : "default"}
-          >
-            <Terminal className="w-4 h-4 mr-2" />
-            {showSnippet ? "Nascondi istruzioni" : isOk ? "Rinnova Cookie" : "Cattura Cookie dal Browser"}
-          </Button>
+        <CardContent className="space-y-5">
+          {/* Draggable bookmarklet */}
+          <div className="flex flex-col items-center gap-4 p-6 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
+            <p className="text-sm font-medium text-muted-foreground">
+              ↓ Trascina questo bottone nella barra dei preferiti ↓
+            </p>
+            <a
+              href={BOOKMARKLET}
+              onClick={(e) => e.preventDefault()}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-base shadow-lg hover:bg-primary/90 cursor-grab active:cursor-grabbing select-none"
+              draggable
+            >
+              <Bookmark className="w-5 h-5" />
+              📡 Cattura WCA
+            </a>
+            <p className="text-xs text-muted-foreground text-center max-w-md">
+              Non cliccare qui — trascinalo nella barra dei preferiti del browser!
+            </p>
+          </div>
 
-          {showSnippet && (
-            <div className="rounded-md border bg-muted/50 p-4 space-y-3">
-              <p className="text-sm font-medium">Procedura (30 secondi):</p>
+          {/* Instructions */}
+          <div className="rounded-md border bg-muted/50 p-4">
+            <p className="text-sm font-medium mb-3">Come funziona:</p>
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+              <li>
+                <strong>Una volta sola:</strong> trascina il bottone{" "}
+                <span className="font-semibold text-primary">"📡 Cattura WCA"</span>{" "}
+                nella barra dei preferiti
+              </li>
+              <li>
+                Vai su{" "}
+                <a
+                  href="https://www.wcaworld.com/MemberSection"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-primary font-medium"
+                >
+                  wcaworld.com
+                </a>{" "}
+                e fai login
+              </li>
+              <li>
+                Clicca il bookmark <strong>"📡 Cattura WCA"</strong> dalla barra dei preferiti
+              </li>
+              <li>
+                Vedrai un messaggio <strong>"Cookie salvato!"</strong> — fatto!
+              </li>
+            </ol>
+          </div>
+
+          {/* Verify button */}
+          <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
+            {verifying ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            {verifying ? "Verifica in corso..." : "Verifica Sessione"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* FALLBACK 1: Console snippet */}
+      <Collapsible>
+        <Card className="bg-card border-border">
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Terminal className="w-5 h-5 text-muted-foreground" />
+                  Metodo alternativo: Console del browser
+                </CardTitle>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-3">
               <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
                 <li>
                   Vai su{" "}
@@ -186,21 +251,15 @@ export default function WCAIntegration() {
                   >
                     wcaworld.com
                   </a>{" "}
-                  (devi essere loggato)
+                  (loggato)
                 </li>
                 <li>
                   Premi{" "}
                   <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">F12</kbd>{" "}
-                  → apri la tab <strong>Console</strong>
+                  → tab <strong>Console</strong>
                 </li>
-                <li>Copia il codice qui sotto e incollalo nella console</li>
-                <li>
-                  Premi{" "}
-                  <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Invio</kbd>
-                  {" "}— vedrai un messaggio "Cookie salvato!"
-                </li>
+                <li>Incolla il codice e premi Invio</li>
               </ol>
-
               <div className="relative">
                 <pre className="text-xs font-mono bg-background border rounded p-3 overflow-x-auto whitespace-pre-wrap break-all select-all">
                   {SNIPPET}
@@ -218,66 +277,62 @@ export default function WCAIntegration() {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
-              <p className="text-xs text-muted-foreground">
-                Il semaforo si aggiornerà automaticamente dopo l'esecuzione del codice.
-              </p>
-            </div>
-          )}
-
-          {/* Verify button */}
-          <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
-            {verifying ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
-            )}
-            {verifying ? "Verifica in corso..." : "Verifica Sessione"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Manual cookie fallback */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Cookie className="w-5 h-5 text-amber-500" />
-            Inserimento Cookie Manuale
-          </CardTitle>
-          <CardDescription>
-            In alternativa, incolla il valore del cookie <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">.ASPXAUTH</code> copiato dai DevTools del browser
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Cookie completo</Label>
-            <Textarea
-              value={manualCookie}
-              onChange={(e) => setManualCookie(e.target.value)}
-              placeholder=".ASPXAUTH=valore_copiato_da_devtools..."
-              className="font-mono text-xs min-h-[80px]"
-            />
-          </div>
-          <Button
-            onClick={handleSaveManualCookie}
-            disabled={savingCookie || !manualCookie.trim()}
-            variant="outline"
-            className="w-full"
-          >
-            {savingCookie ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Shield className="w-4 h-4 mr-2" />
-            )}
-            Salva Cookie Manualmente
-          </Button>
-        </CardContent>
-      </Card>
+      {/* FALLBACK 2: Manual cookie */}
+      <Collapsible>
+        <Card className="bg-card border-border">
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Cookie className="w-5 h-5 text-muted-foreground" />
+                  Metodo alternativo: Cookie manuale
+                </CardTitle>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-4">
+              <CardDescription>
+                Incolla il valore del cookie{" "}
+                <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">.ASPXAUTH</code>{" "}
+                copiato dai DevTools
+              </CardDescription>
+              <div className="space-y-2">
+                <Label>Cookie completo</Label>
+                <Textarea
+                  value={manualCookie}
+                  onChange={(e) => setManualCookie(e.target.value)}
+                  placeholder=".ASPXAUTH=valore_copiato..."
+                  className="font-mono text-xs min-h-[80px]"
+                />
+              </div>
+              <Button
+                onClick={handleSaveManualCookie}
+                disabled={savingCookie || !manualCookie.trim()}
+                variant="outline"
+                className="w-full"
+              >
+                {savingCookie ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Shield className="w-4 h-4 mr-2" />
+                )}
+                Salva Cookie Manualmente
+              </Button>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Info */}
       <div className="text-center text-xs text-muted-foreground space-y-1">
-        <p>Il cookie viene catturato dalla tua sessione browser su wcaworld.com e salvato nel sistema.</p>
-        <p>Quando scade (ogni pochi giorni), basta ripetere la procedura.</p>
+        <p>Quando il cookie scade (ogni pochi giorni), clicca di nuovo il bookmark su wcaworld.com.</p>
       </div>
     </div>
   );
