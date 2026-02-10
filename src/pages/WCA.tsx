@@ -2,20 +2,20 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Loader2, CheckCircle2, XCircle, Globe,
-  RefreshCw, Bookmark,
+  RefreshCw, ClipboardPaste, Info,
 } from "lucide-react";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { toast } from "sonner";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-const BOOKMARKLET = `javascript:void(fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message)))`;
+import { supabase } from "@/integrations/supabase/client";
 
 export default function WCAIntegration() {
   const { status, checkedAt, triggerCheck } = useWcaSessionStatus();
   const [verifying, setVerifying] = useState(false);
+  const [cookieInput, setCookieInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const isOk = status === "ok";
 
@@ -28,6 +28,32 @@ export default function WCAIntegration() {
       toast.error("Errore durante la verifica");
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleSaveCookie = async () => {
+    const cookie = cookieInput.trim();
+    if (!cookie) {
+      toast.error("Incolla il valore del cookie prima di salvare");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("save-wca-cookie", {
+        body: { cookie },
+      });
+      if (error) throw error;
+      if (data?.authenticated) {
+        toast.success("✅ Cookie salvato e verificato! Sessione attiva.");
+        setCookieInput("");
+      } else {
+        toast.warning("⚠️ Cookie salvato ma la verifica è fallita. Assicurati di copiare l'header Cookie completo.");
+      }
+      triggerCheck();
+    } catch (err: any) {
+      toast.error("Errore: " + (err.message || "Sconosciuto"));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -54,34 +80,65 @@ export default function WCAIntegration() {
       {/* Main card */}
       <Card>
         <CardContent className="pt-6 space-y-6">
-          {/* Bookmarklet */}
-          <div className="flex flex-col items-center gap-3 p-5 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
-            <p className="text-sm text-muted-foreground">
-              Trascina nei preferiti del browser
-            </p>
-            <a
-              href={BOOKMARKLET}
-              onClick={(e) => e.preventDefault()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 cursor-grab active:cursor-grabbing select-none"
-              draggable
-            >
-              <Bookmark className="w-4 h-4" />
-              📡 Cattura WCA
-            </a>
+          {/* Instructions */}
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <p className="text-sm font-medium text-foreground">
+                Come ottenere il cookie di sessione WCA
+              </p>
+            </div>
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+              <li>
+                Vai su{" "}
+                <a href="https://www.wcaworld.com/MemberSection" target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                  wcaworld.com
+                </a>{" "}
+                e accedi al tuo account
+              </li>
+              <li>
+                Premi <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">F12</kbd> per aprire i DevTools
+              </li>
+              <li>
+                Vai alla tab <strong>Network</strong> e ricarica la pagina (<kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">F5</kbd>)
+              </li>
+              <li>
+                Clicca sulla prima richiesta (il documento HTML principale)
+              </li>
+              <li>
+                Nella sezione <strong>Headers → Request Headers</strong>, cerca <strong>Cookie:</strong>
+              </li>
+              <li>
+                Copia <strong>tutto il valore</strong> del campo Cookie e incollalo qui sotto
+              </li>
+            </ol>
           </div>
 
-          {/* Steps */}
-          <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-            <li>Trascina <strong>"📡 Cattura WCA"</strong> nei preferiti (una volta sola)</li>
-            <li>
-              Vai su{" "}
-              <a href="https://www.wcaworld.com" target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                wcaworld.com
-              </a>{" "}
-              e accedi
-            </li>
-            <li>Clicca il bookmark → vedrai <strong>"Cookie salvato!"</strong></li>
-          </ol>
+          {/* Cookie input */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Incolla qui il valore completo dell'header Cookie..."
+                value={cookieInput}
+                onChange={(e) => setCookieInput(e.target.value)}
+                className="font-mono text-xs"
+              />
+              <Button
+                onClick={handleSaveCookie}
+                disabled={saving || !cookieInput.trim()}
+                className="shrink-0"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ClipboardPaste className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Il cookie include token HttpOnly che non possono essere catturati automaticamente via JavaScript.
+            </p>
+          </div>
 
           {/* Verify */}
           <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
@@ -97,10 +154,6 @@ export default function WCAIntegration() {
           )}
         </CardContent>
       </Card>
-
-      <p className="text-xs text-center text-muted-foreground">
-        Quando il cookie scade, clicca di nuovo il bookmark su wcaworld.com.
-      </p>
     </div>
   );
 }
