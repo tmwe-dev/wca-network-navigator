@@ -1,75 +1,97 @@
 
 
-# Visualizzatore Dati Scaricati per Job
+# Piano: Fix Autenticazione WCA e Pipeline Completa
 
-## Obiettivo
-Aggiungere un pulsante nella JobCard che apre un pannello/dialog dove puoi sfogliare pagina per pagina tutti i partner scaricati dal job, vedendo per ciascuno: azienda, contatti (con email, telefono, mobile), e un indicatore chiaro di cosa e' stato estratto.
+## Problema centrale
+Il login automatico HTTP non funziona. I download girano per ore salvando dati senza email/telefoni. Questo vanifica l'intero scopo dello scraping.
 
-## Come funziona
+## Soluzione in 3 parti
 
-Nella `JobCard` (la card di ogni job attivo o completato) verra' aggiunto un pulsante con icona "lista/occhio". Cliccandolo si apre un **Dialog** con:
+### Parte 1: Verifica pre-download (STOP immediato se non autenticati)
 
-- **Navigazione a pagine**: pulsanti Avanti/Indietro per scorrere i partner scaricati uno alla volta (o una lista scrollabile)
-- **Per ogni partner**: nome azienda, citta', paese, email azienda, telefono, e soprattutto la **lista completa dei contatti** con nome, titolo, email, telefono, mobile
-- **Indicatori visivi**: icona verde se ha email, rossa se mancante; stesso per telefono
-- **Contatore**: "Partner 3 di 95" con navigazione
+Modificare la Edge Function `process-download-job` per fare un **test di autenticazione** prima di iniziare il processing. Se il test fallisce (pagina con "Members only"), il job si mette automaticamente in **pausa** e notifica l'utente.
 
-## Dati disponibili
+Logica:
+- Al primo ID del job, controlla se il risultato contiene email/contatti reali
+- Se vede "Members only", setta `status = 'paused'` e `error_message = 'Sessione WCA scaduta - aggiorna il cookie nelle Impostazioni'`
+- Il job NON prosegue a scaricare dati inutili per ore
 
-Il job salva in `processed_ids` la lista ordinata dei WCA ID gia' scaricati. Per ogni WCA ID possiamo caricare dal database:
-- Tabella `partners`: company_name, city, country_code, email, phone
-- Tabella `partner_contacts`: tutti i contatti con nome, titolo, email, telefono, mobile
+File: `supabase/functions/process-download-job/index.ts`
 
-Quindi il viewer carica i dati direttamente dal DB, non serve salvare nulla di aggiuntivo.
+### Parte 2: Fix del login automatico con debug approfondito
+
+Riscrivere `directWcaLogin` con una strategia piu' robusta:
+- Seguire TUTTI i redirect (anche multipli) collezionando ogni cookie
+- Testare immediatamente il login facendo un fetch di un profilo noto e verificando se "Members only" e' assente
+- Se il login HTTP non funziona, loggare esattamente cosa succede (status, cookie names, body snippet) per capire il meccanismo
+
+Se il login HTTP continua a fallire (cosa probabile con ASP.NET moderno), il sistema passa automaticamente al cookie manuale con un messaggio chiaro.
+
+File: `supabase/functions/scrape-wca-partners/index.ts`
+
+### Parte 3: Semaforo WCA nella sidebar + check automatico
+
+Creare il sistema di monitoraggio sessione gia' discusso:
+
+1. **Nuova Edge Function `check-wca-session`**: fa un fetch di un profilo WCA noto (ID 86580) con il cookie salvato. Se vede dati reali restituisce `authenticated: true`, altrimenti `false`. Salva il risultato in `app_settings`.
+
+2. **Hook `useWcaSessionStatus`**: polling ogni 5 minuti, espone lo stato della sessione.
+
+3. **Indicatore nella sidebar**: pallino verde/rosso che mostra a colpo d'occhio se sei loggato. Cliccando sul rosso vai alle Impostazioni.
+
+File nuovi:
+- `supabase/functions/check-wca-session/index.ts`
+- `src/hooks/useWcaSessionStatus.ts`
+
+File da modificare:
+- `src/components/layout/AppSidebar.tsx` - aggiungere indicatore
+- `supabase/config.toml` - registrare `check-wca-session`
 
 ## Dettagli tecnici
 
-### File da modificare:
-
-**`src/pages/DownloadManagement.tsx`**:
-1. Nella `JobCard`, aggiungere un pulsante icona (es. `List` o `Eye`) accanto ai controlli esistenti
-2. Creare un componente `JobDataViewer` (dialog modale) che:
-   - Riceve la lista `processed_ids` dal job
-   - Carica i partner dal DB tramite query `partners` filtrata per `wca_id IN (processed_ids)`
-   - Per ogni partner, carica i `partner_contacts` associati
-   - Mostra una lista scrollabile con navigazione (precedente/successivo)
-   - Per ogni partner mostra: nome azienda, citta', bandiera paese, email/telefono azienda, e sotto tutti i contatti con email/telefono/mobile evidenziati
-   - Badge colorati: verde "Email trovata", rosso "Email mancante"
-
-### Struttura UI del viewer:
-
+### Check pre-download in `process-download-job`
 ```text
-+------------------------------------------+
-|  Dati Scaricati - IT Italia (23/95)      |
-+------------------------------------------+
-|  [<] Partner 3 di 23 [>]                 |
-|                                          |
-|  ACME Logistics Srl                      |
-|  Roma, IT | WCA #12345                   |
-|  Email: info@acme.it                     |
-|  Tel: +39 06 1234567                     |
-|                                          |
-|  --- Contatti (3) ---                    |
-|                                          |
-|  Mario Rossi - Managing Director         |
-|  [v] mario@acme.it                       |
-|  [v] +39 333 1234567 (mobile)            |
-|                                          |
-|  Giulia Bianchi - Pricing Dept           |
-|  [v] giulia@acme.it                      |
-|  [x] Telefono mancante                   |
-|                                          |
-|  Luigi Verdi - Operations                |
-|  [x] Email mancante                      |
-|  [x] Telefono mancante                   |
-+------------------------------------------+
+Al primo ID (current_index === 0):
+  1. Chiama scrape-wca-partners con preview=true
+  2. Se authStatus !== 'authenticated':
+     - Setta job.status = 'paused'
+     - Setta job.error_message = 'Cookie WCA scaduto'
+     - NON proseguire
+  3. Se authStatus === 'authenticated':
+     - Prosegui normalmente
 ```
 
-### Query utilizzate:
-- `SELECT * FROM partners WHERE wca_id = ANY(processed_ids)` per caricare i partner
-- `SELECT * FROM partner_contacts WHERE partner_id IN (...)` per i contatti
-- I dati vengono caricati una sola volta all'apertura del dialog e cachati con React Query
+### Edge Function `check-wca-session`
+```text
+1. Leggi wca_session_cookie e wca_auth_cookie da app_settings
+2. Se nessun cookie: return { authenticated: false, reason: 'no_cookie' }
+3. Fetch https://www.wcaworld.com/directory/members/86580 con il cookie
+4. Conta occorrenze "Members only" nel body
+5. Se < 3 occorrenze: authenticated = true
+6. Aggiorna app_settings: wca_session_status = 'ok'/'expired', wca_session_checked_at = now()
+7. Return { authenticated, checkedAt, reason }
+```
 
-### Nessuna modifica al database necessaria
-Tutti i dati sono gia' presenti nelle tabelle `partners` e `partner_contacts`.
+### Indicatore sidebar
+```text
+Footer della sidebar:
+- Verde: "WCA Connesso" (sessione attiva)
+- Rosso: "WCA Scaduto" con link a /settings (sessione scaduta)
+- Grigio: "Verifica..." (check in corso)
+In modalita' collapsed: solo pallino colorato con tooltip
+```
+
+### Sequenza di implementazione
+1. Creare `check-wca-session` Edge Function
+2. Creare `useWcaSessionStatus` hook
+3. Aggiungere indicatore in `AppSidebar`
+4. Modificare `process-download-job` per il check pre-download
+5. Migliorare il debug logging in `directWcaLogin`
+6. Deploy e test con WCA ID 86580
+
+### Risultato atteso
+- Non si perdono piu' ore a scaricare dati vuoti
+- Il semaforo in sidebar mostra sempre se sei loggato
+- Se il cookie scade durante un download, il job si ferma da solo
+- Il login automatico viene migliorato ma con fallback chiaro al cookie manuale
 
