@@ -15,6 +15,7 @@ import {
   Mail, Phone, XCircle, UserCheck, UserX
 } from "lucide-react";
 import { WcaBrowser } from "@/components/download/WcaBrowser";
+import { JobDataViewer } from "@/components/download/JobDataViewer";
 import { useContactCompleteness } from "@/hooks/useContactCompleteness";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import {
@@ -1680,6 +1681,7 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const isDark = useTheme();
   const th = t(isDark);
   const [showSpeed, setShowSpeed] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
 
   // Track recent speed: store timestamps of last N updates to compute rolling avg
   const prevIndexRef = useRef(job.current_index);
@@ -1748,6 +1750,12 @@ function JobCard({ job, pauseResume, updateSpeed }: {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {/* Data viewer button — always visible if processed_ids exist */}
+          {(job.processed_ids as number[])?.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setShowViewer(true)} className={th.btnTest} title="Visualizza dati scaricati">
+              <List className="w-3.5 h-3.5 mr-1" /> Dati
+            </Button>
+          )}
           {isActive && (
             <>
               <Button size="sm" variant="outline" onClick={() => setShowSpeed(!showSpeed)} className={th.btnPause}>
@@ -1880,6 +1888,16 @@ function JobCard({ job, pauseResume, updateSpeed }: {
           Completato il {new Date(job.completed_at).toLocaleString("it-IT")}
         </p>
       )}
+      {/* Job Data Viewer Dialog */}
+      <JobDataViewer
+        open={showViewer}
+        onOpenChange={setShowViewer}
+        processedIds={(job.processed_ids as number[]) || []}
+        countryName={job.country_name}
+        countryCode={job.country_code}
+        networkName={job.network_name}
+        isDark={isDark}
+      />
     </div>
   );
 }
