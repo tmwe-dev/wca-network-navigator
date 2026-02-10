@@ -1,55 +1,60 @@
 
 
-# Fix: Partner non visibili e "Scarica mancanti" non funziona
+# Fix: Login Automatico WCA e Re-processing Contatti
 
-## Problemi trovati
+## Problema
+Il login automatico nella Edge Function fallisce: il sito WCA restituisce status 200 ma NON emette il cookie `.ASPXAUTH`. Il sistema cade su Firecrawl (non autenticato) e salva i contatti senza email/telefono.
 
-Ho investigato a fondo e trovato **4 problemi interconnessi** che causano il malfunzionamento:
+L'HTML grezzo viene comunque salvato, ma contiene dati "Members only" perche' scaricato senza autenticazione.
 
-### 1. Country code salvato come 'XX' (54 partner coinvolti)
-Lo scraper non riesce a rilevare il paese dalla pagina WCA e salva `country_code = 'XX'` come default. I 3 partner afghani sono nel database ma con `country_code = 'XX'` invece di `'AF'`. Questo causa un effetto a catena su tutto il sistema.
+## Causa Tecnica
+Il login ASP.NET di WCA probabilmente:
+- Richiede un redirect chain (302) che il fetch non segue correttamente
+- Usa `Set-Cookie` in una risposta redirect che viene persa con `redirect: "manual"`
+- Oppure il form di login ha campi aggiuntivi oltre a `__VIEWSTATE` e credenziali
 
-### 2. "Scarica 3 mancanti" crea un loop infinito
-Il pulsante avvia questo ciclo senza fine:
-- La lista cerca partner con `country_code = 'AF'` nel DB
-- Non li trova (sono salvati come 'XX')
-- Li mostra come "mancanti"
-- Cliccando "Scarica", li ri-scarica, ma li salva di nuovo come 'XX'
-- Il ciclo ricomincia
+## Piano di Correzione
 
-### 3. 25 contatti con email spazzatura
-Email come "Members only - please Login to view information." (con e senza parentesi quadre, con e senza grassetto) sono state salvate nel database. Il filtro di validazione non le intercetta.
+### Passo 1: Debug del login WCA
+Aggiungere logging dettagliato nella funzione `directWcaLogin`:
+- Stampare tutti i Set-Cookie headers dalla risposta di login
+- Verificare se ci sono redirect (status 302)
+- Loggare il body della risposta per capire se il login ha successo ma il cookie e' in un redirect successivo
 
-### 4. Record "Member not found" nel database
-Almeno 2 record hanno `company_name = 'Member not found. Please try again.'` - il controllo anti-404 non li ha bloccati.
+### Passo 2: Fix della funzione `directWcaLogin`
+In base ai risultati del debug, possibili fix:
+- **Seguire la redirect chain manualmente**: se il cookie viene settato nella risposta 302, fare un secondo fetch sulla URL di redirect
+- **Gestire cookie multipli**: il `.ASPXAUTH` potrebbe richiedere anche altri cookie dalla pagina di login (es. `ASP.NET_SessionId`)
+- **Combinare tutti i cookie**: inviare tutti i cookie ricevuti (session + auth) nelle richieste successive
 
-## Piano di correzione
+### Passo 3: Aggiungere endpoint di re-parse
+Dato che l'HTML grezzo e' gia' salvato (anche se senza dati contatti autenticati), aggiungere:
+- Un parametro `reparse: true` alla Edge Function `scrape-wca-partners` che ri-scarica il profilo con credenziali valide e aggiorna l'HTML
+- Un parametro `aiParse: true` che lancia `parse-profile-ai` automaticamente dopo il salvataggio
 
-### Modifica 1: Edge function `scrape-wca-partners/index.ts`
-- Accettare un nuovo parametro `countryCode` nel body della richiesta
-- In `saveAndRespond`, se il `country_code` parsato e' 'XX' e un `countryCode` e' stato passato dal chiamante, usare quest'ultimo
-- Migliorare la validazione email per rifiutare pattern come:
-  - `Members only`
-  - `[Members only...]`
-  - `please **Login** to view`
-  - `Login to view information`
-- Migliorare il filtro "not found" per catturare `Member not found. Please try again.`
+### Passo 4: Re-download con autenticazione funzionante
+Una volta fixato il login:
+- I 18 partner gia' scaricati potranno essere ri-processati senza riscaricare, lanciando `parse-profile-ai` sull'HTML salvato (ma solo se l'HTML salvato contiene i dati — se e' stato scaricato senza auth, conterra' "Members only" e servira' un ri-download)
+- I restanti 77 partner del job verranno scaricati con autenticazione corretta
 
-### Modifica 2: Edge function `process-download-job/index.ts`
-- Passare `country_code` del job allo scraper: `body: { wcaId, countryCode: job.country_code }`
-- Aggiornare la verifica completamento per cercare partner sia per `country_code` che per `wca_id` (in modo che funzioni anche se il country code non corrisponde)
+### Passo 5: Fallback manuale cookie
+Come piano B, se il login automatico non funziona:
+- Aggiungere un campo "WCA Auth Cookie" nelle Impostazioni (diverso dal session cookie attuale)
+- L'utente copia il cookie `.ASPXAUTH` dal browser dopo il login manuale
+- Lo scraper lo usa direttamente senza tentare il login automatico
 
-### Modifica 3: `src/pages/DownloadManagement.tsx` - DirectoryScanner
-- Nella query dei partner dal DB (linee 803-823), aggiungere una ricerca alternativa per `wca_id` oltre che per `country_code`, cosi' i partner con 'XX' vengono trovati se il loro `wca_id` e' nella cache della directory
+## Dettagli Tecnici
 
-### Modifica 4: Pulizia dati esistenti (migrazione SQL)
-- Aggiornare i 54 partner con `country_code = 'XX'` ai codici corretti usando i dati dalla `directory_cache`
-- Cancellare i 25 contatti con email "Members only" spazzatura
-- Cancellare i record con `company_name = 'Member not found...'`
+### File da modificare:
+- **`supabase/functions/scrape-wca-partners/index.ts`**: Fix `directWcaLogin`, migliorare gestione cookie, aggiungere logging
+- **`supabase/functions/parse-profile-ai/index.ts`**: Verificare che gestisca correttamente HTML con "Members only" (skip parsing se dati non autenticati)
+- **`src/pages/Settings.tsx`** (se serve fallback): Aggiungere campo per cookie manuale `.ASPXAUTH`
 
-## Sequenza implementazione
-
-1. Prima la migrazione SQL per pulire i dati esistenti
-2. Poi le modifiche alle edge functions (scraper + processor)
-3. Infine la modifica al frontend (DirectoryScanner query)
+### Sequenza:
+1. Deploy con logging dettagliato per debug login
+2. Analizzare i log per capire il problema esatto
+3. Implementare il fix
+4. Testare su un singolo ID (es. 86580 Logenix)
+5. Se funziona, rilanciare il resync
+6. Se il login automatico non funziona, implementare il fallback manuale
 
