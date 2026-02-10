@@ -78,6 +78,42 @@ Deno.serve(async (req) => {
         .eq('id', jobId)
     }
 
+    // ── Pre-download auth check on first ID ──
+    if (currentIndex === 0) {
+      console.log(`Job ${jobId}: First ID — running auth check with preview...`)
+      try {
+        const previewUrl = `${supabaseUrl}/functions/v1/scrape-wca-partners`
+        const previewRes = await fetch(previewUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ wcaId: wcaIds[0], preview: true }),
+        })
+        const previewResult = await previewRes.json()
+        
+        if (previewResult.authStatus && previewResult.authStatus !== 'authenticated') {
+          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — pausing job`)
+          await supabase
+            .from('download_jobs')
+            .update({
+              status: 'paused',
+              error_message: `Sessione WCA scaduta (${previewResult.authStatus}). Aggiorna il cookie nelle Impostazioni.`,
+            })
+            .eq('id', jobId)
+          
+          return new Response(
+            JSON.stringify({ success: false, paused: true, reason: 'auth_failed', authStatus: previewResult.authStatus }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        console.log(`Job ${jobId}: Auth check passed — proceeding with download`)
+      } catch (authCheckErr) {
+        console.error(`Job ${jobId}: Auth check error (proceeding anyway):`, authCheckErr)
+      }
+    }
+
     // Process the current ID by calling scrape-wca-partners
     const wcaId = wcaIds[currentIndex]
     console.log(`Job ${jobId}: Processing ID ${wcaId} (${currentIndex + 1}/${wcaIds.length})`)

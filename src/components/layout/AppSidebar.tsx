@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,11 +13,14 @@ import {
   Moon,
   Sun,
   Settings,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useActiveJobCount } from "@/hooks/useDownloadJobs";
+import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -39,6 +42,12 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
   const activeJobCount = useActiveJobCount();
+  const { status: wcaStatus, triggerCheck, checkedAt } = useWcaSessionStatus();
+
+  // Trigger a check on mount
+  useEffect(() => {
+    triggerCheck();
+  }, []);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -114,8 +123,53 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="p-2 border-t border-sidebar-border space-y-1">
+      {/* WCA Session Status */}
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            {wcaStatus === "expired" || wcaStatus === "no_cookie" ? (
+              <Link
+                to="/settings"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "text-destructive hover:bg-destructive/10",
+                  collapsed && "justify-center px-0"
+                )}
+              >
+                <span className="relative flex-shrink-0">
+                  <WifiOff className="w-4 h-4" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive" />
+                </span>
+                {!collapsed && <span>WCA Scaduto</span>}
+              </Link>
+            ) : (
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
+                  wcaStatus === "ok" ? "text-emerald-500" : "text-muted-foreground",
+                  collapsed && "justify-center px-0"
+                )}
+              >
+                <span className="relative flex-shrink-0">
+                  <Wifi className="w-4 h-4" />
+                  {wcaStatus === "ok" && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
+                  )}
+                </span>
+                {!collapsed && (
+                  <span>{wcaStatus === "ok" ? "WCA Connesso" : "Verifica..."}</span>
+                )}
+              </div>
+            )}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {wcaStatus === "ok" ? "Sessione WCA attiva" :
+             wcaStatus === "expired" ? "Cookie WCA scaduto - clicca per aggiornare" :
+             wcaStatus === "no_cookie" ? "Nessun cookie WCA - clicca per configurare" :
+             "Verifica sessione in corso..."}
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
