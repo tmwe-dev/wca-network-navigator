@@ -1,59 +1,42 @@
 
 
-# Soluzione: Cattura Cookie con Un Click
+# Bookmarklet per Cattura Cookie con Un Click
 
-## Il problema reale
-WCA World blocca i login provenienti da server (Cloudflare/protezione anti-bot). Questo NON e' risolvibile -- il sito accetta login solo da browser reali. Le credenziali sono corrette ma il server WCA le rifiuta quando arrivano dalle nostre funzioni backend.
+## Cosa cambia per te
+Invece di aprire la console del browser (F12), trascinare un link nella barra dei preferiti. Quando sei su wcaworld.com, clicchi il bookmark e il cookie viene catturato automaticamente. Un click, zero console.
 
-## La soluzione
-Dato che sei gia' loggato su wcaworld.com, prendiamo il cookie direttamente dalla tua sessione browser e lo salviamo nel nostro sistema. Una volta salvato, tutte le funzioni di scraping funzionano perfettamente (il cookie viene usato per le richieste GET, non per il login).
-
-## Come funzionera' (per te)
-1. Apri la pagina Impostazioni
-2. Clicca "Cattura Cookie dal Browser"
-3. Ti compare un codice da copiare
-4. Vai su wcaworld.com (dove sei gia' loggato), premi F12, vai su Console
-5. Incolla il codice e premi Invio
-6. Il semaforo diventa verde automaticamente -- FATTO
+## Come funzionera'
+1. Nella pagina WCA dell'app, trovi un bottone/link trascinabile "Cattura WCA"
+2. Lo trascini nella barra dei preferiti del browser (una volta sola)
+3. Quando sei loggato su wcaworld.com, clicchi il bookmark
+4. Appare un alert "Cookie salvato!" -- fatto
 
 ## Modifiche tecniche
 
-### 1. Nuova funzione backend `save-wca-cookie`
-Endpoint che riceve il cookie dal browser dell'utente e lo salva nel database. Poi verifica automaticamente che funzioni.
+### 1. Aggiornamento pagina WCA (`src/pages/WCA.tsx`)
+- Aggiungere un link con `href="javascript:..."` contenente lo snippet fetch (il bookmarklet)
+- Istruzioni visive chiare: "Trascina questo bottone nella barra dei preferiti"
+- Mantenere il fallback console/manuale per chi preferisce
+- Rimuovere il testo tecnico confuso, sostituire con istruzioni numerate semplici
 
-### 2. Aggiornamento pagina Impostazioni (`Settings.tsx`)
-- Aggiungere bottone "Cattura Cookie dal Browser" ben visibile
-- Mostra un dialog/card con il codice da copiare (un one-liner JavaScript)
-- Il codice fa un fetch alla nostra funzione backend con `document.cookie`
-- Dopo il salvataggio, aggiorna automaticamente lo stato del semaforo
-
-### 3. Aggiornamento `ProxySetupGuide.tsx`
-- Aggiungere il bottone cattura cookie come azione primaria
-- Mantenere il bottone "Ricontrolla Sessione" come secondario
-
-### 4. Rimozione logica auto-login dalla funzione `check-wca-session`
-- La funzione continua a VERIFICARE il cookie (funziona)
-- Rimuovere il tentativo di auto-login (non funziona e non funzionera')
-- Se il cookie e' scaduto, segnala "expired" e basta
-
-## Il codice che l'utente incollera' nella console
+### 2. Il bookmarklet (codice nel link)
+Il contenuto del bookmarklet sara' essenzialmente lo stesso snippet gia' funzionante, wrappato in un formato `javascript:void(...)`:
 
 ```text
-fetch('https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/save-wca-cookie', 
-  {method:'POST', headers:{'Content-Type':'application/json'}, 
-   body:JSON.stringify({cookie:document.cookie})})
-.then(r=>r.json()).then(d=>alert(d.message||'Cookie salvato!'))
+javascript:void(fetch('https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message)))
 ```
 
-## File modificati
-- `supabase/functions/save-wca-cookie/index.ts` -- NUOVO: salva e verifica cookie
-- `supabase/functions/check-wca-session/index.ts` -- semplificare: solo verifica, no auto-login
-- `src/pages/Settings.tsx` -- aggiungere UI cattura cookie
-- `src/components/settings/ProxySetupGuide.tsx` -- aggiungere bottone cattura
+### 3. Semplificazione UI della pagina WCA
+- Sezione primaria: il bookmarklet drag-and-drop con istruzioni visive
+- Sezione secondaria (collassabile): metodo console manuale come fallback
+- Sezione terziaria (collassabile): inserimento cookie manuale come ultimo fallback
+- Bottone "Verifica Sessione" sempre visibile
 
-## Vantaggi
-- Funziona al 100% (usa il cookie reale del browser)
-- Procedura di 30 secondi, non serve proxy o software
-- Quando il cookie scade (ogni ~giorni), basta ripetere la procedura
-- Il semaforo rosso avvisa quando serve rinnovare
+### 4. Nessuna modifica backend
+Le edge functions `save-wca-cookie` e `check-wca-session` restano identiche -- il bookmarklet chiama lo stesso endpoint.
+
+## Limiti da conoscere
+- Il bookmarklet funziona solo se sei gia' loggato su wcaworld.com
+- Quando il cookie scade (ogni pochi giorni), devi cliccare di nuovo il bookmark su wcaworld.com
+- Alcuni browser (Safari mobile) non supportano i bookmarklet, ma su desktop funziona ovunque
 
