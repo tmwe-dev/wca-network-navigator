@@ -31,6 +31,7 @@ const navItems = [
   { title: "Reminders", url: "/reminders", icon: Calendar },
   { title: "Export", url: "/export", icon: Download },
   { title: "Impostazioni", url: "/settings", icon: Settings },
+  { title: "WCA Proxy", url: "/wca", icon: Wifi },
 ];
 
 interface AppSidebarProps {

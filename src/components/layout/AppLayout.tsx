@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, LayoutDashboard, Users, Bell, Mail, Download } from "lucide-react";
+import { Search, LayoutDashboard, Users, Bell, Mail, Download, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Page titles and icons mapping
@@ -12,6 +12,7 @@ const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
   "/reminders": { title: "Reminders", icon: <Bell className="w-5 h-5" /> },
   "/campaigns": { title: "Email Campaigns", icon: <Mail className="w-5 h-5" /> },
   "/export": { title: "Export", icon: <Download className="w-5 h-5" /> },
+  "/wca": { title: "WCA Integration", icon: <Globe className="w-5 h-5" /> },
 };
 
 export function AppLayout() {
