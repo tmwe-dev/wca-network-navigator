@@ -160,18 +160,16 @@ export default function AcquisizionePartner() {
 
       // Scan directory cache or trigger scan
       for (const code of selectedCountries) {
-        const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [...WCA_NETWORKS];
+        // Use "" for "all networks" — aligned with ActionPanel/Download Management cache
+        const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
 
         for (const net of networkFilter) {
-          // Check cache first
-          let query = supabase
+          // Check cache with exact key: "" for all, specific name otherwise
+          const { data: cached } = await supabase
             .from("directory_cache")
             .select("*")
-            .eq("country_code", code);
-
-          if (net) query = query.eq("network_name", net);
-
-          const { data: cached } = await query;
+            .eq("country_code", code)
+            .eq("network_name", net);
 
           if (cached && cached.length > 0) {
             for (const entry of cached) {
