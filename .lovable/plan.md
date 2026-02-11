@@ -1,65 +1,48 @@
 
-# Semplificazione Download Management
 
-## Problemi attuali
-- Troppi bottoni confusi nella Fase 1 ("Salva solo lista ID", "Riscansiona", "Aggiorna tutti") senza spiegare cosa fanno
-- La verifica della sessione WCA e' separata in un'altra pagina -- l'utente deve ricordarsi di andarci
-- Il flusso a 4 step (Paesi -> Network -> Fase 1: Lista -> Fase 2: Dettagli) e' macchinoso, con terminologia tecnica ("Fase 1", "Fase 2", "directory_cache")
-- 4 azioni nella home ("Scarica Partner", "Aggiorna Contatti", "Arricchisci dal Sito", "Analisi Network") sono troppe per un utente non tecnico
+## Pulizia e Semplificazione WCA - "Un Click e Via"
 
-## Cosa cambia
+### Problema attuale
+La gestione WCA e' frammentata e piena di roba inutile:
+- La pagina **Impostazioni** ha campi username/password WCA che non servono (il login server-side non funziona per protezioni Cloudflare)
+- Ci sono **3 posti diversi** dove incollare il cookie manualmente (Settings cookie fallback, ProxySetupGuide, pagina WCA)
+- Il componente si chiama ancora "ProxySetupGuide" ma non c'e' nessun proxy
+- La sidebar dice "WCA Proxy" invece di "WCA"
+- Troppe istruzioni tecniche sparse ovunque
 
-### 1. Verifica sessione WCA integrata nel flusso download
-Prima di avviare qualsiasi download, il sistema verifica automaticamente la sessione WCA. Se scaduta, mostra un banner con il link al bookmarklet e blocca l'avvio. L'utente non deve piu' andare nella pagina WCA separatamente.
+### Cosa cambia
 
-### 2. Flusso semplificato a 3 step con nomi chiari
-Il wizard passa da 4 a 3 step con nomi comprensibili:
-- **Step 1: "Scegli Paesi"** (invariato, funziona bene)
-- **Step 2: "Scegli Network"** (invariato)
-- **Step 3: "Avvia Download"** -- unifica Fase 1 (lista) e Fase 2 (dettagli) in un unico step automatico
+**1. Pagina /wca - Diventa il centro di comando**
+- Badge di stato grande e chiaro (Connesso / Non connesso)
+- UN SOLO pulsante "Sincronizza Cookie" che apre una nuova finestra su wcaworld.com e poi l'utente clicca l'estensione Chrome
+- Pulsante "Verifica Sessione" per ricontrollare
+- Il metodo manuale (incolla cookie) resta nascosto in un dettaglio collassabile per emergenze
+- Niente piu' istruzioni lunghe 4 passaggi sull'installazione dell'estensione: solo un link diretto
 
-Al posto di mostrare la lista ID e chiedere cosa fare, il sistema:
-1. Controlla se esiste gia' una scansione in cache
-2. Se si': mostra quanti partner mancano e propone "Scarica X mancanti" oppure "Aggiorna tutti"
-3. Se no: avvia la scansione automaticamente, e al termine propone il download
-4. Un unico bottone principale: **"Avvia Download"**
+**2. Pagina Impostazioni - Pulizia totale**
+- ELIMINATA la card "Credenziali WCA World" (username e password sono inutili, il login avviene dal browser)
+- ELIMINATA la sezione "Inserimento cookie manuale (fallback)" duplicata
+- La card "Sessione WCA" diventa compatta: solo semaforo di stato + link a /wca per gestire la connessione
+- Resta la card WhatsApp che e' utile
 
-### 3. Bottoni ridotti e rinominati
-- "Salva solo lista ID" viene rimosso (il salvataggio in cache avviene sempre automaticamente)
-- "Riscansiona" diventa "Aggiorna lista dalla directory" e viene messo in un menu secondario
-- "Aggiorna tutti" diventa piu' chiaro: "Ri-scarica profili esistenti (aggiorna dati)"
+**3. Componente ProxySetupGuide - Rinominato e semplificato**
+- Rinominato in `WcaSessionCard`
+- Mostra solo: indicatore di stato + pulsante "Vai a WCA" (link a /wca) + pulsante "Verifica"
+- Rimosso tutto il codice per input cookie (quello si fa solo dalla pagina /wca)
 
-### 4. Home page semplificata
-Le 4 card diventano 2 azioni principali + 1 secondaria:
-- **Scarica Partner** (azione primaria) -- il flusso principale
-- **Aggiorna Contatti** (azione secondaria) -- per chi ha gia' partner senza email
-- "Arricchisci dal Sito" e "Analisi Network" vanno in un menu "Strumenti avanzati" collassabile
+**4. Sidebar**
+- "WCA Proxy" rinominato in "WCA"
 
-### 5. Indicatore sessione WCA nella barra superiore
-Un piccolo semaforo (pallino verde/rosso) visibile sempre nella barra del Download Management, con tooltip che spiega lo stato e un click che apre le istruzioni per il bookmarklet.
+### Dettagli tecnici
 
-## Dettagli tecnici
+**File modificati:**
+- `src/pages/WCA.tsx` - Semplificato: status + sync button + verify + fallback nascosto
+- `src/pages/Settings.tsx` - Rimossa card credenziali WCA, rimosso fallback cookie duplicato, card sessione punta a /wca
+- `src/components/settings/ProxySetupGuide.tsx` - Rinominato in `WcaSessionCard.tsx`, semplificato a indicatore di stato + link
+- `src/components/layout/AppSidebar.tsx` - Label "WCA Proxy" cambiata in "WCA"
 
-### File modificati
-- `src/pages/DownloadManagement.tsx` -- riscrittura principale (~2165 righe attuali, obiettivo ~1500)
+**File eliminati:**
+- Nessuno (il componente viene rinominato)
 
-### Componenti da modificare
+**Nessuna modifica alle Edge Functions** - la logica backend e' gia' corretta dopo l'ultimo fix.
 
-**StepChoose**: ridurre da 4 a 2 card principali + sezione collassabile "Strumenti". Aggiungere indicatore sessione WCA in alto.
-
-**DownloadWizard**: ridurre da 4 sub-step a 3. Unificare `DirectoryScanner` e `Phase2Config`:
-- Se cache esiste e non e' vecchia: mostrare direttamente il riepilogo con bottone "Avvia Download"
-- Se cache non esiste: avviare la scansione automaticamente, poi mostrare il riepilogo
-- Rimuovere il bottone "Salva solo lista ID"
-- Rinominare "Ri-scansiona" in "Aggiorna lista" e metterlo come azione secondaria
-
-**Barra superiore**: aggiungere il pallino sessione WCA importando `useWcaSessionStatus` con un `Popover` per le istruzioni del bookmarklet.
-
-### Verifica sessione automatica
-Prima di creare un `download_job`, il sistema chiama `check-wca-session` e se lo stato non e' "ok", mostra un dialog bloccante con:
-- Stato attuale della sessione
-- Link al bookmarklet (stesso della pagina WCA)
-- Bottone "Riprova" che ri-verifica
-
-### Nessuna modifica backend
-Le edge functions e le tabelle restano invariate.
