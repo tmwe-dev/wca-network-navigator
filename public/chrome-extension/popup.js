@@ -24,178 +24,168 @@ mainBtn.addEventListener("click", async () => {
   setStatus("⏳ Avvio login automatico...", "working");
 
   try {
-    // Step 1: Get credentials from server
-    log("① Recupero credenziali dal server...", "wait");
+    // Step 1: Get credentials
+    log("① Recupero credenziali...", "wait");
     const credRes = await fetch(`${SUPABASE_URL}/functions/v1/get-wca-credentials`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
       body: JSON.stringify({}),
     });
     const creds = await credRes.json();
-    if (!creds.username || !creds.password) {
-      throw new Error("Credenziali WCA non configurate nel server. Vai su Impostazioni → WCA.");
-    }
+    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate. Vai su Impostazioni.");
     log("✓ Credenziali ottenute", "done");
 
-    // Step 2: Open login page in background
-    log("② Apro pagina di login WCA...", "wait");
-    const tab = await chrome.tabs.create({
-      url: "https://www.wcaworld.com/Account/Login",
-      active: false,
-    });
-    log("✓ Pagina aperta (tab " + tab.id + ")", "done");
+    // Step 2: Open login page
+    log("② Apro pagina di login...", "wait");
+    const tab = await chrome.tabs.create({ url: "https://www.wcaworld.com/Account/Login", active: false });
+    log("✓ Pagina aperta", "done");
 
-    // Step 3: Wait for page to load, then inject login script
-    log("③ Attendo caricamento pagina...", "wait");
-    await waitForTabLoad(tab.id);
+    // Step 3: Wait for load
+    log("③ Attendo caricamento...", "wait");
+    await waitForTabLoad(tab.id, 20000);
     log("✓ Pagina caricata", "done");
 
-    // Step 4: Fill and submit login form
-    log("④ Compilo e invio il form di login...", "wait");
+    // Step 4: Fill and submit
+    log("④ Login automatico...", "wait");
     setStatus("⏳ Login in corso...", "working");
-    
-    const injectionResult = await chrome.scripting.executeScript({
+    const injResult = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: fillAndSubmitLogin,
       args: [creds.username, creds.password],
     });
+    const formResult = injResult[0]?.result;
+    if (!formResult?.success) throw new Error(formResult?.error || "Form di login non trovato");
+    log("✓ Form inviato", "done");
 
-    const formResult = injectionResult[0]?.result;
-    if (!formResult?.success) {
-      throw new Error(formResult?.error || "Form di login non trovato nella pagina");
-    }
-    log("✓ Form compilato e inviato", "done");
+    // Step 5: Wait for redirect (short timeout, proceed anyway)
+    log("⑤ Attendo risposta...", "wait");
+    await waitForRedirectOrTimeout(tab.id, 8000);
+    log("✓ Proseguo", "done");
 
-    // Step 5: Wait for redirect after login
-    log("⑤ Attendo redirect post-login...", "wait");
-    await waitForNavigation(tab.id, 15000);
-    log("✓ Redirect completato", "done");
-
-    // Step 6: Read all cookies
-    log("⑥ Leggo tutti i cookie...", "wait");
+    // Step 6: Read cookies
+    log("⑥ Leggo cookie...", "wait");
     const cookies = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
     const hasAuth = cookies.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
     const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
-    
-    log(`✓ ${cookies.length} cookie trovati, .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
+    log(`✓ ${cookies.length} cookie, .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
 
     if (!hasAuth) {
-      // Close tab
+      // Try waiting a bit more and retry
+      log("⏳ Riprovo tra 3s...", "wait");
+      await sleep(3000);
+      const cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+      const hasAuth2 = cookies2.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
+      if (hasAuth2) {
+        const cookieStr2 = cookies2.map(c => `${c.name}=${c.value}`).join("; ");
+        log("✓ .ASPXAUTH trovato al secondo tentativo!", "done");
+        await sendCookiesAndFinish(cookieStr2, tab.id);
+        return;
+      }
       try { chrome.tabs.remove(tab.id); } catch {}
-      setStatus("❌ Login fallito: .ASPXAUTH non presente. Credenziali errate?", "error");
+      setStatus("❌ Login fallito: .ASPXAUTH mancante", "error");
+      log("Credenziali errate o protezione anti-bot attiva.", "fail");
       mainBtn.disabled = false;
       return;
     }
 
-    // Step 7: Send cookies to server
-    log("⑦ Invio cookie al server...", "wait");
-    setStatus("⏳ Invio e verifica...", "working");
-    
+    await sendCookiesAndFinish(cookieStr, tab.id);
+  } catch (err) {
+    setStatus("❌ " + err.message, "error");
+    log("Errore: " + err.message, "fail");
+    mainBtn.disabled = false;
+  }
+});
+
+async function sendCookiesAndFinish(cookieStr, tabId) {
+  log("⑦ Invio cookie al server...", "wait");
+  setStatus("⏳ Verifica finale...", "working");
+  try {
     const saveRes = await fetch(`${SUPABASE_URL}/functions/v1/save-wca-cookie`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
       body: JSON.stringify({ cookie: cookieStr }),
     });
     const saveData = await saveRes.json();
-
-    // Step 8: Close tab and show result
-    try { chrome.tabs.remove(tab.id); } catch {}
+    try { chrome.tabs.remove(tabId); } catch {}
 
     if (saveData.authenticated) {
-      setStatus("✅ Connesso! Contatti personali visibili.", "ok");
-      log("✓ Tutto OK! Cookie salvato e verificato.", "done");
+      setStatus("✅ Connesso! Tutto OK.", "ok");
+      log("✓ Cookie salvato e verificato!", "done");
     } else {
-      setStatus("⚠️ Cookie salvato ma verifica contatti fallita.", "error");
-      log("Cookie inviato ma i contatti privati non sono visibili.", "fail");
+      setStatus("⚠️ Cookie salvato, verifica fallita", "error");
+      log("Cookie inviato ma contatti privati non visibili.", "fail");
     }
-
     if (saveData.diagnostics) {
       const d = saveData.diagnostics;
       log(`Contatti: ${d.contactsTotal || 0}, Nomi: ${d.contactsWithRealName || 0}, Email: ${d.contactsWithEmail || 0}`);
     }
   } catch (err) {
-    setStatus("❌ " + err.message, "error");
+    setStatus("❌ Errore invio: " + err.message, "error");
     log("Errore: " + err.message, "fail");
-  } finally {
-    mainBtn.disabled = false;
   }
-});
+  mainBtn.disabled = false;
+}
 
 // ── Helpers ──
 
-function waitForTabLoad(tabId) {
-  return new Promise((resolve, reject) => {
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function waitForTabLoad(tabId, ms = 20000) {
+  return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
-      reject(new Error("Timeout caricamento pagina (15s)"));
-    }, 15000);
-
+      resolve(); // proceed anyway
+    }, ms);
     function listener(id, info) {
       if (id === tabId && info.status === "complete") {
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(listener);
-        setTimeout(resolve, 1000); // extra wait for JS to init
+        setTimeout(resolve, 1500);
       }
     }
     chrome.tabs.onUpdated.addListener(listener);
   });
 }
 
-function waitForNavigation(tabId, ms = 15000) {
-  return new Promise((resolve, reject) => {
+function waitForRedirectOrTimeout(tabId, ms = 8000) {
+  return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
-      resolve(); // resolve anyway, maybe login didn't redirect
+      resolve(); // always proceed
     }, ms);
-
     let navigated = false;
     function listener(id, info) {
       if (id === tabId && info.status === "complete" && !navigated) {
         navigated = true;
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(listener);
-        setTimeout(resolve, 2000); // wait for cookies to settle
+        setTimeout(resolve, 2000);
       }
     }
     chrome.tabs.onUpdated.addListener(listener);
   });
 }
 
-// Injected into the WCA login page
 function fillAndSubmitLogin(username, password) {
   try {
     const userInput = document.querySelector('input[name="UserName"], input[name="username"], input#UserName, input[type="text"]');
     const passInput = document.querySelector('input[name="Password"], input[name="password"], input#Password, input[type="password"]');
-    const form = document.querySelector('form[action*="Login"], form[action*="login"], form');
     const submitBtn = document.querySelector('input[type="submit"], button[type="submit"], .btn-login, .login-btn');
+    const form = document.querySelector('form[action*="Login"], form[action*="login"], form');
 
-    if (!userInput || !passInput) {
-      return { success: false, error: "Campi username/password non trovati" };
-    }
+    if (!userInput || !passInput) return { success: false, error: "Campi username/password non trovati" };
 
-    // Set values using native input setter for React-style forms
     const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     nativeSet.call(userInput, username);
     userInput.dispatchEvent(new Event('input', { bubbles: true }));
+    userInput.dispatchEvent(new Event('change', { bubbles: true }));
     nativeSet.call(passInput, password);
     passInput.dispatchEvent(new Event('input', { bubbles: true }));
+    passInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    // Submit
-    if (submitBtn) {
-      submitBtn.click();
-    } else if (form) {
-      form.submit();
-    } else {
-      return { success: false, error: "Nessun bottone submit o form trovato" };
-    }
+    if (submitBtn) submitBtn.click();
+    else if (form) form.submit();
+    else return { success: false, error: "Nessun bottone submit trovato" };
 
     return { success: true };
   } catch (e) {
