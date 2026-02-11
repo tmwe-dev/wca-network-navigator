@@ -345,7 +345,7 @@ export default function AcquisizionePartner() {
         setCanvasPhase("downloading");
         const { data: scrapeResult } = await supabase.functions.invoke(
           "scrape-wca-partners",
-          { body: { wcaId: item.wca_id, countryCode: item.country_code } }
+          { body: { wcaId: item.wca_id } }
         );
 
         // Build canvas data from result
