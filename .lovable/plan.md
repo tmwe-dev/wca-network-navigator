@@ -1,93 +1,91 @@
 
 
-# Fix: Nomi aziendali nella coda sempre visibili
+# Fix: Il sistema segnala sessione scaduta senza motivo
 
-## Problema radice
+## Problema identificato
 
-Quando il job viene ripreso (resume), la coda viene ricostruita partendo da placeholder "WCA + ID". Il sistema prova a recuperare i nomi reali da due fonti:
-1. Tabella `partners` -- funziona solo per i partner gia' scaricati
-2. Tabella `directory_cache` -- ma la cache per la Bulgaria contiene solo 1 membro su 29
+Dopo un'analisi approfondita dei log, del codice e delle richieste di rete, ho trovato la causa principale:
 
-Per i partner non ancora scaricati e non presenti in cache, il nome resta "WCA 121870".
+### 1. Il `process-download-job` NON pulisce mai il campo `error_message`
 
-Inoltre, quando il server processa un partner e non lo trova (`found: false`), il campo `last_processed_company` nel job resta vuoto, e la UI non ha modo di recuperare il nome reale.
+Quando il pre-auth check riesce (riga 111), il job procede ma il vecchio `error_message` ("Sessione WCA scaduta...") resta nel database dalle esecuzioni precedenti. La UI legge questo messaggio e lo mostra all'utente, facendogli credere che la sessione sia scaduta anche quando funziona perfettamente.
+
+Dai log del server, le ultime esecuzioni mostrano:
+```
+Job xxx: Auth check passed - proceeding with download
+AUTH OK: no login prompt, no members-only
+```
+Ma il job della Danimarca (ee4e3cf0) ha ancora nel DB:
+```
+error_message: "Sessione WCA scaduta (members_only). Rinnovo automatico fallito."
+```
+
+### 2. La UI mostra l'errore vecchio al resume
+
+Quando l'utente torna alla pagina e il sistema trova un job "running" con un `error_message` vecchio, il polling loop (riga 417-426) mostra il toast "Job in pausa" con il vecchio messaggio di errore.
+
+### 3. Codice morto `directWcaLogin` nello scraper
+
+La funzione `scrape-wca-partners` contiene ~120 righe di codice per un login diretto (righe 565-686) che non viene MAI chiamato. Questo codice e' inutile e confondente.
 
 ## Correzioni
 
-### File: `src/pages/AcquisizionePartner.tsx`
+### File 1: `supabase/functions/process-download-job/index.ts`
 
-**1. Resume: se la cache e' incompleta, riscansionare la directory**
+**Pulire `error_message` quando l'auth passa:**
 
-Dopo aver provato `partners` e `directory_cache`, se ci sono ancora nomi "WCA {id}", lanciare una scansione fresca della directory per quel paese. Questo riempie sia la cache che i nomi nella coda.
-
+Dopo riga 111 (`Auth check passed`), aggiungere:
 ```typescript
-// Dopo il blocco di enrichment dalla cache (riga ~135):
-const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
-if (stillMissing2.length > 0) {
-  // Riscansiona la directory per ottenere i nomi reali
-  const { data: scanResult } = await supabase.functions.invoke("scrape-wca-directory", {
-    body: { countryCode: job.country_code, network: "" }
-  });
-  if (scanResult?.members) {
-    // Salva in cache per il futuro
-    await supabase.from("directory_cache").upsert({ ... });
-    // Aggiorna i nomi nella coda
-    for (const m of scanResult.members) {
-      const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
-      if (qi) { qi.company_name = m.company_name; qi.city = m.city; }
-    }
-  }
-}
+// Clear any stale error message from previous runs
+await supabase
+  .from('download_jobs')
+  .update({ error_message: null })
+  .eq('id', jobId)
 ```
 
-**2. Polling: aggiornare il nome nella coda quando il partner viene scaricato**
+**Pulire `error_message` anche durante il processing normale:**
 
-Gia' fatto alla riga 633, ma solo se `canvas.company_name` e' diverso dal placeholder. Aggiungere un controllo esplicito: se il nome nel canvas e' ancora "WCA {id}", provare a leggerlo dalla `directory_cache`:
-
+Nella sezione di aggiornamento progresso (righe 167-178), assicurarsi che `error_message` venga azzerato ad ogni step riuscito:
 ```typescript
-// Riga ~415: quando si costruisce il canvas per un partner appena processato
-let resolvedName = partnerData?.company_name || item.company_name;
-if (resolvedName.startsWith("WCA ")) {
-  // Ultimo tentativo: cerca nella cache
-  const { data: cacheRows } = await supabase
-    .from("directory_cache").select("members").eq("country_code", item.country_code);
-  for (const row of cacheRows || []) {
-    const found = (row.members as any[])?.find(m => m.wca_id === item.wca_id);
-    if (found?.company_name) { resolvedName = found.company_name; break; }
-  }
-}
+.update({
+  current_index: currentIndex + 1,
+  ...
+  error_message: null,  // Pulisce errori vecchi
+})
 ```
 
-**3. Edge function: salvare il nome reale anche quando found=false**
+### File 2: `src/pages/AcquisizionePartner.tsx`
 
-Nel file `supabase/functions/process-download-job/index.ts`, quando lo scraper ritorna `found: false`, il `lastCompany` resta vuoto. Dovremmo cercare il nome dalla `directory_cache` come fallback:
+**Al resume, pulire l'error_message del job prima di continuare:**
 
+Quando l'utente clicca "Riprendi" su un job che era in pausa, pulire il vecchio messaggio di errore dal DB:
 ```typescript
-// Riga ~136 di process-download-job/index.ts:
-if (result.success && result.found) {
-  lastCompany = result.partner?.company_name || '';
-}
-// AGGIUNTA: fallback dalla cache se non trovato
-if (!lastCompany) {
-  const { data: cacheRows } = await supabase
-    .from('directory_cache').select('members').eq('country_code', job.country_code);
-  for (const row of (cacheRows || [])) {
-    const found = (row.members as any[])?.find(m => m.wca_id === wcaId);
-    if (found?.company_name) { lastCompany = found.company_name; break; }
-  }
-}
+// Prima di invocare process-download-job per il resume
+await supabase
+  .from("download_jobs")
+  .update({ error_message: null, status: "running" })
+  .eq("id", jobId);
 ```
+
+**Non mostrare il toast di errore se il job sta effettivamente processando:**
+
+Nel polling (riga 417), aggiungere un check: se il job e' "paused" ma l'error_message contiene "Rinnovo automatico", ignorarlo perche' e' un messaggio vecchio e forzare il resume.
+
+### File 3: `supabase/functions/scrape-wca-partners/index.ts`
+
+Rimuovere la funzione `directWcaLogin` (righe 565-686) che e' codice morto mai chiamato. Questo elimina ~120 righe inutili e previene confusione futura.
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/AcquisizionePartner.tsx` | Resume: riscansione directory se nomi mancanti + fallback cache nel polling |
-| `supabase/functions/process-download-job/index.ts` | Fallback nome dalla cache quando scraper non trova il partner |
+| `supabase/functions/process-download-job/index.ts` | Pulire error_message quando auth passa + ad ogni step riuscito |
+| `src/pages/AcquisizionePartner.tsx` | Pulire error_message al resume + ignorare messaggi vecchi |
+| `supabase/functions/scrape-wca-partners/index.ts` | Rimuovere codice morto directWcaLogin (~120 righe) |
 
 ## Risultato atteso
 
-- La coda mostra SEMPRE i nomi reali delle aziende, sia alla prima scansione che al resume
-- Il job nel DB registra sempre il nome reale del partner processato
-- Se un partner non viene trovato dallo scraper, il nome viene recuperato dalla cache della directory
+- L'utente NON vedra' piu' messaggi "sessione scaduta" quando la sessione e' attiva
+- I vecchi messaggi di errore vengono puliti automaticamente
+- Il job prosegue senza interruzioni quando l'auth e' valida
 
