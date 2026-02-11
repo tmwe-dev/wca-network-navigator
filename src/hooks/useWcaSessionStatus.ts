@@ -24,12 +24,11 @@ export function useWcaSessionStatus() {
     refetchInterval: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Trigger a fresh check via the edge function
-  const triggerCheck = async () => {
+  // Trigger a fresh check via the edge function and return the result directly
+  const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean } | null> => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
-      await fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,10 +36,16 @@ export function useWcaSessionStatus() {
         },
         body: JSON.stringify({}),
       });
-      // Refetch the status from DB
+      const data = await res.json();
+      // Refetch in background to update React Query cache
       statusQuery.refetch();
+      return {
+        status: (data.status || "error") as WcaSessionStatus,
+        authenticated: !!data.authenticated,
+      };
     } catch (err) {
       console.error("WCA session check failed:", err);
+      return null;
     }
   };
 

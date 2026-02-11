@@ -160,9 +160,9 @@ export default function AcquisizionePartner() {
 
   // Start acquisition pipeline
   const startPipeline = useCallback(async () => {
-    // Check WCA session first
-    await triggerCheck();
-    if (wcaStatus !== "ok") {
+    // Check WCA session first - use returned value to avoid stale state
+    const sessionResult = await triggerCheck();
+    if (!sessionResult || sessionResult.status !== "ok") {
       setShowSessionAlert(true);
       return;
     }
@@ -205,7 +205,8 @@ export default function AcquisizionePartner() {
 
         // Build canvas data from result
         const partnerData = scrapeResult?.partner;
-        const contacts = scrapeResult?.contacts || [];
+        // Contacts are nested inside partner, not at top level
+        const contacts = partnerData?.contacts || scrapeResult?.contacts || [];
 
         const canvas: CanvasData = {
           company_name: partnerData?.company_name || item.company_name,
@@ -220,10 +221,10 @@ export default function AcquisizionePartner() {
             direct_phone: c.direct_phone,
             mobile: c.mobile,
           })),
-          services: scrapeResult?.services || [],
+          services: partnerData?.services || scrapeResult?.services || [],
           key_markets: [],
           key_routes: [],
-          networks: (scrapeResult?.networks || []).map((n: any) => n.network_name || n),
+          networks: (partnerData?.networks || scrapeResult?.networks || []).map((n: any) => n.network_name || n.name || n),
           rating: partnerData?.rating,
           website: partnerData?.website,
           profile_description: partnerData?.profile_description,
@@ -355,7 +356,7 @@ export default function AcquisizionePartner() {
     setCanvasData(null);
     setPipelineStatus("done");
     toast({ title: "Acquisizione completata!", description: `${items.length} partner processati` });
-  }, [queue, wcaStatus, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds]);
+  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
