@@ -6,9 +6,9 @@ const corsHeaders = {
 }
 
 /**
- * Server-side download job processor.
- * Processes ONE WCA ID from the job, updates progress, then self-chains for the next.
- * SKIPS partners that already have complete contacts (email + phone).
+ * Download job progress tracker.
+ * NO HTTP requests to WCA — the frontend + Chrome Extension handle all scraping.
+ * This function only manages job state (status, completion, verification).
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,13 +20,10 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
-    const { jobId } = await req.json()
+    const { jobId, action } = await req.json()
 
     if (!jobId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'jobId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return respond({ success: false, error: 'jobId is required' }, 400)
     }
 
     // Fetch the job
@@ -37,25 +34,11 @@ Deno.serve(async (req) => {
       .single()
 
     if (jobError || !job) {
-      return new Response(
-        JSON.stringify({ success: false, error: `Job not found: ${jobError?.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return respond({ success: false, error: `Job not found: ${jobError?.message}` })
     }
 
-    // Check if job should continue
-    if (job.status === 'paused' || job.status === 'cancelled' || job.status === 'completed' || job.status === 'error') {
-      return new Response(
-        JSON.stringify({ success: true, message: `Job is ${job.status}, not processing` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const wcaIds: number[] = job.wca_ids || []
-    let currentIndex: number = job.current_index || 0
-
-    // Check if we're done
-    if (currentIndex >= wcaIds.length) {
+    // Action: mark job as completed
+    if (action === 'complete') {
       await supabase
         .from('download_jobs')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
@@ -64,332 +47,44 @@ Deno.serve(async (req) => {
       await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
       await updateNetworkConfigsFromData(supabase, job.network_name)
 
-      return new Response(
-        JSON.stringify({ success: true, message: 'Job completed', total: wcaIds.length }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return respond({ success: true, message: 'Job completed' })
     }
 
-    // Mark as running
-    if (job.status !== 'running') {
-      await supabase
-        .from('download_jobs')
-        .update({ status: 'running' })
-        .eq('id', jobId)
-    }
-
-    // ── Pre-download auth check on first ID ──
-    if (currentIndex === 0) {
-      console.log(`Job ${jobId}: First ID — running auth check with preview...`)
-      try {
-        const previewUrl = `${supabaseUrl}/functions/v1/scrape-wca-partners`
-        const previewRes = await fetch(previewUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ wcaId: wcaIds[0], preview: true }),
-        })
-        const previewResult = await previewRes.json()
-        
-        if (previewResult.authStatus && previewResult.authStatus !== 'authenticated') {
-          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — pausing job.`)
-          await supabase
-            .from('download_jobs')
-            .update({
-              status: 'paused',
-              error_message: `Sessione WCA scaduta (${previewResult.authStatus}). Sincronizza il cookie tramite l'estensione Chrome.`,
-            })
-            .eq('id', jobId)
-          
-          return new Response(
-            JSON.stringify({ success: false, paused: true, reason: 'auth_failed', authStatus: previewResult.authStatus }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        console.log(`Job ${jobId}: Auth check passed — proceeding with download`)
-        await supabase
-          .from('download_jobs')
-          .update({ error_message: null })
-          .eq('id', jobId)
-      } catch (authCheckErr) {
-        console.error(`Job ${jobId}: Auth check error (proceeding anyway):`, authCheckErr)
-      }
-    }
-
-    // ── SKIP CHECK: Is this partner already complete? ──
-    const wcaId = wcaIds[currentIndex]
-    const skipResult = await isPartnerComplete(supabase, wcaId)
-    
-    if (skipResult.complete) {
-      console.log(`Job ${jobId}: SKIP ID ${wcaId} (${skipResult.companyName}) — already has complete contacts`)
-      
-      const processedIds = [...(job.processed_ids || []), wcaId]
-      await supabase
-        .from('download_jobs')
-        .update({
-          current_index: currentIndex + 1,
-          processed_ids: processedIds,
-          last_processed_wca_id: wcaId,
-          last_processed_company: skipResult.companyName || null,
-          last_contact_result: 'skipped_complete',
-          error_message: null,
-        })
-        .eq('id', jobId)
-      
-      // Chain immediately (no delay needed for skips)
-      await chainNext(supabase, supabaseUrl, supabaseKey, jobId, currentIndex + 1, wcaIds.length, 0)
-      
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, processed: wcaId, company: skipResult.companyName }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // ── Normal processing ──
-    console.log(`Job ${jobId}: Processing ID ${wcaId} (${currentIndex + 1}/${wcaIds.length})`)
-
-    // Track consecutive empty profiles to detect silent session death
-    const prevConsecutiveEmpty = parseConsecutiveEmpty(job.error_message)
-
-    let lastCompany = ''
-    let consecutiveEmpty = prevConsecutiveEmpty
-    try {
-      const scrapeUrl = `${supabaseUrl}/functions/v1/scrape-wca-partners`
-      const scrapeResponse = await fetch(scrapeUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ wcaId, countryCode: job.country_code }),
-      })
-
-      const result = await scrapeResponse.json()
-
-      if (result.success && result.found) {
-        lastCompany = result.partner?.company_name || ''
-      }
-
-      // Fallback: resolve name from directory_cache if still empty
-      if (!lastCompany) {
-        try {
-          const { data: cacheRows } = await supabase
-            .from('directory_cache')
-            .select('members')
-            .eq('country_code', job.country_code)
-          for (const row of (cacheRows || [])) {
-            const found = ((row.members as any[]) || []).find((m: any) => m.wca_id === wcaId)
-            if (found?.company_name) { lastCompany = found.company_name; break }
-          }
-        } catch (cacheErr) {
-          console.warn('Cache lookup for company name failed:', cacheErr)
-        }
-      }
-
-      // Determine contact extraction result
-      const contacts = result.partner?.contacts || []
-      const hasContactWithData = contacts.some((c: any) => c.email || c.phone || c.mobile)
-      const hasEmail = !!(result.partner?.email) || contacts.some((c: any) => c.email)
-      const hasPhone = !!(result.partner?.phone) || contacts.some((c: any) => c.phone || c.mobile)
-      const contactResult = hasEmail && hasPhone ? 'email+phone'
-        : hasEmail ? 'email_only'
-        : hasPhone ? 'phone_only'
-        : 'no_contacts'
-      const contactFound = (hasEmail || hasPhone) ? 1 : 0
-      const contactMissing = (!hasEmail && !hasPhone) ? 1 : 0
-
-      // ── Consecutive empty detection ──
-      // A profile with 0 contact blocks AND no email/phone = suspicious
-      const contactBlocks = contacts.length
-      if (contactBlocks === 0 && !hasContactWithData && !hasEmail && !hasPhone) {
-        consecutiveEmpty++
-        console.log(`Job ${jobId}: ID ${wcaId} — 0 contacts (consecutive empty: ${consecutiveEmpty}/5)`)
-      } else {
-        if (consecutiveEmpty > 0) {
-          console.log(`Job ${jobId}: ID ${wcaId} — has contacts, resetting consecutive empty counter (was ${consecutiveEmpty})`)
-        }
-        consecutiveEmpty = 0
-      }
-
-      // If 5+ consecutive profiles have zero contacts, session is likely dead
-      if (consecutiveEmpty >= 5) {
-        console.log(`Job ${jobId}: PAUSING — ${consecutiveEmpty} profili consecutivi senza contatti. Sessione probabilmente scaduta.`)
-        await supabase
-          .from('download_jobs')
-          .update({
-            status: 'paused',
-            current_index: currentIndex + 1,
-            processed_ids: [...(job.processed_ids || []), wcaId],
-            last_processed_wca_id: wcaId,
-            last_processed_company: lastCompany || null,
-            last_contact_result: contactResult,
-            contacts_found_count: (job.contacts_found_count || 0) + contactFound,
-            contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
-            error_message: `⚠️ ${consecutiveEmpty} profili consecutivi senza contatti — sessione WCA probabilmente scaduta. Sincronizza il cookie tramite l'estensione Chrome e riprendi il job.`,
-          })
-          .eq('id', jobId)
-
-        return new Response(
-          JSON.stringify({ success: false, paused: true, reason: 'consecutive_empty', count: consecutiveEmpty }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Update job progress with contact tracking
-      const processedIds = [...(job.processed_ids || []), wcaId]
-      // Preserve consecutive empty count in error_message field for state tracking across invocations
-      const trackingMsg = consecutiveEmpty > 0 ? `[consecutive_empty:${consecutiveEmpty}]` : null
-      await supabase
-        .from('download_jobs')
-        .update({
-          current_index: currentIndex + 1,
-          processed_ids: processedIds,
-          last_processed_wca_id: wcaId,
-          last_processed_company: lastCompany || null,
-          last_contact_result: contactResult,
-          contacts_found_count: (job.contacts_found_count || 0) + contactFound,
-          contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
-          error_message: trackingMsg,
-        })
-        .eq('id', jobId)
-
-    } catch (scrapeErr) {
-      console.error(`Job ${jobId}: Error processing ID ${wcaId}:`, scrapeErr)
-      
-      // Still advance the index so we don't get stuck
-      await supabase
-        .from('download_jobs')
-        .update({
-          current_index: currentIndex + 1,
-          processed_ids: [...(job.processed_ids || []), wcaId],
-          last_processed_wca_id: wcaId,
-          error_message: `Error on ID ${wcaId}: ${scrapeErr instanceof Error ? scrapeErr.message : 'Unknown'}`,
-        })
-        .eq('id', jobId)
-    }
-
-    // Chain to next
-    const { data: freshJob } = await supabase
-      .from('download_jobs')
-      .select('status, delay_seconds')
-      .eq('id', jobId)
-      .single()
-
-    if (freshJob && freshJob.status === 'running') {
-      const delaySec = freshJob.delay_seconds || 3
-      await chainNext(supabase, supabaseUrl, supabaseKey, jobId, currentIndex + 1, wcaIds.length, delaySec)
-    }
-
-    return new Response(
-      JSON.stringify({
+    // Action: get job status (for frontend polling)
+    if (action === 'status') {
+      return respond({
         success: true,
-        processed: wcaId,
-        index: currentIndex + 1,
-        total: wcaIds.length,
-        company: lastCompany,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+        status: job.status,
+        current_index: job.current_index,
+        total_count: job.total_count,
+        contacts_found_count: job.contacts_found_count,
+        contacts_missing_count: job.contacts_missing_count,
+      })
+    }
+
+    // Default: return job info
+    return respond({
+      success: true,
+      message: `Job is ${job.status}. Processing is handled by the Chrome Extension via the frontend.`,
+      status: job.status,
+      current_index: job.current_index,
+      total_count: job.total_count,
+    })
 
   } catch (error) {
     console.error('process-download-job error:', error)
-    return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    return respond(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      500
     )
   }
 })
 
-/**
- * Check if a partner with this wca_id already has complete contacts
- * (at least one contact with email AND (direct_phone OR mobile)).
- */
-async function isPartnerComplete(supabase: any, wcaId: number): Promise<{ complete: boolean; companyName?: string }> {
-  try {
-    // Find partner by wca_id
-    const { data: partners } = await supabase
-      .from('partners')
-      .select('id, company_name')
-      .eq('wca_id', wcaId)
-      .limit(1)
-
-    if (!partners || partners.length === 0) {
-      return { complete: false }
-    }
-
-    const partner = partners[0]
-
-    // Check if partner has at least one contact with email AND phone
-    const { data: contacts } = await supabase
-      .from('partner_contacts')
-      .select('email, direct_phone, mobile')
-      .eq('partner_id', partner.id)
-      .not('email', 'is', null)
-
-    if (!contacts || contacts.length === 0) {
-      return { complete: false, companyName: partner.company_name }
-    }
-
-    // Complete = at least one contact with email AND (direct_phone OR mobile)
-    const hasCompleteContact = contacts.some((c: any) => 
-      c.email && (c.direct_phone || c.mobile)
-    )
-
-    return { complete: hasCompleteContact, companyName: partner.company_name }
-  } catch (err) {
-    console.warn(`isPartnerComplete error for wcaId ${wcaId}:`, err)
-    return { complete: false }
-  }
-}
-
-/**
- * Chain to the next step with delay, checking job status first.
- */
-async function chainNext(supabase: any, supabaseUrl: string, supabaseKey: string, jobId: string, nextIndex: number, totalIds: number, delaySec: number) {
-  if (nextIndex >= totalIds) {
-    // Complete the job
-    const { data: job } = await supabase
-      .from('download_jobs')
-      .select('country_code, network_name')
-      .eq('id', jobId)
-      .single()
-
-    await supabase
-      .from('download_jobs')
-      .update({ status: 'completed', completed_at: new Date().toISOString() })
-      .eq('id', jobId)
-
-    if (job) {
-      await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
-      await updateNetworkConfigsFromData(supabase, job.network_name)
-    }
-    return
-  }
-
-  // Wait delay
-  if (delaySec > 0) {
-    await new Promise(r => setTimeout(r, delaySec * 1000))
-  }
-
-  // Re-check status after delay
-  const { data: checkJob } = await supabase
-    .from('download_jobs')
-    .select('status')
-    .eq('id', jobId)
-    .single()
-
-  if (checkJob && checkJob.status === 'running') {
-    fetch(`${supabaseUrl}/functions/v1/process-download-job`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ jobId }),
-    }).catch(err => console.error('Self-chain error:', err))
-  }
+function respond(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 }
 
 /**
@@ -443,11 +138,9 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
   try {
     if (!networkName || networkName === 'Tutti' || networkName === '') return
 
-    // For combined networks like "WCA Inter Global, WCA First", update each
     const netNames = networkName.includes(',') ? networkName.split(',').map(n => n.trim()) : [networkName]
 
     for (const net of netNames) {
-      // Find partners that belong to this network
       const { data: networkPartners } = await supabase
         .from('partner_networks')
         .select('partner_id')
@@ -458,7 +151,6 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
 
       const partnerIds = networkPartners.map((p: any) => p.partner_id)
 
-      // Check contacts for these partners
       const { data: contacts } = await supabase
         .from('partner_contacts')
         .select('email, direct_phone, mobile, name')
@@ -483,14 +175,4 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
   } catch (err) {
     console.error('updateNetworkConfigsFromData error:', err)
   }
-}
-
-/**
- * Parse the consecutive empty counter from the error_message field.
- * Format: [consecutive_empty:N]
- */
-function parseConsecutiveEmpty(errorMessage: string | null): number {
-  if (!errorMessage) return 0
-  const match = errorMessage.match(/\[consecutive_empty:(\d+)\]/)
-  return match ? parseInt(match[1], 10) : 0
 }

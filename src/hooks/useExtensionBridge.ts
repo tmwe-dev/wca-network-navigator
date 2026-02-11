@@ -13,6 +13,9 @@ type ExtensionResponse = {
   wcaId?: number;
   error?: string;
   version?: string;
+  authenticated?: boolean;
+  reason?: string;
+  cookieLength?: number;
 };
 
 /**
@@ -59,7 +62,6 @@ export function useExtensionBridge() {
   // Auto-poll every 5s until extension is detected
   useEffect(() => {
     if (isAvailable) {
-      // Stop polling once detected
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
@@ -67,7 +69,6 @@ export function useExtensionBridge() {
       return;
     }
 
-    // Immediate check + periodic polling
     const doPing = () => {
       window.postMessage(
         {
@@ -79,10 +80,7 @@ export function useExtensionBridge() {
       );
     };
 
-    // Ping immediately
     doPing();
-
-    // Then every 5s
     pollRef.current = setInterval(doPing, 5000);
 
     return () => {
@@ -99,19 +97,16 @@ export function useExtensionBridge() {
       return new Promise((resolve) => {
         const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-        // Set timeout
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
           resolve({ success: false, error: "Timeout" });
         }, timeoutMs);
 
-        // Register pending callback
         pendingRef.current.set(requestId, (response) => {
           clearTimeout(timer);
           resolve(response);
         });
 
-        // Post message to content script
         window.postMessage(
           {
             direction: "from-webapp",
@@ -130,7 +125,6 @@ export function useExtensionBridge() {
   const checkAvailable = useCallback(async (): Promise<boolean> => {
     if (isAvailable) return true;
 
-    // Try 3 times with 1s delay
     for (let attempt = 0; attempt < 3; attempt++) {
       const response = await sendMessage("ping", {}, 2000);
       if (response.success === true) {
@@ -150,9 +144,27 @@ export function useExtensionBridge() {
     [sendMessage]
   );
 
+  // Verify WCA session is still authenticated
+  const verifySession = useCallback(
+    async (): Promise<ExtensionResponse> => {
+      return sendMessage("verifySession", {}, 30000);
+    },
+    [sendMessage]
+  );
+
+  // Sync WCA cookies to the database
+  const syncCookie = useCallback(
+    async (): Promise<ExtensionResponse> => {
+      return sendMessage("syncCookie", {}, 15000);
+    },
+    [sendMessage]
+  );
+
   return {
     isAvailable,
     checkAvailable,
     extractContacts,
+    verifySession,
+    syncCookie,
   };
 }

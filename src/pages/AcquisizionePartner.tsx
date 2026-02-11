@@ -10,6 +10,8 @@ import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/compone
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
+
+type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
 import {
   AlertDialog,
@@ -67,8 +69,9 @@ export default function AcquisizionePartner() {
   const cancelRef = useRef(false);
   const pollingAbortRef = useRef(false);
   const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
-  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract } = useExtensionBridge();
+  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract, verifySession, syncCookie } = useExtensionBridge();
   const extensionWarningShown = useRef(false);
+  const [sessionHealth, setSessionHealth] = useState<SessionHealth>("unknown");
 
   // ── Extension-driven pipeline: extracts each partner via Chrome Extension (ZERO server requests to WCA) ──
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0) => {
@@ -243,6 +246,48 @@ export default function AcquisizionePartner() {
         await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
       }
 
+      // ── Every 3 partners: verify session is still alive ──
+      const loopCount = i - startFrom + 1;
+      if (loopCount > 0 && loopCount % 3 === 0) {
+        setSessionHealth("checking");
+        try {
+          const sessionResult = await verifySession();
+          if (sessionResult.success && sessionResult.authenticated) {
+            setSessionHealth("active");
+          } else {
+            setSessionHealth("recovering");
+            await syncCookie();
+            await new Promise((r) => setTimeout(r, 2000));
+            const retryResult = await verifySession();
+            if (retryResult.success && retryResult.authenticated) {
+              setSessionHealth("active");
+            } else {
+              setSessionHealth("dead");
+              toast({
+                title: "⚠️ Sessione WCA scaduta",
+                description: "Rilogga su wcaworld.com e riprova. Pipeline in pausa.",
+                variant: "destructive",
+              });
+              pauseRef.current = true;
+              setPipelineStatus("paused");
+              await supabase.from("download_jobs").update({
+                status: "paused",
+                error_message: "Sessione WCA scaduta durante la verifica periodica.",
+              }).eq("id", jobId);
+              while (pauseRef.current) {
+                await new Promise((r) => setTimeout(r, 500));
+                if (cancelRef.current) break;
+              }
+              if (cancelRef.current) break;
+              setSessionHealth("active");
+              await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
+            }
+          }
+        } catch {
+          setSessionHealth("unknown");
+        }
+      }
+
       // ── Consecutive empty detection ──
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
 
@@ -381,7 +426,7 @@ export default function AcquisizionePartner() {
     }
 
     return localStats;
-  }, [includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, extensionAvailable, checkExtension, extensionExtract, liveStats]);
+  }, [includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, extensionAvailable, checkExtension, extensionExtract, verifySession, syncCookie, liveStats]);
 
   // Check for active acquisition jobs on mount
   useEffect(() => {
@@ -792,6 +837,31 @@ export default function AcquisizionePartner() {
             <Plug className="w-3 h-3" />
             <span>{extensionAvailable ? "Estensione attiva" : "Estensione non rilevata"}</span>
           </div>
+
+          {/* WCA Session Health Indicator */}
+          {(pipelineStatus === "running" || pipelineStatus === "paused") && (
+            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${
+              sessionHealth === "active" ? "bg-emerald-500/10 text-emerald-500" :
+              sessionHealth === "checking" ? "bg-amber-500/10 text-amber-500" :
+              sessionHealth === "recovering" ? "bg-amber-500/10 text-amber-500" :
+              sessionHealth === "dead" ? "bg-destructive/10 text-destructive" :
+              "bg-muted text-muted-foreground"
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                sessionHealth === "active" ? "bg-emerald-500" :
+                sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-amber-500 animate-pulse" :
+                sessionHealth === "dead" ? "bg-destructive" :
+                "bg-muted-foreground"
+              }`} />
+              <span>{
+                sessionHealth === "active" ? "Sessione WCA attiva" :
+                sessionHealth === "checking" ? "Verifica sessione..." :
+                sessionHealth === "recovering" ? "Ripristino sessione..." :
+                sessionHealth === "dead" ? "Sessione scaduta" :
+                "Sessione non verificata"
+              }</span>
+            </div>
+          )}
 
           {scanStats && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
