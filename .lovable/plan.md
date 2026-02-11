@@ -1,71 +1,73 @@
 
-# Semaforo Contatti, Conteggio Qualita' e Deep Search Parallelo
+# Fix Verifica Sessione WCA + Qualita' Contatti
+
+## Problema 1: Check sessione WCA non funziona
+
+Il codice attuale (riga 162-168 di `AcquisizionePartner.tsx`):
+```text
+await triggerCheck();          // <-- aggiorna il DB in modo asincrono
+if (wcaStatus !== "ok") {      // <-- usa il valore VECCHIO di React, non quello appena verificato
+  setShowSessionAlert(true);
+  return;
+}
+```
+
+`wcaStatus` viene da `useWcaSessionStatus()` che legge dal DB tramite React Query. Ma dopo `triggerCheck()`, il refetch non ha ancora aggiornato lo state React. Risultato: il controllo usa sempre il valore precedente.
+
+### Fix
+
+Modificare `triggerCheck()` in `useWcaSessionStatus.ts` per **restituire direttamente lo status** dalla risposta dell'edge function, invece di aspettare il refetch React Query. Poi in `AcquisizionePartner.tsx` usare il valore di ritorno:
+
+```text
+const result = await triggerCheck();
+if (result?.status !== "ok") {
+  setShowSessionAlert(true);
+  return;
+}
+```
+
+## Problema 2: Contatti mostrati come "non trovati"
+
+Se lo scraper restituisce contatti con email ma senza telefono diretto/mobile, il semaforo arancione e' corretto. Ma il messaggio "Nessun contatto trovato" appare quando `data.contacts.length === 0`, il che suggerisce che lo scraper potrebbe non estrarre correttamente la lista contatti dall'HTML.
+
+Verificare la logica di parsing in `scrape-wca-partners` per assicurarsi che i contatti "Office Contacts" vengano estratti come array separati con nome, titolo, email.
 
 ## Modifiche Pianificate
 
-### 1. Semaforo verde/rosso per qualita' contatti nel Canvas
-
-Nella sezione Contatti del `PartnerCanvas`, accanto a ogni contatto aggiungere un indicatore visivo:
-- **Cerchio verde** se il contatto ha almeno email E (telefono diretto O mobile)
-- **Cerchio arancione** se ha solo email OPPURE solo telefono
-- **Cerchio rosso** se manca sia email che telefono
-
-In cima alla sezione Contatti, un badge riassuntivo: "3/5 completi" con colore verde se tutti completi, arancione se parziale.
-
-### 2. Conteggio qualita' nel Cestino Acquisiti
-
-Nel componente `AcquisitionBin`, mostrare sotto il contatore principale:
-- **Completi**: N partner con almeno 1 contatto con email + telefono (badge verde)
-- **Incompleti**: N partner senza contatti completi (badge arancione/rosso)
-
-Nuove props: `completeCount` e `incompleteCount`, calcolati nella pagina principale al completamento di ogni partner in base ai dati del canvas.
-
-### 3. Deep Search attivo di default
-
-Cambiare il valore iniziale di `includeDeepSearch` da `false` a `true` (riga 30 di `AcquisizionePartner.tsx`).
-
-### 4. Enrichment e Deep Search in parallelo dopo il download
-
-Attualmente la pipeline e' sequenziale: Download -> Enrich -> Deep Search. Modificare per lanciare Enrich e Deep Search in parallelo con `Promise.all` subito dopo il download:
-
-```text
-PRIMA (sequenziale):
-  Download (15s) -> Enrich (10s) -> Deep Search (8s) = 33s totali
-
-DOPO (parallelo):
-  Download (15s) -> [Enrich + Deep Search in parallelo] (max 10s) = 25s totali
-```
-
-La fase nel canvas mostrera' "Arricchimento + Deep Search" durante l'esecuzione parallela, e i risultati aggiornano il canvas man mano che arrivano (chi finisce prima aggiorna subito).
+| File | Modifica |
+|------|----------|
+| `src/hooks/useWcaSessionStatus.ts` | `triggerCheck()` restituisce `{ status, authenticated }` dalla risposta dell'edge function, poi fa refetch in background |
+| `src/pages/AcquisizionePartner.tsx` | Usa il valore di ritorno di `triggerCheck()` per il check sessione invece dello state React stale |
+| `supabase/functions/scrape-wca-partners/index.ts` | Verificare e fixare il parsing dei contatti Office (nome, titolo, email) dall'HTML WCA |
 
 ## Dettaglio Tecnico
 
-| File | Modifiche |
-|------|-----------|
-| `src/components/acquisition/PartnerCanvas.tsx` | Semaforo verde/arancione/rosso accanto ai contatti, badge riassuntivo qualita' |
-| `src/components/acquisition/AcquisitionBin.tsx` | Props `completeCount` e `incompleteCount`, mostrare sotto il contatore |
-| `src/pages/AcquisizionePartner.tsx` | `includeDeepSearch` default `true`, pipeline parallela con `Promise.all`, tracciamento qualita' contatti per il bin |
-
-### Logica qualita' contatto
-
-Un contatto e' "completo" se ha:
-- `email` non vuoto E
-- (`direct_phone` non vuoto OPPURE `mobile` non vuoto)
-
-Un partner e' "completo" se ha almeno 1 contatto completo.
-
-### Pipeline parallela (pseudocodice)
+### useWcaSessionStatus.ts - triggerCheck migliorato
 
 ```text
-// Dopo il download:
-const promises = [];
-if (includeEnrich && website) {
-  promises.push(enrich().then(updateCanvas));
-}
-if (includeDeepSearch) {
-  promises.push(deepSearch().then(updateCanvas));
-}
-setCanvasPhase("enriching"); // fase unica per entrambi
-await Promise.all(promises);
-setCanvasPhase("complete");
+const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean }> => {
+  const res = await fetch(url, { method: "POST", ... });
+  const data = await res.json();
+  // Refetch in background per aggiornare la cache
+  statusQuery.refetch();
+  return { status: data.status, authenticated: data.authenticated };
+};
 ```
+
+### AcquisizionePartner.tsx - check corretto
+
+```text
+const result = await triggerCheck();
+if (!result || result.status !== "ok") {
+  setShowSessionAlert(true);
+  return;
+}
+```
+
+### scrape-wca-partners - parsing contatti
+
+Verificare che il regex/parser per "Office Contacts" estragga correttamente:
+- Nome (es. "Mr. Makis Mavroeidis")
+- Titolo (es. "Executive Director")
+- Email (es. "makis.mavroeidis@sba-group.net")
+- Telefono (dal campo "Phone" dell'azienda, se non c'e' telefono personale)
