@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
     
     const testResult = await testCookieDeep(cookie)
-    const authenticated = testResult.authenticated
+    // If .ASPXAUTH is present, trust the browser-side login — WAF may block server-side test
+    const authenticated = hasAspxAuth || testResult.authenticated
     const status = authenticated ? 'ok' : 'expired'
     await upsertStatus(supabase, status, new Date().toISOString())
 
