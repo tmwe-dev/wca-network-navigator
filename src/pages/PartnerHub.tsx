@@ -14,6 +14,7 @@ import {
 import {
   Search,
   Star,
+  StarHalf,
   StarOff,
   Phone,
   Mail,
@@ -21,6 +22,7 @@ import {
   MapPin,
   Calendar,
   MessageSquare,
+  MessageCircle,
   Clock,
   ChevronRight,
   ChevronDown,
@@ -48,6 +50,7 @@ import {
   Warehouse,
   Anchor,
   Box,
+  Trophy,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -97,6 +100,50 @@ const SERVICE_ICON_MAP: Record<string, any> = {
 function ServiceIcon({ name, className }: { name: string; className?: string }) {
   const Icon = SERVICE_ICON_MAP[name] || Box;
   return <Icon className={className} />;
+}
+
+/* ── Star display for list items ── */
+function MiniStars({ rating, size = "w-3 h-3" }: { rating: number; size?: string }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => {
+        if (i + 1 <= Math.floor(rating)) return <Star key={i} className={`${size} fill-amber-400 text-amber-400`} />;
+        if (i + 0.5 <= rating) return <StarHalf key={i} className={`${size} fill-amber-400 text-amber-400`} />;
+        return <Star key={i} className={`${size} text-muted-foreground/20`} />;
+      })}
+    </div>
+  );
+}
+
+/* ── Trophy row for years of membership ── */
+function TrophyRow({ years }: { years: number }) {
+  if (years <= 0) return null;
+  const display = Math.min(years, 20);
+  return (
+    <div className="flex items-center gap-0.5 flex-wrap">
+      {Array.from({ length: display }).map((_, i) => (
+        <Trophy key={i} className="w-3 h-3 text-amber-500" />
+      ))}
+      {years > 20 && <span className="text-[9px] text-muted-foreground ml-0.5">+{years - 20}</span>}
+    </div>
+  );
+}
+
+/* ── Extract unique branch countries ── */
+function getBranchCountries(partner: any): { code: string; name: string }[] {
+  if (!partner.branch_cities || !Array.isArray(partner.branch_cities)) return [];
+  const map = new Map<string, string>();
+  partner.branch_cities.forEach((b: any) => {
+    const code = b?.country_code || b?.country;
+    if (code && code !== partner.country_code) {
+      map.set(code, b?.country_name || code);
+    }
+  });
+  return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
+}
+
+function cleanPhoneForWhatsApp(phone: string): string {
+  return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
 }
 
 export default function PartnerHub() {
@@ -206,21 +253,28 @@ export default function PartnerHub() {
                 ))
               : filteredPartners?.map((partner: any) => {
                   const q = getPartnerContactQuality(partner.partner_contacts);
+                  const years = getYearsMember(partner.member_since);
+                  const whatsappNum = partner.mobile || partner.phone;
+                  const hasPersonalEmail = partner.partner_contacts?.some((c: any) => !!c.email);
+                  const hasPersonalPhone = partner.partner_contacts?.some((c: any) => !!c.direct_phone || !!c.mobile);
                   return (
                     <div
                       key={partner.id}
                       onClick={() => setSelectedId(partner.id)}
                       className={cn(
-                        "w-full text-left p-3 hover:bg-accent/50 transition-colors cursor-pointer",
+                        "w-full text-left p-3 hover:bg-accent/50 transition-colors cursor-pointer relative",
                         selectedId === partner.id && "bg-accent",
-                        selectedIds.has(partner.id) && "bg-primary/5"
+                        selectedIds.has(partner.id) && "bg-primary/5",
+                        q === "missing" && "border-l-4 border-l-destructive",
+                        q === "partial" && "border-l-4 border-l-amber-400",
+                        q === "complete" && "border-l-4 border-l-primary",
                       )}
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-1" onClick={(e) => toggleSelection(partner.id, e)}>
                           <Checkbox checked={selectedIds.has(partner.id)} />
                         </div>
-                        {/* Logo or flag */}
+                        {/* Logo or empty */}
                         <div className="relative shrink-0 mt-0.5">
                           {partner.logo_url ? (
                             <>
@@ -250,31 +304,28 @@ export default function PartnerHub() {
                           <p className="text-xs text-muted-foreground truncate mt-0.5">
                             {partner.city} · {formatPartnerType(partner.partner_type)}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {partner.rating && (
-                              <span className="text-[10px] text-muted-foreground">★ {Number(partner.rating).toFixed(1)}</span>
-                            )}
-                            <KpiBadges partner={partner} compact />
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {q === "complete" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
-                                <UserCheck className="w-3 h-3" /> OK
-                              </span>
-                            )}
-                            {q === "partial" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
-                                <AlertTriangle className="w-3 h-3" /> Parziale
-                              </span>
-                            )}
+                          {/* Star rating */}
+                          {partner.rating > 0 && (
+                            <div className="mt-1">
+                              <MiniStars rating={Number(partner.rating)} size="w-3 h-3" />
+                            </div>
+                          )}
+                          {/* Trophies for years */}
+                          {years > 0 && (
+                            <div className="mt-1">
+                              <TrophyRow years={years} />
+                            </div>
+                          )}
+                          {/* Contact availability icons */}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {hasPersonalPhone && <Phone className="w-3 h-3 text-primary" />}
+                            {hasPersonalEmail && <Mail className="w-3 h-3 text-primary" />}
+                            {whatsappNum && <MessageCircle className="w-3 h-3 text-primary" />}
                             {q === "missing" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
+                              <span className="text-[9px] text-destructive flex items-center gap-0.5">
                                 <UserX className="w-3 h-3" /> No contatti
                               </span>
                             )}
-                            {/* Quick contact icons */}
-                            {partner.email && <Mail className="w-3 h-3 text-muted-foreground" />}
-                            {partner.phone && <Phone className="w-3 h-3 text-muted-foreground" />}
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
@@ -392,6 +443,18 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
               {partner.city}, {partner.country_name}
               {partner.wca_id && <Badge variant="outline" className="text-xs ml-1">WCA #{partner.wca_id}</Badge>}
             </div>
+
+            {/* Star rating + trophies */}
+            <div className="flex items-center gap-4 mt-2">
+              {partner.rating > 0 && (
+                <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} size="md" />
+              )}
+              {getYearsMember(partner.member_since) > 0 && (
+                <TrophyRow years={getYearsMember(partner.member_since)} />
+              )}
+            </div>
+
+            {/* Status + type badges */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {(() => { const StatusIcon = status.icon; return (
                 <Badge variant="secondary" className="text-xs gap-1">
@@ -404,11 +467,40 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                   {partner.office_type === "head_office" ? "HQ" : "Branch"}
                 </Badge>
               )}
-              {partner.rating && (
-                <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} size="sm" />
-              )}
             </div>
-            <KpiBadges partner={partner} />
+
+            {/* Contact availability icons */}
+            {(() => {
+              const q = getPartnerContactQuality(partner.partner_contacts);
+              const hasPersonalEmail = partner.partner_contacts?.some((c: any) => !!c.email);
+              const hasPersonalPhone = partner.partner_contacts?.some((c: any) => !!c.direct_phone || !!c.mobile);
+              const whatsappNum = partner.mobile || partner.phone;
+              return (
+                <div className="flex items-center gap-2 mt-2">
+                  {hasPersonalPhone && (
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <Phone className="w-3.5 h-3.5" /> Telefono
+                    </span>
+                  )}
+                  {hasPersonalEmail && (
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <Mail className="w-3.5 h-3.5" /> Email
+                    </span>
+                  )}
+                  {whatsappNum && (
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                    </span>
+                  )}
+                  {q === "missing" && (
+                    <span className="flex items-center gap-1 text-xs text-destructive">
+                      <UserX className="w-3.5 h-3.5" /> No contatti personali
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="mt-2">
               <SocialLinks partnerId={partner.id} />
             </div>
@@ -424,6 +516,41 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
           </Button>
         </div>
       </div>
+
+      {/* ── Branch Countries (tags) ── */}
+      {(() => {
+        const branchCountries = getBranchCountries(partner);
+        if (branchCountries.length === 0) return null;
+        return (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2 font-medium flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> Paesi Collegati ({branchCountries.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {branchCountries.map(({ code, name }) => (
+                <Badge key={code} variant="outline" className="text-xs gap-1">
+                  {getCountryFlag(code)} {name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Services & Specialties ── */}
+      {partner.partner_services?.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground mb-2 font-medium">Specialità & Servizi</p>
+          <div className="flex flex-wrap gap-1.5">
+            {partner.partner_services.map((s: any, i: number) => (
+              <Badge key={i} variant="secondary" className="text-xs gap-1">
+                <ServiceIcon name={getServiceIconName(s.service_category)} className="w-3 h-3" />
+                {formatServiceCategory(s.service_category)}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Info grid + Mini globe ── */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6">
@@ -481,21 +608,6 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
           </Suspense>
         )}
       </div>
-
-      {/* ── Services ── */}
-      {partner.partner_services?.length > 0 && (
-        <div>
-          <p className="text-xs text-muted-foreground mb-2 font-medium">Servizi & Specialità</p>
-          <div className="flex flex-wrap gap-1.5">
-            {partner.partner_services.map((s: any, i: number) => (
-              <Badge key={i} variant="secondary" className="text-xs gap-1">
-                <ServiceIcon name={getServiceIconName(s.service_category)} className="w-3 h-3" />
-                {formatServiceCategory(s.service_category)}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Office Contacts ── */}
       {partner.partner_contacts?.length > 0 && (
