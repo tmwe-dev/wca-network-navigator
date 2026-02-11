@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA Cookie Sync",
-  "version": "2.0",
-  "description": "Un click: login automatico + sincronizzazione cookie WCA.",
+  "version": "3.0",
+  "description": "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting"],
   "host_permissions": ["https://*.wcaworld.com/*", "https://wcaworld.com/*", "https://www.wcaworld.com/*", "https://zrbditqddhjkutzjycgi.supabase.co/*"],
   "action": {
