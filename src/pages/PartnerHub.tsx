@@ -39,6 +39,7 @@ import {
   ChevronRight,
   ChevronDown,
   Users,
+  User,
   Sparkles,
   Loader2,
   Filter,
@@ -59,6 +60,8 @@ import {
   Warehouse,
   Anchor,
   Box,
+  Container,
+  Cpu,
   Trophy,
   ShieldCheck,
   FileText,
@@ -104,7 +107,7 @@ const SERVICE_ICON_MAP: Record<string, any> = {
 const SERVICE_ICONS: Record<string, any> = {
   air_freight: Plane,
   ocean_fcl: Ship,
-  ocean_lcl: Ship,
+  ocean_lcl: Container,
   road_freight: Truck,
   rail_freight: TrainFront,
   project_cargo: Package,
@@ -436,33 +439,80 @@ export default function PartnerHub() {
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
                             {years > 0 && <TrophyRow years={years} />}
                           </div>
-                          {/* Contact icons */}
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {hasPersonalPhone && <Phone className="w-3 h-3 text-green-500" />}
-                            {hasPersonalEmail && <Mail className="w-3 h-3 text-blue-500" />}
-                            {whatsappNum && <MessageCircle className="w-3 h-3 text-green-500" />}
-                          </div>
-                          {/* Branch country flags */}
-                          {branchCountries.length > 0 && (
-                            <div className="flex items-center gap-0.5 mt-1 flex-wrap">
-                              {branchCountries.slice(0, 8).map(({ code }) => (
-                                <span key={code} className="text-sm leading-none">{getCountryFlag(code)}</span>
+                          {/* Contact persons */}
+                          {partner.partner_contacts?.length > 0 && (
+                            <div className="mt-1.5 space-y-0.5">
+                              {partner.partner_contacts.slice(0, 3).map((c: any) => (
+                                <div key={c.id} className="flex items-center gap-1.5 text-xs">
+                                  <User className="w-3.5 h-3.5 text-muted-foreground fill-muted-foreground" />
+                                  <span className="text-foreground font-medium truncate">{c.name}</span>
+                                  {c.title && <span className="text-muted-foreground truncate text-[10px]">· {c.title}</span>}
+                                </div>
                               ))}
-                              {branchCountries.length > 8 && (
-                                <span className="text-[9px] text-muted-foreground ml-0.5">+{branchCountries.length - 8}</span>
+                              {partner.partner_contacts.length > 3 && (
+                                <span className="text-[9px] text-muted-foreground ml-5">+{partner.partner_contacts.length - 3} altri</span>
                               )}
                             </div>
                           )}
-                          {/* Service icons */}
+                          {/* Service icons - filled, larger */}
                           {services.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1 flex-wrap">
-                              {services.slice(0, 6).map((s: any, i: number) => {
+                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                              {services.map((s: any, i: number) => {
                                 const Icon = getServiceIcon(s.service_category);
-                                return <Icon key={i} className={`w-3.5 h-3.5 ${getServiceIconColor(s.service_category)}`} />;
+                                return (
+                                  <Tooltip key={i}>
+                                    <TooltipTrigger>
+                                      <Icon className={`w-5 h-5 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                                  </Tooltip>
+                                );
                               })}
-                              {services.length > 6 && (
-                                <span className="text-[9px] text-muted-foreground">+{services.length - 6}</span>
+                              {/* XP badge for courier */}
+                              {partner.partner_type === "courier" && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="w-5 h-5 rounded bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">XP</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Corriere Espresso</TooltipContent>
+                                </Tooltip>
                               )}
+                              {/* Tech capabilities */}
+                              {(partner.enrichment_data as any)?.has_technology && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Cpu className="w-5 h-5 text-violet-500 fill-violet-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Capacità Tecnologiche</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          )}
+                          {/* Branch country flags */}
+                          {branchCountries.length > 0 && (
+                            <div className="flex items-center gap-0.5 mt-1.5 flex-wrap">
+                              {branchCountries.slice(0, 10).map(({ code }) => (
+                                <span key={code} className="text-base leading-none">{getCountryFlag(code)}</span>
+                              ))}
+                              {branchCountries.length > 10 && (
+                                <span className="text-[9px] text-muted-foreground ml-0.5">+{branchCountries.length - 10}</span>
+                              )}
+                            </div>
+                          )}
+                          {/* Network logos */}
+                          {partner.partner_networks?.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                              {partner.partner_networks.map((n: any) => {
+                                const logo = getNetworkLogo(n.network_name);
+                                return logo ? (
+                                  <Tooltip key={n.id}>
+                                    <TooltipTrigger>
+                                      <img src={logo} alt={n.network_name} className="w-6 h-6 object-contain" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>{n.network_name}</TooltipContent>
+                                  </Tooltip>
+                                ) : null;
+                              })}
                             </div>
                           )}
                         </div>
@@ -936,10 +986,10 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                   return (
                     <div key={n.id} className="bg-secondary/50 border rounded-lg px-3 py-3 flex items-center gap-3">
                       {logo ? (
-                        <img src={logo} alt={n.network_name} className="w-12 h-12 object-contain rounded-lg" />
+                        <img src={logo} alt={n.network_name} className="w-24 h-24 object-contain rounded-lg" />
                       ) : (
-                        <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center border">
-                          <Globe className="w-6 h-6 text-primary" />
+                        <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center border">
+                          <Globe className="w-10 h-10 text-primary" />
                         </div>
                       )}
                       <div>
