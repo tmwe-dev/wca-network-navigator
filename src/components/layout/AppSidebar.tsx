@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
-  Users,
   Calendar,
   Download,
   Mail,
   Globe,
-  HardDriveDownload,
   ChevronLeft,
   ChevronRight,
   Moon,
@@ -18,13 +16,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useActiveJobCount } from "@/hooks/useDownloadJobs";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 const navItems = [
   { title: "Partner", url: "/", icon: Globe },
+  { title: "Acquisizione", url: "/acquisizione", icon: Download },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
-  { title: "Download", url: "/download-management", icon: HardDriveDownload, badgeKey: "download" },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
 ];
@@ -37,7 +34,6 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
-  const activeJobCount = useActiveJobCount();
   const { status: wcaStatus, triggerCheck, checkedAt } = useWcaSessionStatus();
 
   // Trigger a check on mount
@@ -77,7 +73,6 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       <nav className="flex-1 py-4 px-2 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.url;
-          const showBadge = item.badgeKey === "download" && activeJobCount > 0;
           
           const NavItem = (
             <Link
@@ -92,14 +87,6 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
               {!collapsed && <span className="flex-1">{item.title}</span>}
-              {showBadge && (
-                <span className={cn(
-                  "flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-amber-500 animate-pulse",
-                  collapsed ? "absolute -top-1 -right-1 w-4 h-4" : "w-5 h-5"
-                )}>
-                  {activeJobCount}
-                </span>
-              )}
             </Link>
           );
 
@@ -109,7 +96,6 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                 <TooltipTrigger asChild>{NavItem}</TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
                   {item.title}
-                  {showBadge && ` (${activeJobCount} attivi)`}
                 </TooltipContent>
               </Tooltip>
             );
