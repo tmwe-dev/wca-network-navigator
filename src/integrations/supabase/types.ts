@@ -95,6 +95,83 @@ export type Database = {
         }
         Relationships: []
       }
+      blacklist_entries: {
+        Row: {
+          blacklist_no: number | null
+          city: string | null
+          claims: string | null
+          company_name: string
+          country: string | null
+          created_at: string | null
+          id: string
+          matched_partner_id: string | null
+          source: string | null
+          status: string | null
+          total_owed_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          blacklist_no?: number | null
+          city?: string | null
+          claims?: string | null
+          company_name: string
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          matched_partner_id?: string | null
+          source?: string | null
+          status?: string | null
+          total_owed_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          blacklist_no?: number | null
+          city?: string | null
+          claims?: string | null
+          company_name?: string
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          matched_partner_id?: string | null
+          source?: string | null
+          status?: string | null
+          total_owed_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blacklist_entries_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blacklist_sync_log: {
+        Row: {
+          created_at: string | null
+          entries_count: number | null
+          id: string
+          matched_count: number | null
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          entries_count?: number | null
+          id?: string
+          matched_count?: number | null
+          sync_type: string
+        }
+        Update: {
+          created_at?: string | null
+          entries_count?: number | null
+          id?: string
+          matched_count?: number | null
+          sync_type?: string
+        }
+        Relationships: []
+      }
       directory_cache: {
         Row: {
           country_code: string

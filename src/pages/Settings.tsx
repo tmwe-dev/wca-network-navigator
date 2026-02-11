@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { toast as toastHook } from "@/hooks/use-toast";
 import { CSVImport } from "@/components/partners/CSVImport";
 import { WCAScraper } from "@/components/partners/WCAScraper";
+import BlacklistManager from "@/components/settings/BlacklistManager";
 
 /* ── Export field config ── */
 const EXPORT_FIELDS = [
@@ -131,6 +132,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="import-export" className="flex items-center gap-2">
             <Download className="w-4 h-4" /> Import / Export
+          </TabsTrigger>
+          <TabsTrigger value="blacklist" className="flex items-center gap-2">
+            <Shield className="w-4 h-4" /> Blacklist
           </TabsTrigger>
         </TabsList>
 
@@ -313,6 +317,10 @@ export default function Settings() {
 
             <TabsContent value="wca-download"><WCAScraper /></TabsContent>
           </Tabs>
+        </TabsContent>
+        {/* ════════════════ BLACKLIST ════════════════ */}
+        <TabsContent value="blacklist">
+          <BlacklistManager />
         </TabsContent>
       </Tabs>
     </div>
