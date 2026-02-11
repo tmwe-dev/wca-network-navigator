@@ -32,7 +32,7 @@ mainBtn.addEventListener("click", async () => {
       body: JSON.stringify({}),
     });
     const creds = await credRes.json();
-    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate. Vai su Impostazioni.");
+    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate.");
     log("✓ Credenziali ottenute", "done");
 
     // Step 2: Open login page
@@ -45,8 +45,20 @@ mainBtn.addEventListener("click", async () => {
     await waitForTabLoad(tab.id, 20000);
     log("✓ Pagina caricata", "done");
 
-    // Step 4: Fill and submit
-    log("④ Login automatico...", "wait");
+    // Step 4: Analyze the login form first
+    log("④ Analizzo form di login...", "wait");
+    const analyzeResult = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: analyzeLoginPage,
+    });
+    const pageInfo = analyzeResult[0]?.result;
+    log(`   URL: ${pageInfo?.url || '?'}`, "wait");
+    log(`   Form trovati: ${pageInfo?.formCount || 0}`, "wait");
+    log(`   Input text: ${pageInfo?.textInputs || 0}, password: ${pageInfo?.passwordInputs || 0}`, "wait");
+    if (pageInfo?.inputDetails) log(`   Campi: ${pageInfo.inputDetails}`, "wait");
+
+    // Step 5: Fill and submit
+    log("⑤ Compilo e invio login...", "wait");
     setStatus("⏳ Login in corso...", "working");
     const injResult = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -54,40 +66,92 @@ mainBtn.addEventListener("click", async () => {
       args: [creds.username, creds.password],
     });
     const formResult = injResult[0]?.result;
-    if (!formResult?.success) throw new Error(formResult?.error || "Form di login non trovato");
-    log("✓ Form inviato", "done");
+    if (!formResult?.success) {
+      throw new Error(formResult?.error || "Form di login non trovato");
+    }
+    log(`✓ Form inviato (metodo: ${formResult.method || '?'})`, "done");
 
-    // Step 5: Wait for redirect (short timeout, proceed anyway)
-    log("⑤ Attendo risposta...", "wait");
-    await waitForRedirectOrTimeout(tab.id, 8000);
-    log("✓ Proseguo", "done");
+    // Step 6: Wait for response
+    log("⑥ Attendo risposta...", "wait");
+    await waitForRedirectOrTimeout(tab.id, 10000);
+    log("✓ Attesa completata", "done");
 
-    // Step 6: Read cookies
-    log("⑥ Leggo cookie...", "wait");
-    const cookies = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-    const hasAuth = cookies.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-    const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
-    log(`✓ ${cookies.length} cookie, .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
+    // Step 7: Diagnose what happened
+    log("⑦ Verifico risultato login...", "wait");
+    const diagResult = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: diagnoseAfterLogin,
+    });
+    const diag = diagResult[0]?.result;
+    log(`   URL dopo login: ${diag?.url || '?'}`, "wait");
+    if (diag?.errorMessage) log(`   ⚠ Errore pagina: ${diag.errorMessage}`, "fail");
+    if (diag?.isLoggedIn) log("   ✓ Sembra loggato!", "done");
+    if (diag?.pageTitle) log(`   Titolo: ${diag.pageTitle}`, "wait");
+
+    // Step 8: Read cookies (try multiple times)
+    log("⑧ Leggo cookie...", "wait");
+    let cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+    let cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+    // Merge unique cookies
+    const allCookies = [...cookies];
+    for (const c of cookies2) {
+      if (!allCookies.some(x => x.name === c.name)) allCookies.push(c);
+    }
+    
+    let hasAuth = allCookies.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
+    log(`   Cookie trovati: ${allCookies.length} (domain .wcaworld.com + www)`, "wait");
+    log(`   .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
+    log(`   Nomi: ${allCookies.map(c => c.name).join(", ")}`, "wait");
 
     if (!hasAuth) {
-      // Try waiting a bit more and retry
-      log("⏳ Riprovo tra 3s...", "wait");
-      await sleep(3000);
-      const cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-      const hasAuth2 = cookies2.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-      if (hasAuth2) {
-        const cookieStr2 = cookies2.map(c => `${c.name}=${c.value}`).join("; ");
-        log("✓ .ASPXAUTH trovato al secondo tentativo!", "done");
-        await sendCookiesAndFinish(cookieStr2, tab.id);
+      // Wait more and retry
+      log("   Riprovo tra 5s...", "wait");
+      await sleep(5000);
+      cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+      cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+      const allCookies2 = [...cookies];
+      for (const c of cookies2) {
+        if (!allCookies2.some(x => x.name === c.name)) allCookies2.push(c);
+      }
+      hasAuth = allCookies2.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
+      
+      if (hasAuth) {
+        log("   ✓ .ASPXAUTH trovato al secondo tentativo!", "done");
+        const cookieStr = allCookies2.map(c => `${c.name}=${c.value}`).join("; ");
+        await sendCookiesAndFinish(cookieStr, tab.id);
         return;
       }
-      try { chrome.tabs.remove(tab.id); } catch {}
-      setStatus("❌ Login fallito: .ASPXAUTH mancante", "error");
-      log("Credenziali errate o protezione anti-bot attiva.", "fail");
-      mainBtn.disabled = false;
+
+      // Still no auth - let's try navigating to member section to trigger auth
+      log("   Provo accesso a MemberSection...", "wait");
+      await chrome.tabs.update(tab.id, { url: "https://www.wcaworld.com/MemberSection" });
+      await waitForTabLoad(tab.id, 10000);
+      
+      const cookies3 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+      const cookies4 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+      const allCookies3 = [...cookies3];
+      for (const c of cookies4) {
+        if (!allCookies3.some(x => x.name === c.name)) allCookies3.push(c);
+      }
+      hasAuth = allCookies3.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
+      log(`   Dopo MemberSection: ${allCookies3.length} cookie, .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
+      log(`   Nomi: ${allCookies3.map(c => c.name).join(", ")}`, "wait");
+
+      if (!hasAuth) {
+        try { chrome.tabs.remove(tab.id); } catch {}
+        setStatus("❌ Login fallito: .ASPXAUTH non presente", "error");
+        log("Il form è stato inviato ma WCA non ha rilasciato il cookie di autenticazione.", "fail");
+        if (diag?.errorMessage) log("Errore dalla pagina: " + diag.errorMessage, "fail");
+        mainBtn.disabled = false;
+        return;
+      }
+
+      const cookieStr = allCookies3.map(c => `${c.name}=${c.value}`).join("; ");
+      await sendCookiesAndFinish(cookieStr, tab.id);
       return;
     }
 
+    const cookieStr = allCookies.map(c => `${c.name}=${c.value}`).join("; ");
     await sendCookiesAndFinish(cookieStr, tab.id);
   } catch (err) {
     setStatus("❌ " + err.message, "error");
@@ -97,7 +161,7 @@ mainBtn.addEventListener("click", async () => {
 });
 
 async function sendCookiesAndFinish(cookieStr, tabId) {
-  log("⑦ Invio cookie al server...", "wait");
+  log("⑨ Invio cookie al server...", "wait");
   setStatus("⏳ Verifica finale...", "working");
   try {
     const saveRes = await fetch(`${SUPABASE_URL}/functions/v1/save-wca-cookie`, {
@@ -112,7 +176,7 @@ async function sendCookiesAndFinish(cookieStr, tabId) {
       setStatus("✅ Connesso! Tutto OK.", "ok");
       log("✓ Cookie salvato e verificato!", "done");
     } else {
-      setStatus("⚠️ Cookie salvato, verifica fallita", "error");
+      setStatus("⚠️ Cookie salvato, verifica contatti fallita", "error");
       log("Cookie inviato ma contatti privati non visibili.", "fail");
     }
     if (saveData.diagnostics) {
@@ -134,7 +198,7 @@ function waitForTabLoad(tabId, ms = 20000) {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
-      resolve(); // proceed anyway
+      resolve();
     }, ms);
     function listener(id, info) {
       if (id === tabId && info.status === "complete") {
@@ -147,11 +211,11 @@ function waitForTabLoad(tabId, ms = 20000) {
   });
 }
 
-function waitForRedirectOrTimeout(tabId, ms = 8000) {
+function waitForRedirectOrTimeout(tabId, ms = 10000) {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
-      resolve(); // always proceed
+      resolve();
     }, ms);
     let navigated = false;
     function listener(id, info) {
@@ -166,29 +230,121 @@ function waitForRedirectOrTimeout(tabId, ms = 8000) {
   });
 }
 
+// Analyze the login page structure
+function analyzeLoginPage() {
+  try {
+    const forms = document.querySelectorAll('form');
+    const textInputs = document.querySelectorAll('input[type="text"], input[type="email"], input:not([type])');
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    const allInputs = document.querySelectorAll('input');
+    
+    const inputDetails = Array.from(allInputs)
+      .filter(i => i.type !== 'hidden')
+      .map(i => `${i.name || i.id || '?'}(${i.type})`)
+      .join(', ');
+
+    return {
+      url: window.location.href,
+      formCount: forms.length,
+      textInputs: textInputs.length,
+      passwordInputs: passwordInputs.length,
+      inputDetails,
+      pageTitle: document.title,
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// Fill and submit the login form
 function fillAndSubmitLogin(username, password) {
   try {
-    const userInput = document.querySelector('input[name="UserName"], input[name="username"], input#UserName, input[type="text"]');
-    const passInput = document.querySelector('input[name="Password"], input[name="password"], input#Password, input[type="password"]');
-    const submitBtn = document.querySelector('input[type="submit"], button[type="submit"], .btn-login, .login-btn');
-    const form = document.querySelector('form[action*="Login"], form[action*="login"], form');
+    // Try specific WCA selectors first, then generic
+    const userInput = document.querySelector('#UserName') 
+      || document.querySelector('input[name="UserName"]')
+      || document.querySelector('input[name="username"]')
+      || document.querySelector('input[type="text"]')
+      || document.querySelector('input[type="email"]');
+    
+    const passInput = document.querySelector('#Password')
+      || document.querySelector('input[name="Password"]')
+      || document.querySelector('input[name="password"]')
+      || document.querySelector('input[type="password"]');
 
-    if (!userInput || !passInput) return { success: false, error: "Campi username/password non trovati" };
+    if (!userInput || !passInput) {
+      return { 
+        success: false, 
+        error: `Campi non trovati. User: ${!!userInput}, Pass: ${!!passInput}. Inputs visibili: ${document.querySelectorAll('input:not([type="hidden"])').length}` 
+      };
+    }
 
+    // Use native setter for maximum compatibility
     const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    
+    // Focus, clear, set value, dispatch events
+    userInput.focus();
     nativeSet.call(userInput, username);
     userInput.dispatchEvent(new Event('input', { bubbles: true }));
     userInput.dispatchEvent(new Event('change', { bubbles: true }));
+    userInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    
+    passInput.focus();
     nativeSet.call(passInput, password);
     passInput.dispatchEvent(new Event('input', { bubbles: true }));
     passInput.dispatchEvent(new Event('change', { bubbles: true }));
+    passInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
 
-    if (submitBtn) submitBtn.click();
-    else if (form) form.submit();
-    else return { success: false, error: "Nessun bottone submit trovato" };
+    // Find submit button
+    const submitBtn = document.querySelector('input[type="submit"]')
+      || document.querySelector('button[type="submit"]')
+      || document.querySelector('.btn-login')
+      || document.querySelector('.login-btn')
+      || document.querySelector('button.btn-primary');
+    
+    const form = userInput.closest('form') || document.querySelector('form');
 
-    return { success: true };
+    let method = 'unknown';
+    if (submitBtn) {
+      submitBtn.click();
+      method = 'button-click';
+    } else if (form) {
+      form.submit();
+      method = 'form-submit';
+    } else {
+      // Try pressing Enter in the password field
+      passInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+      method = 'enter-key';
+    }
+
+    return { success: true, method };
   } catch (e) {
     return { success: false, error: e.message };
+  }
+}
+
+// Diagnose the page state after login attempt
+function diagnoseAfterLogin() {
+  try {
+    const url = window.location.href;
+    const title = document.title;
+    
+    // Check for error messages
+    const errorEl = document.querySelector('.validation-summary-errors, .alert-danger, .error-message, .field-validation-error');
+    const errorMessage = errorEl ? errorEl.textContent.trim().substring(0, 200) : null;
+    
+    // Check if we're on a logged-in page
+    const hasLogoutLink = !!document.querySelector('a[href*="Logout"], a[href*="logout"], a[href*="SignOut"]');
+    const hasLoginForm = !!document.querySelector('input[type="password"]');
+    
+    return {
+      url,
+      pageTitle: title,
+      errorMessage,
+      isLoggedIn: hasLogoutLink && !hasLoginForm,
+      hasLogoutLink,
+      stillOnLoginPage: hasLoginForm,
+    };
+  } catch (e) {
+    return { error: e.message };
   }
 }
