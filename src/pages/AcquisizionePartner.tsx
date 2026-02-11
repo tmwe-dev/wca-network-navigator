@@ -222,19 +222,22 @@ export default function AcquisizionePartner() {
         // Contacts are nested inside partner, not at top level
         const contacts = partnerData?.contacts || scrapeResult?.contacts || [];
 
+        // Save server contacts as fallback, but DON'T show them yet
+        const serverContacts = contacts.map((c: any) => ({
+          name: c.name || c.title || "Sconosciuto",
+          title: c.title,
+          email: c.email,
+          direct_phone: c.phone || c.direct_phone,
+          mobile: c.mobile,
+        }));
+
         const canvas: CanvasData = {
           company_name: partnerData?.company_name || item.company_name,
           city: partnerData?.city || item.city,
           country_code: partnerData?.country_code || item.country_code,
           country_name: partnerData?.country_name || "",
           logo_url: partnerData?.logo_url,
-          contacts: contacts.map((c: any) => ({
-            name: c.name || c.title || "Sconosciuto",
-            title: c.title,
-            email: c.email,
-            direct_phone: c.phone || c.direct_phone,
-            mobile: c.mobile,
-          })),
+          contacts: [],  // Empty: no red badges flash
           services: partnerData?.services || scrapeResult?.services || [],
           key_markets: [],
           key_routes: [],
@@ -247,7 +250,7 @@ export default function AcquisizionePartner() {
           employees: undefined,
           founded: undefined,
           fleet: undefined,
-          contactSource: contacts.length > 0 ? "server" as ContactSource : "none" as ContactSource,
+          contactSource: "none" as ContactSource,
         };
         setCanvasData(canvas);
 
@@ -304,12 +307,20 @@ export default function AcquisizionePartner() {
               }
             } catch { /* DB check failure is non-blocking */ }
           }
-        } else if (!extensionWarningShown.current) {
-          extensionWarningShown.current = true;
-          toast({
-            title: "Estensione Chrome non rilevata",
-            description: "Installa l'estensione WCA Cookie Sync per estrarre email e telefoni privati automaticamente.",
-          });
+        } else {
+          // Extension not available — show server contacts as fallback
+          if (serverContacts.length > 0) {
+            canvas.contacts = serverContacts;
+            canvas.contactSource = "server";
+            setCanvasData({ ...canvas });
+          }
+          if (!extensionWarningShown.current) {
+            extensionWarningShown.current = true;
+            toast({
+              title: "Estensione Chrome non rilevata",
+              description: "Installa l'estensione WCA Cookie Sync per estrarre email e telefoni privati automaticamente.",
+            });
+          }
         }
 
         // PHASE 2+3: Enrich + Deep Search in parallel

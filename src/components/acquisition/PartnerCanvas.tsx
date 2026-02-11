@@ -252,9 +252,16 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
 
         {/* CONTACTS */}
         {data.contacts.length === 0 && show("contacts") && (
-          <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-semibold">
-            ⚠️ Nessun contatto trovato — dati incompleti
-          </div>
+          phase === "extracting" || phase === "downloading" ? (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-xs text-primary font-semibold flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Estrazione contatti in corso...
+            </div>
+          ) : phase === "complete" ? (
+            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-semibold">
+              ⚠️ Nessun contatto trovato — dati incompleti
+            </div>
+          ) : null
         )}
         {data.contacts.length > 0 && (
           <div
