@@ -1,5 +1,6 @@
 import { Check, Circle, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
 
@@ -17,26 +18,40 @@ export interface QueueItem {
 interface PartnerQueueProps {
   items: QueueItem[];
   activeIndex: number;
+  selectedIds: Set<number>;
+  onToggle: (wcaId: number) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
 }
 
-export function PartnerQueue({ items, activeIndex }: PartnerQueueProps) {
+export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll }: PartnerQueueProps) {
+  const selectedCount = items.filter((i) => selectedIds.has(i.wca_id)).length;
+  const allSelected = items.length > 0 && selectedCount === items.length;
+
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Coda Partner
-        </span>
+      <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={() => (allSelected ? onDeselectAll() : onSelectAll())}
+            className="h-3.5 w-3.5"
+          />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Coda Partner
+          </span>
+        </div>
         <span className="text-xs text-muted-foreground">
-          {items.filter((i) => i.status === "done").length}/{items.length}
+          {selectedCount} sel. · {items.filter((i) => i.status === "done").length}/{items.length}
         </span>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {items.map((item, idx) => (
+          {items.map((item) => (
             <div
               key={item.wca_id}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-300",
+                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-300",
                 item.status === "active" &&
                   "bg-primary/10 border border-primary/30 shadow-sm shadow-primary/10",
                 item.status === "done" && "opacity-60",
@@ -44,6 +59,15 @@ export function PartnerQueue({ items, activeIndex }: PartnerQueueProps) {
                 item.status === "error" && "bg-destructive/10 border border-destructive/20"
               )}
             >
+              {/* Checkbox */}
+              {item.status === "pending" && (
+                <Checkbox
+                  checked={selectedIds.has(item.wca_id)}
+                  onCheckedChange={() => onToggle(item.wca_id)}
+                  className="h-3.5 w-3.5 flex-shrink-0"
+                />
+              )}
+
               {/* Status icon */}
               <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                 {item.status === "done" ? (

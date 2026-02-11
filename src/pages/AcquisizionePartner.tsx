@@ -39,6 +39,7 @@ export default function AcquisizionePartner() {
   const [completedCount, setCompletedCount] = useState(0);
   const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Scan stats
   const [scanStats, setScanStats] = useState<{
@@ -146,6 +147,8 @@ export default function AcquisizionePartner() {
         missing: allMembers.length - existing,
       });
       setQueue(allMembers);
+      // Auto-select new partners
+      setSelectedIds(new Set(allMembers.filter((m) => !m.alreadyDownloaded).map((m) => m.wca_id)));
       setPipelineStatus("idle");
     } catch (err: any) {
       toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
@@ -167,8 +170,7 @@ export default function AcquisizionePartner() {
     cancelRef.current = false;
     setCompletedCount(0);
 
-    const items = queue.filter((q) => !q.alreadyDownloaded);
-
+    const items = queue.filter((q) => selectedIds.has(q.wca_id));
     for (let i = 0; i < items.length; i++) {
       if (cancelRef.current) break;
 
@@ -325,7 +327,7 @@ export default function AcquisizionePartner() {
     setCanvasData(null);
     setPipelineStatus("done");
     toast({ title: "Acquisizione completata!", description: `${items.length} partner processati` });
-  }, [queue, wcaStatus, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck]);
+  }, [queue, wcaStatus, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
@@ -369,14 +371,14 @@ export default function AcquisizionePartner() {
             </div>
           )}
 
-          {queue.length > 0 && pipelineStatus !== "running" && (
+          {queue.length > 0 && pipelineStatus !== "running" && selectedIds.size > 0 && (
             <Button
               onClick={startPipeline}
               className="ml-auto gap-2"
               size="sm"
             >
               <Play className="w-4 h-4" />
-              Avvia Acquisizione ({queue.filter((q) => !q.alreadyDownloaded).length})
+              Avvia Acquisizione ({selectedIds.size})
             </Button>
           )}
 
@@ -419,7 +421,21 @@ export default function AcquisizionePartner() {
       <div className="flex-1 flex gap-3 min-h-0">
         {/* LEFT: Partner Queue */}
         <Card className="w-[35%] flex flex-col bg-card/80 backdrop-blur-sm border-border overflow-hidden">
-          <PartnerQueue items={queue} activeIndex={activeIndex} />
+          <PartnerQueue
+            items={queue}
+            activeIndex={activeIndex}
+            selectedIds={selectedIds}
+            onToggle={(wcaId) => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(wcaId)) next.delete(wcaId);
+                else next.add(wcaId);
+                return next;
+              });
+            }}
+            onSelectAll={() => setSelectedIds(new Set(queue.map((q) => q.wca_id)))}
+            onDeselectAll={() => setSelectedIds(new Set())}
+          />
         </Card>
 
         {/* RIGHT: Canvas */}
@@ -436,7 +452,7 @@ export default function AcquisizionePartner() {
       <div className="flex justify-center">
         <AcquisitionBin
           count={completedCount}
-          total={queue.filter((q) => !q.alreadyDownloaded).length}
+          total={queue.filter((q) => selectedIds.has(q.wca_id)).length}
           showComet={showComet}
         />
       </div>
