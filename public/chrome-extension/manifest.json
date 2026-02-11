@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Sincronizza automaticamente i cookie di sessione WCA con la tua app.",
   "permissions": ["cookies"],
-  "host_permissions": ["https://www.wcaworld.com/*"],
+  "host_permissions": ["https://www.wcaworld.com/*", "https://zrbditqddhjkutzjycgi.supabase.co/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"
