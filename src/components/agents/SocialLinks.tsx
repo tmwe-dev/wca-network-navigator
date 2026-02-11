@@ -92,28 +92,36 @@ export function SocialLinks({ partnerId, contactId, compact }: SocialLinksProps)
     );
   }
 
+  const PLATFORM_BG: Record<string, string> = {
+    linkedin: "bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20",
+    facebook: "bg-blue-400/10 border-blue-400/20 hover:bg-blue-400/20",
+    instagram: "bg-pink-500/10 border-pink-500/20 hover:bg-pink-500/20",
+    twitter: "bg-foreground/5 border-foreground/10 hover:bg-foreground/10",
+    whatsapp: "bg-green-500/10 border-green-500/20 hover:bg-green-500/20",
+  };
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap">
         {filtered.map((link) => {
           const info = getPlatformInfo(link.platform);
           const Icon = info.icon;
+          const bg = PLATFORM_BG[link.platform] || "bg-muted border-border";
           return (
-            <div key={link.id} className="flex items-center gap-1 group">
+            <div key={link.id} className="flex flex-col items-center gap-1 group relative">
               <a
                 href={link.url}
                 target="_blank"
                 rel="noopener"
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md border hover:bg-accent transition-colors text-sm"
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-all ${bg}`}
               >
-                <Icon className={`w-4 h-4 ${info.color}`} />
-                <span>{info.label}</span>
-                <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                <Icon className={`w-6 h-6 ${info.color}`} fill="currentColor" />
+                <span className="text-[10px] text-muted-foreground">{info.label}</span>
               </a>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-5 w-5 absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-destructive/10"
                 onClick={() => handleDelete(link)}
               >
                 <Trash2 className="w-3 h-3 text-destructive" />
@@ -121,7 +129,7 @@ export function SocialLinks({ partnerId, contactId, compact }: SocialLinksProps)
             </div>
           );
         })}
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setDialogOpen(true)}>
+        <Button variant="outline" size="sm" className="h-9 text-xs rounded-xl" onClick={() => setDialogOpen(true)}>
           <Plus className="w-3 h-3 mr-1" />
           Social
         </Button>
