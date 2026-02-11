@@ -692,6 +692,51 @@ export type Database = {
         }
         Relationships: []
       }
+      partners_no_contacts: {
+        Row: {
+          city: string | null
+          company_name: string
+          country_code: string | null
+          created_at: string
+          id: string
+          last_retry_at: string | null
+          networks: Json | null
+          partner_id: string | null
+          resolved: boolean
+          retry_count: number
+          scraped_at: string
+          wca_id: number
+        }
+        Insert: {
+          city?: string | null
+          company_name: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          last_retry_at?: string | null
+          networks?: Json | null
+          partner_id?: string | null
+          resolved?: boolean
+          retry_count?: number
+          scraped_at?: string
+          wca_id: number
+        }
+        Update: {
+          city?: string | null
+          company_name?: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          last_retry_at?: string | null
+          networks?: Json | null
+          partner_id?: string | null
+          resolved?: boolean
+          retry_count?: number
+          scraped_at?: string
+          wca_id?: number
+        }
+        Relationships: []
+      }
       reminders: {
         Row: {
           created_at: string | null

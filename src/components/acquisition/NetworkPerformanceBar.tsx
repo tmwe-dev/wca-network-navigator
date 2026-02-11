@@ -1,4 +1,4 @@
-import { Ban, TrendingDown, TrendingUp } from "lucide-react";
+import { Ban, TrendingDown, TrendingUp, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -53,30 +53,18 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, onExclude, onRe
               <TrendingUp className="w-3 h-3" />
             ) : rate < 10 && !isExcluded ? (
               <TrendingDown className="w-3 h-3" />
+            ) : isExcluded ? (
+              <Ban className="w-3 h-3" />
             ) : null}
             <span className="font-medium truncate max-w-[140px]">{name}</span>
             <span className="opacity-70">{s.success}/{total}</span>
             <span className="opacity-50">({rate}%)</span>
 
             {isExcluded ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-1.5 text-[10px] hover:bg-primary/10"
-                onClick={() => onReinclude(name)}
-              >
-                Riattiva
-              </Button>
-            ) : rate < 50 && total >= 3 ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
-                onClick={() => onExclude(name)}
-              >
-                <Ban className="w-3 h-3 mr-0.5" />
-                Escludi
-              </Button>
+              <span className="flex items-center gap-0.5 text-[10px] opacity-60">
+                <ShieldCheck className="w-3 h-3" />
+                Auto-escluso
+              </span>
             ) : null}
           </div>
         );

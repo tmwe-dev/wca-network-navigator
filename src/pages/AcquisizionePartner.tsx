@@ -81,7 +81,9 @@ export default function AcquisizionePartner() {
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0) => {
     let localStats = { ...liveStats };
     let consecutiveEmpty = 0;
-    const MAX_CONSECUTIVE_EMPTY = 5;
+    const AUTO_EXCLUDE_THRESHOLD = 5; // Auto-exclude network after 5+ partners with 0% success
+    const SESSION_RECOVERY_THRESHOLD = 3; // Attempt session recovery after 3 consecutive empty from good networks
+    let localNetworkStats: Record<string, { success: number; empty: number }> = { ...networkStats };
 
     // Read existing progress from DB so we can accumulate correctly
     const { data: currentJobData } = await supabase
@@ -273,7 +275,7 @@ export default function AcquisizionePartner() {
         await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
       }
 
-      // ── Every 3 partners: verify session is still alive ──
+      // ── Every 3 partners: verify session is still alive (auto-recover, never pause) ──
       const loopCount = i - startFrom + 1;
       if (loopCount > 0 && loopCount % 3 === 0) {
         setSessionHealth("checking");
@@ -282,32 +284,32 @@ export default function AcquisizionePartner() {
           if (sessionResult.success && sessionResult.authenticated) {
             setSessionHealth("active");
           } else {
+            // Auto-recover: try syncCookie + verify, never pause
             setSessionHealth("recovering");
             await syncCookie();
-            await new Promise((r) => setTimeout(r, 2000));
+            await new Promise((r) => setTimeout(r, 3000));
             const retryResult = await verifySession();
             if (retryResult.success && retryResult.authenticated) {
               setSessionHealth("active");
+              toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito." });
             } else {
-              setSessionHealth("dead");
-              toast({
-                title: "⚠️ Sessione WCA scaduta",
-                description: "Rilogga su wcaworld.com e riprova. Pipeline in pausa.",
-                variant: "destructive",
-              });
-              pauseRef.current = true;
-              setPipelineStatus("paused");
-              await supabase.from("download_jobs").update({
-                status: "paused",
-                error_message: "Sessione WCA scaduta durante la verifica periodica.",
-              }).eq("id", jobId);
-              while (pauseRef.current) {
-                await new Promise((r) => setTimeout(r, 500));
-                if (cancelRef.current) break;
-              }
+              // Second attempt with longer wait
+              await new Promise((r) => setTimeout(r, 10000));
               if (cancelRef.current) break;
-              setSessionHealth("active");
-              await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
+              await syncCookie();
+              await new Promise((r) => setTimeout(r, 3000));
+              const retryResult2 = await verifySession();
+              if (retryResult2.success && retryResult2.authenticated) {
+                setSessionHealth("active");
+                toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito (secondo tentativo)." });
+              } else {
+                setSessionHealth("dead");
+                // Log but don't pause — the consecutive empty logic will handle further recovery
+                console.warn("[SessionCheck] Auto-recovery failed, pipeline continues");
+                await supabase.from("download_jobs").update({
+                  error_message: "⚠️ Verifica sessione fallita — pipeline continua, recovery in corso.",
+                }).eq("id", jobId);
+              }
             }
           }
         } catch {
@@ -315,61 +317,106 @@ export default function AcquisizionePartner() {
         }
       }
 
-      // ── Update network stats ──
+      // ── Update network stats (local + state) ──
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
       if (canvas.networks && canvas.networks.length > 0) {
-        setNetworkStats((prev) => {
-          const next = { ...prev };
-          for (const net of canvas.networks) {
-            if (!next[net]) next[net] = { success: 0, empty: 0 };
-            if (hasAnyContact) next[net] = { ...next[net], success: next[net].success + 1 };
-            else next[net] = { ...next[net], empty: next[net].empty + 1 };
-          }
-          return next;
-        });
-      }
+        for (const net of canvas.networks) {
+          if (!localNetworkStats[net]) localNetworkStats[net] = { success: 0, empty: 0 };
+          if (hasAnyContact) localNetworkStats[net].success++;
+          else localNetworkStats[net].empty++;
+        }
+        setNetworkStats({ ...localNetworkStats });
 
-      // ── Consecutive empty detection ──
-
-      // First partner empty: verify session via extension instead of edge function
-      if (i === startFrom && !hasAnyContact) {
-        const recheck = await verifySession();
-        if (!recheck.success || !recheck.authenticated) {
-          pauseRef.current = true;
-          setPipelineStatus("paused");
-          toast({
-            title: "⚠️ Sessione WCA non attiva",
-            description: "Il primo partner non ha contatti. Verifica la sessione su wcaworld.com.",
-            variant: "destructive",
-          });
-          await supabase.from("download_jobs").update({ status: "paused", error_message: "Sessione WCA non attiva al primo partner." }).eq("id", jobId);
-          while (pauseRef.current) {
-            await new Promise((r) => setTimeout(r, 500));
-            if (cancelRef.current) break;
+        // ── Auto-exclude networks with 0% success after threshold ──
+        for (const net of canvas.networks) {
+          const s = localNetworkStats[net];
+          if (s && s.success === 0 && (s.success + s.empty) >= AUTO_EXCLUDE_THRESHOLD && !excludedNetworksRef.current.has(net)) {
+            excludedNetworksRef.current.add(net);
+            setExcludedNetworks(new Set(excludedNetworksRef.current));
+            toast({
+              title: `Network "${net}" escluso automaticamente`,
+              description: `0/${s.empty} partner con contatti. I partner rimanenti di questo network verranno saltati.`,
+            });
           }
-          if (cancelRef.current) break;
-          await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
         }
       }
 
+      // ── Consecutive empty tracking + auto-recovery ──
       if (!hasAnyContact) {
         consecutiveEmpty++;
-        if (consecutiveEmpty >= MAX_CONSECUTIVE_EMPTY) {
-          toast({
-            title: "⚠️ Sessione probabilmente scaduta",
-            description: `${MAX_CONSECUTIVE_EMPTY} partner consecutivi senza contatti. Pipeline in pausa.`,
-            variant: "destructive",
-          });
-          pauseRef.current = true;
-          setPipelineStatus("paused");
-          await supabase.from("download_jobs").update({
-            status: "paused",
-            error_message: `⚠️ ${consecutiveEmpty} profili consecutivi senza contatti — sessione WCA probabilmente scaduta.`,
-          }).eq("id", jobId);
-          break;
+
+        // Check if emptiness is due to excluded-only networks (not a session problem)
+        const allNetworksAreBad = canvas.networks.length > 0 && canvas.networks.every(n => {
+          const s = localNetworkStats[n];
+          return s && s.success === 0 && (s.success + s.empty) >= AUTO_EXCLUDE_THRESHOLD;
+        });
+
+        // If good networks are also failing → likely session issue → auto-recover
+        if (consecutiveEmpty >= SESSION_RECOVERY_THRESHOLD && !allNetworksAreBad) {
+          console.log(`[AutoRecovery] ${consecutiveEmpty} consecutive empty — attempting session recovery`);
+          setSessionHealth("recovering");
+
+          // Attempt 1: syncCookie
+          try {
+            await syncCookie();
+            await new Promise((r) => setTimeout(r, 3000));
+            const recheck = await verifySession();
+            if (recheck.success && recheck.authenticated) {
+              setSessionHealth("active");
+              consecutiveEmpty = 0;
+              toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito. Pipeline continua." });
+              await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
+            } else {
+              // Attempt 2: wait longer and retry
+              console.log("[AutoRecovery] First attempt failed, waiting 10s and retrying...");
+              await new Promise((r) => setTimeout(r, 10000));
+              await syncCookie();
+              await new Promise((r) => setTimeout(r, 3000));
+              const recheck2 = await verifySession();
+              if (recheck2.success && recheck2.authenticated) {
+                setSessionHealth("active");
+                consecutiveEmpty = 0;
+                toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito (secondo tentativo)." });
+                await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
+              } else {
+                // Attempt 3: wait 30s and try one last time
+                console.log("[AutoRecovery] Second attempt failed, waiting 30s...");
+                await supabase.from("download_jobs").update({ error_message: "🔄 Tentativo di recovery sessione in corso..." }).eq("id", jobId);
+                await new Promise((r) => setTimeout(r, 30000));
+                if (cancelRef.current) break;
+                await syncCookie();
+                await new Promise((r) => setTimeout(r, 5000));
+                const recheck3 = await verifySession();
+                if (recheck3.success && recheck3.authenticated) {
+                  setSessionHealth("active");
+                  consecutiveEmpty = 0;
+                  toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito (terzo tentativo)." });
+                  await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
+                } else {
+                  // All attempts failed — continue anyway, session may recover on its own
+                  setSessionHealth("dead");
+                  toast({
+                    title: "⚠️ Recovery sessione fallito",
+                    description: "La pipeline continua. Rilogga su wcaworld.com quando possibile.",
+                    variant: "destructive",
+                  });
+                  await supabase.from("download_jobs").update({
+                    error_message: "⚠️ Sessione scaduta — recovery automatico fallito. La pipeline continua.",
+                  }).eq("id", jobId);
+                  // Reset counter to avoid spamming recovery attempts — try again after another batch
+                  consecutiveEmpty = 0;
+                }
+              }
+            }
+          } catch (recoveryErr) {
+            console.error("[AutoRecovery] Error:", recoveryErr);
+            setSessionHealth("unknown");
+            consecutiveEmpty = 0; // Reset to avoid infinite recovery loops
+          }
         }
       } else {
         consecutiveEmpty = 0;
+        if (sessionHealth === "dead") setSessionHealth("active"); // Session came back!
       }
 
       // ── Enrich + Deep Search ──
