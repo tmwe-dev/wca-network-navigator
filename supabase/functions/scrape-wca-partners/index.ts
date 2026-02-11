@@ -685,7 +685,7 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
   }
 }
 
-async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean; contactsAuthenticated: boolean }> {
+async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean; loginPrompt: boolean; contactsAuthenticated: boolean }> {
   const res = await fetch(url, {
     method: 'GET',
     headers: {
@@ -711,9 +711,6 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
     }
   }
   
-  // Check if contacts are genuinely visible (real names, not "Members only")
-  // Note: .ASPXAUTH may be present but WAF can block it server-side
-  // Also check for emails to avoid false negatives when names aren't visible
   let contactsWithEmail = 0
   for (const block of contactBlocks) {
     const emailMatch = block.match(/profile_label">[^<]*Email[^<]*<\/div>[\s\S]*?profile_val">[\s\S]*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
@@ -723,7 +720,7 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
   
   console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, contactsAuth=${contactsAuthenticated}`)
   
-  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, contactsAuthenticated }
+  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, loginPrompt: hasLoginPrompt, contactsAuthenticated }
 }
 
 // Simple HTML-to-markdown converter for profile pages
@@ -939,11 +936,16 @@ Deno.serve(async (req) => {
         authStatus = 'authenticated'
         loginDetails = 'Direct fetch with session cookie - private contacts visible'
         console.log('AUTH OK: session cookie valid, private contacts accessible')
+      } else if (!result.membersOnly && !result.loginPrompt) {
+        // Page loaded fine, no "Members only" or login prompts — cookie works,
+        // this member just has no contacts or no contact rows
+        authStatus = 'authenticated'
+        loginDetails = 'Direct fetch with session cookie - page accessible (no contact rows on this profile)'
+        console.log('AUTH OK: no login prompt, no members-only — treating as authenticated (member may have no contacts)')
       } else {
         authStatus = 'members_only'
         loginDetails = 'Session cookie present but private contact names NOT visible (Members only)'
-        console.log(`AUTH FAILED: cookie doesn't grant access to private contacts. Attempting auto-login...`)
-        // Don't use this html yet - try auto-login first
+        console.log(`AUTH FAILED: cookie doesn't grant access to private contacts. Members only detected.`)
       }
     }
 
