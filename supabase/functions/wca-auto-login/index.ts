@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
-    // 1. Get saved credentials
     const { data: settings } = await supabase
       .from('app_settings')
       .select('key, value')
@@ -37,7 +36,7 @@ Deno.serve(async (req) => {
 
     console.log(`wca-auto-login: attempting login for user "${username}"`)
 
-    // 2. Get the login page first to obtain any anti-forgery tokens
+    // Step 1: GET login page
     const loginPageRes = await fetch('https://www.wcaworld.com/Account/Login', {
       method: 'GET',
       headers: { 'User-Agent': UA },
@@ -45,23 +44,24 @@ Deno.serve(async (req) => {
     })
     
     const loginPageHtml = await loginPageRes.text()
-    const loginPageCookies = extractSetCookies(loginPageRes)
+    const cookieJar = extractAndMergeCookies([], loginPageRes)
     
-    console.log(`Login page: status=${loginPageRes.status}, cookies=${loginPageCookies.length}`)
+    console.log(`Login page: status=${loginPageRes.status}, cookies=${cookieJar.length}, names=${cookieJar.map(c => c.split('=')[0]).join(',')}`)
 
-    // Extract __RequestVerificationToken from hidden input
+    // Extract __RequestVerificationToken
     const tokenMatch = loginPageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)
     const verificationToken = tokenMatch ? tokenMatch[1] : ''
-    
     console.log(`Verification token found: ${!!verificationToken}`)
 
-    // 3. Build cookie string from login page
-    const cookieJar = loginPageCookies.join('; ')
+    // WCA login form field names (verified)
+    const usernameField = 'Username'
+    const passwordField = 'Password'
+    console.log(`Form fields: username=${usernameField}, password=${passwordField}`)
 
-    // 4. POST login form
+    // Step 2: POST login
     const formBody = new URLSearchParams({
-      'Username': username,
-      'Password': password,
+      [usernameField]: username,
+      [passwordField]: password,
       '__RequestVerificationToken': verificationToken,
       'RememberMe': 'true',
     })
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       headers: {
         'User-Agent': UA,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookieJar,
+        'Cookie': cookieJar.join('; '),
         'Origin': 'https://www.wcaworld.com',
         'Referer': 'https://www.wcaworld.com/Account/Login',
       },
@@ -79,54 +79,73 @@ Deno.serve(async (req) => {
       redirect: 'manual',
     })
 
-    const loginStatus = loginRes.status
-    const loginCookies = extractSetCookies(loginRes)
+    const postCookies = extractAndMergeCookies(cookieJar, loginRes)
     const locationHeader = loginRes.headers.get('location') || ''
     
-    console.log(`Login POST: status=${loginStatus}, location=${locationHeader}, newCookies=${loginCookies.length}`)
+    console.log(`Login POST: status=${loginRes.status}, location=${locationHeader}, cookies=${postCookies.length}, names=${postCookies.map(c => c.split('=')[0]).join(',')}`)
 
-    // 5. Merge all cookies
-    const allCookies = mergeCookies(loginPageCookies, loginCookies)
-    const fullCookieStr = allCookies.join('; ')
+    // Step 3: Follow ALL redirects manually, collecting cookies at each step
+    let currentCookies = postCookies
+    let redirectUrl = locationHeader
+    let redirectCount = 0
+    const maxRedirects = 5
 
-    // Check if we got auth cookies
-    const hasAuthCookie = allCookies.some(c => 
-      c.startsWith('.ASPXAUTH=') || 
-      c.startsWith('__AntiXsrfToken=') ||
-      c.startsWith('.AspNet.ApplicationCookie=')
-    )
-
-    console.log(`Has auth cookie: ${hasAuthCookie}, total cookies: ${allCookies.length}`)
-
-    // 6. Follow redirect if any to collect more cookies
-    let finalCookieStr = fullCookieStr
-    if (locationHeader && (loginStatus === 301 || loginStatus === 302)) {
-      const redirectUrl = locationHeader.startsWith('http') 
-        ? locationHeader 
-        : `https://www.wcaworld.com${locationHeader}`
+    while (redirectUrl && redirectCount < maxRedirects) {
+      redirectCount++
+      const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `https://www.wcaworld.com${redirectUrl}`
+      console.log(`Following redirect ${redirectCount}: ${fullUrl}`)
       
-      const redirectRes = await fetch(redirectUrl, {
+      const redirectRes = await fetch(fullUrl, {
         method: 'GET',
         headers: {
           'User-Agent': UA,
-          'Cookie': fullCookieStr,
+          'Cookie': currentCookies.join('; '),
         },
         redirect: 'manual',
       })
       
-      const redirectCookies = extractSetCookies(redirectRes)
-      const mergedAfterRedirect = mergeCookies(allCookies.map(c => c), redirectCookies)
-      finalCookieStr = mergedAfterRedirect.join('; ')
+      currentCookies = extractAndMergeCookies(currentCookies, redirectRes)
+      console.log(`Redirect ${redirectCount}: status=${redirectRes.status}, cookies=${currentCookies.length}, names=${currentCookies.map(c => c.split('=')[0]).join(',')}`)
       
-      console.log(`Redirect: status=${redirectRes.status}, newCookies=${redirectCookies.length}`)
+      // Check for further redirect
+      const nextLocation = redirectRes.headers.get('location')
+      if (redirectRes.status >= 300 && redirectRes.status < 400 && nextLocation) {
+        redirectUrl = nextLocation
+      } else {
+        redirectUrl = ''
+      }
     }
 
-    // 7. Verify the cookie works
-    const authenticated = await testCookie(finalCookieStr)
+    const finalCookieStr = currentCookies.join('; ')
+    const hasAspxAuth = currentCookies.some(c => c.startsWith('.ASPXAUTH=') || c.startsWith('.AspNet.ApplicationCookie='))
+
+    console.log(`Final: hasAspxAuth=${hasAspxAuth}, totalCookies=${currentCookies.length}, redirects=${redirectCount}`)
+
+    if (!hasAspxAuth) {
+      console.log('wca-auto-login: FAILED — .ASPXAUTH not found after all redirects')
+      const now = new Date().toISOString()
+      await supabase.from('app_settings').upsert(
+        { key: 'wca_session_status', value: 'expired', updated_at: now },
+        { onConflict: 'key' }
+      )
+      return respond({ 
+        success: false, 
+        authenticated: false, 
+        message: '❌ Login eseguito ma .ASPXAUTH non ottenuto. Possibile blocco WAF/Cloudflare. Usa l\'estensione Chrome.',
+        debug: { redirectCount, cookieCount: currentCookies.length, cookieNames: currentCookies.map(c => c.split('=')[0]) }
+      })
+    }
+
+    // Step 4: Deep verify with the obtained cookie
+    const testResult = await testCookieDeep(finalCookieStr)
     const now = new Date().toISOString()
 
-    if (authenticated) {
-      // Save the new cookie
+    if (testResult.authenticated) {
+      // Save as wca_auth_cookie (primary) and wca_session_cookie (compat)
+      await supabase.from('app_settings').upsert(
+        { key: 'wca_auth_cookie', value: finalCookieStr, updated_at: now },
+        { onConflict: 'key' }
+      )
       await supabase.from('app_settings').upsert(
         { key: 'wca_session_cookie', value: finalCookieStr, updated_at: now },
         { onConflict: 'key' }
@@ -140,20 +159,25 @@ Deno.serve(async (req) => {
         { onConflict: 'key' }
       )
       
-      console.log('wca-auto-login: SUCCESS - cookie saved and verified')
-      return respond({ success: true, authenticated: true, message: '✅ Login automatico riuscito!' })
+      console.log('wca-auto-login: SUCCESS — cookie saved and deep-verified')
+      return respond({ 
+        success: true, 
+        authenticated: true, 
+        message: '✅ Login automatico riuscito! Contatti personali visibili.',
+        diagnostics: testResult.diagnostics,
+      })
     } else {
       await supabase.from('app_settings').upsert(
         { key: 'wca_session_status', value: 'expired', updated_at: now },
         { onConflict: 'key' }
       )
       
-      console.log('wca-auto-login: FAILED - login did not produce valid session')
+      console.log('wca-auto-login: FAILED — .ASPXAUTH present but private contacts not visible')
       return respond({ 
         success: false, 
         authenticated: false, 
-        message: '⚠️ Login eseguito ma la sessione non è valida. Possibile blocco WAF/Cloudflare.',
-        debug: { loginStatus, hasAuthCookie, locationHeader, cookieCount: allCookies.length }
+        message: '⚠️ Login eseguito con .ASPXAUTH ma i contatti personali non sono visibili. Account potrebbe non avere i permessi.',
+        diagnostics: testResult.diagnostics,
       })
     }
   } catch (error) {
@@ -165,54 +189,72 @@ Deno.serve(async (req) => {
   }
 })
 
-function extractSetCookies(res: Response): string[] {
-  const cookies: string[] = []
-  // Deno's headers.getSetCookie() or iterate
-  const raw = res.headers.getSetCookie?.() || []
-  for (const c of raw) {
-    // Extract just name=value part
-    const nameValue = c.split(';')[0].trim()
-    if (nameValue && nameValue.includes('=')) {
-      cookies.push(nameValue)
-    }
-  }
-  return cookies
-}
-
-function mergeCookies(existing: string[], newCookies: string[]): string[] {
-  const map = new Map<string, string>()
+function extractAndMergeCookies(existing: string[], res: Response): string[] {
+  const merged = new Map<string, string>()
   for (const c of existing) {
     const eqIdx = c.indexOf('=')
-    if (eqIdx > 0) {
-      map.set(c.substring(0, eqIdx), c)
+    if (eqIdx > 0) merged.set(c.substring(0, eqIdx), c)
+  }
+  const raw = res.headers.getSetCookie?.() || []
+  for (const c of raw) {
+    const nameValue = c.split(';')[0].trim()
+    if (nameValue && nameValue.includes('=')) {
+      const eqIdx = nameValue.indexOf('=')
+      merged.set(nameValue.substring(0, eqIdx), nameValue)
     }
   }
-  for (const c of newCookies) {
-    const eqIdx = c.indexOf('=')
-    if (eqIdx > 0) {
-      map.set(c.substring(0, eqIdx), c)
-    }
-  }
-  return Array.from(map.values())
+  return Array.from(merged.values())
 }
 
-async function testCookie(cookie: string): Promise<boolean> {
+function detectFieldName(html: string, type: string): string | null {
+  const regex = new RegExp(`<input[^>]*type="${type}"[^>]*name="([^"]+)"`, 'i')
+  const match = html.match(regex)
+  if (match) return match[1]
+  const regex2 = new RegExp(`<input[^>]*name="([^"]+)"[^>]*type="${type}"`, 'i')
+  const match2 = html.match(regex2)
+  return match2?.[1] || null
+}
+
+async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean; diagnostics: Record<string, any> }> {
   try {
     const res = await fetch('https://www.wcaworld.com/directory/members/86580', {
       method: 'GET',
       headers: { 'Cookie': cookie, 'User-Agent': UA },
     })
     const html = await res.text()
-    const hasEmail = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(html)
-    const hasPhone = /\+?\d[\d\s\-().]{7,}/.test(html)
-    const hasLogoutLink = /logout|log\s*out|sign\s*out/i.test(html)
+    
     const hasLoginPrompt = /please\s*log\s*in|sign\s*in\s*to\s*view|login\s*required/i.test(html)
-    const authenticated = !hasLoginPrompt && (hasEmail || hasPhone || hasLogoutLink)
-    console.log(`testCookie: hasEmail=${hasEmail}, hasPhone=${hasPhone}, hasLogout=${hasLogoutLink}, auth=${authenticated}`)
-    return authenticated
+    const membersOnlyCount = (html.match(/Members\s*only/gi) || []).length
+    
+    const contactBlocks = html.split(/contactperson_row/).slice(1)
+    let contactsWithRealName = 0
+    let contactsWithEmail = 0
+    
+    for (const block of contactBlocks) {
+      const nameMatch = block.match(/profile_label">[^<]*Name[^<]*<\/div>[\s\S]*?profile_val">\s*([^<]+)/i)
+      const name = nameMatch?.[1]?.trim()
+      if (name && !/Members\s*only|Login/i.test(name) && name.length > 2) {
+        contactsWithRealName++
+      }
+      const emailMatch = block.match(/profile_label">[^<]*Email[^<]*<\/div>[\s\S]*?profile_val">[\s\S]*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
+      if (emailMatch) contactsWithEmail++
+    }
+    
+    const authenticated = !hasLoginPrompt && contactBlocks.length > 0 && contactsWithRealName > 0
+    
+    const diagnostics = {
+      membersOnlyCount,
+      contactsTotal: contactBlocks.length,
+      contactsWithRealName,
+      contactsWithEmail,
+      hasAspxAuth: cookie.includes('.ASPXAUTH='),
+    }
+    
+    console.log(`testCookieDeep: realNames=${contactsWithRealName}, emails=${contactsWithEmail}, membersOnly=${membersOnlyCount}, auth=${authenticated}`)
+    return { authenticated, diagnostics }
   } catch (e) {
-    console.error('testCookie error:', e)
-    return false
+    console.error('testCookieDeep error:', e)
+    return { authenticated: false, diagnostics: { error: String(e) } }
   }
 }
 

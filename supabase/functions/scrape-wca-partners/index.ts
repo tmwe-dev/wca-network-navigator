@@ -672,7 +672,7 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
   }
 }
 
-async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean }> {
+async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean; contactsAuthenticated: boolean }> {
   const res = await fetch(url, {
     method: 'GET',
     headers: {
@@ -684,13 +684,25 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
   })
   const html = await res.text()
   
-  // Count "Members only" occurrences in contact sections
   const membersOnlyCount = (html.match(/Members\s*only/gi) || []).length
   const hasLoginPrompt = /please\s*Login|Login\s*to\s*view/i.test(html)
   
-  console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}`)
+  // Deep check: are private contact names visible?
+  const contactBlocks = html.split(/contactperson_row/).slice(1)
+  let contactsWithRealName = 0
+  for (const block of contactBlocks) {
+    const nameMatch = block.match(/profile_label">[^<]*Name[^<]*<\/div>[\s\S]*?profile_val">\s*([^<]+)/i)
+    const name = nameMatch?.[1]?.trim()
+    if (name && !/Members\s*only|Login/i.test(name) && name.length > 2) {
+      contactsWithRealName++
+    }
+  }
   
-  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt }
+  const contactsAuthenticated = contactBlocks.length > 0 && contactsWithRealName > 0
+  
+  console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, contactsAuth=${contactsAuthenticated}`)
+  
+  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, contactsAuthenticated }
 }
 
 // Simple HTML-to-markdown converter for profile pages
@@ -902,20 +914,20 @@ Deno.serve(async (req) => {
       const result = await directFetchPage(url, wcaSessionCookie)
       html = result.html
       
-      if (!result.membersOnly) {
+      if (result.contactsAuthenticated) {
         authStatus = 'authenticated'
-        loginDetails = 'Direct fetch with session cookie - contacts visible'
-        console.log('AUTH OK: session cookie valid, contacts accessible')
+        loginDetails = 'Direct fetch with session cookie - private contacts visible'
+        console.log('AUTH OK: session cookie valid, private contacts accessible')
       } else {
         authStatus = 'members_only'
-        loginDetails = 'Session cookie present but some sections marked members_only - HTML preserved'
-        console.log(`AUTH PARTIAL: members_only detected but keeping HTML (${html.length} chars) - contains useful data`)
-        // NON scartare html - contiene comunque dati utili (email, telefoni, etc.)
+        loginDetails = 'Session cookie present but private contact names NOT visible (Members only)'
+        console.log(`AUTH FAILED: cookie doesn't grant access to private contacts. Attempting auto-login...`)
+        // Don't use this html yet - try auto-login first
       }
     }
 
-    // Try 2: Auto-login with stored WCA credentials if cookie missing or expired
-    if (!html && authStatus !== 'authenticated') {
+    // Try 2: Auto-login with stored WCA credentials if cookie missing or contacts not visible
+    if (authStatus !== 'authenticated') {
       const { data: credSettings } = await supabase
         .from('app_settings')
         .select('key, value')
@@ -933,15 +945,12 @@ Deno.serve(async (req) => {
         if (loginResult.success) {
           console.log('Auto-login SUCCESS, fetching profile...')
           const loginFetchResult = await directFetchPage(url, loginResult.cookies)
-          // Solo sovrascrivere html se auto-login produce risultato migliore
-          if (!loginFetchResult.membersOnly || !html) {
-            html = loginFetchResult.html
-          }
           
-          if (!loginFetchResult.membersOnly) {
+          if (loginFetchResult.contactsAuthenticated) {
+            html = loginFetchResult.html
             authStatus = 'authenticated'
-            loginDetails = 'Auto-login successful - contacts visible'
-            console.log('AUTH OK: auto-login worked, contacts accessible')
+            loginDetails = 'Auto-login successful - private contacts visible'
+            console.log('AUTH OK: auto-login worked, private contacts accessible')
             
             // Save the fresh cookie for future requests
             await supabase
