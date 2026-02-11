@@ -25,10 +25,8 @@ const navItems = [
   { title: "Partner", url: "/", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Download", url: "/download-management", icon: HardDriveDownload, badgeKey: "download" },
-  { title: "Reminders", url: "/reminders", icon: Calendar },
-  { title: "Export", url: "/export", icon: Download },
+  { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
-  { title: "WCA", url: "/wca", icon: Wifi },
 ];
 
 interface AppSidebarProps {
