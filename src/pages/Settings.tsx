@@ -4,156 +4,317 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, Loader2, KeyRound, MessageCircle, Phone, CheckCircle2, Shield } from "lucide-react";
-import { WcaSessionCard } from "@/components/settings/WcaSessionCard";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
+  Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
+  Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
+} from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { usePartners } from "@/hooks/usePartners";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { toast as toastHook } from "@/hooks/use-toast";
+import { CSVImport } from "@/components/partners/CSVImport";
+import { WCAScraper } from "@/components/partners/WCAScraper";
+
+/* ── Export field config ── */
+const EXPORT_FIELDS = [
+  { id: "company_name", label: "Company Name" },
+  { id: "wca_id", label: "WCA ID" },
+  { id: "country_code", label: "Country Code" },
+  { id: "country_name", label: "Country" },
+  { id: "city", label: "City" },
+  { id: "address", label: "Address" },
+  { id: "phone", label: "Phone" },
+  { id: "email", label: "Email" },
+  { id: "website", label: "Website" },
+  { id: "partner_type", label: "Partner Type" },
+  { id: "member_since", label: "Member Since" },
+  { id: "membership_expires", label: "Membership Expires" },
+];
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const { triggerCheck } = useWcaSessionStatus();
+  const { status: wcaStatus, checkedAt, triggerCheck } = useWcaSessionStatus();
 
+  /* ── Generale state ── */
   const [whatsappNumber, setWhatsappNumber] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [savingWA, setSavingWA] = useState(false);
 
-  const handleVerify = async () => {
-    setVerifying(true);
-    try {
-      await triggerCheck();
-      toast.success("Verifica completata!");
-    } catch {
-      toast.error("Errore durante la verifica");
-    } finally {
-      setVerifying(false);
-    }
-  };
+  /* ── WCA state ── */
+  const [verifying, setVerifying] = useState(false);
+  const [cookieInput, setCookieInput] = useState("");
+  const [savingCookie, setSavingCookie] = useState(false);
+  const isWcaOk = wcaStatus === "ok";
+
+  /* ── Export state ── */
+  const [selectedFields, setSelectedFields] = useState<string[]>(EXPORT_FIELDS.map((f) => f.id));
+  const { data: partners, isLoading: loadingPartners } = usePartners();
 
   useEffect(() => {
-    if (settings) {
-      setWhatsappNumber(settings["whatsapp_number"] || "");
-    }
+    if (settings) setWhatsappNumber(settings["whatsapp_number"] || "");
   }, [settings]);
 
-  const hasCookie = !!settings?.["wca_session_cookie"];
+  /* ── WCA handlers ── */
+  const handleVerify = async () => {
+    setVerifying(true);
+    try { await triggerCheck(); toast.success("Verifica completata!"); }
+    catch { toast.error("Errore durante la verifica"); }
+    finally { setVerifying(false); }
+  };
+
+  const handleSaveCookie = async () => {
+    const cookie = cookieInput.trim();
+    if (!cookie) return;
+    setSavingCookie(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("save-wca-cookie", { body: { cookie } });
+      if (error) throw error;
+      if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
+      else toast.warning("Cookie salvato ma la verifica è fallita.");
+      triggerCheck();
+    } catch (err: any) { toast.error("Errore: " + (err.message || "Sconosciuto")); }
+    finally { setSavingCookie(false); }
+  };
+
+  /* ── Export handlers ── */
+  const toggleField = (id: string) =>
+    setSelectedFields((p) => (p.includes(id) ? p.filter((f) => f !== id) : [...p, id]));
+
+  const exportCSV = () => {
+    if (!partners?.length) { toastHook({ title: "Nessun dato", variant: "destructive" }); return; }
+    const headers = selectedFields.join(",");
+    const rows = partners.map((p) => selectedFields.map((f) => { const v = (p as any)[f]; return v == null ? "" : `"${String(v).replace(/"/g, '""')}"`; }).join(","));
+    downloadBlob([headers, ...rows].join("\n"), "text/csv;charset=utf-8;", "csv");
+    toastHook({ title: "Export completato", description: `${partners.length} partner esportati in CSV.` });
+  };
+
+  const exportJSON = () => {
+    if (!partners?.length) { toastHook({ title: "Nessun dato", variant: "destructive" }); return; }
+    const data = partners.map((p) => { const o: Record<string, any> = {}; selectedFields.forEach((f) => { o[f] = (p as any)[f]; }); return o; });
+    downloadBlob(JSON.stringify(data, null, 2), "application/json", "json");
+    toastHook({ title: "Export completato", description: `${partners.length} partner esportati in JSON.` });
+  };
+
+  const downloadBlob = (content: string, type: string, ext: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wca-partners-${new Date().toISOString().split("T")[0]}.${ext}`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">Impostazioni</h1>
         <p className="text-muted-foreground mt-1">Configurazione della piattaforma</p>
       </div>
 
-      {/* WCA Session - compact card pointing to /wca */}
-      <Card className="border-amber-200 bg-amber-50/30">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <KeyRound className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Sessione WCA</CardTitle>
-                <CardDescription>Stato della connessione a WCA World</CardDescription>
-              </div>
-            </div>
-            {hasCookie ? (
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Cookie presente
-              </Badge>
-            ) : (
-              <Badge variant="destructive">Mancante</Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <WcaSessionCard onVerify={handleVerify} verifying={verifying} />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="generale" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="generale" className="flex items-center gap-2">
+            <SettingsIcon className="w-4 h-4" /> Generale
+          </TabsTrigger>
+          <TabsTrigger value="wca" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" /> WCA
+          </TabsTrigger>
+          <TabsTrigger value="import-export" className="flex items-center gap-2">
+            <Download className="w-4 h-4" /> Import / Export
+          </TabsTrigger>
+        </TabsList>
 
-      {/* WhatsApp Configuration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <MessageCircle className="w-5 h-5 text-emerald-600" />
+        {/* ════════════════ GENERALE ════════════════ */}
+        <TabsContent value="generale">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Numero WhatsApp</CardTitle>
+                    <CardDescription>Il tuo numero WhatsApp per chiamate e messaggi dal sistema</CardDescription>
+                  </div>
+                </div>
+                {settings?.["whatsapp_number"] ? (
+                  <Badge className="bg-primary/10 text-primary border border-primary/20">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Configurato
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Non impostato</Badge>
+                )}
               </div>
-              <div>
-                <CardTitle className="text-base">Numero WhatsApp</CardTitle>
-                <CardDescription>
-                  Il tuo numero WhatsApp per chiamate e messaggi dal sistema
-                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp-number">Numero di telefono</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="whatsapp-number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+39 333 1234567" className="pl-10" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).</p>
               </div>
-            </div>
-            {settings?.["whatsapp_number"] ? (
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Configurato
-              </Badge>
-            ) : (
-              <Badge variant="secondary">Non impostato</Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="whatsapp-number">Numero di telefono</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="whatsapp-number"
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder="+39 333 1234567"
-                  className="pl-10"
-                />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Shield className="w-3.5 h-3.5" /> Salvato nelle impostazioni dell'app
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!whatsappNumber.trim()) return;
+                    setSavingWA(true);
+                    try { await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() }); toast.success("Numero WhatsApp salvato"); }
+                    catch { toast.error("Errore nel salvataggio"); }
+                    finally { setSavingWA(false); }
+                  }}
+                  disabled={savingWA || !whatsappNumber.trim()}
+                  variant="outline"
+                >
+                  {savingWA ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salva Numero
+                </Button>
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).
-            </p>
-          </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Shield className="w-3.5 h-3.5" />
-              Salvato nelle impostazioni dell'app
+        {/* ════════════════ WCA ════════════════ */}
+        <TabsContent value="wca">
+          <div className="space-y-4">
+            {/* Status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold">Connessione WCA World</h2>
+              </div>
+              <Badge variant={isWcaOk ? "default" : "destructive"} className={isWcaOk ? "bg-primary text-primary-foreground" : ""}>
+                {isWcaOk ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</> : <><XCircle className="w-3 h-3 mr-1" /> Non connesso</>}
+              </Badge>
             </div>
-            <Button
-              onClick={async () => {
-                if (!whatsappNumber.trim()) return;
-                setSaving(true);
-                try {
-                  await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() });
-                  toast.success("Numero WhatsApp salvato");
-                } catch {
-                  toast.error("Errore nel salvataggio");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              disabled={saving || !whatsappNumber.trim()}
-              variant="outline"
-            >
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salva Numero
-            </Button>
+
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <Button className="w-full" size="lg" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
+                  <ExternalLink className="w-4 h-4 mr-2" /> Apri WCA World e Sincronizza
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Accedi a wcaworld.com, poi clicca l'icona dell'estensione Chrome → <strong>🔄 Sincronizza Cookie</strong>
+                </p>
+
+                <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
+                  {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  {verifying ? "Verifica..." : "Verifica Sessione"}
+                </Button>
+
+                {checkedAt && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    Ultimo controllo: {new Date(checkedAt).toLocaleString("it-IT")}
+                  </p>
+                )}
+
+                {/* Fallback manuale */}
+                <details className="group">
+                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                    ⚙️ Inserimento manuale cookie (emergenza)
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex gap-2">
+                      <Input placeholder="Incolla header Cookie completo..." value={cookieInput} onChange={(e) => setCookieInput(e.target.value)} className="font-mono text-xs" />
+                      <Button onClick={handleSaveCookie} disabled={savingCookie || !cookieInput.trim()} size="sm" className="shrink-0">
+                        {savingCookie ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardPaste className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">F12 → Network → prima richiesta → Headers → Cookie → copia tutto.</p>
+                  </div>
+                </details>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* ════════════════ IMPORT / EXPORT ════════════════ */}
+        <TabsContent value="import-export">
+          <Tabs defaultValue="import" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="import" className="flex items-center gap-2"><Upload className="w-4 h-4" /> Importa</TabsTrigger>
+              <TabsTrigger value="export" className="flex items-center gap-2"><Download className="w-4 h-4" /> Esporta</TabsTrigger>
+              <TabsTrigger value="wca-download" className="flex items-center gap-2"><Globe className="w-4 h-4" /> Scarica da WCA</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="import"><CSVImport /></TabsContent>
+
+            <TabsContent value="export">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Seleziona Campi</CardTitle>
+                    <CardDescription>Scegli quali campi includere nell'export</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {EXPORT_FIELDS.map((field) => (
+                        <div key={field.id} className="flex items-center space-x-2">
+                          <Checkbox id={field.id} checked={selectedFields.includes(field.id)} onCheckedChange={() => toggleField(field.id)} />
+                          <Label htmlFor={field.id} className="cursor-pointer">{field.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedFields(EXPORT_FIELDS.map((f) => f.id))}>Seleziona Tutto</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedFields([])}>Deseleziona Tutto</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Formato Export</CardTitle>
+                    <CardDescription>{loadingPartners ? "Caricamento..." : `${partners?.length || 0} partner verranno esportati`}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button variant="outline" className="w-full justify-start h-auto py-4" onClick={exportCSV} disabled={selectedFields.length === 0 || loadingPartners}>
+                      <FileSpreadsheet className="w-8 h-8 mr-4 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium">CSV (Excel compatibile)</p>
+                        <p className="text-sm text-muted-foreground">Ideale per fogli di calcolo</p>
+                      </div>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start h-auto py-4" onClick={exportJSON} disabled={selectedFields.length === 0 || loadingPartners}>
+                      <File className="w-8 h-8 mr-4 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium">JSON</p>
+                        <p className="text-sm text-muted-foreground">Ideale per sviluppatori e API</p>
+                      </div>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start h-auto py-4" disabled>
+                      <FileText className="w-8 h-8 mr-4 text-muted-foreground" />
+                      <div className="text-left">
+                        <p className="font-medium">PDF Report</p>
+                        <p className="text-sm text-muted-foreground">Prossimamente</p>
+                      </div>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="wca-download"><WCAScraper /></TabsContent>
+          </Tabs>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

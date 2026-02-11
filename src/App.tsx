@@ -7,10 +7,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import PartnerHub from "./pages/PartnerHub";
 import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
-import Export from "./pages/Export";
+
 import DownloadManagement from "./pages/DownloadManagement";
 import Settings from "./pages/Settings";
-import WCA from "./pages/WCA";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,9 +27,7 @@ const App = () => (
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
-            <Route path="/export" element={<Export />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/wca" element={<WCA />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
