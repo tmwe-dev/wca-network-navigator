@@ -12,6 +12,7 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 const navItems = [
   { title: "Partner", url: "/", icon: Globe },
   { title: "Acquisizione", url: "/acquisizione", icon: Download },
+  { title: "Download", url: "/download-management", icon: Database },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
