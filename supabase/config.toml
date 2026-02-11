@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.scrape-wca-blacklist]
 verify_jwt = false
+
+[functions.get-wca-credentials]
+verify_jwt = false
