@@ -32,6 +32,22 @@ import {
   AlertTriangle,
   Filter,
   Building2,
+  Circle,
+  ArrowUpRight,
+  CheckCircle2,
+  Plane,
+  Ship,
+  Truck,
+  TrainFront,
+  Package,
+  Snowflake,
+  Pill,
+  ShoppingCart,
+  Home,
+  FileCheck,
+  Warehouse,
+  Anchor,
+  Box,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -46,6 +62,7 @@ import {
   formatPartnerType,
   formatServiceCategory,
   getServiceColor,
+  getServiceIconName,
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -64,10 +81,22 @@ const PartnerMiniGlobe = lazy(() =>
 
 function getContactStatus(interactions: any[] | undefined) {
   if (!interactions || interactions.length === 0)
-    return { label: "Primo contatto", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300", count: 0 };
+    return { label: "Primo contatto", icon: Circle, count: 0 };
   if (interactions.length <= 2)
-    return { label: "In conoscenza", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", count: interactions.length };
-  return { label: "Attivo", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300", count: interactions.length };
+    return { label: "In conoscenza", icon: ArrowUpRight, count: interactions.length };
+  return { label: "Attivo", icon: CheckCircle2, count: interactions.length };
+}
+
+const SERVICE_ICON_MAP: Record<string, any> = {
+  Plane: Plane, Ship: Ship, Truck: Truck, TrainFront: TrainFront,
+  Package: Package, AlertTriangle: AlertTriangle, Snowflake: Snowflake,
+  Pill: Pill, ShoppingCart: ShoppingCart, Home: Home, FileCheck: FileCheck,
+  Warehouse: Warehouse, Anchor: Anchor, Box: Box,
+};
+
+function ServiceIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = SERVICE_ICON_MAP[name] || Box;
+  return <Icon className={className} />;
 }
 
 export default function PartnerHub() {
@@ -156,7 +185,7 @@ export default function PartnerHub() {
               className={cn(
                 "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all",
                 filterIncomplete
-                  ? "bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-500/40 dark:text-red-400"
+                  ? "bg-primary/10 border-primary/30 text-primary"
                   : "bg-muted border-border text-muted-foreground hover:bg-accent"
               )}
             >
@@ -204,13 +233,13 @@ export default function PartnerHub() {
                                   (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
                                 }}
                               />
-                              <span className="hidden text-2xl leading-none">{getCountryFlag(partner.country_code)}</span>
+                              <div className="hidden w-9 h-9 rounded-md bg-muted border" />
                               <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">
                                 {getCountryFlag(partner.country_code)}
                               </span>
                             </>
                           ) : (
-                            <span className="text-2xl leading-none">{getCountryFlag(partner.country_code)}</span>
+                            <div className="w-9 h-9 rounded-md bg-muted border" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -229,17 +258,17 @@ export default function PartnerHub() {
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             {q === "complete" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
                                 <UserCheck className="w-3 h-3" /> OK
                               </span>
                             )}
                             {q === "partial" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
                                 <AlertTriangle className="w-3 h-3" /> Parziale
                               </span>
                             )}
                             {q === "missing" && (
-                              <span className="text-[9px] flex items-center gap-0.5 text-red-600 dark:text-red-400">
+                              <span className="text-[9px] flex items-center gap-0.5 text-muted-foreground">
                                 <UserX className="w-3 h-3" /> No contatti
                               </span>
                             )}
@@ -349,11 +378,11 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                     (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
                   }}
                 />
-                <span className={cn("text-5xl", partner.logo_url && "hidden")}>{getCountryFlag(partner.country_code)}</span>
+                <div className="hidden w-14 h-14 rounded-xl bg-muted border" />
                 <span className="absolute -bottom-1 -right-1 text-lg leading-none">{getCountryFlag(partner.country_code)}</span>
               </>
             ) : (
-              <span className="text-5xl">{getCountryFlag(partner.country_code)}</span>
+              <div className="w-14 h-14 rounded-xl bg-muted border" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -364,7 +393,11 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
               {partner.wca_id && <Badge variant="outline" className="text-xs ml-1">WCA #{partner.wca_id}</Badge>}
             </div>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <Badge className={cn("text-xs", status.color)}>{status.label}</Badge>
+              {(() => { const StatusIcon = status.icon; return (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <StatusIcon className="w-3 h-3" /> {status.label}
+                </Badge>
+              ); })()}
               <Badge variant="secondary" className="text-xs">{formatPartnerType(partner.partner_type)}</Badge>
               {partner.office_type && (
                 <Badge variant="outline" className="text-xs">
@@ -455,7 +488,10 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
           <p className="text-xs text-muted-foreground mb-2 font-medium">Servizi & Specialità</p>
           <div className="flex flex-wrap gap-1.5">
             {partner.partner_services.map((s: any, i: number) => (
-              <Badge key={i} className={cn(getServiceColor(s.service_category))}>{formatServiceCategory(s.service_category)}</Badge>
+              <Badge key={i} variant="secondary" className="text-xs gap-1">
+                <ServiceIcon name={getServiceIconName(s.service_category)} className="w-3 h-3" />
+                {formatServiceCategory(s.service_category)}
+              </Badge>
             ))}
           </div>
         </div>
@@ -591,15 +627,7 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
             <div className="space-y-3">
               {partner.interactions.map((interaction: any) => (
                 <div key={interaction.id} className="flex gap-3 p-3 rounded-lg border">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                      interaction.interaction_type === "call" && "bg-green-100 text-green-700",
-                      interaction.interaction_type === "email" && "bg-blue-100 text-blue-700",
-                      interaction.interaction_type === "meeting" && "bg-purple-100 text-purple-700",
-                      interaction.interaction_type === "note" && "bg-muted text-muted-foreground"
-                    )}
-                  >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 bg-muted text-muted-foreground">
                     {interaction.interaction_type?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
