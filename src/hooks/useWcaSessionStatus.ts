@@ -24,8 +24,8 @@ export function useWcaSessionStatus() {
     refetchInterval: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Trigger a fresh check via the edge function and return the result directly
-  const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean } | null> => {
+  // Trigger a fresh check via the edge function, with optional auto-login
+  const triggerCheck = async (autoLogin = false): Promise<{ status: WcaSessionStatus; authenticated: boolean; autoLoginAttempted?: boolean } | null> => {
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
       const res = await fetch(url, {
@@ -34,14 +34,14 @@ export function useWcaSessionStatus() {
           "Content-Type": "application/json",
           "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ autoLogin }),
       });
       const data = await res.json();
-      // Refetch in background to update React Query cache
       statusQuery.refetch();
       return {
         status: (data.status || "error") as WcaSessionStatus,
         authenticated: !!data.authenticated,
+        autoLoginAttempted: data.autoLoginAttempted,
       };
     } catch (err) {
       console.error("WCA session check failed:", err);
@@ -49,10 +49,14 @@ export function useWcaSessionStatus() {
     }
   };
 
+  // Auto-login shortcut
+  const autoLogin = async () => triggerCheck(true);
+
   return {
     status: statusQuery.data?.status ?? "checking",
     checkedAt: statusQuery.data?.checkedAt ?? null,
     isLoading: statusQuery.isLoading,
-    triggerCheck,
+    triggerCheck: () => triggerCheck(false),
+    autoLogin,
   };
 }
