@@ -61,6 +61,40 @@ export function getServiceIconName(category: string): string {
   return icons[category] || "Box";
 }
 
+// Service icon color mapping (Tailwind classes)
+export function getServiceIconColor(category: string): string {
+  const colors: Record<string, string> = {
+    air_freight: "text-sky-500",
+    ocean_fcl: "text-blue-500",
+    ocean_lcl: "text-blue-400",
+    road_freight: "text-amber-500",
+    rail_freight: "text-slate-500",
+    project_cargo: "text-orange-500",
+    dangerous_goods: "text-red-500",
+    perishables: "text-cyan-400",
+    pharma: "text-purple-500",
+    ecommerce: "text-green-500",
+    relocations: "text-teal-500",
+    customs_broker: "text-indigo-500",
+    warehousing: "text-stone-500",
+    nvocc: "text-slate-600",
+  };
+  return colors[category] || "text-muted-foreground";
+}
+
+// Partner type icon name mapping
+export function getPartnerTypeIconName(type: string | null): string {
+  const icons: Record<string, string> = {
+    freight_forwarder: "Truck",
+    customs_broker: "FileCheck",
+    carrier: "Ship",
+    nvocc: "Anchor",
+    "3pl": "Warehouse",
+    courier: "Package",
+  };
+  return icons[type || ""] || "Box";
+}
+
 // Priority colors
 export function getPriorityColor(priority: string | null): string {
   switch (priority) {
