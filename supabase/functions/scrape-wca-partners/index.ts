@@ -908,53 +908,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Try 2: Auto-login with stored WCA credentials if cookie missing or contacts not visible
-    if (authStatus !== 'authenticated') {
-      const { data: credSettings } = await supabase
-        .from('app_settings')
-        .select('key, value')
-        .in('key', ['wca_username', 'wca_password'])
-      
-      const creds: Record<string, string> = {}
-      for (const s of (credSettings || [])) {
-        if (s.value) creds[s.key] = s.value
-      }
-      
-      if (creds.wca_username && creds.wca_password) {
-        console.log(`Auto-login: attempting with user ${creds.wca_username}...`)
-        const loginResult = await directWcaLogin(creds.wca_username, creds.wca_password)
-        
-        if (loginResult.success) {
-          console.log('Auto-login SUCCESS, fetching profile...')
-          const loginFetchResult = await directFetchPage(url, loginResult.cookies)
-          
-          if (loginFetchResult.contactsAuthenticated) {
-            html = loginFetchResult.html
-            authStatus = 'authenticated'
-            loginDetails = 'Auto-login successful - private contacts visible'
-            console.log('AUTH OK: auto-login worked, private contacts accessible')
-            
-            // Save the fresh cookie for future requests
-            await supabase
-              .from('app_settings')
-              .upsert({ key: 'wca_auth_cookie', value: loginResult.cookies, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-            console.log('Saved fresh auth cookie to app_settings')
-          } else {
-            authStatus = 'members_only'
-            loginDetails = 'Auto-login succeeded but contacts still blocked (account may lack permissions)'
-            console.log('AUTH PARTIAL: logged in but still members_only')
-          }
-        } else {
-          console.log(`Auto-login FAILED: ${loginResult.error}`)
-          authStatus = 'login_failed'
-          loginDetails = `Auto-login failed: ${loginResult.error}`
-        }
-      } else if (!wcaSessionCookie) {
-        loginDetails = 'No WCA credentials configured. Go to Settings to add username/password.'
-      }
-    }
-
-    // Try 3: Firecrawl fallback (unauthenticated)
+    // Try 2: Firecrawl fallback (unauthenticated)
     if (!html) {
       const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
       if (apiKey) {

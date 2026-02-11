@@ -17,12 +17,6 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
-    let autoLogin = false
-    try {
-      const body = await req.json()
-      autoLogin = body?.autoLogin === true
-    } catch { /* no body */ }
-
     const { data: settings } = await supabase
       .from('app_settings')
       .select('key, value')
@@ -37,10 +31,6 @@ Deno.serve(async (req) => {
     const cookie = map['wca_auth_cookie'] || map['wca_session_cookie'] || Deno.env.get('WCA_SESSION_COOKIE') || null
 
     if (!cookie) {
-      if (autoLogin) {
-        const loginResult = await tryAutoLogin(supabaseUrl, supabaseKey)
-        return respond(loginResult)
-      }
       await upsertStatus(supabase, 'no_cookie', new Date().toISOString())
       return respond({ authenticated: false, status: 'no_cookie' })
     }
@@ -56,14 +46,7 @@ Deno.serve(async (req) => {
     const status = authenticated ? 'ok' : 'expired'
     await upsertStatus(supabase, status, new Date().toISOString())
 
-    // If expired and autoLogin requested, try to renew
-    if (!authenticated && autoLogin) {
-      console.log('Cookie expired, attempting auto-login...')
-      const loginResult = await tryAutoLogin(supabaseUrl, supabaseKey)
-      return respond(loginResult)
-    }
-
-    return respond({ 
+    return respond({
       authenticated, 
       status, 
       checkedAt: new Date().toISOString(),
@@ -151,30 +134,6 @@ async function upsertStatus(supabase: any, status: string, checkedAt: string) {
     { key: 'wca_session_checked_at', value: checkedAt, updated_at: now },
     { onConflict: 'key' }
   )
-}
-
-async function tryAutoLogin(supabaseUrl: string, supabaseKey: string): Promise<any> {
-  try {
-    const loginUrl = `${supabaseUrl}/functions/v1/wca-auto-login`
-    const res = await fetch(loginUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const data = await res.json()
-    return {
-      ...data,
-      status: data.authenticated ? 'ok' : 'expired',
-      autoLoginAttempted: true,
-      checkedAt: new Date().toISOString(),
-    }
-  } catch (e) {
-    console.error('Auto-login call failed:', e)
-    return { authenticated: false, status: 'expired', autoLoginAttempted: true, error: 'Auto-login failed' }
-  }
 }
 
 function respond(data: any, status = 200) {

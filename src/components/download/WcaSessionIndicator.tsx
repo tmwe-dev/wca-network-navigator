@@ -8,7 +8,7 @@ import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 export function WcaSessionIndicator() {
   const isDark = useTheme();
-  const { status, checkedAt, diagnostics, triggerCheck, autoLogin, isLoading } = useWcaSessionStatus();
+  const { status, checkedAt, diagnostics, triggerCheck, isLoading } = useWcaSessionStatus();
 
   const isOk = status === "ok";
   const dotColor = isOk
@@ -67,12 +67,8 @@ export function WcaSessionIndicator() {
             {!isOk && (
               <div className="space-y-2">
                 <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Usa l'estensione Chrome per sincronizzare il cookie .ASPXAUTH, oppure prova il login automatico.
+                  Usa l'estensione Chrome per sincronizzare il cookie .ASPXAUTH.
                 </p>
-                <Button size="sm" variant="outline" onClick={autoLogin} disabled={isLoading} className="w-full">
-                  {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Key className="w-3.5 h-3.5 mr-1" />}
-                  Tenta Auto-Login
-                </Button>
               </div>
             )}
             <Button size="sm" variant="outline" onClick={triggerCheck} disabled={isLoading} className="w-full">
@@ -89,12 +85,7 @@ export function WcaSessionIndicator() {
 export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolean; onOpenChange: (o: boolean) => void; onRetry: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const { status, diagnostics, triggerCheck, autoLogin, isLoading } = useWcaSessionStatus();
-
-  const handleAutoLogin = async () => {
-    await autoLogin();
-    setTimeout(() => { onRetry(); }, 2000);
-  };
+  const { status, diagnostics, triggerCheck, isLoading } = useWcaSessionStatus();
 
   const handleRetry = async () => {
     await triggerCheck();
@@ -117,11 +108,11 @@ export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolea
           <ol className={`text-sm space-y-3 ${th.body}`}>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepAct}`}>1</span>
-              <span>Prova il <strong>Login Automatico</strong> (usa le credenziali salvate)</span>
+              <span>Vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a>, fai login, e usa l'estensione Chrome per sincronizzare il cookie</span>
             </li>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>2</span>
-              <span>Se fallisce, vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a>, fai login, e usa l'estensione Chrome per sincronizzare il cookie</span>
+              <span>Torna qui e clicca <strong>Verifica sessione</strong> per confermare</span>
             </li>
           </ol>
           
@@ -133,11 +124,7 @@ export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolea
             </div>
           )}
 
-          <Button onClick={handleAutoLogin} disabled={isLoading} className={`w-full ${th.btnPri}`}>
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
-            Tenta Auto-Login
-          </Button>
-          <Button onClick={handleRetry} disabled={isLoading} variant="outline" className="w-full">
+          <Button onClick={handleRetry} disabled={isLoading} className={`w-full ${th.btnPri}`}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             Verifica sessione
           </Button>
