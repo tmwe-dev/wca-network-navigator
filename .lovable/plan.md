@@ -1,52 +1,58 @@
 
 
-# Fix: Ripristino automatico del monitoraggio acquisizione al rientro nella pagina
+# Fix: Lo scraper non rileva la sessione scaduta — soglia "Members only" troppo permissiva
 
-## Problema
+## Problema trovato
 
-Quando navighi fuori dalla pagina Acquisizione e ci ritorni, il job in background continua a processare (la Edge Function lavora indipendentemente), ma la UI non lo mostra. Il motivo:
-
-- Il `useEffect` di mount trova il job attivo e ricostruisce la coda
-- Ma imposta lo stato a "idle" o "paused", mai a "running"
-- Il loop di polling che aggiorna la UI in tempo reale (barra progresso, canvas, statistiche) viene avviato solo quando clicchi "Avvia Acquisizione"
-- Risultato: vedi la lista dei partner ma nessun feedback live
-
-## Soluzione
-
-### File: `src/pages/AcquisizionePartner.tsx`
-
-1. **Auto-resume del polling quando il job e' "running"**: nel `useEffect` di mount (riga 72-195), se il job trovato ha `status === "running"`, impostare `pipelineStatus` a `"running"` e avviare automaticamente il polling loop per seguire il progresso in tempo reale.
-
-2. **Estrarre il polling loop in una funzione riusabile**: attualmente il loop di polling (righe 394-705) e' embedded dentro `startPipeline`. Verra' estratto in una funzione `pollJobProgress(jobId, items)` che puo' essere chiamata sia da `startPipeline` che dal `useEffect` di resume.
-
-3. **Aggiornare le live stats dal DB al mount**: quando si riprende un job, caricare `contacts_found_count`, `contacts_missing_count` e `current_index` dal job per popolare subito le statistiche live, senza aspettare il primo ciclo di polling.
-
-### Dettaglio tecnico
-
-```text
-PRIMA (attuale):
-  Mount -> trova job "running" -> pipelineStatus = "idle" -> UI ferma
-
-DOPO (fix):
-  Mount -> trova job "running" -> pipelineStatus = "running"
-        -> avvia pollJobProgress() -> UI mostra progresso live
-        -> aggiorna coda, stats, canvas in tempo reale
+Dai log del server, il profilo WCA ID 72850 mostra:
+```
+membersOnly=1x, contactBlocks=0, realNames=0, contactsAuth=false
 ```
 
-### Modifiche specifiche
+Ma lo scraper lo tratta come "AUTH OK" perche' la condizione per dichiarare la sessione non valida e':
+```
+membersOnly > 2 || hasLoginPrompt
+```
 
-- Riga 182: cambiare da `setPipelineStatus(job.status === "paused" ? "paused" : "idle")` a gestire anche il caso `"running"` avviando il polling
-- Aggiungere al mount l'inizializzazione delle `liveStats` con i dati gia' presenti nel job (`contacts_found_count`, `contacts_missing_count`)
-- Utilizzare un `useRef` per il polling in modo che possa essere pulito se l'utente naviga via di nuovo
+Significa che servono **3 o piu'** occorrenze di "Members only" per bloccare il download. Con 1 solo "Members only" (tipico di sessioni scadute), il sistema pensa che il membro semplicemente non abbia contatti e prosegue — scaricando dati vuoti.
+
+Il job precedente (71727edd) con lo stesso cookie trovava 40 contatti su 83 profili. Il job nuovo (1aefb73e) ne ha trovato 0 su 1 — chiaramente la sessione si e' degradata.
+
+## Correzione
+
+### File 1: `supabase/functions/scrape-wca-partners/index.ts`
+
+**Abbassare la soglia da `> 2` a `> 0`:**
+
+Riga 600 — cambiare:
+```typescript
+return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, ... }
+```
+in:
+```typescript
+return { html, membersOnly: membersOnlyCount > 0 || hasLoginPrompt, ... }
+```
+
+Questo fa si' che anche una sola occorrenza di "Members only" venga segnalata come sessione non autenticata.
+
+**Aggiornare la logica di auth (righe 816-821):**
+
+La condizione `!result.membersOnly` ora sara' piu' rigorosa. Un profilo con `membersOnly >= 1` verra' correttamente identificato come sessione scaduta, anche se non ci sono blocchi `contactperson_row`.
+
+### File 2: `supabase/functions/process-download-job/index.ts`
+
+**Nessuna modifica necessaria** — il pre-auth check gia' usa `scrape-wca-partners` per il primo profilo. Con la soglia corretta, il job verra' messo in pausa se la sessione e' scaduta.
+
+## Risultato atteso
+
+- Con la nuova soglia, anche 1 "Members only" blocca il download
+- Il job viene messo in pausa immediatamente
+- L'utente riceve la notifica "Sessione scaduta"
+- Niente piu' download di dati vuoti
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/AcquisizionePartner.tsx` | Auto-resume polling al mount quando job e' running + init live stats dal DB |
-
-## Risultato atteso
-
-- Quando torni alla pagina Acquisizione e c'e' un job attivo, lo vedi subito con barra progresso, statistiche e canvas animato — identico a come se non avessi mai lasciato la pagina
-- I bottoni Pausa/Stop sono immediatamente disponibili
+| `supabase/functions/scrape-wca-partners/index.ts` | Soglia membersOnly da > 2 a > 0 (riga 600) |
 
