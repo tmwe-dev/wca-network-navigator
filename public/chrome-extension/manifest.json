@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "WCA Cookie Sync",
+  "version": "1.0",
+  "description": "Sincronizza automaticamente i cookie di sessione WCA con la tua app.",
+  "permissions": ["cookies"],
+  "host_permissions": ["https://www.wcaworld.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
