@@ -215,10 +215,10 @@ export default function AcquisizionePartner() {
           country_name: partnerData?.country_name || "",
           logo_url: partnerData?.logo_url,
           contacts: contacts.map((c: any) => ({
-            name: c.name,
+            name: c.name || c.title || "Sconosciuto",
             title: c.title,
             email: c.email,
-            direct_phone: c.direct_phone,
+            direct_phone: c.phone || c.direct_phone,
             mobile: c.mobile,
           })),
           services: partnerData?.services || scrapeResult?.services || [],
