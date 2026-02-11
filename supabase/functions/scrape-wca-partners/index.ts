@@ -50,9 +50,17 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   }
 
   const topSection = md.substring(0, 2000)
-  const countryLineMatch = topSection.match(/^(United States of America|United Kingdom|Canada|Australia|Germany|France|Italy|Spain|China|India|Japan|Brazil|Mexico|Argentina|Colombia|Chile|Peru|South Korea|Thailand|Indonesia|Malaysia|Vietnam|Philippines|Singapore|Hong Kong|Taiwan|Turkey|Saudi Arabia|United Arab Emirates|South Africa|Nigeria|Kenya|Egypt|Netherlands|Belgium|Switzerland|Austria|Sweden|Norway|Denmark|Finland|Poland|Czech Republic|Portugal|Greece|Ireland|New Zealand|Israel|Russia|Ukraine|Romania|Hungary|Pakistan|Bangladesh|Sri Lanka|Nepal|Panama|Costa Rica|Ecuador|Bolivia|Paraguay|Uruguay|Venezuela|Guatemala|Honduras|Dominican Republic|El Salvador|Nicaragua|Cuba|Jamaica|Trinidad and Tobago|Puerto Rico)$/mi)
+  const countryLineMatch = topSection.match(/^(United States of America|United Kingdom|Canada|Australia|Germany|France|Italy|Spain|China|India|Japan|Brazil|Mexico|Argentina|Colombia|Chile|Peru|South Korea|Thailand|Indonesia|Malaysia|Vietnam|Philippines|Singapore|Hong Kong|Taiwan|Turkey|Saudi Arabia|United Arab Emirates|South Africa|Nigeria|Kenya|Egypt|Netherlands|Belgium|Switzerland|Austria|Sweden|Norway|Denmark|Finland|Poland|Czech Republic|Portugal|Greece|Ireland|New Zealand|Israel|Russia|Ukraine|Romania|Hungary|Pakistan|Bangladesh|Sri Lanka|Nepal|Panama|Costa Rica|Ecuador|Bolivia|Paraguay|Uruguay|Venezuela|Guatemala|Honduras|Dominican Republic|El Salvador|Nicaragua|Cuba|Jamaica|Trinidad and Tobago|Puerto Rico|Albania|Kosovo|Bosnia and Herzegovina|North Macedonia|Montenegro|Georgia|Uzbekistan|Kazakhstan|Kyrgyzstan|Tajikistan|Turkmenistan|Belarus|Moldova|Senegal|Ivory Coast|Cameroon|Congo|Madagascar|Namibia|Botswana|Zimbabwe|Zambia|Malawi|Rwanda|Burundi|Libya|Sudan|Somalia|Djibouti|Mauritius|Maldives|Brunei|Fiji|Papua New Guinea|Bahamas|Barbados|Belize|Guyana|Suriname|Haiti|Bermuda|Cayman Islands|Curacao|Reunion)$/mi)
   if (countryLineMatch) {
     country = countryLineMatch[1].trim()
+  }
+  
+  // Also try to extract country from address line (e.g., "2001, Durres, Albania")
+  if (!country) {
+    const addressCountryMatch = content.match(/,\s*(Albania|Kosovo|Montenegro|North Macedonia|Bosnia and Herzegovina|Serbia|Croatia|Slovenia|Georgia|Armenia|Azerbaijan|Belarus|Moldova|Kazakhstan|Uzbekistan|Kyrgyzstan|Tajikistan|Turkmenistan|Afghanistan|Myanmar|Laos|Cambodia|Mongolia|Brunei|Fiji|Papua New Guinea|Bahamas|Barbados|Belize|Guyana|Suriname|Haiti|Bermuda|Djibouti|Somalia|Sudan|Libya|Rwanda|Burundi|Malawi|Zambia|Zimbabwe|Botswana|Namibia|Madagascar|Cameroon|Senegal|Ivory Coast|Mauritius|Maldives|United States of America|United Kingdom|Canada|Australia|Germany|France|Italy|Spain|China|India|Japan|Brazil|Mexico|Argentina|Colombia|Chile|Peru|South Korea|Thailand|Indonesia|Malaysia|Vietnam|Philippines|Singapore|Hong Kong|Taiwan|Turkey|Saudi Arabia|United Arab Emirates|South Africa|Nigeria|Kenya|Egypt|Netherlands|Belgium|Switzerland|Austria|Sweden|Norway|Denmark|Finland|Poland|Czech Republic|Portugal|Greece|Ireland|New Zealand|Israel|Russia|Ukraine|Romania|Hungary|Pakistan|Bangladesh|Sri Lanka|Nepal|Panama|Costa Rica|Ecuador|Bolivia|Paraguay|Uruguay|Venezuela|Guatemala|Honduras|Dominican Republic|El Salvador|Nicaragua|Cuba|Jamaica|Trinidad and Tobago|Puerto Rico|Morocco|Tunisia|Algeria|Ghana|Ethiopia|Tanzania|Uganda|Mozambique|Jordan|Lebanon|Kuwait|Qatar|Bahrain|Oman|Iraq|Iran|Luxembourg|Malta|Cyprus|Iceland)\s*(?:<|$)/i)
+    if (addressCountryMatch) {
+      country = addressCountryMatch[1].trim()
+    }
   }
 
   if (!city) {
@@ -142,13 +150,14 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   ])
 
   // ── Profile Description ──
-  let profileDescription = extractField(md, [
-    /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*[-–]+\s*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
-    /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
+  let profileDescription = extractField(content, [
+    /class="profile_table"[\s\S]*?<td[^>]*>([\s\S]{20,3000}?)<\/td>/i,
+    /class="[^"]*(?:profile|description|about|company-?info)[^"]*"[^>]*>([\s\S]{20,2000}?)<\//i,
   ])
   if (!profileDescription) {
-    profileDescription = extractField(content, [
-      /class="[^"]*(?:profile|description|about|company-?info)[^"]*"[^>]*>([\s\S]{20,2000}?)<\//i,
+    profileDescription = extractField(md, [
+      /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*[-–]+\s*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
+      /Profile:\s*\n+\|[^\n]*\|\s*\n\|\s*([\s\S]{20,3000}?)\s*\|/im,
     ])
   }
   if (profileDescription) {
@@ -452,6 +461,16 @@ function countryNameToCode(name: string | null): string | null {
     'croatia': 'HR', 'serbia': 'RS', 'bulgaria': 'BG', 'slovakia': 'SK',
     'slovenia': 'SI', 'lithuania': 'LT', 'latvia': 'LV', 'estonia': 'EE',
     'luxembourg': 'LU', 'malta': 'MT', 'cyprus': 'CY', 'iceland': 'IS',
+    'albania': 'AL', 'kosovo': 'XK', 'bosnia and herzegovina': 'BA', 'north macedonia': 'MK',
+    'montenegro': 'ME', 'georgia': 'GE', 'uzbekistan': 'UZ', 'kazakhstan': 'KZ',
+    'kyrgyzstan': 'KG', 'tajikistan': 'TJ', 'turkmenistan': 'TM', 'belarus': 'BY',
+    'moldova': 'MD', 'senegal': 'SN', 'ivory coast': 'CI', 'cameroon': 'CM',
+    'congo': 'CG', 'madagascar': 'MG', 'namibia': 'NA', 'botswana': 'BW',
+    'zimbabwe': 'ZW', 'zambia': 'ZM', 'malawi': 'MW', 'rwanda': 'RW',
+    'burundi': 'BI', 'libya': 'LY', 'sudan': 'SD', 'somalia': 'SO',
+    'djibouti': 'DJ', 'mauritius': 'MU', 'maldives': 'MV', 'brunei': 'BN',
+    'fiji': 'FJ', 'papua new guinea': 'PG', 'bahamas': 'BS', 'barbados': 'BB',
+    'belize': 'BZ', 'guyana': 'GY', 'suriname': 'SR', 'haiti': 'HT',
   }
   return map[name.toLowerCase().trim()] || null
 }
@@ -486,6 +505,8 @@ function countryCodeToName(code: string): string {
     'LV': 'Latvia', 'EE': 'Estonia', 'LU': 'Luxembourg', 'MT': 'Malta',
     'CY': 'Cyprus', 'IS': 'Iceland', 'AF': 'Afghanistan', 'AL': 'Albania',
     'AM': 'Armenia', 'AZ': 'Azerbaijan', 'AW': 'Aruba', 'GM': 'Gambia',
+    'XK': 'Kosovo', 'BA': 'Bosnia and Herzegovina', 'MK': 'North Macedonia',
+    'ME': 'Montenegro', 'GE': 'Georgia', 'BY': 'Belarus', 'MD': 'Moldova',
   }
   return map[code.toUpperCase()] || ''
 }
