@@ -65,9 +65,317 @@ export default function AcquisizionePartner() {
 
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
+  const pollingAbortRef = useRef(false);
   const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract } = useExtensionBridge();
   const extensionWarningShown = useRef(false);
+
+  // ── Reusable polling loop: tracks background job progress and enriches each partner ──
+  const pollJobProgress = useCallback(async (jobId: string, items: QueueItem[]) => {
+    let lastProcessedIndex = items.filter(q => q.status === "done").length;
+    let localConsecutiveEmpty = 0;
+    const MAX_CONSECUTIVE_EMPTY = 5;
+    let localStats = { ...liveStats };
+
+    pollingAbortRef.current = false;
+
+    while (lastProcessedIndex < items.length) {
+      if (cancelRef.current || pollingAbortRef.current) break;
+
+      // Pause support
+      while (pauseRef.current) {
+        await new Promise((r) => setTimeout(r, 500));
+        if (cancelRef.current || pollingAbortRef.current) break;
+      }
+      if (cancelRef.current || pollingAbortRef.current) break;
+
+      // Poll job progress from DB
+      const { data: freshJob } = await supabase
+        .from("download_jobs")
+        .select("current_index, status, last_processed_wca_id, last_processed_company, error_message, contacts_found_count, contacts_missing_count")
+        .eq("id", jobId)
+        .single();
+
+      if (!freshJob) break;
+      if (freshJob.status === "error") {
+        toast({ title: "Errore nel job", description: freshJob.error_message || "Errore sconosciuto", variant: "destructive" });
+        break;
+      }
+      if (freshJob.status === "cancelled") break;
+      if (freshJob.status === "completed" && (freshJob.current_index || 0) <= lastProcessedIndex) break;
+      if (freshJob.status === "paused" && !pauseRef.current) {
+        pauseRef.current = true;
+        setPipelineStatus("paused");
+        toast({
+          title: "Job in pausa",
+          description: freshJob.error_message || "Il server ha messo in pausa il job.",
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      const serverIndex = freshJob.current_index || 0;
+
+      if (serverIndex > lastProcessedIndex) {
+        for (let i = lastProcessedIndex; i < serverIndex && i < items.length; i++) {
+          if (cancelRef.current || pollingAbortRef.current) break;
+
+          const item = items[i];
+          setActiveIndex(i);
+
+          setQueue((prev) =>
+            prev.map((q) =>
+              q.wca_id === item.wca_id ? { ...q, status: "active" as const } : q
+            )
+          );
+
+          setCanvasPhase("downloading");
+          const { data: partner } = await supabase
+            .from("partners")
+            .select("*")
+            .eq("wca_id", item.wca_id)
+            .maybeSingle();
+
+          const partnerData = partner;
+
+          let resolvedName = partnerData?.company_name || item.company_name;
+          let resolvedCity = partnerData?.city || item.city;
+          if (resolvedName.startsWith("WCA ")) {
+            const { data: cacheRows } = await supabase
+              .from("directory_cache")
+              .select("members")
+              .eq("country_code", item.country_code);
+            for (const row of cacheRows || []) {
+              const found = (row.members as any[])?.find((m: any) => m.wca_id === item.wca_id);
+              if (found?.company_name && !found.company_name.startsWith("WCA ")) {
+                resolvedName = found.company_name;
+                if (found.city) resolvedCity = found.city;
+                break;
+              }
+            }
+          }
+
+          const canvas: CanvasData = {
+            company_name: resolvedName,
+            city: resolvedCity,
+            country_code: partnerData?.country_code || item.country_code,
+            country_name: partnerData?.country_name || "",
+            logo_url: partnerData?.logo_url || undefined,
+            contacts: [],
+            services: [],
+            key_markets: [],
+            key_routes: [],
+            networks: [],
+            rating: partnerData?.rating ? Number(partnerData.rating) : undefined,
+            website: partnerData?.website || undefined,
+            profile_description: partnerData?.profile_description || undefined,
+            linkedin_links: [],
+            warehouse_sqm: undefined,
+            employees: undefined,
+            founded: undefined,
+            fleet: undefined,
+            contactSource: "none" as ContactSource,
+          };
+
+          if (partnerData?.id) {
+            const [{ data: nets }, { data: svcs }, { data: serverContacts }] = await Promise.all([
+              supabase.from("partner_networks").select("network_name").eq("partner_id", partnerData.id),
+              supabase.from("partner_services").select("service_category").eq("partner_id", partnerData.id),
+              supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partnerData.id),
+            ]);
+            canvas.networks = (nets || []).map((n) => n.network_name);
+            canvas.services = (svcs || []).map((s) => s.service_category);
+            const serverContactsList = (serverContacts || []).map((c) => ({
+              name: c.name,
+              title: c.title || undefined,
+              email: c.email || undefined,
+              direct_phone: c.direct_phone || undefined,
+              mobile: c.mobile || undefined,
+            }));
+            if (serverContactsList.length > 0 && serverContactsList.some(c => c.email || c.direct_phone || c.mobile)) {
+              canvas.contacts = serverContactsList;
+              canvas.contactSource = "server";
+            }
+          }
+
+          setCanvasData(canvas);
+
+          // Extract contacts via Chrome Extension
+          if (extensionAvailable || await checkExtension()) {
+            setCanvasPhase("extracting");
+            try {
+              const extResult = await extensionExtract(item.wca_id);
+              if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
+                canvas.contacts = extResult.contacts.map((c) => ({
+                  name: c.name || c.title || "Sconosciuto",
+                  title: c.title,
+                  email: c.email,
+                  direct_phone: c.phone,
+                  mobile: c.mobile,
+                }));
+                canvas.contactSource = "extension";
+                setCanvasData({ ...canvas });
+              }
+            } catch (extErr) {
+              console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
+            }
+
+            if (canvas.contactSource !== "extension" || !canvas.contacts.some(c => c.email?.trim())) {
+              try {
+                if (partnerData?.id) {
+                  const { data: dbContacts } = await supabase
+                    .from("partner_contacts")
+                    .select("name, title, email, direct_phone, mobile")
+                    .eq("partner_id", partnerData.id);
+                  if (dbContacts && dbContacts.length > 0 &&
+                      dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
+                    canvas.contacts = dbContacts.map(c => ({
+                      name: c.name,
+                      title: c.title || undefined,
+                      email: c.email || undefined,
+                      direct_phone: c.direct_phone || undefined,
+                      mobile: c.mobile || undefined,
+                    }));
+                    canvas.contactSource = "extension";
+                    setCanvasData({ ...canvas });
+                  }
+                }
+              } catch { /* non-blocking */ }
+            }
+          } else {
+            if (!extensionWarningShown.current) {
+              extensionWarningShown.current = true;
+              toast({
+                title: "Estensione Chrome non rilevata",
+                description: "Installa l'estensione WCA Cookie Sync per estrarre email e telefoni privati.",
+              });
+            }
+          }
+
+          // Enrich + Deep Search in parallel
+          const parallelTasks: Promise<void>[] = [];
+
+          if (includeEnrich && partnerData?.website && partnerData?.id) {
+            parallelTasks.push(
+              (async () => {
+                try {
+                  const { data: enrichResult } = await supabase.functions.invoke(
+                    "enrich-partner-website",
+                    { body: { partnerId: partnerData.id } }
+                  );
+                  if (enrichResult?.enrichment_data) {
+                    const ed = enrichResult.enrichment_data;
+                    setCanvasData((prev) =>
+                      prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employees, founded: ed.year_founded, fleet: ed.own_fleet } : prev
+                    );
+                  }
+                } catch { /* non-blocking */ }
+              })()
+            );
+          }
+
+          if (includeDeepSearch && partnerData?.id) {
+            parallelTasks.push(
+              (async () => {
+                try {
+                  const { data: deepResult } = await supabase.functions.invoke(
+                    "deep-search-partner",
+                    { body: { partnerId: partnerData.id } }
+                  );
+                  if (deepResult) {
+                    setCanvasData((prev) =>
+                      prev ? { ...prev, logo_url: deepResult.logo_url || prev.logo_url, linkedin_links: (deepResult.social_links || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: l.contact_name || "LinkedIn", url: l.url })) } : prev
+                    );
+                  }
+                } catch { /* non-blocking */ }
+              })()
+            );
+          }
+
+          if (parallelTasks.length > 0) {
+            setCanvasPhase("enriching");
+            await Promise.all(parallelTasks);
+          }
+
+          setCanvasPhase("complete");
+          await new Promise((r) => setTimeout(r, 1000));
+
+          setIsAnimatingOut(true);
+          setShowComet(true);
+          await new Promise((r) => setTimeout(r, 600));
+          setShowComet(false);
+          setIsAnimatingOut(false);
+          setCompletedCount((c) => c + 1);
+
+          const contactsWithEmail = canvas.contacts.filter(c => !!c.email?.trim());
+          const contactsWithPhone = canvas.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
+          const hasAnyContact = contactsWithEmail.length > 0 || contactsWithPhone.length > 0;
+          const hasComplete = canvas.contacts.some((c) => !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim()));
+
+          localStats = {
+            processed: localStats.processed + 1,
+            withEmail: localStats.withEmail + (contactsWithEmail.length > 0 ? 1 : 0),
+            withPhone: localStats.withPhone + (contactsWithPhone.length > 0 ? 1 : 0),
+            complete: localStats.complete + (hasComplete ? 1 : 0),
+            empty: localStats.empty + (!hasAnyContact ? 1 : 0),
+          };
+          setLiveStats(localStats);
+
+          if (hasComplete) {
+            setQualityComplete((v) => v + 1);
+            localConsecutiveEmpty = 0;
+          } else {
+            setQualityIncomplete((v) => v + 1);
+            if (!hasAnyContact) localConsecutiveEmpty++;
+            else localConsecutiveEmpty = 0;
+          }
+
+          if (localConsecutiveEmpty >= MAX_CONSECUTIVE_EMPTY) {
+            toast({
+              title: "⚠️ Qualità dati bassa",
+              description: `${MAX_CONSECUTIVE_EMPTY} partner consecutivi senza contatti. Controlla la sessione WCA se vuoi fermarti.`,
+              variant: "destructive",
+            });
+            localConsecutiveEmpty = 0;
+          }
+
+          if (i === 0 && !hasAnyContact) {
+            const recheck = await triggerCheck();
+            if (!recheck || recheck.status !== "ok") {
+              pauseRef.current = true;
+              setPipelineStatus("paused");
+              setShowSessionAlert(true);
+              if (jobId) {
+                supabase.from("download_jobs").update({ status: "paused" }).eq("id", jobId).then(() => {});
+              }
+              while (pauseRef.current) {
+                await new Promise((r) => setTimeout(r, 500));
+                if (cancelRef.current) break;
+              }
+              if (cancelRef.current) break;
+              if (jobId) {
+                supabase.from("download_jobs").update({ status: "running" }).eq("id", jobId).then(() => {});
+                supabase.functions.invoke("process-download-job", { body: { jobId } }).catch(console.error);
+              }
+            }
+          }
+
+          setQueue((prev) =>
+            prev.map((q) =>
+              q.wca_id === item.wca_id ? { ...q, status: "done" as const, company_name: canvas.company_name || q.company_name, city: canvas.city || q.city } : q
+            )
+          );
+        }
+        lastProcessedIndex = serverIndex;
+      }
+
+      if (freshJob.status === "completed" && lastProcessedIndex >= items.length) break;
+
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+
+    return localStats;
+  }, [includeEnrich, includeDeepSearch, triggerCheck, extensionAvailable, checkExtension, extensionExtract, liveStats]);
 
   // Check for active acquisition jobs on mount
   useEffect(() => {
@@ -142,7 +450,6 @@ export default function AcquisizionePartner() {
                 body: { countryCode: job.country_code, network: job.network_name || "" },
               });
               if (scanResult?.members) {
-                // Save to cache
                 const membersJson = scanResult.members.map((m: any) => ({
                   company_name: m.company_name,
                   city: m.city,
@@ -160,7 +467,6 @@ export default function AcquisizionePartner() {
                   },
                   { onConflict: "country_code,network_name" }
                 );
-                // Resolve names
                 for (const m of scanResult.members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
@@ -178,13 +484,49 @@ export default function AcquisizionePartner() {
           setQueue(queueItems);
           setSelectedIds(new Set(wcaIds.filter((id) => !processedIds.has(id))));
           setCompletedCount(processedIds.size);
-          setLiveStats((prev) => ({ ...prev, processed: processedIds.size }));
-          setPipelineStatus(job.status === "paused" ? "paused" : "idle");
 
-          toast({
-            title: "Acquisizione precedente trovata",
-            description: `${processedIds.size}/${wcaIds.length} partner già processati. Puoi riprendere.`,
+          // Init live stats from DB job data
+          setLiveStats({
+            processed: processedIds.size,
+            withEmail: job.contacts_found_count || 0,
+            withPhone: 0,
+            complete: job.contacts_found_count || 0,
+            empty: job.contacts_missing_count || 0,
           });
+
+          if (job.status === "running") {
+            // AUTO-RESUME: job is still running in background, start polling immediately
+            setPipelineStatus("running");
+            pauseRef.current = false;
+            cancelRef.current = false;
+
+            toast({
+              title: "Acquisizione attiva ripresa",
+              description: `${processedIds.size}/${wcaIds.length} partner processati. Monitoraggio in tempo reale attivo.`,
+            });
+
+            // Start polling in background (non-blocking)
+            const itemsToTrack = queueItems.filter(q => !processedIds.has(q.wca_id) || q.status === "pending");
+            // Use all items for polling (it will skip already-done ones)
+            pollJobProgress(job.id, queueItems).then((finalStats) => {
+              setCanvasPhase("idle");
+              setCanvasData(null);
+              setPipelineStatus("done");
+              setActiveJobId(null);
+              if (finalStats) {
+                toast({
+                  title: "Acquisizione completata!",
+                  description: `${finalStats.processed} partner processati — Completi: ${finalStats.complete}, Incompleti: ${finalStats.processed - finalStats.complete}`,
+                });
+              }
+            });
+          } else {
+            setPipelineStatus("paused");
+            toast({
+              title: "Acquisizione precedente trovata",
+              description: `${processedIds.size}/${wcaIds.length} partner già processati. Puoi riprendere.`,
+            });
+          }
         }
       } catch (err) {
         console.error("Failed to check active acquisition jobs:", err);
@@ -192,6 +534,10 @@ export default function AcquisizionePartner() {
         setResumeLoading(false);
       }
     })();
+
+    return () => {
+      pollingAbortRef.current = true;
+    };
   }, []);
 
   // Scan directory for selected countries
@@ -332,9 +678,6 @@ export default function AcquisizionePartner() {
     setQualityIncomplete(0);
     setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 });
 
-    let consecutiveNoContacts = 0;
-    const MAX_CONSECUTIVE_EMPTY = 5;
-
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
 
     // Create or update download_job in DB for persistence
@@ -342,8 +685,6 @@ export default function AcquisizionePartner() {
     try {
       if (!jobId) {
         const countryCode = items[0]?.country_code || selectedCountries[0] || "";
-        const countryName = items[0]?.country_code || "";
-        // Look up country name from partners or use code
         const { data: countryPartner } = await supabase
           .from("partners")
           .select("country_name")
@@ -386,329 +727,12 @@ export default function AcquisizionePartner() {
       supabase.functions.invoke("process-download-job", { body: { jobId } }).catch(console.error);
     }
 
-    // ── Poll job progress and enrich each completed partner ──
-    let lastProcessedIndex = activeJobId ? (queue.filter(q => q.status === "done").length) : 0;
-    let localConsecutiveEmpty = 0;
-    let localStats = { processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 };
-
-    while (lastProcessedIndex < items.length) {
-      if (cancelRef.current) break;
-
-      // Pause support
-      while (pauseRef.current) {
-        await new Promise((r) => setTimeout(r, 500));
-        if (cancelRef.current) break;
-      }
-      if (cancelRef.current) break;
-
-      // Poll job progress from DB
-      const { data: freshJob } = await supabase
-        .from("download_jobs")
-        .select("current_index, status, last_processed_wca_id, last_processed_company, error_message")
-        .eq("id", jobId!)
-        .single();
-
-      if (!freshJob) break;
-      if (freshJob.status === "error") {
-        toast({ title: "Errore nel job", description: freshJob.error_message || "Errore sconosciuto", variant: "destructive" });
-        break;
-      }
-      if (freshJob.status === "cancelled") break;
-      if (freshJob.status === "paused" && !pauseRef.current) {
-        // Server paused the job (e.g., auth failure)
-        pauseRef.current = true;
-        setPipelineStatus("paused");
-        toast({
-          title: "Job in pausa",
-          description: freshJob.error_message || "Il server ha messo in pausa il job.",
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const serverIndex = freshJob.current_index || 0;
-
-      if (serverIndex > lastProcessedIndex) {
-        // Process each newly completed partner
-        for (let i = lastProcessedIndex; i < serverIndex && i < items.length; i++) {
-          if (cancelRef.current) break;
-
-          const item = items[i];
-          setActiveIndex(i);
-
-          // Update queue status to active momentarily
-          setQueue((prev) =>
-            prev.map((q) =>
-              q.wca_id === item.wca_id ? { ...q, status: "active" as const } : q
-            )
-          );
-
-          // Fetch partner from DB (saved by edge function)
-          setCanvasPhase("downloading");
-          const { data: partner } = await supabase
-            .from("partners")
-            .select("*")
-            .eq("wca_id", item.wca_id)
-            .maybeSingle();
-
-          const partnerData = partner;
-
-          // Resolve company name — never keep "WCA {id}" placeholder
-          let resolvedName = partnerData?.company_name || item.company_name;
-          let resolvedCity = partnerData?.city || item.city;
-          if (resolvedName.startsWith("WCA ")) {
-            // Try to resolve from directory_cache
-            const { data: cacheRows } = await supabase
-              .from("directory_cache")
-              .select("members")
-              .eq("country_code", item.country_code);
-            for (const row of cacheRows || []) {
-              const found = (row.members as any[])?.find((m: any) => m.wca_id === item.wca_id);
-              if (found?.company_name && !found.company_name.startsWith("WCA ")) {
-                resolvedName = found.company_name;
-                if (found.city) resolvedCity = found.city;
-                break;
-              }
-            }
-          }
-
-          const canvas: CanvasData = {
-            company_name: resolvedName,
-            city: resolvedCity,
-            country_code: partnerData?.country_code || item.country_code,
-            country_name: partnerData?.country_name || "",
-            logo_url: partnerData?.logo_url || undefined,
-            contacts: [],
-            services: [],
-            key_markets: [],
-            key_routes: [],
-            networks: [],
-            rating: partnerData?.rating ? Number(partnerData.rating) : undefined,
-            website: partnerData?.website || undefined,
-            profile_description: partnerData?.profile_description || undefined,
-            linkedin_links: [],
-            warehouse_sqm: undefined,
-            employees: undefined,
-            founded: undefined,
-            fleet: undefined,
-            contactSource: "none" as ContactSource,
-          };
-
-          // Fetch networks + services from DB
-          if (partnerData?.id) {
-            const [{ data: nets }, { data: svcs }, { data: serverContacts }] = await Promise.all([
-              supabase.from("partner_networks").select("network_name").eq("partner_id", partnerData.id),
-              supabase.from("partner_services").select("service_category").eq("partner_id", partnerData.id),
-              supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partnerData.id),
-            ]);
-            canvas.networks = (nets || []).map((n) => n.network_name);
-            canvas.services = (svcs || []).map((s) => s.service_category);
-            // Save server contacts as fallback
-            const serverContactsList = (serverContacts || []).map((c) => ({
-              name: c.name,
-              title: c.title || undefined,
-              email: c.email || undefined,
-              direct_phone: c.direct_phone || undefined,
-              mobile: c.mobile || undefined,
-            }));
-            if (serverContactsList.length > 0 && serverContactsList.some(c => c.email || c.direct_phone || c.mobile)) {
-              canvas.contacts = serverContactsList;
-              canvas.contactSource = "server";
-            }
-          }
-
-          setCanvasData(canvas);
-
-          // PHASE 1.5: Extract contacts via Chrome Extension
-          if (extensionAvailable || await checkExtension()) {
-            setCanvasPhase("extracting");
-            try {
-              const extResult = await extensionExtract(item.wca_id);
-              if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
-                canvas.contacts = extResult.contacts.map((c) => ({
-                  name: c.name || c.title || "Sconosciuto",
-                  title: c.title,
-                  email: c.email,
-                  direct_phone: c.phone,
-                  mobile: c.mobile,
-                }));
-                canvas.contactSource = "extension";
-                setCanvasData({ ...canvas });
-              }
-            } catch (extErr) {
-              console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
-            }
-
-            // FALLBACK: Check DB if extension didn't provide emails
-            if (canvas.contactSource !== "extension" || !canvas.contacts.some(c => c.email?.trim())) {
-              try {
-                if (partnerData?.id) {
-                  const { data: dbContacts } = await supabase
-                    .from("partner_contacts")
-                    .select("name, title, email, direct_phone, mobile")
-                    .eq("partner_id", partnerData.id);
-
-                  if (dbContacts && dbContacts.length > 0 &&
-                      dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
-                    canvas.contacts = dbContacts.map(c => ({
-                      name: c.name,
-                      title: c.title || undefined,
-                      email: c.email || undefined,
-                      direct_phone: c.direct_phone || undefined,
-                      mobile: c.mobile || undefined,
-                    }));
-                    canvas.contactSource = "extension";
-                    setCanvasData({ ...canvas });
-                  }
-                }
-              } catch { /* non-blocking */ }
-            }
-          } else {
-            if (!extensionWarningShown.current) {
-              extensionWarningShown.current = true;
-              toast({
-                title: "Estensione Chrome non rilevata",
-                description: "Installa l'estensione WCA Cookie Sync per estrarre email e telefoni privati.",
-              });
-            }
-          }
-
-          // PHASE 2+3: Enrich + Deep Search in parallel
-          const parallelTasks: Promise<void>[] = [];
-
-          if (includeEnrich && partnerData?.website && partnerData?.id) {
-            parallelTasks.push(
-              (async () => {
-                try {
-                  const { data: enrichResult } = await supabase.functions.invoke(
-                    "enrich-partner-website",
-                    { body: { partnerId: partnerData.id } }
-                  );
-                  if (enrichResult?.enrichment_data) {
-                    const ed = enrichResult.enrichment_data;
-                    setCanvasData((prev) =>
-                      prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employees, founded: ed.year_founded, fleet: ed.own_fleet } : prev
-                    );
-                  }
-                } catch { /* non-blocking */ }
-              })()
-            );
-          }
-
-          if (includeDeepSearch && partnerData?.id) {
-            parallelTasks.push(
-              (async () => {
-                try {
-                  const { data: deepResult } = await supabase.functions.invoke(
-                    "deep-search-partner",
-                    { body: { partnerId: partnerData.id } }
-                  );
-                  if (deepResult) {
-                    setCanvasData((prev) =>
-                      prev ? { ...prev, logo_url: deepResult.logo_url || prev.logo_url, linkedin_links: (deepResult.social_links || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: l.contact_name || "LinkedIn", url: l.url })) } : prev
-                    );
-                  }
-                } catch { /* non-blocking */ }
-              })()
-            );
-          }
-
-          if (parallelTasks.length > 0) {
-            setCanvasPhase("enriching");
-            await Promise.all(parallelTasks);
-          }
-
-          // COMPLETE
-          setCanvasPhase("complete");
-          await new Promise((r) => setTimeout(r, 1000));
-
-          // Comet animation
-          setIsAnimatingOut(true);
-          setShowComet(true);
-          await new Promise((r) => setTimeout(r, 600));
-          setShowComet(false);
-          setIsAnimatingOut(false);
-          setCompletedCount((c) => c + 1);
-
-          // Track quality
-          const contactsWithEmail = canvas.contacts.filter(c => !!c.email?.trim());
-          const contactsWithPhone = canvas.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
-          const hasAnyContact = contactsWithEmail.length > 0 || contactsWithPhone.length > 0;
-          const hasComplete = canvas.contacts.some((c) => !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim()));
-
-          localStats = {
-            processed: localStats.processed + 1,
-            withEmail: localStats.withEmail + (contactsWithEmail.length > 0 ? 1 : 0),
-            withPhone: localStats.withPhone + (contactsWithPhone.length > 0 ? 1 : 0),
-            complete: localStats.complete + (hasComplete ? 1 : 0),
-            empty: localStats.empty + (!hasAnyContact ? 1 : 0),
-          };
-          setLiveStats(localStats);
-
-          if (hasComplete) {
-            setQualityComplete((v) => v + 1);
-            localConsecutiveEmpty = 0;
-          } else {
-            setQualityIncomplete((v) => v + 1);
-            if (!hasAnyContact) localConsecutiveEmpty++;
-            else localConsecutiveEmpty = 0;
-          }
-
-          // Warn (but don't stop) if too many consecutive empty
-          if (localConsecutiveEmpty >= MAX_CONSECUTIVE_EMPTY) {
-            toast({
-              title: "⚠️ Qualità dati bassa",
-              description: `${MAX_CONSECUTIVE_EMPTY} partner consecutivi senza contatti. Controlla la sessione WCA se vuoi fermarti.`,
-              variant: "destructive",
-            });
-            localConsecutiveEmpty = 0;
-          }
-
-          // Re-check session after first partner with no contacts
-          if (i === 0 && !hasAnyContact) {
-            const recheck = await triggerCheck();
-            if (!recheck || recheck.status !== "ok") {
-              pauseRef.current = true;
-              setPipelineStatus("paused");
-              setShowSessionAlert(true);
-              // Pause the background job too
-              if (jobId) {
-                supabase.from("download_jobs").update({ status: "paused" }).eq("id", jobId).then(() => {});
-              }
-              while (pauseRef.current) {
-                await new Promise((r) => setTimeout(r, 500));
-                if (cancelRef.current) break;
-              }
-              if (cancelRef.current) break;
-              // Resume background job
-              if (jobId) {
-                supabase.from("download_jobs").update({ status: "running" }).eq("id", jobId).then(() => {});
-                supabase.functions.invoke("process-download-job", { body: { jobId } }).catch(console.error);
-              }
-            }
-          }
-
-          // Mark done in queue
-          setQueue((prev) =>
-            prev.map((q) =>
-              q.wca_id === item.wca_id ? { ...q, status: "done" as const, company_name: canvas.company_name || q.company_name, city: canvas.city || q.city } : q
-            )
-          );
-        }
-        lastProcessedIndex = serverIndex;
-      }
-
-      if (freshJob.status === "completed" && lastProcessedIndex >= items.length) break;
-
-      // Wait before next poll
-      await new Promise((r) => setTimeout(r, 3000));
-    }
+    // ── Poll job progress using extracted function ──
+    const localStats = await pollJobProgress(jobId!, items);
 
     // ── Cleanup ──
     setCanvasPhase("idle");
     setCanvasData(null);
-
-    const processedItems = queue.filter((q) => q.status === "done").length;
 
     if (cancelRef.current) {
       setPipelineStatus("idle");
@@ -734,7 +758,7 @@ export default function AcquisizionePartner() {
         setShowRetryDialog(true);
       }
     }
-  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks]);
+  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, pollJobProgress]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
