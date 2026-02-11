@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
-  LayoutDashboard,
   Users,
   Calendar,
   Download,
@@ -23,9 +22,7 @@ import { useActiveJobCount } from "@/hooks/useDownloadJobs";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Agenti", url: "/agents", icon: Users },
-  { title: "Partners", url: "/partners", icon: Globe },
+  { title: "Partner", url: "/", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Download", url: "/download-management", icon: HardDriveDownload, badgeKey: "download" },
   { title: "Reminders", url: "/reminders", icon: Calendar },
