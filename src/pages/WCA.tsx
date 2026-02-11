@@ -77,68 +77,72 @@ export default function WCAIntegration() {
         </Badge>
       </div>
 
-      {/* Main card */}
+      {/* Chrome Extension card */}
       <Card>
         <CardContent className="pt-6 space-y-6">
-          {/* Instructions */}
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
             <div className="flex items-start gap-2">
               <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <p className="text-sm font-medium text-foreground">
-                Come ottenere il cookie di sessione WCA
+                Sincronizzazione automatica con Estensione Chrome
               </p>
             </div>
             <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
               <li>
-                Vai su{" "}
+                Scarica la cartella <strong>chrome-extension</strong> dal{" "}
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                  repository GitHub
+                </a>{" "}
+                del progetto (cartella <code className="px-1 py-0.5 rounded bg-muted border text-xs">public/chrome-extension</code>)
+              </li>
+              <li>
+                Apri Chrome → <strong>chrome://extensions</strong> → attiva <strong>Modalità sviluppatore</strong>
+              </li>
+              <li>
+                Clicca <strong>"Carica estensione non pacchettizzata"</strong> e seleziona la cartella scaricata
+              </li>
+              <li>
+                Accedi a{" "}
                 <a href="https://www.wcaworld.com/MemberSection" target="_blank" rel="noopener noreferrer" className="underline text-primary">
                   wcaworld.com
-                </a>{" "}
-                e accedi al tuo account
-              </li>
-              <li>
-                Premi <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">F12</kbd> per aprire i DevTools
-              </li>
-              <li>
-                Vai alla tab <strong>Network</strong> e ricarica la pagina (<kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">F5</kbd>)
-              </li>
-              <li>
-                Clicca sulla prima richiesta (il documento HTML principale)
-              </li>
-              <li>
-                Nella sezione <strong>Headers → Request Headers</strong>, cerca <strong>Cookie:</strong>
-              </li>
-              <li>
-                Copia <strong>tutto il valore</strong> del campo Cookie e incollalo qui sotto
+                </a>, poi clicca l'icona dell'estensione → <strong>🔄 Sincronizza Cookie</strong>
               </li>
             </ol>
-          </div>
-
-          {/* Cookie input */}
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Incolla qui il valore completo dell'header Cookie..."
-                value={cookieInput}
-                onChange={(e) => setCookieInput(e.target.value)}
-                className="font-mono text-xs"
-              />
-              <Button
-                onClick={handleSaveCookie}
-                disabled={saving || !cookieInput.trim()}
-                className="shrink-0"
-              >
-                {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <ClipboardPaste className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Il cookie include token HttpOnly che non possono essere catturati automaticamente via JavaScript.
+            <p className="text-xs text-muted-foreground mt-2">
+              L'estensione legge i cookie HttpOnly (impossibili da catturare via JavaScript) e li invia direttamente al server. <strong>Un solo click!</strong>
             </p>
           </div>
+
+          {/* Fallback: manual cookie input */}
+          <details className="group">
+            <summary className="text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+              ⚙️ Metodo alternativo (manuale)
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Incolla qui il valore completo dell'header Cookie..."
+                  value={cookieInput}
+                  onChange={(e) => setCookieInput(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  onClick={handleSaveCookie}
+                  disabled={saving || !cookieInput.trim()}
+                  className="shrink-0"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ClipboardPaste className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                F12 → Network → prima richiesta → Headers → Cookie → copia tutto il valore.
+              </p>
+            </div>
+          </details>
 
           {/* Verify */}
           <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
