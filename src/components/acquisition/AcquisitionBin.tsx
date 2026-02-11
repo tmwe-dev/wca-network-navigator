@@ -6,9 +6,11 @@ interface AcquisitionBinProps {
   count: number;
   total: number;
   showComet: boolean;
+  completeCount?: number;
+  incompleteCount?: number;
 }
 
-export function AcquisitionBin({ count, total, showComet }: AcquisitionBinProps) {
+export function AcquisitionBin({ count, total, showComet, completeCount = 0, incompleteCount = 0 }: AcquisitionBinProps) {
   const [pulse, setPulse] = useState(false);
   const prevCount = useRef(count);
 
@@ -53,6 +55,20 @@ export function AcquisitionBin({ count, total, showComet }: AcquisitionBinProps)
               className="h-full bg-primary rounded-full transition-all duration-500"
               style={{ width: `${(count / total) * 100}%` }}
             />
+          </div>
+        )}
+
+        {/* Quality stats */}
+        {count > 0 && (
+          <div className="flex items-center gap-2 text-[11px] ml-1">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{completeCount}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="font-semibold text-amber-600 dark:text-amber-400">{incompleteCount}</span>
+            </span>
           </div>
         )}
       </div>
