@@ -9,6 +9,7 @@ import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
 
 import DownloadManagement from "./pages/DownloadManagement";
+import AcquisizionePartner from "./pages/AcquisizionePartner";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<PartnerHub />} />
             <Route path="/partners" element={<PartnerHub />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/acquisizione" element={<AcquisizionePartner />} />
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/settings" element={<Settings />} />
