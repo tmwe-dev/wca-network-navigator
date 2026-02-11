@@ -88,31 +88,22 @@ mainBtn.addEventListener("click", async () => {
     if (diag?.isLoggedIn) log("   ✓ Sembra loggato!", "done");
     if (diag?.pageTitle) log(`   Titolo: ${diag.pageTitle}`, "wait");
 
-    // Step 8: Read cookies (try multiple times)
+    // Step 8: Read cookies using URL method (more reliable)
     log("⑧ Leggo cookie...", "wait");
-    let cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
-    let cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-    // Merge unique cookies
-    const allCookies = [...cookies];
-    for (const c of cookies2) {
-      if (!allCookies.some(x => x.name === c.name)) allCookies.push(c);
-    }
-    
+    const allCookies = await getAllWcaCookies();
     let hasAuth = allCookies.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-    log(`   Cookie trovati: ${allCookies.length} (domain .wcaworld.com + www)`, "wait");
+    log(`   Cookie trovati: ${allCookies.length}`, "wait");
     log(`   .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
     log(`   Nomi: ${allCookies.map(c => c.name).join(", ")}`, "wait");
+    // Show domains for debugging
+    const domains = [...new Set(allCookies.map(c => c.domain))];
+    log(`   Domini: ${domains.join(", ")}`, "wait");
 
     if (!hasAuth) {
-      // Wait more and retry
+      // Wait and retry with all methods
       log("   Riprovo tra 5s...", "wait");
       await sleep(5000);
-      cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
-      cookies2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-      const allCookies2 = [...cookies];
-      for (const c of cookies2) {
-        if (!allCookies2.some(x => x.name === c.name)) allCookies2.push(c);
-      }
+      const allCookies2 = await getAllWcaCookies();
       hasAuth = allCookies2.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
       
       if (hasAuth) {
@@ -122,32 +113,23 @@ mainBtn.addEventListener("click", async () => {
         return;
       }
 
-      // Still no auth - let's try navigating to member section to trigger auth
-      log("   Provo accesso a MemberSection...", "wait");
-      await chrome.tabs.update(tab.id, { url: "https://www.wcaworld.com/MemberSection" });
-      await waitForTabLoad(tab.id, 10000);
-      
-      const cookies3 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
-      const cookies4 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-      const allCookies3 = [...cookies3];
-      for (const c of cookies4) {
-        if (!allCookies3.some(x => x.name === c.name)) allCookies3.push(c);
-      }
-      hasAuth = allCookies3.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-      log(`   Dopo MemberSection: ${allCookies3.length} cookie, .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
-      log(`   Nomi: ${allCookies3.map(c => c.name).join(", ")}`, "wait");
+      log(`   Ancora ${allCookies2.length} cookie, nomi: ${allCookies2.map(c=>c.name).join(", ")}`, "fail");
 
-      if (!hasAuth) {
-        try { chrome.tabs.remove(tab.id); } catch {}
-        setStatus("❌ Login fallito: .ASPXAUTH non presente", "error");
-        log("Il form è stato inviato ma WCA non ha rilasciato il cookie di autenticazione.", "fail");
-        if (diag?.errorMessage) log("Errore dalla pagina: " + diag.errorMessage, "fail");
-        mainBtn.disabled = false;
+      // Last resort: send whatever cookies we have (the session might work without .ASPXAUTH visible to extension)
+      try { chrome.tabs.remove(tab.id); } catch {}
+      
+      // Even without .ASPXAUTH, try sending all cookies - the login DID succeed
+      if (diag?.isLoggedIn) {
+        log("   Login riuscito ma .ASPXAUTH non visibile. Invio cookie disponibili...", "wait");
+        const cookieStr = allCookies2.map(c => `${c.name}=${c.value}`).join("; ");
+        await sendCookiesAndFinish(cookieStr, null);
         return;
       }
 
-      const cookieStr = allCookies3.map(c => `${c.name}=${c.value}`).join("; ");
-      await sendCookiesAndFinish(cookieStr, tab.id);
+      setStatus("❌ Login fallito: .ASPXAUTH non visibile", "error");
+      log("Il login è riuscito (MemberSection raggiunta) ma il cookie .ASPXAUTH non è accessibile dall'estensione.", "fail");
+      log("Prova: apri wcaworld.com manualmente nel browser, poi riclicca qui.", "fail");
+      mainBtn.disabled = false;
       return;
     }
 
@@ -211,7 +193,32 @@ function waitForTabLoad(tabId, ms = 20000) {
   });
 }
 
-function waitForRedirectOrTimeout(tabId, ms = 10000) {
+// Get ALL cookies for wcaworld.com using multiple methods
+async function getAllWcaCookies() {
+  const byUrl = await chrome.cookies.getAll({ url: "https://www.wcaworld.com/" });
+  const byDomain1 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+  const byDomain2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+  const byDomain3 = await chrome.cookies.getAll({ domain: "wcaworld.com" });
+  
+  // Also try to get .ASPXAUTH specifically
+  let aspxAuth = null;
+  try {
+    aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
+  } catch (e) {}
+  
+  // Merge all unique cookies
+  const map = new Map();
+  for (const list of [byUrl, byDomain1, byDomain2, byDomain3]) {
+    for (const c of list) {
+      map.set(`${c.domain}|${c.name}|${c.path}`, c);
+    }
+  }
+  if (aspxAuth) map.set(`.aspxauth-direct`, aspxAuth);
+  
+  return Array.from(map.values());
+}
+
+
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
