@@ -1,122 +1,89 @@
 
 
-# Tracciamento Network e Esclusione Dinamica durante l'Acquisizione
+# Archivio Partner Senza Contatti
 
 ## Obiettivo
 
-Durante l'acquisizione, monitorare in tempo reale quali network WCA danno contatti (email/telefono) e quali no. Mostrare le statistiche per network in un banner e permettere di escludere al volo i network che non producono risultati, saltando i partner associati solo a quei network.
+Quando un partner viene scaricato ma risulta senza contatti personali (email/telefono), il sistema lo archivia automaticamente in una tabella dedicata. Questo crea un registro consultabile di tutti i partner "vuoti" che potranno essere rivisitati in futuro (ad esempio quando la sessione e' piu' stabile o i dati vengono aggiornati su WCA).
 
 ## Come funziona
 
-Ogni partner estratto ha gia' i network associati (il codice li carica da `partner_networks` a riga 164-166). Dopo l'estrazione dei contatti, il sistema aggiorna un contatore per-network:
-- Partner con contatti: network X -> successo +1
-- Partner senza contatti: network X -> vuoto +1
-
-Se un network ha 0% di successo dopo N partner, viene evidenziato in rosso con un pulsante per escluderlo. Escluderlo salta automaticamente i partner rimanenti nella coda che appartengono SOLO a quel network.
+1. Durante l'acquisizione, se un partner non ha contatti, viene salvato in una nuova tabella `partners_no_contacts`
+2. Nella pagina Acquisizione Partner appare una sezione/tab "Archivio Senza Contatti" per consultare l'elenco
+3. Dall'archivio si puo' selezionare uno o piu' partner e avviare un retry mirato
 
 ## Modifiche
 
-### 1. Stato network stats in `AcquisizionePartner.tsx`
+### 1. Nuova tabella `partners_no_contacts`
 
-Aggiungere uno stato per tracciare le performance per network:
+Creazione via migrazione SQL:
 
-```typescript
-const [networkStats, setNetworkStats] = useState<Record<string, { success: number; empty: number }>>({});
-const [excludedNetworks, setExcludedNetworks] = useState<Set<string>>(new Set());
-```
+| Colonna | Tipo | Descrizione |
+|---------|------|-------------|
+| id | uuid (PK) | ID univoco |
+| wca_id | integer | ID WCA del partner |
+| partner_id | uuid | Riferimento al partner nel DB (se esiste) |
+| company_name | text | Nome azienda |
+| country_code | text | Codice paese |
+| city | text | Citta' |
+| networks | jsonb | Network di appartenenza al momento dello scraping |
+| scraped_at | timestamptz | Quando e' stato scaricato |
+| retry_count | integer | Quante volte e' stato ritentato (default 0) |
+| last_retry_at | timestamptz | Ultimo tentativo di retry |
+| resolved | boolean | Se il partner e' stato risolto (contatti trovati al retry) |
+| created_at | timestamptz | Data creazione |
 
-### 2. Aggiornare il loop di estrazione
+RLS: accesso pubblico (come le altre tabelle del progetto).
 
-Nel `runExtensionLoop`, dopo aver determinato se un partner ha contatti o no (riga 290), aggiornare le stats per ciascun network del partner:
+### 2. Salvataggio automatico nel loop di acquisizione
+
+**File**: `src/pages/AcquisizionePartner.tsx`
+
+Dopo la riga che rileva `!hasAnyContact` (riga 355), aggiungere un upsert nella tabella `partners_no_contacts`:
 
 ```text
-Per ogni partner processato:
-  networks = canvas.networks (gia' caricati da partner_networks)
-  hasContacts = canvas.contacts.some(c => c.email || c.phone || c.mobile)
-  
-  Per ogni network del partner:
-    if hasContacts: networkStats[network].success++
-    else: networkStats[network].empty++
-```
-
-### 3. Saltare partner di network esclusi
-
-All'inizio di ogni iterazione del loop, prima di processare il partner, controllare se TUTTI i suoi network sono nella lista esclusi. Se si', saltarlo:
-
-```text
-// All'inizio del loop, dopo il check pausa:
-if (excludedNetworks.size > 0) {
-  // Carica i network del partner dal DB o dalla cache
-  // Se TUTTI i network del partner sono esclusi -> skip
-  // Se ha almeno UN network non escluso -> procedi
+if (!hasAnyContact && partnerId) {
+  await supabase.from("partners_no_contacts").upsert({
+    wca_id: item.wca_id,
+    partner_id: partnerId,
+    company_name: canvas.company_name,
+    country_code: canvas.country_code,
+    city: canvas.city,
+    networks: canvas.networks,
+    scraped_at: new Date().toISOString(),
+  }, { onConflict: "wca_id" });
 }
 ```
 
-Per efficienza, pre-caricare i network di tutti i partner nella coda durante la scansione iniziale e salvarli nella `QueueItem`.
+### 3. Componente Archivio
 
-### 4. Aggiungere campo `networks` a QueueItem
+**Nuovo file**: `src/components/acquisition/NoContactsArchive.tsx`
 
-**File**: `src/components/acquisition/PartnerQueue.tsx`
+Un pannello che mostra:
+- Lista dei partner senza contatti con flag paese, nome, citta', data di scraping
+- Contatore totale e per paese
+- Pulsante "Riprova selezionati" per rimetterli in coda di acquisizione
+- Badge "Ritentato X volte" per chi e' gia' stato riprovato
+- Filtro per paese e per data
 
-```typescript
-export interface QueueItem {
-  wca_id: number;
-  company_name: string;
-  country_code: string;
-  city: string;
-  status: QueueItemStatus;
-  alreadyDownloaded?: boolean;
-  networks?: string[];  // NUOVO: network di appartenenza
-}
-```
+### 4. Integrazione nella pagina Acquisizione
 
-### 5. Popolare i network nella coda durante la scansione
+**File**: `src/pages/AcquisizionePartner.tsx`
 
-In `handleScan` (riga 596), dopo aver caricato i membri dalla directory_cache, fare un batch query su `partner_networks` per i partner gia' nel DB e associare i network alla `QueueItem`. Per i partner nuovi, i network verranno caricati al momento dell'estrazione.
+Aggiungere un pulsante/tab "Archivio Vuoti" accanto al Bin dei partner acquisiti. Cliccandolo si apre il pannello archivio. Un badge numerico mostra quanti partner senza contatti ci sono in totale.
 
-### 6. Banner Network Performance nella toolbar
+### 5. Retry dall'archivio
 
-Aggiungere un nuovo componente `NetworkPerformanceBar` che appare sopra la Live Stats bar quando ci sono dati:
-
-```text
-+---------------------------------------------------------------------+
-| Network Performance:                                                |
-| WCA Inter Global: 12/15 (80%) [verde]                              |
-| Lognet: 0/8 (0%) [rosso] [Escludi]                                |
-| WCA First: 5/6 (83%) [verde]                                       |
-| CGLN: 1/10 (10%) [giallo] [Escludi]                               |
-+---------------------------------------------------------------------+
-```
-
-- Verde: >50% successo
-- Giallo: 10-50% successo  
-- Rosso: <10% successo (con pulsante "Escludi")
-- Il pulsante "Escludi" aggiunge il network a `excludedNetworks` e i partner rimanenti nella coda con SOLO quel network vengono automaticamente marcati come "skipped"
-
-### 7. Indicatore network esclusi nei partner saltati
-
-Nella `PartnerQueue`, i partner saltati per network escluso mostrano un badge grigio "Network escluso" invece del loader.
+Quando l'utente seleziona partner dall'archivio e preme "Riprova":
+- I partner selezionati vengono aggiunti alla coda (`queue`) come item pending
+- Il campo `retry_count` viene incrementato
+- Se al retry i contatti vengono trovati, il record viene marcato `resolved = true`
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/AcquisizionePartner.tsx` | Stato networkStats + excludedNetworks, logica di skip nel loop, aggiornamento stats dopo ogni partner, banner performance |
-| `src/components/acquisition/PartnerQueue.tsx` | Campo `networks` in QueueItem, badge "Network escluso" per partner saltati |
-| `src/components/acquisition/AcquisitionToolbar.tsx` | Nessuna modifica (il banner va nella pagina principale) |
-
-## Flusso risultante
-
-```text
-1. Scansione directory -> carica partner + loro network
-2. Pipeline parte
-3. Partner 1 (WCA Inter Global, Lognet) -> contatti trovati -> stats aggiornate
-4. Partner 2 (Lognet solo) -> nessun contatto -> Lognet: 0/1
-5. Partner 3 (Lognet solo) -> nessun contatto -> Lognet: 0/2
-6. ...
-7. Partner 8 (Lognet solo) -> nessun contatto -> Lognet: 0/5 -> BANNER ROSSO
-8. Utente clicca "Escludi Lognet"
-9. Partner 9-15 che hanno SOLO Lognet -> saltati automaticamente
-10. Partner 16 (WCA First + Lognet) -> processato normalmente (ha WCA First che non e' escluso)
-```
+| Migrazione SQL | Nuova tabella `partners_no_contacts` |
+| `src/pages/AcquisizionePartner.tsx` | Upsert nel loop quando partner e' senza contatti, pulsante archivio, logica retry |
+| `src/components/acquisition/NoContactsArchive.tsx` | Nuovo componente per visualizzare e gestire l'archivio |
 
