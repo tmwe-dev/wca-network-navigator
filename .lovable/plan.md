@@ -1,127 +1,53 @@
 
 
-# Sessione WCA Indistruttibile: Piano Definitivo
+# Fix: Lo stato sessione resta "expired" anche con cookie valido
 
-## Problema ancora presente
+## Problema
 
-Il file `supabase/functions/process-download-job/index.ts` (righe 82-167) chiama ANCORA `scrape-wca-partners` dal server. Ogni volta che un job parte, il server fa richieste HTTP a WCA con il tuo cookie, da un IP diverso dal tuo browser. WCA invalida la sessione immediatamente.
+Il cookie WCA nel database contiene `.ASPXAUTH` ed e' valido, ma il sistema mostra "Sessione scaduta" perche':
 
-La pagina Acquisizione ha gia' il loop via estensione (`runExtensionLoop`), ma il job processor server-side continua a girare in parallelo e uccide tutto.
+1. C'e' un job in pausa (USA) con messaggio "5 profili consecutivi senza contatti"
+2. La funzione `check-wca-session` vede quel job e forza lo stato a `expired`
+3. Anche se il cookie e' stato ri-sincronizzato DOPO la pausa del job, il vecchio job continua ad avvelenare il risultato
 
-## Modifiche
+## Soluzione
 
-### 1. Neutralizzare `process-download-job`
+### File 1: `supabase/functions/check-wca-session/index.ts`
 
-**File**: `supabase/functions/process-download-job/index.ts`
-
-Il job processor server-side non deve MAI chiamare `scrape-wca-partners`. Diventa un semplice "tracker" che:
-- Tiene traccia dello stato del job (running/paused/completed)
-- NON fa nessuna richiesta HTTP a WCA
-- NON chiama `scrape-wca-partners`
-- NON fa auto-chaining (il frontend guida tutto)
-
-Rimuovere:
-- La chiamata auth-check a `scrape-wca-partners` (righe 82-118)
-- La chiamata di scraping a `scrape-wca-partners` (righe 159-167)
-- La logica di auto-chaining `chainNext` (riga 282)
-
-Il job processor diventa un endpoint che il frontend chiama per aggiornare il progresso e basta.
-
-### 2. Verifica sessione ogni 3 partner nel loop frontend
-
-**File**: `src/pages/AcquisizionePartner.tsx`
-
-Nel `runExtensionLoop`, aggiungere un controllo ogni 3 partner processati:
-- Dopo il 3o, 6o, 9o... partner: chiedere all'estensione di fare un "ping" a WCA
-- Se il ping fallisce o i contatti sono vuoti: tentare il ripristino automatico
-- Se il ripristino non funziona: mettere in pausa e avvisare
+Modificare la logica dei job (righe 53-71):
+- Se il cookie ha `.ASPXAUTH`, lo stato base e' `ok`
+- Controllare i job recenti SOLO se sono stati aggiornati DOPO l'ultimo salvataggio del cookie
+- Se il job in pausa e' PIU' VECCHIO dell'ultimo cookie sync, ignorarlo (il cookie e' stato rinnovato)
 
 ```text
-Loop per ogni partner:
-  1. Estrai contatti via estensione
-  2. Se (contatore % 3 == 0):
-     a. Verifica sessione tramite estensione (apre pagina test WCA)
-     b. Se sessione morta:
-        - Tenta re-sync cookie automatico
-        - Se fallisce: PAUSA + avviso
-  3. Salva dati nel DB
-  4. Prossimo partner
+Logica attuale (sbagliata):
+  cookie valido + job in pausa con "senza contatti" = expired
+
+Logica nuova (corretta):
+  cookie valido + job in pausa MA cookie salvato DOPO il job = ok
+  cookie valido + job in pausa E cookie salvato PRIMA del job = expired
 ```
 
-### 3. Aggiungere azione "verifySession" all'estensione Chrome
+### File 2: `src/hooks/useWcaSessionStatus.ts`
 
-**File**: `public/chrome-extension/background.js`
+Il `triggerCheck` chiama la Edge Function che ora restituisce risultati corretti. Nessuna modifica strutturale necessaria, ma aggiungere un `refetch` immediato dopo il `triggerCheck` per aggiornare l'UI.
 
-Nuova azione `verifySession` che:
-- Apre un profilo WCA noto (es: ID 86580) in tab nascosta
-- Controlla se la pagina contiene blocchi contatto reali (non "Members only")
-- Restituisce `{ authenticated: true/false }`
-- Se autenticato: ri-sincronizza il cookie aggiornato nel DB
+## Dettagli tecnici
 
-### 4. Aggiungere azione "syncCookie" all'estensione Chrome
+Nel `check-wca-session`, leggere anche il `updated_at` del cookie e confrontarlo con il `updated_at` del job in pausa:
 
-**File**: `public/chrome-extension/background.js`
-
-Nuova azione `syncCookie` che:
-- Legge tutti i cookie di `wcaworld.com` tramite `chrome.cookies.getAll`
-- Li concatena in una stringa cookie completa
-- Li salva nel DB chiamando `save-wca-cookie`
-- Questo mantiene il cookie nel DB sempre aggiornato con l'ultimo token valido
-
-### 5. Esporre le nuove azioni nel bridge
-
-**File**: `src/hooks/useExtensionBridge.ts`
-
-Aggiungere due nuovi metodi:
-- `verifySession()`: chiama l'azione `verifySession` dell'estensione
-- `syncCookie()`: chiama l'azione `syncCookie` dell'estensione
-
-### 6. Indicatore sessione live nella pagina Acquisizione
-
-**File**: `src/pages/AcquisizionePartner.tsx`
-
-Aggiungere un indicatore visivo permanente in alto nella pagina:
-- Pallino verde: "Sessione WCA attiva"
-- Pallino rosso: "Sessione scaduta - ripristino in corso..."
-- Pallino giallo: "Verifica in corso..."
-
-Questo indicatore si aggiorna automaticamente ogni 3 partner e dopo ogni sync.
-
-## Flusso risultante
-
-```text
-1. Utente fa login su WCA nel browser
-2. Estensione sincronizza cookie automaticamente
-3. Pipeline parte:
-   Partner 1 -> estrai via estensione (stesso IP) -> OK
-   Partner 2 -> estrai via estensione -> OK
-   Partner 3 -> estrai via estensione -> OK
-   --- VERIFICA SESSIONE ---
-   Estensione apre pagina test -> contatti visibili? -> SI -> continua
-   Partner 4 -> OK
-   Partner 5 -> OK
-   Partner 6 -> OK
-   --- VERIFICA SESSIONE ---
-   Estensione apre pagina test -> contatti visibili? -> NO
-   -> Estensione ri-sincronizza cookie -> riprova -> OK? -> continua
-   -> Ancora NO? -> PAUSA + avviso utente
+```typescript
+// Se il cookie e' stato aggiornato DOPO la pausa del job, il cookie e' fresco
+const cookieUpdatedAt = map['wca_auth_cookie_updated_at']
+if (job.status === 'paused' && cookieUpdatedAt > job.updated_at) {
+  // Cookie rinnovato dopo la pausa - sessione probabilmente OK
+  status = 'ok'
+}
 ```
 
-## Riepilogo file modificati
+## File modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/process-download-job/index.ts` | Rimuovere TUTTE le chiamate a `scrape-wca-partners` e auto-chaining |
-| `public/chrome-extension/background.js` | Aggiungere azioni `verifySession` e `syncCookie` |
-| `src/hooks/useExtensionBridge.ts` | Esporre `verifySession()` e `syncCookie()` |
-| `src/pages/AcquisizionePartner.tsx` | Verifica sessione ogni 3 partner + indicatore live + auto-recovery |
-
-## Risultato
-
-- Il server NON tocca MAI WCA -- zero richieste server-side
-- L'estensione lavora dal tuo browser, stesso IP, stessa sessione
-- Ogni 3 partner il sistema verifica che la sessione sia viva
-- Se la sessione muore: tentativo automatico di ripristino
-- Se il ripristino fallisce: pausa immediata con avviso chiaro
-- La sessione resta aperta finche' TU non la chiudi
+| `supabase/functions/check-wca-session/index.ts` | Confrontare timestamp cookie vs job per evitare falsi "expired" |
 
