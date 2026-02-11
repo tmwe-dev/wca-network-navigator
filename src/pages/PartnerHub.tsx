@@ -122,7 +122,7 @@ function TrophyRow({ years }: { years: number }) {
   return (
     <div className="flex items-center gap-0.5 flex-wrap">
       {Array.from({ length: display }).map((_, i) => (
-        <Trophy key={i} className="w-3 h-3 text-amber-500" />
+        <Trophy key={i} className="w-3 h-3 text-amber-500 fill-amber-500" />
       ))}
       {years > 20 && <span className="text-[9px] text-muted-foreground ml-0.5">+{years - 20}</span>}
     </div>
@@ -302,6 +302,7 @@ export default function PartnerHub() {
                             {partner.is_favorite && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />}
                           </div>
                           <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            <span className="text-sm mr-1">{getCountryFlag(partner.country_code)}</span>
                             {partner.city} · {formatPartnerType(partner.partner_type)}
                           </p>
                           {/* Star rating */}
@@ -321,11 +322,6 @@ export default function PartnerHub() {
                             {hasPersonalPhone && <Phone className="w-3 h-3 text-primary" />}
                             {hasPersonalEmail && <Mail className="w-3 h-3 text-primary" />}
                             {whatsappNum && <MessageCircle className="w-3 h-3 text-primary" />}
-                            {q === "missing" && (
-                              <span className="text-[9px] text-destructive flex items-center gap-0.5">
-                                <UserX className="w-3 h-3" /> No contatti
-                              </span>
-                            )}
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
@@ -439,12 +435,20 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold truncate">{partner.company_name}</h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-              <MapPin className="w-4 h-4" />
+              <span className="text-lg">{getCountryFlag(partner.country_code)}</span>
+              <MapPin className="w-3.5 h-3.5" />
               {partner.city}, {partner.country_name}
-              {partner.wca_id && <Badge variant="outline" className="text-xs ml-1">WCA #{partner.wca_id}</Badge>}
+              <span className="text-muted-foreground/50">·</span>
+              <span>{formatPartnerType(partner.partner_type)}</span>
+              {partner.office_type && (
+                <Badge variant="outline" className="text-[10px] py-0">
+                  {partner.office_type === "head_office" ? "HQ" : "Branch"}
+                </Badge>
+              )}
+              {partner.wca_id && <Badge variant="outline" className="text-[10px] py-0 ml-1">WCA #{partner.wca_id}</Badge>}
             </div>
 
-            {/* Star rating + trophies */}
+            {/* Star rating + trophies on same row */}
             <div className="flex items-center gap-4 mt-2">
               {partner.rating > 0 && (
                 <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} size="md" />
@@ -453,53 +457,6 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                 <TrophyRow years={getYearsMember(partner.member_since)} />
               )}
             </div>
-
-            {/* Status + type badges */}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {(() => { const StatusIcon = status.icon; return (
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <StatusIcon className="w-3 h-3" /> {status.label}
-                </Badge>
-              ); })()}
-              <Badge variant="secondary" className="text-xs">{formatPartnerType(partner.partner_type)}</Badge>
-              {partner.office_type && (
-                <Badge variant="outline" className="text-xs">
-                  {partner.office_type === "head_office" ? "HQ" : "Branch"}
-                </Badge>
-              )}
-            </div>
-
-            {/* Contact availability icons */}
-            {(() => {
-              const q = getPartnerContactQuality(partner.partner_contacts);
-              const hasPersonalEmail = partner.partner_contacts?.some((c: any) => !!c.email);
-              const hasPersonalPhone = partner.partner_contacts?.some((c: any) => !!c.direct_phone || !!c.mobile);
-              const whatsappNum = partner.mobile || partner.phone;
-              return (
-                <div className="flex items-center gap-2 mt-2">
-                  {hasPersonalPhone && (
-                    <span className="flex items-center gap-1 text-xs text-primary">
-                      <Phone className="w-3.5 h-3.5" /> Telefono
-                    </span>
-                  )}
-                  {hasPersonalEmail && (
-                    <span className="flex items-center gap-1 text-xs text-primary">
-                      <Mail className="w-3.5 h-3.5" /> Email
-                    </span>
-                  )}
-                  {whatsappNum && (
-                    <span className="flex items-center gap-1 text-xs text-primary">
-                      <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                    </span>
-                  )}
-                  {q === "missing" && (
-                    <span className="flex items-center gap-1 text-xs text-destructive">
-                      <UserX className="w-3.5 h-3.5" /> No contatti personali
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
 
             <div className="mt-2">
               <SocialLinks partnerId={partner.id} />
