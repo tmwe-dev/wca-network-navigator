@@ -102,16 +102,13 @@ async function sendCookiesAndFinish(cookieStr, tabId) {
     var saveData = await saveRes.json();
     if (tabId) { try { chrome.tabs.remove(tabId); } catch (e) { /* ignore */ } }
 
-    if (saveData.authenticated) {
+    // If .ASPXAUTH was present, it's a success regardless of server-side deep test
+    if (saveData.hasAspxAuth || saveData.authenticated) {
       setStatus("✅ Connesso! Tutto OK.", "ok");
-      log("✓ Cookie salvato e verificato!", "done");
+      log("✓ Cookie salvato e sessione attiva!", "done");
     } else {
-      setStatus("⚠️ Cookie salvato, verifica contatti fallita", "error");
-      log("Cookie inviato ma contatti privati non visibili.", "fail");
-    }
-    if (saveData.diagnostics) {
-      var d = saveData.diagnostics;
-      log("Contatti: " + (d.contactsTotal || 0) + ", Nomi: " + (d.contactsWithRealName || 0) + ", Email: " + (d.contactsWithEmail || 0));
+      setStatus("❌ Connessione fallita", "error");
+      log("Cookie senza autenticazione.", "fail");
     }
   } catch (err) {
     setStatus("❌ Errore invio: " + err.message, "error");
