@@ -186,4 +186,27 @@
   .space-floating-bar {
     @apply bg-black/60 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-2;
   }
+
+  /* Partner Hub Glassmorphism */
+  .glass-surface {
+    background: linear-gradient(135deg, hsl(222 47% 11% / 0.95), hsl(215 28% 17% / 0.9));
+  }
+
+  .glass-card {
+    @apply backdrop-blur-xl border rounded-xl;
+    background: hsl(0 0% 100% / 0.05);
+    border-color: hsl(0 0% 100% / 0.1);
+  }
+
+  .glass-badge {
+    @apply backdrop-blur-md rounded-lg px-3 py-2;
+    background: hsl(0 0% 100% / 0.08);
+    border: 1px solid hsl(0 0% 100% / 0.12);
+  }
+
+  .glass-section {
+    @apply backdrop-blur-md rounded-xl p-4;
+    background: hsl(0 0% 100% / 0.03);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+  }
 }
