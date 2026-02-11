@@ -1,63 +1,78 @@
 
 
-# Fix Uniformita' Colore, Responsive e Contrasto
+# Redesign Partner Hub: Coppe, Contatti, Social, Design Professionale
 
-## Problemi dallo screenshot
+## Problemi segnalati
 
-1. **Due colori diversi**: pannello sinistro bianco, pannello destro scuro -- deve essere uniforme
-2. **Coppe verticali**: le coppe si impilano in colonna singola, devono stare su griglia 2-4 colonne quando lo spazio e' poco
-3. **Contrasto bottoni/badge**: testi neri su sfondo scuro (es. Social LinkedIn), illeggibili
-4. **Non responsive**: quando si riduce la pagina il layout non si adatta
+1. **Coppe**: troppe coppe individuali -- servono UNA coppa + numero anni chiaro
+2. **Network a sinistra**: mostra tutti i loghi a tutti i partner invece che solo quelli a cui appartiene
+3. **Contatti nella card**: mancano icone telefono/email accanto a ogni persona
+4. **Pannello destro**: troppo dispersivo, loghi network ancora "vuoti" (non pieni), serve compattare
+5. **Social nella card sinistra**: mancano icone LinkedIn/Facebook
+6. **Design generale**: troppo elementare, mancano glassmorphism, sfumature, gradients
+7. **Servizi trasporto e specialita'**: brutti, da rifare con design professionale
+8. **Contatti azienda**: non evidenziano se i valori sono pieni o vuoti
+9. **Icone piene**: a destra ancora non sono fill
 
-## Correzioni
+## Modifiche pianificate
 
-### 1. Uniformita' colore
-Il pannello destro usa `glass-surface` (sfondo scuro con gradiente). Il pannello sinistro usa `bg-card` (bianco in light mode). La soluzione:
-- Rimuovere `glass-surface` dal pannello destro
-- Usare `bg-card` per entrambi i pannelli
-- Tutte le `glass-section`, `glass-card`, `glass-badge` nel dettaglio vengono sostituite con card standard: `bg-muted/50 border rounded-xl`
-- I testi `text-white/*` vengono sostituiti con `text-foreground`, `text-muted-foreground` ecc.
-- Questo rende la pagina uniforme in light mode (bianca) e in dark mode (scura), senza mai mischiare
+### File: `src/pages/PartnerHub.tsx`
 
-### 2. Coppe responsive
-- La `TrophyRow` usa `flex-wrap` ma e' una sola riga. Cambiare a `grid` con `grid-cols-4` (o `grid-cols-5`) cosi' le coppe si distribuiscono su piu' righe compatte senza andare in verticale
+#### 1. TrophyRow -> singola coppa + numero
+Sostituire la griglia di N coppe con:
+- 1 icona Trophy (fill, amber, `w-4 h-4`)
+- numero anni in grassetto (`text-sm font-bold text-amber-500`)
+- testo "yrs" piccolo accanto
 
-### 3. Contrasto bottoni e badge
-Revisione sistematica di tutti gli elementi nel pannello destro:
-- Badge HQ/Branch: `bg-secondary text-secondary-foreground` (non `bg-white/10 text-white/60`)
-- Collapsible triggers: `bg-muted text-foreground` con hover `bg-accent`
-- Testi dentro sezioni: `text-foreground` per titoli, `text-muted-foreground` per secondari
-- Social Links button: verificare che il bottone abbia `bg-secondary text-secondary-foreground` (non sfondo scuro con testo scuro)
-- Deep Search button: `bg-primary text-primary-foreground`
-- Icone servizi: mantengono i colori specifici (sky, blue, amber ecc.) che funzionano su entrambi gli sfondi
-- Empty state testo: `text-muted-foreground` invece di `text-white/40`
+Sia nella card sinistra che nel pannello destro.
 
-### 4. Responsive
-- Il container principale: `flex flex-col md:flex-row` -- su mobile la lista sta sopra, il dettaglio sotto
-- Lista partner: `w-full md:w-[400px]`
-- Grid 2 colonne nel dettaglio: `grid-cols-1 lg:grid-cols-[3fr_2fr]` (gia' presente, OK)
-- Servizi di trasporto: `grid-cols-1 sm:grid-cols-2`
+#### 2. Contatti con icone email/telefono nella card sinistra
+Per ogni contatto mostrato (max 3), aggiungere accanto al nome:
+- Icona `Mail` piena (fill) in blu se `c.email` esiste, altrimenti grigia/opaca
+- Icona `Phone` piena (fill) in verde se `c.direct_phone || c.mobile` esiste, altrimenti grigia/opaca
+- Questo mostra immediatamente la qualita' del contatto
 
-### File modificato
+#### 3. Social links nella card sinistra
+Dopo i contatti e prima dei servizi, aggiungere una riga con le icone social (LinkedIn, Facebook, ecc.) recuperate dal componente `SocialLinks` in modalita' compact. Importare `useSocialLinks` e mostrare le icone direttamente nella card con `fill="currentColor"`.
 
-`src/pages/PartnerHub.tsx` -- tutte le correzioni in un unico file:
+#### 4. Network solo del partner (card sinistra)
+Il codice attuale gia' filtra `partner.partner_networks` -- verificare che funzioni correttamente. Se il database ritorna i network corretti per partner, non serve modifica. Se mostra tutti, aggiungere filtro.
 
-| Zona | Modifica |
-|------|----------|
-| Riga 271 | Container: aggiungere `flex-col md:flex-row` |
-| Riga 273 | Lista: `w-full md:w-[400px]` |
-| Riga 456 | Pannello destro: rimuovere `glass-surface`, usare `bg-card` |
-| Riga 458 | Empty state: `text-muted-foreground` |
-| Righe 526-608 | Header card: sostituire `glass-card` con `bg-muted/50 border rounded-xl`, tutti i `text-white` con `text-foreground` |
-| Riga 148-158 | TrophyRow: cambiare a `grid grid-cols-5 gap-0.5` |
-| Righe 616-648 | Servizi: `glass-section` diventa `bg-muted/50 border rounded-xl p-4`, `glass-badge` diventa `bg-secondary/50 border rounded-lg px-3 py-2` |
-| Righe 651-773 | Collapsible: trigger con `bg-muted hover:bg-accent text-foreground`, contenuti con `bg-muted/30 border` |
-| Righe 782-837 | Timeline/Reminders: card interne con `bg-muted/50 border` |
-| Righe 841-964 | Colonna destra: stesse sostituzioni glass -> standard |
-| Riga 560 | Badge HQ: `bg-secondary text-secondary-foreground` |
-| Riga 574 | "High Quality": `text-muted-foreground` |
-| Riga 599 | Deep Search: `bg-primary text-primary-foreground` |
+#### 5. Pannello destro: compattare e icone piene
+- **Servizi trasporto**: aggiungere `fill="currentColor"` a tutte le icone, aggiungere gradient di sfondo alle card servizio (`bg-gradient-to-r from-sky-500/10 to-transparent` per air, `from-blue-500/10` per ocean, ecc.)
+- **Specialita'**: stesso trattamento con icone piene e sfumature colorate
+- **Network logos**: i loghi da `w-24 h-24` sono gia' immagini reali (PNG caricati), ma il fallback Globe e' vuoto -- aggiungere `fill="currentColor"` al fallback
+- **Contatti azienda collapsible**: accanto a ogni campo (Phone, Mail, Globe, Address), mostrare l'icona piena colorata se il valore esiste, grigia outline se manca. Aggiungere anche i campi mancanti in grigio per evidenziare cosa non abbiamo
+- **Contatti ufficio collapsible**: per ogni persona, mostrare icone email/phone piene se presenti, vuote/grigie se mancanti
+
+#### 6. Design professionale con glassmorphism e gradients
+- **Header card**: aggiungere `bg-gradient-to-br from-primary/5 via-transparent to-accent/10` e `backdrop-blur-sm`
+- **Sezioni servizi/specialita'**: `bg-gradient-to-r` con colori tematici
+- **Badge servizi singoli**: bordo con glow sottile (`shadow-sm shadow-sky-500/20` per air, ecc.)
+- **Collapsible triggers**: aggiungere gradient sottile e icona con glow
+- **Card KPI**: aggiungere gradient e border glow
+- **Bottone Deep Search**: gradient `from-primary to-sky-400` con hover animato
+- **Bottone preferiti**: glow amber quando attivo
+- **Card network**: backdrop-blur e border sottile luminoso
+
+#### 7. Bottoni e tasti migliorati
+- Tutti i bottoni con `rounded-xl` e transizioni smooth
+- Social links nel pannello destro: icone piu' grandi (`w-6 h-6`), con label sotto, sfondo colorato per piattaforma
+- Rating stars: leggermente piu' grandi nel dettaglio
+
+### File: `src/components/agents/SocialLinks.tsx`
+- Modalita' non-compact: icone piu' grandi (`w-6 h-6`), con `fill="currentColor"`, sfondo colorato per piattaforma (`bg-blue-500/10` per LinkedIn, `bg-blue-400/10` per Facebook, ecc.)
+- Label sotto l'icona in formato verticale
+
+### Riepilogo modifiche per file
+
+| File | Modifiche |
+|------|-----------|
+| `src/pages/PartnerHub.tsx` | TrophyRow semplificata, contatti con icone pieni/vuoti, social nella card sinistra, icone piene ovunque, glassmorphism, gradients, design professionale, servizi ridisegnati, contatti azienda con stati pieni/vuoti |
+| `src/components/agents/SocialLinks.tsx` | Icone piu' grandi con fill, sfondo colorato per piattaforma, layout verticale |
 
 ### Risultato atteso
-Pagina completamente uniforme: bianca in light mode, scura in dark mode. Nessun elemento con contrasto insufficiente. Layout responsive che si adatta su mobile. Coppe distribuite su griglia compatta.
+- Card sinistra: coppa singola con numero, contatti con icone stato, social visibili, design moderno
+- Pannello destro: compatto, icone piene, gradients, glassmorphism, contatti con evidenza pieno/vuoto
+- Design professionale con sfumature e profondita' visiva
 
