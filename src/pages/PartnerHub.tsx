@@ -127,6 +127,34 @@ const PARTNER_TYPE_ICONS: Record<string, any> = {
   courier: Package,
 };
 
+/* ── Network logo mapping ── */
+const NETWORK_LOGOS: Record<string, string> = {
+  "wca expo": "/logos/wca-expo.png",
+  "wca live events & expo": "/logos/wca-expo.png",
+  "wca ecommerce": "/logos/wca-ecommerce.png",
+  "wca ecommerce solutions": "/logos/wca-ecommerce.png",
+  "wca pharma": "/logos/wca-pharma.png",
+  "wca time critical": "/logos/wca-time-critical.png",
+  "wca perishables": "/logos/wca-perishables.png",
+  "wca relocations": "/logos/wca-relocations.png",
+  "wca dangerous goods": "/logos/wca-dangerous-goods.png",
+  "wca projects": "/logos/wca-projects.png",
+  "infinite connection": "/logos/ifc-infinite-connection.png",
+  "ifc": "/logos/ifc-infinite-connection.png",
+  "elite global logistics network": "/logos/elite-global-logistics.png",
+  "egln": "/logos/elite-global-logistics.png",
+};
+
+function getNetworkLogo(name: string): string | null {
+  const key = name.toLowerCase().trim();
+  if (NETWORK_LOGOS[key]) return NETWORK_LOGOS[key];
+  // Partial match
+  for (const [k, v] of Object.entries(NETWORK_LOGOS)) {
+    if (key.includes(k) || k.includes(key)) return v;
+  }
+  return null;
+}
+
 function getServiceIcon(category: string) {
   return SERVICE_ICONS[category] || Box;
 }
@@ -894,19 +922,26 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
             <div className="bg-muted/50 border rounded-xl p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">Network</p>
               <div className="space-y-3">
-                {partner.partner_networks.map((n: any) => (
-                  <div key={n.id} className="bg-secondary/50 border rounded-lg px-3 py-2 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center border">
-                      <Globe className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-foreground font-medium">{n.network_name}</p>
-                      {n.expires && (
-                        <p className="text-xs text-muted-foreground">Scade {format(new Date(n.expires), "MMM yyyy")}</p>
+                {partner.partner_networks.map((n: any) => {
+                  const logo = getNetworkLogo(n.network_name);
+                  return (
+                    <div key={n.id} className="bg-secondary/50 border rounded-lg px-3 py-3 flex items-center gap-3">
+                      {logo ? (
+                        <img src={logo} alt={n.network_name} className="w-12 h-12 object-contain rounded-lg" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center border">
+                          <Globe className="w-6 h-6 text-primary" />
+                        </div>
                       )}
+                      <div>
+                        <p className="text-sm text-foreground font-medium">{n.network_name}</p>
+                        {n.expires && (
+                          <p className="text-xs text-muted-foreground">Scade {format(new Date(n.expires), "MMM yyyy")}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
