@@ -1,48 +1,90 @@
 
 
-## Pulizia e Semplificazione WCA - "Un Click e Via"
+## Ristrutturazione Download Management - Tutto in Una Pagina
 
 ### Problema attuale
-La gestione WCA e' frammentata e piena di roba inutile:
-- La pagina **Impostazioni** ha campi username/password WCA che non servono (il login server-side non funziona per protezioni Cloudflare)
-- Ci sono **3 posti diversi** dove incollare il cookie manualmente (Settings cookie fallback, ProxySetupGuide, pagina WCA)
-- Il componente si chiama ancora "ProxySetupGuide" ma non c'e' nessun proxy
-- La sidebar dice "WCA Proxy" invece di "WCA"
-- Troppe istruzioni tecniche sparse ovunque
+Per avviare un download servono **4 click** attraverso 3 schermate diverse:
+1. "Scarica Partner" (schermata azione)
+2. Seleziona paesi + "Prosegui"
+3. Seleziona network + "Prosegui"  
+4. "Avvia Download"
 
-### Cosa cambia
+Inoltre il file e' un monolite di **1903 righe** con 15+ componenti inline, difficile da mantenere.
 
-**1. Pagina /wca - Diventa il centro di comando**
-- Badge di stato grande e chiaro (Connesso / Non connesso)
-- UN SOLO pulsante "Sincronizza Cookie" che apre una nuova finestra su wcaworld.com e poi l'utente clicca l'estensione Chrome
-- Pulsante "Verifica Sessione" per ricontrollare
-- Il metodo manuale (incolla cookie) resta nascosto in un dettaglio collassabile per emergenze
-- Niente piu' istruzioni lunghe 4 passaggi sull'installazione dell'estensione: solo un link diretto
+### Nuova struttura: Layout a due colonne, zero navigazione
 
-**2. Pagina Impostazioni - Pulizia totale**
-- ELIMINATA la card "Credenziali WCA World" (username e password sono inutili, il login avviene dal browser)
-- ELIMINATA la sezione "Inserimento cookie manuale (fallback)" duplicata
-- La card "Sessione WCA" diventa compatta: solo semaforo di stato + link a /wca per gestire la connessione
-- Resta la card WhatsApp che e' utile
+La pagina diventa un'unica schermata divisa in due zone:
 
-**3. Componente ProxySetupGuide - Rinominato e semplificato**
-- Rinominato in `WcaSessionCard`
-- Mostra solo: indicatore di stato + pulsante "Vai a WCA" (link a /wca) + pulsante "Verifica"
-- Rimosso tutto il codice per input cookie (quello si fa solo dalla pagina /wca)
+```text
++------------------------------------------+----------------------------+
+|  COLONNA SINISTRA (60%)                  |  COLONNA DESTRA (40%)      |
+|                                          |                            |
+|  [Cerca paese...]  [Filtri]              |  PANNELLO AZIONE           |
+|                                          |                            |
+|  +--------+ +--------+ +--------+       |  Paesi: IT, DE, FR         |
+|  | Italia | | Germany| | France |       |  Network: [Tutti v]        |
+|  | 45/50  | | 30/80  | | 0/120  |       |  Velocita: [===--]         |
+|  +--------+ +--------+ +--------+       |  Stima: ~25 min            |
+|  +--------+ +--------+ +--------+       |                            |
+|  | Spain  | | UK     | | USA    |       |  [Scarica 150 mancanti]    |
+|  | 12/35  | | 0/200  | | 10/500 |       |  [Aggiorna 45 esistenti]   |
+|  +--------+ +--------+ +--------+       |                            |
+|  ...                                     |  --- Job Attivi ---        |
+|                                          |  IT: 23/50 [Pausa][Stop]   |
+|                                          |  DE: 5/80  [Pausa][Stop]   |
++------------------------------------------+----------------------------+
+```
 
-**4. Sidebar**
-- "WCA Proxy" rinominato in "WCA"
+### Cosa cambia concretamente
+
+**1. Eliminazione del wizard a 3 step**
+- Non c'e' piu' la schermata "Cosa vuoi fare?" 
+- Non c'e' piu' il passaggio "Scegli Network" separato
+- La selezione paesi e' sempre visibile a sinistra
+- Il pannello azione a destra si aggiorna in tempo reale con i paesi selezionati
+
+**2. Pannello azione contestuale (colonna destra)**
+Quando selezioni uno o piu' paesi, il pannello mostra:
+- Riepilogo: quanti partner nella directory, quanti gia' scaricati, quanti mancanti
+- Selettore network (dropdown, default "Tutti")
+- Slider velocita'
+- Pulsante principale: "Scarica X mancanti" oppure "Aggiorna X esistenti"
+- Se non ci sono paesi selezionati: mostra i job attivi e completati recenti
+
+**3. Job attivi sempre visibili**
+- I job in corso appaiono nella parte bassa del pannello destro (o sotto il pulsante)
+- Non serve navigare in una schermata separata per vederli
+- Mantengono tutte le metriche attuali (progresso, velocita', contatti trovati, pausa/stop)
+
+**4. "Aggiorna Contatti" integrato**
+- Invece di essere un'azione separata, diventa un toggle nel pannello: "Scarica mancanti" vs "Aggiorna contatti esistenti"
+- Oppure un secondo pulsante sotto quello principale
+
+**5. Strumenti avanzati**
+- "Arricchisci dal Sito" e "Analisi Network" restano in un collapsible in fondo alla pagina
+- WCA Browser resta nel collapsible
 
 ### Dettagli tecnici
 
-**File modificati:**
-- `src/pages/WCA.tsx` - Semplificato: status + sync button + verify + fallback nascosto
-- `src/pages/Settings.tsx` - Rimossa card credenziali WCA, rimosso fallback cookie duplicato, card sessione punta a /wca
-- `src/components/settings/ProxySetupGuide.tsx` - Rinominato in `WcaSessionCard.tsx`, semplificato a indicatore di stato + link
-- `src/components/layout/AppSidebar.tsx` - Label "WCA Proxy" cambiata in "WCA"
+**Decomposizione del file (da 1903 righe a componenti)**
 
-**File eliminati:**
-- Nessuno (il componente viene rinominato)
+Il file `DownloadManagement.tsx` viene spezzato in moduli:
 
-**Nessuna modifica alle Edge Functions** - la logica backend e' gia' corretta dopo l'ultimo fix.
+| File | Contenuto |
+|------|-----------|
+| `src/pages/DownloadManagement.tsx` | Layout principale, ~150 righe |
+| `src/components/download/CountryGrid.tsx` | Griglia paesi con filtri, ricerca, statistiche |
+| `src/components/download/ActionPanel.tsx` | Pannello destro: riepilogo + azione + network + velocita' |
+| `src/components/download/JobMonitor.tsx` | Lista job attivi/completati con controlli |
+| `src/components/download/JobCard.tsx` | Singola card job (estratta dall'attuale) |
+| `src/components/download/WcaSessionIndicator.tsx` | Indicatore sessione WCA (estratto) |
+| `src/components/download/AdvancedTools.tsx` | Sezione collapsible con Enrich + Network Analysis |
+| `src/components/download/theme.ts` | Oggetto tema (le 130 righe di `t()`) |
+
+**Flusso utente semplificato:**
+1. Apri Download Management - vedi subito la griglia paesi
+2. Clicca su uno o piu' paesi - il pannello destro si popola
+3. Clicca "Scarica" - parte. Fine.
+
+**Nessuna modifica al backend** - le Edge Functions e la logica dei job restano identiche.
 
