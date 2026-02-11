@@ -11,9 +11,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app/*",
-        "https://wca-network-navigator.lovable.app/*",
-        "http://localhost:*/*"
+        "https://*.lovable.app/*",
+        "http://localhost/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
