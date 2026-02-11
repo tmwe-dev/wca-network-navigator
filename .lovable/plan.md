@@ -1,59 +1,53 @@
 
-# Fix: Auto-Login Server-Side e Stabilita' Bridge
+# Fix: Auto-Login e Validazione Sessione WCA
 
-## Situazione Attuale
+## Situazione dai Log
 
-I dati STANNO arrivando (verificato dai log del server). Esempi dalla sessione appena eseguita:
-- Pelikan: 4 email estratte
-- SKY NET: email + telefoni + mobile
-- International Trans 06: email + telefoni
+I log mostrano chiaramente:
+- Il server trova **3 email** ma **0 nomi reali** e **5 "Members only"** -- questo significa che la regex per rilevare i nomi dei contatti e' troppo restrittiva
+- L'auto-login continua a postare a `/Home/SetLanguage` (i log sono di prima che il deploy del fix fosse completato)
+- Quando tu fai il login manuale, funziona per un po', poi la sessione scade e il server non riesce a rinnovarla
 
-Alcuni partner (SBA Albania, Blackthorne, Aster Logistics) non hanno email/telefoni perche' non li condividono su WCA -- non e' un bug.
+## Correzioni
 
-## Problemi da Risolvere
+### 1. Fix regex nomi in `check-wca-session` e `save-wca-cookie`
 
-### Problema 1: Auto-Login Server-Side Rotto
-Il server trova il form SBAGLIATO nella pagina di login WCA (`/Home/SetLanguage` invece del form di login). Per questo il login automatico server-side fallisce SEMPRE. Il sistema dipende interamente dall'estensione Chrome.
+Il problema: la regex cerca `profile_label">...Name...</div>...profile_val">NOME` ma il formato HTML di WCA potrebbe usare classi diverse o struttura diversa. Se il server vede 3 email ma 0 nomi, significa che le email vengono trovate con un pattern diverso da quello dei nomi.
 
-**Fix**: Nella edge function `scrape-wca-partners`, correggere la funzione `directWcaLogin` per cercare specificamente il form di login (quello con `input[type="password"]`) invece di prendere il primo form trovato. Usare il selettore dell'action corretto (`/Account/Login`) e i nomi campo corretti (`UserName`/`Password` o quelli rilevati dal form giusto).
+**Soluzione**: Invece di cercare "Name" nel label, cercare qualsiasi testo non-"Members only" nelle righe di contatto. Se ci sono email valide, la sessione e' autenticata -- non serve che ANCHE i nomi siano visibili.
 
-### Problema 2: Bridge Estensione Instabile
-Il messaggio `contentScriptReady` puo' arrivare prima che la webapp sia pronta ad ascoltare. Risultato: l'indicatore mostra "non rilevata" anche quando l'estensione e' installata.
+```
+// Vecchia logica (troppo restrittiva):
+authenticated = contactsTotal > 0 && contactsWithRealName > 0
 
-**Fix**: Nel hook `useExtensionBridge`, aggiungere:
-- Un ping periodico ogni 5 secondi finche' l'estensione non viene rilevata
-- Un retry automatico al mount del componente
-- Nella pagina Acquisizione, prima di avviare la pipeline, forzare un `checkAvailable()` con retry
+// Nuova logica (se vedi email, sei autenticato):
+authenticated = contactsTotal > 0 && (contactsWithRealName > 0 || contactsWithEmail > 0)
+```
 
-### Problema 3: Feedback Visivo Insufficiente
-L'utente non vede chiaramente quali dati sono stati estratti e da quale fonte (server vs estensione).
+Stesso fix in `save-wca-cookie/index.ts` che ha la stessa logica di verifica.
 
-**Fix**: Nel canvas del partner, aggiungere un badge che indica la fonte dei contatti:
-- "Server" se i contatti vengono dallo scraper server-side
-- "Extension" se vengono dal bridge Chrome
-- Evidenziare in verde le email/telefoni estratti con successo
+### 2. Verifica deploy auto-login in `scrape-wca-partners`
 
-## Dettagli Tecnici
+Il codice aggiornato (che cerca il form con password input) e' gia' nel file ma i log mostrano che era ancora in esecuzione la versione vecchia. Serve un re-deploy forzato e un test per confermare che il form corretto (`/Account/Login`) viene trovato.
 
-### File da modificare
+### 3. Aggiungere log del form trovato nell'auto-login
 
-1. **`supabase/functions/scrape-wca-partners/index.ts`** (funzione `directWcaLogin`)
-   - Cercare il form che contiene `input[type="password"]` nell'HTML della pagina di login
-   - Estrarre l'action di QUEL form specifico, non del primo form trovato
-   - Fallback ai field names `UserName`/`Password` (standard ASP.NET Identity)
-   - Aggiungere logging migliorato per diagnostica
+Per diagnosticare meglio, aggiungere un log che mostri tutti i form trovati nella pagina e quale viene selezionato, cosi' se il problema persiste possiamo vedere esattamente cosa succede.
 
-2. **`src/hooks/useExtensionBridge.ts`**
-   - Aggiungere interval di polling (ping ogni 5s) finche' `isAvailable` diventa true
-   - Cleanup dell'interval quando il bridge viene rilevato o il componente si smonta
-   - Aggiungere retry nel `checkAvailable` (3 tentativi con delay 1s)
+## File da Modificare
 
-3. **`src/pages/AcquisizionePartner.tsx`**
-   - Prima di avviare la pipeline, forzare `checkExtension()` con feedback
-   - Mostrare nel canvas la fonte dei contatti (server vs extension)
-   - Aggiungere contatore contatti con email/telefono nel riassunto finale
+1. **`supabase/functions/check-wca-session/index.ts`** (linea 120)
+   - Cambiare la condizione `authenticated` per accettare anche `contactsWithEmail > 0`
+
+2. **`supabase/functions/save-wca-cookie/index.ts`** (funzione `testCookieDeep`)
+   - Stessa correzione della condizione `authenticated`
+
+3. **`supabase/functions/scrape-wca-partners/index.ts`** (funzione `directWcaLogin`)
+   - Aggiungere log diagnostico che elenca tutti i form trovati e le loro action
+   - Re-deploy forzato per assicurarsi che il fix precedente sia attivo
 
 ## Risultato Atteso
-- Il server riesce ad autenticarsi autonomamente senza dipendere dall'estensione
-- L'estensione viene rilevata in modo affidabile quando installata
-- L'utente vede chiaramente quanti contatti con email/telefono sono stati estratti
+
+- La sessione WCA viene correttamente rilevata come "attiva" quando le email sono visibili (non solo i nomi)
+- L'auto-login server-side posta al form corretto e rinnova la sessione automaticamente
+- Il semaforo resta verde e i download procedono senza interruzioni
