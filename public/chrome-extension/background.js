@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════
 // WCA Cookie Sync - Background Service Worker
-// Handles automated contact extraction requests from webapp
+// Handles automated contact extraction, session verification, and cookie sync
 // ══════════════════════════════════════════════════
 
 var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
@@ -77,6 +77,51 @@ function extractContactsFromPage() {
   }
 }
 
+// ── Check if a page has real authenticated contact data ──
+function checkSessionOnPage() {
+  try {
+    // Check if the page has a login prompt
+    var bodyText = document.body.innerText || "";
+    if (/please.*log\s*in/i.test(bodyText) || /sign\s*in.*to.*continue/i.test(bodyText)) {
+      return { authenticated: false, reason: "login_prompt" };
+    }
+
+    // Check for real contact rows with data (not "Members only")
+    var contactRows = document.querySelectorAll("[class*='contactperson_row']");
+    if (contactRows.length === 0) {
+      // Fallback scan
+      var allEls = document.querySelectorAll("*");
+      var rows = [];
+      for (var i = 0; i < allEls.length; i++) {
+        if (allEls[i].className && typeof allEls[i].className === "string" && allEls[i].className.indexOf("contactperson_row") >= 0) {
+          rows.push(allEls[i]);
+        }
+      }
+      contactRows = rows;
+    }
+
+    if (contactRows.length === 0) {
+      // Page loaded but no contact rows — could be a profile without contacts
+      // Check if HTML is substantial (not a redirect page)
+      return { authenticated: document.body.innerHTML.length > 5000, reason: "no_contact_rows_but_page_loaded" };
+    }
+
+    // Check if any contact has real email (not "Members only")
+    var hasRealData = false;
+    for (var r = 0; r < contactRows.length; r++) {
+      var text = contactRows[r].innerText || "";
+      if (text.indexOf("@") >= 0 && !/Members\s*only/i.test(text)) {
+        hasRealData = true;
+        break;
+      }
+    }
+
+    return { authenticated: hasRealData || contactRows.length > 0, reason: hasRealData ? "real_contacts" : "contacts_but_no_email" };
+  } catch (e) {
+    return { authenticated: false, reason: "error: " + e.message };
+  }
+}
+
 // ── Wait for tab to finish loading ──
 function waitForTabLoad(tabId, ms) {
   ms = ms || 15000;
@@ -122,6 +167,70 @@ async function extractContactsForId(wcaId) {
   }
 }
 
+// ── Verify WCA session by opening a known profile ──
+async function verifyWcaSession() {
+  var TEST_WCA_ID = 86580;
+  var tab = await chrome.tabs.create({
+    url: "https://www.wcaworld.com/directory/members/" + TEST_WCA_ID,
+    active: false,
+  });
+
+  try {
+    await waitForTabLoad(tab.id, 15000);
+
+    var results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: checkSessionOnPage,
+    });
+
+    var sessionResult = results[0] && results[0].result;
+
+    // If authenticated, also sync the cookie
+    if (sessionResult && sessionResult.authenticated) {
+      await syncWcaCookiesToServer();
+    }
+
+    return sessionResult || { authenticated: false, reason: "no_result" };
+  } catch (err) {
+    return { authenticated: false, reason: "error: " + err.message };
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
+}
+
+// ── Sync all WCA cookies to the server ──
+async function syncWcaCookiesToServer() {
+  try {
+    var cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+    if (!cookies || cookies.length === 0) {
+      cookies = await chrome.cookies.getAll({ domain: "wcaworld.com" });
+    }
+    if (!cookies || cookies.length === 0) {
+      cookies = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+    }
+
+    if (!cookies || cookies.length === 0) {
+      return { success: false, error: "No WCA cookies found" };
+    }
+
+    var cookieString = cookies.map(function (c) { return c.name + "=" + c.value; }).join("; ");
+
+    var res = await fetch(SUPABASE_URL + "/functions/v1/save-wca-cookie", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ cookie: cookieString }),
+    });
+    var result = await res.json();
+    return { success: true, authenticated: result.authenticated, cookieLength: cookieString.length };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 // ── Save contacts to server ──
 async function sendContactsToServer(dataArray) {
   var batch = dataArray.map(function (d) {
@@ -145,7 +254,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.source !== "wca-content-bridge") return false;
 
   if (message.action === "ping") {
-    sendResponse({ success: true, version: "3.0" });
+    sendResponse({ success: true, version: "4.0" });
     return false;
   }
 
@@ -156,16 +265,12 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       return false;
     }
 
-    // Async extraction - must return true to keep sendResponse channel open
     (async function () {
       try {
         var result = await extractContactsForId(wcaId);
-
-        // Save to server
         if (result.contacts && result.contacts.length > 0) {
           await sendContactsToServer([result]);
         }
-
         sendResponse({
           success: true,
           wcaId: wcaId,
@@ -176,8 +281,31 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         sendResponse({ success: false, error: err.message, wcaId: wcaId });
       }
     })();
+    return true;
+  }
 
-    return true; // Keep message channel open for async response
+  if (message.action === "verifySession") {
+    (async function () {
+      try {
+        var result = await verifyWcaSession();
+        sendResponse({ success: true, authenticated: result.authenticated, reason: result.reason });
+      } catch (err) {
+        sendResponse({ success: false, authenticated: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.action === "syncCookie") {
+    (async function () {
+      try {
+        var result = await syncWcaCookiesToServer();
+        sendResponse(result);
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
   }
 
   return false;
@@ -188,7 +316,6 @@ chrome.runtime.onInstalled.addListener(async function () {
   var extensionId = chrome.runtime.id;
   console.log("[WCA Extension] Installed, ID:", extensionId);
 
-  // Save extension ID to app_settings
   try {
     await fetch(SUPABASE_URL + "/rest/v1/app_settings?key=eq.chrome_extension_id", {
       method: "GET",
@@ -226,4 +353,7 @@ chrome.runtime.onInstalled.addListener(async function () {
   } catch (err) {
     console.error("[WCA Extension] Failed to save ID:", err);
   }
+
+  // Auto-sync cookies on install
+  await syncWcaCookiesToServer();
 });
