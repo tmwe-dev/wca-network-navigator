@@ -39,13 +39,32 @@ Deno.serve(async (req) => {
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
     
     const testResult = await testCookieDeep(cookie)
-    const authenticated = testResult.diagnostics?.error
-      ? hasAspxAuth  // Network/WAF error: trust ASPXAUTH as fallback
-      : testResult.authenticated  // Test succeeded: trust the result
+    
+    // Determine authentication:
+    // 1. Network/WAF error → trust ASPXAUTH presence as fallback
+    // 2. Test found contacts with emails → definitely authenticated
+    // 3. Page loaded fine (no login prompt, no error) but no contact rows → 
+    //    this is NORMAL for some profiles, treat as authenticated if ASPXAUTH present
+    // 4. Login prompt found → definitely expired
+    let authenticated: boolean
+    if (testResult.diagnostics?.error) {
+      authenticated = hasAspxAuth
+    } else if (testResult.authenticated) {
+      authenticated = true
+    } else if (!testResult.diagnostics?.hasLoginPrompt && hasAspxAuth && testResult.diagnostics?.htmlSize > 10000) {
+      // Page loaded successfully (large HTML), no login prompt, has ASPXAUTH cookie
+      // The profile might just not have contactperson_row blocks — this is NOT expired
+      console.log('check-wca-session: page loaded OK, no login prompt, ASPXAUTH present — treating as authenticated')
+      authenticated = true
+    } else {
+      authenticated = false
+    }
 
     const status = authenticated ? 'ok' : 'expired'
     await upsertStatus(supabase, status, new Date().toISOString())
 
+    // IMPORTANT: Never call wca-auto-login from here — it invalidates the browser session
+    
     return respond({
       authenticated, 
       status, 
