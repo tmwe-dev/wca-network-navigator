@@ -8,7 +8,6 @@ import { AcquisitionToolbar } from "@/components/acquisition/AcquisitionToolbar"
 import { PartnerQueue, QueueItem } from "@/components/acquisition/PartnerQueue";
 import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/PartnerCanvas";
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
 type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -68,8 +67,7 @@ export default function AcquisizionePartner() {
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
   const pollingAbortRef = useRef(false);
-  const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
-  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract, verifySession, syncCookie } = useExtensionBridge();
+  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, waitForExtension, extractContacts: extensionExtract, verifySession, syncCookie } = useExtensionBridge();
   const extensionWarningShown = useRef(false);
   const [sessionHealth, setSessionHealth] = useState<SessionHealth>("unknown");
 
@@ -291,13 +289,18 @@ export default function AcquisizionePartner() {
       // ── Consecutive empty detection ──
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
 
+      // First partner empty: verify session via extension instead of edge function
       if (i === startFrom && !hasAnyContact) {
-        const recheck = await triggerCheck();
-        if (!recheck || recheck.status !== "ok") {
+        const recheck = await verifySession();
+        if (!recheck.success || !recheck.authenticated) {
           pauseRef.current = true;
           setPipelineStatus("paused");
-          setShowSessionAlert(true);
-          await supabase.from("download_jobs").update({ status: "paused" }).eq("id", jobId);
+          toast({
+            title: "⚠️ Sessione WCA non attiva",
+            description: "Il primo partner non ha contatti. Verifica la sessione su wcaworld.com.",
+            variant: "destructive",
+          });
+          await supabase.from("download_jobs").update({ status: "paused", error_message: "Sessione WCA non attiva al primo partner." }).eq("id", jobId);
           while (pauseRef.current) {
             await new Promise((r) => setTimeout(r, 500));
             if (cancelRef.current) break;
@@ -426,7 +429,7 @@ export default function AcquisizionePartner() {
     }
 
     return localStats;
-  }, [includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, extensionAvailable, checkExtension, extensionExtract, verifySession, syncCookie, liveStats]);
+  }, [includeEnrich, includeDeepSearch, delaySeconds, extensionAvailable, checkExtension, extensionExtract, verifySession, syncCookie, liveStats]);
 
   // Check for active acquisition jobs on mount
   useEffect(() => {
@@ -712,10 +715,25 @@ export default function AcquisizionePartner() {
 
   // Start acquisition pipeline
   const startPipeline = useCallback(async () => {
-    // Check WCA session first - use returned value to avoid stale state
-    const sessionResult = await triggerCheck();
-    if (!sessionResult || sessionResult.status !== "ok") {
-      setShowSessionAlert(true);
+    // Verify extension is available first
+    const extReady = await waitForExtension(10000);
+    if (!extReady) {
+      toast({
+        title: "Estensione Chrome non trovata",
+        description: "Installa o ricarica l'estensione WCA Cookie Sync e riprova.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verify WCA session via extension (real test on WCA site)
+    const sessionResult = await verifySession();
+    if (!sessionResult.success || !sessionResult.authenticated) {
+      toast({
+        title: "Sessione WCA non attiva",
+        description: "Effettua il login su wcaworld.com e riprova.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -802,7 +820,7 @@ export default function AcquisizionePartner() {
         setShowRetryDialog(true);
       }
     }
-  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop]);
+  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop, waitForExtension, verifySession]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">

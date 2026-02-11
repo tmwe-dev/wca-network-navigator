@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Check, ChevronDown, Wifi, WifiOff, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 interface AcquisitionToolbarProps {
   selectedCountries: string[];
@@ -40,7 +38,6 @@ export function AcquisitionToolbar({
 }: AcquisitionToolbarProps) {
   const [countryOpen, setCountryOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
-  const { status: wcaStatus } = useWcaSessionStatus();
 
   const toggleCountry = (code: string) => {
     onCountriesChange(
@@ -141,24 +138,6 @@ export function AcquisitionToolbar({
           </PopoverContent>
         </Popover>
 
-        {/* WCA Status */}
-        <div
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border",
-            wcaStatus === "ok"
-              ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/10"
-              : wcaStatus === "expired" || wcaStatus === "no_cookie"
-                ? "border-destructive/30 text-destructive bg-destructive/10"
-                : "border-border text-muted-foreground"
-          )}
-        >
-          {wcaStatus === "ok" ? (
-            <Wifi className="w-3.5 h-3.5" />
-          ) : (
-            <WifiOff className="w-3.5 h-3.5" />
-          )}
-          {wcaStatus === "ok" ? "WCA Connesso" : wcaStatus === "expired" ? "Sessione Scaduta" : "Non connesso"}
-        </div>
 
         {/* Pipeline options */}
         <div className="flex items-center gap-4 ml-auto">
