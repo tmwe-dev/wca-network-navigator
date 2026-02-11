@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AcquisitionToolbar } from "@/components/acquisition/AcquisitionToolbar";
 import { PartnerQueue, QueueItem } from "@/components/acquisition/PartnerQueue";
-import { PartnerCanvas, CanvasData, CanvasPhase } from "@/components/acquisition/PartnerCanvas";
+import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/PartnerCanvas";
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
@@ -239,6 +239,7 @@ export default function AcquisizionePartner() {
           employees: undefined,
           founded: undefined,
           fleet: undefined,
+          contactSource: contacts.length > 0 ? "server" as ContactSource : "none" as ContactSource,
         };
         setCanvasData(canvas);
 
@@ -256,6 +257,7 @@ export default function AcquisizionePartner() {
                 direct_phone: c.phone,
                 mobile: c.mobile,
               }));
+              canvas.contactSource = "extension";
               setCanvasData({ ...canvas });
               console.log(`[Extension] ${item.company_name}: ${extResult.contacts.length} contacts extracted`);
             }

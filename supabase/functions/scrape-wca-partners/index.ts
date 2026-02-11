@@ -560,16 +560,52 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
       })
     console.log(`Direct login: form text/password inputs: ${formInputs.join(', ') || 'NONE'}`)
     
-    // Also check the form action
-    const formAction = loginPageHtml.match(/<form[^>]*action="([^"]*)"[^>]*>/i)?.[1]
-    const formMethod = loginPageHtml.match(/<form[^>]*method="([^"]*)"[^>]*>/i)?.[1]
-    console.log(`Direct login: form action=${formAction}, method=${formMethod}`)
+    // Find the LOGIN form specifically (the one with a password input, not the language form)
+    // Split HTML into individual forms and find the right one
+    const formBlocks = loginPageHtml.split(/<form\b/i).slice(1)
+    let loginFormHtml = ''
+    let loginFormAction = ''
     
-    // Detect form field names
-    const usernameFieldMatch = loginPageHtml.match(/<input[^>]*type="(?:text|email)"[^>]*name="([^"]+)"/i)
-      || loginPageHtml.match(/<input[^>]*name="([^"]+)"[^>]*type="(?:text|email)"/i)
-    const passwordFieldMatch = loginPageHtml.match(/<input[^>]*type="password"[^>]*name="([^"]+)"/i)
-      || loginPageHtml.match(/<input[^>]*name="([^"]+)"[^>]*type="password"/i)
+    for (const block of formBlocks) {
+      const closingIdx = block.indexOf('</form>')
+      const formContent = closingIdx >= 0 ? block.substring(0, closingIdx) : block
+      
+      // This is the login form if it contains a password input
+      if (/type\s*=\s*["']password["']/i.test(formContent)) {
+        loginFormHtml = formContent
+        const actionMatch = formContent.match(/action\s*=\s*"([^"]*)"/i)
+        loginFormAction = actionMatch?.[1] || '/Account/Login'
+        break
+      }
+    }
+    
+    console.log(`Direct login: login form action=${loginFormAction}, hasPasswordField=${!!loginFormHtml}`)
+    
+    if (!loginFormHtml) {
+      console.log('Direct login: WARNING - no form with password field found! Falling back to full page scan.')
+      loginFormHtml = loginPageHtml
+      loginFormAction = '/Account/Login'
+    }
+    
+    // Extract hidden fields ONLY from the login form
+    const loginHiddenFields: Record<string, string> = {}
+    const loginHiddenRegex = /name="([^"]+)"[^>]*value="([^"]*)"/gi
+    let lhm
+    while ((lhm = loginHiddenRegex.exec(loginFormHtml)) !== null) {
+      const name = lhm[1]
+      if (name.startsWith('__') || name.includes('Token') || name.includes('token')) {
+        loginHiddenFields[name] = lhm[2]
+      }
+    }
+    
+    // Override the generic hiddenFields with login-form-specific ones
+    Object.assign(hiddenFields, loginHiddenFields)
+    
+    // Detect field names from the login form specifically
+    const usernameFieldMatch = loginFormHtml.match(/name="([^"]+)"[^>]*type\s*=\s*["'](?:text|email)["']/i)
+      || loginFormHtml.match(/type\s*=\s*["'](?:text|email)["'][^>]*name="([^"]+)"/i)
+    const passwordFieldMatch = loginFormHtml.match(/name="([^"]+)"[^>]*type\s*=\s*["']password["']/i)
+      || loginFormHtml.match(/type\s*=\s*["']password["'][^>]*name="([^"]+)"/i)
     
     const usernameField = usernameFieldMatch?.[1] || 'usr'
     const passwordField = passwordFieldMatch?.[1] || 'pwd'
@@ -584,7 +620,11 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
     formParams[passwordField] = password
     const formBody = new URLSearchParams(formParams)
 
-    const loginRes = await fetch('https://www.wcaworld.com/Account/Login', {
+    // POST to the correct login form action URL
+    const postUrl = loginFormAction.startsWith('http') ? loginFormAction : `https://www.wcaworld.com${loginFormAction}`
+    console.log(`Direct login: POSTing to ${postUrl}`)
+    
+    const loginRes = await fetch(postUrl, {
       method: 'POST',
       redirect: 'manual',
       headers: {
