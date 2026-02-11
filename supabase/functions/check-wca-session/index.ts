@@ -45,12 +45,14 @@ Deno.serve(async (req) => {
       return respond({ authenticated: false, status: 'no_cookie' })
     }
 
-    // Check if .ASPXAUTH is present in cookie
+    // Check if .ASPXAUTH is present in cookie (diagnostic only)
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
     
     const testResult = await testCookieDeep(cookie)
-    // If .ASPXAUTH is present, trust the browser-side login — WAF may block server-side test
-    const authenticated = hasAspxAuth || testResult.authenticated
+    // Trust the real test result. Only fall back to ASPXAUTH if network error prevented the test.
+    const authenticated = testResult.diagnostics?.error
+      ? hasAspxAuth  // Network/WAF error: trust ASPXAUTH as fallback
+      : testResult.authenticated  // Test succeeded: trust the result
     const status = authenticated ? 'ok' : 'expired'
     await upsertStatus(supabase, status, new Date().toISOString())
 
