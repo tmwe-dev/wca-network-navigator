@@ -18,10 +18,12 @@ type ExtensionResponse = {
 /**
  * Hook for communicating with the WCA Chrome Extension via content script bridge.
  * Uses window.postMessage so no Extension ID is needed.
+ * Includes automatic polling to reliably detect the extension.
  */
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
   const pendingRef = useRef<Map<string, (response: ExtensionResponse) => void>>(new Map());
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Listen for responses from the content script
   useEffect(() => {
@@ -47,6 +49,43 @@ export function useExtensionBridge() {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
+
+  // Auto-poll every 5s until extension is detected
+  useEffect(() => {
+    if (isAvailable) {
+      // Stop polling once detected
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    // Immediate check + periodic polling
+    const doPing = () => {
+      window.postMessage(
+        {
+          direction: "from-webapp",
+          action: "ping",
+          requestId: `poll_${Date.now()}`,
+        },
+        "*"
+      );
+    };
+
+    // Ping immediately
+    doPing();
+
+    // Then every 5s
+    pollRef.current = setInterval(doPing, 5000);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [isAvailable]);
 
   // Send a message to the extension and wait for response
   const sendMessage = useCallback(
@@ -81,14 +120,20 @@ export function useExtensionBridge() {
     []
   );
 
-  // Check if extension is available
+  // Check if extension is available (with retries)
   const checkAvailable = useCallback(async (): Promise<boolean> => {
     if (isAvailable) return true;
 
-    const response = await sendMessage("ping", {}, 3000);
-    const available = response.success === true;
-    setIsAvailable(available);
-    return available;
+    // Try 3 times with 1s delay
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const response = await sendMessage("ping", {}, 2000);
+      if (response.success === true) {
+        setIsAvailable(true);
+        return true;
+      }
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+    }
+    return false;
   }, [isAvailable, sendMessage]);
 
   // Extract contacts for a WCA ID

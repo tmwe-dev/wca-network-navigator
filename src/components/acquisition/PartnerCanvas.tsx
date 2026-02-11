@@ -44,6 +44,8 @@ export interface CanvasContact {
   mobile?: string;
 }
 
+export type ContactSource = "server" | "extension" | "none";
+
 export interface CanvasData {
   company_name: string;
   city: string;
@@ -63,6 +65,7 @@ export interface CanvasData {
   linkedin_links: Array<{ name: string; url: string }>;
   website?: string;
   profile_description?: string;
+  contactSource?: ContactSource;
 }
 
 export type CanvasPhase = "idle" | "downloading" | "enriching" | "deep_search" | "complete";
@@ -265,9 +268,21 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               const allComplete = completeCount === total;
               return (
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Contatti
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Contatti
+                    </h3>
+                    {data.contactSource && data.contactSource !== "none" && (
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                        data.contactSource === "extension"
+                          ? "bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30"
+                          : "bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30"
+                      )}>
+                        {data.contactSource === "extension" ? "🔌 Extension" : "☁️ Server"}
+                      </span>
+                    )}
+                  </div>
                   <span className={cn(
                     "text-[11px] font-bold px-2.5 py-1 rounded-full",
                     allComplete
