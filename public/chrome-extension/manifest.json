@@ -11,8 +11,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.lovable.app/*",
-        "http://localhost/*"
+        "https://*.lovable.app/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
