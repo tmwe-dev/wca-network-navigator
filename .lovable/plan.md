@@ -1,173 +1,63 @@
 
 
-# REBUILDING - Partner Hub Glassmorphism Redesign
+# Fix Uniformita' Colore, Responsive e Contrasto
 
-## Obiettivo
-Trasformare il Partner Hub in un'interfaccia con stile glassmorphism (simile alla pagina Campaigns), layout a due colonne nel pannello destro, icone grandi, sezioni collassabili, ordinamenti nella lista sinistra, e bandiere/icone prominenti ovunque.
+## Problemi dallo screenshot
 
-## FASE 1 - Stile Glassmorphism e Layout Base
+1. **Due colori diversi**: pannello sinistro bianco, pannello destro scuro -- deve essere uniforme
+2. **Coppe verticali**: le coppe si impilano in colonna singola, devono stare su griglia 2-4 colonne quando lo spazio e' poco
+3. **Contrasto bottoni/badge**: testi neri su sfondo scuro (es. Social LinkedIn), illeggibili
+4. **Non responsive**: quando si riduce la pagina il layout non si adatta
 
-### Sfondo e pannelli
-- Il pannello destro (dettaglio) adotta lo stile glassmorphism: sfondo con gradiente scuro, card con `backdrop-blur-xl bg-white/5 border border-white/10` (simile a `.space-panel`)
-- Il pannello sinistro (lista) mantiene un look piu' pulito ma con leggere trasparenze
-- Aggiungere classi CSS dedicate in `src/index.css` per il glassmorphism del Partner Hub (es. `.glass-card`, `.glass-surface`)
+## Correzioni
 
-### File: `src/index.css`
-Aggiungere classi:
-- `.glass-card` - card con backdrop-blur, bordo semi-trasparente, sfondo semi-trasparente
-- `.glass-surface` - sfondo con gradiente scuro per il pannello dettaglio
-- `.glass-badge` - badge con sfondo blur
+### 1. Uniformita' colore
+Il pannello destro usa `glass-surface` (sfondo scuro con gradiente). Il pannello sinistro usa `bg-card` (bianco in light mode). La soluzione:
+- Rimuovere `glass-surface` dal pannello destro
+- Usare `bg-card` per entrambi i pannelli
+- Tutte le `glass-section`, `glass-card`, `glass-badge` nel dettaglio vengono sostituite con card standard: `bg-muted/50 border rounded-xl`
+- I testi `text-white/*` vengono sostituiti con `text-foreground`, `text-muted-foreground` ecc.
+- Questo rende la pagina uniforme in light mode (bianca) e in dark mode (scura), senza mai mischiare
 
----
+### 2. Coppe responsive
+- La `TrophyRow` usa `flex-wrap` ma e' una sola riga. Cambiare a `grid` con `grid-cols-4` (o `grid-cols-5`) cosi' le coppe si distribuiscono su piu' righe compatte senza andare in verticale
 
-## FASE 2 - Pannello Sinistro (Lista Partner)
+### 3. Contrasto bottoni e badge
+Revisione sistematica di tutti gli elementi nel pannello destro:
+- Badge HQ/Branch: `bg-secondary text-secondary-foreground` (non `bg-white/10 text-white/60`)
+- Collapsible triggers: `bg-muted text-foreground` con hover `bg-accent`
+- Testi dentro sezioni: `text-foreground` per titoli, `text-muted-foreground` per secondari
+- Social Links button: verificare che il bottone abbia `bg-secondary text-secondary-foreground` (non sfondo scuro con testo scuro)
+- Deep Search button: `bg-primary text-primary-foreground`
+- Icone servizi: mantengono i colori specifici (sky, blue, amber ecc.) che funzionano su entrambi gli sfondi
+- Empty state testo: `text-muted-foreground` invece di `text-white/40`
 
-### Card partner nella lista
-Ogni card mostra:
-- Logo (o box vuoto se mancante)
-- Nome azienda in grassetto
-- Citta' e Paese su due righe separate (citta' in grassetto, bandiera 3x piu' grande)
-- Stelle rating (5 stelle, mezze stelle gialle)
-- Coppe piene per anni
-- Icone contatto (Phone verde, Mail blu, WhatsApp verde) se disponibili
-- Riga di bandiere affiancate dei paesi dove hanno branch offices
-- Riga di icone servizi principali (Plane, Ship, Truck ecc.)
-- Striscia laterale colorata per qualita' contatti
+### 4. Responsive
+- Il container principale: `flex flex-col md:flex-row` -- su mobile la lista sta sopra, il dettaglio sotto
+- Lista partner: `w-full md:w-[400px]`
+- Grid 2 colonne nel dettaglio: `grid-cols-1 lg:grid-cols-[3fr_2fr]` (gia' presente, OK)
+- Servizi di trasporto: `grid-cols-1 sm:grid-cols-2`
 
-### Ordinamenti (sotto la barra di ricerca)
-Aggiungere un selettore di ordinamento con le opzioni:
-- Nome (A-Z / Z-A)
-- Rating (alto-basso)
-- Anni WCA (piu'-meno)
-- Paese (A-Z)
-- Numero branch (piu'-meno)
-- Qualita' contatti (completi prima)
+### File modificato
 
-Implementato come un `Select` compatto accanto al filtro esistente.
+`src/pages/PartnerHub.tsx` -- tutte le correzioni in un unico file:
 
-### File: `src/pages/PartnerHub.tsx` - sezione lista
+| Zona | Modifica |
+|------|----------|
+| Riga 271 | Container: aggiungere `flex-col md:flex-row` |
+| Riga 273 | Lista: `w-full md:w-[400px]` |
+| Riga 456 | Pannello destro: rimuovere `glass-surface`, usare `bg-card` |
+| Riga 458 | Empty state: `text-muted-foreground` |
+| Righe 526-608 | Header card: sostituire `glass-card` con `bg-muted/50 border rounded-xl`, tutti i `text-white` con `text-foreground` |
+| Riga 148-158 | TrophyRow: cambiare a `grid grid-cols-5 gap-0.5` |
+| Righe 616-648 | Servizi: `glass-section` diventa `bg-muted/50 border rounded-xl p-4`, `glass-badge` diventa `bg-secondary/50 border rounded-lg px-3 py-2` |
+| Righe 651-773 | Collapsible: trigger con `bg-muted hover:bg-accent text-foreground`, contenuti con `bg-muted/30 border` |
+| Righe 782-837 | Timeline/Reminders: card interne con `bg-muted/50 border` |
+| Righe 841-964 | Colonna destra: stesse sostituzioni glass -> standard |
+| Riga 560 | Badge HQ: `bg-secondary text-secondary-foreground` |
+| Riga 574 | "High Quality": `text-muted-foreground` |
+| Riga 599 | Deep Search: `bg-primary text-primary-foreground` |
 
----
-
-## FASE 3 - Pannello Destro (Dettaglio) - Layout a 2 Colonne
-
-Il dettaglio viene riorganizzato in un layout a due colonne dentro il contenitore:
-
-### Colonna Sinistra (60%) - Informazioni Principali
-
-**Header compatto (3 righe):**
-1. Nome azienda + WCA ID
-2. Citta' (grassetto) su una riga, Paese su seconda riga, bandiera 3x grande
-3. Icona grande per tipo (es. Truck per Freight Forwarder) + stelle + coppe
-
-**Sezione "Servizi" (icone grandi, raggruppate):**
-- Gruppo "Transport": Ocean FCL + LCL affiancati (icona Ship grande), Road Freight (Truck), Rail (Train), Air (Plane), Project Cargo (Package) -- layout a griglia 2 colonne
-- Ogni servizio ha icona grande (w-8 h-8) colorata + nome sotto
-
-**Sezione "Specialita'" (verticale):**
-- Dangerous Goods (AlertTriangle, arancione)
-- Perishables (Snowflake, azzurro)
-- Pharma (Pill, viola)
-- E-commerce (ShoppingCart, verde)
-- Ognuno con icona grande + nome accanto, layout verticale
-
-**Contatti Azienda (collapsible):**
-- Icona grande (Building2) come trigger
-- Quando aperto: telefono, email, sito, indirizzo
-- Chiuso di default: si vede solo l'icona
-
-**Contatti Ufficio (collapsible):**
-- Icona grande (Users) come trigger
-- Quando aperto: lista contatti con nome, ruolo, email, telefono
-- Chiuso di default
-
-**Profilo Aziendale (collapsible):**
-- Icona grande (FileText) come trigger
-- Dentro: descrizione + icone specialita' + paesi branch con bandiere + routing principali
-
-### Colonna Destra (40%) - Dettagli e Metadati
-
-**Social Links:**
-- Icone grandi dei social (LinkedIn blu grande, Facebook, Instagram, Twitter, WhatsApp)
-- Ogni icona e' un link cliccabile
-- Nome del social sotto l'icona
-
-**Paesi Collegati (Branch):**
-- Griglia di bandiere grandi con nome paese sotto
-- Ogni bandiera rappresenta un paese dove hanno uffici
-
-**Mercati Principali:**
-- Bandiere grandi dei paesi/continenti serviti
-- Estratti dai dati di enrichment (`key_markets`)
-- Se disponibile, mini-mappa 2D del continente (usando un semplice SVG o emoji continente)
-
-**Network WCA:**
-- Logo grande di ogni network (immagine se disponibile, altrimenti badge con nome)
-- Nome del network sotto il logo
-- Data scadenza se presente
-
-**Certificazioni:**
-- Badge grandi con icona (ShieldCheck) + nome certificazione
-- Layout verticale
-
-**KPI Badges:**
-- Mantiene il layout attuale ma con stile glass
-
----
-
-## FASE 4 - Icone e Visuali
-
-### Mapping icone servizi (grandi, colorate)
-| Servizio | Icona | Colore |
-|----------|-------|--------|
-| Air Freight | Plane | sky-500 |
-| Ocean FCL | Ship | blue-500 |
-| Ocean LCL | Ship | blue-400 |
-| Road Freight | Truck | amber-500 |
-| Rail Freight | TrainFront | slate-500 |
-| Project Cargo | Package | orange-500 |
-| Dangerous Goods | AlertTriangle | red-500 |
-| Perishables | Snowflake | cyan-400 |
-| Pharma | Pill | purple-500 |
-| E-commerce | ShoppingCart | green-500 |
-| Relocations | Home | teal-500 |
-| Customs Broker | FileCheck | indigo-500 |
-| Warehousing | Warehouse | stone-500 |
-| NVOCC | Anchor | navy/slate-600 |
-
-### Mapping icone tipo partner
-| Tipo | Icona |
-|------|-------|
-| Freight Forwarder | Truck (grande) |
-| Customs Broker | FileCheck |
-| Carrier | Ship |
-| NVOCC | Anchor |
-| 3PL | Warehouse |
-| Courier | Package |
-
-### Rating "High Quality" (spiegazione)
-Aggiungere un tooltip al rating che spiega il breakdown: "Valutazione basata su: anzianita' WCA, numero filiali, completezza profilo, certificazioni, infrastrutture proprie"
-
----
-
-## FASE 5 - Dettagli Tecnici
-
-### File modificati
-
-| File | Modifiche |
-|------|-----------|
-| `src/index.css` | Aggiungere classi `.glass-card`, `.glass-surface`, `.glass-badge` |
-| `src/pages/PartnerHub.tsx` | Riscrittura completa del `PartnerDetail` con layout 2 colonne, glassmorphism, icone grandi, sezioni collapsible. Aggiunta ordinamenti nella lista. Card lista arricchite con bandiere branch e icone servizi |
-| `src/lib/countries.ts` | Aggiungere `getPartnerTypeIcon()` che mappa tipo partner a icona. Aggiungere `getServiceIconColor()` per colori dedicati per servizio |
-| `src/components/agents/SocialLinks.tsx` | Variante "large" con icone grandi e nome sotto |
-| `src/components/agents/KpiBadges.tsx` | Variante glass style |
-
-### Ordinamento lista
-Nuovo state `sortBy` con opzioni: `name_asc`, `name_desc`, `rating_desc`, `years_desc`, `country_asc`, `branches_desc`, `contacts_desc`. Applicato con `useMemo` sulla lista filtrata.
-
-### Collapsible sections
-Usare il componente `Collapsible` gia' presente per Contatti Azienda, Contatti Ufficio e Profilo Aziendale. Trigger: icona grande + titolo. Contenuto nascosto di default.
-
-### Bandiere nella lista
-Per ogni partner nella lista, estrarre i branch countries e mostrare una riga di emoji bandiera (testo grande) affiancate. Massimo 8 bandiere visibili, poi "+N".
+### Risultato atteso
+Pagina completamente uniforme: bianca in light mode, scura in dark mode. Nessun elemento con contrasto insufficiente. Layout responsive che si adatta su mobile. Coppe distribuite su griglia compatta.
 
