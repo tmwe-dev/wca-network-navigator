@@ -134,6 +134,47 @@ export default function AcquisizionePartner() {
             }
           }
 
+          // If still missing names, re-scan directory to populate cache
+          const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
+          if (stillMissing2.length > 0) {
+            try {
+              const { data: scanResult } = await supabase.functions.invoke("scrape-wca-directory", {
+                body: { countryCode: job.country_code, network: job.network_name || "" },
+              });
+              if (scanResult?.members) {
+                // Save to cache
+                const membersJson = scanResult.members.map((m: any) => ({
+                  company_name: m.company_name,
+                  city: m.city,
+                  country_code: job.country_code,
+                  wca_id: m.wca_id,
+                }));
+                await supabase.from("directory_cache").upsert(
+                  {
+                    country_code: job.country_code,
+                    network_name: job.network_name || "",
+                    members: membersJson as any,
+                    total_results: scanResult.members.length,
+                    scanned_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: "country_code,network_name" }
+                );
+                // Resolve names
+                for (const m of scanResult.members) {
+                  if (!m.wca_id || !m.company_name) continue;
+                  const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
+                  if (qi) {
+                    qi.company_name = m.company_name;
+                    if (m.city) qi.city = m.city;
+                  }
+                }
+              }
+            } catch (scanErr) {
+              console.warn("Re-scan directory for names failed:", scanErr);
+            }
+          }
+
           setQueue(queueItems);
           setSelectedIds(new Set(wcaIds.filter((id) => !processedIds.has(id))));
           setCompletedCount(processedIds.size);
@@ -411,9 +452,29 @@ export default function AcquisizionePartner() {
             .maybeSingle();
 
           const partnerData = partner;
+
+          // Resolve company name — never keep "WCA {id}" placeholder
+          let resolvedName = partnerData?.company_name || item.company_name;
+          let resolvedCity = partnerData?.city || item.city;
+          if (resolvedName.startsWith("WCA ")) {
+            // Try to resolve from directory_cache
+            const { data: cacheRows } = await supabase
+              .from("directory_cache")
+              .select("members")
+              .eq("country_code", item.country_code);
+            for (const row of cacheRows || []) {
+              const found = (row.members as any[])?.find((m: any) => m.wca_id === item.wca_id);
+              if (found?.company_name && !found.company_name.startsWith("WCA ")) {
+                resolvedName = found.company_name;
+                if (found.city) resolvedCity = found.city;
+                break;
+              }
+            }
+          }
+
           const canvas: CanvasData = {
-            company_name: partnerData?.company_name || item.company_name,
-            city: partnerData?.city || item.city,
+            company_name: resolvedName,
+            city: resolvedCity,
             country_code: partnerData?.country_code || item.country_code,
             country_name: partnerData?.country_name || "",
             logo_url: partnerData?.logo_url || undefined,
