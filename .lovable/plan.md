@@ -1,67 +1,67 @@
 
-# Piano: Ottimizzazione Download — Salta Partner Completi, No Logout, Auto-Detect Network
+# Fix: Sessione WCA invalidata dal server + scraper cieco
 
-## Stato attuale verificato
+## Causa radice trovata
 
-- **Job US in corso**: 3 job attivi, uno a index 63/1030 con 29 contatti trovati e 34 mancanti — funziona
-- **211 partner US** nel database, di cui 10 con email
-- **Nessun codice di auto-login** viene chiamato dal frontend o dai job in background — il commento in `check-wca-session` lo conferma: "Never call wca-auto-login from here"
-- **`network_configs`** ha dati errati: quasi tutti i flag `has_contact_emails/phones` sono `false`, ma i dati reali mostrano che TUTTI i network principali hanno centinaia di contatti con email
-- Il download attuale ri-scarica TUTTI gli ID, inclusi quelli gia' completi di contatti
+Due cose uccidono la sessione:
+
+### 1. `check-wca-session` fa richieste dal server con il cookie del browser
+
+Ogni volta che il semaforo controlla lo stato, la Edge Function fa una richiesta HTTP a `wcaworld.com/directory/members/86580` usando il cookie salvato. Questa richiesta arriva dall'IP del server (non dal browser dell'utente). WCA vede lo stesso cookie usato da due IP diversi e invalida la sessione.
+
+**Soluzione**: eliminare il test HTTP dal `check-wca-session`. Il semaforo deve basarsi SOLO sui dati gia' nel database (ultimo check, presenza del cookie, risultati recenti dei job) — senza MAI toccare WCA dal server.
+
+### 2. Lo scraper non rileva la sessione morta
+
+Dai log di adesso:
+```
+ID 88149: contactBlocks=0, html=23460c -> "AUTH OK"
+ID 142034: contactBlocks=0, html=23462c -> "AUTH OK"  
+ID 92928: contactBlocks=0, html=23460c -> "AUTH OK"
+ID 131527: contactBlocks=0, html=23462c -> "AUTH OK"
+(tutti identici...)
+```
+
+TUTTI i profili restituiscono esattamente ~23460 byte e 0 contatti. E' chiaramente una pagina generica. Lo scraper li salta tutti dicendo "membro senza contatti" — ma sono TUTTI senza contatti, il che e' impossibile.
+
+**Soluzione**: aggiungere un contatore di profili consecutivi senza contatti. Se X profili di fila (es: 5) hanno tutti 0 contact blocks, mettere il job in pausa con errore "possibile sessione scaduta". Inoltre, controllare se la dimensione HTML e' sempre identica (segno di pagina cached/generica).
 
 ## Modifiche
 
-### 1. Skip partner gia' completi nel job processor
+### File 1: `supabase/functions/check-wca-session/index.ts`
 
-**File**: `supabase/functions/process-download-job/index.ts`
+Rimuovere completamente la chiamata HTTP a WCA (`testCookieDeep`). Il controllo diventa:
+- Legge `wca_auth_cookie` / `wca_session_cookie` da `app_settings`
+- Verifica se `.ASPXAUTH` e' presente nel cookie (senza fare richieste HTTP)
+- Legge i risultati recenti dei job (contatti trovati/mancanti) per stimare lo stato
+- NON tocca mai wcaworld.com
 
-Prima di chiamare `scrape-wca-partners` per ogni WCA ID, verificare se il partner esiste gia' con contatti completi (email + telefono in `partner_contacts`). Se completo, saltarlo e avanzare l'indice senza fare la richiesta HTTP.
+### File 2: `supabase/functions/scrape-wca-partners/index.ts`
 
-Logica:
-```text
-Per ogni wcaId:
-  1. Cerca partner con quel wca_id
-  2. Se esiste, cerca in partner_contacts se ha almeno un contatto con email E (direct_phone O mobile)
-  3. Se completo -> skip, aggiorna current_index, segna come "skipped_complete"
-  4. Se incompleto o non esiste -> scarica normalmente
-```
+Nessuna modifica diretta al singolo fetch. La logica di rilevamento resta com'e'.
 
-Questo risparmia tempo e richieste HTTP per i partner gia' acquisiti correttamente.
+### File 3: `supabase/functions/process-download-job/index.ts`
 
-### 2. Opzione "Scarica solo incompleti" nell'ActionPanel e nella Dashboard
+Aggiungere un contatore di "profili consecutivi senza contatti":
+- Se 5 profili consecutivi restituiscono 0 contact blocks, mettere il job in pausa
+- Messaggio: "5 profili consecutivi senza contatti — possibile sessione scaduta"
+- Salvare il contatore nel campo `error_message` per il frontend
+- Quando un profilo HA contatti, azzerare il contatore
 
-**File**: `src/components/download/ActionPanel.tsx`
+### File 4: `supabase/functions/wca-auto-login/index.ts`
 
-Aggiungere un checkbox "Salta partner con contatti completi" (attivo per default). Quando attivo, il job esclude dalla lista `wca_ids` quelli gia' completi prima ancora di creare il job. Cosi' il job parte gia' con la lista filtrata.
+Nessuna modifica — gia' non viene chiamato automaticamente.
 
-**File**: `src/hooks/useDownloadJobs.ts`
+## Risultato atteso
 
-Aggiungere al `useCreateDownloadJob` un parametro opzionale `skipComplete: boolean` che, se true, filtra gli ID prima di inserirli nel job.
-
-### 3. Auto-aggiornamento `network_configs` con dati reali
-
-**File**: `supabase/functions/process-download-job/index.ts`
-
-Al completamento di un job, dopo la verifica di completezza, aggiornare automaticamente la riga corrispondente in `network_configs` con i flag corretti basati sui dati reali estratti (conteggio email, telefoni, nomi nei `partner_contacts` per quel network).
-
-### 4. Verifica assenza di logout involontario
-
-Ho analizzato tutto il codice server-side e client-side:
-- **`wca-auto-login`** esiste ma NON viene mai chiamato dal frontend ne' dai job (confermato: zero riferimenti in `src/`)
-- **`check-wca-session`** ha un commento esplicito: "Never call wca-auto-login from here"
-- **Nessuna funzione** esegue logout o invalida il cookie
-
-Il sistema NON fa logout. La perdita di sessione avviene naturalmente quando il cookie `.ASPXAUTH` scade lato server WCA (tipicamente dopo alcune ore). Non c'e' codice da rimuovere.
-
-### 5. Aggiornamento `network_configs` con dati corretti
-
-**Migrazione SQL**: Aggiornare i flag `has_contact_emails`, `has_contact_names`, `has_contact_phones` con i dati reali gia' presenti nel database. Tutti i network WCA principali hanno contatti — i flag attuali sono errati.
+- Il server NON fa piu' richieste a WCA (niente piu' invalidazione sessione)
+- Se la sessione scade naturalmente, il job si ferma dopo max 5 profili vuoti
+- L'utente viene avvisato e puo' ri-sincronizzare il cookie con l'estensione Chrome
+- Il download riprende da dove si era fermato
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/process-download-job/index.ts` | Skip partner completi + aggiornamento network_configs a fine job |
-| `src/components/download/ActionPanel.tsx` | Checkbox "Salta completi" + filtro pre-job |
-| `src/hooks/useDownloadJobs.ts` | Supporto parametro `skipComplete` |
-| Migrazione SQL | Aggiornamento flag `network_configs` con dati reali |
+| `supabase/functions/check-wca-session/index.ts` | Rimuovere fetch HTTP a WCA, basarsi solo su dati DB |
+| `supabase/functions/process-download-job/index.ts` | Contatore profili vuoti consecutivi, pausa automatica dopo 5 |
