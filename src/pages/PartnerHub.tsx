@@ -65,11 +65,13 @@ import {
   Cpu,
   Trophy,
   ShieldCheck,
+  ShieldAlert,
   FileText,
   ExternalLink,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import { useBlacklistByPartnerIds, useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -296,6 +298,10 @@ export default function PartnerHub() {
   const { data: partners, isLoading } = usePartners(mergedFilters);
   const toggleFavorite = useToggleFavorite();
 
+  // Blacklist data for all visible partners
+  const partnerIds = useMemo(() => (partners || []).map((p: any) => p.id), [partners]);
+  const { data: blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
+
   const filteredPartners = useMemo(() => {
     let list = filterIncomplete
       ? (partners || []).filter((p: any) => getPartnerContactQuality(p.partner_contacts) !== "complete")
@@ -445,7 +451,19 @@ export default function PartnerHub() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium text-sm truncate">{partner.company_name}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-medium text-sm truncate">{partner.company_name}</span>
+                              {blacklistedIds?.has(partner.id) && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Badge variant="destructive" className="text-[9px] px-1 py-0 gap-0.5 shrink-0">
+                                      <ShieldAlert className="w-2.5 h-2.5" /> BL
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Questa azienda è nella Blacklist WCA</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                             {partner.is_favorite && (
                               <Tooltip>
                                 <TooltipTrigger><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" /></TooltipTrigger>
@@ -631,6 +649,8 @@ export default function PartnerHub() {
 function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFavorite: () => void }) {
   const [deepSearching, setDeepSearching] = useState(false);
   const queryClient = useQueryClient();
+  const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
+  const isBlacklisted = blacklistEntries.length > 0;
 
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
@@ -664,6 +684,28 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
 
   return (
     <div className="p-6 space-y-5">
+      {/* Blacklist Warning */}
+      {isBlacklisted && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-start gap-3">
+          <ShieldAlert className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-destructive">⚠️ BLACKLIST WCA</p>
+            <p className="text-sm text-destructive/80 mt-0.5">
+              Questa azienda risulta nella blacklist WCA con {blacklistEntries.length} segnalazione/i.
+              {blacklistEntries[0]?.total_owed_amount && (
+                <> Importo totale dovuto: <strong>${Number(blacklistEntries[0].total_owed_amount).toLocaleString()}</strong></>
+              )}
+              {blacklistEntries[0]?.status && <> — Status: <strong>{blacklistEntries[0].status}</strong></>}
+            </p>
+            {blacklistEntries[0]?.claims && (
+              <details className="mt-2">
+                <summary className="text-xs font-medium cursor-pointer text-destructive/70">Dettaglio claims</summary>
+                <pre className="text-[10px] text-destructive/60 mt-1 whitespace-pre-wrap">{blacklistEntries[0].claims}</pre>
+              </details>
+            )}
+          </div>
+        </div>
+      )}
       {/* ═══ HEADER ═══ */}
       <div className="bg-gradient-to-br from-primary/5 via-card to-accent/10 backdrop-blur-sm border border-primary/10 rounded-2xl p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
