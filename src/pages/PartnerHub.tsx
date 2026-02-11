@@ -48,6 +48,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Plane,
+  AlertTriangle,
   Ship,
   Truck,
   TrainFront,
@@ -106,7 +107,7 @@ const SERVICE_ICONS: Record<string, any> = {
   road_freight: Truck,
   rail_freight: TrainFront,
   project_cargo: Package,
-  dangerous_goods: Plane,
+  dangerous_goods: AlertTriangle,
   perishables: Snowflake,
   pharma: Pill,
   ecommerce: ShoppingCart,
@@ -472,69 +473,88 @@ export default function PartnerHub() {
                               </Tooltip>
                             )}
                           </div>
-                          {/* Contact persons with email/phone status icons */}
+                          {/* Contacts inline with status icons */}
                           {partner.partner_contacts?.length > 0 && (
-                            <div className="mt-1.5 space-y-0.5">
-                              {partner.partner_contacts.slice(0, 3).map((c: any) => (
-                                <div key={c.id} className="flex items-center gap-1.5 text-xs">
-                                  <User className="w-3.5 h-3.5 text-muted-foreground fill-muted-foreground shrink-0" />
-                                  <span className="text-foreground font-medium truncate">{c.name}</span>
-                                  {c.title && <span className="text-muted-foreground truncate text-[10px]">· {c.title}</span>}
-                                  <div className="flex items-center gap-0.5 ml-auto shrink-0">
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <Mail className={cn("w-3 h-3", c.email ? "text-blue-500 fill-blue-500" : "text-muted-foreground/30")} />
-                                      </TooltipTrigger>
-                                      <TooltipContent>{c.email ? `Email: ${c.email}` : "Email mancante"}</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <Phone className={cn("w-3 h-3", (c.direct_phone || c.mobile) ? "text-green-500 fill-green-500" : "text-muted-foreground/30")} />
-                                      </TooltipTrigger>
-                                      <TooltipContent>{(c.direct_phone || c.mobile) ? `Tel: ${c.direct_phone || c.mobile}` : "Telefono mancante"}</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </div>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              {partner.partner_contacts.slice(0, 4).map((c: any, idx: number) => (
+                                <Tooltip key={c.id || idx}>
+                                  <TooltipTrigger>
+                                    <div className="flex items-center gap-0.5">
+                                      <User className="w-3.5 h-3.5 text-muted-foreground fill-muted-foreground" />
+                                      <Mail className={cn("w-3 h-3", c.email ? "text-blue-500 fill-blue-500" : "text-muted-foreground/25")} />
+                                      <Phone className={cn("w-3 h-3", (c.direct_phone || c.mobile) ? "text-green-500 fill-green-500" : "text-muted-foreground/25")} />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-medium">{c.name || "Contatto"}</p>
+                                    {c.title && <p className="text-[10px] text-muted-foreground">{c.title}</p>}
+                                    <p className="text-[10px]">{c.email ? `✓ Email` : `✗ Email mancante`}</p>
+                                    <p className="text-[10px]">{(c.direct_phone || c.mobile) ? `✓ Telefono` : `✗ Telefono mancante`}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               ))}
-                              {partner.partner_contacts.length > 3 && (
-                                <span className="text-[9px] text-muted-foreground ml-5">+{partner.partner_contacts.length - 3} altri</span>
+                              {partner.partner_contacts.length > 4 && (
+                                <span className="text-[9px] text-muted-foreground">+{partner.partner_contacts.length - 4}</span>
                               )}
                             </div>
                           )}
                           {/* Social links inline */}
                           <CardSocialIcons partnerId={partner.id} />
-                          {/* Service icons - filled */}
-                          {services.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                              {services.map((s: any, i: number) => {
-                                const Icon = getServiceIcon(s.service_category);
-                                return (
-                                  <Tooltip key={i}>
-                                    <TooltipTrigger>
-                                      <Icon className={`w-5 h-5 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
-                                  </Tooltip>
-                                );
-                              })}
-                              {partner.partner_type === "courier" && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <span className="w-5 h-5 rounded bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">XP</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Corriere Espresso</TooltipContent>
-                                </Tooltip>
-                              )}
-                              {(partner.enrichment_data as any)?.has_technology && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Cpu className="w-5 h-5 text-violet-500 fill-violet-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>Capacità Tecnologiche</TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                          )}
+                          {/* Transport services row */}
+                          {(() => {
+                            const transport = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
+                            const specialty = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+                            return (
+                              <>
+                                {transport.length > 0 && (
+                                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                    {transport.map((s: any, i: number) => {
+                                      const Icon = getServiceIcon(s.service_category);
+                                      return (
+                                        <Tooltip key={i}>
+                                          <TooltipTrigger>
+                                            <Icon className={`w-5 h-5 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {specialty.length > 0 && (
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    {specialty.map((s: any, i: number) => {
+                                      const Icon = getServiceIcon(s.service_category);
+                                      return (
+                                        <Tooltip key={i}>
+                                          <TooltipTrigger>
+                                            <Icon className={`w-4 h-4 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })}
+                                    {partner.partner_type === "courier" && (
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <span className="w-4 h-4 rounded bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center">XP</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Corriere Espresso</TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    {(partner.enrichment_data as any)?.has_technology && (
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Cpu className="w-4 h-4 text-violet-500 fill-violet-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>Capacità Tecnologiche</TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                           {/* Branch country flags */}
                           {branchCountries.length > 0 && (
                             <div className="flex items-center gap-0.5 mt-1.5 flex-wrap">
@@ -547,22 +567,6 @@ export default function PartnerHub() {
                               {branchCountries.length > 10 && (
                                 <span className="text-[9px] text-muted-foreground ml-0.5">+{branchCountries.length - 10}</span>
                               )}
-                            </div>
-                          )}
-                          {/* Network logos - only this partner's */}
-                          {partner.partner_networks?.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                              {partner.partner_networks.map((n: any) => {
-                                const logo = getNetworkLogo(n.network_name);
-                                return logo ? (
-                                  <Tooltip key={n.id}>
-                                    <TooltipTrigger>
-                                      <img src={logo} alt={n.network_name} className="w-6 h-6 object-contain" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>{n.network_name}</TooltipContent>
-                                  </Tooltip>
-                                ) : null;
-                              })}
                             </div>
                           )}
                         </div>

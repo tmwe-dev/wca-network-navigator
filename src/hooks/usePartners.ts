@@ -51,8 +51,8 @@ export function usePartners(filters?: PartnerFilters) {
           *,
           partner_services (service_category),
           partner_certifications (certification),
-          partner_networks (network_name, expires),
-          partner_contacts (email, direct_phone, mobile)
+          partner_networks (id, network_name, expires),
+          partner_contacts (id, name, title, email, direct_phone, mobile, is_primary)
         `)
         .eq("is_active", true);
 
