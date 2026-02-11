@@ -698,11 +698,14 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
     }
   }
   
-  const contactsAuthenticated = contactBlocks.length > 0 && contactsWithRealName > 0
+  // Trust .ASPXAUTH presence — WAF/Cloudflare may block server-side name visibility
+  // even when the cookie is valid (browser-side login works fine)
+  const hasAspxAuth = /\.ASPXAUTH=/i.test(cookies)
+  const contactsAuthenticated = hasAspxAuth || (contactBlocks.length > 0 && contactsWithRealName > 0)
   
-  console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, contactsAuth=${contactsAuthenticated}`)
+  console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, hasAspxAuth=${hasAspxAuth}, contactsAuth=${contactsAuthenticated}`)
   
-  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, contactsAuthenticated }
+  return { html, membersOnly: !hasAspxAuth && (membersOnlyCount > 2 || hasLoginPrompt), contactsAuthenticated }
 }
 
 // Simple HTML-to-markdown converter for profile pages
