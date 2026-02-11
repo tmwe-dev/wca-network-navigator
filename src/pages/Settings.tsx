@@ -209,6 +209,71 @@ export default function Settings() {
               </Badge>
             </div>
 
+
+            {/* Chrome Extension Download */}
+            <Card>
+              <CardContent className="pt-6 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Download className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Estensione Chrome</p>
+                    <p className="text-xs text-muted-foreground">Necessaria per sincronizzare il cookie .ASPXAUTH</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Button className="w-full" variant="outline" onClick={() => {
+                    const instructions = `ISTRUZIONI INSTALLAZIONE ESTENSIONE CHROME WCA:
+
+1. Scarica i 4 file qui sotto nella STESSA cartella sul tuo PC (es. "wca-extension"):
+   - manifest.json
+   - popup.html
+   - popup.js
+   - icon.png
+
+2. Apri Chrome → vai su chrome://extensions/
+
+3. Attiva "Modalità sviluppatore" (toggle in alto a destra)
+
+4. Clicca "Carica estensione non pacchettizzata"
+
+5. Seleziona la cartella dove hai salvato i 4 file
+
+6. L'icona 🌐 apparirà nella barra di Chrome
+
+USO:
+- Vai su wcaworld.com e fai login
+- Clicca l'icona dell'estensione
+- Clicca "Sincronizza Cookie"
+- Se mostra ✅ con .ASPXAUTH presente → tutto OK!`;
+                    const blob = new Blob([instructions], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'ISTRUZIONI.txt';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    // Download each extension file
+                    const files = ['manifest.json', 'popup.html', 'popup.js', 'icon.png'];
+                    files.forEach((file, i) => {
+                      setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = `/chrome-extension/${file}`;
+                        link.download = file;
+                        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                      }, (i + 1) * 500);
+                    });
+                    toast.success("Download avviato! Salva tutti i file nella stessa cartella.");
+                  }}>
+                    <Download className="w-4 h-4 mr-2" /> Scarica Estensione Chrome
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground text-center">Scarica 4 file + istruzioni. Salvali nella stessa cartella e caricali su Chrome.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Session actions */}
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <Button className="w-full" size="lg" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
