@@ -18,167 +18,38 @@ function log(text, cls = "") {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-mainBtn.addEventListener("click", async () => {
-  mainBtn.disabled = true;
-  logEl.innerHTML = "";
-  setStatus("⏳ Avvio login automatico...", "working");
-
-  try {
-    // Step 1: Get credentials
-    log("① Recupero credenziali...", "wait");
-    const credRes = await fetch(`${SUPABASE_URL}/functions/v1/get-wca-credentials`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({}),
-    });
-    const creds = await credRes.json();
-    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate.");
-    log("✓ Credenziali ottenute", "done");
-
-    // Step 2: Open login page
-    log("② Apro pagina di login...", "wait");
-    const tab = await chrome.tabs.create({ url: "https://www.wcaworld.com/Account/Login", active: false });
-    log("✓ Pagina aperta", "done");
-
-    // Step 3: Wait for load
-    log("③ Attendo caricamento...", "wait");
-    await waitForTabLoad(tab.id, 20000);
-    log("✓ Pagina caricata", "done");
-
-    // Step 4: Analyze the login form first
-    log("④ Analizzo form di login...", "wait");
-    const analyzeResult = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: analyzeLoginPage,
-    });
-    const pageInfo = analyzeResult[0]?.result;
-    log(`   URL: ${pageInfo?.url || '?'}`, "wait");
-    log(`   Form trovati: ${pageInfo?.formCount || 0}`, "wait");
-    log(`   Input text: ${pageInfo?.textInputs || 0}, password: ${pageInfo?.passwordInputs || 0}`, "wait");
-    if (pageInfo?.inputDetails) log(`   Campi: ${pageInfo.inputDetails}`, "wait");
-
-    // Step 5: Fill and submit
-    log("⑤ Compilo e invio login...", "wait");
-    setStatus("⏳ Login in corso...", "working");
-    const injResult = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: fillAndSubmitLogin,
-      args: [creds.username, creds.password],
-    });
-    const formResult = injResult[0]?.result;
-    if (!formResult?.success) {
-      throw new Error(formResult?.error || "Form di login non trovato");
-    }
-    log(`✓ Form inviato (metodo: ${formResult.method || '?'})`, "done");
-
-    // Step 6: Wait for response
-    log("⑥ Attendo risposta...", "wait");
-    await waitForRedirectOrTimeout(tab.id, 10000);
-    log("✓ Attesa completata", "done");
-
-    // Step 7: Diagnose what happened
-    log("⑦ Verifico risultato login...", "wait");
-    const diagResult = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: diagnoseAfterLogin,
-    });
-    const diag = diagResult[0]?.result;
-    log(`   URL dopo login: ${diag?.url || '?'}`, "wait");
-    if (diag?.errorMessage) log(`   ⚠ Errore pagina: ${diag.errorMessage}`, "fail");
-    if (diag?.isLoggedIn) log("   ✓ Sembra loggato!", "done");
-    if (diag?.pageTitle) log(`   Titolo: ${diag.pageTitle}`, "wait");
-
-    // Step 8: Read cookies using URL method (more reliable)
-    log("⑧ Leggo cookie...", "wait");
-    const allCookies = await getAllWcaCookies();
-    let hasAuth = allCookies.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-    log(`   Cookie trovati: ${allCookies.length}`, "wait");
-    log(`   .ASPXAUTH: ${hasAuth ? "✅" : "❌"}`, hasAuth ? "done" : "fail");
-    log(`   Nomi: ${allCookies.map(c => c.name).join(", ")}`, "wait");
-    // Show domains for debugging
-    const domains = [...new Set(allCookies.map(c => c.domain))];
-    log(`   Domini: ${domains.join(", ")}`, "wait");
-
-    if (!hasAuth) {
-      // Wait and retry with all methods
-      log("   Riprovo tra 5s...", "wait");
-      await sleep(5000);
-      const allCookies2 = await getAllWcaCookies();
-      hasAuth = allCookies2.some(c => c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie");
-      
-      if (hasAuth) {
-        log("   ✓ .ASPXAUTH trovato al secondo tentativo!", "done");
-        const cookieStr = allCookies2.map(c => `${c.name}=${c.value}`).join("; ");
-        await sendCookiesAndFinish(cookieStr, tab.id);
-        return;
-      }
-
-      log(`   Ancora ${allCookies2.length} cookie, nomi: ${allCookies2.map(c=>c.name).join(", ")}`, "fail");
-
-      // Last resort: send whatever cookies we have (the session might work without .ASPXAUTH visible to extension)
-      try { chrome.tabs.remove(tab.id); } catch {}
-      
-      // Even without .ASPXAUTH, try sending all cookies - the login DID succeed
-      if (diag?.isLoggedIn) {
-        log("   Login riuscito ma .ASPXAUTH non visibile. Invio cookie disponibili...", "wait");
-        const cookieStr = allCookies2.map(c => `${c.name}=${c.value}`).join("; ");
-        await sendCookiesAndFinish(cookieStr, null);
-        return;
-      }
-
-      setStatus("❌ Login fallito: .ASPXAUTH non visibile", "error");
-      log("Il login è riuscito (MemberSection raggiunta) ma il cookie .ASPXAUTH non è accessibile dall'estensione.", "fail");
-      log("Prova: apri wcaworld.com manualmente nel browser, poi riclicca qui.", "fail");
-      mainBtn.disabled = false;
-      return;
-    }
-
-    const cookieStr = allCookies.map(c => `${c.name}=${c.value}`).join("; ");
-    await sendCookiesAndFinish(cookieStr, tab.id);
-  } catch (err) {
-    setStatus("❌ " + err.message, "error");
-    log("Errore: " + err.message, "fail");
-    mainBtn.disabled = false;
-  }
-});
-
-async function sendCookiesAndFinish(cookieStr, tabId) {
-  log("⑨ Invio cookie al server...", "wait");
-  setStatus("⏳ Verifica finale...", "working");
-  try {
-    const saveRes = await fetch(`${SUPABASE_URL}/functions/v1/save-wca-cookie`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ cookie: cookieStr }),
-    });
-    const saveData = await saveRes.json();
-    try { chrome.tabs.remove(tabId); } catch {}
-
-    if (saveData.authenticated) {
-      setStatus("✅ Connesso! Tutto OK.", "ok");
-      log("✓ Cookie salvato e verificato!", "done");
-    } else {
-      setStatus("⚠️ Cookie salvato, verifica contatti fallita", "error");
-      log("Cookie inviato ma contatti privati non visibili.", "fail");
-    }
-    if (saveData.diagnostics) {
-      const d = saveData.diagnostics;
-      log(`Contatti: ${d.contactsTotal || 0}, Nomi: ${d.contactsWithRealName || 0}, Email: ${d.contactsWithEmail || 0}`);
-    }
-  } catch (err) {
-    setStatus("❌ Errore invio: " + err.message, "error");
-    log("Errore: " + err.message, "fail");
-  }
-  mainBtn.disabled = false;
+function sleep(ms) {
+  return new Promise(function (r) { setTimeout(r, ms); });
 }
 
-// ── Helpers ──
+// ── Get ALL wcaworld cookies using every method available ──
+async function getAllWcaCookies() {
+  var byUrl = await chrome.cookies.getAll({ url: "https://www.wcaworld.com/" });
+  var byDomain1 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
+  var byDomain2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+  var byDomain3 = await chrome.cookies.getAll({ domain: "wcaworld.com" });
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  var aspxAuth = null;
+  try {
+    aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
+  } catch (e) { /* ignore */ }
 
-function waitForTabLoad(tabId, ms = 20000) {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
+  var map = new Map();
+  [byUrl, byDomain1, byDomain2, byDomain3].forEach(function (list) {
+    list.forEach(function (c) {
+      map.set(c.domain + "|" + c.name + "|" + c.path, c);
+    });
+  });
+  if (aspxAuth) map.set("aspxauth-direct", aspxAuth);
+
+  return Array.from(map.values());
+}
+
+// ── Wait for tab to finish loading ──
+function waitForTabLoad(tabId, ms) {
+  ms = ms || 20000;
+  return new Promise(function (resolve) {
+    var timeout = setTimeout(function () {
       chrome.tabs.onUpdated.removeListener(listener);
       resolve();
     }, ms);
@@ -193,38 +64,15 @@ function waitForTabLoad(tabId, ms = 20000) {
   });
 }
 
-// Get ALL cookies for wcaworld.com using multiple methods
-async function getAllWcaCookies() {
-  const byUrl = await chrome.cookies.getAll({ url: "https://www.wcaworld.com/" });
-  const byDomain1 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
-  const byDomain2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
-  const byDomain3 = await chrome.cookies.getAll({ domain: "wcaworld.com" });
-  
-  // Also try to get .ASPXAUTH specifically
-  let aspxAuth = null;
-  try {
-    aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
-  } catch (e) {}
-  
-  // Merge all unique cookies
-  const map = new Map();
-  for (const list of [byUrl, byDomain1, byDomain2, byDomain3]) {
-    for (const c of list) {
-      map.set(`${c.domain}|${c.name}|${c.path}`, c);
-    }
-  }
-  if (aspxAuth) map.set(`.aspxauth-direct`, aspxAuth);
-  
-  return Array.from(map.values());
-}
-
-
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
+// ── Wait for navigation or timeout ──
+function waitForRedirectOrTimeout(tabId, ms) {
+  ms = ms || 10000;
+  return new Promise(function (resolve) {
+    var timeout = setTimeout(function () {
       chrome.tabs.onUpdated.removeListener(listener);
       resolve();
     }, ms);
-    let navigated = false;
+    var navigated = false;
     function listener(id, info) {
       if (id === tabId && info.status === "complete" && !navigated) {
         navigated = true;
@@ -237,121 +85,225 @@ async function getAllWcaCookies() {
   });
 }
 
-// Analyze the login page structure
+// ── Send cookies to server and show result ──
+async function sendCookiesAndFinish(cookieStr, tabId) {
+  log("⑨ Invio cookie al server...", "wait");
+  setStatus("⏳ Verifica finale...", "working");
+  try {
+    var saveRes = await fetch(SUPABASE_URL + "/functions/v1/save-wca-cookie", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ cookie: cookieStr }),
+    });
+    var saveData = await saveRes.json();
+    if (tabId) { try { chrome.tabs.remove(tabId); } catch (e) { /* ignore */ } }
+
+    if (saveData.authenticated) {
+      setStatus("✅ Connesso! Tutto OK.", "ok");
+      log("✓ Cookie salvato e verificato!", "done");
+    } else {
+      setStatus("⚠️ Cookie salvato, verifica contatti fallita", "error");
+      log("Cookie inviato ma contatti privati non visibili.", "fail");
+    }
+    if (saveData.diagnostics) {
+      var d = saveData.diagnostics;
+      log("Contatti: " + (d.contactsTotal || 0) + ", Nomi: " + (d.contactsWithRealName || 0) + ", Email: " + (d.contactsWithEmail || 0));
+    }
+  } catch (err) {
+    setStatus("❌ Errore invio: " + err.message, "error");
+    log("Errore: " + err.message, "fail");
+  }
+  mainBtn.disabled = false;
+}
+
+// ── Injected: analyze login page ──
 function analyzeLoginPage() {
   try {
-    const forms = document.querySelectorAll('form');
-    const textInputs = document.querySelectorAll('input[type="text"], input[type="email"], input:not([type])');
-    const passwordInputs = document.querySelectorAll('input[type="password"]');
-    const allInputs = document.querySelectorAll('input');
-    
-    const inputDetails = Array.from(allInputs)
-      .filter(i => i.type !== 'hidden')
-      .map(i => `${i.name || i.id || '?'}(${i.type})`)
-      .join(', ');
-
+    var forms = document.querySelectorAll("form");
+    var allInputs = document.querySelectorAll("input");
+    var inputDetails = Array.from(allInputs)
+      .filter(function (i) { return i.type !== "hidden"; })
+      .map(function (i) { return (i.name || i.id || "?") + "(" + i.type + ")"; })
+      .join(", ");
     return {
       url: window.location.href,
       formCount: forms.length,
-      textInputs: textInputs.length,
-      passwordInputs: passwordInputs.length,
-      inputDetails,
+      inputDetails: inputDetails,
       pageTitle: document.title,
     };
-  } catch (e) {
-    return { error: e.message };
-  }
+  } catch (e) { return { error: e.message }; }
 }
 
-// Fill and submit the login form
+// ── Injected: fill and submit login ──
 function fillAndSubmitLogin(username, password) {
   try {
-    // Try specific WCA selectors first, then generic
-    const userInput = document.querySelector('#UserName') 
-      || document.querySelector('input[name="UserName"]')
-      || document.querySelector('input[name="username"]')
-      || document.querySelector('input[type="text"]')
-      || document.querySelector('input[type="email"]');
-    
-    const passInput = document.querySelector('#Password')
-      || document.querySelector('input[name="Password"]')
-      || document.querySelector('input[name="password"]')
-      || document.querySelector('input[type="password"]');
+    var userInput = document.querySelector("#UserName")
+      || document.querySelector("input[name='UserName']")
+      || document.querySelector("input[name='usr']")
+      || document.querySelector("input[type='text']")
+      || document.querySelector("input[type='email']");
+
+    var passInput = document.querySelector("#Password")
+      || document.querySelector("input[name='Password']")
+      || document.querySelector("input[name='pwd']")
+      || document.querySelector("input[type='password']");
 
     if (!userInput || !passInput) {
-      return { 
-        success: false, 
-        error: `Campi non trovati. User: ${!!userInput}, Pass: ${!!passInput}. Inputs visibili: ${document.querySelectorAll('input:not([type="hidden"])').length}` 
-      };
+      return { success: false, error: "Campi non trovati. User:" + !!userInput + " Pass:" + !!passInput };
     }
 
-    // Use native setter for maximum compatibility
-    const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    
-    // Focus, clear, set value, dispatch events
+    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+
     userInput.focus();
     nativeSet.call(userInput, username);
-    userInput.dispatchEvent(new Event('input', { bubbles: true }));
-    userInput.dispatchEvent(new Event('change', { bubbles: true }));
-    userInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-    
+    userInput.dispatchEvent(new Event("input", { bubbles: true }));
+    userInput.dispatchEvent(new Event("change", { bubbles: true }));
+
     passInput.focus();
     nativeSet.call(passInput, password);
-    passInput.dispatchEvent(new Event('input', { bubbles: true }));
-    passInput.dispatchEvent(new Event('change', { bubbles: true }));
-    passInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    passInput.dispatchEvent(new Event("input", { bubbles: true }));
+    passInput.dispatchEvent(new Event("change", { bubbles: true }));
 
-    // Find submit button
-    const submitBtn = document.querySelector('input[type="submit"]')
-      || document.querySelector('button[type="submit"]')
-      || document.querySelector('.btn-login')
-      || document.querySelector('.login-btn')
-      || document.querySelector('button.btn-primary');
-    
-    const form = userInput.closest('form') || document.querySelector('form');
+    var submitBtn = document.querySelector("input[type='submit']")
+      || document.querySelector("button[type='submit']")
+      || document.querySelector(".btn-login")
+      || document.querySelector("button.btn-primary");
+    var form = userInput.closest("form") || document.querySelector("form");
 
-    let method = 'unknown';
-    if (submitBtn) {
-      submitBtn.click();
-      method = 'button-click';
-    } else if (form) {
-      form.submit();
-      method = 'form-submit';
-    } else {
-      // Try pressing Enter in the password field
-      passInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-      method = 'enter-key';
-    }
+    var method = "unknown";
+    if (submitBtn) { submitBtn.click(); method = "button"; }
+    else if (form) { form.submit(); method = "form"; }
+    else { return { success: false, error: "Nessun submit trovato" }; }
 
-    return { success: true, method };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+    return { success: true, method: method };
+  } catch (e) { return { success: false, error: e.message }; }
 }
 
-// Diagnose the page state after login attempt
+// ── Injected: diagnose after login ──
 function diagnoseAfterLogin() {
   try {
-    const url = window.location.href;
-    const title = document.title;
-    
-    // Check for error messages
-    const errorEl = document.querySelector('.validation-summary-errors, .alert-danger, .error-message, .field-validation-error');
-    const errorMessage = errorEl ? errorEl.textContent.trim().substring(0, 200) : null;
-    
-    // Check if we're on a logged-in page
-    const hasLogoutLink = !!document.querySelector('a[href*="Logout"], a[href*="logout"], a[href*="SignOut"]');
-    const hasLoginForm = !!document.querySelector('input[type="password"]');
-    
+    var errorEl = document.querySelector(".validation-summary-errors, .alert-danger, .error-message");
     return {
-      url,
-      pageTitle: title,
-      errorMessage,
-      isLoggedIn: hasLogoutLink && !hasLoginForm,
-      hasLogoutLink,
-      stillOnLoginPage: hasLoginForm,
+      url: window.location.href,
+      pageTitle: document.title,
+      errorMessage: errorEl ? errorEl.textContent.trim().substring(0, 200) : null,
+      isLoggedIn: !!document.querySelector("a[href*='Logout'], a[href*='logout'], a[href*='SignOut']"),
+      stillOnLoginPage: !!document.querySelector("input[type='password']"),
     };
-  } catch (e) {
-    return { error: e.message };
-  }
+  } catch (e) { return { error: e.message }; }
 }
+
+// ══════════════════════════════════════════════════
+// MAIN BUTTON HANDLER
+// ══════════════════════════════════════════════════
+mainBtn.addEventListener("click", async function () {
+  mainBtn.disabled = true;
+  logEl.innerHTML = "";
+  setStatus("⏳ Avvio login automatico...", "working");
+
+  try {
+    // 1. Get credentials
+    log("① Recupero credenziali...", "wait");
+    var credRes = await fetch(SUPABASE_URL + "/functions/v1/get-wca-credentials", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({}),
+    });
+    var creds = await credRes.json();
+    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate.");
+    log("✓ Credenziali ottenute", "done");
+
+    // 2. Open login page
+    log("② Apro pagina di login...", "wait");
+    var tab = await chrome.tabs.create({ url: "https://www.wcaworld.com/Account/Login", active: false });
+    log("✓ Pagina aperta", "done");
+
+    // 3. Wait for load
+    log("③ Attendo caricamento...", "wait");
+    await waitForTabLoad(tab.id, 20000);
+    log("✓ Pagina caricata", "done");
+
+    // 4. Analyze form
+    log("④ Analizzo form...", "wait");
+    var analyzeRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: analyzeLoginPage });
+    var pageInfo = analyzeRes[0] && analyzeRes[0].result;
+    if (pageInfo) {
+      log("   URL: " + (pageInfo.url || "?"), "wait");
+      log("   Campi: " + (pageInfo.inputDetails || "nessuno"), "wait");
+    }
+
+    // 5. Fill and submit
+    log("⑤ Login automatico...", "wait");
+    setStatus("⏳ Login in corso...", "working");
+    var injRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: fillAndSubmitLogin,
+      args: [creds.username, creds.password],
+    });
+    var formResult = injRes[0] && injRes[0].result;
+    if (!formResult || !formResult.success) throw new Error((formResult && formResult.error) || "Form non trovato");
+    log("✓ Form inviato (" + formResult.method + ")", "done");
+
+    // 6. Wait for redirect
+    log("⑥ Attendo risposta...", "wait");
+    await waitForRedirectOrTimeout(tab.id, 10000);
+    log("✓ OK", "done");
+
+    // 7. Diagnose
+    log("⑦ Verifico...", "wait");
+    var diagRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: diagnoseAfterLogin });
+    var diag = diagRes[0] && diagRes[0].result;
+    if (diag) {
+      log("   URL: " + (diag.url || "?"), "wait");
+      if (diag.errorMessage) log("   ⚠ Errore: " + diag.errorMessage, "fail");
+      if (diag.isLoggedIn) log("   ✓ Login riuscito!", "done");
+      if (diag.stillOnLoginPage) log("   ✗ Ancora sulla pagina di login", "fail");
+    }
+
+    // 8. Read cookies
+    log("⑧ Leggo cookie...", "wait");
+    var allCookies = await getAllWcaCookies();
+    var hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; });
+    var cookieNames = allCookies.map(function (c) { return c.name; }).join(", ");
+    log("   " + allCookies.length + " cookie: " + cookieNames, "wait");
+    log("   .ASPXAUTH: " + (hasAuth ? "✅" : "❌"), hasAuth ? "done" : "fail");
+
+    if (!hasAuth) {
+      log("   Riprovo tra 5s...", "wait");
+      await sleep(5000);
+      allCookies = await getAllWcaCookies();
+      hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; });
+      cookieNames = allCookies.map(function (c) { return c.name; }).join(", ");
+      log("   Retry: " + allCookies.length + " cookie: " + cookieNames, "wait");
+    }
+
+    if (!hasAuth && diag && diag.isLoggedIn) {
+      log("   Login OK ma .ASPXAUTH non visibile. Invio cookie disponibili...", "wait");
+    }
+
+    if (!hasAuth && (!diag || !diag.isLoggedIn)) {
+      if (tab.id) { try { chrome.tabs.remove(tab.id); } catch (e) {} }
+      setStatus("❌ Login fallito", "error");
+      log("Login non riuscito e .ASPXAUTH assente.", "fail");
+      mainBtn.disabled = false;
+      return;
+    }
+
+    // 9. Send cookies
+    var cookieStr = allCookies.map(function (c) { return c.name + "=" + c.value; }).join("; ");
+    await sendCookiesAndFinish(cookieStr, tab.id);
+
+  } catch (err) {
+    setStatus("❌ " + err.message, "error");
+    log("Errore: " + err.message, "fail");
+    mainBtn.disabled = false;
+  }
+});
