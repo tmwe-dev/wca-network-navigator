@@ -1,55 +1,60 @@
 
 
-# Fix: Auto-Login Server-Side - Approccio Robusto
+# Fix: Rilevamento Estensione Chrome
 
-## Problema Attuale
+## Il Bug
 
-I log mostrano che:
-1. Il deploy del fix e' avvenuto DOPO che la pipeline era gia' finita -- il nuovo codice non e' stato ancora testato
-2. Il form di login WCA contiene campi `usr` (text) e `pwd` (password) ma il regex li associa al form sbagliato (`/Home/SetLanguage`)
-3. La regex non-greedy `([\s\S]*?)</form>` potrebbe fallire se il form di login WCA non e' chiuso correttamente o ha form annidati
+Il polling nell'hook `useExtensionBridge` e' rotto. Ecco cosa succede:
 
-## Soluzione: Approccio Diretto Senza Dipendenza dai Tag Form
+1. Il content script invia `contentScriptReady` UNA SOLA VOLTA quando si carica
+2. Se la webapp non ha ancora montato il listener `useEffect`, il messaggio viene perso
+3. Il polling ogni 5 secondi invia ping con `window.postMessage` diretto, ma NON registra nessun callback in `pendingRef`
+4. Quando la risposta torna dal background (`{success: true, version: "3.0"}`), il gestore cerca il `requestId` in `pendingRef` -- non lo trova -- ignora la risposta
+5. Risultato: `isAvailable` resta `false` per sempre
 
-Invece di cercare di isolare il tag `<form>` corretto (fragile con HTML mal formato), usare un approccio diretto:
+Quando ha funzionato (Pelikan), probabilmente il timing era favorevole e il `contentScriptReady` e' arrivato nel momento giusto.
 
-1. **Trovare l'action corretta**: cercare qualsiasi `action` che contiene "Login" o "Account" nella pagina
-2. **Usare i campi gia' rilevati**: i log mostrano che `usr` e `pwd` vengono gia' trovati correttamente -- usarli direttamente
-3. **Estrarre il token CSRF**: cercare `__RequestVerificationToken` nel form piu' vicino al campo password
+## Soluzione
 
-### File: `supabase/functions/scrape-wca-partners/index.ts`
+### File: `src/hooks/useExtensionBridge.ts`
 
-Riscrivere `directWcaLogin` per:
+Aggiungere nel gestore messaggi (`handleMessage`) un controllo per le risposte ai ping di polling: se arriva un messaggio con `action === "ping"` e la risposta contiene `success: true`, impostare `isAvailable = true`.
 
 ```
-// 1. Cercare action con "Login" o "Account" nell'intera pagina
-const loginActionMatch = loginPageHtml.match(/action\s*=\s*"([^"]*(?:Login|Account)[^"]*)"/i)
-const loginAction = loginActionMatch?.[1] || '/Account/Login'
-
-// 2. Usare i campi usr/pwd gia' rilevati (o fallback a UserName/Password)
-// 3. Cercare __RequestVerificationToken piu' vicino al campo password
+// Nella funzione handleMessage, PRIMA del check requestId:
+if (data.action === "ping" && data.response?.success) {
+  setIsAvailable(true);
+  return;
+}
 ```
 
-Questo elimina completamente la dipendenza dal parsing dei tag `<form>` che e' la causa di tutti i fallimenti.
+Questo risolve il problema alla radice: ogni risposta positiva a un ping (sia dal polling automatico sia da `checkAvailable`) verra' rilevata e attivera' l'indicatore verde.
 
-### Aggiungere anche: fallback all'estensione se auto-login fallisce
+### File: `public/chrome-extension/content.js`
 
-Se l'auto-login server-side fallisce (nessun `.ASPXAUTH` nel response), il sistema deve continuare comunque con i dati parziali dal server + dati completi dall'estensione Chrome, senza bloccare la pipeline.
+Aggiungere un meccanismo di re-announce periodico: il content script invia `contentScriptReady` non solo al caricamento ma anche in risposta a ogni ping ricevuto, come backup.
 
 ## Dettagli Tecnici
 
-### Modifiche in `supabase/functions/scrape-wca-partners/index.ts`
+### Modifica 1: `src/hooks/useExtensionBridge.ts` (handleMessage, riga ~30-46)
 
-Funzione `directWcaLogin` (~riga 530-650):
-- Rimuovere la logica di parsing dei form con regex
-- Cercare direttamente `action="...Login..."` o `action="...Account..."` nell'HTML
-- Usare i nomi campi `usr`/`pwd` (rilevati dai log) con fallback a `UserName`/`Password`
-- Cercare `__RequestVerificationToken` value nell'intera pagina (c'e' un solo token nella pagina)
-- Aggiungere log chiaro: `Direct login: POSTing to ${loginAction} with fields usr+pwd`
+Aggiungere dopo il check `contentScriptReady`:
 
-### Risultato Atteso
-- Il POST va a `/Account/Login` (o qualsiasi URL contenga "Login")
-- I campi `usr`+`pwd` vengono inviati correttamente
-- Il cookie `.ASPXAUTH` viene restituito nel response
-- I download successivi usano la sessione autenticata per estrarre email/telefoni
+```typescript
+// Any successful ping response means extension is alive
+if (data.action === "ping" && data.response?.success) {
+  setIsAvailable(true);
+  return;
+}
+```
+
+### Modifica 2: `public/chrome-extension/content.js`
+
+Nella risposta del content script, se l'action e' "ping", includere anche un `contentScriptReady` come conferma aggiuntiva.
+
+## Risultato Atteso
+
+- L'estensione viene rilevata entro 5 secondi dal caricamento della pagina (al primo ping di polling che riceve risposta)
+- Non dipende piu' dal timing del `contentScriptReady` iniziale
+- L'indicatore "Estensione attiva" appare in modo affidabile nella toolbar di acquisizione
 
