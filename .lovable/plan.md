@@ -1,73 +1,69 @@
 
 
-## Redesign Completo dello Stile - Pulizia Colori e Layout
+## Riorganizzazione Navigazione e Pagine
 
-### Problema
-La pagina e' un arcobaleno: KPI badges in 5 colori diversi, servizi in 14 colori, badge di stato in 3 colori, tutto disallineato. Dove manca il logo appare una bandiera gigante invece di uno spazio pulito.
+### Situazione attuale (problemi)
+- **WCA duplicato**: c'e' una sezione WCA nelle Impostazioni che rimanda a una pagina `/wca` separata -- ridondante
+- **Export/Import**: pagina dedicata per operazioni rare, spreca un posto in sidebar
+- **Reminders**: si chiama "Reminders" invece di "Agenda"
+- **Due dashboard**: Partner Hub e' gia' la home, non ci sono conflitti reali ma la voce "WCA" e "Export" nella sidebar creano confusione
 
-### Palette ridotta: solo 2 colori
+### Cosa cambia
 
-Tutto il sistema di badge e KPI passa a usare **solo primary (sky) e muted (grigio)**:
-- **Primary/sky**: per dati numerici importanti (anni WCA, filiali, paesi, certificazioni, Gold)
-- **Muted/grigio**: per informazioni secondarie (tipo partner, office type, servizi, WCA ID)
+**Sidebar semplificata** -- da 7 voci a 4:
 
-### Modifiche specifiche
+```text
+Prima:                    Dopo:
+Partner                   Partner
+Campaigns                 Campaigns
+Download                  Download
+Reminders                 Agenda
+Export                    Impostazioni
+Impostazioni
+WCA
+```
 
-**1. KpiBadges (`src/components/agents/KpiBadges.tsx`)**
-- Tutti i badge usano lo stesso stile: `bg-primary/10 text-primary border border-primary/20`
-- Ogni badge mantiene la sua icona (Calendar, Building2, Globe, ShieldCheck, Award) per distinguere il tipo
-- Layout: riga singola, gap uniforme, allineamento orizzontale perfetto
-- Compact: stesso approccio, mini-pill tutte uniformi in primary
+**Pagina Impostazioni** -- diventa un hub con 3 sezioni via Tabs:
+1. **Generale** -- WhatsApp e altre configurazioni
+2. **WCA** -- tutta la gestione WCA (sincronizza, verifica, cookie manuale) integrata direttamente, non piu' un link esterno
+3. **Import / Export** -- CSV import, export CSV/JSON, scarica da WCA (tutto il contenuto attuale della pagina Export)
 
-**2. Service badges (`src/lib/countries.ts` - `getServiceColor`)**
-- Tutti i servizi diventano `bg-muted text-foreground` con un'icona specifica per categoria davanti al testo
-- Niente piu' 14 colori diversi, solo grigio neutro con icone chiare
+**Rotte eliminate**:
+- `/wca` -- rimossa (contenuto integrato in Settings)
+- `/export` -- rimossa (contenuto integrato in Settings)
 
-**3. Badge di stato nel dettaglio (`PartnerHub.tsx`)**
-- "Primo contatto" / "In conoscenza" / "Attivo": tutti `bg-muted text-muted-foreground` con un'icona diversa (Circle, ArrowUpRight, CheckCircle)
-- Badge partner type: `bg-muted text-foreground`
-- Badge office type (HQ/Branch): `bg-muted text-foreground`  
-- Badge WCA ID: `variant="outline"` (resta com'e', pulito)
-- Badge "Primary" nei contatti: `bg-primary/10 text-primary`
+### Dettagli tecnici
 
-**4. Badge nella lista partner (colonna sinistra)**
-- Status contatti (OK/Parziale/No contatti): tutti in `text-muted-foreground` con icone diverse (check, alert, x)
-- KpiBadges compact: uniformati in primary come sopra
+| File | Azione |
+|------|--------|
+| `src/pages/Settings.tsx` | Riscrittura con Tabs: Generale, WCA (contenuto di WCA.tsx inline), Import/Export (contenuto di Export.tsx inline) |
+| `src/components/settings/WcaSessionCard.tsx` | Aggiornamento: rimuovere il link "Gestisci Connessione WCA" (non serve piu'), integrare direttamente i pulsanti di sync e cookie |
+| `src/components/layout/AppSidebar.tsx` | Rimuovere le voci "Export" e "WCA", rinominare "Reminders" in "Agenda" |
+| `src/App.tsx` | Rimuovere le rotte `/wca` e `/export`, rimuovere gli import di WCA e Export |
 
-**5. Logo mancante**
-- Dove non c'e' `logo_url`: spazio vuoto con bordo leggero (`w-14 h-14 rounded-xl border bg-muted`) - nessuna bandiera gigante
-- La bandiera piccola resta come badge overlay solo quando c'e' il logo
-- Nella lista: stesso approccio, box vuoto con bordo al posto della bandiera gigante
+### La pagina Impostazioni dopo il refactor
 
-**6. Allineamento e organizzazione**
-- Header del dettaglio: badge organizzati in una riga orizzontale ordinata
-- KPI badges: tutti sulla stessa riga con flex-wrap, gap-2 uniforme
-- Servizi: griglia ordinata, tutti stessi colori, icone per distinguerli
-- Contatti: layout tabellare pulito
+```text
+Impostazioni
+Configurazione della piattaforma
 
-### Icone per servizi (sostituzione dei colori)
-Ogni servizio avra' una micro-icona accanto al nome al posto del colore:
-- Air freight: Plane
-- Ocean FCL/LCL: Ship  
-- Road freight: Truck
-- Rail freight: Train (o TrainFront)
-- Project cargo: Package
-- Dangerous goods: AlertTriangle
-- Perishables: Snowflake
-- Pharma: Pill
-- Ecommerce: ShoppingCart
-- Relocations: Home
-- Customs broker: FileCheck
-- Warehousing: Warehouse
-- NVOCC: Anchor
+[Generale] [WCA] [Import / Export]
 
-### File modificati
+--- Tab Generale ---
+  Card WhatsApp (invariata)
 
-| File | Modifica |
-|------|----------|
-| `src/components/agents/KpiBadges.tsx` | Palette uniforme primary, layout allineato |
-| `src/lib/countries.ts` | `getServiceColor()` ritorna sempre muted + aggiunta `getServiceIcon()` |
-| `src/pages/PartnerHub.tsx` | Badge uniformati, logo vuoto al posto di bandiera, allineamenti |
+--- Tab WCA ---
+  Status badge (Connesso / Non connesso)
+  [Apri WCA World e Sincronizza]  (bottone primario)
+  Istruzioni estensione Chrome
+  [Verifica Sessione]
+  Ultimo controllo: ...
+  > Inserimento manuale cookie (emergenza) (collapsible)
 
-### Risultato atteso
-Una pagina elegante con massimo 2 tonalita' (sky e grigio), dove le icone fanno il lavoro di distinguere i contenuti invece dei colori. Tutto allineato, ordinato, professionale.
+--- Tab Import / Export ---
+  [Importa] [Esporta] [Scarica da WCA]  (sotto-tabs)
+  Contenuto identico alla pagina Export attuale
+```
+
+### Indicatore WCA nella sidebar
+L'indicatore semaforo WCA in fondo alla sidebar resta invariato -- continua a funzionare e a linkare a `/settings` (che ora contiene la gestione WCA completa).
