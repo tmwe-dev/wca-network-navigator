@@ -28,7 +28,7 @@ export function useWcaSessionStatus() {
         checkedAt: map.wca_session_checked_at || null,
       };
     },
-    refetchInterval: 30 * 1000,
+    refetchInterval: 5 * 60 * 1000, // Every 5 minutes — avoid excessive WCA requests
   });
 
   // Store latest diagnostics from check

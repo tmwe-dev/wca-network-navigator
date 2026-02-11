@@ -8,7 +8,7 @@ const corsHeaders = {
 /**
  * Server-side download job processor.
  * Processes ONE WCA ID from the job, updates progress, then self-chains for the next.
- * This allows background processing that continues even if the user navigates away.
+ * SKIPS partners that already have complete contacts (email + phone).
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     }
 
     const wcaIds: number[] = job.wca_ids || []
-    const currentIndex: number = job.current_index || 0
+    let currentIndex: number = job.current_index || 0
 
     // Check if we're done
     if (currentIndex >= wcaIds.length) {
@@ -61,8 +61,8 @@ Deno.serve(async (req) => {
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', jobId)
 
-      // Verify download completeness for this country
       await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
+      await updateNetworkConfigsFromData(supabase, job.network_name)
 
       return new Response(
         JSON.stringify({ success: true, message: 'Job completed', total: wcaIds.length }),
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         const previewResult = await previewRes.json()
         
         if (previewResult.authStatus && previewResult.authStatus !== 'authenticated') {
-          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — pausing job. Use Chrome extension to renew session.`)
+          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — pausing job.`)
           await supabase
             .from('download_jobs')
             .update({
@@ -109,7 +109,6 @@ Deno.serve(async (req) => {
           )
         }
         console.log(`Job ${jobId}: Auth check passed — proceeding with download`)
-        // Clear any stale error message from previous runs
         await supabase
           .from('download_jobs')
           .update({ error_message: null })
@@ -119,8 +118,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Process the current ID by calling scrape-wca-partners
+    // ── SKIP CHECK: Is this partner already complete? ──
     const wcaId = wcaIds[currentIndex]
+    const skipResult = await isPartnerComplete(supabase, wcaId)
+    
+    if (skipResult.complete) {
+      console.log(`Job ${jobId}: SKIP ID ${wcaId} (${skipResult.companyName}) — already has complete contacts`)
+      
+      const processedIds = [...(job.processed_ids || []), wcaId]
+      await supabase
+        .from('download_jobs')
+        .update({
+          current_index: currentIndex + 1,
+          processed_ids: processedIds,
+          last_processed_wca_id: wcaId,
+          last_processed_company: skipResult.companyName || null,
+          last_contact_result: 'skipped_complete',
+          error_message: null,
+        })
+        .eq('id', jobId)
+      
+      // Chain immediately (no delay needed for skips)
+      await chainNext(supabase, supabaseUrl, supabaseKey, jobId, currentIndex + 1, wcaIds.length, 0)
+      
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, processed: wcaId, company: skipResult.companyName }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ── Normal processing ──
     console.log(`Job ${jobId}: Processing ID ${wcaId} (${currentIndex + 1}/${wcaIds.length})`)
 
     let lastCompany = ''
@@ -198,8 +225,7 @@ Deno.serve(async (req) => {
         .eq('id', jobId)
     }
 
-    // Self-chain: schedule the next step after the configured delay
-    // Re-read job to check if it was paused/cancelled in the meantime
+    // Chain to next
     const { data: freshJob } = await supabase
       .from('download_jobs')
       .select('status, delay_seconds')
@@ -208,41 +234,7 @@ Deno.serve(async (req) => {
 
     if (freshJob && freshJob.status === 'running') {
       const delaySec = freshJob.delay_seconds || 3
-      
-      // Fire the next step after delay
-      // We use setTimeout-like behavior by waiting, then calling ourselves
-      if (currentIndex + 1 < wcaIds.length) {
-        // Wait the configured delay
-        await new Promise(r => setTimeout(r, delaySec * 1000))
-        
-        // Re-check status after delay (user might have paused during wait)
-        const { data: checkJob } = await supabase
-          .from('download_jobs')
-          .select('status')
-          .eq('id', jobId)
-          .single()
-
-        if (checkJob && checkJob.status === 'running') {
-          // Chain to next step (fire and forget)
-          fetch(`${supabaseUrl}/functions/v1/process-download-job`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ jobId }),
-          }).catch(err => console.error('Self-chain error:', err))
-        }
-      } else {
-        // This was the last one
-        await supabase
-          .from('download_jobs')
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
-          .eq('id', jobId)
-
-        // Verify download completeness for this country
-        await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
-      }
+      await chainNext(supabase, supabaseUrl, supabaseKey, jobId, currentIndex + 1, wcaIds.length, delaySec)
     }
 
     return new Response(
@@ -266,13 +258,101 @@ Deno.serve(async (req) => {
 })
 
 /**
+ * Check if a partner with this wca_id already has complete contacts
+ * (at least one contact with email AND (direct_phone OR mobile)).
+ */
+async function isPartnerComplete(supabase: any, wcaId: number): Promise<{ complete: boolean; companyName?: string }> {
+  try {
+    // Find partner by wca_id
+    const { data: partners } = await supabase
+      .from('partners')
+      .select('id, company_name')
+      .eq('wca_id', wcaId)
+      .limit(1)
+
+    if (!partners || partners.length === 0) {
+      return { complete: false }
+    }
+
+    const partner = partners[0]
+
+    // Check if partner has at least one contact with email AND phone
+    const { data: contacts } = await supabase
+      .from('partner_contacts')
+      .select('email, direct_phone, mobile')
+      .eq('partner_id', partner.id)
+      .not('email', 'is', null)
+
+    if (!contacts || contacts.length === 0) {
+      return { complete: false, companyName: partner.company_name }
+    }
+
+    // Complete = at least one contact with email AND (direct_phone OR mobile)
+    const hasCompleteContact = contacts.some((c: any) => 
+      c.email && (c.direct_phone || c.mobile)
+    )
+
+    return { complete: hasCompleteContact, companyName: partner.company_name }
+  } catch (err) {
+    console.warn(`isPartnerComplete error for wcaId ${wcaId}:`, err)
+    return { complete: false }
+  }
+}
+
+/**
+ * Chain to the next step with delay, checking job status first.
+ */
+async function chainNext(supabase: any, supabaseUrl: string, supabaseKey: string, jobId: string, nextIndex: number, totalIds: number, delaySec: number) {
+  if (nextIndex >= totalIds) {
+    // Complete the job
+    const { data: job } = await supabase
+      .from('download_jobs')
+      .select('country_code, network_name')
+      .eq('id', jobId)
+      .single()
+
+    await supabase
+      .from('download_jobs')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('id', jobId)
+
+    if (job) {
+      await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
+      await updateNetworkConfigsFromData(supabase, job.network_name)
+    }
+    return
+  }
+
+  // Wait delay
+  if (delaySec > 0) {
+    await new Promise(r => setTimeout(r, delaySec * 1000))
+  }
+
+  // Re-check status after delay
+  const { data: checkJob } = await supabase
+    .from('download_jobs')
+    .select('status')
+    .eq('id', jobId)
+    .single()
+
+  if (checkJob && checkJob.status === 'running') {
+    fetch(`${supabaseUrl}/functions/v1/process-download-job`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId }),
+    }).catch(err => console.error('Self-chain error:', err))
+  }
+}
+
+/**
  * Verify that all WCA IDs in the directory_cache for a country+network
  * have been downloaded to the partners table.
- * Sets download_verified = true only if every ID is present.
  */
 async function verifyDownloadCompleteness(supabase: any, countryCode: string, networkName: string) {
   try {
-    // Get cached members for this country+network
     const { data: cacheRows } = await supabase
       .from('directory_cache')
       .select('id, members')
@@ -285,11 +365,9 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
       const members = cache.members as Array<{ id: number }> | number[]
       if (!members || !Array.isArray(members) || members.length === 0) continue
 
-      // Extract WCA IDs from members (could be objects with .id or plain numbers)
       const wcaIds: number[] = members.map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean)
       if (wcaIds.length === 0) continue
 
-      // Check which IDs exist in partners (by wca_id, regardless of country_code)
       const { data: partners } = await supabase
         .from('partners')
         .select('wca_id')
@@ -298,7 +376,6 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
       const foundIds = new Set((partners || []).map((p: any) => p.wca_id))
       const allPresent = wcaIds.every(id => foundIds.has(id))
 
-      // Update the verified flag
       await supabase
         .from('directory_cache')
         .update({
@@ -311,5 +388,54 @@ async function verifyDownloadCompleteness(supabase: any, countryCode: string, ne
     }
   } catch (err) {
     console.error('Verification error:', err)
+  }
+}
+
+/**
+ * Auto-update network_configs flags based on actual data in the database.
+ */
+async function updateNetworkConfigsFromData(supabase: any, networkName: string) {
+  try {
+    if (!networkName || networkName === 'Tutti' || networkName === '') return
+
+    // For combined networks like "WCA Inter Global, WCA First", update each
+    const netNames = networkName.includes(',') ? networkName.split(',').map(n => n.trim()) : [networkName]
+
+    for (const net of netNames) {
+      // Find partners that belong to this network
+      const { data: networkPartners } = await supabase
+        .from('partner_networks')
+        .select('partner_id')
+        .eq('network_name', net)
+        .limit(500)
+
+      if (!networkPartners || networkPartners.length === 0) continue
+
+      const partnerIds = networkPartners.map((p: any) => p.partner_id)
+
+      // Check contacts for these partners
+      const { data: contacts } = await supabase
+        .from('partner_contacts')
+        .select('email, direct_phone, mobile, name')
+        .in('partner_id', partnerIds)
+
+      const hasEmails = (contacts || []).some((c: any) => c.email)
+      const hasPhones = (contacts || []).some((c: any) => c.direct_phone || c.mobile)
+      const hasNames = (contacts || []).some((c: any) => c.name && !/Members\s*only/i.test(c.name))
+
+      await supabase
+        .from('network_configs')
+        .update({
+          has_contact_emails: hasEmails,
+          has_contact_phones: hasPhones,
+          has_contact_names: hasNames,
+          sample_tested_at: new Date().toISOString(),
+        })
+        .eq('network_name', net)
+
+      console.log(`Updated network_configs for "${net}": emails=${hasEmails}, phones=${hasPhones}, names=${hasNames}`)
+    }
+  } catch (err) {
+    console.error('updateNetworkConfigsFromData error:', err)
   }
 }
