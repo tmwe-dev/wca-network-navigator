@@ -186,7 +186,7 @@ export default function AcquisizionePartner() {
     setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 });
 
     let consecutiveNoContacts = 0;
-    const MAX_CONSECUTIVE_EMPTY = 3;
+    const MAX_CONSECUTIVE_EMPTY = 2;
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
     for (let i = 0; i < items.length; i++) {
@@ -429,6 +429,21 @@ export default function AcquisizionePartner() {
             consecutiveNoContacts++;
           } else {
             consecutiveNoContacts = 0;
+          }
+        }
+
+        // Re-check session after first partner with no contacts
+        if (i === 0 && !hasAnyContact && canvas.contacts.length === 0) {
+          const recheck = await triggerCheck();
+          if (!recheck || recheck.status !== "ok") {
+            pauseRef.current = true;
+            setPipelineStatus("paused");
+            setShowSessionAlert(true);
+            while (pauseRef.current) {
+              await new Promise((r) => setTimeout(r, 500));
+              if (cancelRef.current) break;
+            }
+            if (cancelRef.current) break;
           }
         }
 
