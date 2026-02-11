@@ -182,7 +182,8 @@ Estrai queste informazioni (metti null se non trovate):
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "AI analysis failed" }), {
+      const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
+      return new Response(JSON.stringify({ error: detail }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
