@@ -1,101 +1,127 @@
 
 
-# Architettura stabile: ZERO richieste server-side a WCA
+# Sessione WCA Indistruttibile: Piano Definitivo
 
-## Problema reale trovato
+## Problema ancora presente
 
-Ho analizzato ogni riga di codice. Ecco cosa succede:
+Il file `supabase/functions/process-download-job/index.ts` (righe 82-167) chiama ANCORA `scrape-wca-partners` dal server. Ogni volta che un job parte, il server fa richieste HTTP a WCA con il tuo cookie, da un IP diverso dal tuo browser. WCA invalida la sessione immediatamente.
 
-**Ogni volta che il sistema scarica un profilo WCA, la Edge Function `scrape-wca-partners` fa una richiesta HTTP diretta a `wcaworld.com` dal server di Supabase** (file `scrape-wca-partners/index.ts`, funzione `directFetchPage`, riga 565-601). Questa richiesta parte dall'IP del server, NON dal tuo browser.
+La pagina Acquisizione ha gia' il loop via estensione (`runExtensionLoop`), ma il job processor server-side continua a girare in parallelo e uccide tutto.
 
-WCA vede il tuo cookie usato da due IP diversi (il tuo PC e il server Supabase) e invalida la sessione. Succede ad ogni singolo profilo scaricato.
+## Modifiche
 
-Inoltre, `save-wca-cookie/index.ts` (riga 43) chiama `testCookieDeep()` che fa un'altra richiesta HTTP a WCA dal server quando salvi il cookie. Altro colpo alla sessione.
-
-```text
-FLUSSO ATTUALE (che rompe la sessione):
-
-Browser (tuo IP) --> login su WCA --> cookie valido
-                                         |
-Edge Function (IP server) --> fetch WCA con il TUO cookie --> WCA vede 2 IP --> INVALIDA sessione
-```
-
-## Soluzione: tutto passa dall'estensione Chrome
-
-L'estensione Chrome gira nel tuo browser, stesso IP, stessa sessione. Nessun conflitto di IP.
-
-```text
-FLUSSO NUOVO (sessione stabile):
-
-Browser (tuo IP) --> login su WCA --> cookie valido
-                                         |
-Estensione (tuo IP) --> apre tab WCA --> stesso IP --> sessione STABILE
-                                         |
-                                    salva dati --> database
-```
-
-### Modifiche specifiche:
-
-### 1. Rimuovere `testCookieDeep` da `save-wca-cookie`
-
-**File**: `supabase/functions/save-wca-cookie/index.ts`
-
-Eliminare la chiamata `testCookieDeep()` (riga 43). Il cookie viene salvato e lo stato viene determinato solo dalla presenza di `.ASPXAUTH` nel cookie, senza MAI fare richieste HTTP a WCA.
-
-### 2. Modalita' "extension-only" nel job processor
+### 1. Neutralizzare `process-download-job`
 
 **File**: `supabase/functions/process-download-job/index.ts`
 
-Il job processor smette di chiamare `scrape-wca-partners` (che fa `directFetchPage` dal server). Invece:
-- Il job avanza l'indice e segna il WCA ID come "da processare"
-- Il frontend (che ha l'estensione) fa il lavoro reale tramite l'extension bridge
-- Il server si occupa solo di tenere traccia del progresso
+Il job processor server-side non deve MAI chiamare `scrape-wca-partners`. Diventa un semplice "tracker" che:
+- Tiene traccia dello stato del job (running/paused/completed)
+- NON fa nessuna richiesta HTTP a WCA
+- NON chiama `scrape-wca-partners`
+- NON fa auto-chaining (il frontend guida tutto)
 
-Il flusso diventa:
-1. Job creato con lista WCA IDs
-2. Frontend poll il job, vede il prossimo ID da processare
-3. Frontend chiede all'estensione di aprire la pagina e estrarre i dati
-4. Estensione salva i contatti nel DB tramite `save-wca-contacts`
-5. Frontend segna l'ID come completato e passa al successivo
+Rimuovere:
+- La chiamata auth-check a `scrape-wca-partners` (righe 82-118)
+- La chiamata di scraping a `scrape-wca-partners` (righe 159-167)
+- La logica di auto-chaining `chainNext` (riga 282)
 
-### 3. Scraper server-side come fallback senza cookie
+Il job processor diventa un endpoint che il frontend chiama per aggiornare il progresso e basta.
 
-**File**: `supabase/functions/scrape-wca-partners/index.ts`
-
-Lo scraper server-side rimane ma opera SOLO senza il cookie dell'utente. Serve come fallback per estrarre dati pubblici (nome azienda, citta', sito web) quando l'estensione non e' disponibile. Non usa MAI il cookie della sessione autenticata.
-
-### 4. Pipeline di acquisizione gestita dal frontend
+### 2. Verifica sessione ogni 3 partner nel loop frontend
 
 **File**: `src/pages/AcquisizionePartner.tsx`
 
-La pipeline cambia:
-- Il frontend diventa il "motore" che orchestra il download
-- Per ogni WCA ID: chiede all'estensione di aprire la pagina
-- L'estensione estrae TUTTO (contatti, email, telefoni, nome azienda)
-- I dati vengono salvati nel DB
-- Se l'estensione non e' disponibile, il job va in pausa (non usa il server come fallback)
+Nel `runExtensionLoop`, aggiungere un controllo ogni 3 partner processati:
+- Dopo il 3o, 6o, 9o... partner: chiedere all'estensione di fare un "ping" a WCA
+- Se il ping fallisce o i contatti sono vuoti: tentare il ripristino automatico
+- Se il ripristino non funziona: mettere in pausa e avvisare
 
-### 5. Download Management adattato
+```text
+Loop per ogni partner:
+  1. Estrai contatti via estensione
+  2. Se (contatore % 3 == 0):
+     a. Verifica sessione tramite estensione (apre pagina test WCA)
+     b. Se sessione morta:
+        - Tenta re-sync cookie automatico
+        - Se fallisce: PAUSA + avviso
+  3. Salva dati nel DB
+  4. Prossimo partner
+```
 
-**File**: `src/pages/DownloadManagement.tsx` e `src/hooks/useDownloadJobs.ts`
+### 3. Aggiungere azione "verifySession" all'estensione Chrome
 
-Il Download Management continua a creare job con la lista di WCA IDs, ma il processing avviene lato frontend tramite l'estensione. Il job tiene traccia del progresso. Se il browser viene chiuso, il job resta in pausa e riprende quando il browser viene riaperto.
+**File**: `public/chrome-extension/background.js`
 
-## Riepilogo dei file modificati
+Nuova azione `verifySession` che:
+- Apre un profilo WCA noto (es: ID 86580) in tab nascosta
+- Controlla se la pagina contiene blocchi contatto reali (non "Members only")
+- Restituisce `{ authenticated: true/false }`
+- Se autenticato: ri-sincronizza il cookie aggiornato nel DB
+
+### 4. Aggiungere azione "syncCookie" all'estensione Chrome
+
+**File**: `public/chrome-extension/background.js`
+
+Nuova azione `syncCookie` che:
+- Legge tutti i cookie di `wcaworld.com` tramite `chrome.cookies.getAll`
+- Li concatena in una stringa cookie completa
+- Li salva nel DB chiamando `save-wca-cookie`
+- Questo mantiene il cookie nel DB sempre aggiornato con l'ultimo token valido
+
+### 5. Esporre le nuove azioni nel bridge
+
+**File**: `src/hooks/useExtensionBridge.ts`
+
+Aggiungere due nuovi metodi:
+- `verifySession()`: chiama l'azione `verifySession` dell'estensione
+- `syncCookie()`: chiama l'azione `syncCookie` dell'estensione
+
+### 6. Indicatore sessione live nella pagina Acquisizione
+
+**File**: `src/pages/AcquisizionePartner.tsx`
+
+Aggiungere un indicatore visivo permanente in alto nella pagina:
+- Pallino verde: "Sessione WCA attiva"
+- Pallino rosso: "Sessione scaduta - ripristino in corso..."
+- Pallino giallo: "Verifica in corso..."
+
+Questo indicatore si aggiorna automaticamente ogni 3 partner e dopo ogni sync.
+
+## Flusso risultante
+
+```text
+1. Utente fa login su WCA nel browser
+2. Estensione sincronizza cookie automaticamente
+3. Pipeline parte:
+   Partner 1 -> estrai via estensione (stesso IP) -> OK
+   Partner 2 -> estrai via estensione -> OK
+   Partner 3 -> estrai via estensione -> OK
+   --- VERIFICA SESSIONE ---
+   Estensione apre pagina test -> contatti visibili? -> SI -> continua
+   Partner 4 -> OK
+   Partner 5 -> OK
+   Partner 6 -> OK
+   --- VERIFICA SESSIONE ---
+   Estensione apre pagina test -> contatti visibili? -> NO
+   -> Estensione ri-sincronizza cookie -> riprova -> OK? -> continua
+   -> Ancora NO? -> PAUSA + avviso utente
+```
+
+## Riepilogo file modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/save-wca-cookie/index.ts` | Rimuovere `testCookieDeep` — zero richieste HTTP a WCA |
-| `supabase/functions/process-download-job/index.ts` | Rimuovere chiamata a `scrape-wca-partners` — il job segna solo il progresso |
-| `supabase/functions/scrape-wca-partners/index.ts` | Non usa piu' il cookie dell'utente per fetch diretti |
-| `src/pages/AcquisizionePartner.tsx` | L'estensione diventa il motore di scraping |
-| `public/chrome-extension/background.js` | Estrarre TUTTI i dati del profilo (non solo contatti) |
+| `supabase/functions/process-download-job/index.ts` | Rimuovere TUTTE le chiamate a `scrape-wca-partners` e auto-chaining |
+| `public/chrome-extension/background.js` | Aggiungere azioni `verifySession` e `syncCookie` |
+| `src/hooks/useExtensionBridge.ts` | Esporre `verifySession()` e `syncCookie()` |
+| `src/pages/AcquisizionePartner.tsx` | Verifica sessione ogni 3 partner + indicatore live + auto-recovery |
 
 ## Risultato
 
-- Tu fai login su WCA una volta sola
-- L'estensione lavora nel tuo browser, stesso IP, stessa sessione
-- Il server NON tocca MAI WCA con il tuo cookie
-- La sessione resta attiva finche' il cookie non scade naturalmente (ore/giorni)
-- Se il cookie scade, l'estensione lo ri-sincronizza automaticamente
+- Il server NON tocca MAI WCA -- zero richieste server-side
+- L'estensione lavora dal tuo browser, stesso IP, stessa sessione
+- Ogni 3 partner il sistema verifica che la sessione sia viva
+- Se la sessione muore: tentativo automatico di ripristino
+- Se il ripristino fallisce: pausa immediata con avviso chiaro
+- La sessione resta aperta finche' TU non la chiudi
 
