@@ -68,7 +68,7 @@ export interface CanvasData {
   contactSource?: ContactSource;
 }
 
-export type CanvasPhase = "idle" | "downloading" | "enriching" | "deep_search" | "complete";
+export type CanvasPhase = "idle" | "downloading" | "extracting" | "enriching" | "deep_search" | "complete";
 
 interface PartnerCanvasProps {
   data: CanvasData | null;
@@ -102,6 +102,7 @@ const QUALITY_COLORS = {
 function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
   const phases = [
     { key: "downloading", label: "Download" },
+    { key: "extracting", label: "Contatti Privati" },
     { key: "enriching", label: "Arricchimento" },
     { key: "deep_search", label: "Deep Search" },
     { key: "complete", label: "Completato" },

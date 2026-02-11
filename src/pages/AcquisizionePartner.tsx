@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle, Plug } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,13 @@ export default function AcquisizionePartner() {
   const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [liveStats, setLiveStats] = useState({
+    processed: 0,
+    withEmail: 0,
+    withPhone: 0,
+    complete: 0,
+    empty: 0,
+  });
 
   // Scan stats
   const [scanStats, setScanStats] = useState<{
@@ -176,6 +183,7 @@ export default function AcquisizionePartner() {
     setCompletedCount(0);
     setQualityComplete(0);
     setQualityIncomplete(0);
+    setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 });
 
     let consecutiveNoContacts = 0;
     const MAX_CONSECUTIVE_EMPTY = 3;
@@ -245,11 +253,10 @@ export default function AcquisizionePartner() {
 
         // PHASE 1.5: Extract contacts via Chrome Extension
         if (extensionAvailable || await checkExtension()) {
-          setCanvasPhase("downloading"); // Still in download phase visually
+          setCanvasPhase("extracting");
           try {
             const extResult = await extensionExtract(item.wca_id);
             if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
-              // Update canvas with real contacts from extension
               canvas.contacts = extResult.contacts.map((c) => ({
                 name: c.name || c.title || "Sconosciuto",
                 title: c.title,
@@ -263,6 +270,39 @@ export default function AcquisizionePartner() {
             }
           } catch (extErr) {
             console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
+          }
+
+          // FALLBACK: If canvas still has no real emails, check DB directly
+          // (extension may have saved contacts via save-wca-contacts independently)
+          if (canvas.contactSource !== "extension" || !canvas.contacts.some(c => c.email?.trim())) {
+            try {
+              const { data: dbPartner } = await supabase
+                .from("partners")
+                .select("id")
+                .eq("wca_id", item.wca_id)
+                .maybeSingle();
+
+              if (dbPartner) {
+                const { data: dbContacts } = await supabase
+                  .from("partner_contacts")
+                  .select("name, title, email, direct_phone, mobile")
+                  .eq("partner_id", dbPartner.id);
+
+                if (dbContacts && dbContacts.length > 0 &&
+                    dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
+                  canvas.contacts = dbContacts.map(c => ({
+                    name: c.name,
+                    title: c.title || undefined,
+                    email: c.email || undefined,
+                    direct_phone: c.direct_phone || undefined,
+                    mobile: c.mobile || undefined,
+                  }));
+                  canvas.contactSource = "extension";
+                  setCanvasData({ ...canvas });
+                  console.log(`[DB Fallback] ${item.company_name}: ${dbContacts.length} contacts recovered from DB`);
+                }
+              }
+            } catch { /* DB check failure is non-blocking */ }
           }
         } else if (!extensionWarningShown.current) {
           extensionWarningShown.current = true;
@@ -353,17 +393,21 @@ export default function AcquisizionePartner() {
         setIsAnimatingOut(false);
         setCompletedCount((c) => c + 1);
 
-        // Track quality + consecutive empty detection
-        const hasAnyContact = canvas.contacts.length > 0 && canvas.contacts.some((c) => {
-          const hasEmail = !!c.email?.trim();
-          const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
-          return hasEmail || hasPhone;
-        });
+        // Track quality + consecutive empty detection + live stats
+        const contactsWithEmail = canvas.contacts.filter(c => !!c.email?.trim());
+        const contactsWithPhone = canvas.contacts.filter(c => !!(c.direct_phone?.trim() || c.mobile?.trim()));
+        const hasAnyContact = contactsWithEmail.length > 0 || contactsWithPhone.length > 0;
         const hasComplete = canvas.contacts.some((c) => {
-          const hasEmail = !!c.email?.trim();
-          const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
-          return hasEmail && hasPhone;
+          return !!c.email?.trim() && !!(c.direct_phone?.trim() || c.mobile?.trim());
         });
+
+        setLiveStats(prev => ({
+          processed: prev.processed + 1,
+          withEmail: prev.withEmail + (contactsWithEmail.length > 0 ? 1 : 0),
+          withPhone: prev.withPhone + (contactsWithPhone.length > 0 ? 1 : 0),
+          complete: prev.complete + (hasComplete ? 1 : 0),
+          empty: prev.empty + (!hasAnyContact && canvas.contacts.length === 0 ? 1 : 0),
+        }));
 
         if (hasComplete) {
           setQualityComplete((v) => v + 1);
@@ -531,6 +575,39 @@ export default function AcquisizionePartner() {
           )}
         </div>
       </Card>
+
+      {/* LIVE STATS BAR */}
+      {(pipelineStatus === "running" || pipelineStatus === "paused" || pipelineStatus === "done") && liveStats.processed > 0 && (
+        <div className="flex items-center gap-4 px-4 py-2 rounded-lg bg-card/80 backdrop-blur-sm border border-border text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
+            Progresso: <strong className="text-foreground">{liveStats.processed}/{queue.filter(q => selectedIds.has(q.wca_id)).length}</strong>
+          </div>
+          <div className="h-2 flex-1 max-w-[200px] bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${(liveStats.processed / Math.max(queue.filter(q => selectedIds.has(q.wca_id)).length, 1)) * 100}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-1 text-sky-500">
+            <Mail className="w-3 h-3" />
+            <span>{liveStats.withEmail}</span>
+          </div>
+          <div className="flex items-center gap-1 text-violet-500">
+            <Phone className="w-3 h-3" />
+            <span>{liveStats.withPhone}</span>
+          </div>
+          <div className="flex items-center gap-1 text-emerald-500">
+            <CheckCircle2 className="w-3 h-3" />
+            <span>{liveStats.complete} completi</span>
+          </div>
+          {liveStats.empty > 0 && (
+            <div className="flex items-center gap-1 text-destructive">
+              <XCircle className="w-3 h-3" />
+              <span>{liveStats.empty} vuoti</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MAIN SPLIT */}
       <div className="flex-1 flex gap-3 min-h-0">
