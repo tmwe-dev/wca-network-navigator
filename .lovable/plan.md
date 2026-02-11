@@ -1,84 +1,94 @@
 
 
-# Fix: Verifica sessione WCA affidabile
+# Fix: Eliminare auto-login server-side e aggiungere retry automatico
 
-## Problema identificato
+## Problema
 
-Nel file `supabase/functions/check-wca-session/index.ts`, riga 57:
+Il file `scrape-wca-partners/index.ts` (righe 912-955) contiene una logica di **auto-login server-side**: quando il cookie non funziona, il sistema tenta di fare un login con username/password direttamente dal server. Questo crea una **NUOVA sessione** sul sito WCA, che molto probabilmente **invalida la sessione attiva nel browser** dell'utente. Risultato: l'estensione Chrome perde l'accesso e non puo' piu' estrarre i contatti privati.
 
-```typescript
-const authenticated = hasAspxAuth || testResult.authenticated
-```
-
-Questa logica dice "se il cookie contiene la stringa `.ASPXAUTH=`, la sessione e' valida" -- anche quando il test reale (`testCookieDeep`) ha verificato che i contatti NON sono visibili. Il risultato: il semaforo resta verde, la pipeline parte, e scarica dati vuoti.
-
-I log lo confermano:
-- 09:30 -> `emails=3, auth=true` (sessione ok)
-- 09:34 -> `contacts=0, emails=0, auth=false` (sessione scaduta)
-- Ma `wca_session_status` rimane `ok` perche' `.ASPXAUTH` e' ancora nel testo del cookie
+Lo stesso problema esiste in `check-wca-session/index.ts` (riga 60-63): se la sessione risulta scaduta e `autoLogin` e' richiesto, chiama `wca-auto-login` che fa la stessa cosa.
 
 ## Soluzione
 
-### 1. Edge Function `check-wca-session/index.ts` -- rimuovere override
+### 1. Rimuovere auto-login da `scrape-wca-partners` (Edge Function)
 
-Cambiare la logica di autenticazione: il risultato del test reale (`testCookieDeep`) deve avere la priorita'. La presenza della stringa `.ASPXAUTH` nel cookie serve solo come diagnostica, non come prova di autenticazione.
+Eliminare il blocco "Try 2: Auto-login" (righe 912-955). Se il cookie non funziona, la funzione deve restituire `authStatus: "members_only"` e lasciare che la pipeline gestisca la situazione (pausa + alert all'utente).
 
-```typescript
-// PRIMA (bug):
-const authenticated = hasAspxAuth || testResult.authenticated
+Il flusso diventa:
+1. Usa il cookie salvato -> funziona? OK
+2. Non funziona? Restituisci `members_only` senza tentare login
+3. Non c'e' cookie? Usa Firecrawl come fallback (dati pubblici)
 
-// DOPO (fix):
-const authenticated = testResult.authenticated
+### 2. Rimuovere auto-login da `check-wca-session` (Edge Function)
+
+Rimuovere la chiamata a `tryAutoLogin` (righe 60-63) e il parametro `autoLogin`. Il check deve solo verificare lo stato, mai tentare di rinnovare la sessione. Il rinnovo deve avvenire SOLO tramite l'estensione Chrome nel browser dell'utente.
+
+### 3. Aggiungere "Retry incompleti" nella pipeline (Frontend)
+
+Alla fine della pipeline, verificare se ci sono partner con contatti mancanti e proporre un secondo giro automatico:
+
+- Contare i partner completati con `contactSource === "none"` o senza email
+- Se ce ne sono, mostrare un dialog: "X partner senza contatti. Vuoi ritentare?"
+- Se l'utente accetta, rieseguire la pipeline solo per quei partner
+
+## Dettagli Tecnici
+
+### File: `supabase/functions/scrape-wca-partners/index.ts`
+
+**Rimuovere** il blocco "Try 2: Auto-login" (righe 912-955). La logica dopo il cookie check diventa:
+
+```
+Se authStatus !== 'authenticated':
+  -> Non fare nulla (niente auto-login)
+  -> Il profilo verra' scaricato con dati pubblici (members_only)
+  -> La pipeline vedra' authStatus e potra' reagire
 ```
 
-Inoltre, se `testCookieDeep` fallisce per errore di rete/WAF (non per sessione scaduta), aggiungere un fallback che controlla se il test ha effettivamente raggiunto WCA:
+### File: `supabase/functions/check-wca-session/index.ts`
+
+- Rimuovere il parametro `autoLogin` dal body parsing (righe 20-24)
+- Rimuovere il blocco `if (!cookie && autoLogin)` (righe 40-43) 
+- Rimuovere il blocco `if (!authenticated && autoLogin)` (righe 60-63)
+- Rimuovere la funzione `tryAutoLogin` (righe 156-177)
+
+### File: `src/pages/AcquisizionePartner.tsx`
+
+Dopo il ciclo principale (riga 487), aggiungere logica per il retry:
 
 ```typescript
-// Se il test non ha potuto raggiungere WCA (errore di rete/WAF),
-// e il cookie ha .ASPXAUTH, considerare "unknown" invece di "expired"
-const authenticated = testResult.diagnostics?.error 
-  ? hasAspxAuth  // Network error: trust ASPXAUTH as fallback
-  : testResult.authenticated  // Test succeeded: trust the result
-```
+// Check for incomplete partners
+const incompleteItems = items.filter(item => {
+  const qItem = queue.find(q => q.wca_id === item.wca_id);
+  return qItem?.status === "done"; // will check bin for missing contacts
+});
 
-### 2. Pipeline: ri-verifica dopo il primo partner
-
-Nel file `src/pages/AcquisizionePartner.tsx`, aggiungere un controllo della sessione dopo il primo partner processato. Se il primo partner restituisce 0 contatti, fare un check immediato della sessione prima di continuare con i successivi.
-
-Dopo il blocco di quality tracking (~riga 430), aggiungere:
-
-```typescript
-// After first partner, if no contacts found, re-check session immediately
-if (i === 0 && !hasAnyContact && canvas.contacts.length === 0) {
-  const recheck = await triggerCheck();
-  if (!recheck || recheck.status !== "ok") {
-    pauseRef.current = true;
-    setPipelineStatus("paused");
-    setShowSessionAlert(true);
-    // Wait for user to fix session and resume
-    while (pauseRef.current) {
-      await new Promise((r) => setTimeout(r, 500));
-      if (cancelRef.current) break;
-    }
-    if (cancelRef.current) break;
-  }
+// If there are partners without contacts, offer retry
+if (liveStats.empty > 0 && !cancelRef.current) {
+  // Show retry dialog
+  setShowRetryDialog(true);
 }
 ```
 
-### 3. Ridurre il threshold di pausa automatica
+Aggiungere un nuovo dialog e stato:
+- `showRetryDialog` (boolean)  
+- Quando l'utente conferma, rieseguire la pipeline filtrando solo i partner senza contatti dal bin
 
-Cambiare `MAX_CONSECUTIVE_EMPTY` da 3 a 2, cosi' il sistema si ferma piu' velocemente se la sessione scade durante il processo.
+### File: `src/hooks/useWcaSessionStatus.ts`
 
-## Riepilogo modifiche
+Rimuovere la funzione `autoLogin` dal return (non serve piu').
+
+## Riepilogo Modifiche
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/check-wca-session/index.ts` | Rimuovere override `.ASPXAUTH`, fidarsi solo del test reale |
-| `src/pages/AcquisizionePartner.tsx` | Re-check sessione dopo primo partner vuoto + ridurre threshold a 2 |
+| `scrape-wca-partners/index.ts` | Rimuovere blocco auto-login (righe 912-955) |
+| `check-wca-session/index.ts` | Rimuovere `autoLogin` param e `tryAutoLogin()` |
+| `AcquisizionePartner.tsx` | Aggiungere dialog "Retry incompleti" a fine pipeline |
+| `useWcaSessionStatus.ts` | Rimuovere `autoLogin` dal return |
 
-## Risultato atteso
+## Risultato
 
-- Il semaforo diventa rosso IMMEDIATAMENTE quando la sessione scade
-- La pipeline si blocca al primo partner vuoto se la sessione non e' valida
-- Niente piu' download di dati vuoti perche' il sistema credeva di essere autenticato
+- Il server non fara' MAI login autonomamente -> la sessione del browser resta intatta
+- Se il cookie scade, la pipeline si blocca e chiede all'utente di rifare la connessione tramite estensione
+- A fine giro, se ci sono partner incompleti, il sistema propone un retry automatico
 
