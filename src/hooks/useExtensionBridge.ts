@@ -21,12 +21,18 @@ type ExtensionResponse = {
 /**
  * Hook for communicating with the WCA Chrome Extension via content script bridge.
  * Uses window.postMessage so no Extension ID is needed.
- * Includes automatic polling to reliably detect the extension.
+ * Continuous polling to reliably detect the extension even if loaded after the page.
  */
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
   const pendingRef = useRef<Map<string, (response: ExtensionResponse) => void>>(new Map());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const availableRef = useRef(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    availableRef.current = isAvailable;
+  }, [isAvailable]);
 
   // Listen for responses from the content script
   useEffect(() => {
@@ -59,16 +65,8 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // Auto-poll every 5s until extension is detected
+  // CONTINUOUS polling every 3s — never stops, so extension is detected even if installed/reloaded later
   useEffect(() => {
-    if (isAvailable) {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-      return;
-    }
-
     const doPing = () => {
       window.postMessage(
         {
@@ -81,7 +79,7 @@ export function useExtensionBridge() {
     };
 
     doPing();
-    pollRef.current = setInterval(doPing, 5000);
+    pollRef.current = setInterval(doPing, 3000);
 
     return () => {
       if (pollRef.current) {
@@ -89,7 +87,7 @@ export function useExtensionBridge() {
         pollRef.current = null;
       }
     };
-  }, [isAvailable]);
+  }, []);
 
   // Send a message to the extension and wait for response
   const sendMessage = useCallback(
@@ -121,20 +119,46 @@ export function useExtensionBridge() {
     []
   );
 
-  // Check if extension is available (with retries)
+  // Check if extension is available (with retries) — 5 attempts, 3s timeout each
   const checkAvailable = useCallback(async (): Promise<boolean> => {
-    if (isAvailable) return true;
+    if (availableRef.current) return true;
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const response = await sendMessage("ping", {}, 2000);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await sendMessage("ping", {}, 3000);
       if (response.success === true) {
         setIsAvailable(true);
         return true;
       }
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+      if (attempt < 4) await new Promise((r) => setTimeout(r, 1000));
     }
     return false;
-  }, [isAvailable, sendMessage]);
+  }, [sendMessage]);
+
+  // Wait for extension to become available (up to maxWaitMs)
+  const waitForExtension = useCallback(
+    (maxWaitMs = 10000): Promise<boolean> => {
+      return new Promise((resolve) => {
+        if (availableRef.current) {
+          resolve(true);
+          return;
+        }
+
+        const start = Date.now();
+        const interval = setInterval(() => {
+          if (availableRef.current) {
+            clearInterval(interval);
+            resolve(true);
+            return;
+          }
+          if (Date.now() - start >= maxWaitMs) {
+            clearInterval(interval);
+            resolve(false);
+          }
+        }, 500);
+      });
+    },
+    []
+  );
 
   // Extract contacts for a WCA ID
   const extractContacts = useCallback(
@@ -163,6 +187,7 @@ export function useExtensionBridge() {
   return {
     isAvailable,
     checkAvailable,
+    waitForExtension,
     extractContacts,
     verifySession,
     syncCookie,
