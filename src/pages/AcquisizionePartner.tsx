@@ -27,7 +27,7 @@ export default function AcquisizionePartner() {
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [delaySeconds, setDelaySeconds] = useState(15);
   const [includeEnrich, setIncludeEnrich] = useState(true);
-  const [includeDeepSearch, setIncludeDeepSearch] = useState(false);
+  const [includeDeepSearch, setIncludeDeepSearch] = useState(true);
 
   // Pipeline state
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
@@ -37,6 +37,8 @@ export default function AcquisizionePartner() {
   const [canvasPhase, setCanvasPhase] = useState<CanvasPhase>("idle");
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
+  const [qualityComplete, setQualityComplete] = useState(0);
+  const [qualityIncomplete, setQualityIncomplete] = useState(0);
   const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -169,6 +171,8 @@ export default function AcquisizionePartner() {
     pauseRef.current = false;
     cancelRef.current = false;
     setCompletedCount(0);
+    setQualityComplete(0);
+    setQualityIncomplete(0);
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
     for (let i = 0; i < items.length; i++) {
@@ -231,61 +235,71 @@ export default function AcquisizionePartner() {
         };
         setCanvasData(canvas);
 
-        // PHASE 2: Enrich website
-        if (includeEnrich && partnerData?.website && partnerData?.id) {
-          setCanvasPhase("enriching");
-          try {
-            const { data: enrichResult } = await supabase.functions.invoke(
-              "enrich-partner-website",
-              { body: { partnerId: partnerData.id } }
-            );
+        // PHASE 2+3: Enrich + Deep Search in parallel
+        const parallelTasks: Promise<void>[] = [];
 
-            if (enrichResult?.enrichment_data) {
-              const ed = enrichResult.enrichment_data;
-              setCanvasData((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      key_markets: ed.key_markets || [],
-                      key_routes: ed.key_routes || [],
-                      warehouse_sqm: ed.warehouse_sqm,
-                      employees: ed.employees,
-                      founded: ed.year_founded,
-                      fleet: ed.own_fleet,
-                    }
-                  : prev
-              );
-            }
-          } catch {
-            /* enrichment failure is non-blocking */
-          }
+        if (includeEnrich && partnerData?.website && partnerData?.id) {
+          parallelTasks.push(
+            (async () => {
+              try {
+                const { data: enrichResult } = await supabase.functions.invoke(
+                  "enrich-partner-website",
+                  { body: { partnerId: partnerData.id } }
+                );
+                if (enrichResult?.enrichment_data) {
+                  const ed = enrichResult.enrichment_data;
+                  setCanvasData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          key_markets: ed.key_markets || [],
+                          key_routes: ed.key_routes || [],
+                          warehouse_sqm: ed.warehouse_sqm,
+                          employees: ed.employees,
+                          founded: ed.year_founded,
+                          fleet: ed.own_fleet,
+                        }
+                      : prev
+                  );
+                }
+              } catch {
+                /* enrichment failure is non-blocking */
+              }
+            })()
+          );
         }
 
-        // PHASE 3: Deep search
         if (includeDeepSearch && partnerData?.id) {
-          setCanvasPhase("deep_search");
-          try {
-            const { data: deepResult } = await supabase.functions.invoke(
-              "deep-search-partner",
-              { body: { partnerId: partnerData.id } }
-            );
+          parallelTasks.push(
+            (async () => {
+              try {
+                const { data: deepResult } = await supabase.functions.invoke(
+                  "deep-search-partner",
+                  { body: { partnerId: partnerData.id } }
+                );
+                if (deepResult) {
+                  setCanvasData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          logo_url: deepResult.logo_url || prev.logo_url,
+                          linkedin_links: (deepResult.social_links || [])
+                            .filter((l: any) => l.platform === "linkedin")
+                            .map((l: any) => ({ name: l.contact_name || "LinkedIn", url: l.url })),
+                        }
+                      : prev
+                  );
+                }
+              } catch {
+                /* deep search failure is non-blocking */
+              }
+            })()
+          );
+        }
 
-            if (deepResult) {
-              setCanvasData((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      logo_url: deepResult.logo_url || prev.logo_url,
-                      linkedin_links: (deepResult.social_links || [])
-                        .filter((l: any) => l.platform === "linkedin")
-                        .map((l: any) => ({ name: l.contact_name || "LinkedIn", url: l.url })),
-                    }
-                  : prev
-              );
-            }
-          } catch {
-            /* deep search failure is non-blocking */
-          }
+        if (parallelTasks.length > 0) {
+          setCanvasPhase("enriching");
+          await Promise.all(parallelTasks);
         }
 
         // COMPLETE
@@ -301,6 +315,20 @@ export default function AcquisizionePartner() {
         setShowComet(false);
         setIsAnimatingOut(false);
         setCompletedCount((c) => c + 1);
+
+        // Track quality
+        setCanvasData((currentCanvas) => {
+          if (currentCanvas) {
+            const hasComplete = currentCanvas.contacts.some((c) => {
+              const hasEmail = !!c.email?.trim();
+              const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
+              return hasEmail && hasPhone;
+            });
+            if (hasComplete) setQualityComplete((v) => v + 1);
+            else setQualityIncomplete((v) => v + 1);
+          }
+          return currentCanvas;
+        });
 
         // Mark done
         setQueue((prev) =>
@@ -454,6 +482,8 @@ export default function AcquisizionePartner() {
           count={completedCount}
           total={queue.filter((q) => selectedIds.has(q.wca_id)).length}
           showComet={showComet}
+          completeCount={qualityComplete}
+          incompleteCount={qualityIncomplete}
         />
       </div>
 

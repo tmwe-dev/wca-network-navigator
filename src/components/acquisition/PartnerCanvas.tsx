@@ -82,6 +82,20 @@ const SERVICE_ICONS: Record<string, any> = {
   project_cargo: Package,
 };
 
+function isContactComplete(c: CanvasContact): "green" | "orange" | "red" {
+  const hasEmail = !!c.email?.trim();
+  const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
+  if (hasEmail && hasPhone) return "green";
+  if (hasEmail || hasPhone) return "orange";
+  return "red";
+}
+
+const QUALITY_COLORS = {
+  green: "bg-emerald-500",
+  orange: "bg-amber-500",
+  red: "bg-red-500",
+};
+
 function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
   const phases = [
     { key: "downloading", label: "Download" },
@@ -240,15 +254,35 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               show("contacts") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             )}
           >
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Contatti
-            </h3>
+            {(() => {
+              const completeCount = data.contacts.filter((c) => isContactComplete(c) === "green").length;
+              const total = data.contacts.length;
+              const allComplete = completeCount === total;
+              return (
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Contatti
+                  </h3>
+                  <span className={cn(
+                    "text-[11px] font-semibold px-2 py-0.5 rounded-full",
+                    allComplete
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  )}>
+                    {completeCount}/{total} completi
+                  </span>
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {data.contacts.slice(0, 6).map((c, i) => (
+              {data.contacts.slice(0, 6).map((c, i) => {
+                const quality = isContactComplete(c);
+                return (
                 <div
                   key={i}
                   className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 text-xs"
                 >
+                  <div className={cn("w-2.5 h-2.5 rounded-full mt-1 shrink-0", QUALITY_COLORS[quality])} title={quality === "green" ? "Completo" : quality === "orange" ? "Parziale" : "Mancante"} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{c.name}</div>
                     {c.title && (
@@ -273,7 +307,8 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
