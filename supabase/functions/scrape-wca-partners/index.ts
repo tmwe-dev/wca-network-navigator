@@ -837,14 +837,15 @@ Deno.serve(async (req) => {
         loginDetails = 'Direct fetch with session cookie - contacts visible'
         console.log('AUTH OK: session cookie valid, contacts accessible')
       } else {
-        console.log('AUTH PARTIAL: cookie expired, attempting auto-login...')
-        // Cookie expired → try auto-login with stored credentials
-        html = '' // reset so we try again below
+        authStatus = 'members_only'
+        loginDetails = 'Session cookie present but some sections marked members_only - HTML preserved'
+        console.log(`AUTH PARTIAL: members_only detected but keeping HTML (${html.length} chars) - contains useful data`)
+        // NON scartare html - contiene comunque dati utili (email, telefoni, etc.)
       }
     }
 
     // Try 2: Auto-login with stored WCA credentials if cookie missing or expired
-    if (!html || authStatus !== 'authenticated') {
+    if (!html && authStatus !== 'authenticated') {
       const { data: credSettings } = await supabase
         .from('app_settings')
         .select('key, value')
@@ -861,10 +862,13 @@ Deno.serve(async (req) => {
         
         if (loginResult.success) {
           console.log('Auto-login SUCCESS, fetching profile...')
-          const result = await directFetchPage(url, loginResult.cookies)
-          html = result.html
+          const loginFetchResult = await directFetchPage(url, loginResult.cookies)
+          // Solo sovrascrivere html se auto-login produce risultato migliore
+          if (!loginFetchResult.membersOnly || !html) {
+            html = loginFetchResult.html
+          }
           
-          if (!result.membersOnly) {
+          if (!loginFetchResult.membersOnly) {
             authStatus = 'authenticated'
             loginDetails = 'Auto-login successful - contacts visible'
             console.log('AUTH OK: auto-login worked, contacts accessible')
