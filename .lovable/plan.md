@@ -1,60 +1,132 @@
 
 
-# Fix: Rilevamento Estensione Chrome
+# Fix: Canvas Real-Time e Riepilogo Qualità
 
-## Il Bug
+## Problema
 
-Il polling nell'hook `useExtensionBridge` e' rotto. Ecco cosa succede:
+Il canvas mostra "rosso falso" perché:
 
-1. Il content script invia `contentScriptReady` UNA SOLA VOLTA quando si carica
-2. Se la webapp non ha ancora montato il listener `useEffect`, il messaggio viene perso
-3. Il polling ogni 5 secondi invia ping con `window.postMessage` diretto, ma NON registra nessun callback in `pendingRef`
-4. Quando la risposta torna dal background (`{success: true, version: "3.0"}`), il gestore cerca il `requestId` in `pendingRef` -- non lo trova -- ignora la risposta
-5. Risultato: `isAvailable` resta `false` per sempre
-
-Quando ha funzionato (Pelikan), probabilmente il timing era favorevole e il `contentScriptReady` e' arrivato nel momento giusto.
+1. Il server (Phase 1) restituisce contatti SENZA email/telefoni (non ha i cookie di autenticazione)
+2. Il canvas mostra subito questi contatti come ROSSI
+3. L'estensione Chrome (Phase 1.5) salva i dati reali nel database tramite `save-wca-contacts`, MA se la comunicazione bridge fallisce o va in timeout, il canvas non si aggiorna mai
+4. Il contatore qualità segna "incompleto" e dopo 3 consecutivi manda il warning "Qualità dati sospetta"
 
 ## Soluzione
 
-### File: `src/hooks/useExtensionBridge.ts`
+### 1. Verifica DB dopo l'estensione (fallback)
 
-Aggiungere nel gestore messaggi (`handleMessage`) un controllo per le risposte ai ping di polling: se arriva un messaggio con `action === "ping"` e la risposta contiene `success: true`, impostare `isAvailable = true`.
+Dopo Phase 1.5, se il bridge non ha restituito contatti, fare una query diretta al DB per recuperare i contatti REALI che l'estensione potrebbe aver salvato in autonomia.
+
+**File: `src/pages/AcquisizionePartner.tsx`** (dopo il blocco extension, ~riga 273)
+
+Aggiungere un fallback che:
+- Trova il partner nel DB tramite `wca_id`
+- Recupera i contatti dalla tabella `partner_contacts`
+- Aggiorna il canvas con i dati reali dal DB
+- Se trova email/telefoni, segna `contactSource = "extension"`
+
+### 2. Riepilogo Qualità Live nella Toolbar
+
+Aggiungere una barra riepilogativa visibile durante l'esecuzione della pipeline, nella toolbar (sopra il canvas), che mostra in tempo reale:
 
 ```
-// Nella funzione handleMessage, PRIMA del check requestId:
-if (data.action === "ping" && data.response?.success) {
-  setIsAvailable(true);
-  return;
-}
+Progresso: 5/11 | Con email: 4 | Con telefono: 3 | Completi: 3 | Vuoti: 1
 ```
 
-Questo risolve il problema alla radice: ogni risposta positiva a un ping (sia dal polling automatico sia da `checkAvailable`) verra' rilevata e attivera' l'indicatore verde.
+Con indicatori colorati (verde/arancione/rosso) e una barra di progresso.
 
-### File: `public/chrome-extension/content.js`
+**File: `src/pages/AcquisizionePartner.tsx`** (nella toolbar, dopo i pulsanti)
 
-Aggiungere un meccanismo di re-announce periodico: il content script invia `contentScriptReady` non solo al caricamento ma anche in risposta a ogni ping ricevuto, come backup.
+### 3. Indicatore di fase sul Canvas per l'estensione
+
+Aggiungere una fase visiva "Estrazione contatti..." tra Download e Arricchimento, per dare feedback che il sistema sta lavorando sull'estrazione dei contatti privati.
+
+**File: `src/components/acquisition/PartnerCanvas.tsx`**
+
+Aggiungere `"extracting"` come fase nel `PhaseIndicator` con label "Contatti Privati".
+
+### 4. Contatore qualità corretto
+
+Il conteggio qualità (completo/incompleto) deve usare i dati FINALI del canvas (dopo il fallback DB), non i dati intermedi del server.
 
 ## Dettagli Tecnici
 
-### Modifica 1: `src/hooks/useExtensionBridge.ts` (handleMessage, riga ~30-46)
+### Modifica 1: Fallback DB dopo estensione (`AcquisizionePartner.tsx`, ~riga 273)
 
-Aggiungere dopo il check `contentScriptReady`:
+Dopo il blocco `try/catch` dell'estensione, aggiungere:
 
 ```typescript
-// Any successful ping response means extension is alive
-if (data.action === "ping" && data.response?.success) {
-  setIsAvailable(true);
-  return;
+// FALLBACK: If canvas still shows no emails, check DB directly
+// (extension may have saved contacts via save-wca-contacts independently)
+if (canvas.contactSource !== "extension" || 
+    !canvas.contacts.some(c => c.email?.trim())) {
+  try {
+    // Find partner by wca_id
+    const { data: dbPartner } = await supabase
+      .from("partners")
+      .select("id")
+      .eq("wca_id", item.wca_id)
+      .maybeSingle();
+    
+    if (dbPartner) {
+      const { data: dbContacts } = await supabase
+        .from("partner_contacts")
+        .select("name, title, email, direct_phone, mobile")
+        .eq("partner_id", dbPartner.id);
+      
+      if (dbContacts && dbContacts.length > 0 && 
+          dbContacts.some(c => c.email || c.direct_phone || c.mobile)) {
+        canvas.contacts = dbContacts.map(c => ({
+          name: c.name,
+          title: c.title || undefined,
+          email: c.email || undefined,
+          direct_phone: c.direct_phone || undefined,
+          mobile: c.mobile || undefined,
+        }));
+        canvas.contactSource = "extension";
+        setCanvasData({ ...canvas });
+      }
+    }
+  } catch { /* DB check failure is non-blocking */ }
 }
 ```
 
-### Modifica 2: `public/chrome-extension/content.js`
+### Modifica 2: Barra riepilogo live (`AcquisizionePartner.tsx`, nella toolbar)
 
-Nella risposta del content script, se l'action e' "ping", includere anche un `contentScriptReady` come conferma aggiuntiva.
+Nuovo stato per tracciare statistiche dettagliate:
+
+```typescript
+const [liveStats, setLiveStats] = useState({
+  processed: 0,
+  withEmail: 0,
+  withPhone: 0,
+  complete: 0, // email + phone
+  empty: 0,    // no contacts at all
+});
+```
+
+Aggiornare dopo ogni partner completato (dove ora si aggiorna qualityComplete/qualityIncomplete).
+
+Rendering nella toolbar come barra compatta con numeri e indicatori colorati.
+
+### Modifica 3: Fase "extracting" nel PhaseIndicator (`PartnerCanvas.tsx`)
+
+Aggiungere `"extracting"` nel type `CanvasPhase` e nel componente `PhaseIndicator`:
+
+```typescript
+export type CanvasPhase = "idle" | "downloading" | "extracting" | "enriching" | "deep_search" | "complete";
+```
+
+Fasi visualizzate: Download -> Contatti Privati -> Arricchimento -> Completato
+
+### Modifica 4: Usare `setCanvasPhase("extracting")` durante Phase 1.5
+
+Nel pipeline, prima di chiamare `extensionExtract`, impostare la fase a "extracting" per dare feedback visivo che il sistema sta estraendo i contatti dall'estensione.
 
 ## Risultato Atteso
 
-- L'estensione viene rilevata entro 5 secondi dal caricamento della pagina (al primo ping di polling che riceve risposta)
-- Non dipende piu' dal timing del `contentScriptReady` iniziale
-- L'indicatore "Estensione attiva" appare in modo affidabile nella toolbar di acquisizione
-
+- Il canvas mostra il colore CORRETTO (verde/arancione/rosso) basato sui dati REALI nel database
+- Se l'estensione salva i contatti ma non comunica al bridge, il fallback DB li recupera
+- La toolbar mostra in tempo reale quanti partner hanno email, telefono, dati completi
+- Una nuova fase "Contatti Privati" nel PhaseIndicator mostra quando il sistema sta estraendo i dati
+- Niente piu' warning "Qualità dati sospetta" quando i dati sono effettivamente presenti nel DB
