@@ -27,6 +27,14 @@
           },
           "*"
         );
+
+        // Re-announce readiness on every ping response as backup
+        if (data.action === "ping") {
+          window.postMessage(
+            { direction: "from-extension", action: "contentScriptReady" },
+            "*"
+          );
+        }
       }
     );
   });

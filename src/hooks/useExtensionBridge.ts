@@ -38,6 +38,12 @@ export function useExtensionBridge() {
         return;
       }
 
+      // Any successful ping response means extension is alive
+      if (data.action === "ping" && data.response?.success) {
+        setIsAvailable(true);
+        return;
+      }
+
       // Response to a request
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
