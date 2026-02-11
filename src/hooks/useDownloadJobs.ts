@@ -9,6 +9,7 @@ export interface DownloadJob {
   country_name: string;
   network_name: string;
   status: string;
+  job_type: string;
   wca_ids: number[];
   processed_ids: number[];
   current_index: number;
