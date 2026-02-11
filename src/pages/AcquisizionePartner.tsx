@@ -8,6 +8,7 @@ import { AcquisitionToolbar } from "@/components/acquisition/AcquisitionToolbar"
 import { PartnerQueue, QueueItem } from "@/components/acquisition/PartnerQueue";
 import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/PartnerCanvas";
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
+import { NetworkPerformanceBar, NetworkStats } from "@/components/acquisition/NetworkPerformanceBar";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
 type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -57,6 +58,11 @@ export default function AcquisizionePartner() {
     empty: 0,
   });
 
+  // Network performance tracking
+  const [networkStats, setNetworkStats] = useState<Record<string, NetworkStats>>({});
+  const [excludedNetworks, setExcludedNetworks] = useState<Set<string>>(new Set());
+  const excludedNetworksRef = useRef<Set<string>>(new Set());
+
   // Scan stats
   const [scanStats, setScanStats] = useState<{
     total: number;
@@ -95,6 +101,21 @@ export default function AcquisizionePartner() {
       if (cancelRef.current) break;
 
       const item = items[i];
+
+      // ── Skip partner if ALL its networks are excluded ──
+      if (excludedNetworksRef.current.size > 0 && item.networks && item.networks.length > 0) {
+        const allExcluded = item.networks.every(n => excludedNetworksRef.current.has(n));
+        if (allExcluded) {
+          setQueue((prev) =>
+            prev.map((q) =>
+              q.wca_id === item.wca_id ? { ...q, status: "done" as const, skippedNetwork: true } : q
+            )
+          );
+          processedSet.add(item.wca_id);
+          continue;
+        }
+      }
+
       setActiveIndex(i);
 
       setQueue((prev) =>
@@ -167,6 +188,14 @@ export default function AcquisizionePartner() {
         ]);
         canvas.networks = (nets || []).map((n) => n.network_name);
         canvas.services = (svcs || []).map((s) => s.service_category);
+        // Update queue item networks for tracking
+        if (canvas.networks.length > 0) {
+          setQueue((prev) =>
+            prev.map((q) =>
+              q.wca_id === item.wca_id ? { ...q, networks: canvas.networks } : q
+            )
+          );
+        }
       }
 
       setCanvasData(canvas);
@@ -286,8 +315,21 @@ export default function AcquisizionePartner() {
         }
       }
 
-      // ── Consecutive empty detection ──
+      // ── Update network stats ──
       const hasAnyContact = canvas.contacts.some(c => c.email?.trim() || c.direct_phone?.trim() || c.mobile?.trim());
+      if (canvas.networks && canvas.networks.length > 0) {
+        setNetworkStats((prev) => {
+          const next = { ...prev };
+          for (const net of canvas.networks) {
+            if (!next[net]) next[net] = { success: 0, empty: 0 };
+            if (hasAnyContact) next[net] = { ...next[net], success: next[net].success + 1 };
+            else next[net] = { ...next[net], empty: next[net].empty + 1 };
+          }
+          return next;
+        });
+      }
+
+      // ── Consecutive empty detection ──
 
       // First partner empty: verify session via extension instead of edge function
       if (i === startFrom && !hasAnyContact) {
@@ -706,6 +748,38 @@ export default function AcquisizionePartner() {
       setQueue(allMembers);
       // Auto-select new partners
       setSelectedIds(new Set(allMembers.filter((m) => !m.alreadyDownloaded).map((m) => m.wca_id)));
+
+      // Load networks for existing partners in DB
+      const wcaIdsInDb = allMembers.filter(m => existingWcaIds.has(m.wca_id)).map(m => m.wca_id);
+      if (wcaIdsInDb.length > 0) {
+        try {
+          const { data: partnersWithIds } = await supabase
+            .from("partners")
+            .select("id, wca_id")
+            .in("wca_id", wcaIdsInDb);
+          if (partnersWithIds && partnersWithIds.length > 0) {
+            const partnerIds = partnersWithIds.map(p => p.id);
+            const { data: networkRows } = await supabase
+              .from("partner_networks")
+              .select("partner_id, network_name")
+              .in("partner_id", partnerIds);
+            if (networkRows) {
+              const wcaIdToNetworks: Record<number, string[]> = {};
+              for (const nr of networkRows) {
+                const p = partnersWithIds.find(pp => pp.id === nr.partner_id);
+                if (p?.wca_id) {
+                  if (!wcaIdToNetworks[p.wca_id]) wcaIdToNetworks[p.wca_id] = [];
+                  wcaIdToNetworks[p.wca_id].push(nr.network_name);
+                }
+              }
+              setQueue(prev => prev.map(q =>
+                wcaIdToNetworks[q.wca_id] ? { ...q, networks: wcaIdToNetworks[q.wca_id] } : q
+              ));
+            }
+          }
+        } catch { /* non-blocking */ }
+      }
+
       setPipelineStatus("idle");
     } catch (err: any) {
       toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
@@ -743,6 +817,9 @@ export default function AcquisizionePartner() {
     setCompletedCount(0);
     setQualityComplete(0);
     setQualityIncomplete(0);
+    setNetworkStats({});
+    setExcludedNetworks(new Set());
+    excludedNetworksRef.current = new Set();
     setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 });
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
@@ -821,6 +898,47 @@ export default function AcquisizionePartner() {
       }
     }
   }, [queue, includeEnrich, includeDeepSearch, delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop, waitForExtension, verifySession]);
+
+  // ── Network exclusion handlers ──
+  const handleExcludeNetwork = useCallback((network: string) => {
+    setExcludedNetworks((prev) => {
+      const next = new Set(prev);
+      next.add(network);
+      excludedNetworksRef.current = next;
+      return next;
+    });
+    // Mark pending queue items that have ONLY excluded networks as skipped
+    setQueue((prev) =>
+      prev.map((q) => {
+        if (q.status !== "pending" || !q.networks || q.networks.length === 0) return q;
+        const updatedExcluded = new Set(excludedNetworksRef.current);
+        updatedExcluded.add(network);
+        const allExcluded = q.networks.every(n => updatedExcluded.has(n));
+        return allExcluded ? { ...q, status: "done" as const, skippedNetwork: true } : q;
+      })
+    );
+    toast({ title: `Network "${network}" escluso`, description: "I partner con solo questo network verranno saltati." });
+  }, []);
+
+  const handleReincludeNetwork = useCallback((network: string) => {
+    setExcludedNetworks((prev) => {
+      const next = new Set(prev);
+      next.delete(network);
+      excludedNetworksRef.current = next;
+      return next;
+    });
+    // Restore skipped items that now have at least one non-excluded network
+    setQueue((prev) =>
+      prev.map((q) => {
+        if (!q.skippedNetwork || !q.networks) return q;
+        const updatedExcluded = new Set(excludedNetworksRef.current);
+        updatedExcluded.delete(network);
+        const stillAllExcluded = q.networks.every(n => updatedExcluded.has(n));
+        return stillAllExcluded ? q : { ...q, status: "pending" as const, skippedNetwork: false };
+      })
+    );
+    toast({ title: `Network "${network}" riattivato` });
+  }, []);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
@@ -980,6 +1098,16 @@ export default function AcquisizionePartner() {
             </div>
           )}
         </div>
+      )}
+
+      {/* NETWORK PERFORMANCE BAR */}
+      {Object.keys(networkStats).length > 0 && (
+        <NetworkPerformanceBar
+          stats={networkStats}
+          excludedNetworks={excludedNetworks}
+          onExclude={handleExcludeNetwork}
+          onReinclude={handleReincludeNetwork}
+        />
       )}
 
       {/* MAIN SPLIT */}
