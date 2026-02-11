@@ -29,42 +29,21 @@
     .status.error { background: #7f1d1d; color: #fca5a5; }
     .status.working { background: #1e3a5f; color: #93c5fd; }
     .status.idle { background: #1e293b; color: #94a3b8; }
-    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
     .btn {
-      flex: 1;
-      padding: 12px 8px;
+      width: 100%;
+      padding: 14px 8px;
       border: none;
       border-radius: 10px;
       color: white;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       transition: background 0.2s;
+      background: #3b82f6;
+      margin-bottom: 10px;
     }
-    .btn-primary { background: #3b82f6; }
-    .btn-primary:hover { background: #2563eb; }
-    .btn-extract { background: #8b5cf6; }
-    .btn-extract:hover { background: #7c3aed; }
+    .btn:hover { background: #2563eb; }
     .btn:disabled { background: #475569; cursor: not-allowed; }
-    .extract-config {
-      text-align: left;
-      margin: 8px 0;
-      padding: 10px;
-      background: #1e293b;
-      border-radius: 8px;
-      font-size: 11px;
-    }
-    .extract-config label { display: block; margin: 4px 0; color: #94a3b8; }
-    .extract-config input[type="text"] {
-      width: 100%;
-      padding: 6px 8px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      color: #e2e8f0;
-      font-size: 11px;
-      margin-top: 2px;
-    }
     .step-log {
       font-size: 11px;
       color: #64748b;
@@ -82,19 +61,8 @@
 </head>
 <body>
   <h2>🌐 WCA Cookie Sync v3</h2>
-  <div id="status" class="status idle">Pronto. Connetti o estrai contatti.</div>
-  <div class="btn-row">
-    <button id="mainBtn" class="btn btn-primary">🚀 Connetti</button>
-    <button id="extractBtn" class="btn btn-extract">📇 Estrai Contatti</button>
-  </div>
-  <div id="extractConfig" class="extract-config" style="display:none;">
-    <label>WCA IDs (separati da virgola):
-      <input type="text" id="wcaIds" placeholder="69664,78753,120111">
-    </label>
-    <div style="margin-top: 6px; color: #64748b;">
-      Lascio vuoto = estrai dalla tab corrente se è un profilo WCA
-    </div>
-  </div>
+  <div id="status" class="status idle">Pronto. Clicca Connetti per autenticarti.</div>
+  <button id="mainBtn" class="btn">🚀 Connetti</button>
   <div id="log" class="step-log"></div>
   <script src="popup.js"></script>
 </body>
