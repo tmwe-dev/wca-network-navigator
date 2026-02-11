@@ -247,6 +247,11 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
         </div>
 
         {/* CONTACTS */}
+        {data.contacts.length === 0 && show("contacts") && (
+          <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-semibold">
+            ⚠️ Nessun contatto trovato — dati incompleti
+          </div>
+        )}
         {data.contacts.length > 0 && (
           <div
             className={cn(
@@ -264,10 +269,12 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                     Contatti
                   </h3>
                   <span className={cn(
-                    "text-[11px] font-semibold px-2 py-0.5 rounded-full",
+                    "text-[11px] font-bold px-2.5 py-1 rounded-full",
                     allComplete
-                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                      : completeCount === 0
+                        ? "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
+                        : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
                   )}>
                     {completeCount}/{total} completi
                   </span>
@@ -280,7 +287,14 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                 return (
                 <div
                   key={i}
-                  className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 text-xs"
+                  className={cn(
+                    "flex items-start gap-2 p-2 rounded-lg text-xs border",
+                    quality === "green"
+                      ? "bg-emerald-500/10 border-emerald-500/30"
+                      : quality === "orange"
+                        ? "bg-amber-500/10 border-amber-500/30"
+                        : "bg-red-500/15 border-red-500/30"
+                  )}
                 >
                   <div className={cn("w-2.5 h-2.5 rounded-full mt-1 shrink-0", QUALITY_COLORS[quality])} title={quality === "green" ? "Completo" : quality === "orange" ? "Parziale" : "Mancante"} />
                   <div className="flex-1 min-w-0">
