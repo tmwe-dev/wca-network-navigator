@@ -179,13 +179,52 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
   const goldMedallion = /gold\s*medallion/i.test(content)
 
   // ── Networks ──
+  // IMPORTANT: Only search within the "Member(s) of" section, NOT the full page
+  // The footer contains ALL network names as links, causing false positives
   const networks: { name: string; expires?: string }[] = []
-  const wcaNetworks = ['WCA Inter Global', 'WCA China Global', 'WCA First', 'WCA Advanced Professionals', 'WCA Projects', 'WCA Dangerous Goods', 'WCA Perishables', 'WCA Time Critical', 'WCA Pharma', 'WCA eCommerce']
-  for (const net of wcaNetworks) {
-    if (content.includes(net) || md.includes(net)) {
-      const expiryRegex = new RegExp(net.replace(/\s+/g, '\\s+') + '[^\\n]*?(?:Expires?\\s*[:：]?\\s*|[-–]\\s*)(\\w+\\s+\\d{1,2},?\\s*\\d{4})', 'i')
-      const expiryMatch = content.match(expiryRegex) || md.match(expiryRegex)
-      networks.push({ name: net, expires: expiryMatch?.[1] || undefined })
+  const memberofMatch = content.match(/memberprofile_memberof[\s\S]*?(?=<div class="clear"|<\/div>\s*<\/div>\s*<\/div>\s*<div class="clear")/)
+  const memberofSection = memberofMatch ? memberofMatch[0] : ''
+  
+  // Also extract from memberof_entry links — the domain tells us the network
+  const networkDomainMap: Record<string, string> = {
+    'wcafirst': 'WCA First',
+    'wcaadvancedprofessionals': 'WCA Advanced Professionals',
+    'wcachinaglobal': 'WCA China Global',
+    'wcainterglobal': 'WCA Inter Global',
+    'wcaprojects': 'WCA Projects',
+    'wcadangerousgoods': 'WCA Dangerous Goods',
+    'wcaperishables': 'WCA Perishables',
+    'wcatimecritical': 'WCA Time Critical',
+    'wcapharma': 'WCA Pharma',
+    'wcaecommerce': 'WCA eCommerce',
+  }
+  
+  // Strategy A: Parse memberof_entry links from HTML
+  const entryLinkRegex = /href="https?:\/\/(?:www\.)?(\w+)\.com\/directory\/members/gi
+  let linkMatch
+  while ((linkMatch = entryLinkRegex.exec(memberofSection)) !== null) {
+    const domain = linkMatch[1].toLowerCase()
+    const netName = networkDomainMap[domain]
+    if (netName && !networks.find(n => n.name === netName)) {
+      // Extract expiry from the same memberof_entry block
+      const entryStart = memberofSection.lastIndexOf('memberof_entry', linkMatch.index)
+      const entryBlock = memberofSection.substring(entryStart, linkMatch.index + 500)
+      const expiryMatch = entryBlock.match(/Expires?:?\s*(\w+\s+\d{1,2},?\s*\d{4})/i)
+      networks.push({ name: netName, expires: expiryMatch?.[1] || undefined })
+    }
+  }
+  
+  // Strategy B: Fallback — check markdown "Member(s) of" section only
+  if (networks.length === 0) {
+    const mdMemberSection = md.match(/Member\(s\)\s*of[\s\S]*?(?=Profile:|Contact|$)/i)
+    const mdSection = mdMemberSection ? mdMemberSection[0] : ''
+    const wcaNetworks = ['WCA Inter Global', 'WCA China Global', 'WCA First', 'WCA Advanced Professionals', 'WCA Projects', 'WCA Dangerous Goods', 'WCA Perishables', 'WCA Time Critical', 'WCA Pharma', 'WCA eCommerce']
+    for (const net of wcaNetworks) {
+      if (mdSection.includes(net)) {
+        const expiryRegex = new RegExp(net.replace(/\s+/g, '\\s+') + '[^\\n]*?(?:Expires?\\s*[:：]?\\s*|[-–]\\s*)(\\w+\\s+\\d{1,2},?\\s*\\d{4})', 'i')
+        const expiryMatch = mdSection.match(expiryRegex)
+        networks.push({ name: net, expires: expiryMatch?.[1] || undefined })
+      }
     }
   }
 
