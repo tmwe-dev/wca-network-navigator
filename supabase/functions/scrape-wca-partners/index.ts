@@ -206,7 +206,55 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
     return null
   }
   
+  // Strategy 0: WCA structured HTML (profile_label/profile_val divs)
+  const contactPersonBlocks = content.split(/contactperson_row/).slice(1)
+  
+  if (contactPersonBlocks.length > 0) {
+    console.log(`[parseProfile] Strategy 0: Found ${contactPersonBlocks.length} contactperson_row blocks in HTML`)
+    
+    for (const block of contactPersonBlocks) {
+      const getProfileVal = (label: string): string | null => {
+        const regex = new RegExp(
+          'profile_label">[^<]*' + label + '[^<]*</div>[\\s\\S]*?profile_val">[\\s\\S]*?(?:<a[^>]*>)?([^<]+)',
+          'i'
+        )
+        const m = block.match(regex)
+        return m?.[1]?.trim() || null
+      }
+
+      const name = getProfileVal('Name')
+      const title = getProfileVal('Title')
+      const email = getProfileVal('Email')
+      const directLine = getProfileVal('Direct Line')
+      const mobile = getProfileVal('Mobile')
+
+      if (!name && !title) continue
+      if (name && /Members\s*only|Login/i.test(name)) continue
+
+      const contact: { title: string; name?: string; email?: string; phone?: string; mobile?: string } = {
+        title: title || name || 'Unknown',
+      }
+      if (name && name !== title) contact.name = name
+      if (email && /\S+@\S+\.\S+/.test(email) && !isGarbageEmail(email) && !/wcaworld/i.test(email)) {
+        contact.email = email
+      }
+      if (directLine && !/Members\s*only|Login/i.test(directLine) && /[+\d]/.test(directLine)) {
+        contact.phone = directLine
+      }
+      if (mobile && !/Members\s*only|Login/i.test(mobile) && /[+\d]/.test(mobile)) {
+        contact.mobile = mobile
+      }
+
+      contacts.push(contact)
+    }
+    
+    if (contacts.length > 0) {
+      console.log(`[parseProfile] Strategy 0 extracted ${contacts.length} contacts from HTML structure`)
+    }
+  }
+
   // Strategy 1: Split by "Name:" to handle WCA inline format (Name:X Title:Y Email:Z all on one line)
+  if (contacts.length === 0) {
   const nameBasedBlocks = content.split(/(?=Name\s*:)/i).slice(1)
   
   if (nameBasedBlocks.length > 0) {
@@ -247,6 +295,7 @@ function parseProfileFromContent(html: string, markdown: string, wcaId: number) 
       
       contacts.push(contact)
     }
+  }
   }
   
   // Strategy 2: Fallback - split by "Title:" for older format (markdown with Title: on its own line)
