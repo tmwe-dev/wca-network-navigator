@@ -1,69 +1,49 @@
 
 
-## Riorganizzazione Navigazione e Pagine
+## Fix Completo della Maschera Partner Hub
 
-### Situazione attuale (problemi)
-- **WCA duplicato**: c'e' una sezione WCA nelle Impostazioni che rimanda a una pagina `/wca` separata -- ridondante
-- **Export/Import**: pagina dedicata per operazioni rare, spreca un posto in sidebar
-- **Reminders**: si chiama "Reminders" invece di "Agenda"
-- **Due dashboard**: Partner Hub e' gia' la home, non ci sono conflitti reali ma la voce "WCA" e "Export" nella sidebar creano confusione
+### Problemi identificati dallo screenshot
 
-### Cosa cambia
+1. Le coppe sono **vuote** (solo contorno) - manca il `fill`
+2. Layout **caotico**: badge sparsi su 6 righe verticali senza logica
+3. **Bandiera paese** quasi invisibile
+4. **"No contatti personali"** scritto in testo rosso - dovrebbe essere solo la striscia laterale
+5. **"WhatsApp" / "Telefono" / "Email"** come testo nel header - ridondante e brutto
+6. Badge "Primo contatto", "Freight Forwarder", "HQ" tutti separati e disordinati
 
-**Sidebar semplificata** -- da 7 voci a 4:
+### Correzioni
 
-```text
-Prima:                    Dopo:
-Partner                   Partner
-Campaigns                 Campaigns
-Download                  Download
-Reminders                 Agenda
-Export                    Impostazioni
-Impostazioni
-WCA
-```
+**1. Coppe piene (riga 125)**
+Aggiungere `fill-amber-500` alle icone Trophy per renderle solide.
 
-**Pagina Impostazioni** -- diventa un hub con 3 sezioni via Tabs:
-1. **Generale** -- WhatsApp e altre configurazioni
-2. **WCA** -- tutta la gestione WCA (sincronizza, verifica, cookie manuale) integrata direttamente, non piu' un link esterno
-3. **Import / Export** -- CSV import, export CSV/JSON, scarica da WCA (tutto il contenuto attuale della pagina Export)
+**2. Eliminare testo ridondante contatti dal header (righe 472-502)**
+Rimuovere completamente la sezione "WhatsApp / Telefono / Email / No contatti personali" dal dettaglio header. La qualita' contatto e' gia' comunicata dalla striscia laterale nella lista. Nel dettaglio si vedono i contatti veri nella sezione dedicata.
 
-**Rotte eliminate**:
-- `/wca` -- rimossa (contenuto integrato in Settings)
-- `/export` -- rimossa (contenuto integrato in Settings)
+**3. Compattare header dettaglio (righe 440-507)**
+Mettere tutto su 2-3 righe massimo:
+- Riga 1: Nome + Bandiera grande + WCA ID
+- Riga 2: Citta', Paese + Tipo (FF) + Office (HQ) -- tutto inline
+- Riga 3: Stelline + Coppe (sulla stessa riga)
+- Eliminare il badge "Primo contatto" (informazione inutile nel dettaglio, si vede dalla timeline)
 
-### Dettagli tecnici
+**4. Lista partner (sinistra) - pulizia**
+- Rimuovere il testo "No contatti" dalla card (la striscia rossa laterale basta)
+- Coppe con fill
+- Bandiera del paese visibile accanto al nome della citta'
 
-| File | Azione |
-|------|--------|
-| `src/pages/Settings.tsx` | Riscrittura con Tabs: Generale, WCA (contenuto di WCA.tsx inline), Import/Export (contenuto di Export.tsx inline) |
-| `src/components/settings/WcaSessionCard.tsx` | Aggiornamento: rimuovere il link "Gestisci Connessione WCA" (non serve piu'), integrare direttamente i pulsanti di sync e cookie |
-| `src/components/layout/AppSidebar.tsx` | Rimuovere le voci "Export" e "WCA", rinominare "Reminders" in "Agenda" |
-| `src/App.tsx` | Rimuovere le rotte `/wca` e `/export`, rimuovere gli import di WCA e Export |
+**5. Bandiera grande nel dettaglio**
+Spostare la bandiera accanto al nome della citta' come testo grande (non come micro-overlay sul logo).
 
-### La pagina Impostazioni dopo il refactor
+### File modificato
 
-```text
-Impostazioni
-Configurazione della piattaforma
+`src/pages/PartnerHub.tsx` -- tutte le correzioni sono in questo file:
 
-[Generale] [WCA] [Import / Export]
+| Zona | Modifica |
+|------|----------|
+| `TrophyRow` (riga 125) | Aggiungere `fill-amber-500` alle coppe |
+| Lista partner (righe 320-329) | Rimuovere testo "No contatti" e icone contatto ridondanti |
+| Header dettaglio (righe 440-507) | Compattare: nome+bandiera, citta+tipo+office su una riga, stelline+coppe su una riga, eliminare sezione contatti e badge "Primo contatto" |
+| Bandiera (riga 443) | Bandiera grande accanto a citta'/paese |
 
---- Tab Generale ---
-  Card WhatsApp (invariata)
-
---- Tab WCA ---
-  Status badge (Connesso / Non connesso)
-  [Apri WCA World e Sincronizza]  (bottone primario)
-  Istruzioni estensione Chrome
-  [Verifica Sessione]
-  Ultimo controllo: ...
-  > Inserimento manuale cookie (emergenza) (collapsible)
-
---- Tab Import / Export ---
-  [Importa] [Esporta] [Scarica da WCA]  (sotto-tabs)
-  Contenuto identico alla pagina Export attuale
-```
-
-### Indicatore WCA nella sidebar
-L'indicatore semaforo WCA in fondo alla sidebar resta invariato -- continua a funzionare e a linkare a `/settings` (che ora contiene la gestione WCA completa).
+### Risultato atteso
+Header pulito su 3 righe: nome con bandiera, localita' e tipo, stelline e coppe piene. Nessun testo ridondante sui contatti nel header. La striscia laterale rossa/ambra/blu nella lista comunica gia' la qualita' contatto.
