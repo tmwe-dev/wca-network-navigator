@@ -92,14 +92,7 @@ export function useCreateDownloadJob() {
         .single();
 
       if (error) throw error;
-      const jobId = data.id;
-
-      // Trigger the server-side processor
-      await supabase.functions.invoke("process-download-job", {
-        body: { jobId },
-      });
-
-      return jobId;
+      return data.id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
@@ -121,9 +114,7 @@ export function usePauseResumeJob() {
       } else if (action === "cancel") {
         await supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", jobId);
       } else if (action === "resume") {
-        await supabase.from("download_jobs").update({ status: "running" }).eq("id", jobId);
-        // Re-trigger the processor
-        await supabase.functions.invoke("process-download-job", { body: { jobId } });
+        await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
       }
     },
     onSuccess: () => {
