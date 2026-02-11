@@ -597,7 +597,7 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
   
   console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, contactsAuth=${contactsAuthenticated}`)
   
-  return { html, membersOnly: membersOnlyCount > 2 || hasLoginPrompt, loginPrompt: hasLoginPrompt, contactsAuthenticated }
+  return { html, membersOnly: membersOnlyCount > 0 || hasLoginPrompt, loginPrompt: hasLoginPrompt, contactsAuthenticated }
 }
 
 // Simple HTML-to-markdown converter for profile pages
