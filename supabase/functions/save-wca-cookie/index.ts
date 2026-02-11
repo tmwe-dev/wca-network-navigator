@@ -69,9 +69,14 @@ async function testCookie(cookie: string): Promise<boolean> {
       },
     })
     const html = await res.text()
-    const membersOnlyCount = (html.match(/Members\s*only/gi) || []).length
-    const hasLoginPrompt = /please\s*Login|Login\s*to\s*view/i.test(html)
-    return membersOnlyCount < 3 && !hasLoginPrompt
+    const hasEmail = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(html)
+    const hasPhone = /\+?\d[\d\s\-().]{7,}/.test(html)
+    const hasContactSection = /contact.*details|email.*address|phone.*number/i.test(html)
+    const hasLoginPrompt = /please\s*log\s*in|sign\s*in\s*to\s*view|login\s*required/i.test(html)
+    const hasLogoutLink = /logout|log\s*out|sign\s*out/i.test(html)
+    const authenticated = !hasLoginPrompt && (hasEmail || hasPhone || hasContactSection || hasLogoutLink)
+    console.log(`Cookie test: hasEmail=${hasEmail}, hasPhone=${hasPhone}, hasLogout=${hasLogoutLink}, authenticated=${authenticated}`)
+    return authenticated
   } catch (e) {
     console.error('Cookie test error:', e)
     return false
