@@ -2,16 +2,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, CheckCircle } from "lucide-react";
+import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, CheckCircle, Key } from "lucide-react";
 import { useTheme, t } from "./theme";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const BOOKMARKLET = `javascript:void(fetch('${SUPABASE_URL}/functions/v1/save-wca-cookie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:document.cookie})}).then(r=>r.json()).then(d=>alert(d.message||'Done!')).catch(e=>alert('Errore: '+e.message)))`;
-
 export function WcaSessionIndicator() {
   const isDark = useTheme();
-  const { status, checkedAt, triggerCheck, isLoading } = useWcaSessionStatus();
+  const { status, checkedAt, diagnostics, triggerCheck, autoLogin, isLoading } = useWcaSessionStatus();
 
   const isOk = status === "ok";
   const dotColor = isOk
@@ -46,20 +43,36 @@ export function WcaSessionIndicator() {
               {isOk ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <ShieldAlert className="w-5 h-5 text-red-500" />}
               <span className="font-medium">{label}</span>
             </div>
+            
+            {/* Diagnostics */}
+            {diagnostics && (
+              <div className={`text-xs rounded-lg p-2 space-y-1 ${isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+                <div className="flex items-center gap-1">
+                  <Key className="w-3 h-3" />
+                  <span>.ASPXAUTH: {diagnostics.hasAspxAuth ? "✅" : "❌ Mancante"}</span>
+                </div>
+                {diagnostics.contactsTotal != null && (
+                  <>
+                    <div>Contatti trovati: {diagnostics.contactsTotal}</div>
+                    <div>Nomi reali visibili: {diagnostics.contactsWithRealName || 0}</div>
+                    <div>Email visibili: {diagnostics.contactsWithEmail || 0}</div>
+                    {diagnostics.membersOnlyCount > 0 && (
+                      <div className="text-amber-500">"Members only": {diagnostics.membersOnlyCount}x</div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {!isOk && (
               <div className="space-y-2">
                 <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Per attivare la sessione, trascina il bottone qui sotto nella barra dei preferiti, poi cliccalo su wcaworld.com:
+                  Usa l'estensione Chrome per sincronizzare il cookie .ASPXAUTH, oppure prova il login automatico.
                 </p>
-                <a
-                  href={BOOKMARKLET}
-                  onClick={e => e.preventDefault()}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium cursor-grab active:cursor-grabbing ${
-                    isDark ? "bg-amber-600 text-white" : "bg-sky-600 text-white"
-                  }`}
-                >
-                  🔗 Cattura WCA
-                </a>
+                <Button size="sm" variant="outline" onClick={autoLogin} disabled={isLoading} className="w-full">
+                  {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Key className="w-3.5 h-3.5 mr-1" />}
+                  Tenta Auto-Login
+                </Button>
               </div>
             )}
             <Button size="sm" variant="outline" onClick={triggerCheck} disabled={isLoading} className="w-full">
@@ -76,7 +89,12 @@ export function WcaSessionIndicator() {
 export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolean; onOpenChange: (o: boolean) => void; onRetry: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const { status, triggerCheck, isLoading } = useWcaSessionStatus();
+  const { status, diagnostics, triggerCheck, autoLogin, isLoading } = useWcaSessionStatus();
+
+  const handleAutoLogin = async () => {
+    await autoLogin();
+    setTimeout(() => { onRetry(); }, 2000);
+  };
 
   const handleRetry = async () => {
     await triggerCheck();
@@ -92,35 +110,40 @@ export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolea
             Sessione WCA non attiva
           </DialogTitle>
           <DialogDescription className={th.dlgSub}>
-            Per scaricare i dati dei contatti è necessaria una sessione WCA attiva.
+            I contatti personali non sono visibili. Serve una sessione autenticata con .ASPXAUTH.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <ol className={`text-sm space-y-3 ${th.body}`}>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepAct}`}>1</span>
-              <span>Trascina questo bottone nella barra dei preferiti:
-                <a href={BOOKMARKLET} onClick={e => e.preventDefault()} className={`inline-flex items-center gap-1 ml-2 px-2 py-1 rounded text-xs font-medium cursor-grab active:cursor-grabbing ${isDark ? "bg-amber-600 text-white" : "bg-sky-600 text-white"}`}>
-                  🔗 Cattura WCA
-                </a>
-              </span>
+              <span>Prova il <strong>Login Automatico</strong> (usa le credenziali salvate)</span>
             </li>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>2</span>
-              <span>Vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a> e fai login</span>
-            </li>
-            <li className="flex gap-3">
-              <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>3</span>
-              <span>Clicca il bookmark "Cattura WCA" — vedrai un alert "Done!"</span>
+              <span>Se fallisce, vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a>, fai login, e usa l'estensione Chrome per sincronizzare il cookie</span>
             </li>
           </ol>
-          <Button onClick={handleRetry} disabled={isLoading} className={`w-full ${th.btnPri}`}>
+          
+          {diagnostics && (
+            <div className={`text-xs rounded-lg p-2 ${isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+              <div>.ASPXAUTH: {diagnostics.hasAspxAuth ? "✅" : "❌ Mancante"}</div>
+              <div>Nomi visibili: {diagnostics.contactsWithRealName || 0}/{diagnostics.contactsTotal || 0}</div>
+              {diagnostics.membersOnlyCount > 0 && <div className="text-amber-500">"Members only": {diagnostics.membersOnlyCount}x</div>}
+            </div>
+          )}
+
+          <Button onClick={handleAutoLogin} disabled={isLoading} className={`w-full ${th.btnPri}`}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
+            Tenta Auto-Login
+          </Button>
+          <Button onClick={handleRetry} disabled={isLoading} variant="outline" className="w-full">
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Riprova verifica
+            Verifica sessione
           </Button>
           {status === "ok" && (
             <div className={`p-3 rounded-lg border text-sm text-center ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-              <CheckCircle className="w-4 h-4 inline mr-1" /> Sessione attiva! Puoi procedere.
+              <CheckCircle className="w-4 h-4 inline mr-1" /> Sessione attiva! Contatti personali visibili.
             </div>
           )}
         </div>

@@ -3,8 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type WcaSessionStatus = "ok" | "expired" | "no_cookie" | "checking" | "error";
 
+export interface WcaDiagnostics {
+  hasAspxAuth?: boolean;
+  membersOnlyCount?: number;
+  contactsTotal?: number;
+  contactsWithRealName?: number;
+  contactsWithEmail?: number;
+}
+
 export function useWcaSessionStatus() {
-  // Poll app_settings for the cached status
   const statusQuery = useQuery({
     queryKey: ["wca-session-status"],
     queryFn: async () => {
@@ -21,11 +28,13 @@ export function useWcaSessionStatus() {
         checkedAt: map.wca_session_checked_at || null,
       };
     },
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Trigger a fresh check via the edge function, with optional auto-login
-  const triggerCheck = async (autoLogin = false): Promise<{ status: WcaSessionStatus; authenticated: boolean; autoLoginAttempted?: boolean } | null> => {
+  // Store latest diagnostics from check
+  let lastDiagnostics: WcaDiagnostics | null = null;
+
+  const triggerCheck = async (autoLogin = false): Promise<{ status: WcaSessionStatus; authenticated: boolean; autoLoginAttempted?: boolean; diagnostics?: WcaDiagnostics } | null> => {
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
       const res = await fetch(url, {
@@ -37,11 +46,13 @@ export function useWcaSessionStatus() {
         body: JSON.stringify({ autoLogin }),
       });
       const data = await res.json();
+      lastDiagnostics = data.diagnostics || null;
       statusQuery.refetch();
       return {
         status: (data.status || "error") as WcaSessionStatus,
         authenticated: !!data.authenticated,
         autoLoginAttempted: data.autoLoginAttempted,
+        diagnostics: data.diagnostics,
       };
     } catch (err) {
       console.error("WCA session check failed:", err);
@@ -49,12 +60,12 @@ export function useWcaSessionStatus() {
     }
   };
 
-  // Auto-login shortcut
   const autoLogin = async () => triggerCheck(true);
 
   return {
     status: statusQuery.data?.status ?? "checking",
     checkedAt: statusQuery.data?.checkedAt ?? null,
+    diagnostics: lastDiagnostics,
     isLoading: statusQuery.isLoading,
     triggerCheck: () => triggerCheck(false),
     autoLogin,
