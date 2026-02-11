@@ -1,95 +1,73 @@
 
-## Pagina Unificata "Partner" - Ibrido Dashboard + Agenti + Dettaglio
 
-### Cosa viene eliminato
-- La pagina **Dashboard** (`/`) viene sostituita dalla nuova pagina unificata che diventa la home
-- La pagina **Partners** (`/partners`) viene eliminata (duplicato)
-- La pagina **Agenti** (`/agents`) viene eliminata (assorbita)
-- La pagina **PartnerDetail** (`/partners/:id`) viene eliminata (il dettaglio si apre inline)
-- Dalla sidebar spariscono le voci "Dashboard", "Agenti" e "Partners" e ne resta una sola: **"Partner"**
+## Redesign Completo dello Stile - Pulizia Colori e Layout
 
-### La nuova pagina: layout master-detail
+### Problema
+La pagina e' un arcobaleno: KPI badges in 5 colori diversi, servizi in 14 colori, badge di stato in 3 colori, tutto disallineato. Dove manca il logo appare una bandiera gigante invece di uno spazio pulito.
 
-```text
-+----------------------------------------------+----------------------------------------+
-| LISTA PARTNER (40%)                          | DETTAGLIO PARTNER (60%)                |
-|                                              |                                        |
-| [Cerca...]  [Filtri] [Solo incompleti]       |  +------+ ACME Logistics Ltd           |
-|                                              |  | LOGO | Milano, Italia 🇮🇹             |
-| 1.247 partner                                |  +------+ ★★★★☆ 4.2  FF  HQ  8a WCA   |
-|                                              |                                        |
-| +------------------------------------------+|  [KPI badges: Anni, Filiali, Paesi]    |
-| | 🇮🇹 ACME Logistics          ★ 4.2  ✓OK  ||  [Social links]                        |
-| |    Milano · FF · 8a  · ✉️📞             ||                                        |
-| +------------------------------------------+|  +--LEFT COL-----+  +--RIGHT COL-----+ |
-| | 🇩🇪 Berlin Freight          ★ 3.8  ⚠️  ||  | Contatti       |  | 🌍 MINI GLOBO  | |
-| |    Berlin · FF · 12a · ✉️               ||  | ☎ +39 02 xxx  |  | con 3 marker   | |
-| +------------------------------------------+|  | ✉ info@...    |  | IT, US, BR     | |
-|                                              |  | 🌐 acme.com   |  |                | |
-|                                              |  +---------------+  +----------------+ |
-|                                              |                                        |
-|                                              |  Servizi: [Air] [Sea] [Express]         |
-|                                              |                                        |
-|                                              |  Contatti Ufficio                       |
-|                                              |  Mario Rossi · CEO                      |
-|                                              |  mario@acme.com · +39 333 xxx          |
-|                                              |  [LinkedIn]                             |
-|                                              |                                        |
-|                                              |  ▸ Profilo aziendale (collapsible)      |
-|                                              |  ▸ Dati dal sito web (enrichment)       |
-|                                              |                                        |
-|                                              |  Network: WCA Gold · FIATA              |
-|                                              |  Certificazioni: IATA · ISO 9001        |
-|                                              |                                        |
-|                                              |  Timeline CRM (interazioni + attivita') |
-|                                              |  Promemoria                             |
-+----------------------------------------------+----------------------------------------+
-```
+### Palette ridotta: solo 2 colori
 
-### Elementi chiave del dettaglio
+Tutto il sistema di badge e KPI passa a usare **solo primary (sky) e muted (grigio)**:
+- **Primary/sky**: per dati numerici importanti (anni WCA, filiali, paesi, certificazioni, Gold)
+- **Muted/grigio**: per informazioni secondarie (tipo partner, office type, servizi, WCA ID)
 
-**Header partner:**
-- Logo aziendale (da `logo_url` o favicon) con bandiera sovrapposta come badge
-- Nome, citta', paese, badge tipo (FF/Broker/HQ/Branch)
-- Rating stellare, KPI badges (anni WCA, filiali, paesi, certificazioni, gold)
-- Social links (LinkedIn, etc.)
-- Pulsanti: Favorito, Deep Search, Analisi AI
+### Modifiche specifiche
 
-**Mini-globo 3D (angolo in alto a destra del dettaglio):**
-- Un globo compatto (~200x200px) che usa il componente StandaloneGlobe
-- Mostra marker solo per i paesi dove l'azienda ha filiali (da `branch_cities`)
-- Marker sulla sede principale + marker sulle citta' delle filiali
-- Si vede solo se il partner ha filiali in altri paesi
+**1. KpiBadges (`src/components/agents/KpiBadges.tsx`)**
+- Tutti i badge usano lo stesso stile: `bg-primary/10 text-primary border border-primary/20`
+- Ogni badge mantiene la sua icona (Calendar, Building2, Globe, ShieldCheck, Award) per distinguere il tipo
+- Layout: riga singola, gap uniforme, allineamento orizzontale perfetto
+- Compact: stesso approccio, mini-pill tutte uniformi in primary
 
-**Contatti ufficio (sezione dedicata, NO pulsanti nascosti):**
-- Ogni contatto mostra: nome, titolo, email (testo visibile), telefono (testo visibile), mobile
-- Link social accanto a ogni contatto
-- Badge "Primary" per il contatto principale
+**2. Service badges (`src/lib/countries.ts` - `getServiceColor`)**
+- Tutti i servizi diventano `bg-muted text-foreground` con un'icona specifica per categoria davanti al testo
+- Niente piu' 14 colori diversi, solo grigio neutro con icone chiare
 
-**Descrizione e arricchimento:**
-- Profilo aziendale in un collapsible (aperto di default se breve)
-- EnrichmentCard (dati dal sito web) in un collapsible
+**3. Badge di stato nel dettaglio (`PartnerHub.tsx`)**
+- "Primo contatto" / "In conoscenza" / "Attivo": tutti `bg-muted text-muted-foreground` con un'icona diversa (Circle, ArrowUpRight, CheckCircle)
+- Badge partner type: `bg-muted text-foreground`
+- Badge office type (HQ/Branch): `bg-muted text-foreground`  
+- Badge WCA ID: `variant="outline"` (resta com'e', pulito)
+- Badge "Primary" nei contatti: `bg-primary/10 text-primary`
 
-**CRM:**
-- Timeline interazioni + lista attivita' + promemoria, tutto in fondo
+**4. Badge nella lista partner (colonna sinistra)**
+- Status contatti (OK/Parziale/No contatti): tutti in `text-muted-foreground` con icone diverse (check, alert, x)
+- KpiBadges compact: uniformati in primary come sopra
 
-### Dettagli tecnici
+**5. Logo mancante**
+- Dove non c'e' `logo_url`: spazio vuoto con bordo leggero (`w-14 h-14 rounded-xl border bg-muted`) - nessuna bandiera gigante
+- La bandiera piccola resta come badge overlay solo quando c'e' il logo
+- Nella lista: stesso approccio, box vuoto con bordo al posto della bandiera gigante
 
-**File creati:**
-- `src/pages/PartnerHub.tsx` - La nuova pagina unificata (layout master-detail)
-- `src/components/partners/PartnerMiniGlobe.tsx` - Wrapper del globo 3D in formato compatto per il dettaglio partner
+**6. Allineamento e organizzazione**
+- Header del dettaglio: badge organizzati in una riga orizzontale ordinata
+- KPI badges: tutti sulla stessa riga con flex-wrap, gap-2 uniforme
+- Servizi: griglia ordinata, tutti stessi colori, icone per distinguerli
+- Contatti: layout tabellare pulito
 
-**File modificati:**
-- `src/App.tsx` - Rotte: `/` e `/partners` puntano a PartnerHub, rimosse `/agents` e `/partners/:id`
-- `src/components/layout/AppSidebar.tsx` - Sidebar: una sola voce "Partner" al posto di Dashboard + Agenti + Partners
+### Icone per servizi (sostituzione dei colori)
+Ogni servizio avra' una micro-icona accanto al nome al posto del colore:
+- Air freight: Plane
+- Ocean FCL/LCL: Ship  
+- Road freight: Truck
+- Rail freight: Train (o TrainFront)
+- Project cargo: Package
+- Dangerous goods: AlertTriangle
+- Perishables: Snowflake
+- Pharma: Pill
+- Ecommerce: ShoppingCart
+- Relocations: Home
+- Customs broker: FileCheck
+- Warehousing: Warehouse
+- NVOCC: Anchor
 
-**File che restano ma non vengono piu' usati nelle rotte:**
-- `src/pages/Dashboard.tsx`, `src/pages/Partners.tsx`, `src/pages/Agents.tsx`, `src/pages/PartnerDetail.tsx` - Non eliminati fisicamente per sicurezza, ma rimossi dalle rotte
+### File modificati
 
-**Componenti riutilizzati senza modifiche:**
-- `KpiBadges`, `EnrichmentCard`, `SocialLinks`, `BulkActionBar`, `AssignActivityDialog`, `ActivityList`, `PartnerRating`, `PartnerFiltersSheet`
+| File | Modifica |
+|------|----------|
+| `src/components/agents/KpiBadges.tsx` | Palette uniforme primary, layout allineato |
+| `src/lib/countries.ts` | `getServiceColor()` ritorna sempre muted + aggiunta `getServiceIcon()` |
+| `src/pages/PartnerHub.tsx` | Badge uniformati, logo vuoto al posto di bandiera, allineamenti |
 
-**Dati:**
-- La lista usa `usePartners()` (gia' esistente, include contatti e servizi nella select)
-- Il dettaglio usa `usePartner(id)` (gia' esistente, include tutto: contatti, interazioni, servizi, network, certificazioni, promemoria)
-- Il mini-globo riceve i dati da `branch_cities` del partner e la sede principale, costruendo un array di `CountryWithPartners` per i soli paesi rilevanti
+### Risultato atteso
+Una pagina elegante con massimo 2 tonalita' (sky e grigio), dove le icone fanno il lavoro di distinguere i contenuti invece dei colori. Tutto allineato, ordinato, professionale.
