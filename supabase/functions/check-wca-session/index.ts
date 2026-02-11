@@ -5,8 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-
+/**
+ * Check WCA session status WITHOUT making any HTTP requests to WCA.
+ * This prevents IP-mismatch session invalidation.
+ * 
+ * Status is determined from:
+ * 1. Presence of .ASPXAUTH in stored cookie
+ * 2. Recent download job results (contacts found vs missing)
+ */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -17,17 +23,17 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
+    // Read cookie from app_settings
     const { data: settings } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['wca_session_cookie', 'wca_auth_cookie'])
+      .in('key', ['wca_session_cookie', 'wca_auth_cookie', 'wca_session_status'])
 
     const map: Record<string, string> = {}
     for (const s of (settings || [])) {
       if (s.key && s.value) map[s.key] = s.value
     }
 
-    // Prefer wca_auth_cookie (should contain .ASPXAUTH)
     const cookie = map['wca_auth_cookie'] || map['wca_session_cookie'] || Deno.env.get('WCA_SESSION_COOKIE') || null
 
     if (!cookie) {
@@ -35,42 +41,45 @@ Deno.serve(async (req) => {
       return respond({ authenticated: false, status: 'no_cookie' })
     }
 
-    // Check if .ASPXAUTH is present in cookie (diagnostic only)
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
-    
-    const testResult = await testCookieDeep(cookie)
-    
-    // Determine authentication:
-    // 1. Network/WAF error → trust ASPXAUTH presence as fallback
-    // 2. Test found contacts with emails → definitely authenticated
-    // 3. Page loaded fine (no login prompt, no error) but no contact rows → 
-    //    this is NORMAL for some profiles, treat as authenticated if ASPXAUTH present
-    // 4. Login prompt found → definitely expired
-    let authenticated: boolean
-    if (testResult.diagnostics?.error) {
-      authenticated = hasAspxAuth
-    } else if (testResult.authenticated) {
-      authenticated = true
-    } else if (!testResult.diagnostics?.hasLoginPrompt && hasAspxAuth && testResult.diagnostics?.htmlSize > 10000) {
-      // Page loaded successfully (large HTML), no login prompt, has ASPXAUTH cookie
-      // The profile might just not have contactperson_row blocks — this is NOT expired
-      console.log('check-wca-session: page loaded OK, no login prompt, ASPXAUTH present — treating as authenticated')
-      authenticated = true
-    } else {
-      authenticated = false
+
+    if (!hasAspxAuth) {
+      await upsertStatus(supabase, 'expired', new Date().toISOString())
+      return respond({ authenticated: false, status: 'expired', reason: 'no_aspxauth_in_cookie' })
     }
 
-    const status = authenticated ? 'ok' : 'expired'
+    // Check recent job activity for signs of session death
+    // Look at the most recent running/completed job's contact metrics
+    const { data: recentJobs } = await supabase
+      .from('download_jobs')
+      .select('status, contacts_found_count, contacts_missing_count, error_message, updated_at')
+      .in('status', ['running', 'completed', 'paused'])
+      .order('updated_at', { ascending: false })
+      .limit(1)
+
+    let status = 'ok'
+    let jobSignal: string | null = null
+
+    if (recentJobs && recentJobs.length > 0) {
+      const job = recentJobs[0]
+      
+      // If the most recent job was paused due to consecutive empty profiles, session is likely dead
+      if (job.status === 'paused' && job.error_message?.includes('consecutivi senza contatti')) {
+        status = 'expired'
+        jobSignal = 'job_paused_empty_profiles'
+      }
+    }
+
+    const authenticated = status === 'ok'
     await upsertStatus(supabase, status, new Date().toISOString())
 
-    // IMPORTANT: Never call wca-auto-login from here — it invalidates the browser session
-    
     return respond({
-      authenticated, 
-      status, 
+      authenticated,
+      status,
       checkedAt: new Date().toISOString(),
       hasAspxAuth,
-      diagnostics: testResult.diagnostics,
+      jobSignal,
+      method: 'db_only', // No HTTP requests to WCA
     })
   } catch (error) {
     console.error('check-wca-session error:', error)
@@ -80,68 +89,6 @@ Deno.serve(async (req) => {
     )
   }
 })
-
-/**
- * Deep cookie test: verifies that PRIVATE contact data (names, personal emails)
- * is visible, not just public company info.
- */
-async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean; diagnostics: Record<string, any> }> {
-  try {
-    const res = await fetch('https://www.wcaworld.com/directory/members/86580', {
-      method: 'GET',
-      headers: { 'Cookie': cookie, 'User-Agent': UA },
-    })
-    const html = await res.text()
-    
-    // Check for login prompts (definitely not authenticated)
-    const hasLoginPrompt = /please\s*log\s*in|sign\s*in\s*to\s*view|login\s*required/i.test(html)
-    const hasLogoutLink = /logout|log\s*out|sign\s*out/i.test(html)
-    
-    // Count "Members only" in contact person sections
-    const membersOnlyCount = (html.match(/Members\s*only/gi) || []).length
-    
-    // Check contactperson_row blocks for REAL names (not "Members only")
-    const contactBlocks = html.split(/contactperson_row/).slice(1)
-    let contactsWithRealName = 0
-    let contactsWithEmail = 0
-    let contactsTotal = contactBlocks.length
-    
-    for (const block of contactBlocks) {
-      // Extract Name field value
-      const nameMatch = block.match(/profile_label">[^<]*Name[^<]*<\/div>[\s\S]*?profile_val">\s*([^<]+)/i)
-      const name = nameMatch?.[1]?.trim()
-      if (name && !/Members\s*only|Login/i.test(name) && name.length > 2) {
-        contactsWithRealName++
-      }
-      // Extract Email field value  
-      const emailMatch = block.match(/profile_label">[^<]*Email[^<]*<\/div>[\s\S]*?profile_val">[\s\S]*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
-      if (emailMatch) {
-        contactsWithEmail++
-      }
-    }
-    
-    // Session is authenticated if we can see private contact data (names OR emails)
-    const authenticated = !hasLoginPrompt && contactsTotal > 0 && (contactsWithRealName > 0 || contactsWithEmail > 0)
-    
-    const diagnostics = {
-      hasLoginPrompt,
-      hasLogoutLink,
-      membersOnlyCount,
-      contactsTotal,
-      contactsWithRealName,
-      contactsWithEmail,
-      hasAspxAuth: cookie.includes('.ASPXAUTH='),
-      htmlSize: html.length,
-    }
-    
-    console.log(`testCookieDeep: contacts=${contactsTotal}, realNames=${contactsWithRealName}, emails=${contactsWithEmail}, membersOnly=${membersOnlyCount}, logout=${hasLogoutLink}, auth=${authenticated}`)
-    
-    return { authenticated, diagnostics }
-  } catch (e) {
-    console.error('testCookieDeep error:', e)
-    return { authenticated: false, diagnostics: { error: String(e) } }
-  }
-}
 
 async function upsertStatus(supabase: any, status: string, checkedAt: string) {
   const now = new Date().toISOString()

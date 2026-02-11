@@ -150,7 +150,11 @@ Deno.serve(async (req) => {
     // ── Normal processing ──
     console.log(`Job ${jobId}: Processing ID ${wcaId} (${currentIndex + 1}/${wcaIds.length})`)
 
+    // Track consecutive empty profiles to detect silent session death
+    const prevConsecutiveEmpty = parseConsecutiveEmpty(job.error_message)
+
     let lastCompany = ''
+    let consecutiveEmpty = prevConsecutiveEmpty
     try {
       const scrapeUrl = `${supabaseUrl}/functions/v1/scrape-wca-partners`
       const scrapeResponse = await fetch(scrapeUrl, {
@@ -185,8 +189,10 @@ Deno.serve(async (req) => {
       }
 
       // Determine contact extraction result
-      const hasEmail = !!(result.partner?.email)
-      const hasPhone = !!(result.partner?.phone)
+      const contacts = result.partner?.contacts || []
+      const hasContactWithData = contacts.some((c: any) => c.email || c.phone || c.mobile)
+      const hasEmail = !!(result.partner?.email) || contacts.some((c: any) => c.email)
+      const hasPhone = !!(result.partner?.phone) || contacts.some((c: any) => c.phone || c.mobile)
       const contactResult = hasEmail && hasPhone ? 'email+phone'
         : hasEmail ? 'email_only'
         : hasPhone ? 'phone_only'
@@ -194,8 +200,47 @@ Deno.serve(async (req) => {
       const contactFound = (hasEmail || hasPhone) ? 1 : 0
       const contactMissing = (!hasEmail && !hasPhone) ? 1 : 0
 
+      // ── Consecutive empty detection ──
+      // A profile with 0 contact blocks AND no email/phone = suspicious
+      const contactBlocks = contacts.length
+      if (contactBlocks === 0 && !hasContactWithData && !hasEmail && !hasPhone) {
+        consecutiveEmpty++
+        console.log(`Job ${jobId}: ID ${wcaId} — 0 contacts (consecutive empty: ${consecutiveEmpty}/5)`)
+      } else {
+        if (consecutiveEmpty > 0) {
+          console.log(`Job ${jobId}: ID ${wcaId} — has contacts, resetting consecutive empty counter (was ${consecutiveEmpty})`)
+        }
+        consecutiveEmpty = 0
+      }
+
+      // If 5+ consecutive profiles have zero contacts, session is likely dead
+      if (consecutiveEmpty >= 5) {
+        console.log(`Job ${jobId}: PAUSING — ${consecutiveEmpty} profili consecutivi senza contatti. Sessione probabilmente scaduta.`)
+        await supabase
+          .from('download_jobs')
+          .update({
+            status: 'paused',
+            current_index: currentIndex + 1,
+            processed_ids: [...(job.processed_ids || []), wcaId],
+            last_processed_wca_id: wcaId,
+            last_processed_company: lastCompany || null,
+            last_contact_result: contactResult,
+            contacts_found_count: (job.contacts_found_count || 0) + contactFound,
+            contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
+            error_message: `⚠️ ${consecutiveEmpty} profili consecutivi senza contatti — sessione WCA probabilmente scaduta. Sincronizza il cookie tramite l'estensione Chrome e riprendi il job.`,
+          })
+          .eq('id', jobId)
+
+        return new Response(
+          JSON.stringify({ success: false, paused: true, reason: 'consecutive_empty', count: consecutiveEmpty }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // Update job progress with contact tracking
       const processedIds = [...(job.processed_ids || []), wcaId]
+      // Preserve consecutive empty count in error_message field for state tracking across invocations
+      const trackingMsg = consecutiveEmpty > 0 ? `[consecutive_empty:${consecutiveEmpty}]` : null
       await supabase
         .from('download_jobs')
         .update({
@@ -206,7 +251,7 @@ Deno.serve(async (req) => {
           last_contact_result: contactResult,
           contacts_found_count: (job.contacts_found_count || 0) + contactFound,
           contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
-          error_message: null,
+          error_message: trackingMsg,
         })
         .eq('id', jobId)
 
@@ -438,4 +483,14 @@ async function updateNetworkConfigsFromData(supabase: any, networkName: string) 
   } catch (err) {
     console.error('updateNetworkConfigsFromData error:', err)
   }
+}
+
+/**
+ * Parse the consecutive empty counter from the error_message field.
+ * Format: [consecutive_empty:N]
+ */
+function parseConsecutiveEmpty(errorMessage: string | null): number {
+  if (!errorMessage) return 0
+  const match = errorMessage.match(/\[consecutive_empty:(\d+)\]/)
+  return match ? parseInt(match[1], 10) : 0
 }
