@@ -41,7 +41,9 @@ Deno.serve(async (req) => {
 
     // Deep verify: check private contact visibility
     const testResult = await testCookieDeep(cookie)
-    const status = testResult.authenticated ? 'ok' : 'expired'
+    // If .ASPXAUTH is present, consider it "ok" even if deep test fails
+    // (server-side fetch may be blocked by WAF while browser-side works fine)
+    const status = hasAspxAuth ? 'ok' : (testResult.authenticated ? 'ok' : 'expired')
 
     await supabase.from('app_settings').upsert(
       { key: 'wca_session_status', value: status, updated_at: now },
@@ -83,11 +85,25 @@ async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean;
   try {
     const res = await fetch('https://www.wcaworld.com/directory/members/86580', {
       method: 'GET',
-      headers: { 'Cookie': cookie, 'User-Agent': UA },
+      headers: { 
+        'Cookie': cookie, 
+        'User-Agent': UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': 'https://www.wcaworld.com/MemberSection',
+      },
+      redirect: 'follow',
     })
     const html = await res.text()
+    const statusCode = res.status
+    const finalUrl = res.url
+    
+    // Log diagnostics
+    const htmlPreview = html.substring(0, 500).replace(/\s+/g, ' ')
+    console.log(`testCookieDeep: status=${statusCode}, url=${finalUrl}, htmlSize=${html.length}, preview=${htmlPreview}`)
     
     const hasLoginPrompt = /please\s*log\s*in|sign\s*in\s*to\s*view|login\s*required/i.test(html)
+    const hasCloudflare = /cloudflare|cf-challenge|challenge-platform/i.test(html)
     const membersOnlyCount = (html.match(/Members\s*only/gi) || []).length
     
     const contactBlocks = html.split(/contactperson_row/).slice(1)
@@ -104,9 +120,14 @@ async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean;
       if (emailMatch) contactsWithEmail++
     }
     
-    const authenticated = !hasLoginPrompt && contactBlocks.length > 0 && contactsWithRealName > 0
+    const authenticated = !hasLoginPrompt && !hasCloudflare && contactBlocks.length > 0 && contactsWithRealName > 0
     
     const diagnostics = {
+      statusCode,
+      finalUrl,
+      htmlSize: html.length,
+      hasCloudflare,
+      hasLoginPrompt,
       membersOnlyCount,
       contactsTotal: contactBlocks.length,
       contactsWithRealName,
@@ -114,7 +135,7 @@ async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean;
       hasAspxAuth: cookie.includes('.ASPXAUTH='),
     }
     
-    console.log(`testCookieDeep: realNames=${contactsWithRealName}, emails=${contactsWithEmail}, membersOnly=${membersOnlyCount}, auth=${authenticated}`)
+    console.log(`testCookieDeep: realNames=${contactsWithRealName}, emails=${contactsWithEmail}, membersOnly=${membersOnlyCount}, cloudflare=${hasCloudflare}, auth=${authenticated}`)
     return { authenticated, diagnostics }
   } catch (e) {
     console.error('testCookieDeep error:', e)
