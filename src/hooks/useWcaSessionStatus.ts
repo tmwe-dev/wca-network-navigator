@@ -34,7 +34,7 @@ export function useWcaSessionStatus() {
   // Store latest diagnostics from check
   let lastDiagnostics: WcaDiagnostics | null = null;
 
-  const triggerCheck = async (autoLogin = false): Promise<{ status: WcaSessionStatus; authenticated: boolean; autoLoginAttempted?: boolean; diagnostics?: WcaDiagnostics } | null> => {
+  const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean; diagnostics?: WcaDiagnostics } | null> => {
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
       const res = await fetch(url, {
@@ -43,7 +43,6 @@ export function useWcaSessionStatus() {
           "Content-Type": "application/json",
           "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ autoLogin }),
       });
       const data = await res.json();
       lastDiagnostics = data.diagnostics || null;
@@ -51,7 +50,6 @@ export function useWcaSessionStatus() {
       return {
         status: (data.status || "error") as WcaSessionStatus,
         authenticated: !!data.authenticated,
-        autoLoginAttempted: data.autoLoginAttempted,
         diagnostics: data.diagnostics,
       };
     } catch (err) {
@@ -60,14 +58,11 @@ export function useWcaSessionStatus() {
     }
   };
 
-  const autoLogin = async () => triggerCheck(true);
-
   return {
     status: statusQuery.data?.status ?? "checking",
     checkedAt: statusQuery.data?.checkedAt ?? null,
     diagnostics: lastDiagnostics,
     isLoading: statusQuery.isLoading,
-    triggerCheck: () => triggerCheck(false),
-    autoLogin,
+    triggerCheck,
   };
 }

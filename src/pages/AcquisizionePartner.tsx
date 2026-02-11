@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,8 @@ export default function AcquisizionePartner() {
   const [qualityIncomplete, setQualityIncomplete] = useState(0);
   const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
+  const [showRetryDialog, setShowRetryDialog] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [liveStats, setLiveStats] = useState({
     processed: 0,
@@ -505,6 +507,12 @@ export default function AcquisizionePartner() {
         title: "Acquisizione completata!",
         description: `${processedItems} partner processati — Completi: ${qualityComplete}, Incompleti: ${qualityIncomplete}`,
       });
+
+      // Check for incomplete partners and offer retry
+      if (liveStats.empty > 0 && !cancelRef.current) {
+        setRetryCount(liveStats.empty);
+        setShowRetryDialog(true);
+      }
     }
   }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract]);
 
@@ -693,6 +701,51 @@ export default function AcquisizionePartner() {
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setShowSessionAlert(false)}>
               Ho capito
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Retry Incomplete Dialog */}
+      <AlertDialog open={showRetryDialog} onOpenChange={setShowRetryDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-primary" />
+              Partner senza contatti
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {retryCount} partner sono stati scaricati senza email o telefoni.
+              Vuoi ritentare l'acquisizione solo per questi partner?
+              Assicurati che la sessione WCA sia attiva.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={() => setShowRetryDialog(false)}>
+              No, chiudi
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => {
+              setShowRetryDialog(false);
+              // Select only empty partners and restart
+              const emptyWcaIds = new Set<number>();
+              queue.forEach((q) => {
+                if (q.status === "done" && selectedIds.has(q.wca_id)) {
+                  // Check if this partner had no contacts in the bin
+                  emptyWcaIds.add(q.wca_id);
+                }
+              });
+              // Reset statuses for retry
+              setQueue((prev) =>
+                prev.map((q) =>
+                  emptyWcaIds.has(q.wca_id) ? { ...q, status: "pending" as const } : q
+                )
+              );
+              setSelectedIds(emptyWcaIds);
+              // Auto-start after short delay
+              setTimeout(() => startPipeline(), 500);
+            }}>
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Riprova ({retryCount})
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
