@@ -533,100 +533,47 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
     })
     const loginPageHtml = await loginPageRes.text()
     const setCookies1 = loginPageRes.headers.getSetCookie?.() || []
-    
-    // Extract ALL hidden fields from the login form
-    const hiddenFields: Record<string, string> = {}
-    const hiddenRegex = /name="([^"]+)"[^>]*value="([^"]*)"/gi
-    let hm
-    while ((hm = hiddenRegex.exec(loginPageHtml)) !== null) {
-      const name = hm[1]
-      // Only capture hidden-like fields (tokens, viewstate, etc.)
-      if (name.startsWith('__') || name.includes('Token') || name.includes('token')) {
-        hiddenFields[name] = hm[2]
-      }
-    }
-    
-    console.log(`Direct login: hidden fields found: ${Object.keys(hiddenFields).join(', ') || 'NONE'}`)
-    
-    // Log form inputs to discover field names
-    const inputMatches = loginPageHtml.match(/<input[^>]*>/gi) || []
-    const formInputs = inputMatches
-      .filter((inp: string) => /type="(?:text|email|password)"/i.test(inp))
-      .map((inp: string) => {
-        const nameM = inp.match(/name="([^"]+)"/)
-        const typeM = inp.match(/type="([^"]+)"/)
-        const idM = inp.match(/id="([^"]+)"/)
-        return `${nameM?.[1] || idM?.[1] || '?'}(${typeM?.[1] || '?'})`
-      })
-    console.log(`Direct login: form text/password inputs: ${formInputs.join(', ') || 'NONE'}`)
-    
-    // Find the LOGIN form specifically (the one with a password input, not the language form)
-    // Use regex to capture the full <form ...> tag + content
-    const formRegex = /<form\b([^>]*)>([\s\S]*?)<\/form>/gi
-    let loginFormHtml = ''
-    let loginFormAction = ''
-    const allForms: { action: string; hasPassword: boolean }[] = []
-    
-    let formMatch
-    while ((formMatch = formRegex.exec(loginPageHtml)) !== null) {
-      const formAttrs = formMatch[1]
-      const formBody = formMatch[2]
-      const actionMatch = formAttrs.match(/action\s*=\s*"([^"]*)"/i)
-      const action = actionMatch?.[1] || ''
-      const hasPassword = /type\s*=\s*["']password["']/i.test(formBody)
-      allForms.push({ action, hasPassword })
-      
-      if (hasPassword && !loginFormHtml) {
-        loginFormHtml = formAttrs + formBody
-        loginFormAction = action || '/Account/Login'
-      }
-    }
-    
-    console.log(`Direct login: found ${allForms.length} forms: ${JSON.stringify(allForms)}`)
-    console.log(`Direct login: selected login form action=${loginFormAction}, hasPasswordField=${!!loginFormHtml}`)
-    
-    if (!loginFormHtml) {
-      console.log('Direct login: WARNING - no form with password field found! Falling back to full page scan.')
-      loginFormHtml = loginPageHtml
-      loginFormAction = '/Account/Login'
-    }
-    
-    // Extract hidden fields ONLY from the login form
-    const loginHiddenFields: Record<string, string> = {}
-    const loginHiddenRegex = /name="([^"]+)"[^>]*value="([^"]*)"/gi
-    let lhm
-    while ((lhm = loginHiddenRegex.exec(loginFormHtml)) !== null) {
-      const name = lhm[1]
-      if (name.startsWith('__') || name.includes('Token') || name.includes('token')) {
-        loginHiddenFields[name] = lhm[2]
-      }
-    }
-    
-    // Override the generic hiddenFields with login-form-specific ones
-    Object.assign(hiddenFields, loginHiddenFields)
-    
-    // Detect field names from the login form specifically
-    const usernameFieldMatch = loginFormHtml.match(/name="([^"]+)"[^>]*type\s*=\s*["'](?:text|email)["']/i)
-      || loginFormHtml.match(/type\s*=\s*["'](?:text|email)["'][^>]*name="([^"]+)"/i)
-    const passwordFieldMatch = loginFormHtml.match(/name="([^"]+)"[^>]*type\s*=\s*["']password["']/i)
-      || loginFormHtml.match(/type\s*=\s*["']password["'][^>]*name="([^"]+)"/i)
-    
-    const usernameField = usernameFieldMatch?.[1] || 'usr'
-    const passwordField = passwordFieldMatch?.[1] || 'pwd'
-    console.log(`Direct login: detected fields: username=${usernameField}, password=${passwordField}`)
-    
     const cookieJar: string[] = setCookies1.map(sc => sc.split(';')[0])
     console.log(`Direct login: got ${cookieJar.length} initial cookies`)
 
-    // Build form body with all hidden fields + credentials
-    const formParams: Record<string, string> = { ...hiddenFields }
+    // === ROBUST APPROACH: No form parsing, direct field detection ===
+
+    // 1. Find login action URL directly (any action containing Login or Account)
+    const loginActionMatch = loginPageHtml.match(/action\s*=\s*"([^"]*(?:Login|Account)[^"]*)"/i)
+    const loginAction = loginActionMatch?.[1] || '/Account/Login'
+    console.log(`Direct login: detected action=${loginAction}`)
+
+    // 2. Find username/password field names from ALL inputs on page
+    const textInputs = loginPageHtml.match(/<input[^>]*type\s*=\s*["'](?:text|email)["'][^>]*>/gi) || []
+    const passInputs = loginPageHtml.match(/<input[^>]*type\s*=\s*["']password["'][^>]*>/gi) || []
+    
+    const getFieldName = (inp: string): string | null => {
+      const m = inp.match(/name\s*=\s*["']([^"']+)["']/)
+      return m?.[1] || null
+    }
+    
+    const usernameField = textInputs.map(getFieldName).find(n => n && !/language|culture|search/i.test(n)) || 'usr'
+    const passwordField = passInputs.map(getFieldName).find(Boolean) || 'pwd'
+    console.log(`Direct login: fields username=${usernameField}, password=${passwordField}`)
+
+    // 3. Extract __RequestVerificationToken globally (there's typically one on the page)
+    const tokenMatch = loginPageHtml.match(/name\s*=\s*"__RequestVerificationToken"[^>]*value\s*=\s*"([^"]*)"/i)
+      || loginPageHtml.match(/value\s*=\s*"([^"]*)"[^>]*name\s*=\s*"__RequestVerificationToken"/i)
+    
+    const formParams: Record<string, string> = {}
+    if (tokenMatch?.[1]) {
+      formParams['__RequestVerificationToken'] = tokenMatch[1]
+      console.log(`Direct login: CSRF token found (${tokenMatch[1].length} chars)`)
+    } else {
+      console.log('Direct login: WARNING - no CSRF token found')
+    }
+
     formParams[usernameField] = username
     formParams[passwordField] = password
-    const formBody = new URLSearchParams(formParams)
 
-    // POST to the correct login form action URL
-    const postUrl = loginFormAction.startsWith('http') ? loginFormAction : `https://www.wcaworld.com${loginFormAction}`
-    console.log(`Direct login: POSTing to ${postUrl}`)
+    // POST to login
+    const postUrl = loginAction.startsWith('http') ? loginAction : `https://www.wcaworld.com${loginAction}`
+    console.log(`Direct login: POSTing to ${postUrl} with fields ${usernameField}+${passwordField}`)
     
     const loginRes = await fetch(postUrl, {
       method: 'POST',
@@ -638,11 +585,11 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
         'Referer': 'https://www.wcaworld.com/Account/Login',
         'Origin': 'https://www.wcaworld.com',
       },
-      body: formBody.toString(),
+      body: new URLSearchParams(formParams).toString(),
     })
 
     const setCookies2 = loginRes.headers.getSetCookie?.() || []
-    console.log(`Direct login: POST status=${loginRes.status}, setCookies=${setCookies2.length}, setCookieHeaders=${setCookies2.map(s => s.split('=')[0]).join(',')}`)
+    console.log(`Direct login: POST status=${loginRes.status}, setCookies=${setCookies2.length}`)
     
     for (const sc of setCookies2) {
       const val = sc.split(';')[0]
@@ -652,14 +599,11 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
       else cookieJar.push(val)
     }
 
-    // Check for redirect (302/301) - ASP.NET login typically redirects on success
+    // Follow redirect chain if 302/301
     const isRedirect = loginRes.status >= 300 && loginRes.status < 400
-    
     if (isRedirect) {
-      // Follow the redirect chain to collect all cookies
       const location = loginRes.headers.get('Location')
       console.log(`Direct login: following redirect to ${location}`)
-      
       if (location) {
         const redirectUrl = location.startsWith('http') ? location : `https://www.wcaworld.com${location}`
         const redirectRes = await fetch(redirectUrl, {
@@ -670,46 +614,32 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
         })
-        
-        const setCookies3 = redirectRes.headers.getSetCookie?.() || []
-        for (const sc of setCookies3) {
+        for (const sc of (redirectRes.headers.getSetCookie?.() || [])) {
           const val = sc.split(';')[0]
           const name = val.split('=')[0]
           const idx = cookieJar.findIndex(c => c.startsWith(name + '='))
           if (idx >= 0) cookieJar[idx] = val
           else cookieJar.push(val)
         }
-        console.log(`Direct login: redirect status=${redirectRes.status}, newCookies=${setCookies3.length}`)
       }
     }
 
     const hasAuthCookie = cookieJar.some(c => c.startsWith('.ASPXAUTH='))
     const allCookies = cookieJar.join('; ')
+    console.log(`Direct login: final cookies=${cookieJar.length}, hasASPXAUTH=${hasAuthCookie}, names=${cookieJar.map(c => c.split('=')[0]).join(',')}`)
     
-    console.log(`Direct login: final cookies=${cookieJar.length}, hasASPXAUTH=${hasAuthCookie}, cookieNames=${cookieJar.map(c => c.split('=')[0]).join(',')}`)
-    
-    if (hasAuthCookie) {
+    if (hasAuthCookie || isRedirect) {
       return { cookies: allCookies, success: true }
     }
     
-    // Even without .ASPXAUTH, if we got a redirect it might have worked (some ASP.NET apps use different cookie names)
-    if (isRedirect) {
-      console.log('Direct login: got redirect without .ASPXAUTH - trying with current cookies anyway...')
-      return { cookies: allCookies, success: true }
-    }
-    
-    // Log response body snippet for debugging
+    // Log error info
     try {
       const bodyText = await loginRes.text()
       const hasError = /invalid|incorrect|wrong|failed|error/i.test(bodyText.substring(0, 2000))
-      console.log(`Direct login: response body has error indicators: ${hasError}, bodyLength=${bodyText.length}`)
-      if (hasError) {
-        const errorSnippet = bodyText.substring(0, 500).replace(/\s+/g, ' ')
-        console.log(`Direct login: error snippet: ${errorSnippet}`)
-      }
+      console.log(`Direct login: response hasError=${hasError}, bodyLength=${bodyText.length}`)
     } catch {}
     
-    return { cookies: allCookies, success: false, error: `Login returned status ${loginRes.status}, no auth cookie found` }
+    return { cookies: allCookies, success: false, error: `Login status ${loginRes.status}, no auth cookie` }
   } catch (err) {
     console.error('Direct login error:', err)
     return { cookies: '', success: false, error: err instanceof Error ? err.message : 'Login failed' }
