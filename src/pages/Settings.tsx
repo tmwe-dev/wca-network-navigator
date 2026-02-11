@@ -198,7 +198,7 @@ export default function Settings() {
         {/* ════════════════ WCA ════════════════ */}
         <TabsContent value="wca">
           <div className="space-y-4">
-            {/* Status */}
+            {/* Status badge */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-primary" />
@@ -209,108 +209,72 @@ export default function Settings() {
               </Badge>
             </div>
 
-
-            {/* Chrome Extension Download */}
+            {/* Main action: Scarica estensione */}
             <Card>
-              <CardContent className="pt-6 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Download className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Estensione Chrome</p>
-                    <p className="text-xs text-muted-foreground">Necessaria per sincronizzare il cookie .ASPXAUTH</p>
-                  </div>
+              <CardContent className="pt-6 space-y-4">
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Scarica l'estensione Chrome, installala, e clicca <strong>"🚀 Connetti WCA"</strong>.<br/>
+                    Fa tutto lui: login + cookie + verifica. Un solo click.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Button className="w-full" variant="outline" onClick={() => {
-                    const instructions = `ISTRUZIONI INSTALLAZIONE ESTENSIONE CHROME WCA:
-
-1. Scarica i 4 file qui sotto nella STESSA cartella sul tuo PC (es. "wca-extension"):
-   - manifest.json
-   - popup.html
-   - popup.js
-   - icon.png
-
-2. Apri Chrome → vai su chrome://extensions/
-
-3. Attiva "Modalità sviluppatore" (toggle in alto a destra)
-
-4. Clicca "Carica estensione non pacchettizzata"
-
-5. Seleziona la cartella dove hai salvato i 4 file
-
-6. L'icona 🌐 apparirà nella barra di Chrome
-
-USO:
-- Vai su wcaworld.com e fai login
-- Clicca l'icona dell'estensione
-- Clicca "Sincronizza Cookie"
-- Se mostra ✅ con .ASPXAUTH presente → tutto OK!`;
-                    const blob = new Blob([instructions], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = 'ISTRUZIONI.txt';
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-
-                    // Download each extension file
-                    const files = ['manifest.json', 'popup.html', 'popup.js', 'icon.png'];
-                    files.forEach((file, i) => {
-                      setTimeout(() => {
-                        const link = document.createElement('a');
-                        link.href = `/chrome-extension/${file}`;
-                        link.download = file;
-                        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-                      }, (i + 1) * 500);
-                    });
-                    toast.success("Download avviato! Salva tutti i file nella stessa cartella.");
-                  }}>
-                    <Download className="w-4 h-4 mr-2" /> Scarica Estensione Chrome
-                  </Button>
-                  <p className="text-[11px] text-muted-foreground text-center">Scarica 4 file + istruzioni. Salvali nella stessa cartella e caricali su Chrome.</p>
-                </div>
+                <Button className="w-full" size="lg" onClick={() => {
+                  const files = ['manifest.json', 'popup.html', 'popup.js', 'icon.png'];
+                  files.forEach((file, i) => {
+                    setTimeout(() => {
+                      const link = document.createElement('a');
+                      link.href = `/chrome-extension/${file}`;
+                      link.download = file;
+                      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    }, i * 500);
+                  });
+                  toast.success("Download avviato! Salva i 4 file nella stessa cartella, poi caricali su chrome://extensions/");
+                }}>
+                  <Download className="w-4 h-4 mr-2" /> Scarica Estensione Chrome
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Dopo il download: Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata → seleziona la cartella.
+                </p>
               </CardContent>
             </Card>
 
-            {/* Session actions */}
+            {/* Verify session */}
             <Card>
-              <CardContent className="pt-6 space-y-4">
-                <Button className="w-full" size="lg" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
-                  <ExternalLink className="w-4 h-4 mr-2" /> Apri WCA World e Sincronizza
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Accedi a wcaworld.com, poi clicca l'icona dell'estensione Chrome → <strong>🔄 Sincronizza Cookie</strong>
-                </p>
-
+              <CardContent className="pt-6 space-y-3">
                 <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
                   {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                   {verifying ? "Verifica..." : "Verifica Sessione"}
                 </Button>
-
                 {checkedAt && (
                   <p className="text-xs text-center text-muted-foreground">
                     Ultimo controllo: {new Date(checkedAt).toLocaleString("it-IT")}
                   </p>
                 )}
+              </CardContent>
+            </Card>
 
-                {/* Fallback manuale */}
-                <details className="group">
-                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-                    ⚙️ Inserimento manuale cookie (emergenza)
-                  </summary>
-                  <div className="mt-3 space-y-2">
+            {/* Advanced - collapsed */}
+            <details className="group">
+              <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                ⚙️ Avanzate (cookie manuale, link diretto)
+              </summary>
+              <div className="mt-3 space-y-3">
+                <Card>
+                  <CardContent className="pt-4 space-y-3">
+                    <Button className="w-full" variant="outline" size="sm" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
+                      <ExternalLink className="w-4 h-4 mr-2" /> Apri WCA World
+                    </Button>
                     <div className="flex gap-2">
                       <Input placeholder="Incolla header Cookie completo..." value={cookieInput} onChange={(e) => setCookieInput(e.target.value)} className="font-mono text-xs" />
                       <Button onClick={handleSaveCookie} disabled={savingCookie || !cookieInput.trim()} size="sm" className="shrink-0">
                         {savingCookie ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardPaste className="w-4 h-4" />}
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">F12 → Network → prima richiesta → Headers → Cookie → copia tutto.</p>
-                  </div>
-                </details>
-              </CardContent>
-            </Card>
+                    <p className="text-[11px] text-muted-foreground">Emergenza: F12 → Network → Headers → Cookie → incolla qui.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </details>
           </div>
         </TabsContent>
 
