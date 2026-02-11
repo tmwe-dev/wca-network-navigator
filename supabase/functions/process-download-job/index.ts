@@ -94,58 +94,19 @@ Deno.serve(async (req) => {
         const previewResult = await previewRes.json()
         
         if (previewResult.authStatus && previewResult.authStatus !== 'authenticated') {
-          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — attempting auto-login...`)
-          
-          // Try auto-login to renew the session
-          let autoLoginSuccess = false
-          try {
-            const autoRes = await fetch(`${supabaseUrl}/functions/v1/wca-auto-login`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-              },
+          console.log(`Job ${jobId}: AUTH FAILED (${previewResult.authStatus}) — pausing job. Use Chrome extension to renew session.`)
+          await supabase
+            .from('download_jobs')
+            .update({
+              status: 'paused',
+              error_message: `Sessione WCA scaduta (${previewResult.authStatus}). Sincronizza il cookie tramite l'estensione Chrome.`,
             })
-            const autoData = await autoRes.json()
-            console.log(`Job ${jobId}: Auto-login result:`, JSON.stringify(autoData))
-            if (autoData.success && autoData.authenticated) {
-              autoLoginSuccess = true
-              console.log(`Job ${jobId}: Auto-login succeeded — retrying auth check...`)
-              // Re-check auth with fresh cookie
-              const retryRes = await fetch(previewUrl, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${supabaseKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ wcaId: wcaIds[0], preview: true }),
-              })
-              const retryResult = await retryRes.json()
-              if (retryResult.authStatus && retryResult.authStatus !== 'authenticated') {
-                autoLoginSuccess = false
-                console.log(`Job ${jobId}: Still not authenticated after auto-login`)
-              }
-            }
-          } catch (autoErr) {
-            console.error(`Job ${jobId}: Auto-login error:`, autoErr)
-          }
-
-          if (!autoLoginSuccess) {
-            console.log(`Job ${jobId}: Auto-login failed — pausing job`)
-            await supabase
-              .from('download_jobs')
-              .update({
-                status: 'paused',
-                error_message: `Sessione WCA scaduta (${previewResult.authStatus}). Rinnovo automatico fallito.`,
-              })
-              .eq('id', jobId)
-            
-            return new Response(
-              JSON.stringify({ success: false, paused: true, reason: 'auth_failed', authStatus: previewResult.authStatus }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            )
-          }
-          console.log(`Job ${jobId}: Session renewed automatically — proceeding`)
+            .eq('id', jobId)
+          
+          return new Response(
+            JSON.stringify({ success: false, paused: true, reason: 'auth_failed', authStatus: previewResult.authStatus }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
         console.log(`Job ${jobId}: Auth check passed — proceeding with download`)
       } catch (authCheckErr) {
