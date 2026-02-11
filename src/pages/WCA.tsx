@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Loader2, CheckCircle2, XCircle, Globe,
-  RefreshCw, ClipboardPaste, Info,
+  RefreshCw, ExternalLink, ClipboardPaste,
 } from "lucide-react";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { toast } from "sonner";
@@ -33,10 +33,7 @@ export default function WCAIntegration() {
 
   const handleSaveCookie = async () => {
     const cookie = cookieInput.trim();
-    if (!cookie) {
-      toast.error("Incolla il valore del cookie prima di salvare");
-      return;
-    }
+    if (!cookie) return;
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke("save-wca-cookie", {
@@ -44,10 +41,10 @@ export default function WCAIntegration() {
       });
       if (error) throw error;
       if (data?.authenticated) {
-        toast.success("✅ Cookie salvato e verificato! Sessione attiva.");
+        toast.success("Cookie salvato e verificato!");
         setCookieInput("");
       } else {
-        toast.warning("⚠️ Cookie salvato ma la verifica è fallita. Assicurati di copiare l'header Cookie completo.");
+        toast.warning("Cookie salvato ma la verifica è fallita.");
       }
       triggerCheck();
     } catch (err: any) {
@@ -77,72 +74,20 @@ export default function WCAIntegration() {
         </Badge>
       </div>
 
-      {/* Chrome Extension card */}
       <Card>
-        <CardContent className="pt-6 space-y-6">
-          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <p className="text-sm font-medium text-foreground">
-                Sincronizzazione automatica con Estensione Chrome
-              </p>
-            </div>
-            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-              <li>
-                Scarica la cartella <strong>chrome-extension</strong> dal{" "}
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                  repository GitHub
-                </a>{" "}
-                del progetto (cartella <code className="px-1 py-0.5 rounded bg-muted border text-xs">public/chrome-extension</code>)
-              </li>
-              <li>
-                Apri Chrome → <strong>chrome://extensions</strong> → attiva <strong>Modalità sviluppatore</strong>
-              </li>
-              <li>
-                Clicca <strong>"Carica estensione non pacchettizzata"</strong> e seleziona la cartella scaricata
-              </li>
-              <li>
-                Accedi a{" "}
-                <a href="https://www.wcaworld.com/MemberSection" target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                  wcaworld.com
-                </a>, poi clicca l'icona dell'estensione → <strong>🔄 Sincronizza Cookie</strong>
-              </li>
-            </ol>
-            <p className="text-xs text-muted-foreground mt-2">
-              L'estensione legge i cookie HttpOnly (impossibili da catturare via JavaScript) e li invia direttamente al server. <strong>Un solo click!</strong>
-            </p>
-          </div>
-
-          {/* Fallback: manual cookie input */}
-          <details className="group">
-            <summary className="text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-              ⚙️ Metodo alternativo (manuale)
-            </summary>
-            <div className="mt-3 space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Incolla qui il valore completo dell'header Cookie..."
-                  value={cookieInput}
-                  onChange={(e) => setCookieInput(e.target.value)}
-                  className="font-mono text-xs"
-                />
-                <Button
-                  onClick={handleSaveCookie}
-                  disabled={saving || !cookieInput.trim()}
-                  className="shrink-0"
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ClipboardPaste className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                F12 → Network → prima richiesta → Headers → Cookie → copia tutto il valore.
-              </p>
-            </div>
-          </details>
+        <CardContent className="pt-6 space-y-4">
+          {/* One-click sync */}
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Apri WCA World e Sincronizza
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            Accedi a wcaworld.com, poi clicca l'icona dell'estensione Chrome → <strong>🔄 Sincronizza Cookie</strong>
+          </p>
 
           {/* Verify */}
           <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
@@ -150,12 +95,39 @@ export default function WCAIntegration() {
             {verifying ? "Verifica..." : "Verifica Sessione"}
           </Button>
 
-          {/* Last check */}
           {checkedAt && (
             <p className="text-xs text-center text-muted-foreground">
               Ultimo controllo: {new Date(checkedAt).toLocaleString("it-IT")}
             </p>
           )}
+
+          {/* Fallback manuale - nascosto */}
+          <details className="group">
+            <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+              ⚙️ Inserimento manuale cookie (emergenza)
+            </summary>
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Incolla header Cookie completo..."
+                  value={cookieInput}
+                  onChange={(e) => setCookieInput(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  onClick={handleSaveCookie}
+                  disabled={saving || !cookieInput.trim()}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardPaste className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                F12 → Network → prima richiesta → Headers → Cookie → copia tutto.
+              </p>
+            </div>
+          </details>
         </CardContent>
       </Card>
     </div>
