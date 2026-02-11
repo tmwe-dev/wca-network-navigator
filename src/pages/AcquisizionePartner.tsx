@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { PartnerQueue, QueueItem } from "@/components/acquisition/PartnerQueue";
 import { PartnerCanvas, CanvasData, CanvasPhase } from "@/components/acquisition/PartnerCanvas";
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -53,6 +54,8 @@ export default function AcquisizionePartner() {
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
   const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
+  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract } = useExtensionBridge();
+  const extensionWarningShown = useRef(false);
 
   // Scan directory for selected countries
   const handleScan = useCallback(async () => {
@@ -239,6 +242,34 @@ export default function AcquisizionePartner() {
         };
         setCanvasData(canvas);
 
+        // PHASE 1.5: Extract contacts via Chrome Extension
+        if (extensionAvailable || await checkExtension()) {
+          setCanvasPhase("downloading"); // Still in download phase visually
+          try {
+            const extResult = await extensionExtract(item.wca_id);
+            if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
+              // Update canvas with real contacts from extension
+              canvas.contacts = extResult.contacts.map((c) => ({
+                name: c.name || c.title || "Sconosciuto",
+                title: c.title,
+                email: c.email,
+                direct_phone: c.phone,
+                mobile: c.mobile,
+              }));
+              setCanvasData({ ...canvas });
+              console.log(`[Extension] ${item.company_name}: ${extResult.contacts.length} contacts extracted`);
+            }
+          } catch (extErr) {
+            console.warn(`[Extension] Failed for ${item.wca_id}:`, extErr);
+          }
+        } else if (!extensionWarningShown.current) {
+          extensionWarningShown.current = true;
+          toast({
+            title: "Estensione Chrome non rilevata",
+            description: "Installa l'estensione WCA Cookie Sync per estrarre email e telefoni privati automaticamente.",
+          });
+        }
+
         // PHASE 2+3: Enrich + Deep Search in parallel
         const parallelTasks: Promise<void>[] = [];
 
@@ -403,7 +434,7 @@ export default function AcquisizionePartner() {
         description: `${processedItems} partner processati — Completi: ${qualityComplete}, Incompleti: ${qualityIncomplete}`,
       });
     }
-  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds]);
+  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
@@ -422,7 +453,7 @@ export default function AcquisizionePartner() {
           onIncludeDeepSearchChange={setIncludeDeepSearch}
         />
 
-        {/* Scan + Stats row */}
+        {/* Scan + Stats + Extension indicator */}
         <div className="flex items-center gap-3 mt-3">
           <Button
             onClick={handleScan}
@@ -432,6 +463,12 @@ export default function AcquisizionePartner() {
           >
             {pipelineStatus === "scanning" ? "Scansione..." : "Scansiona Directory"}
           </Button>
+
+          {/* Extension status */}
+          <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${extensionAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}>
+            <Plug className="w-3 h-3" />
+            <span>{extensionAvailable ? "Estensione attiva" : "Estensione non rilevata"}</span>
+          </div>
 
           {scanStats && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground">

@@ -5,6 +5,20 @@
   "description": "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting"],
   "host_permissions": ["https://*.wcaworld.com/*", "https://wcaworld.com/*", "https://www.wcaworld.com/*", "https://zrbditqddhjkutzjycgi.supabase.co/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app/*",
+        "https://wca-network-navigator.lovable.app/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"
