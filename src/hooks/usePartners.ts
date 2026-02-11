@@ -36,8 +36,10 @@ export interface PartnerFilters {
   services?: string[];
   certifications?: string[];
   networks?: string[];
+  minRating?: number;
   minYearsMember?: number;
   hasBranches?: boolean;
+  expiresWithinMonths?: number | "active";
   favorites?: boolean;
 }
 
