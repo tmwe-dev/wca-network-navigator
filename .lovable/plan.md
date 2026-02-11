@@ -1,91 +1,52 @@
 
 
-# Fix: Il sistema segnala sessione scaduta senza motivo
+# Fix: Ripristino automatico del monitoraggio acquisizione al rientro nella pagina
 
-## Problema identificato
+## Problema
 
-Dopo un'analisi approfondita dei log, del codice e delle richieste di rete, ho trovato la causa principale:
+Quando navighi fuori dalla pagina Acquisizione e ci ritorni, il job in background continua a processare (la Edge Function lavora indipendentemente), ma la UI non lo mostra. Il motivo:
 
-### 1. Il `process-download-job` NON pulisce mai il campo `error_message`
+- Il `useEffect` di mount trova il job attivo e ricostruisce la coda
+- Ma imposta lo stato a "idle" o "paused", mai a "running"
+- Il loop di polling che aggiorna la UI in tempo reale (barra progresso, canvas, statistiche) viene avviato solo quando clicchi "Avvia Acquisizione"
+- Risultato: vedi la lista dei partner ma nessun feedback live
 
-Quando il pre-auth check riesce (riga 111), il job procede ma il vecchio `error_message` ("Sessione WCA scaduta...") resta nel database dalle esecuzioni precedenti. La UI legge questo messaggio e lo mostra all'utente, facendogli credere che la sessione sia scaduta anche quando funziona perfettamente.
+## Soluzione
 
-Dai log del server, le ultime esecuzioni mostrano:
-```
-Job xxx: Auth check passed - proceeding with download
-AUTH OK: no login prompt, no members-only
-```
-Ma il job della Danimarca (ee4e3cf0) ha ancora nel DB:
-```
-error_message: "Sessione WCA scaduta (members_only). Rinnovo automatico fallito."
-```
+### File: `src/pages/AcquisizionePartner.tsx`
 
-### 2. La UI mostra l'errore vecchio al resume
+1. **Auto-resume del polling quando il job e' "running"**: nel `useEffect` di mount (riga 72-195), se il job trovato ha `status === "running"`, impostare `pipelineStatus` a `"running"` e avviare automaticamente il polling loop per seguire il progresso in tempo reale.
 
-Quando l'utente torna alla pagina e il sistema trova un job "running" con un `error_message` vecchio, il polling loop (riga 417-426) mostra il toast "Job in pausa" con il vecchio messaggio di errore.
+2. **Estrarre il polling loop in una funzione riusabile**: attualmente il loop di polling (righe 394-705) e' embedded dentro `startPipeline`. Verra' estratto in una funzione `pollJobProgress(jobId, items)` che puo' essere chiamata sia da `startPipeline` che dal `useEffect` di resume.
 
-### 3. Codice morto `directWcaLogin` nello scraper
+3. **Aggiornare le live stats dal DB al mount**: quando si riprende un job, caricare `contacts_found_count`, `contacts_missing_count` e `current_index` dal job per popolare subito le statistiche live, senza aspettare il primo ciclo di polling.
 
-La funzione `scrape-wca-partners` contiene ~120 righe di codice per un login diretto (righe 565-686) che non viene MAI chiamato. Questo codice e' inutile e confondente.
+### Dettaglio tecnico
 
-## Correzioni
+```text
+PRIMA (attuale):
+  Mount -> trova job "running" -> pipelineStatus = "idle" -> UI ferma
 
-### File 1: `supabase/functions/process-download-job/index.ts`
-
-**Pulire `error_message` quando l'auth passa:**
-
-Dopo riga 111 (`Auth check passed`), aggiungere:
-```typescript
-// Clear any stale error message from previous runs
-await supabase
-  .from('download_jobs')
-  .update({ error_message: null })
-  .eq('id', jobId)
+DOPO (fix):
+  Mount -> trova job "running" -> pipelineStatus = "running"
+        -> avvia pollJobProgress() -> UI mostra progresso live
+        -> aggiorna coda, stats, canvas in tempo reale
 ```
 
-**Pulire `error_message` anche durante il processing normale:**
+### Modifiche specifiche
 
-Nella sezione di aggiornamento progresso (righe 167-178), assicurarsi che `error_message` venga azzerato ad ogni step riuscito:
-```typescript
-.update({
-  current_index: currentIndex + 1,
-  ...
-  error_message: null,  // Pulisce errori vecchi
-})
-```
-
-### File 2: `src/pages/AcquisizionePartner.tsx`
-
-**Al resume, pulire l'error_message del job prima di continuare:**
-
-Quando l'utente clicca "Riprendi" su un job che era in pausa, pulire il vecchio messaggio di errore dal DB:
-```typescript
-// Prima di invocare process-download-job per il resume
-await supabase
-  .from("download_jobs")
-  .update({ error_message: null, status: "running" })
-  .eq("id", jobId);
-```
-
-**Non mostrare il toast di errore se il job sta effettivamente processando:**
-
-Nel polling (riga 417), aggiungere un check: se il job e' "paused" ma l'error_message contiene "Rinnovo automatico", ignorarlo perche' e' un messaggio vecchio e forzare il resume.
-
-### File 3: `supabase/functions/scrape-wca-partners/index.ts`
-
-Rimuovere la funzione `directWcaLogin` (righe 565-686) che e' codice morto mai chiamato. Questo elimina ~120 righe inutili e previene confusione futura.
+- Riga 182: cambiare da `setPipelineStatus(job.status === "paused" ? "paused" : "idle")` a gestire anche il caso `"running"` avviando il polling
+- Aggiungere al mount l'inizializzazione delle `liveStats` con i dati gia' presenti nel job (`contacts_found_count`, `contacts_missing_count`)
+- Utilizzare un `useRef` per il polling in modo che possa essere pulito se l'utente naviga via di nuovo
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/process-download-job/index.ts` | Pulire error_message quando auth passa + ad ogni step riuscito |
-| `src/pages/AcquisizionePartner.tsx` | Pulire error_message al resume + ignorare messaggi vecchi |
-| `supabase/functions/scrape-wca-partners/index.ts` | Rimuovere codice morto directWcaLogin (~120 righe) |
+| `src/pages/AcquisizionePartner.tsx` | Auto-resume polling al mount quando job e' running + init live stats dal DB |
 
 ## Risultato atteso
 
-- L'utente NON vedra' piu' messaggi "sessione scaduta" quando la sessione e' attiva
-- I vecchi messaggi di errore vengono puliti automaticamente
-- Il job prosegue senza interruzioni quando l'auth e' valida
+- Quando torni alla pagina Acquisizione e c'e' un job attivo, lo vedi subito con barra progresso, statistiche e canvas animato — identico a come se non avessi mai lasciato la pagina
+- I bottoni Pausa/Stop sono immediatamente disponibili
 
