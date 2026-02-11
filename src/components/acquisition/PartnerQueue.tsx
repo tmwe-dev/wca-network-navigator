@@ -13,6 +13,8 @@ export interface QueueItem {
   city: string;
   status: QueueItemStatus;
   alreadyDownloaded?: boolean;
+  networks?: string[];
+  skippedNetwork?: boolean;
 }
 
 interface PartnerQueueProps {
@@ -103,6 +105,13 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
               {item.alreadyDownloaded && item.status === "pending" && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                   Già presente
+                </span>
+              )}
+
+              {/* Skipped network badge */}
+              {item.skippedNetwork && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground italic">
+                  Network escluso
                 </span>
               )}
             </div>
