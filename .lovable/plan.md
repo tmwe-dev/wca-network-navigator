@@ -1,83 +1,50 @@
 
-# Fix: Parser non estrae i contatti dall'HTML strutturato di WCA
+# Filtri Avanzati per il Partner Hub
 
-## Il Problema Reale (finalmente chiaro!)
+## Cosa cambia
 
-Il cookie FUNZIONA. La pagina viene scaricata correttamente (35-46k chars). Il problema e' nel **parser**.
+Il pannello filtri (Sheet laterale destra) viene completamente potenziato con nuove sezioni per filtrare i partner in modo combinato e preciso.
 
-L'HTML di WCA ha i contatti in questa struttura:
-```text
-<div class="profile_label">Name:</div>
-<div class="profile_val">Mr. Ledio Saliko</div>
+## Nuove sezioni filtro
 
-<div class="profile_label">Title:</div>
-<div class="profile_val">Managing Director</div>
+### 1. Paesi (multi-selezione)
+- Attualmente si puo' selezionare UN solo paese. Verra' trasformato in multi-selezione con chip rimovibili, come gia' fatto nella toolbar Acquisizione.
 
-<div class="profile_label">Email:</div>
-<div class="profile_val"><a href='mailto:ledio.saliko@wto.com'>ledio.saliko@wto.com</a></div>
+### 2. Servizi (gia' presente, invariato)
+- 14 servizi disponibili: Air Freight, Ocean FCL/LCL, Road, Rail, Project Cargo, Dangerous Goods, Perishables, Pharma, eCommerce, Relocations, Customs Broker, Warehousing, NVOCC.
 
-<div class="profile_label">Direct Line:</div>
-<div class="profile_val"><span class='warning_login_text'>Members only...</span></div>
-```
+### 3. Network WCA (nuovo)
+- Selezione multipla tra i network presenti nel database: WCA Inter Global, WCA First, WCA Advanced Professionals, WCA China Global, WCA Projects, WCA Dangerous Goods, WCA Perishables, WCA Time Critical, WCA Pharma, WCA eCommerce, GAA, Lognet, ecc.
 
-Ma il parser (riga 210) fa `content.split(/(?=Name\s*:)/i)` e poi cerca il valore con regex tipo `Name\s*:\s*([^*\n]+?)` -- che NON cattura il valore perche' c'e' tutto l'HTML (`</div><div class="profile_val">`) tra "Name:" e il nome reale.
+### 4. Certificazioni (nuovo)
+- Checkbox per: IATA, ISO, AEO, C-TPAT, BASC
 
-Il risultato: 0 contatti estratti dal regex, nonostante email e nomi siano visibili nell'HTML.
+### 5. Rating minimo (nuovo)
+- Slider da 0 a 5 stelle per filtrare solo partner con rating uguale o superiore
 
-## La Soluzione
+### 6. Anni di permanenza WCA (nuovo)
+- Slider per impostare il numero minimo di anni di membership
 
-Aggiungere una **Strategy 0** specifica per il formato HTML strutturato di WCA, prima delle strategie esistenti (che funzionano solo sul markdown/testo).
+### 7. Scadenza copertura WCA (nuovo)
+- Filtro per la data di scadenza della membership: opzioni tipo "Scade entro 3 mesi", "Scade entro 6 mesi", "Scade entro 1 anno", "Attiva" per trovare partner con copertura in scadenza
 
-## Modifiche Pianificate
+### 8. Ha filiali (nuovo)
+- Toggle per mostrare solo partner con branch office
+
+### 9. Preferiti (gia' presente, invariato)
+
+## Modifiche tecniche
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/scrape-wca-partners/index.ts` | Aggiungere parser HTML specifico per la struttura `profile_label`/`profile_val` di WCA |
+| `src/hooks/usePartners.ts` | Estendere `PartnerFilters` con nuovi campi: `networks`, `certifications`, `minRating`, `minYearsMember`, `hasBranches`, `expiresWithinMonths`. Aggiungere logica di filtraggio lato client per i campi che richiedono join (network, certificazioni, rating, expiration). |
+| `src/components/partners/PartnerFiltersSheet.tsx` | Ricostruire il pannello con tutte le nuove sezioni: multi-select paesi, network, certificazioni, slider rating, slider anni WCA, filtro scadenza, toggle filiali. Organizzare in sezioni collassabili. |
+| `src/pages/PartnerHub.tsx` | Aggiornare il conteggio filtri attivi (`activeFilterCount`) per includere i nuovi filtri. Aggiungere il filtraggio lato client nel `filteredPartners` per network, certificazioni, rating, anni, scadenza e filiali. |
 
-## Dettaglio Tecnico
+## Come funziona il filtraggio
 
-### Nuova Strategy 0: HTML strutturato WCA (prima della riga 209)
+Alcuni filtri (paese, tipo, preferiti) vengono applicati nella query Supabase. Gli altri (network, certificazioni, rating, anni, scadenza, filiali) vengono applicati lato client dopo il fetch, perche' richiedono accesso ai dati delle tabelle collegate gia' incluse nel select (partner_networks, partner_certifications, ecc.).
 
-```text
-// Strategy 0: WCA structured HTML (profile_label/profile_val divs)
-const contactPersonBlocks = content.split(/contactperson_row/).slice(1)
+## Aspetto visivo
 
-for (const block of contactPersonBlocks) {
-  // Extract fields from profile_label/profile_val pairs
-  function getProfileVal(label: string): string | null {
-    const regex = new RegExp(
-      'profile_label">[^<]*' + label + '[^<]*</div>[\\s\\S]*?profile_val">[\\s\\S]*?(?:<a[^>]*>)?([^<]+)',
-      'i'
-    )
-    const m = block.match(regex)
-    return m?.[1]?.trim() || null
-  }
-
-  const name = getProfileVal('Name')
-  const title = getProfileVal('Title')
-  const email = getProfileVal('Email')  // estrae da <a href='mailto:...'>email</a>
-  const directLine = getProfileVal('Direct Line')
-  const mobile = getProfileVal('Mobile')
-
-  if (!name && !title) continue
-  if (name && /Members\s*only|Login/i.test(name)) continue
-
-  const contact = { title: title || name || 'Unknown' }
-  if (name) contact.name = name
-  if (email && !isGarbageEmail(email)) contact.email = email
-  if (directLine && !/Members\s*only|Login/i.test(directLine)) contact.phone = directLine
-  if (mobile && !/Members\s*only|Login/i.test(mobile)) contact.mobile = mobile
-
-  contacts.push(contact)
-}
-```
-
-Questa strategy viene eseguita PRIMA delle altre. Se trova contatti, le Strategy 1/2/3 vengono saltate. I campi "Members only" (Direct Line, Mobile) vengono correttamente filtrati, ma Name, Title e Email vengono estratti.
-
-### Risultato atteso per il partner WCA 140543:
-
-```text
-{ name: "Mr. Ledio Saliko", title: "Managing Director", email: "ledio.saliko@wto.com" }
-```
-
-Invece dell'attuale risultato vuoto (0 contatti).
+Il pannello mantiene lo stile glassmorphism esistente con sezioni collassabili. Ogni sezione ha un'icona e un titolo chiaro. I filtri attivi vengono mostrati come badge numerici sul pulsante filtro e come chip nel pannello. Il pulsante "Pulisci" resetta tutti i filtri in un click.
