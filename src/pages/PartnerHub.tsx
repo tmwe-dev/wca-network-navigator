@@ -308,6 +308,7 @@ export default function PartnerHub() {
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="flex flex-col md:flex-row h-[calc(100vh-5rem)] gap-0 -m-6 relative">
       {/* ═══ LEFT PANEL: Partner List ═══ */}
       <div className="w-full md:w-[400px] flex-shrink-0 border-r flex flex-col bg-card">
@@ -424,20 +425,33 @@ export default function PartnerHub() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium text-sm truncate">{partner.company_name}</span>
-                            {partner.is_favorite && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />}
+                            {partner.is_favorite && (
+                              <Tooltip>
+                                <TooltipTrigger><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" /></TooltipTrigger>
+                                <TooltipContent>Preferito</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                           {/* City bold + Country on two lines */}
                           <p className="text-sm mt-0.5">
                             <span className="font-semibold">{partner.city}</span>
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <span className="text-lg leading-none">{getCountryFlag(partner.country_code)}</span>
+                            <Tooltip>
+                              <TooltipTrigger><span className="text-lg leading-none">{getCountryFlag(partner.country_code)}</span></TooltipTrigger>
+                              <TooltipContent>{partner.country_name}</TooltipContent>
+                            </Tooltip>
                             {partner.country_name}
                           </p>
                           {/* Stars + trophies inline */}
                           <div className="flex items-center gap-2 mt-1">
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                            {years > 0 && <TrophyRow years={years} />}
+                            {years > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger><div><TrophyRow years={years} /></div></TooltipTrigger>
+                                <TooltipContent>{years} anni membro WCA</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                           {/* Contact persons */}
                           {partner.partner_contacts?.length > 0 && (
@@ -491,8 +505,11 @@ export default function PartnerHub() {
                           {/* Branch country flags */}
                           {branchCountries.length > 0 && (
                             <div className="flex items-center gap-0.5 mt-1.5 flex-wrap">
-                              {branchCountries.slice(0, 10).map(({ code }) => (
-                                <span key={code} className="text-base leading-none">{getCountryFlag(code)}</span>
+                              {branchCountries.slice(0, 10).map(({ code, name }) => (
+                                <Tooltip key={code}>
+                                  <TooltipTrigger><span className="text-base leading-none">{getCountryFlag(code)}</span></TooltipTrigger>
+                                  <TooltipContent>{name}</TooltipContent>
+                                </Tooltip>
                               ))}
                               {branchCountries.length > 10 && (
                                 <span className="text-[9px] text-muted-foreground ml-0.5">+{branchCountries.length - 10}</span>
@@ -566,6 +583,7 @@ export default function PartnerHub() {
         ) : null}
       </div>
     </div>
+    </TooltipProvider>
   );
 }
 
@@ -641,7 +659,10 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                   <span className="text-3xl leading-none">{getCountryFlag(partner.country_code)}</span>
                   <span>{partner.country_name}</span>
                   <span className="text-border">·</span>
-                  <PartnerTypeIcon className="w-5 h-5 text-muted-foreground" />
+                  <Tooltip>
+                    <TooltipTrigger><PartnerTypeIcon className="w-5 h-5 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent>{formatPartnerType(partner.partner_type)}</TooltipContent>
+                  </Tooltip>
                   <span className="text-sm">{formatPartnerType(partner.partner_type)}</span>
                   {partner.office_type && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border">
@@ -653,7 +674,6 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
               {/* Row 3: Rating with tooltip + Trophies */}
               <div className="flex items-center gap-4 mt-2">
                 {partner.rating > 0 && (
-                  <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-1 cursor-help">
@@ -665,7 +685,6 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                         <p className="text-xs">Valutazione basata su: anzianità WCA, numero filiali, completezza profilo, certificazioni, infrastrutture proprie</p>
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>
                 )}
                 {years > 0 && <TrophyRow years={years} size="w-4 h-4" />}
               </div>
@@ -673,13 +692,14 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
           </div>
           {/* Action buttons */}
           <div className="flex gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleFavorite}
-            >
-              {partner.is_favorite ? <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> : <StarOff className="w-4 h-4" />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={onToggleFavorite}>
+                  {partner.is_favorite ? <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> : <StarOff className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{partner.is_favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}</TooltipContent>
+            </Tooltip>
             <Button
               size="sm"
               className="bg-primary text-primary-foreground hover:bg-primary/90"
