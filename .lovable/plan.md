@@ -1,46 +1,71 @@
 
-
-# Selezione Partner + Acquisizione Completa (Tutti)
-
-## Problemi Identificati
-
-1. **Nessuna selezione individuale**: I partner nella coda non hanno checkbox, quindi non si puo' scegliere quali processare
-2. **Nessun "Acquisisci Tutti"**: Il bottone "Avvia Acquisizione" processa solo i partner **nuovi** (filtra via quelli gia' scaricati a riga 170), quindi non c'e' modo di ri-verificare/aggiornare quelli esistenti
+# Semaforo Contatti, Conteggio Qualita' e Deep Search Parallelo
 
 ## Modifiche Pianificate
 
-### 1. Checkbox di selezione nella coda (`PartnerQueue.tsx`)
+### 1. Semaforo verde/rosso per qualita' contatti nel Canvas
 
-Aggiungere una checkbox accanto a ogni partner nella lista. Di default:
-- Partner **nuovi**: selezionati
-- Partner **gia' scaricati**: deselezionati (ma selezionabili)
+Nella sezione Contatti del `PartnerCanvas`, accanto a ogni contatto aggiungere un indicatore visivo:
+- **Cerchio verde** se il contatto ha almeno email E (telefono diretto O mobile)
+- **Cerchio arancione** se ha solo email OPPURE solo telefono
+- **Cerchio rosso** se manca sia email che telefono
 
-Header della coda con "Seleziona tutti" / "Deseleziona tutti" e un contatore dei selezionati.
+In cima alla sezione Contatti, un badge riassuntivo: "3/5 completi" con colore verde se tutti completi, arancione se parziale.
 
-### 2. Modalita' "Acquisisci Tutti" (`AcquisizionePartner.tsx`)
+### 2. Conteggio qualita' nel Cestino Acquisiti
 
-Nella riga dei bottoni, aggiungere due azioni:
-- **Avvia Acquisizione (Solo Nuovi)**: come oggi, processa solo i non-scaricati selezionati
-- **Ri-Verifica Tutti**: processa TUTTI i partner selezionati (inclusi quelli gia' presenti), utile per aggiornare email/telefoni mancanti o arricchire dati
+Nel componente `AcquisitionBin`, mostrare sotto il contatore principale:
+- **Completi**: N partner con almeno 1 contatto con email + telefono (badge verde)
+- **Incompleti**: N partner senza contatti completi (badge arancione/rosso)
 
-La pipeline a riga 170 usera' la lista dei partner selezionati (tramite un Set di `wca_id`) invece del filtro fisso `!q.alreadyDownloaded`.
+Nuove props: `completeCount` e `incompleteCount`, calcolati nella pagina principale al completamento di ogni partner in base ai dati del canvas.
 
-### 3. Stato selezione
+### 3. Deep Search attivo di default
 
-Nuovo state `selectedIds: Set<number>` nella pagina principale. Viene passato a `PartnerQueue` come prop insieme a un callback `onToggle(wcaId)`.
+Cambiare il valore iniziale di `includeDeepSearch` da `false` a `true` (riga 30 di `AcquisizionePartner.tsx`).
+
+### 4. Enrichment e Deep Search in parallelo dopo il download
+
+Attualmente la pipeline e' sequenziale: Download -> Enrich -> Deep Search. Modificare per lanciare Enrich e Deep Search in parallelo con `Promise.all` subito dopo il download:
+
+```text
+PRIMA (sequenziale):
+  Download (15s) -> Enrich (10s) -> Deep Search (8s) = 33s totali
+
+DOPO (parallelo):
+  Download (15s) -> [Enrich + Deep Search in parallelo] (max 10s) = 25s totali
+```
+
+La fase nel canvas mostrera' "Arricchimento + Deep Search" durante l'esecuzione parallela, e i risultati aggiornano il canvas man mano che arrivano (chi finisce prima aggiorna subito).
 
 ## Dettaglio Tecnico
 
 | File | Modifiche |
 |------|-----------|
-| `src/components/acquisition/PartnerQueue.tsx` | Aggiungere checkbox per ogni item, header con "Seleziona tutti", props `selectedIds` e `onToggle` |
-| `src/pages/AcquisizionePartner.tsx` | Nuovo state `selectedIds`, logica toggle, bottone "Ri-Verifica Tutti", pipeline usa `selectedIds` invece del filtro hardcoded |
+| `src/components/acquisition/PartnerCanvas.tsx` | Semaforo verde/arancione/rosso accanto ai contatti, badge riassuntivo qualita' |
+| `src/components/acquisition/AcquisitionBin.tsx` | Props `completeCount` e `incompleteCount`, mostrare sotto il contatore |
+| `src/pages/AcquisizionePartner.tsx` | `includeDeepSearch` default `true`, pipeline parallela con `Promise.all`, tracciamento qualita' contatti per il bin |
 
-### Flusso Utente
+### Logica qualita' contatto
 
-1. Scansiona directory -- appare la lista
-2. I nuovi sono pre-selezionati, gli esistenti no
-3. L'utente puo' cliccare "Seleziona Tutti" per incluere anche gli esistenti
-4. Oppure selezionare/deselezionare singoli partner
-5. "Avvia Acquisizione" processa solo i selezionati
-6. Il conteggio nel bottone riflette la selezione attuale
+Un contatto e' "completo" se ha:
+- `email` non vuoto E
+- (`direct_phone` non vuoto OPPURE `mobile` non vuoto)
+
+Un partner e' "completo" se ha almeno 1 contatto completo.
+
+### Pipeline parallela (pseudocodice)
+
+```text
+// Dopo il download:
+const promises = [];
+if (includeEnrich && website) {
+  promises.push(enrich().then(updateCanvas));
+}
+if (includeDeepSearch) {
+  promises.push(deepSearch().then(updateCanvas));
+}
+setCanvasPhase("enriching"); // fase unica per entrambi
+await Promise.all(promises);
+setCanvasPhase("complete");
+```
