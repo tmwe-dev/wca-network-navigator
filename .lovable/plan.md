@@ -1,94 +1,129 @@
 
 
-# Fix: Eliminare auto-login server-side e aggiungere retry automatico
+# Allineamento Acquisizione e Download Management
 
-## Problema
+## Problemi identificati
 
-Il file `scrape-wca-partners/index.ts` (righe 912-955) contiene una logica di **auto-login server-side**: quando il cookie non funziona, il sistema tenta di fare un login con username/password direttamente dal server. Questo crea una **NUOVA sessione** sul sito WCA, che molto probabilmente **invalida la sessione attiva nel browser** dell'utente. Risultato: l'estensione Chrome perde l'accesso e non puo' piu' estrarre i contatti privati.
+### 1. La coda si perde cambiando pagina
+La pagina Acquisizione usa solo `useState` (stato React locale). Quando navighi via, tutto sparisce: coda, progresso, partner processati. La pagina Download Management invece salva tutto nella tabella `download_jobs` nel database e funziona in background.
 
-Lo stesso problema esiste in `check-wca-session/index.ts` (riga 60-63): se la sessione risulta scaduta e `autoLogin` e' richiesto, chiama `wca-auto-login` che fa la stessa cosa.
+### 2. L'Acquisizione non crea job in background
+Quando avvii l'acquisizione, tutto gira nel browser. Se chiudi la pagina o navighi altrove, il processo si ferma. Download Management invece usa una funzione server che si auto-rilancia e continua anche a browser chiuso.
 
-## Soluzione
+### 3. Scansione network incompleta
+Quando non selezioni nessun network specifico nell'Acquisizione, il sistema scansiona solo "WCA Inter Global" come default (riga 132), invece di scansionare tutti i network disponibili. Ecco perche' la Svizzera mostra solo 7 risultati.
 
-### 1. Rimuovere auto-login da `scrape-wca-partners` (Edge Function)
+### 4. Le due pagine non comunicano
+Download Management non sa nulla di cio' che fa Acquisizione e viceversa. Sono due sistemi completamente separati.
 
-Eliminare il blocco "Try 2: Auto-login" (righe 912-955). Se il cookie non funziona, la funzione deve restituire `authStatus: "members_only"` e lasciare che la pipeline gestisca la situazione (pausa + alert all'utente).
+---
 
-Il flusso diventa:
-1. Usa il cookie salvato -> funziona? OK
-2. Non funziona? Restituisci `members_only` senza tentare login
-3. Non c'e' cookie? Usa Firecrawl come fallback (dati pubblici)
+## Piano di correzione
 
-### 2. Rimuovere auto-login da `check-wca-session` (Edge Function)
+### Fase 1: Fix immediato della scansione multi-network
 
-Rimuovere la chiamata a `tryAutoLogin` (righe 60-63) e il parametro `autoLogin`. Il check deve solo verificare lo stato, mai tentare di rinnovare la sessione. Il rinnovo deve avvenire SOLO tramite l'estensione Chrome nel browser dell'utente.
+**File: `src/pages/AcquisizionePartner.tsx`**
 
-### 3. Aggiungere "Retry incompleti" nella pipeline (Frontend)
+Quando `selectedNetworks` e' vuoto (= "tutti i network"), il sistema deve scansionare TUTTI i network dalla lista `WCA_NETWORKS`, non solo "WCA Inter Global".
 
-Alla fine della pipeline, verificare se ci sono partner con contatti mancanti e proporre un secondo giro automatico:
-
-- Contare i partner completati con `contactSource === "none"` o senza email
-- Se ce ne sono, mostrare un dialog: "X partner senza contatti. Vuoi ritentare?"
-- Se l'utente accetta, rieseguire la pipeline solo per quei partner
-
-## Dettagli Tecnici
-
-### File: `supabase/functions/scrape-wca-partners/index.ts`
-
-**Rimuovere** il blocco "Try 2: Auto-login" (righe 912-955). La logica dopo il cookie check diventa:
-
+Cambio alla riga 98:
 ```
-Se authStatus !== 'authenticated':
-  -> Non fare nulla (niente auto-login)
-  -> Il profilo verra' scaricato con dati pubblici (members_only)
-  -> La pipeline vedra' authStatus e potra' reagire
+// PRIMA:
+const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
+
+// DOPO:
+const networkFilter = selectedNetworks.length > 0
+  ? selectedNetworks
+  : WCA_NETWORKS.map(n => n);  // Scan ALL networks
 ```
 
-### File: `supabase/functions/check-wca-session/index.ts`
+E alla riga 132, rimuovere il fallback hardcoded:
+```
+// PRIMA:
+networkName: net || "WCA Inter Global"
 
-- Rimuovere il parametro `autoLogin` dal body parsing (righe 20-24)
-- Rimuovere il blocco `if (!cookie && autoLogin)` (righe 40-43) 
-- Rimuovere il blocco `if (!authenticated && autoLogin)` (righe 60-63)
-- Rimuovere la funzione `tryAutoLogin` (righe 156-177)
-
-### File: `src/pages/AcquisizionePartner.tsx`
-
-Dopo il ciclo principale (riga 487), aggiungere logica per il retry:
-
-```typescript
-// Check for incomplete partners
-const incompleteItems = items.filter(item => {
-  const qItem = queue.find(q => q.wca_id === item.wca_id);
-  return qItem?.status === "done"; // will check bin for missing contacts
-});
-
-// If there are partners without contacts, offer retry
-if (liveStats.empty > 0 && !cancelRef.current) {
-  // Show retry dialog
-  setShowRetryDialog(true);
-}
+// DOPO:
+networkName: net
 ```
 
-Aggiungere un nuovo dialog e stato:
-- `showRetryDialog` (boolean)  
-- Quando l'utente conferma, rieseguire la pipeline filtrando solo i partner senza contatti dal bin
+### Fase 2: Integrazione con download_jobs per persistenza
 
-### File: `src/hooks/useWcaSessionStatus.ts`
+**File: `src/pages/AcquisizionePartner.tsx`**
 
-Rimuovere la funzione `autoLogin` dal return (non serve piu').
+Far si' che quando la pipeline parte, crei un `download_job` nel database (come fa Download Management). Questo garantisce:
+- La coda e' visibile in Download Management
+- Il progresso e' persistente
+- Se l'utente cambia pagina e torna, puo' vedere cosa stava succedendo
 
-## Riepilogo Modifiche
+Modifiche:
+1. Importare `useCreateDownloadJob` da `useDownloadJobs`
+2. Prima di iniziare il loop, creare un job nel DB con `status: "running"` e `job_type: "acquisition"`
+3. Durante il loop, aggiornare `current_index`, `last_processed_company` etc. nel DB
+4. Alla fine, marcare come `completed`
+
+Il processing resta nel browser (per l'estensione Chrome), ma lo stato e' nel database.
+
+### Fase 3: Ripristino coda al rientro nella pagina
+
+**File: `src/pages/AcquisizionePartner.tsx`**
+
+Al mount della pagina, controllare se esiste un `download_job` con `status: "running"` e `job_type: "acquisition"`:
+- Se esiste e non e' completato, ricaricare la coda dal job (i `wca_ids` e `processed_ids` sono nel DB)
+- Mostrare un avviso: "C'e' un'acquisizione in corso. Vuoi riprendere?"
+- L'utente puo' riprendere dal punto in cui si era fermato
+
+### Fase 4: Visibilita' in Download Management
+
+**File: `src/components/download/JobMonitor.tsx`**
+
+I job di tipo "acquisition" appariranno automaticamente nel JobMonitor perche' sono nella stessa tabella `download_jobs`. Aggiungere solo un badge per distinguere i tipi:
+- `job_type: "download"` -> badge "Download"
+- `job_type: "acquisition"` -> badge "Acquisizione"
+
+---
+
+## Dettagli tecnici
+
+### Struttura dati (tabella `download_jobs` -- nessuna migrazione necessaria)
+
+La tabella ha gia' il campo `job_type` con default `'download'`. I job dell'Acquisizione useranno `job_type: 'acquisition'`.
+
+### File modificati
 
 | File | Modifica |
 |------|----------|
-| `scrape-wca-partners/index.ts` | Rimuovere blocco auto-login (righe 912-955) |
-| `check-wca-session/index.ts` | Rimuovere `autoLogin` param e `tryAutoLogin()` |
-| `AcquisizionePartner.tsx` | Aggiungere dialog "Retry incompleti" a fine pipeline |
-| `useWcaSessionStatus.ts` | Rimuovere `autoLogin` dal return |
+| `src/pages/AcquisizionePartner.tsx` | Fix network scan + creazione job nel DB + ripristino al mount |
+| `src/components/download/JobMonitor.tsx` | Badge per tipo job (acquisition vs download) |
+| `src/data/wcaFilters.ts` | Nessuna modifica (usato come import) |
 
-## Risultato
+### Flusso aggiornato
 
-- Il server non fara' MAI login autonomamente -> la sessione del browser resta intatta
-- Se il cookie scade, la pipeline si blocca e chiede all'utente di rifare la connessione tramite estensione
-- A fine giro, se ci sono partner incompleti, il sistema propone un retry automatico
+```text
+Utente seleziona paese + network
+        |
+        v
+  Scansione directory (TUTTI i network se non specificato)
+        |
+        v
+  Crea download_job nel DB (job_type: "acquisition")
+        |
+        v
+  Loop nel browser (scrape + extension + enrich)
+  -> Aggiorna download_job ad ogni partner
+        |
+        v
+  Se l'utente naviga via:
+  -> Il processing si ferma (e' nel browser)
+  -> Ma lo stato e' nel DB
+  -> Tornando su Acquisizione, puo' riprendere
+        |
+        v
+  Il job appare anche in Download Management
+```
+
+### Cosa NON cambia
+
+- Il processing dell'Acquisizione resta nel browser (necessario per l'estensione Chrome)
+- Download Management continua a usare il processing server-side (edge function)
+- Le due pagine ora condividono la stessa tabella `download_jobs` per visibilita'
 
