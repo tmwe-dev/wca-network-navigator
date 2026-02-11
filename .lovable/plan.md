@@ -1,134 +1,93 @@
 
 
-# Fix Acquisizione: Nomi nella coda, stop automatico e background
+# Fix: Nomi aziendali nella coda sempre visibili
 
-## Problemi identificati
+## Problema radice
 
-### 1. La coda mostra "WCA 121870" invece dei nomi aziendali
-**Causa**: Quando la scansione della directory viene eseguita nella pagina Acquisizione, i risultati NON vengono salvati nella tabella `directory_cache`. L'ActionPanel del Download Management ha una funzione `saveScanToCache` (riga 138), ma l'Acquisizione non ce l'ha. Quindi:
-- La prima scansione funziona (i nomi arrivano dal risultato fresco)
-- Ma se l'utente naviga via e torna, il resume cerca nella `directory_cache` e nella tabella `partners` -- ma la cache non contiene i dati della scansione fatta dall'Acquisizione
-- I partner non ancora processati non sono nella tabella `partners`, quindi restano come "WCA {id}"
+Quando il job viene ripreso (resume), la coda viene ricostruita partendo da placeholder "WCA + ID". Il sistema prova a recuperare i nomi reali da due fonti:
+1. Tabella `partners` -- funziona solo per i partner gia' scaricati
+2. Tabella `directory_cache` -- ma la cache per la Bulgaria contiene solo 1 membro su 29
 
-### 2. Il download si ferma dopo 2 partner senza contatti
-**Causa**: Riga 276: `MAX_CONSECUTIVE_EMPTY = 2`. Dopo soli 2 partner consecutivi senza contatti, il sistema mette automaticamente in pausa e mostra un toast. L'utente vuole che il sistema AVVISI ma NON si fermi da solo. L'utente decidera' se fermarsi.
+Per i partner non ancora scaricati e non presenti in cache, il nome resta "WCA 121870".
 
-### 3. L'acquisizione non gira in background come il Download Management
-**Causa**: Il processing dell'Acquisizione gira nel browser (loop `for` in React). Quando l'utente naviga via, tutto si ferma. Il Download Management invece usa la edge function `process-download-job` che si auto-rilancia. L'Acquisizione non puo' usare al 100% lo stesso sistema perche' dipende dall'estensione Chrome (per i contatti privati), ma il download base puo' girare in background. L'acquisizione potrebbe delegare la parte di download alla edge function `process-download-job` gia' esistente, mantenendo l'arricchimento via estensione come step opzionale quando l'utente torna.
+Inoltre, quando il server processa un partner e non lo trova (`found: false`), il campo `last_processed_company` nel job resta vuoto, e la UI non ha modo di recuperare il nome reale.
 
----
+## Correzioni
 
-## Piano di correzione
+### File: `src/pages/AcquisizionePartner.tsx`
 
-### Fix 1: Salvare i risultati della scansione nella cache
+**1. Resume: se la cache e' incompleta, riscansionare la directory**
 
-**File: `src/pages/AcquisizionePartner.tsx`**
-
-Dopo che la scansione restituisce i risultati (sia da cache che da scan fresco), salvare nella tabella `directory_cache` con upsert, esattamente come fa l'ActionPanel:
+Dopo aver provato `partners` e `directory_cache`, se ci sono ancora nomi "WCA {id}", lanciare una scansione fresca della directory per quel paese. Questo riempie sia la cache che i nomi nella coda.
 
 ```typescript
-// Dopo aver ricevuto scanResult.members dalla edge function:
-const membersJson = members.map(m => ({
-  company_name: m.company_name,
-  city: m.city,
-  country_code: code,
-  wca_id: m.wca_id
-}));
-
-await supabase.from("directory_cache").upsert({
-  country_code: code,
-  network_name: net,  // "" per tutti i network
-  members: membersJson,
-  total_results: members.length,
-  scanned_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-});
-```
-
-Questo garantisce che al resume la coda possa recuperare i nomi dalla cache.
-
-### Fix 2: Avvisare senza fermare il download
-
-**File: `src/pages/AcquisizionePartner.tsx`**
-
-Cambiare il comportamento alle righe 582-597:
-- Rimuovere `pauseRef.current = true` e la logica di attesa
-- Mostrare solo un toast di avviso
-- Aumentare `MAX_CONSECUTIVE_EMPTY` a 5 per ridurre falsi allarmi
-- Mantenere il check della sessione WCA al primo partner vuoto (riga 567) come protezione iniziale
-
-```typescript
-// PRIMA: si ferma
-if (consecutiveNoContacts >= MAX_CONSECUTIVE_EMPTY) {
-  pauseRef.current = true;
-  setPipelineStatus("paused");
-  // ...attende...
-}
-
-// DOPO: avvisa soltanto
-if (consecutiveNoContacts >= MAX_CONSECUTIVE_EMPTY) {
-  toast({
-    title: "Qualita' dati bassa",
-    description: `${MAX_CONSECUTIVE_EMPTY} partner consecutivi senza contatti. Controlla la sessione WCA.`,
+// Dopo il blocco di enrichment dalla cache (riga ~135):
+const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
+if (stillMissing2.length > 0) {
+  // Riscansiona la directory per ottenere i nomi reali
+  const { data: scanResult } = await supabase.functions.invoke("scrape-wca-directory", {
+    body: { countryCode: job.country_code, network: "" }
   });
-  consecutiveNoContacts = 0; // Reset per non spammare toast
+  if (scanResult?.members) {
+    // Salva in cache per il futuro
+    await supabase.from("directory_cache").upsert({ ... });
+    // Aggiorna i nomi nella coda
+    for (const m of scanResult.members) {
+      const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
+      if (qi) { qi.company_name = m.company_name; qi.city = m.city; }
+    }
+  }
 }
 ```
 
-### Fix 3: Delegare il download base alla edge function in background
+**2. Polling: aggiornare il nome nella coda quando il partner viene scaricato**
 
-**File: `src/pages/AcquisizionePartner.tsx`**
+Gia' fatto alla riga 633, ma solo se `canvas.company_name` e' diverso dal placeholder. Aggiungere un controllo esplicito: se il nome nel canvas e' ancora "WCA {id}", provare a leggerlo dalla `directory_cache`:
 
-Quando l'utente avvia l'acquisizione:
-1. Creare il `download_job` nel DB (gia' implementato)
-2. Chiamare la edge function `process-download-job` con il `jobId` per avviare il processing in background
-3. Il download dei profili base gira server-side (auto-chaining)
-4. L'arricchimento via estensione Chrome resta opzionale: quando l'utente e' sulla pagina, la UI mostra i partner scaricati e permette l'estrazione contatti via estensione in tempo reale
-5. Se l'utente naviga via, il download base continua in background; tornando, puo' vedere il progresso e avviare l'arricchimento sui partner gia' scaricati
+```typescript
+// Riga ~415: quando si costruisce il canvas per un partner appena processato
+let resolvedName = partnerData?.company_name || item.company_name;
+if (resolvedName.startsWith("WCA ")) {
+  // Ultimo tentativo: cerca nella cache
+  const { data: cacheRows } = await supabase
+    .from("directory_cache").select("members").eq("country_code", item.country_code);
+  for (const row of cacheRows || []) {
+    const found = (row.members as any[])?.find(m => m.wca_id === item.wca_id);
+    if (found?.company_name) { resolvedName = found.company_name; break; }
+  }
+}
+```
 
-Modifiche:
-- Nella funzione `startPipeline`, dopo aver creato il job, invocare `supabase.functions.invoke("process-download-job", { body: { jobId } })` per avviare il background processing
-- Aggiungere un polling con `setInterval` per aggiornare la coda leggendo il progresso dal DB (ogni 3-5 secondi)
-- Quando un partner viene completato dal server, la UI lo mostra nel canvas e offre l'estrazione contatti via estensione se disponibile
-- Se l'estensione non e' disponibile, il download prosegue comunque con i contatti server-side
+**3. Edge function: salvare il nome reale anche quando found=false**
 
----
+Nel file `supabase/functions/process-download-job/index.ts`, quando lo scraper ritorna `found: false`, il `lastCompany` resta vuoto. Dovremmo cercare il nome dalla `directory_cache` come fallback:
 
-## Dettagli tecnici
+```typescript
+// Riga ~136 di process-download-job/index.ts:
+if (result.success && result.found) {
+  lastCompany = result.partner?.company_name || '';
+}
+// AGGIUNTA: fallback dalla cache se non trovato
+if (!lastCompany) {
+  const { data: cacheRows } = await supabase
+    .from('directory_cache').select('members').eq('country_code', job.country_code);
+  for (const row of (cacheRows || [])) {
+    const found = (row.members as any[])?.find(m => m.wca_id === wcaId);
+    if (found?.company_name) { lastCompany = found.company_name; break; }
+  }
+}
+```
 
-### File modificati
+## File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/AcquisizionePartner.tsx` | Salvare scan in cache + rimuovere auto-stop + delegare a edge function |
+| `src/pages/AcquisizionePartner.tsx` | Resume: riscansione directory se nomi mancanti + fallback cache nel polling |
+| `supabase/functions/process-download-job/index.ts` | Fallback nome dalla cache quando scraper non trova il partner |
 
-### Flusso aggiornato
+## Risultato atteso
 
-```text
-Utente avvia Acquisizione
-        |
-        v
-  Crea download_job nel DB
-  Invoca process-download-job (background)
-        |
-        v
-  Edge function scarica profili (auto-chaining)
-  UI fa polling dal DB ogni 3-5s
-        |
-        v
-  Per ogni partner scaricato:
-  - Se utente e' sulla pagina + estensione attiva:
-    -> Estrae contatti privati via estensione
-  - Se utente naviga via:
-    -> Download continua in background
-    -> Contatti server-side salvati comunque
-        |
-        v
-  Utente torna: vede progresso, puo' arricchire i mancanti
-```
-
-### Cosa NON cambia
-- La edge function `process-download-job` non necessita modifiche (gia' gestisce il download base)
-- Il JobMonitor nel Download Management mostra gia' i job di tipo "acquisition"
-- Il sistema di cache della directory resta lo stesso formato
+- La coda mostra SEMPRE i nomi reali delle aziende, sia alla prima scansione che al resume
+- Il job nel DB registra sempre il nome reale del partner processato
+- Se un partner non viene trovato dallo scraper, il nome viene recuperato dalla cache della directory
 
