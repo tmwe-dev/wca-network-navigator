@@ -1,24 +1,15 @@
 
 
-# Fix: Content Script non si connette alla Preview
+# Fix: Estensione non rilevata dentro l'iframe di Lovable
 
-## Problema Trovato
-Il `manifest.json` dell'estensione specifica che il content script deve essere iniettato solo su:
-```
-https://*.lovable.app/*
-```
-
-Ma la preview dell'app gira su:
-```
-https://....lovableproject.com
-```
-
-Risultato: il content script non viene mai caricato, il bridge `window.postMessage` non funziona, e l'estensione non riceve mai la richiesta di estrarre i contatti. Per questo vedi la luce verde (la sessione WCA server-side e' ok) ma non arrivano email e telefoni privati.
+## Problema
+Il content script (`content.js`) si inietta solo nei tab di primo livello. Ma quando lavori nell'editor di Lovable, la preview della tua app viene caricata dentro un **iframe**. Il content script non viene mai caricato nell'iframe, quindi il bridge `window.postMessage` non funziona e l'estensione risulta "non rilevata".
 
 ## Soluzione
 
-### 1. `public/chrome-extension/manifest.json`
-Aggiungere il dominio `.lovableproject.com` ai matches del content script:
+### `public/chrome-extension/manifest.json`
+Aggiungere `"all_frames": true` alla configurazione dei content scripts. Questo fa si' che `content.js` venga iniettato anche negli iframe il cui URL corrisponde ai pattern specificati.
+
 ```json
 "content_scripts": [
   {
@@ -27,16 +18,20 @@ Aggiungere il dominio `.lovableproject.com` ai matches del content script:
       "https://*.lovableproject.com/*"
     ],
     "js": ["content.js"],
-    "run_at": "document_idle"
+    "run_at": "document_idle",
+    "all_frames": true
   }
 ]
 ```
 
-### 2. Dopo la modifica
-Dovrai riscaricare i file dell'estensione (Impostazioni > Scarica Estensione Chrome) e ricaricarla in `chrome://extensions/`. Una volta fatto, quando apri la pagina Acquisizione Partner il content script si attivera' e il bridge sara' operativo.
+### Dopo la modifica
+Dovrai:
+1. Scaricare l'estensione aggiornata da Impostazioni
+2. Sostituire i file nella cartella dell'estensione
+3. Ricaricare l'estensione in `chrome://extensions/` (icona di refresh)
 
-## Risultato Atteso
-- L'indicatore "Plug" nella toolbar di acquisizione diventa verde (estensione rilevata)
-- Durante il download di ogni partner, la Phase 1.5 (estrazione contatti) si attiva automaticamente
-- Email, telefoni diretti e mobile vengono estratti dal DOM autenticato del browser
+## Dettagli tecnici
+- `all_frames: true` permette a Chrome di iniettare il content script in qualsiasi frame (iframe incluso) il cui URL corrisponde ai pattern in `matches`
+- Senza questa opzione, il content script si attiva solo sulla pagina principale del tab
+- La preview dell'app su `*.lovable.app` viene renderizzata in un iframe dentro l'editor, percio' il bridge non si attivava mai
 
