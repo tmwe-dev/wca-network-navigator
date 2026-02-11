@@ -85,6 +85,7 @@ import {
   getServiceIconName,
   getServiceIconColor,
   getPartnerTypeIconName,
+  resolveCountryCode,
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -499,8 +500,8 @@ export default function PartnerHub() {
                                   <TooltipTrigger>
                                     <div className="flex items-center gap-0.5">
                                       <User className="w-3.5 h-3.5 text-muted-foreground fill-muted-foreground" />
-                                      <Mail className={cn("w-3 h-3", c.email ? "text-blue-500 fill-blue-500" : "text-muted-foreground/25")} />
-                                      <Phone className={cn("w-3 h-3", (c.direct_phone || c.mobile) ? "text-green-500 fill-green-500" : "text-muted-foreground/25")} />
+                                      <Mail className={cn("w-3 h-3", c.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
+                                      <Phone className={cn("w-3 h-3", (c.direct_phone || c.mobile) ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
@@ -563,7 +564,7 @@ export default function PartnerHub() {
                                     {(partner.enrichment_data as any)?.has_technology && (
                                       <Tooltip>
                                         <TooltipTrigger>
-                                          <Cpu className="w-4 h-4 text-violet-500 fill-violet-500" />
+                                          <Cpu className="w-4 h-4 text-slate-500 fill-slate-500" />
                                         </TooltipTrigger>
                                         <TooltipContent>Capacità Tecnologiche</TooltipContent>
                                       </Tooltip>
@@ -811,7 +812,7 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                   const Icon = getServiceIcon(s.service_category);
                   const color = getServiceIconColor(s.service_category);
                   return (
-                    <div key={i} className="flex items-center gap-3 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={i} className="flex items-center gap-3 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-lg hover:bg-card/95 hover:backdrop-blur-md hover:border-sky-500/20 transition-all">
                       <Icon className={`w-7 h-7 ${color}`} fill="currentColor" />
                       <span className="text-sm text-foreground font-medium">{formatServiceCategory(s.service_category)}</span>
                     </div>
@@ -830,7 +831,7 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                   const Icon = getServiceIcon(s.service_category);
                   const color = getServiceIconColor(s.service_category);
                   return (
-                    <div key={i} className="flex items-center gap-3 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={i} className="flex items-center gap-3 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-lg hover:bg-card/95 hover:backdrop-blur-md hover:border-slate-500/20 transition-all">
                       <Icon className={`w-7 h-7 ${color}`} fill="currentColor" />
                       <span className="text-sm text-foreground font-medium">{formatServiceCategory(s.service_category)}</span>
                     </div>
@@ -853,7 +854,7 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
               <div className="mt-2 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-2.5">
                 {/* Phone */}
                 <div className="flex items-center gap-3 text-sm">
-                  <Phone className={cn("w-5 h-5", partner.phone ? "text-green-500 fill-green-500" : "text-muted-foreground/30")} />
+                  <Phone className={cn("w-5 h-5", partner.phone ? "text-sky-500 fill-sky-500" : "text-muted-foreground/30")} />
                   {partner.phone ? (
                     <a href={`tel:${partner.phone}`} className="text-foreground hover:text-primary transition-colors">{partner.phone}</a>
                   ) : (
@@ -862,7 +863,7 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                 </div>
                 {/* Email */}
                 <div className="flex items-center gap-3 text-sm">
-                  <Mail className={cn("w-5 h-5", partner.email ? "text-blue-500 fill-blue-500" : "text-muted-foreground/30")} />
+                  <Mail className={cn("w-5 h-5", partner.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/30")} />
                   {partner.email ? (
                     <a href={`mailto:${partner.email}`} className="text-foreground hover:text-primary transition-colors">{partner.email}</a>
                   ) : (
@@ -942,13 +943,13 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                         <div className="flex items-center gap-1 ml-auto">
                           <Tooltip>
                             <TooltipTrigger>
-                              <Mail className={cn("w-4 h-4", c.email ? "text-blue-500 fill-blue-500" : "text-muted-foreground/25")} />
+                              <Mail className={cn("w-4 h-4", c.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
                             </TooltipTrigger>
                             <TooltipContent>{c.email || "Email mancante"}</TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger>
-                              <Phone className={cn("w-4 h-4", (c.direct_phone || c.mobile) ? "text-green-500 fill-green-500" : "text-muted-foreground/25")} />
+                              <Phone className={cn("w-4 h-4", (c.direct_phone || c.mobile) ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
                             </TooltipTrigger>
                             <TooltipContent>{c.direct_phone || c.mobile || "Telefono mancante"}</TooltipContent>
                           </Tooltip>
@@ -958,17 +959,17 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
                       <div className="flex items-center gap-4 text-sm ml-6 flex-wrap">
                         {c.email && (
                           <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                            <Mail className="w-3.5 h-3.5 text-blue-400 fill-blue-400" /> {c.email}
+                            <Mail className="w-3.5 h-3.5 text-sky-500 fill-sky-500" /> {c.email}
                           </a>
                         )}
                         {c.direct_phone && (
                           <a href={`tel:${c.direct_phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                            <Phone className="w-3.5 h-3.5 text-green-400 fill-green-400" /> {c.direct_phone}
+                            <Phone className="w-3.5 h-3.5 text-sky-500 fill-sky-500" /> {c.direct_phone}
                           </a>
                         )}
                         {c.mobile && (
                           <a href={`tel:${c.mobile}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                            <Phone className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" /> {c.mobile}
+                            <Phone className="w-3.5 h-3.5 text-sky-500 fill-sky-500" /> {c.mobile}
                           </a>
                         )}
                       </div>
@@ -1107,12 +1108,43 @@ function PartnerDetail({ partner, onToggleFavorite }: { partner: any; onToggleFa
             <div className="bg-card/80 backdrop-blur-sm border border-primary/5 rounded-2xl p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">Mercati Principali</p>
               <div className="grid grid-cols-2 gap-2.5">
-                {enrichment.key_markets.map((market: string, i: number) => (
-                  <div key={i} className="flex flex-col items-center gap-1 bg-muted/50 border rounded-xl py-3 px-2">
-                    <Globe className="w-6 h-6 text-primary fill-primary" />
-                    <span className="text-xs text-muted-foreground text-center">{market}</span>
-                  </div>
-                ))}
+                {enrichment.key_markets.map((market: string, i: number) => {
+                  const code = resolveCountryCode(market);
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1 bg-muted/50 border rounded-xl py-3 px-2 hover:shadow-md hover:bg-muted/80 transition-all">
+                      <span className="text-3xl leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
+                      <span className="text-xs text-muted-foreground text-center">{market}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Key Routes from enrichment */}
+          {enrichment?.key_routes && Array.isArray(enrichment.key_routes) && enrichment.key_routes.length > 0 && (
+            <div className="bg-card/80 backdrop-blur-sm border border-primary/5 rounded-2xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">Routing Principali</p>
+              <div className="space-y-2">
+                {enrichment.key_routes.map((route: any, i: number) => {
+                  const fromCode = resolveCountryCode(route.from || route.origin || "");
+                  const toCode = resolveCountryCode(route.to || route.destination || "");
+                  const fromLabel = route.from || route.origin || "?";
+                  const toLabel = route.to || route.destination || "?";
+                  return (
+                    <div key={i} className="flex items-center justify-center gap-3 bg-muted/50 border rounded-xl py-3 px-3 hover:shadow-md hover:bg-muted/80 transition-all">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-2xl leading-none">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
+                        <span className="text-[10px] text-muted-foreground">{fromLabel}</span>
+                      </div>
+                      <ArrowUpRight className="w-5 h-5 text-sky-500 rotate-45 shrink-0" />
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-2xl leading-none">{toCode ? getCountryFlag(toCode) : "🌍"}</span>
+                        <span className="text-[10px] text-muted-foreground">{toLabel}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
