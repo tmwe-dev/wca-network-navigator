@@ -219,7 +219,7 @@ export default function Settings() {
                   </p>
                 </div>
                 <Button className="w-full" size="lg" onClick={() => {
-                  const files = ['manifest.json', 'popup.html', 'popup.js', 'icon.png'];
+                  const files = ['manifest.json', 'popup.html', 'popup.js', 'background.js', 'content.js', 'icon.png'];
                   files.forEach((file, i) => {
                     setTimeout(() => {
                       const link = document.createElement('a');
@@ -228,7 +228,7 @@ export default function Settings() {
                       document.body.appendChild(link); link.click(); document.body.removeChild(link);
                     }, i * 500);
                   });
-                  toast.success("Download avviato! Salva i 4 file nella stessa cartella, poi caricali su chrome://extensions/");
+                  toast.success("Download avviato! Salva i 6 file nella stessa cartella, poi caricali su chrome://extensions/");
                 }}>
                   <Download className="w-4 h-4 mr-2" /> Scarica Estensione Chrome
                 </Button>
