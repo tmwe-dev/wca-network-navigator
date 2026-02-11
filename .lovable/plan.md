@@ -1,67 +1,101 @@
 
-# Fix: Sessione WCA invalidata dal server + scraper cieco
 
-## Causa radice trovata
+# Architettura stabile: ZERO richieste server-side a WCA
 
-Due cose uccidono la sessione:
+## Problema reale trovato
 
-### 1. `check-wca-session` fa richieste dal server con il cookie del browser
+Ho analizzato ogni riga di codice. Ecco cosa succede:
 
-Ogni volta che il semaforo controlla lo stato, la Edge Function fa una richiesta HTTP a `wcaworld.com/directory/members/86580` usando il cookie salvato. Questa richiesta arriva dall'IP del server (non dal browser dell'utente). WCA vede lo stesso cookie usato da due IP diversi e invalida la sessione.
+**Ogni volta che il sistema scarica un profilo WCA, la Edge Function `scrape-wca-partners` fa una richiesta HTTP diretta a `wcaworld.com` dal server di Supabase** (file `scrape-wca-partners/index.ts`, funzione `directFetchPage`, riga 565-601). Questa richiesta parte dall'IP del server, NON dal tuo browser.
 
-**Soluzione**: eliminare il test HTTP dal `check-wca-session`. Il semaforo deve basarsi SOLO sui dati gia' nel database (ultimo check, presenza del cookie, risultati recenti dei job) — senza MAI toccare WCA dal server.
+WCA vede il tuo cookie usato da due IP diversi (il tuo PC e il server Supabase) e invalida la sessione. Succede ad ogni singolo profilo scaricato.
 
-### 2. Lo scraper non rileva la sessione morta
+Inoltre, `save-wca-cookie/index.ts` (riga 43) chiama `testCookieDeep()` che fa un'altra richiesta HTTP a WCA dal server quando salvi il cookie. Altro colpo alla sessione.
 
-Dai log di adesso:
-```
-ID 88149: contactBlocks=0, html=23460c -> "AUTH OK"
-ID 142034: contactBlocks=0, html=23462c -> "AUTH OK"  
-ID 92928: contactBlocks=0, html=23460c -> "AUTH OK"
-ID 131527: contactBlocks=0, html=23462c -> "AUTH OK"
-(tutti identici...)
+```text
+FLUSSO ATTUALE (che rompe la sessione):
+
+Browser (tuo IP) --> login su WCA --> cookie valido
+                                         |
+Edge Function (IP server) --> fetch WCA con il TUO cookie --> WCA vede 2 IP --> INVALIDA sessione
 ```
 
-TUTTI i profili restituiscono esattamente ~23460 byte e 0 contatti. E' chiaramente una pagina generica. Lo scraper li salta tutti dicendo "membro senza contatti" — ma sono TUTTI senza contatti, il che e' impossibile.
+## Soluzione: tutto passa dall'estensione Chrome
 
-**Soluzione**: aggiungere un contatore di profili consecutivi senza contatti. Se X profili di fila (es: 5) hanno tutti 0 contact blocks, mettere il job in pausa con errore "possibile sessione scaduta". Inoltre, controllare se la dimensione HTML e' sempre identica (segno di pagina cached/generica).
+L'estensione Chrome gira nel tuo browser, stesso IP, stessa sessione. Nessun conflitto di IP.
 
-## Modifiche
+```text
+FLUSSO NUOVO (sessione stabile):
 
-### File 1: `supabase/functions/check-wca-session/index.ts`
+Browser (tuo IP) --> login su WCA --> cookie valido
+                                         |
+Estensione (tuo IP) --> apre tab WCA --> stesso IP --> sessione STABILE
+                                         |
+                                    salva dati --> database
+```
 
-Rimuovere completamente la chiamata HTTP a WCA (`testCookieDeep`). Il controllo diventa:
-- Legge `wca_auth_cookie` / `wca_session_cookie` da `app_settings`
-- Verifica se `.ASPXAUTH` e' presente nel cookie (senza fare richieste HTTP)
-- Legge i risultati recenti dei job (contatti trovati/mancanti) per stimare lo stato
-- NON tocca mai wcaworld.com
+### Modifiche specifiche:
 
-### File 2: `supabase/functions/scrape-wca-partners/index.ts`
+### 1. Rimuovere `testCookieDeep` da `save-wca-cookie`
 
-Nessuna modifica diretta al singolo fetch. La logica di rilevamento resta com'e'.
+**File**: `supabase/functions/save-wca-cookie/index.ts`
 
-### File 3: `supabase/functions/process-download-job/index.ts`
+Eliminare la chiamata `testCookieDeep()` (riga 43). Il cookie viene salvato e lo stato viene determinato solo dalla presenza di `.ASPXAUTH` nel cookie, senza MAI fare richieste HTTP a WCA.
 
-Aggiungere un contatore di "profili consecutivi senza contatti":
-- Se 5 profili consecutivi restituiscono 0 contact blocks, mettere il job in pausa
-- Messaggio: "5 profili consecutivi senza contatti — possibile sessione scaduta"
-- Salvare il contatore nel campo `error_message` per il frontend
-- Quando un profilo HA contatti, azzerare il contatore
+### 2. Modalita' "extension-only" nel job processor
 
-### File 4: `supabase/functions/wca-auto-login/index.ts`
+**File**: `supabase/functions/process-download-job/index.ts`
 
-Nessuna modifica — gia' non viene chiamato automaticamente.
+Il job processor smette di chiamare `scrape-wca-partners` (che fa `directFetchPage` dal server). Invece:
+- Il job avanza l'indice e segna il WCA ID come "da processare"
+- Il frontend (che ha l'estensione) fa il lavoro reale tramite l'extension bridge
+- Il server si occupa solo di tenere traccia del progresso
 
-## Risultato atteso
+Il flusso diventa:
+1. Job creato con lista WCA IDs
+2. Frontend poll il job, vede il prossimo ID da processare
+3. Frontend chiede all'estensione di aprire la pagina e estrarre i dati
+4. Estensione salva i contatti nel DB tramite `save-wca-contacts`
+5. Frontend segna l'ID come completato e passa al successivo
 
-- Il server NON fa piu' richieste a WCA (niente piu' invalidazione sessione)
-- Se la sessione scade naturalmente, il job si ferma dopo max 5 profili vuoti
-- L'utente viene avvisato e puo' ri-sincronizzare il cookie con l'estensione Chrome
-- Il download riprende da dove si era fermato
+### 3. Scraper server-side come fallback senza cookie
 
-## File modificati
+**File**: `supabase/functions/scrape-wca-partners/index.ts`
+
+Lo scraper server-side rimane ma opera SOLO senza il cookie dell'utente. Serve come fallback per estrarre dati pubblici (nome azienda, citta', sito web) quando l'estensione non e' disponibile. Non usa MAI il cookie della sessione autenticata.
+
+### 4. Pipeline di acquisizione gestita dal frontend
+
+**File**: `src/pages/AcquisizionePartner.tsx`
+
+La pipeline cambia:
+- Il frontend diventa il "motore" che orchestra il download
+- Per ogni WCA ID: chiede all'estensione di aprire la pagina
+- L'estensione estrae TUTTO (contatti, email, telefoni, nome azienda)
+- I dati vengono salvati nel DB
+- Se l'estensione non e' disponibile, il job va in pausa (non usa il server come fallback)
+
+### 5. Download Management adattato
+
+**File**: `src/pages/DownloadManagement.tsx` e `src/hooks/useDownloadJobs.ts`
+
+Il Download Management continua a creare job con la lista di WCA IDs, ma il processing avviene lato frontend tramite l'estensione. Il job tiene traccia del progresso. Se il browser viene chiuso, il job resta in pausa e riprende quando il browser viene riaperto.
+
+## Riepilogo dei file modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/check-wca-session/index.ts` | Rimuovere fetch HTTP a WCA, basarsi solo su dati DB |
-| `supabase/functions/process-download-job/index.ts` | Contatore profili vuoti consecutivi, pausa automatica dopo 5 |
+| `supabase/functions/save-wca-cookie/index.ts` | Rimuovere `testCookieDeep` — zero richieste HTTP a WCA |
+| `supabase/functions/process-download-job/index.ts` | Rimuovere chiamata a `scrape-wca-partners` — il job segna solo il progresso |
+| `supabase/functions/scrape-wca-partners/index.ts` | Non usa piu' il cookie dell'utente per fetch diretti |
+| `src/pages/AcquisizionePartner.tsx` | L'estensione diventa il motore di scraping |
+| `public/chrome-extension/background.js` | Estrarre TUTTI i dati del profilo (non solo contatti) |
+
+## Risultato
+
+- Tu fai login su WCA una volta sola
+- L'estensione lavora nel tuo browser, stesso IP, stessa sessione
+- Il server NON tocca MAI WCA con il tuo cookie
+- La sessione resta attiva finche' il cookie non scade naturalmente (ore/giorni)
+- Se il cookie scade, l'estensione lo ri-sincronizza automaticamente
+
