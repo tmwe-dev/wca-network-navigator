@@ -62,24 +62,123 @@ export function getServiceIconName(category: string): string {
 }
 
 // Service icon color mapping (Tailwind classes)
+// Harmonized: sky-500 for transport, slate-500 for specialties
+const TRANSPORT_CATEGORIES = new Set([
+  "air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight", "project_cargo",
+]);
+
 export function getServiceIconColor(category: string): string {
-  const colors: Record<string, string> = {
-    air_freight: "text-sky-500",
-    ocean_fcl: "text-blue-500",
-    ocean_lcl: "text-blue-400",
-    road_freight: "text-amber-500",
-    rail_freight: "text-slate-500",
-    project_cargo: "text-orange-500",
-    dangerous_goods: "text-red-500",
-    perishables: "text-cyan-400",
-    pharma: "text-purple-500",
-    ecommerce: "text-green-500",
-    relocations: "text-teal-500",
-    customs_broker: "text-indigo-500",
-    warehousing: "text-stone-500",
-    nvocc: "text-slate-600",
-  };
-  return colors[category] || "text-muted-foreground";
+  if (TRANSPORT_CATEGORIES.has(category)) return "text-sky-500";
+  return "text-slate-500";
+}
+
+// Resolve a market name (e.g. "UAE", "Saudi Arabia") to ISO country code
+import { WCA_COUNTRIES } from "@/data/wcaCountries";
+
+const MARKET_ALIASES: Record<string, string> = {
+  uae: "AE", "united arab emirates": "AE", emirates: "AE",
+  usa: "US", "united states": "US", "united states of america": "US", america: "US",
+  uk: "GB", "united kingdom": "GB", england: "GB", britain: "GB",
+  "saudi arabia": "SA", saudi: "SA", ksa: "SA",
+  china: "CN", prc: "CN",
+  "south korea": "KR", korea: "KR",
+  "north korea": "KP",
+  russia: "RU",
+  taiwan: "TW",
+  "hong kong": "HK",
+  macau: "MO",
+  japan: "JP",
+  india: "IN",
+  brazil: "BR",
+  germany: "DE",
+  france: "FR",
+  italy: "IT",
+  spain: "ES",
+  turkey: "TR",
+  egypt: "EG",
+  "south africa": "ZA",
+  australia: "AU",
+  canada: "CA",
+  mexico: "MX",
+  singapore: "SG",
+  malaysia: "MY",
+  thailand: "TH",
+  vietnam: "VN",
+  indonesia: "ID",
+  philippines: "PH",
+  pakistan: "PK",
+  bangladesh: "BD",
+  "sri lanka": "LK",
+  nepal: "NP",
+  iran: "IR",
+  iraq: "IQ",
+  kuwait: "KW",
+  qatar: "QA",
+  bahrain: "BH",
+  oman: "OM",
+  jordan: "JO",
+  lebanon: "LB",
+  israel: "IL",
+  nigeria: "NG",
+  kenya: "KE",
+  ghana: "GH",
+  morocco: "MA",
+  tunisia: "TN",
+  algeria: "DZ",
+  colombia: "CO",
+  chile: "CL",
+  argentina: "AR",
+  peru: "PE",
+  venezuela: "VE",
+  ecuador: "EC",
+  panama: "PA",
+  netherlands: "NL", holland: "NL",
+  belgium: "BE",
+  switzerland: "CH",
+  austria: "AT",
+  sweden: "SE",
+  norway: "NO",
+  denmark: "DK",
+  finland: "FI",
+  poland: "PL",
+  portugal: "PT",
+  greece: "GR",
+  romania: "RO",
+  "czech republic": "CZ", czechia: "CZ",
+  hungary: "HU",
+  ireland: "IE",
+  scotland: "GB",
+  wales: "GB",
+  "new zealand": "NZ",
+  myanmar: "MM", burma: "MM",
+  cambodia: "KH",
+  laos: "LA",
+};
+
+export function resolveCountryCode(marketName: string): string | null {
+  if (!marketName) return null;
+  const lower = marketName.toLowerCase().trim();
+
+  // Direct alias
+  if (MARKET_ALIASES[lower]) return MARKET_ALIASES[lower];
+
+  // If it's already a 2-letter code
+  if (lower.length === 2) {
+    const upper = lower.toUpperCase();
+    if (WCA_COUNTRIES.find((c) => c.code === upper)) return upper;
+  }
+
+  // Match against WCA_COUNTRIES by name
+  const exact = WCA_COUNTRIES.find((c) => c.name.toLowerCase() === lower);
+  if (exact) return exact.code;
+
+  // Partial match
+  const partial = WCA_COUNTRIES.find(
+    (c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase())
+  );
+  if (partial) return partial.code;
+
+  return null;
 }
 
 // Partner type icon name mapping
