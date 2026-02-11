@@ -136,6 +136,22 @@ Deno.serve(async (req) => {
         lastCompany = result.partner?.company_name || ''
       }
 
+      // Fallback: resolve name from directory_cache if still empty
+      if (!lastCompany) {
+        try {
+          const { data: cacheRows } = await supabase
+            .from('directory_cache')
+            .select('members')
+            .eq('country_code', job.country_code)
+          for (const row of (cacheRows || [])) {
+            const found = ((row.members as any[]) || []).find((m: any) => m.wca_id === wcaId)
+            if (found?.company_name) { lastCompany = found.company_name; break }
+          }
+        } catch (cacheErr) {
+          console.warn('Cache lookup for company name failed:', cacheErr)
+        }
+      }
+
       // Determine contact extraction result
       const hasEmail = !!(result.partner?.email)
       const hasPhone = !!(result.partner?.phone)
