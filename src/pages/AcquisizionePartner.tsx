@@ -371,10 +371,10 @@ export default function AcquisizionePartner() {
           setActiveJobId(jobId);
         }
       } else {
-        // Resume existing job
+        // Resume existing job — clear stale error messages
         await supabase
           .from("download_jobs")
-          .update({ status: "running" })
+          .update({ status: "running", error_message: null })
           .eq("id", jobId);
       }
     } catch (err) {

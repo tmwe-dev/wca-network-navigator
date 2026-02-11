@@ -109,6 +109,11 @@ Deno.serve(async (req) => {
           )
         }
         console.log(`Job ${jobId}: Auth check passed — proceeding with download`)
+        // Clear any stale error message from previous runs
+        await supabase
+          .from('download_jobs')
+          .update({ error_message: null })
+          .eq('id', jobId)
       } catch (authCheckErr) {
         console.error(`Job ${jobId}: Auth check error (proceeding anyway):`, authCheckErr)
       }
@@ -174,6 +179,7 @@ Deno.serve(async (req) => {
           last_contact_result: contactResult,
           contacts_found_count: (job.contacts_found_count || 0) + contactFound,
           contacts_missing_count: (job.contacts_missing_count || 0) + contactMissing,
+          error_message: null,
         })
         .eq('id', jobId)
 
