@@ -109,6 +109,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
             <p className={`text-sm font-medium ${th.h2}`}>
               {getCountryFlag(job.country_code)} {job.country_name}
               <span className={`ml-2 text-xs ${th.dim}`}>{job.network_name}</span>
+              {job.job_type === "acquisition" && (
+                <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-violet-500 text-white border-0">Acquisizione</Badge>
+              )}
             </p>
             <p className={`text-xs ${(statusColor as any)[job.status] || th.dim}`}>
               {statusLabel[job.status] || job.status} • {job.current_index}/{job.total_count}

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/compone
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
+import { WCA_NETWORKS } from "@/data/wcaFilters";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -45,6 +46,8 @@ export default function AcquisizionePartner() {
   const [showRetryDialog, setShowRetryDialog] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(true);
   const [liveStats, setLiveStats] = useState({
     processed: 0,
     withEmail: 0,
@@ -65,6 +68,68 @@ export default function AcquisizionePartner() {
   const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract } = useExtensionBridge();
   const extensionWarningShown = useRef(false);
+
+  // Check for active acquisition jobs on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: activeJobs } = await supabase
+          .from("download_jobs")
+          .select("*")
+          .eq("job_type", "acquisition")
+          .in("status", ["running", "paused"])
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (activeJobs && activeJobs.length > 0) {
+          const job = activeJobs[0];
+          setActiveJobId(job.id);
+          const wcaIds = (job.wca_ids as number[]) || [];
+          const processedIds = new Set((job.processed_ids as number[]) || []);
+
+          // Rebuild queue from job
+          const queueItems: QueueItem[] = wcaIds.map((id) => ({
+            wca_id: id,
+            company_name: `WCA ${id}`,
+            country_code: job.country_code,
+            city: "",
+            status: processedIds.has(id) ? ("done" as const) : ("pending" as const),
+            alreadyDownloaded: false,
+          }));
+
+          // Enrich names from partners table
+          const { data: partners } = await supabase
+            .from("partners")
+            .select("wca_id, company_name, city")
+            .in("wca_id", wcaIds);
+          if (partners) {
+            for (const p of partners) {
+              const qi = queueItems.find((q) => q.wca_id === p.wca_id);
+              if (qi) {
+                qi.company_name = p.company_name;
+                qi.city = p.city;
+              }
+            }
+          }
+
+          setQueue(queueItems);
+          setSelectedIds(new Set(wcaIds.filter((id) => !processedIds.has(id))));
+          setCompletedCount(processedIds.size);
+          setLiveStats((prev) => ({ ...prev, processed: processedIds.size }));
+          setPipelineStatus(job.status === "paused" ? "paused" : "idle");
+
+          toast({
+            title: "Acquisizione precedente trovata",
+            description: `${processedIds.size}/${wcaIds.length} partner già processati. Puoi riprendere.`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to check active acquisition jobs:", err);
+      } finally {
+        setResumeLoading(false);
+      }
+    })();
+  }, []);
 
   // Scan directory for selected countries
   const handleScan = useCallback(async () => {
@@ -95,7 +160,7 @@ export default function AcquisizionePartner() {
 
       // Scan directory cache or trigger scan
       for (const code of selectedCountries) {
-        const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
+        const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [...WCA_NETWORKS];
 
         for (const net of networkFilter) {
           // Check cache first
@@ -131,7 +196,7 @@ export default function AcquisizionePartner() {
               {
                 body: {
                   countryCode: code,
-                  networkName: net || "WCA Inter Global",
+                  networkName: net,
                 },
               }
             );
@@ -191,6 +256,50 @@ export default function AcquisizionePartner() {
     const MAX_CONSECUTIVE_EMPTY = 2;
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
+
+    // Create or update download_job in DB for persistence
+    let jobId = activeJobId;
+    try {
+      if (!jobId) {
+        const countryCode = items[0]?.country_code || selectedCountries[0] || "";
+        const countryName = items[0]?.country_code || "";
+        // Look up country name from partners or use code
+        const { data: countryPartner } = await supabase
+          .from("partners")
+          .select("country_name")
+          .eq("country_code", countryCode)
+          .limit(1)
+          .maybeSingle();
+
+        const { data: newJob, error } = await supabase
+          .from("download_jobs")
+          .insert({
+            country_code: countryCode,
+            country_name: countryPartner?.country_name || countryCode,
+            network_name: selectedNetworks.length > 0 ? selectedNetworks.join(", ") : "All Networks",
+            wca_ids: items.map((i) => i.wca_id) as any,
+            total_count: items.length,
+            delay_seconds: delaySeconds,
+            status: "running",
+            job_type: "acquisition",
+          })
+          .select("id")
+          .single();
+
+        if (!error && newJob) {
+          jobId = newJob.id;
+          setActiveJobId(jobId);
+        }
+      } else {
+        // Resume existing job
+        await supabase
+          .from("download_jobs")
+          .update({ status: "running" })
+          .eq("id", jobId);
+      }
+    } catch (err) {
+      console.error("Failed to create/update acquisition job:", err);
+    }
     for (let i = 0; i < items.length; i++) {
       if (cancelRef.current) break;
 
@@ -474,6 +583,28 @@ export default function AcquisizionePartner() {
           )
         );
 
+        // Update job progress in DB
+        if (jobId) {
+          const processedSoFar = items.slice(0, i + 1).map((x) => x.wca_id);
+          const contactResult = canvas.contacts.some(c => c.email?.trim())
+            ? (canvas.contacts.some(c => c.direct_phone?.trim() || c.mobile?.trim()) ? "email+phone" : "email_only")
+            : (canvas.contacts.some(c => c.direct_phone?.trim() || c.mobile?.trim()) ? "phone_only" : "none");
+
+          supabase
+            .from("download_jobs")
+            .update({
+              current_index: i + 1,
+              processed_ids: processedSoFar as any,
+              last_processed_wca_id: item.wca_id,
+              last_processed_company: canvas.company_name,
+              last_contact_result: contactResult,
+              contacts_found_count: liveStats.withEmail + (contactsWithEmail.length > 0 ? 1 : 0),
+              contacts_missing_count: liveStats.empty + (!hasAnyContact && canvas.contacts.length === 0 ? 1 : 0),
+            })
+            .eq("id", jobId)
+            .then(() => {});
+        }
+
         // Delay before next
         if (delaySeconds > 0 && i < items.length - 1) {
           await new Promise((r) => setTimeout(r, delaySeconds * 1000));
@@ -496,6 +627,10 @@ export default function AcquisizionePartner() {
 
     if (cancelRef.current) {
       setPipelineStatus("idle");
+      if (jobId) {
+        supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", jobId).then(() => {});
+      }
+      setActiveJobId(null);
       toast({
         title: "Acquisizione interrotta",
         description: `${processedItems} partner processati su ${items.length} selezionati`,
@@ -503,6 +638,10 @@ export default function AcquisizionePartner() {
       });
     } else {
       setPipelineStatus("done");
+      if (jobId) {
+        supabase.from("download_jobs").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", jobId).then(() => {});
+      }
+      setActiveJobId(null);
       toast({
         title: "Acquisizione completata!",
         description: `${processedItems} partner processati — Completi: ${qualityComplete}, Incompleti: ${qualityIncomplete}`,
@@ -514,7 +653,7 @@ export default function AcquisizionePartner() {
         setShowRetryDialog(true);
       }
     }
-  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract]);
+  }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
@@ -582,7 +721,11 @@ export default function AcquisizionePartner() {
                 size="sm"
                 onClick={() => {
                   pauseRef.current = !pauseRef.current;
-                  setPipelineStatus(pauseRef.current ? "paused" : "running");
+                  const newStatus = pauseRef.current ? "paused" : "running";
+                  setPipelineStatus(newStatus);
+                  if (activeJobId) {
+                    supabase.from("download_jobs").update({ status: newStatus }).eq("id", activeJobId).then(() => {});
+                  }
                 }}
               >
                 {pauseRef.current ? (
@@ -601,6 +744,10 @@ export default function AcquisizionePartner() {
                 onClick={() => {
                   cancelRef.current = true;
                   setPipelineStatus("idle");
+                  if (activeJobId) {
+                    supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", activeJobId).then(() => {});
+                    setActiveJobId(null);
+                  }
                 }}
               >
                 <Square className="w-4 h-4 mr-1" /> Stop
