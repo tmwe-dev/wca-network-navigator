@@ -174,6 +174,9 @@ export default function AcquisizionePartner() {
     setQualityComplete(0);
     setQualityIncomplete(0);
 
+    let consecutiveNoContacts = 0;
+    const MAX_CONSECUTIVE_EMPTY = 3;
+
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
     for (let i = 0; i < items.length; i++) {
       if (cancelRef.current) break;
@@ -317,19 +320,47 @@ export default function AcquisizionePartner() {
         setIsAnimatingOut(false);
         setCompletedCount((c) => c + 1);
 
-        // Track quality
-        setCanvasData((currentCanvas) => {
-          if (currentCanvas) {
-            const hasComplete = currentCanvas.contacts.some((c) => {
-              const hasEmail = !!c.email?.trim();
-              const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
-              return hasEmail && hasPhone;
-            });
-            if (hasComplete) setQualityComplete((v) => v + 1);
-            else setQualityIncomplete((v) => v + 1);
-          }
-          return currentCanvas;
+        // Track quality + consecutive empty detection
+        const hasAnyContact = canvas.contacts.length > 0 && canvas.contacts.some((c) => {
+          const hasEmail = !!c.email?.trim();
+          const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
+          return hasEmail || hasPhone;
         });
+        const hasComplete = canvas.contacts.some((c) => {
+          const hasEmail = !!c.email?.trim();
+          const hasPhone = !!(c.direct_phone?.trim() || c.mobile?.trim());
+          return hasEmail && hasPhone;
+        });
+
+        if (hasComplete) {
+          setQualityComplete((v) => v + 1);
+          consecutiveNoContacts = 0;
+        } else {
+          setQualityIncomplete((v) => v + 1);
+          if (!hasAnyContact) {
+            consecutiveNoContacts++;
+          } else {
+            consecutiveNoContacts = 0;
+          }
+        }
+
+        // Auto-pause if too many consecutive partners with no contacts
+        if (consecutiveNoContacts >= MAX_CONSECUTIVE_EMPTY) {
+          pauseRef.current = true;
+          setPipelineStatus("paused");
+          toast({
+            title: "⚠️ Qualità dati sospetta",
+            description: `${MAX_CONSECUTIVE_EMPTY} partner consecutivi senza contatti. Sessione WCA scaduta? Verifica e riprendi.`,
+            variant: "destructive",
+          });
+          // Wait for user to resume or cancel
+          while (pauseRef.current) {
+            await new Promise((r) => setTimeout(r, 500));
+            if (cancelRef.current) break;
+          }
+          if (cancelRef.current) break;
+          consecutiveNoContacts = 0; // Reset after resume
+        }
 
         // Mark done
         setQueue((prev) =>
@@ -354,8 +385,24 @@ export default function AcquisizionePartner() {
 
     setCanvasPhase("idle");
     setCanvasData(null);
-    setPipelineStatus("done");
-    toast({ title: "Acquisizione completata!", description: `${items.length} partner processati` });
+
+    // Count actually processed items
+    const processedItems = queue.filter((q) => q.status === "done").length;
+
+    if (cancelRef.current) {
+      setPipelineStatus("idle");
+      toast({
+        title: "Acquisizione interrotta",
+        description: `${processedItems} partner processati su ${items.length} selezionati`,
+        variant: "destructive",
+      });
+    } else {
+      setPipelineStatus("done");
+      toast({
+        title: "Acquisizione completata!",
+        description: `${processedItems} partner processati — Completi: ${qualityComplete}, Incompleti: ${qualityIncomplete}`,
+      });
+    }
   }, [queue, includeEnrich, includeDeepSearch, delaySeconds, triggerCheck, selectedIds]);
 
   return (
