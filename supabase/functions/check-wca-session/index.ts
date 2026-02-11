@@ -39,42 +39,9 @@ Deno.serve(async (req) => {
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
     
     const testResult = await testCookieDeep(cookie)
-    // Trust the real test result. Only fall back to ASPXAUTH if network error prevented the test.
-    let authenticated = testResult.diagnostics?.error
+    const authenticated = testResult.diagnostics?.error
       ? hasAspxAuth  // Network/WAF error: trust ASPXAUTH as fallback
       : testResult.authenticated  // Test succeeded: trust the result
-
-    // AUTO-RENEW: if expired, try wca-auto-login to get a fresh cookie
-    if (!authenticated) {
-      console.log('check-wca-session: session expired, attempting auto-login renewal...')
-      try {
-        const autoLoginUrl = `${supabaseUrl}/functions/v1/wca-auto-login`
-        const autoRes = await fetch(autoLoginUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`,
-          },
-        })
-        const autoData = await autoRes.json()
-        console.log('check-wca-session: auto-login result:', JSON.stringify(autoData))
-        if (autoData.success && autoData.authenticated) {
-          authenticated = true
-          const now = new Date().toISOString()
-          await upsertStatus(supabase, 'ok', now)
-          return respond({
-            authenticated: true,
-            status: 'ok',
-            checkedAt: now,
-            hasAspxAuth: true,
-            diagnostics: autoData.diagnostics,
-            autoRenewed: true,
-          })
-        }
-      } catch (autoErr) {
-        console.error('check-wca-session: auto-login failed:', autoErr)
-      }
-    }
 
     const status = authenticated ? 'ok' : 'expired'
     await upsertStatus(supabase, status, new Date().toISOString())
