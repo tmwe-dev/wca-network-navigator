@@ -4,6 +4,7 @@ import { RecentPartners } from "@/components/dashboard/RecentPartners";
 import { UpcomingReminders } from "@/components/dashboard/UpcomingReminders";
 import { CountryChart } from "@/components/dashboard/CountryChart";
 import { TypeChart } from "@/components/dashboard/TypeChart";
+import { ActiveJobWidget } from "@/components/dashboard/ActiveJobWidget";
 import { usePartnerStats } from "@/hooks/usePartners";
 import { usePendingReminders } from "@/hooks/useReminders";
 import { useContactCompleteness } from "@/hooks/useContactCompleteness";
@@ -22,6 +23,9 @@ const Dashboard = () => {
           Welcome to WCA Partners CRM — manage your global logistics network
         </p>
       </div>
+
+      {/* Active job monitor */}
+      <ActiveJobWidget />
 
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
