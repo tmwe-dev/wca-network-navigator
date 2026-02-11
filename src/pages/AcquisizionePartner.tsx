@@ -112,6 +112,28 @@ export default function AcquisizionePartner() {
             }
           }
 
+          // Enrich remaining "WCA XXXX" names from directory_cache
+          const stillMissing = queueItems.filter(q => q.company_name.startsWith("WCA "));
+          if (stillMissing.length > 0) {
+            const { data: cacheEntries } = await supabase
+              .from("directory_cache")
+              .select("members")
+              .eq("country_code", job.country_code);
+            if (cacheEntries) {
+              for (const entry of cacheEntries) {
+                const members = (entry.members as any[]) || [];
+                for (const m of members) {
+                  if (!m.wca_id || !m.company_name) continue;
+                  const qi = stillMissing.find(q => q.wca_id === m.wca_id);
+                  if (qi) {
+                    qi.company_name = m.company_name;
+                    if (m.city) qi.city = m.city;
+                  }
+                }
+              }
+            }
+          }
+
           setQueue(queueItems);
           setSelectedIds(new Set(wcaIds.filter((id) => !processedIds.has(id))));
           setCompletedCount(processedIds.size);
@@ -194,7 +216,7 @@ export default function AcquisizionePartner() {
               {
                 body: {
                   countryCode: code,
-                  networkName: net,
+                  network: net, // "" = all networks (param name must match edge function)
                 },
               }
             );
@@ -574,10 +596,15 @@ export default function AcquisizionePartner() {
           consecutiveNoContacts = 0; // Reset after resume
         }
 
-        // Mark done
+        // Mark done + update name from scraper result
         setQueue((prev) =>
           prev.map((q) =>
-            q.wca_id === item.wca_id ? { ...q, status: "done" as const } : q
+            q.wca_id === item.wca_id ? { 
+              ...q, 
+              status: "done" as const,
+              company_name: canvas.company_name || q.company_name,
+              city: canvas.city || q.city,
+            } : q
           )
         );
 
