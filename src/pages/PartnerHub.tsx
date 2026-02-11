@@ -307,9 +307,50 @@ export default function PartnerHub() {
     let list = filterIncomplete
       ? (partners || []).filter((p: any) => getPartnerContactQuality(p.partner_contacts) !== "complete")
       : partners || [];
-    return sortPartners(list, sortBy);
-  }, [partners, filterIncomplete, sortBy]);
 
+    // Client-side filters for joined data
+    if (filters.networks && filters.networks.length > 0) {
+      list = list.filter((p: any) => {
+        const pNetworks = (p.partner_networks || []).map((n: any) => n.network_name);
+        return filters.networks!.some((fn) => pNetworks.some((pn: string) => pn.toLowerCase().includes(fn.toLowerCase())));
+      });
+    }
+    if (filters.certifications && filters.certifications.length > 0) {
+      list = list.filter((p: any) => {
+        const pCerts = (p.partner_certifications || []).map((c: any) => c.certification);
+        return filters.certifications!.every((fc) => pCerts.includes(fc));
+      });
+    }
+    if (filters.minRating && filters.minRating > 0) {
+      list = list.filter((p: any) => (p.rating || 0) >= filters.minRating!);
+    }
+    if (filters.minYearsMember && filters.minYearsMember > 0) {
+      list = list.filter((p: any) => getYearsMember(p.member_since) >= filters.minYearsMember!);
+    }
+    if (filters.hasBranches) {
+      list = list.filter((p: any) => p.has_branches === true);
+    }
+    if (filters.expiresWithinMonths) {
+      const now = new Date();
+      if (filters.expiresWithinMonths === "active") {
+        list = list.filter((p: any) => {
+          if (!p.membership_expires) return false;
+          return new Date(p.membership_expires) >= now;
+        });
+      } else {
+        const months = filters.expiresWithinMonths as number;
+        const deadline = new Date(now);
+        deadline.setMonth(deadline.getMonth() + months);
+        list = list.filter((p: any) => {
+          if (!p.membership_expires) return false;
+          const exp = new Date(p.membership_expires);
+          return exp >= now && exp <= deadline;
+        });
+      }
+    }
+
+    return sortPartners(list, sortBy);
+  }, [partners, filterIncomplete, sortBy, filters]);
   const { data: selectedPartner, isLoading: detailLoading } = usePartner(selectedId || "");
 
   const countryOptions = useMemo(() => {
@@ -328,6 +369,12 @@ export default function PartnerHub() {
     (filters.countries?.length || 0) +
     (filters.partnerTypes?.length || 0) +
     (filters.services?.length || 0) +
+    (filters.networks?.length || 0) +
+    (filters.certifications?.length || 0) +
+    (filters.minRating ? 1 : 0) +
+    (filters.minYearsMember ? 1 : 0) +
+    (filters.hasBranches ? 1 : 0) +
+    (filters.expiresWithinMonths ? 1 : 0) +
     (filters.favorites ? 1 : 0);
 
   const toggleSelection = (id: string, e: React.MouseEvent) => {
