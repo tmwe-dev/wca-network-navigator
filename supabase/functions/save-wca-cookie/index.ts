@@ -120,7 +120,7 @@ async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean;
       if (emailMatch) contactsWithEmail++
     }
     
-    const authenticated = !hasLoginPrompt && !hasCloudflare && contactBlocks.length > 0 && contactsWithRealName > 0
+    const authenticated = !hasLoginPrompt && !hasCloudflare && contactBlocks.length > 0 && (contactsWithRealName > 0 || contactsWithEmail > 0)
     
     const diagnostics = {
       statusCode,

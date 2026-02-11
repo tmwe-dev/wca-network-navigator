@@ -116,8 +116,8 @@ async function testCookieDeep(cookie: string): Promise<{ authenticated: boolean;
       }
     }
     
-    // Session is truly authenticated ONLY if we can see private contact names
-    const authenticated = !hasLoginPrompt && contactsTotal > 0 && contactsWithRealName > 0
+    // Session is authenticated if we can see private contact data (names OR emails)
+    const authenticated = !hasLoginPrompt && contactsTotal > 0 && (contactsWithRealName > 0 || contactsWithEmail > 0)
     
     const diagnostics = {
       hasLoginPrompt,

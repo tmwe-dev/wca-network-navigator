@@ -561,25 +561,29 @@ async function directWcaLogin(username: string, password: string): Promise<{ coo
     console.log(`Direct login: form text/password inputs: ${formInputs.join(', ') || 'NONE'}`)
     
     // Find the LOGIN form specifically (the one with a password input, not the language form)
-    // Split HTML into individual forms and find the right one
-    const formBlocks = loginPageHtml.split(/<form\b/i).slice(1)
+    // Use regex to capture the full <form ...> tag + content
+    const formRegex = /<form\b([^>]*)>([\s\S]*?)<\/form>/gi
     let loginFormHtml = ''
     let loginFormAction = ''
+    const allForms: { action: string; hasPassword: boolean }[] = []
     
-    for (const block of formBlocks) {
-      const closingIdx = block.indexOf('</form>')
-      const formContent = closingIdx >= 0 ? block.substring(0, closingIdx) : block
+    let formMatch
+    while ((formMatch = formRegex.exec(loginPageHtml)) !== null) {
+      const formAttrs = formMatch[1]
+      const formBody = formMatch[2]
+      const actionMatch = formAttrs.match(/action\s*=\s*"([^"]*)"/i)
+      const action = actionMatch?.[1] || ''
+      const hasPassword = /type\s*=\s*["']password["']/i.test(formBody)
+      allForms.push({ action, hasPassword })
       
-      // This is the login form if it contains a password input
-      if (/type\s*=\s*["']password["']/i.test(formContent)) {
-        loginFormHtml = formContent
-        const actionMatch = formContent.match(/action\s*=\s*"([^"]*)"/i)
-        loginFormAction = actionMatch?.[1] || '/Account/Login'
-        break
+      if (hasPassword && !loginFormHtml) {
+        loginFormHtml = formAttrs + formBody
+        loginFormAction = action || '/Account/Login'
       }
     }
     
-    console.log(`Direct login: login form action=${loginFormAction}, hasPasswordField=${!!loginFormHtml}`)
+    console.log(`Direct login: found ${allForms.length} forms: ${JSON.stringify(allForms)}`)
+    console.log(`Direct login: selected login form action=${loginFormAction}, hasPasswordField=${!!loginFormHtml}`)
     
     if (!loginFormHtml) {
       console.log('Direct login: WARNING - no form with password field found! Falling back to full page scan.')
@@ -740,7 +744,13 @@ async function directFetchPage(url: string, cookies: string): Promise<{ html: st
   
   // Check if contacts are genuinely visible (real names, not "Members only")
   // Note: .ASPXAUTH may be present but WAF can block it server-side
-  const contactsAuthenticated = contactBlocks.length > 0 && contactsWithRealName > 0
+  // Also check for emails to avoid false negatives when names aren't visible
+  let contactsWithEmail = 0
+  for (const block of contactBlocks) {
+    const emailMatch = block.match(/profile_label">[^<]*Email[^<]*<\/div>[\s\S]*?profile_val">[\s\S]*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i)
+    if (emailMatch) contactsWithEmail++
+  }
+  const contactsAuthenticated = contactBlocks.length > 0 && (contactsWithRealName > 0 || contactsWithEmail > 0)
   
   console.log(`Direct fetch: status=${res.status}, size=${html.length}c, membersOnly=${membersOnlyCount}x, loginPrompt=${hasLoginPrompt}, contactBlocks=${contactBlocks.length}, realNames=${contactsWithRealName}, contactsAuth=${contactsAuthenticated}`)
   
