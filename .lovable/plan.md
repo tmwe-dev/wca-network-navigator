@@ -1,65 +1,66 @@
 
 
-# Stabilita' Notturna e Default Arricchimento
+# Refactoring e Pagina Documentazione
 
-## Situazione attuale
+## Obiettivo
+Pulire il progetto rimuovendo codice morto, eliminando duplicazioni e aggiungendo una pagina "Guida" che spiega il funzionamento di ogni sezione. La pagina Campaigns NON viene toccata.
 
-Il job ha processato 775 partner US, salvato 837 aziende con nomi corretti, ma il tasso di contatti e' solo 4% (31/775). I nomi delle aziende sono stati salvati correttamente nel database.
+---
 
-Il problema principale: l'estensione Chrome estrae i contatti aprendo una tab nascosta per ogni partner. Se durante la notte il browser va in risparmio energetico o Chrome limita le tab in background, l'estrazione fallisce silenziosamente e il sistema conta "empty" senza capire che il problema e' tecnico, non di sessione.
+## Fase 1 — Rimozione pagine orfane
 
-## Modifiche
+Queste pagine esistono nel codice ma non sono raggiungibili da nessun menu o link. Contengono funzionalita' gia' presenti altrove:
 
-### 1. Default Arricchimento e Deep Search a OFF
+| File | Motivo rimozione |
+|------|-----------------|
+| `src/pages/Dashboard.tsx` | Non collegato a nessuna rotta, non usato |
+| `src/pages/Agents.tsx` (627 righe) | Vecchia versione di PartnerHub, non in uso |
+| `src/pages/Export.tsx` | Duplicato della tab Import/Export in Impostazioni |
+| `src/pages/Partners.tsx` | Versione semplificata di PartnerHub, non in uso |
+| `src/pages/WCA.tsx` | Duplicato della tab WCA in Impostazioni |
+| `src/pages/PartnerDetail.tsx` | Non collegato a nessuna rotta |
 
-**File**: `src/pages/AcquisizionePartner.tsx` (righe 33-34)
+Verranno anche rimossi i componenti associati che diventano orfani (es. `src/components/dashboard/`, `src/components/agents/`), solo se non sono usati da nessun'altra pagina attiva.
 
-Cambiare i valori iniziali:
-- `includeEnrich`: `true` -> `false`
-- `includeDeepSearch`: `true` -> `false`
+## Fase 2 — Pulizia rotte e layout
 
-### 2. Robustezza estrazione: retry automatico per tab fallite
+- Rimuovere la rotta duplicata `/partners` (gia' identica a `/`)
+- Aggiungere rotta `/guida` per la nuova pagina documentazione
+- Aggiungere voce "Guida" nella sidebar (icona libro)
+- Pulire `AppLayout.tsx` rimuovendo riferimenti a pagine eliminate dal mapping `PAGE_INFO`
 
-**File**: `public/chrome-extension/background.js` - funzione `extractContactsForId`
+## Fase 3 — Nuova pagina "Guida Progetto"
 
-Problema: se la tab non carica (timeout, errore rete, Chrome throttling notturno), il risultato e' `{contacts: []}` e viene contato come "partner senza contatti". Il sistema pensa che sia un problema di sessione.
+Una pagina statica, chiara e sintetica che spiega:
 
-Soluzione: aggiungere un meccanismo di retry interno all'estensione:
-- Se la tab non produce contatti E il contenuto della pagina e' sotto 5000 caratteri (pagina non caricata), ritentare fino a 3 volte con attesa crescente (3s, 6s, 12s)
-- Aggiungere un campo `pageLoaded: true/false` nella risposta per distinguere "partner senza contatti reali" da "pagina non caricata"
-- Aumentare il timeout di caricamento tab da 15s a 30s per le connessioni lente notturne
+- **Partner Hub**: Consultazione, ricerca e filtro dei partner WCA. Dettaglio con contatti, servizi, network e rating.
+- **Acquisizione Partner**: Pipeline automatizzata che scarica i profili WCA tramite l'estensione Chrome, estrae contatti privati e salva tutto nel database. Include retry automatici e protezione anti-throttling notturno.
+- **Download Management**: Selezione paesi, scansione della directory WCA, creazione di job di download in background con monitoraggio live.
+- **Campaigns**: Invio email ai partner selezionati tramite globo 3D interattivo.
+- **Agenda**: Calendario reminder e follow-up con i partner.
+- **Impostazioni**: Configurazione WhatsApp, connessione WCA (estensione Chrome), import/export CSV/JSON, gestione blacklist.
 
-### 3. Distinguere "pagina non caricata" da "nessun contatto"
+La pagina usa un layout a card semplice, senza logica complessa.
 
-**File**: `src/pages/AcquisizionePartner.tsx` - nel loop `runExtensionLoop`
+## Fase 4 — Verifica hooks orfani
 
-Usare il nuovo campo `pageLoaded` dalla risposta dell'estensione:
-- Se `pageLoaded === false`: non contare come "empty", non aggiornare le statistiche network, loggare come errore di caricamento e ritentare dopo un delay piu' lungo
-- Se `pageLoaded === true` e contacts vuoti: contare normalmente come partner senza contatti
-- Implementare una coda di retry separata: i partner con pagina non caricata vengono rimessi in fondo alla coda automaticamente (max 2 retry)
+Controllo che gli hooks rimangano tutti utilizzati. Se qualcuno diventa orfano dopo la rimozione delle pagine, verra' eliminato:
+- `useActivities.ts` → usato solo da Agents
+- `useTeamMembers.ts` → usato solo da Agents
 
-### 4. Protezione anti-throttling browser
+---
 
-**File**: `src/pages/AcquisizionePartner.tsx` - nel loop `runExtensionLoop`
+## Cosa NON viene toccato
 
-Aggiungere un meccanismo "keep-alive" che previene il throttling del browser durante l'acquisizione notturna:
-- Usare `setInterval` con un piccolo task ogni 30 secondi (aggiornamento timestamp nel DB) per mantenere la pagina attiva
-- Aggiungere un controllo che se il tempo trascorso tra due partner supera i 2 minuti (segno di throttling), eseguire un syncCookie e riprendere normalmente
+- `src/pages/Campaigns.tsx` e tutti i componenti in `src/components/campaigns/`
+- `src/components/globe/`
+- `src/standalone-globe/`
+- `src/backup/`
+- Tutti gli hooks attivamente utilizzati dalle pagine rimanenti
+- Le edge functions
+- Il database
 
-### 5. Contatore e logging piu' granulare
+## Rischio
 
-**File**: `src/pages/AcquisizionePartner.tsx`
-
-Aggiungere alle live stats un contatore `failedLoads` separato da `empty`:
-- `empty` = partner caricati correttamente ma senza contatti
-- `failedLoads` = pagine non caricate / errori tecnici (che verranno ritentati)
-
-Aggiornare il job nel DB con queste informazioni per diagnostica post-notte.
-
-## Riepilogo file modificati
-
-| File | Modifica |
-|------|----------|
-| `src/pages/AcquisizionePartner.tsx` | Default enrich/deepSearch OFF, retry per pagine non caricate, keep-alive anti-throttling, stats granulari |
-| `public/chrome-extension/background.js` | Retry interno per tab fallite, campo `pageLoaded`, timeout aumentato a 30s |
+Basso. Si tratta di rimozione di file non collegati e aggiunta di una pagina statica. Nessuna modifica alla logica di business esistente.
 
