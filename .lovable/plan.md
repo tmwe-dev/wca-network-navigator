@@ -1,42 +1,74 @@
 
+## Piano: Restyling Icone, Fix Bandiere, Fix Bulgaria e Deep Search Avanzato
 
-## Miglioramenti alla Barra Performance Network e Logica di Auto-Esclusione
+### 1. Fix bandiera triplicata
+Il codice alla riga 562-564 di `PartnerHub.tsx` ripete 3 volte la stessa bandiera. Correggo mostrando **una sola bandiera** del paese accanto alla citta'.
 
-### Problema attuale
-La barra dei network mostra le icone ordinate per tasso di successo, ma:
-- I network che falliscono non sono chiaramente separati visivamente (non c'e' una sezione "rossi a destra")
-- La soglia di auto-esclusione e' impostata a 5 partner (troppo alta, l'utente vuole 2-3)
-- Non c'e' un alert specifico quando network che normalmente funzionano iniziano a fallire (possibile bug/sessione)
-- Manca la conferma prima dell'auto-esclusione
+### 2. Fix Bulgaria nella vista Paesi
+La `CountryOverview` riceve i partner gia' filtrati. Se il toggle "Incompleti" e' attivo o ci sono filtri, la Bulgaria potrebbe non comparire. Passo alla `CountryOverview` l'elenco completo dei partner (non filtrato) oppure aggiungo una prop dedicata per garantire che tutti i paesi siano sempre visibili.
 
-### Modifiche previste
+### 3. Icone colorate per i servizi
+Sostituisco le icone monocromatiche con colori specifici per ogni servizio:
 
-**1. NetworkPerformanceBar - Separazione visiva buoni/cattivi**
-- Dividere la barra in due gruppi: a sinistra i network con contatti (bordo verde/ambra), a destra quelli senza (bordo rosso)
-- Aggiungere un separatore verticale tra i due gruppi
-- I network esclusi restano a destra con overlay "Ban"
-- Aggiungere contatore testuale: es. "6 attivi | 2 senza dati"
+| Servizio | Colore |
+|----------|--------|
+| Air Freight | Azzurro cielo (#38bdf8) |
+| Ocean FCL/LCL | Blu oceano (#3b82f6) |
+| Road Freight | Ambra (#f59e0b) |
+| Rail Freight | Grigio acciaio (#64748b) |
+| Project Cargo | Viola (#8b5cf6) |
+| Dangerous Goods | Rosso (#ef4444) |
+| Perishables | Ciano (#06b6d4) |
+| Pharma | Verde (#22c55e) |
+| E-commerce | Arancione (#f97316) |
+| Relocations | Rosa (#ec4899) |
+| Customs | Indaco (#6366f1) |
+| Warehousing | Marrone (#a16207) |
+| NVOCC | Teal (#14b8a6) |
 
-**2. Soglia auto-esclusione ridotta a 3**
-- Modificare `AUTO_EXCLUDE_THRESHOLD` da 5 a 3 in `AcquisizionePartner.tsx`
-- Prima di escludere, mostrare un toast con pulsante "Annulla" (conferma implicita: se non annulli entro 5s, viene escluso)
+Aggiorno sia la lista card che il pannello dettaglio.
 
-**3. Alert per network normalmente funzionanti che smettono di funzionare**
-- Tracciare un "baseline" per ogni network: se un network ha avuto almeno 2 successi e poi produce 3 fallimenti consecutivi, mostrare un alert arancione nella live stats bar
-- Questo indica un possibile problema di sessione o bug, distinto dal caso di network che non hanno mai dato contatti
+### 4. Deep Search potenziato
+Espando la funzione `deep-search-partner` per cercare:
 
-**4. Verifica approccio download-then-process**
-- Confermato: il codice attuale gia' scarica l'intera scheda tramite estensione Chrome (`extractContactsForId` apre il tab, aspetta il caricamento, poi estrae i dati dalla pagina). L'inserimento in DB avviene dopo l'estrazione. L'approccio e' corretto.
+**A. Profili social aggiuntivi per ogni contatto:**
+- LinkedIn personale (gia' presente)
+- LinkedIn aziendale (gia' presente)
+- Facebook personale
+- Instagram personale
+
+**B. Ricerca informazioni personali:**
+- 2-3 ricerche web generiche per ogni responsabile (nome + azienda + citta')
+- L'AI analizza i risultati e genera un mini-profilo con:
+  - Background professionale
+  - Interessi/hobby rilevabili
+  - Lingua parlata
+  - Altre aziende collegate
+
+**C. Profilo aziendale ampliato:**
+- Ricerca informazioni aggiuntive sull'azienda (premi, certificazioni, notizie recenti)
+
+I risultati vengono salvati in:
+- `partner_social_links` (per i nuovi profili social)
+- `partners.enrichment_data` (per le info personali e aziendali aggiuntive)
 
 ### Dettagli tecnici
 
-**File: `src/components/acquisition/NetworkPerformanceBar.tsx`**
-- Separare `entries` in due array: `activeEntries` (rate > 0 o troppo pochi dati) e `failedEntries` (rate === 0 con almeno 3 tentativi)
-- Mostrare `activeEntries` a sinistra, separatore, `failedEntries` a destra con sfondo rosso
-- Aggiungere label riassuntive
+**File: `src/pages/PartnerHub.tsx`**
+- Rimuovere le righe 562-564 (3 bandiere duplicate), sostituire con una sola bandiera
+- Aggiornare i colori delle icone servizi da monocromatici a specifici per servizio
+- Passare `partners` (non `filteredPartners`) alla CountryOverview, oppure gestire separatamente
 
-**File: `src/pages/AcquisizionePartner.tsx`**
-- Cambiare `AUTO_EXCLUDE_THRESHOLD` da 5 a 3
-- Aggiungere logica di "regression detection": nuovo stato `networkBaseline` che traccia i network che hanno avuto successo e poi iniziano a fallire
-- Quando rilevata regressione, mostrare banner di avviso nella live stats bar con icona AlertTriangle arancione
+**File: `src/lib/countries.ts`**
+- Aggiornare `getServiceIconColor()` con colori specifici per ogni categoria invece del generico sky/slate
 
+**File: `supabase/functions/deep-search-partner/index.ts`**
+- Aggiungere ricerca Facebook e Instagram per ogni contatto
+- Aggiungere ricerca web generica (2-3 query) per costruire il profilo personale
+- Salvare il mini-profilo in `enrichment_data` o in un nuovo campo JSON
+- Gestire i rate limit con delay progressivi
+
+**File: `src/components/partners/SocialLinks.tsx`**
+- Aggiungere icone SVG per Instagram e Facebook (oltre a LinkedIn gia' presente)
+
+Nessun nuovo strumento necessario: Firecrawl (ricerca web) e l'AI gateway (analisi risultati) sono sufficienti per tutte le operazioni.
