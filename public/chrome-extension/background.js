@@ -141,30 +141,74 @@ function waitForTabLoad(tabId, ms) {
   });
 }
 
-// ── Extract contacts for a single WCA ID ──
-async function extractContactsForId(wcaId) {
-  var tab = await chrome.tabs.create({
-    url: "https://www.wcaworld.com/directory/members/" + wcaId,
-    active: false,
-  });
-
+// ── Check if page content is substantial (not a blank/error page) ──
+function checkPageLoaded() {
   try {
-    await waitForTabLoad(tab.id, 15000);
-
-    var results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractContactsFromPage,
-    });
-
-    var pageData = results[0] && results[0].result;
-    if (pageData) pageData.wcaId = wcaId;
-
-    return pageData || { wcaId: wcaId, contacts: [], error: "No data" };
-  } catch (err) {
-    return { wcaId: wcaId, contacts: [], error: err.message };
-  } finally {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    var len = (document.body && document.body.innerHTML) ? document.body.innerHTML.length : 0;
+    return { length: len, loaded: len > 5000 };
+  } catch (e) {
+    return { length: 0, loaded: false };
   }
+}
+
+// ── Extract contacts for a single WCA ID (with retry for failed loads) ──
+async function extractContactsForId(wcaId) {
+  var MAX_RETRIES = 3;
+  var RETRY_DELAYS = [3000, 6000, 12000];
+
+  for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    var tab = null;
+    try {
+      tab = await chrome.tabs.create({
+        url: "https://www.wcaworld.com/directory/members/" + wcaId,
+        active: false,
+      });
+
+      await waitForTabLoad(tab.id, 30000);
+
+      // Check if page actually loaded (not blank/error)
+      var loadCheck = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: checkPageLoaded,
+      });
+      var pageLoadResult = loadCheck[0] && loadCheck[0].result;
+      var pageLoaded = pageLoadResult && pageLoadResult.loaded;
+
+      if (!pageLoaded && attempt < MAX_RETRIES) {
+        // Page didn't load — retry after delay
+        console.log("[WCA Extension] Page not loaded for " + wcaId + " (attempt " + (attempt + 1) + "/" + (MAX_RETRIES + 1) + ", length=" + (pageLoadResult ? pageLoadResult.length : 0) + "), retrying...");
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        await new Promise(function(r) { setTimeout(r, RETRY_DELAYS[attempt]); });
+        continue;
+      }
+
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: extractContactsFromPage,
+      });
+
+      var pageData = results[0] && results[0].result;
+      if (pageData) {
+        pageData.wcaId = wcaId;
+        pageData.pageLoaded = !!pageLoaded;
+      }
+
+      return pageData || { wcaId: wcaId, contacts: [], pageLoaded: !!pageLoaded, error: "No data" };
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        console.log("[WCA Extension] Error for " + wcaId + " (attempt " + (attempt + 1) + "), retrying: " + err.message);
+        await new Promise(function(r) { setTimeout(r, RETRY_DELAYS[attempt]); });
+        continue;
+      }
+      return { wcaId: wcaId, contacts: [], pageLoaded: false, error: err.message };
+    } finally {
+      if (tab) {
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+      }
+    }
+  }
+
+  return { wcaId: wcaId, contacts: [], pageLoaded: false, error: "Max retries exceeded" };
 }
 
 // ── Verify WCA session by opening a known profile ──
@@ -276,6 +320,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           wcaId: wcaId,
           contacts: result.contacts || [],
           companyName: result.companyName,
+          pageLoaded: result.pageLoaded !== undefined ? result.pageLoaded : true,
         });
       } catch (err) {
         sendResponse({ success: false, error: err.message, wcaId: wcaId });

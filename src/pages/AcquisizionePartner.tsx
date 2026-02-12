@@ -30,8 +30,8 @@ export default function AcquisizionePartner() {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [delaySeconds, setDelaySeconds] = useState(15);
-  const [includeEnrich, setIncludeEnrich] = useState(true);
-  const [includeDeepSearch, setIncludeDeepSearch] = useState(true);
+  const [includeEnrich, setIncludeEnrich] = useState(false);
+  const [includeDeepSearch, setIncludeDeepSearch] = useState(false);
 
   // Pipeline state
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
@@ -56,6 +56,7 @@ export default function AcquisizionePartner() {
     withPhone: 0,
     complete: 0,
     empty: 0,
+    failedLoads: 0,
   });
 
   // Network performance tracking
@@ -81,9 +82,18 @@ export default function AcquisizionePartner() {
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0) => {
     let localStats = { ...liveStats };
     let consecutiveEmpty = 0;
-    const AUTO_EXCLUDE_THRESHOLD = 5; // Auto-exclude network after 5+ partners with 0% success
-    const SESSION_RECOVERY_THRESHOLD = 3; // Attempt session recovery after 3 consecutive empty from good networks
+    const AUTO_EXCLUDE_THRESHOLD = 5;
+    const SESSION_RECOVERY_THRESHOLD = 3;
     let localNetworkStats: Record<string, { success: number; empty: number }> = { ...networkStats };
+    const retryQueue: { item: QueueItem; retries: number }[] = [];
+    let lastProcessedTime = Date.now();
+
+    // Keep-alive: prevent browser throttling during overnight runs
+    const keepAliveInterval = setInterval(async () => {
+      try {
+        await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
+      } catch { /* non-blocking */ }
+    }, 30000);
 
     // Read existing progress from DB so we can accumulate correctly
     const { data: currentJobData } = await supabase
@@ -208,6 +218,30 @@ export default function AcquisizionePartner() {
       if (extensionAvailable || await checkExtension()) {
         try {
           const extResult = await extensionExtract(item.wca_id);
+
+          // ── Check if page actually loaded (anti-throttling) ──
+          if (extResult.pageLoaded === false) {
+            console.warn(`[Pipeline] Page not loaded for ${item.wca_id}, queuing for retry`);
+            localStats = { ...localStats, failedLoads: localStats.failedLoads + 1 };
+            setLiveStats(localStats);
+            if (retryQueue.filter(r => r.item.wca_id === item.wca_id).length === 0) {
+              const existingRetries = retryQueue.find(r => r.item.wca_id === item.wca_id);
+              if (!existingRetries || existingRetries.retries < 2) {
+                retryQueue.push({ item, retries: (existingRetries?.retries || 0) + 1 });
+              }
+            }
+            setQueue((prev) =>
+              prev.map((q) =>
+                q.wca_id === item.wca_id ? { ...q, status: "pending" as const } : q
+              )
+            );
+            // Don't count as processed, skip to next
+            if (i < items.length - 1 && !cancelRef.current) {
+              await new Promise((r) => setTimeout(r, 5000)); // Longer delay for failed loads
+            }
+            continue;
+          }
+
           if (extResult.success && extResult.contacts && extResult.contacts.length > 0) {
             canvas.contacts = extResult.contacts.map((c) => ({
               name: c.name || c.title || "Sconosciuto",
@@ -479,6 +513,7 @@ export default function AcquisizionePartner() {
         withPhone: localStats.withPhone + (contactsWithPhone.length > 0 ? 1 : 0),
         complete: localStats.complete + (hasComplete ? 1 : 0),
         empty: localStats.empty + (!hasAnyContact ? 1 : 0),
+        failedLoads: localStats.failedLoads,
       };
       setLiveStats(localStats);
 
@@ -511,11 +546,54 @@ export default function AcquisizionePartner() {
         )
       );
 
+      // ── Anti-throttling: detect long gaps between partners ──
+      const now = Date.now();
+      const elapsed = now - lastProcessedTime;
+      lastProcessedTime = now;
+      if (elapsed > 120000) { // > 2 minutes = likely throttled
+        console.warn(`[AntiThrottle] ${Math.round(elapsed / 1000)}s gap detected, syncing cookie...`);
+        try {
+          await syncCookie();
+          await new Promise((r) => setTimeout(r, 2000));
+        } catch { /* non-blocking */ }
+      }
+
       // Wait delay before next
       if (i < items.length - 1 && !cancelRef.current) {
         await new Promise((r) => setTimeout(r, delaySeconds * 1000));
       }
     }
+
+    // ── Process retry queue (failed loads) ──
+    if (retryQueue.length > 0 && !cancelRef.current) {
+      console.log(`[RetryQueue] Processing ${retryQueue.length} failed loads...`);
+      for (const retryItem of retryQueue) {
+        if (cancelRef.current) break;
+        while (pauseRef.current) {
+          await new Promise((r) => setTimeout(r, 500));
+          if (cancelRef.current) break;
+        }
+        if (cancelRef.current) break;
+
+        // Re-run extraction for this item
+        setActiveIndex(items.findIndex(q => q.wca_id === retryItem.item.wca_id));
+        setQueue((prev) => prev.map((q) => q.wca_id === retryItem.item.wca_id ? { ...q, status: "active" as const } : q));
+        setCanvasPhase("extracting");
+
+        try {
+          const extResult = await extensionExtract(retryItem.item.wca_id);
+          if (extResult.pageLoaded !== false && extResult.success && extResult.contacts && extResult.contacts.length > 0) {
+            localStats = { ...localStats, failedLoads: Math.max(0, localStats.failedLoads - 1) };
+            setLiveStats(localStats);
+          }
+        } catch { /* non-blocking */ }
+
+        setQueue((prev) => prev.map((q) => q.wca_id === retryItem.item.wca_id ? { ...q, status: "done" as const } : q));
+        await new Promise((r) => setTimeout(r, delaySeconds * 1000));
+      }
+    }
+
+    clearInterval(keepAliveInterval);
 
     return localStats;
   }, [includeEnrich, includeDeepSearch, delaySeconds, extensionAvailable, checkExtension, extensionExtract, verifySession, syncCookie, liveStats]);
@@ -635,6 +713,7 @@ export default function AcquisizionePartner() {
             withPhone: 0,
             complete: job.contacts_found_count || 0,
             empty: job.contacts_missing_count || 0,
+            failedLoads: 0,
           });
 
           if (job.status === "running") {
@@ -867,7 +946,7 @@ export default function AcquisizionePartner() {
     setNetworkStats({});
     setExcludedNetworks(new Set());
     excludedNetworksRef.current = new Set();
-    setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0 });
+    setLiveStats({ processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0, failedLoads: 0 });
 
     const items = queue.filter((q) => selectedIds.has(q.wca_id));
 
@@ -1142,6 +1221,12 @@ export default function AcquisizionePartner() {
             <div className="flex items-center gap-1 text-destructive">
               <XCircle className="w-3 h-3" />
               <span>{liveStats.empty} vuoti</span>
+            </div>
+          )}
+          {liveStats.failedLoads > 0 && (
+            <div className="flex items-center gap-1 text-amber-500">
+              <AlertTriangle className="w-3 h-3" />
+              <span>{liveStats.failedLoads} caricamenti falliti</span>
             </div>
           )}
         </div>
