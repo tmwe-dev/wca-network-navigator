@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CountryOverview } from "@/components/partners/CountryOverview";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -290,6 +291,7 @@ export default function PartnerHub() {
   const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [filters, setFilters] = useState<PartnerFilters>({});
   const [sortBy, setSortBy] = useState<SortOption>("name_asc");
+  const [viewMode, setViewMode] = useState<"list" | "country">("list");
 
   const mergedFilters: PartnerFilters = {
     ...filters,
@@ -393,60 +395,96 @@ export default function PartnerHub() {
       {/* ═══ LEFT PANEL: Partner List ═══ */}
       <div className="w-full md:w-[400px] flex-shrink-0 border-r flex flex-col bg-card">
         <div className="p-4 border-b space-y-3 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 backdrop-blur-sm">
-          <h1 className="text-lg font-semibold flex items-center gap-2">
-            <Globe className="w-5 h-5 text-primary" />
-            Partner
-          </h1>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca partner..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 rounded-xl"
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" />
+              Partner
+            </h1>
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "px-2 py-1 text-xs rounded-md transition-all",
+                  viewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Users className="w-3.5 h-3.5 inline mr-1" />
+                Lista
+              </button>
+              <button
+                onClick={() => setViewMode("country")}
+                className={cn(
+                  "px-2 py-1 text-xs rounded-md transition-all",
+                  viewMode === "country" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <MapPin className="w-3.5 h-3.5 inline mr-1" />
+                Paesi
+              </button>
+            </div>
+          </div>
+          {viewMode === "list" && (
+            <>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca partner..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 rounded-xl"
+                />
+              </div>
+              <PartnerFiltersSheet
+                filters={filters}
+                setFilters={setFilters}
+                countries={countryOptions}
+                activeFilterCount={activeFilterCount}
               />
             </div>
-            <PartnerFiltersSheet
-              filters={filters}
-              setFilters={setFilters}
-              countries={countryOptions}
-              activeFilterCount={activeFilterCount}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="h-7 text-xs w-[160px] rounded-lg">
-                <SelectValue placeholder="Ordina..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name_asc">Nome A-Z</SelectItem>
-                <SelectItem value="name_desc">Nome Z-A</SelectItem>
-                <SelectItem value="rating_desc">Rating ↓</SelectItem>
-                <SelectItem value="years_desc">Anni WCA ↓</SelectItem>
-                <SelectItem value="country_asc">Paese A-Z</SelectItem>
-                <SelectItem value="branches_desc">Filiali ↓</SelectItem>
-                <SelectItem value="contacts_desc">Contatti completi</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground shrink-0">
-              {isLoading ? "..." : `${filteredPartners.length} partner`}
-            </p>
-            <button
-              onClick={() => setFilterIncomplete(!filterIncomplete)}
-              className={cn(
-                "flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all shrink-0",
-                filterIncomplete
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "bg-muted border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              <Filter className="w-3 h-3" />
-              Incompleti
-            </button>
-          </div>
+            <div className="flex items-center justify-between gap-2">
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="h-7 text-xs w-[160px] rounded-lg">
+                  <SelectValue placeholder="Ordina..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name_asc">Nome A-Z</SelectItem>
+                  <SelectItem value="name_desc">Nome Z-A</SelectItem>
+                  <SelectItem value="rating_desc">Rating ↓</SelectItem>
+                  <SelectItem value="years_desc">Anni WCA ↓</SelectItem>
+                  <SelectItem value="country_asc">Paese A-Z</SelectItem>
+                  <SelectItem value="branches_desc">Filiali ↓</SelectItem>
+                  <SelectItem value="contacts_desc">Contatti completi</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground shrink-0">
+                {isLoading ? "..." : `${filteredPartners.length} partner`}
+              </p>
+              <button
+                onClick={() => setFilterIncomplete(!filterIncomplete)}
+                className={cn(
+                  "flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all shrink-0",
+                  filterIncomplete
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-muted border-border text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <Filter className="w-3 h-3" />
+                Incompleti
+              </button>
+            </div>
+            </>
+          )}
         </div>
 
+        {viewMode === "country" ? (
+          <CountryOverview
+            partners={filteredPartners}
+            isLoading={isLoading}
+            onSelectPartner={setSelectedId}
+            selectedId={selectedId}
+          />
+        ) : (
         <ScrollArea className="flex-1">
           <div className="divide-y">
             {isLoading
@@ -498,88 +536,76 @@ export default function PartnerHub() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="font-medium text-sm truncate">{partner.company_name}</span>
-                              {blacklistedIds?.has(partner.id) && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Badge variant="destructive" className="text-[9px] px-1 py-0 gap-0.5 shrink-0">
-                                      <ShieldAlert className="w-2.5 h-2.5" /> BL
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Questa azienda è nella Blacklist WCA</TooltipContent>
-                                </Tooltip>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm truncate text-foreground">{partner.city}</p>
+                              <p className="text-xs text-muted-foreground truncate">{partner.company_name}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-0.5 shrink-0 text-right">
+                              {partner.member_since && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  Est. {new Date(partner.member_since).getFullYear()}
+                                </span>
+                              )}
+                              {years > 0 && <TrophyRow years={years} />}
+                              {partner.membership_expires && (
+                                <span className={cn(
+                                  "text-[10px]",
+                                  new Date(partner.membership_expires) < new Date() ? "text-destructive" : "text-muted-foreground"
+                                )}>
+                                  Exp {format(new Date(partner.membership_expires), "MM/yy")}
+                                </span>
                               )}
                             </div>
-                            {partner.is_favorite && (
-                              <Tooltip>
-                                <TooltipTrigger><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" /></TooltipTrigger>
-                                <TooltipContent>Preferito</TooltipContent>
-                              </Tooltip>
-                            )}
                           </div>
-                          <p className="text-sm mt-0.5">
-                            <span className="font-semibold">{partner.city}</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Tooltip>
-                              <TooltipTrigger><span className="text-lg leading-none">{getCountryFlag(partner.country_code)}</span></TooltipTrigger>
-                              <TooltipContent>{partner.country_name}</TooltipContent>
-                            </Tooltip>
-                            {partner.country_name}
-                          </p>
-                          {/* Stars + single trophy */}
                           <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
+                            <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
+                            <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                            {years > 0 && (
-                              <Tooltip>
-                                <TooltipTrigger><div><TrophyRow years={years} /></div></TooltipTrigger>
-                                <TooltipContent>{years} anni membro WCA</TooltipContent>
-                              </Tooltip>
-                            )}
                           </div>
-                          {/* Contacts inline with status icons */}
-                          {partner.partner_contacts?.length > 0 && (
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              {partner.partner_contacts.slice(0, 4).map((c: any, idx: number) => (
-                                <Tooltip key={c.id || idx}>
-                                  <TooltipTrigger>
-                                    <div className="flex items-center gap-0.5">
-                                      <User className="w-3.5 h-3.5 text-muted-foreground fill-muted-foreground" />
-                                      <Mail className={cn("w-3 h-3", c.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
-                                      <Phone className={cn("w-3 h-3", (c.direct_phone || c.mobile) ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="font-medium">{c.name || "Contatto"}</p>
-                                    {c.title && <p className="text-[10px] text-muted-foreground">{c.title}</p>}
-                                    <p className="text-[10px]">{c.email ? `✓ Email` : `✗ Email mancante`}</p>
-                                    <p className="text-[10px]">{(c.direct_phone || c.mobile) ? `✓ Telefono` : `✗ Telefono mancante`}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ))}
-                              {partner.partner_contacts.length > 4 && (
-                                <span className="text-[9px] text-muted-foreground">+{partner.partner_contacts.length - 4}</span>
-                              )}
-                            </div>
-                          )}
-                          {/* Social links inline */}
-                          <CardSocialIcons partnerId={partner.id} />
-                          {/* Transport services row */}
+                          {/* Inline contacts status */}
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                            {(() => {
+                              const contacts = partner.partner_contacts || [];
+                              const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+                              if (!primaryContact) return <span className="italic text-muted-foreground/40">Nessun contatto</span>;
+                              return (
+                                <>
+                                  <span className="truncate max-w-[120px]">{primaryContact.name}</span>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Mail className={cn("w-3.5 h-3.5", primaryContact.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>{primaryContact.email || "Email mancante"}</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Phone className={cn("w-3.5 h-3.5", (primaryContact.direct_phone || primaryContact.mobile) ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>{primaryContact.direct_phone || primaryContact.mobile || "Telefono mancante"}</TooltipContent>
+                                  </Tooltip>
+                                  {contacts.length > 1 && (
+                                    <span className="text-[10px] text-muted-foreground">+{contacts.length - 1}</span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          {/* Service icons */}
                           {(() => {
                             const transport = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
                             const specialty = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
                             return (
                               <>
                                 {transport.length > 0 && (
-                                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                                     {transport.map((s: any, i: number) => {
                                       const Icon = getServiceIcon(s.service_category);
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className={`w-5 h-5 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
+                                            <Icon className="w-4 h-4 text-sky-500 fill-sky-500" />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
@@ -588,13 +614,13 @@ export default function PartnerHub() {
                                   </div>
                                 )}
                                 {specialty.length > 0 && (
-                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  <div className="flex items-center gap-1 mt-1 flex-wrap">
                                     {specialty.map((s: any, i: number) => {
                                       const Icon = getServiceIcon(s.service_category);
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className={`w-4 h-4 ${getServiceIconColor(s.service_category)}`} fill="currentColor" />
+                                            <Icon className="w-4 h-4 text-slate-500 fill-slate-500" />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
@@ -621,6 +647,8 @@ export default function PartnerHub() {
                               </>
                             );
                           })()}
+                          {/* Social */}
+                          <CardSocialIcons partnerId={partner.id} />
                           {/* Branch country flags */}
                           {branchCountries.length > 0 && (
                             <div className="flex items-center gap-0.5 mt-1.5 flex-wrap">
@@ -643,6 +671,7 @@ export default function PartnerHub() {
                 })}
           </div>
         </ScrollArea>
+        )}
       </div>
 
       {/* Bulk actions */}
