@@ -88,16 +88,7 @@ function ReportAziendeSettings({ settings, updateSetting }: { settings: any; upd
             </p>
           </div>
           <Button className="w-full" size="lg" onClick={() => {
-            const files = ['manifest.json', 'popup.html', 'popup.js', 'background.js', 'content.js', 'icon.png'];
-            files.forEach((file, i) => {
-              setTimeout(() => {
-                const link = document.createElement('a');
-                link.href = `/ra-extension/${file}`;
-                link.download = file;
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
-              }, i * 500);
-            });
-            toast.success("Download avviato! Salva i file nella stessa cartella.");
+            window.open("/download-ra-extension.html", "_blank");
           }}>
             <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
           </Button>
