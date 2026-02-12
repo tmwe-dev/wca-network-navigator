@@ -7,10 +7,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import PartnerHub from "./pages/PartnerHub";
 import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
-
 import DownloadManagement from "./pages/DownloadManagement";
 import AcquisizionePartner from "./pages/AcquisizionePartner";
 import Settings from "./pages/Settings";
+import Guida from "./pages/Guida";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,12 +24,12 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<PartnerHub />} />
-            <Route path="/partners" element={<PartnerHub />} />
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/acquisizione" element={<AcquisizionePartner />} />
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/guida" element={<Guida />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

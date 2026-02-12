@@ -13,6 +13,7 @@ import {
   Wifi,
   WifiOff,
   Database,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
+  { title: "Guida", url: "/guida", icon: BookOpen },
 ];
 
 interface AppSidebarProps {

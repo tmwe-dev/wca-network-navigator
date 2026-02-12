@@ -90,12 +90,12 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { EnrichmentCard } from "@/components/agents/EnrichmentCard";
-import { SocialLinks } from "@/components/agents/SocialLinks";
+import { EnrichmentCard } from "@/components/partners/EnrichmentCard";
+import { SocialLinks } from "@/components/partners/SocialLinks";
 import { useSocialLinks } from "@/hooks/useSocialLinks";
-import { BulkActionBar } from "@/components/agents/BulkActionBar";
-import { AssignActivityDialog } from "@/components/agents/AssignActivityDialog";
-import { ActivityList } from "@/components/agents/ActivityList";
+import { BulkActionBar } from "@/components/partners/BulkActionBar";
+import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
+import { ActivityList } from "@/components/partners/ActivityList";
 import { PartnerFilters } from "@/hooks/usePartners";
 
 const PartnerMiniGlobe = lazy(() =>
