@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ReportAziende Cookie Sync",
+  "version": "1.0",
+  "description": "Login automatico + sincronizzazione cookie per ReportAziende.it",
+  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.reportaziende.it/*",
+    "https://reportaziende.it/*",
+    "https://www.reportaziende.it/*",
+    "https://ecommerce2.reportaziende.it/*",
+    "https://zrbditqddhjkutzjycgi.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.lovable.app/*",
+        "https://*.lovableproject.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

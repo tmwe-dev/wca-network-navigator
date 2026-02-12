@@ -14,6 +14,7 @@ import {
   WifiOff,
   Database,
   BookOpen,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const navItems = [
   { title: "Acquisizione", url: "/acquisizione", icon: Download },
   { title: "Download", url: "/download-management", icon: Database },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
+  { title: "Prospect", url: "/prospects", icon: Building2 },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
   { title: "Guida", url: "/guida", icon: BookOpen },

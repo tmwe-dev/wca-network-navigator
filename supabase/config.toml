@@ -32,3 +32,12 @@ verify_jwt = false
 
 [functions.get-wca-credentials]
 verify_jwt = false
+
+[functions.save-ra-cookie]
+verify_jwt = false
+
+[functions.get-ra-credentials]
+verify_jwt = false
+
+[functions.save-ra-prospects]
+verify_jwt = false
