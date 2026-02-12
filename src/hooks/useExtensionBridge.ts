@@ -16,6 +16,7 @@ type ExtensionResponse = {
   authenticated?: boolean;
   reason?: string;
   cookieLength?: number;
+  pageLoaded?: boolean;
 };
 
 /**
