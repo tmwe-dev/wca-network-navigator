@@ -11,6 +11,7 @@ import DownloadManagement from "./pages/DownloadManagement";
 import AcquisizionePartner from "./pages/AcquisizionePartner";
 import Settings from "./pages/Settings";
 import Guida from "./pages/Guida";
+import Prospects from "./pages/Prospects";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/prospects" element={<Prospects />} />
             <Route path="/guida" element={<Guida />} />
           </Route>
           <Route path="*" element={<NotFound />} />

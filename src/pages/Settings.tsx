@@ -22,6 +22,94 @@ import { WCAScraper } from "@/components/partners/WCAScraper";
 import BlacklistManager from "@/components/settings/BlacklistManager";
 
 /* ── Export field config ── */
+
+function ReportAziendeSettings({ settings, updateSetting }: { settings: any; updateSetting: any }) {
+  const [raUser, setRaUser] = useState(settings?.["ra_username"] || "");
+  const [raPass, setRaPass] = useState(settings?.["ra_password"] || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setRaUser(settings["ra_username"] || "");
+      setRaPass(settings["ra_password"] || "");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSetting.mutateAsync({ key: "ra_username", value: raUser.trim() });
+      await updateSetting.mutateAsync({ key: "ra_password", value: raPass.trim() });
+      toast.success("Credenziali Report Aziende salvate!");
+    } catch { toast.error("Errore nel salvataggio"); }
+    finally { setSaving(false); }
+  };
+
+  const hasCredentials = !!(settings?.["ra_username"] && settings?.["ra_password"]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold">Report Aziende</h2>
+        </div>
+        <Badge variant={hasCredentials ? "default" : "secondary"} className={hasCredentials ? "bg-primary text-primary-foreground" : ""}>
+          {hasCredentials ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+        </Badge>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Credenziali di accesso</CardTitle>
+          <CardDescription>Username e password per reportaziende.it</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Username / Email</Label>
+            <Input value={raUser} onChange={(e) => setRaUser(e.target.value)} placeholder="email@example.com" />
+          </div>
+          <div className="space-y-2">
+            <Label>Password</Label>
+            <Input type="password" value={raPass} onChange={(e) => setRaPass(e.target.value)} placeholder="••••••••" />
+          </div>
+          <Button onClick={handleSave} disabled={saving || !raUser.trim() || !raPass.trim()}>
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Salva Credenziali
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Scarica l'estensione Chrome per ReportAziende, installala e clicca <strong>"🚀 Connetti"</strong>.
+            </p>
+          </div>
+          <Button className="w-full" size="lg" onClick={() => {
+            const files = ['manifest.json', 'popup.html', 'popup.js', 'background.js', 'content.js'];
+            files.forEach((file, i) => {
+              setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = `/ra-extension/${file}`;
+                link.download = file;
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+              }, i * 500);
+            });
+            toast.success("Download avviato! Salva i file nella stessa cartella.");
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
+          </Button>
+          <p className="text-[11px] text-muted-foreground text-center">
+            Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 const EXPORT_FIELDS = [
   { id: "company_name", label: "Company Name" },
   { id: "wca_id", label: "WCA ID" },
@@ -135,6 +223,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="blacklist" className="flex items-center gap-2">
             <Shield className="w-4 h-4" /> Blacklist
+          </TabsTrigger>
+          <TabsTrigger value="reportaziende" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Report Aziende
           </TabsTrigger>
         </TabsList>
 
@@ -350,6 +441,11 @@ export default function Settings() {
         {/* ════════════════ BLACKLIST ════════════════ */}
         <TabsContent value="blacklist">
           <BlacklistManager />
+        </TabsContent>
+
+        {/* ════════════════ REPORT AZIENDE ════════════════ */}
+        <TabsContent value="reportaziende">
+          <ReportAziendeSettings settings={settings} updateSetting={updateSetting} />
         </TabsContent>
       </Tabs>
     </div>

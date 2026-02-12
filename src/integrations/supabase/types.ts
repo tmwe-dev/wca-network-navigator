@@ -737,6 +737,185 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_contacts: {
+        Row: {
+          codice_fiscale: string | null
+          created_at: string
+          email: string | null
+          id: string
+          linkedin_url: string | null
+          name: string
+          phone: string | null
+          prospect_id: string
+          role: string | null
+        }
+        Insert: {
+          codice_fiscale?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name: string
+          phone?: string | null
+          prospect_id: string
+          role?: string | null
+        }
+        Update: {
+          codice_fiscale?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name?: string
+          phone?: string | null
+          prospect_id?: string
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_contacts_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_social_links: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          id: string
+          platform: string
+          prospect_id: string
+          url: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          platform: string
+          prospect_id: string
+          url: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          platform?: string
+          prospect_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_social_links_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_social_links_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospects: {
+        Row: {
+          address: string | null
+          anno_bilancio: number | null
+          cap: string | null
+          city: string | null
+          codice_ateco: string | null
+          codice_fiscale: string | null
+          company_name: string
+          created_at: string
+          credit_score: number | null
+          data_costituzione: string | null
+          descrizione_ateco: string | null
+          dipendenti: number | null
+          email: string | null
+          enrichment_data: Json | null
+          fatturato: number | null
+          forma_giuridica: string | null
+          id: string
+          partita_iva: string | null
+          pec: string | null
+          phone: string | null
+          province: string | null
+          rating_affidabilita: string | null
+          raw_profile_html: string | null
+          region: string | null
+          source: string
+          updated_at: string
+          utile: number | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          anno_bilancio?: number | null
+          cap?: string | null
+          city?: string | null
+          codice_ateco?: string | null
+          codice_fiscale?: string | null
+          company_name: string
+          created_at?: string
+          credit_score?: number | null
+          data_costituzione?: string | null
+          descrizione_ateco?: string | null
+          dipendenti?: number | null
+          email?: string | null
+          enrichment_data?: Json | null
+          fatturato?: number | null
+          forma_giuridica?: string | null
+          id?: string
+          partita_iva?: string | null
+          pec?: string | null
+          phone?: string | null
+          province?: string | null
+          rating_affidabilita?: string | null
+          raw_profile_html?: string | null
+          region?: string | null
+          source?: string
+          updated_at?: string
+          utile?: number | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          anno_bilancio?: number | null
+          cap?: string | null
+          city?: string | null
+          codice_ateco?: string | null
+          codice_fiscale?: string | null
+          company_name?: string
+          created_at?: string
+          credit_score?: number | null
+          data_costituzione?: string | null
+          descrizione_ateco?: string | null
+          dipendenti?: number | null
+          email?: string | null
+          enrichment_data?: Json | null
+          fatturato?: number | null
+          forma_giuridica?: string | null
+          id?: string
+          partita_iva?: string | null
+          pec?: string | null
+          phone?: string | null
+          province?: string | null
+          rating_affidabilita?: string | null
+          raw_profile_html?: string | null
+          region?: string | null
+          source?: string
+          updated_at?: string
+          utile?: number | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       reminders: {
         Row: {
           created_at: string | null
