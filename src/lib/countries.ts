@@ -61,15 +61,26 @@ export function getServiceIconName(category: string): string {
   return icons[category] || "Box";
 }
 
-// Service icon color mapping (Tailwind classes)
-// Harmonized: sky-500 for transport, slate-500 for specialties
-const TRANSPORT_CATEGORIES = new Set([
-  "air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight", "project_cargo",
-]);
+// Service icon color mapping (Tailwind classes) - per-service colors
+const SERVICE_ICON_COLORS: Record<string, string> = {
+  air_freight: "text-sky-400",
+  ocean_fcl: "text-blue-500",
+  ocean_lcl: "text-blue-500",
+  road_freight: "text-amber-500",
+  rail_freight: "text-slate-500",
+  project_cargo: "text-violet-500",
+  dangerous_goods: "text-red-500",
+  perishables: "text-cyan-500",
+  pharma: "text-green-500",
+  ecommerce: "text-orange-500",
+  relocations: "text-pink-500",
+  customs_broker: "text-indigo-500",
+  warehousing: "text-amber-700",
+  nvocc: "text-teal-500",
+};
 
 export function getServiceIconColor(category: string): string {
-  if (TRANSPORT_CATEGORIES.has(category)) return "text-sky-500";
-  return "text-slate-500";
+  return SERVICE_ICON_COLORS[category] || "text-slate-500";
 }
 
 // Resolve a market name (e.g. "UAE", "Saudi Arabia") to ISO country code

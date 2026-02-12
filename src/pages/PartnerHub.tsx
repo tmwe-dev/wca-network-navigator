@@ -479,7 +479,7 @@ export default function PartnerHub() {
 
         {viewMode === "country" ? (
           <CountryOverview
-            partners={filteredPartners}
+            partners={partners || []}
             isLoading={isLoading}
             onSelectPartner={setSelectedId}
             selectedId={selectedId}
@@ -560,8 +560,6 @@ export default function PartnerHub() {
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
-                            <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
-                            <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
                           </div>
                           {/* Inline contacts status */}
@@ -605,7 +603,7 @@ export default function PartnerHub() {
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className="w-4 h-4 text-sky-500 fill-sky-500" />
+                                            <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
@@ -620,7 +618,7 @@ export default function PartnerHub() {
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className="w-4 h-4 text-slate-500 fill-slate-500" />
+                                            <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
