@@ -16,14 +16,7 @@ import { NetworkConnections } from "./globe/NetworkConnections";
 import { FlyingAirplanes } from "./globe/FlyingAirplanes";
 import { CountryToast } from "./globe/CountryToast";
 
-// Smooth easing functions
-function easeOutQuart(x: number): number {
-  return 1 - Math.pow(1 - x, 4);
-}
-
-function easeInOutCubic(x: number): number {
-  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-}
+import { easeInOutCubic } from "./globe/utils";
 
 // Earth component with smooth zoom and rotation to selected country
 function Earth({ 

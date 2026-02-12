@@ -2,20 +2,11 @@ import { useRef, useMemo, useEffect } from "react";
 import { useFrame, useThree, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
+import { latLngToVector3 } from "./utils";
 
 // Smaller marker geometries
 const INNER_GEOMETRY = new THREE.SphereGeometry(0.012, 6, 6);
 const OUTER_GEOMETRY = new THREE.SphereGeometry(0.018, 6, 6);
-
-// Convert lat/lng to 3D position on sphere
-function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  const x = -(radius * Math.sin(phi) * Math.cos(theta));
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-  const y = radius * Math.cos(phi);
-  return new THREE.Vector3(x, y, z);
-}
 
 // Colors
 const COLOR_PARTNER = new THREE.Color("#f59e0b");

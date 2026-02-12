@@ -1,27 +1,11 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { latLngToVector3, easeOutQuart, easeInOutSine } from "./utils";
 
 // Only two elements: center dot and one pulse ring
 const DOT_GEOMETRY = new THREE.CircleGeometry(0.008, 16);
 const RING_GEOMETRY = new THREE.RingGeometry(0.04, 0.045, 64);
-
-function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  const x = -(radius * Math.sin(phi) * Math.cos(theta));
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-  const y = radius * Math.cos(phi);
-  return new THREE.Vector3(x, y, z);
-}
-
-function easeOutQuart(x: number): number {
-  return 1 - Math.pow(1 - x, 4);
-}
-
-function easeInOutSine(x: number): number {
-  return -(Math.cos(Math.PI * x) - 1) / 2;
-}
 
 interface Props {
   lat: number;

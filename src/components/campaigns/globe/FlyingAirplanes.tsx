@@ -2,16 +2,7 @@ import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
-
-// Convert lat/lng to 3D position on sphere
-function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  const x = -(radius * Math.sin(phi) * Math.cos(theta));
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-  const y = radius * Math.cos(phi);
-  return new THREE.Vector3(x, y, z);
-}
+import { latLngToVector3 } from "./utils";
 
 // Create a smooth arc between two points on a sphere
 function createArcPoints(start: THREE.Vector3, end: THREE.Vector3, arcHeight: number, segments: number = 50): THREE.Vector3[] {
