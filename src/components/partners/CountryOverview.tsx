@@ -15,8 +15,16 @@ import {
   AlertTriangle,
   MapPin,
   Star,
-  Building2,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CountryOverviewProps {
   partners: any[];
@@ -37,6 +45,8 @@ interface CountryGroup {
 export function CountryOverview({ partners, isLoading, onSelectPartner, selectedId }: CountryOverviewProps) {
   const [search, setSearch] = useState("");
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"name" | "total" | "pct">("name");
+  const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
@@ -61,17 +71,40 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
     });
 
     const groups = Array.from(map.values());
-    groups.sort((a, b) => a.name.localeCompare(b.name));
     return groups;
   }, [partners]);
 
   const filteredGroups = useMemo(() => {
-    if (!search) return countryGroups;
-    const q = search.toLowerCase();
-    return countryGroups.filter(
-      (g) => g.name.toLowerCase().includes(q) || g.code.toLowerCase().includes(q)
-    );
-  }, [countryGroups, search]);
+    let result = countryGroups;
+
+    // Text search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (g) => g.name.toLowerCase().includes(q) || g.code.toLowerCase().includes(q)
+      );
+    }
+
+    // Filter by completeness
+    if (filterMode === "complete") {
+      result = result.filter((g) => g.withContacts === g.total && g.total > 0);
+    } else if (filterMode === "incomplete") {
+      result = result.filter((g) => g.withContacts < g.total);
+    }
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      if (sortBy === "total") return b.total - a.total;
+      if (sortBy === "pct") {
+        const pctA = a.total > 0 ? a.withContacts / a.total : 0;
+        const pctB = b.total > 0 ? b.withContacts / b.total : 0;
+        return pctB - pctA;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return result;
+  }, [countryGroups, search, sortBy, filterMode]);
 
   const totalPartners = partners?.length || 0;
   const totalWithContacts = useMemo(
@@ -103,7 +136,31 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 rounded-xl"
-          />
+         />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="h-7 text-xs w-[120px]">
+              <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Nome</SelectItem>
+              <SelectItem value="total">Totale</SelectItem>
+              <SelectItem value="pct">% Completi</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+            <SelectTrigger className="h-7 text-xs w-[120px]">
+              <Filter className="w-3 h-3 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti</SelectItem>
+              <SelectItem value="complete">Completi</SelectItem>
+              <SelectItem value="incomplete">Incompleti</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
