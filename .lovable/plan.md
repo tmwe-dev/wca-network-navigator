@@ -1,89 +1,65 @@
 
 
-# Archivio Partner Senza Contatti
+# Stabilita' Notturna e Default Arricchimento
 
-## Obiettivo
+## Situazione attuale
 
-Quando un partner viene scaricato ma risulta senza contatti personali (email/telefono), il sistema lo archivia automaticamente in una tabella dedicata. Questo crea un registro consultabile di tutti i partner "vuoti" che potranno essere rivisitati in futuro (ad esempio quando la sessione e' piu' stabile o i dati vengono aggiornati su WCA).
+Il job ha processato 775 partner US, salvato 837 aziende con nomi corretti, ma il tasso di contatti e' solo 4% (31/775). I nomi delle aziende sono stati salvati correttamente nel database.
 
-## Come funziona
-
-1. Durante l'acquisizione, se un partner non ha contatti, viene salvato in una nuova tabella `partners_no_contacts`
-2. Nella pagina Acquisizione Partner appare una sezione/tab "Archivio Senza Contatti" per consultare l'elenco
-3. Dall'archivio si puo' selezionare uno o piu' partner e avviare un retry mirato
+Il problema principale: l'estensione Chrome estrae i contatti aprendo una tab nascosta per ogni partner. Se durante la notte il browser va in risparmio energetico o Chrome limita le tab in background, l'estrazione fallisce silenziosamente e il sistema conta "empty" senza capire che il problema e' tecnico, non di sessione.
 
 ## Modifiche
 
-### 1. Nuova tabella `partners_no_contacts`
+### 1. Default Arricchimento e Deep Search a OFF
 
-Creazione via migrazione SQL:
+**File**: `src/pages/AcquisizionePartner.tsx` (righe 33-34)
 
-| Colonna | Tipo | Descrizione |
-|---------|------|-------------|
-| id | uuid (PK) | ID univoco |
-| wca_id | integer | ID WCA del partner |
-| partner_id | uuid | Riferimento al partner nel DB (se esiste) |
-| company_name | text | Nome azienda |
-| country_code | text | Codice paese |
-| city | text | Citta' |
-| networks | jsonb | Network di appartenenza al momento dello scraping |
-| scraped_at | timestamptz | Quando e' stato scaricato |
-| retry_count | integer | Quante volte e' stato ritentato (default 0) |
-| last_retry_at | timestamptz | Ultimo tentativo di retry |
-| resolved | boolean | Se il partner e' stato risolto (contatti trovati al retry) |
-| created_at | timestamptz | Data creazione |
+Cambiare i valori iniziali:
+- `includeEnrich`: `true` -> `false`
+- `includeDeepSearch`: `true` -> `false`
 
-RLS: accesso pubblico (come le altre tabelle del progetto).
+### 2. Robustezza estrazione: retry automatico per tab fallite
 
-### 2. Salvataggio automatico nel loop di acquisizione
+**File**: `public/chrome-extension/background.js` - funzione `extractContactsForId`
 
-**File**: `src/pages/AcquisizionePartner.tsx`
+Problema: se la tab non carica (timeout, errore rete, Chrome throttling notturno), il risultato e' `{contacts: []}` e viene contato come "partner senza contatti". Il sistema pensa che sia un problema di sessione.
 
-Dopo la riga che rileva `!hasAnyContact` (riga 355), aggiungere un upsert nella tabella `partners_no_contacts`:
+Soluzione: aggiungere un meccanismo di retry interno all'estensione:
+- Se la tab non produce contatti E il contenuto della pagina e' sotto 5000 caratteri (pagina non caricata), ritentare fino a 3 volte con attesa crescente (3s, 6s, 12s)
+- Aggiungere un campo `pageLoaded: true/false` nella risposta per distinguere "partner senza contatti reali" da "pagina non caricata"
+- Aumentare il timeout di caricamento tab da 15s a 30s per le connessioni lente notturne
 
-```text
-if (!hasAnyContact && partnerId) {
-  await supabase.from("partners_no_contacts").upsert({
-    wca_id: item.wca_id,
-    partner_id: partnerId,
-    company_name: canvas.company_name,
-    country_code: canvas.country_code,
-    city: canvas.city,
-    networks: canvas.networks,
-    scraped_at: new Date().toISOString(),
-  }, { onConflict: "wca_id" });
-}
-```
+### 3. Distinguere "pagina non caricata" da "nessun contatto"
 
-### 3. Componente Archivio
+**File**: `src/pages/AcquisizionePartner.tsx` - nel loop `runExtensionLoop`
 
-**Nuovo file**: `src/components/acquisition/NoContactsArchive.tsx`
+Usare il nuovo campo `pageLoaded` dalla risposta dell'estensione:
+- Se `pageLoaded === false`: non contare come "empty", non aggiornare le statistiche network, loggare come errore di caricamento e ritentare dopo un delay piu' lungo
+- Se `pageLoaded === true` e contacts vuoti: contare normalmente come partner senza contatti
+- Implementare una coda di retry separata: i partner con pagina non caricata vengono rimessi in fondo alla coda automaticamente (max 2 retry)
 
-Un pannello che mostra:
-- Lista dei partner senza contatti con flag paese, nome, citta', data di scraping
-- Contatore totale e per paese
-- Pulsante "Riprova selezionati" per rimetterli in coda di acquisizione
-- Badge "Ritentato X volte" per chi e' gia' stato riprovato
-- Filtro per paese e per data
+### 4. Protezione anti-throttling browser
 
-### 4. Integrazione nella pagina Acquisizione
+**File**: `src/pages/AcquisizionePartner.tsx` - nel loop `runExtensionLoop`
+
+Aggiungere un meccanismo "keep-alive" che previene il throttling del browser durante l'acquisizione notturna:
+- Usare `setInterval` con un piccolo task ogni 30 secondi (aggiornamento timestamp nel DB) per mantenere la pagina attiva
+- Aggiungere un controllo che se il tempo trascorso tra due partner supera i 2 minuti (segno di throttling), eseguire un syncCookie e riprendere normalmente
+
+### 5. Contatore e logging piu' granulare
 
 **File**: `src/pages/AcquisizionePartner.tsx`
 
-Aggiungere un pulsante/tab "Archivio Vuoti" accanto al Bin dei partner acquisiti. Cliccandolo si apre il pannello archivio. Un badge numerico mostra quanti partner senza contatti ci sono in totale.
+Aggiungere alle live stats un contatore `failedLoads` separato da `empty`:
+- `empty` = partner caricati correttamente ma senza contatti
+- `failedLoads` = pagine non caricate / errori tecnici (che verranno ritentati)
 
-### 5. Retry dall'archivio
+Aggiornare il job nel DB con queste informazioni per diagnostica post-notte.
 
-Quando l'utente seleziona partner dall'archivio e preme "Riprova":
-- I partner selezionati vengono aggiunti alla coda (`queue`) come item pending
-- Il campo `retry_count` viene incrementato
-- Se al retry i contatti vengono trovati, il record viene marcato `resolved = true`
-
-## File modificati
+## Riepilogo file modificati
 
 | File | Modifica |
 |------|----------|
-| Migrazione SQL | Nuova tabella `partners_no_contacts` |
-| `src/pages/AcquisizionePartner.tsx` | Upsert nel loop quando partner e' senza contatti, pulsante archivio, logica retry |
-| `src/components/acquisition/NoContactsArchive.tsx` | Nuovo componente per visualizzare e gestire l'archivio |
+| `src/pages/AcquisizionePartner.tsx` | Default enrich/deepSearch OFF, retry per pagine non caricate, keep-alive anti-throttling, stats granulari |
+| `public/chrome-extension/background.js` | Retry interno per tab fallite, campo `pageLoaded`, timeout aumentato a 30s |
 
