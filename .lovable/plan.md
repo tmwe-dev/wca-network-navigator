@@ -1,74 +1,96 @@
 
-## Piano: Restyling Icone, Fix Bandiere, Fix Bulgaria e Deep Search Avanzato
 
-### 1. Fix bandiera triplicata
-Il codice alla riga 562-564 di `PartnerHub.tsx` ripete 3 volte la stessa bandiera. Correggo mostrando **una sola bandiera** del paese accanto alla citta'.
+## Piano: Integrazione Report Aziende
 
-### 2. Fix Bulgaria nella vista Paesi
-La `CountryOverview` riceve i partner gia' filtrati. Se il toggle "Incompleti" e' attivo o ci sono filtri, la Bulgaria potrebbe non comparire. Passo alla `CountryOverview` l'elenco completo dei partner (non filtrato) oppure aggiungo una prop dedicata per garantire che tutti i paesi siano sempre visibili.
+### Panoramica
+ReportAziende.it e' un database di 5.9M aziende italiane con 16M+ contatti e manager. L'integrazione prevede: una nuova sezione dedicata nell'app, credenziali nelle Impostazioni, e un'estensione Chrome per lo scraping autenticato (stesso approccio usato per WCA).
 
-### 3. Icone colorate per i servizi
-Sostituisco le icone monocromatiche con colori specifici per ogni servizio:
+### 1. Database - Nuove tabelle
 
-| Servizio | Colore |
-|----------|--------|
-| Air Freight | Azzurro cielo (#38bdf8) |
-| Ocean FCL/LCL | Blu oceano (#3b82f6) |
-| Road Freight | Ambra (#f59e0b) |
-| Rail Freight | Grigio acciaio (#64748b) |
-| Project Cargo | Viola (#8b5cf6) |
-| Dangerous Goods | Rosso (#ef4444) |
-| Perishables | Ciano (#06b6d4) |
-| Pharma | Verde (#22c55e) |
-| E-commerce | Arancione (#f97316) |
-| Relocations | Rosa (#ec4899) |
-| Customs | Indaco (#6366f1) |
-| Warehousing | Marrone (#a16207) |
-| NVOCC | Teal (#14b8a6) |
+**`prospects`** - Contatti non-WCA (struttura separata da `partners`)
+- id, company_name, partita_iva, codice_fiscale
+- city, province, region, address, cap
+- phone, email, pec, website
+- fatturato, utile, dipendenti, anno_bilancio
+- codice_ateco, descrizione_ateco
+- forma_giuridica, data_costituzione
+- rating_affidabilita, credit_score
+- source (default: 'reportaziende')
+- raw_profile_html, enrichment_data (jsonb)
+- created_at, updated_at
 
-Aggiorno sia la lista card che il pannello dettaglio.
+**`prospect_contacts`** - Manager/responsabili delle aziende
+- id, prospect_id (FK), name, role (amministratore, socio, etc.)
+- codice_fiscale, email, phone, linkedin_url
+- created_at
 
-### 4. Deep Search potenziato
-Espando la funzione `deep-search-partner` per cercare:
+**`prospect_social_links`** - Link social dei contatti
+- id, prospect_id, contact_id, platform, url
 
-**A. Profili social aggiuntivi per ogni contatto:**
-- LinkedIn personale (gia' presente)
-- LinkedIn aziendale (gia' presente)
-- Facebook personale
-- Instagram personale
+### 2. Impostazioni - Tab "Report Aziende"
 
-**B. Ricerca informazioni personali:**
-- 2-3 ricerche web generiche per ogni responsabile (nome + azienda + citta')
-- L'AI analizza i risultati e genera un mini-profilo con:
-  - Background professionale
-  - Interessi/hobby rilevabili
-  - Lingua parlata
-  - Altre aziende collegate
+Aggiungere un nuovo tab nella pagina Settings con:
+- Campo username/email per ReportAziende
+- Campo password per ReportAziende
+- Pulsante "Salva Credenziali" (salva in `app_settings` come `ra_username` e `ra_password`)
+- Stato connessione (badge Connesso/Non connesso)
+- Download estensione Chrome dedicata (come per WCA)
 
-**C. Profilo aziendale ampliato:**
-- Ricerca informazioni aggiuntive sull'azienda (premi, certificazioni, notizie recenti)
+### 3. Estensione Chrome - ReportAziende Scraper
 
-I risultati vengono salvati in:
-- `partner_social_links` (per i nuovi profili social)
-- `partners.enrichment_data` (per le info personali e aziendali aggiuntive)
+Creare una seconda estensione (o estendere quella esistente) che:
+- Si inietti sulle pagine di `reportaziende.it` e `ecommerce2.reportaziende.it`
+- Faccia login automatico con le credenziali salvate
+- Sincronizzi i cookie di sessione
+- Estragga i dati dalle pagine dei risultati di ricerca e dalle schede azienda
+
+File da creare in `public/ra-extension/`:
+- manifest.json (permessi per reportaziende.it)
+- background.js (login, cookie sync, estrazione dati)
+- content.js (bridge con la webapp)
+- popup.html/js (stato connessione)
+
+### 4. Nuova pagina - "Prospect" (o "Aziende IT")
+
+Nuova route `/prospects` con:
+- Lista aziende importate da ReportAziende
+- Filtri: regione, provincia, codice ATECO, range fatturato, numero dipendenti
+- Vista dettaglio con dati finanziari, management, contatti
+- Indicatori di qualita' dati (come per i partner WCA)
+
+### 5. Edge Functions
+
+**`save-ra-credentials`** - Salva username/password criptati
+**`check-ra-session`** - Verifica se la sessione e' attiva
+**`save-ra-cookie`** - Salva cookie di sessione
+**`save-ra-prospects`** - Salva i dati estratti nel database
+
+### 6. Sidebar
+
+Aggiungere voce "Prospect" nel menu di navigazione con icona Building2 (aziende italiane).
 
 ### Dettagli tecnici
 
-**File: `src/pages/PartnerHub.tsx`**
-- Rimuovere le righe 562-564 (3 bandiere duplicate), sostituire con una sola bandiera
-- Aggiornare i colori delle icone servizi da monocromatici a specifici per servizio
-- Passare `partners` (non `filteredPartners`) alla CountryOverview, oppure gestire separatamente
+**File nuovi:**
+- `src/pages/Prospects.tsx` - Pagina principale
+- `src/components/prospects/ProspectList.tsx` - Lista con filtri
+- `src/components/prospects/ProspectDetail.tsx` - Dettaglio azienda
+- `src/hooks/useProspects.ts` - Hook dati
+- `src/hooks/useRASessionStatus.ts` - Stato sessione ReportAziende
+- `public/ra-extension/manifest.json`
+- `public/ra-extension/background.js`
+- `public/ra-extension/content.js`
+- `public/ra-extension/popup.html`
+- `public/ra-extension/popup.js`
+- `supabase/functions/save-ra-cookie/index.ts`
+- `supabase/functions/save-ra-prospects/index.ts`
 
-**File: `src/lib/countries.ts`**
-- Aggiornare `getServiceIconColor()` con colori specifici per ogni categoria invece del generico sky/slate
+**File da modificare:**
+- `src/App.tsx` - Aggiungere route `/prospects`
+- `src/components/layout/AppSidebar.tsx` - Aggiungere voce menu
+- `src/pages/Settings.tsx` - Aggiungere tab "Report Aziende"
 
-**File: `supabase/functions/deep-search-partner/index.ts`**
-- Aggiungere ricerca Facebook e Instagram per ogni contatto
-- Aggiungere ricerca web generica (2-3 query) per costruire il profilo personale
-- Salvare il mini-profilo in `enrichment_data` o in un nuovo campo JSON
-- Gestire i rate limit con delay progressivi
+**Approccio scraping:** Identico a WCA - tutte le richieste partono dal browser dell'utente tramite estensione Chrome per evitare blocchi IP. Il server funge solo da storage.
 
-**File: `src/components/partners/SocialLinks.tsx`**
-- Aggiungere icone SVG per Instagram e Facebook (oltre a LinkedIn gia' presente)
+**Nota:** Per scoprire i parametri esatti di ricerca (filtri ATECO, regioni, etc.) e la struttura HTML delle pagine risultato, servira' esplorare il sito autenticato. Possiamo iniziare con l'infrastruttura (DB + Settings + estensione base) e poi affinare lo scraper una volta che avrai inserito le credenziali e potremo analizzare le pagine interne.
 
-Nessun nuovo strumento necessario: Firecrawl (ricerca web) e l'AI gateway (analisi risultati) sono sufficienti per tutte le operazioni.
