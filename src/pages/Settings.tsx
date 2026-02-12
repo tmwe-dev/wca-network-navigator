@@ -88,7 +88,7 @@ function ReportAziendeSettings({ settings, updateSetting }: { settings: any; upd
             </p>
           </div>
           <Button className="w-full" size="lg" onClick={() => {
-            const files = ['manifest.json', 'popup.html', 'popup.js', 'background.js', 'content.js'];
+            const files = ['manifest.json', 'popup.html', 'popup.js', 'background.js', 'content.js', 'icon.png'];
             files.forEach((file, i) => {
               setTimeout(() => {
                 const link = document.createElement('a');
