@@ -8,7 +8,8 @@ import { AcquisitionToolbar } from "@/components/acquisition/AcquisitionToolbar"
 import { PartnerQueue, QueueItem } from "@/components/acquisition/PartnerQueue";
 import { PartnerCanvas, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/PartnerCanvas";
 import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
-import { NetworkPerformanceBar, NetworkStats } from "@/components/acquisition/NetworkPerformanceBar";
+import { NetworkPerformanceBar, NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
+import { ToastAction } from "@/components/ui/toast";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
 type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -63,6 +64,8 @@ export default function AcquisizionePartner() {
   const [networkStats, setNetworkStats] = useState<Record<string, NetworkStats>>({});
   const [excludedNetworks, setExcludedNetworks] = useState<Set<string>>(new Set());
   const excludedNetworksRef = useRef<Set<string>>(new Set());
+  const [networkRegressions, setNetworkRegressions] = useState<NetworkRegression[]>([]);
+  const networkBaselineRef = useRef<Record<string, { successes: number; consecutiveFailures: number }>>({});
 
   // Scan stats
   const [scanStats, setScanStats] = useState<{
@@ -82,7 +85,7 @@ export default function AcquisizionePartner() {
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0) => {
     let localStats = { ...liveStats };
     let consecutiveEmpty = 0;
-    const AUTO_EXCLUDE_THRESHOLD = 5;
+    const AUTO_EXCLUDE_THRESHOLD = 3;
     const SESSION_RECOVERY_THRESHOLD = 3;
     let localNetworkStats: Record<string, { success: number; empty: number }> = { ...networkStats };
     const retryQueue: { item: QueueItem; retries: number }[] = [];
@@ -361,16 +364,63 @@ export default function AcquisizionePartner() {
         }
         setNetworkStats({ ...localNetworkStats });
 
-        // ── Auto-exclude networks with 0% success after threshold ──
+        // ── Auto-exclude networks with 0% success after threshold (with undo toast) ──
         for (const net of canvas.networks) {
           const s = localNetworkStats[net];
           if (s && s.success === 0 && (s.success + s.empty) >= AUTO_EXCLUDE_THRESHOLD && !excludedNetworksRef.current.has(net)) {
-            excludedNetworksRef.current.add(net);
-            setExcludedNetworks(new Set(excludedNetworksRef.current));
+            // Schedule exclusion with undo option
+            const networkToExclude = net;
+            const undoTimeout = setTimeout(() => {
+              excludedNetworksRef.current.add(networkToExclude);
+              setExcludedNetworks(new Set(excludedNetworksRef.current));
+            }, 5000);
+
             toast({
-              title: `Network "${net}" escluso automaticamente`,
-              description: `0/${s.empty} partner con contatti. I partner rimanenti di questo network verranno saltati.`,
+              title: `Network "${net}" verrà escluso`,
+              description: `0/${s.empty} partner con contatti. Escluso tra 5s.`,
+              action: (
+                <ToastAction altText="Annulla" onClick={() => {
+                  clearTimeout(undoTimeout);
+                  toast({ title: `"${networkToExclude}" mantenuto`, description: "L'esclusione è stata annullata." });
+                }}>
+                  Annulla
+                </ToastAction>
+              ),
             });
+          }
+        }
+
+        // ── Regression detection: networks that used to work now failing ──
+        for (const net of canvas.networks) {
+          if (!networkBaselineRef.current[net]) {
+            networkBaselineRef.current[net] = { successes: 0, consecutiveFailures: 0 };
+          }
+          const baseline = networkBaselineRef.current[net];
+          if (hasAnyContact) {
+            baseline.successes++;
+            baseline.consecutiveFailures = 0;
+          } else {
+            baseline.consecutiveFailures++;
+          }
+          // Alert if had >=2 successes and now 3+ consecutive failures
+          if (baseline.successes >= 2 && baseline.consecutiveFailures >= 3) {
+            setNetworkRegressions(prev => {
+              const existing = prev.find(r => r.network === net);
+              if (existing) {
+                return prev.map(r => r.network === net 
+                  ? { ...r, consecutiveFailures: baseline.consecutiveFailures } 
+                  : r
+                );
+              }
+              return [...prev, {
+                network: net,
+                previousSuccesses: baseline.successes,
+                consecutiveFailures: baseline.consecutiveFailures,
+              }];
+            });
+          } else if (hasAnyContact) {
+            // Clear regression if network starts working again
+            setNetworkRegressions(prev => prev.filter(r => r.network !== net));
           }
         }
       }
@@ -1239,6 +1289,7 @@ export default function AcquisizionePartner() {
           excludedNetworks={excludedNetworks}
           onExclude={handleExcludeNetwork}
           onReinclude={handleReincludeNetwork}
+          regressions={networkRegressions}
         />
       )}
 
