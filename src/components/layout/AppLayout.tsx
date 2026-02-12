@@ -2,17 +2,17 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, LayoutDashboard, Users, Bell, Mail, Download, Globe } from "lucide-react";
+import { Search, Globe, Users, Bell, Mail, Download, Database, BookOpen, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Page titles and icons mapping
 const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
-  "/": { title: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-  "/partners": { title: "Partners", icon: <Users className="w-5 h-5" /> },
-  "/reminders": { title: "Reminders", icon: <Bell className="w-5 h-5" /> },
+  "/": { title: "Partner Hub", icon: <Globe className="w-5 h-5" /> },
   "/campaigns": { title: "Email Campaigns", icon: <Mail className="w-5 h-5" /> },
-  "/export": { title: "Export", icon: <Download className="w-5 h-5" /> },
-  "/wca": { title: "WCA Integration", icon: <Globe className="w-5 h-5" /> },
+  "/acquisizione": { title: "Acquisizione Partner", icon: <Download className="w-5 h-5" /> },
+  "/download-management": { title: "Download Management", icon: <Database className="w-5 h-5" /> },
+  "/reminders": { title: "Agenda", icon: <Bell className="w-5 h-5" /> },
+  "/settings": { title: "Impostazioni", icon: <Settings className="w-5 h-5" /> },
+  "/guida": { title: "Guida Progetto", icon: <BookOpen className="w-5 h-5" /> },
 };
 
 export function AppLayout() {
