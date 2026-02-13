@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { CompanyList } from "@/components/campaigns/CompanyList";
-import { EmailPreview } from "@/components/campaigns/EmailPreview";
-import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown } from "lucide-react";
+import { RefreshCw, Building2, Send, Users, Mail, X, Check, ChevronsUpDown, Briefcase } from "lucide-react";
 import { usePartnersByCountryForGlobe, usePartnersForGlobe } from "@/hooks/usePartnersForGlobe";
 import { WCA_COUNTRIES_MAP, TOTAL_WCA_COUNTRIES } from "@/data/wcaCountries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,7 +38,7 @@ function CampaignHeaderControls({
   countriesWithPartners,
   totalPartners,
   campaignPartners,
-  onGenerateEmail,
+  onGenerateJobs,
 }: {
   countries: { code: string; name: string; count: number }[];
   selectedCountry: string | null;
@@ -46,7 +46,7 @@ function CampaignHeaderControls({
   countriesWithPartners: number;
   totalPartners: number;
   campaignPartners: CampaignPartner[];
-  onGenerateEmail: () => void;
+  onGenerateJobs: () => void;
 }) {
   const [comboOpen, setComboOpen] = useState(false);
   const sortedCountries = useMemo(() => [...countries].sort((a, b) => a.name.localeCompare(b.name)), [countries]);
@@ -154,13 +154,12 @@ function CampaignHeaderControls({
             <span className="text-slate-500">email</span>
           </div>
           <Button 
-            onClick={onGenerateEmail} 
+            onClick={onGenerateJobs} 
             size="sm"
             className="space-button-primary"
-            disabled={totalWithEmail === 0}
           >
-            <Mail className="w-4 h-4 mr-1.5" />
-            Genera Email
+            <Briefcase className="w-4 h-4 mr-1.5" />
+            Genera Jobs
           </Button>
         </div>
       )}
@@ -221,7 +220,7 @@ export default function Campaigns() {
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [campaignPartners, setCampaignPartners] = useState<CampaignPartner[]>([]);
   const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch partners data from Supabase
   const { data: globeData } = usePartnersForGlobe();
@@ -324,7 +323,23 @@ export default function Campaigns() {
           countriesWithPartners={countriesWithPartners}
           totalPartners={totalPartners}
           campaignPartners={campaignPartners}
-          onGenerateEmail={() => setShowEmailPreview(true)}
+          onGenerateJobs={async () => {
+            const batchId = crypto.randomUUID();
+            const { supabase } = await import("@/integrations/supabase/client");
+            const rows = campaignPartners.map(p => ({
+              partner_id: p.id,
+              company_name: p.company_name,
+              country_code: p.country_code,
+              country_name: p.country_name,
+              city: p.city || "",
+              email: p.email,
+              phone: null as string | null,
+              job_type: "email" as const,
+              batch_id: batchId,
+            }));
+            await supabase.from("campaign_jobs").insert(rows as any);
+            navigate(`/campaign-jobs?batch=${batchId}`);
+          }}
         />,
         headerContainer
       )}
@@ -361,12 +376,6 @@ export default function Campaigns() {
         />
       </div>
 
-      {/* Email Preview Modal */}
-      <EmailPreview
-        open={showEmailPreview}
-        onOpenChange={setShowEmailPreview}
-        recipients={campaignPartners}
-      />
     </div>
   );
 }

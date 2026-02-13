@@ -13,6 +13,7 @@ const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
   "/reminders": { title: "Agenda", icon: <Bell className="w-5 h-5" /> },
   "/settings": { title: "Impostazioni", icon: <Settings className="w-5 h-5" /> },
   "/guida": { title: "Guida Progetto", icon: <BookOpen className="w-5 h-5" /> },
+  "/campaign-jobs": { title: "Campaign Jobs", icon: <Mail className="w-5 h-5" /> },
 };
 
 export function AppLayout() {

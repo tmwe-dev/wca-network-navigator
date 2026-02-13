@@ -13,6 +13,7 @@ import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import Guida from "./pages/Guida";
 import ProspectCenter from "./pages/ProspectCenter";
+import CampaignJobs from "./pages/CampaignJobs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/prospects" element={<ProspectCenter />} />
             <Route path="/guida" element={<Guida />} />
+            <Route path="/campaign-jobs" element={<CampaignJobs />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
