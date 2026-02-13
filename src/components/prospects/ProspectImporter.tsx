@@ -1,130 +1,23 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Play, Square, Download, Plug, X, ChevronsUpDown, Check, Search, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Play, Square, Download, Plug, AlertTriangle } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-
-import { ATECO_TREE } from "@/data/atecoCategories";
-import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
 import { t } from "@/components/download/theme";
 
 interface Props {
   isDark: boolean;
+  atecoCodes: string[];
+  regions: string[];
+  provinces: string[];
 }
 
-function MultiSelectPopover({
-  label,
-  placeholder,
-  options,
-  selected,
-  onToggle,
-  onClear,
-  disabled,
-  isDark,
-  renderLabel,
-}: {
-  label: string;
-  placeholder: string;
-  options: Array<{ value: string; label: string; sub?: string }>;
-  selected: string[];
-  onToggle: (v: string) => void;
-  onClear: () => void;
-  disabled: boolean;
-  isDark: boolean;
-  renderLabel?: (v: string) => string;
-}) {
-  const [open, setOpen] = useState(false);
-  const selectedSet = new Set(selected);
 
-  return (
-    <div>
-      <label className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            disabled={disabled}
-            className={`w-full mt-1 flex items-center justify-between px-3 py-2 rounded-lg text-sm border transition-all disabled:opacity-50 ${isDark
-              ? "bg-white/5 border-white/10 text-white hover:bg-white/[0.08]"
-              : "bg-white border-slate-200 text-slate-800 hover:bg-slate-50"
-            }`}
-          >
-            <span className={selected.length === 0 ? (isDark ? "text-slate-500" : "text-slate-400") : ""}>
-              {selected.length === 0 ? placeholder : `${selected.length} selezionat${selected.length === 1 ? "o" : "i"}`}
-            </span>
-            <ChevronsUpDown className="w-3.5 h-3.5 opacity-50" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className={`w-72 p-0 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
-          <Command className={isDark ? "bg-slate-900" : ""}>
-            <CommandInput placeholder="Cerca..." className={isDark ? "text-white" : ""} />
-            <CommandList className="max-h-[300px] overflow-auto">
-              <CommandEmpty className={isDark ? "text-slate-500" : ""}>Nessun risultato</CommandEmpty>
-              {selected.length > 0 && (
-                <CommandGroup>
-                  <CommandItem onSelect={onClear} className={`text-xs ${isDark ? "text-rose-400" : "text-rose-500"}`}>
-                    <X className="w-3 h-3 mr-1" /> Deseleziona tutto
-                  </CommandItem>
-                </CommandGroup>
-              )}
-              <CommandGroup>
-                {options.map(opt => (
-                  <CommandItem
-                    key={opt.value}
-                    value={`${opt.value} ${opt.label}`}
-                    onSelect={() => onToggle(opt.value)}
-                    className={isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}
-                  >
-                    <div className={`w-4 h-4 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
-                      selectedSet.has(opt.value)
-                        ? "bg-sky-500 border-sky-500"
-                        : isDark ? "border-slate-600" : "border-slate-300"
-                    }`}>
-                      {selectedSet.has(opt.value) && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium">{opt.label}</span>
-                      {opt.sub && <span className={`ml-1.5 text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>{opt.sub}</span>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1.5">
-          {selected.map(v => (
-            <button
-              key={v}
-              onClick={() => onToggle(v)}
-              disabled={disabled}
-              className={`group flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ${isDark
-                ? "bg-sky-500/15 text-sky-300 border border-sky-500/25"
-                : "bg-sky-50 text-sky-700 border border-sky-200"
-              } disabled:opacity-50`}
-            >
-              {renderLabel ? renderLabel(v) : v}
-              <X className="w-2.5 h-2.5 opacity-50 group-hover:opacity-100" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function ProspectImporter({ isDark }: Props) {
+export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Props) {
   const th = t(isDark);
   const { isAvailable, scrapeByAteco, getScrapingStatus, stopScraping } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
-
-  const [selectedAteco, setSelectedAteco] = useState<string[]>([]);
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [jobBlocked, setJobBlocked] = useState(false);
   const [status, setStatus] = useState<RAScrapingStatus | null>(null);
@@ -132,37 +25,6 @@ export function ProspectImporter({ isDark }: Props) {
   const logRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ATECO options (level 2+3)
-  const atecoOptions = useMemo(() =>
-    ATECO_TREE.filter(a => a.livello >= 2).map(a => ({
-      value: a.codice,
-      label: `${a.codice} — ${a.descrizione}`,
-      sub: a.livello === 3 ? `(${a.padre})` : undefined,
-    })),
-  []);
-
-  const regionOptions = useMemo(() =>
-    REGIONI_ITALIANE.map(r => ({ value: r, label: r })),
-  []);
-
-  // Filter provinces by selected regions
-  const provinceOptions = useMemo(() => {
-    const filtered = selectedRegions.length > 0
-      ? PROVINCE_ITALIANE.filter(p => selectedRegions.includes(p.regione))
-      : PROVINCE_ITALIANE;
-    return filtered.map(p => ({ value: p.sigla, label: `${p.sigla} — ${p.nome}`, sub: p.regione }));
-  }, [selectedRegions]);
-
-  // Clear provinces that no longer match when regions change
-  useEffect(() => {
-    if (selectedRegions.length > 0) {
-      const validSigle = new Set(PROVINCE_ITALIANE.filter(p => selectedRegions.includes(p.regione)).map(p => p.sigla));
-      setSelectedProvinces(prev => prev.filter(s => validSigle.has(s)));
-    }
-  }, [selectedRegions]);
-
-  const toggle = (list: string[], item: string) =>
-    list.includes(item) ? list.filter(i => i !== item) : [...list, item];
 
   // Check if job already running on mount
   useEffect(() => {
@@ -220,7 +82,7 @@ export function ProspectImporter({ isDark }: Props) {
   }, [logs]);
 
   const handleStart = async () => {
-    if (selectedAteco.length === 0) return;
+    if (atecoCodes.length === 0) return;
 
     // Check sequential lock
     const checkRes = await getScrapingStatus();
@@ -235,9 +97,9 @@ export function ProspectImporter({ isDark }: Props) {
     setStatus(null);
 
     const res = await scrapeByAteco({
-      atecoCode: selectedAteco[0],
-      region: selectedRegions[0] || undefined,
-      province: selectedProvinces[0] || undefined,
+      atecoCodes: atecoCodes,
+      regions: regions.length > 0 ? regions : undefined,
+      provinces: provinces.length > 0 ? provinces : undefined,
       delaySeconds: settings.delayDefault,
       batchSize: 5,
     });
@@ -286,46 +148,33 @@ export function ProspectImporter({ isDark }: Props) {
 
       {/* Config form */}
       <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
-        <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Configura Scraping</h3>
+        <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Avvia Scraping</h3>
 
-        <div className="grid grid-cols-3 gap-3">
-          <MultiSelectPopover
-            label="Codice ATECO *"
-            placeholder="Seleziona ATECO..."
-            options={atecoOptions}
-            selected={selectedAteco}
-            onToggle={v => setSelectedAteco(prev => toggle(prev, v))}
-            onClear={() => setSelectedAteco([])}
-            disabled={isRunning}
-            isDark={isDark}
-          />
-          <MultiSelectPopover
-            label="Regioni"
-            placeholder="Tutte le regioni"
-            options={regionOptions}
-            selected={selectedRegions}
-            onToggle={v => setSelectedRegions(prev => toggle(prev, v))}
-            onClear={() => setSelectedRegions([])}
-            disabled={isRunning}
-            isDark={isDark}
-          />
-          <MultiSelectPopover
-            label="Province"
-            placeholder="Tutte le province"
-            options={provinceOptions}
-            selected={selectedProvinces}
-            onToggle={v => setSelectedProvinces(prev => toggle(prev, v))}
-            onClear={() => setSelectedProvinces([])}
-            disabled={isRunning}
-            isDark={isDark}
-          />
-        </div>
+        {atecoCodes.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {atecoCodes.map(c => (
+              <span key={c} className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
+                {c}
+              </span>
+            ))}
+            {regions.length > 0 && regions.map(r => (
+              <span key={r} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                {r}
+              </span>
+            ))}
+            {provinces.length > 0 && provinces.map(p => (
+              <span key={p} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/25" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                {p}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-1">
           {!isRunning ? (
             <button
               onClick={handleStart}
-              disabled={!isAvailable || selectedAteco.length === 0 || jobBlocked}
+              disabled={!isAvailable || atecoCodes.length === 0 || jobBlocked}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
                 ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
                 : "bg-sky-500 text-white hover:bg-sky-600"
@@ -408,8 +257,17 @@ export function ProspectImporter({ isDark }: Props) {
         <div className="flex-1 flex items-center justify-center">
           <div className={`text-center space-y-2 max-w-md ${isDark ? "text-slate-500" : "text-slate-400"}`}>
             <Download className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-            <p className="text-sm">Seleziona uno o più codici ATECO per cercare e scaricare i profili aziendali da Report Aziende.</p>
-            <p className="text-xs">Puoi filtrare per regione e provincia. I dati verranno salvati automaticamente nel database.</p>
+            {atecoCodes.length === 0 ? (
+              <>
+                <p className="text-sm">Seleziona almeno un codice ATECO dal pannello a sinistra.</p>
+                <p className="text-xs">Puoi anche filtrare per regione e provincia.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm">Premi "Avvia Scraping" per cercare e scaricare i profili aziendali da Report Aziende.</p>
+                <p className="text-xs">I dati verranno salvati automaticamente nel database.</p>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -153,7 +153,7 @@ export default function ProspectCenter() {
 
                 <TabsContent value="import" className="flex-1 min-h-0 mt-0">
                   <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                    <ProspectImporter isDark={isDark} />
+                    <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} />
                   </div>
                 </TabsContent>
               </Tabs>
