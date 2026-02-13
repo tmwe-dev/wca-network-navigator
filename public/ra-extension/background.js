@@ -78,7 +78,7 @@ async function autoLogin() {
     }
 
     const tab = await chrome.tabs.create({
-      url: "https://www.reportaziende.it/login",
+      url: "https://ecommerce2.reportaziende.it/login3/",
       active: true,
     });
 
@@ -397,7 +397,7 @@ async function scrapeCompanyProfile(url) {
 
     // Check if redirected to login (session expired)
     const tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && tabInfo.url.includes("/login")) {
+    if (tabInfo.url && (tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404"))) {
       await chrome.tabs.remove(tab.id);
       return { success: false, error: "session_expired", data: null };
     }
@@ -439,7 +439,7 @@ async function scrapeSearchResults(params) {
 
     // Check if redirected to login
     var tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && tabInfo.url.includes("/login")) {
+    if (tabInfo.url && (tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404"))) {
       await chrome.tabs.remove(tab.id); tab = null;
       return { success: false, error: "session_expired", results: [] };
     }
@@ -469,7 +469,7 @@ async function scrapeSearchResults(params) {
 
     // Check for login redirect after form submit
     tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && tabInfo.url.includes("/login")) {
+    if (tabInfo.url && (tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404"))) {
       await chrome.tabs.remove(tab.id); tab = null;
       return { success: false, error: "session_expired", results: [] };
     }
