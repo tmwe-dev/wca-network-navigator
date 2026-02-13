@@ -172,6 +172,68 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_jobs: {
+        Row: {
+          assigned_to: string | null
+          batch_id: string
+          city: string | null
+          company_name: string
+          completed_at: string | null
+          country_code: string
+          country_name: string
+          created_at: string
+          email: string | null
+          id: string
+          job_type: Database["public"]["Enums"]["campaign_job_type"]
+          notes: string | null
+          partner_id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["campaign_job_status"]
+        }
+        Insert: {
+          assigned_to?: string | null
+          batch_id: string
+          city?: string | null
+          company_name: string
+          completed_at?: string | null
+          country_code: string
+          country_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_type?: Database["public"]["Enums"]["campaign_job_type"]
+          notes?: string | null
+          partner_id: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["campaign_job_status"]
+        }
+        Update: {
+          assigned_to?: string | null
+          batch_id?: string
+          city?: string | null
+          company_name?: string
+          completed_at?: string | null
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_type?: Database["public"]["Enums"]["campaign_job_type"]
+          notes?: string | null
+          partner_id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["campaign_job_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_jobs_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       directory_cache: {
         Row: {
           country_code: string
@@ -1006,6 +1068,8 @@ export type Database = {
         | "meeting"
         | "follow_up"
         | "other"
+      campaign_job_status: "pending" | "in_progress" | "completed" | "skipped"
+      campaign_job_type: "email" | "call"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
       download_queue_status: "pending" | "in_progress" | "completed" | "paused"
       interaction_type: "call" | "email" | "meeting" | "note"
@@ -1176,6 +1240,8 @@ export const Constants = {
         "follow_up",
         "other",
       ],
+      campaign_job_status: ["pending", "in_progress", "completed", "skipped"],
+      campaign_job_type: ["email", "call"],
       certification_type: ["IATA", "BASC", "ISO", "C-TPAT", "AEO"],
       download_queue_status: ["pending", "in_progress", "completed", "paused"],
       interaction_type: ["call", "email", "meeting", "note"],
