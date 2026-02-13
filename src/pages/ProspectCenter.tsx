@@ -1,9 +1,11 @@
 import { useState, useCallback } from "react";
-import { Sun, Moon, Building2, Mail, Phone, Euro, FileText } from "lucide-react";
+import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
 import { ProspectListPanel } from "@/components/prospects/ProspectListPanel";
+import { ProspectImporter } from "@/components/prospects/ProspectImporter";
 import { useProspectStats } from "@/hooks/useProspectStats";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 function formatCurrency(n: number | null) {
   if (n == null) return "—";
@@ -105,34 +107,53 @@ export default function ProspectCenter() {
 
             {/* RIGHT: Contextual Panel (65%) */}
             <div className="flex-1 min-h-0 flex flex-col">
-              {selectedAteco.length === 0 ? (
-                <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                  <div className="text-center space-y-3">
-                    <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                    <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
-                    <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
-                    {stats && stats.total === 0 && (
-                      <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
-                        💡 Nessun prospect nel database. Usa l'estensione Chrome RA per importare dati da Report Aziende.
+              <Tabs defaultValue="prospect" className="flex-1 min-h-0 flex flex-col">
+                <TabsList className={`self-start mb-2 ${isDark ? "bg-white/[0.06] border border-white/[0.08]" : "bg-white/60 border border-white/80"}`}>
+                  <TabsTrigger value="prospect" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-white" : ""}`}>
+                    <FileText className="w-3.5 h-3.5" /> Prospect
+                  </TabsTrigger>
+                  <TabsTrigger value="import" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-white" : ""}`}>
+                    <Download className="w-3.5 h-3.5" /> Importa
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="prospect" className="flex-1 min-h-0 mt-0">
+                  {selectedAteco.length === 0 ? (
+                    <div className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                      <div className="text-center space-y-3">
+                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+                        <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
+                        <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
+                        {stats && stats.total === 0 && (
+                          <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
+                            💡 Nessun prospect nel database. Vai su "Importa" per scaricare dati da Report Aziende.
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  ) : (
+                    <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
+                      <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+                        <span className={`text-sm font-semibold ${th.h2}`}>
+                          {selectedAteco.length === 1 ? `ATECO ${selectedAteco[0]}` : `${selectedAteco.length} codici ATECO`}
+                        </span>
+                      </div>
+                      <ProspectListPanel
+                        atecoCodes={selectedAteco}
+                        isDark={isDark}
+                        regionFilter={regionFilter}
+                        provinceFilter={provinceFilter}
+                      />
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="import" className="flex-1 min-h-0 mt-0">
+                  <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
+                    <ProspectImporter isDark={isDark} />
                   </div>
-                </div>
-              ) : (
-                <div className={`flex-1 min-h-0 rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                  <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
-                    <span className={`text-sm font-semibold ${th.h2}`}>
-                      {selectedAteco.length === 1 ? `ATECO ${selectedAteco[0]}` : `${selectedAteco.length} codici ATECO`}
-                    </span>
-                  </div>
-                  <ProspectListPanel
-                    atecoCodes={selectedAteco}
-                    isDark={isDark}
-                    regionFilter={regionFilter}
-                    provinceFilter={provinceFilter}
-                  />
-                </div>
-              )}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>

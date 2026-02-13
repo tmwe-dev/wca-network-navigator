@@ -1,0 +1,135 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+export interface RAScrapingStatus {
+  active: boolean;
+  total: number;
+  processed: number;
+  saved: number;
+  errors: number;
+  currentCompany: string;
+  log: Array<{ time: string; msg: string }>;
+}
+
+type RAResponse = {
+  success: boolean;
+  error?: string;
+  active?: boolean;
+  total?: number;
+  processed?: number;
+  saved?: number;
+  errors?: number;
+  currentCompany?: string;
+  log?: Array<{ time: string; msg: string }>;
+  data?: any;
+  results?: any[];
+  version?: string;
+};
+
+export function useRAExtensionBridge() {
+  const [isAvailable, setIsAvailable] = useState(false);
+  const pendingRef = useRef<Map<string, (response: RAResponse) => void>>(new Map());
+  const availableRef = useRef(false);
+
+  useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+
+  // Listen for responses from the RA content script
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.direction !== "from-extension-ra") return;
+
+      if (data.action === "contentScriptReady") {
+        setIsAvailable(true);
+        return;
+      }
+
+      if (data.action === "ping" && data.response?.success) {
+        setIsAvailable(true);
+        return;
+      }
+
+      if (data.requestId && pendingRef.current.has(data.requestId)) {
+        const resolve = pendingRef.current.get(data.requestId)!;
+        pendingRef.current.delete(data.requestId);
+        resolve(data.response || { success: false, error: "No response" });
+      }
+    }
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // Poll for RA extension every 5s
+  useEffect(() => {
+    const doPing = () => {
+      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, "*");
+    };
+    doPing();
+    const interval = setInterval(doPing, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sendMessage = useCallback(
+    (action: string, payload?: Record<string, any>, timeoutMs = 600000): Promise<RAResponse> => {
+      return new Promise((resolve) => {
+        const requestId = `ra_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+        const timer = setTimeout(() => {
+          pendingRef.current.delete(requestId);
+          resolve({ success: false, error: "Timeout" });
+        }, timeoutMs);
+
+        pendingRef.current.set(requestId, (response) => {
+          clearTimeout(timer);
+          resolve(response);
+        });
+
+        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, "*");
+      });
+    },
+    []
+  );
+
+  const scrapeByAteco = useCallback(
+    (params: { atecoCode?: string; region?: string; province?: string; minFatturato?: number; maxFatturato?: number; delaySeconds?: number; batchSize?: number }) => {
+      return sendMessage("scrapeByAteco", { params }, 1800000); // 30min timeout
+    },
+    [sendMessage]
+  );
+
+  const scrapeCompany = useCallback(
+    (url: string) => sendMessage("scrapeCompany", { url }, 60000),
+    [sendMessage]
+  );
+
+  const getScrapingStatus = useCallback(
+    (): Promise<RAResponse> => sendMessage("getScrapingStatus", {}, 5000),
+    [sendMessage]
+  );
+
+  const stopScraping = useCallback(
+    () => sendMessage("stopScraping", {}, 5000),
+    [sendMessage]
+  );
+
+  const syncCookies = useCallback(
+    () => sendMessage("syncCookies", {}, 15000),
+    [sendMessage]
+  );
+
+  const autoLogin = useCallback(
+    () => sendMessage("autoLogin", {}, 15000),
+    [sendMessage]
+  );
+
+  return {
+    isAvailable,
+    scrapeByAteco,
+    scrapeCompany,
+    getScrapingStatus,
+    stopScraping,
+    syncCookies,
+    autoLogin,
+  };
+}
