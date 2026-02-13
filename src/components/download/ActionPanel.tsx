@@ -279,7 +279,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
       await createJob.mutateAsync({
         country_code: country.code, country_name: country.name,
         network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-        wca_ids: countryIds, delay_seconds: delay,
+        wca_ids: countryIds, delay_seconds: Math.max(delay, scrapingSettings.delayMin),
       });
     }
   };

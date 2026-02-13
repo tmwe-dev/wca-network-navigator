@@ -23,7 +23,7 @@ export function useDownloadProcessor() {
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
-    const delaySeconds = job.delay_seconds || settings.delayDefault;
+    const delaySeconds = Math.max(job.delay_seconds || settings.delayDefault, settings.delayMin);
     const processedSet = new Set<number>(((job.processed_ids as number[]) || []));
 
     // Mark as running
@@ -244,9 +244,22 @@ export function useDownloadProcessor() {
           await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
         }
 
-        // Delay before next
+        // Anti-ban: long pause every 10 profiles (45-60s)
+        const LONG_PAUSE_EVERY = 10;
+        if (LONG_PAUSE_EVERY > 0 && processedSet.size > 0 && processedSet.size % LONG_PAUSE_EVERY === 0) {
+          const longPauseMs = 45000 + Math.random() * 15000; // 45-60s
+          await supabase.from("download_jobs").update({
+            error_message: `⏸️ Pausa anti-ban (${Math.round(longPauseMs / 1000)}s) dopo ${processedSet.size} profili`,
+          }).eq("id", jobId);
+          await new Promise(r => setTimeout(r, longPauseMs));
+          if (cancelRef.current) break;
+          await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
+        }
+
+        // Delay before next (with jitter 0.8x-1.5x for human-like pattern)
         if (i < wcaIds.length - 1 && !cancelRef.current) {
-          await new Promise(r => setTimeout(r, delaySeconds * 1000));
+          const jitter = delaySeconds * 1000 * (0.8 + Math.random() * 0.7);
+          await new Promise(r => setTimeout(r, jitter));
         }
       }
 
@@ -291,6 +304,11 @@ export function useDownloadProcessor() {
         cancelRef.current = false;
         try {
           await processJob(pendingJobs[0]);
+          // Anti-ban: 30s pause between consecutive jobs
+          if (!cancelRef.current) {
+            console.log("[DownloadProcessor] Inter-job pause: 30s");
+            await new Promise(r => setTimeout(r, 30000));
+          }
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);
         } finally {
