@@ -1,59 +1,111 @@
 
 
-## Prospect Center — Hub Dedicato Report Aziende
+## Implementare lo Scraping di Report Aziende via Chrome Extension
 
-Creare una pagina completa in stile Operations Center ma dedicata ai prospect italiani di Report Aziende. Layout 35/65 con glassmorphism, tema dark/light, stesso look & feel.
+### Situazione attuale
 
-### Struttura
+L'estensione RA attualmente gestisce solo **cookie sync** e **auto-login**. Lo scraping vero (estrazione dati dalle pagine) non e' ancora implementato. Report Aziende richiede autenticazione per tutte le ricerche e i profili aziendali, quindi lo scraping deve avvenire tramite l'estensione Chrome che ha accesso ai cookie di sessione.
 
-**Pannello sinistro (35%) — Griglia ATECO**
-- Lista dei codici ATECO presenti nel database, raggruppati per sezione (primo livello: 2 cifre, es. "46 - Commercio all'ingrosso")
-- Ogni card ATECO mostra: codice, descrizione, numero di prospect, indicatori (email, telefono, fatturato medio)
-- Ricerca per codice o descrizione
-- Filtri nel dropdown: per regione, per provincia, per range fatturato
-- Multi-selezione di codici ATECO (come i paesi nell'Operations Center)
-- Badge delle selezioni attive visualizzati come chip rimovibili
+### Cosa c'e' su Report Aziende
 
-**Pannello destro (65%) — Dettaglio contestuale**
-- Quando nessun ATECO selezionato: overview globale con statistiche (totale prospect, con email, con PEC, fatturato medio, ecc.)
-- Quando ATECO selezionato: lista dei prospect filtrati per quell'ATECO, con:
-  - Ricerca interna per nome/citta'/provincia
-  - Ordinamento per nome, fatturato, dipendenti
-  - Card prospect con: nome azienda, citta' (provincia), fatturato, dipendenti, indicatori contatto
-  - Click su prospect apre il dettaglio inline (come il PartnerDetail nel Partner Hub) con tutti i dati: anagrafica, contatti, dati finanziari, ATECO, rating, contatti personali dalla tabella `prospect_contacts`
+Dalla ricognizione del sito emergono queste risorse:
 
-### File da creare
+**Pagina ATECO** (`/ricerca-ateco`): albero completo dei codici ATECO con link ai risultati. Ogni codice punta a `/ateco-XX_YY_ZZ` con la lista delle aziende. L'albero e' gerarchico:
+- Sezione (lettera): A = Agricoltura, B = Estrazione, C = Manifatturiero...
+- Divisione (2 cifre): 01, 02, 46, 52...
+- Gruppo (3 cifre): 01.1, 52.2...
+- Classe (5-6 cifre): 01.11.00, 52.29.10...
 
-1. **`src/pages/ProspectCenter.tsx`** — Pagina principale con layout 35/65, barra stats, tema dark/light
-2. **`src/components/prospects/AtecoGrid.tsx`** — Pannello sinistro con lista codici ATECO, ricerca, filtri, multi-selezione
-3. **`src/components/prospects/ProspectListPanel.tsx`** — Pannello destro con lista prospect filtrati e dettaglio inline
-4. **`src/hooks/useProspectStats.ts`** — Hook per statistiche aggregate (count per ATECO, per regione, totali)
+**Ricerca Personalizzata** (`/ricerca-personalizzata`): filtri per Regione, Provincia, Comune, CAP, Codice ATECO, Fatturato, Dipendenti, EBITDA, ecc. Restituisce tabelle di risultati con link ai profili.
 
-### File da modificare
+**Profili aziendali**: contengono dati anagrafici (P.IVA, sede, ATECO), finanziari (fatturato, utile, dipendenti), management (nomi, ruoli, CF) e contatti (email, PEC, telefono).
 
-5. **`src/App.tsx`** — Sostituire la rotta `/prospects` per puntare a `ProspectCenter` invece di `Prospects`
-6. **`src/components/layout/AppSidebar.tsx`** — Aggiornare il label da "Prospect" a "Prospect Center" (opzionale)
+### Piano di implementazione
 
-### Dettaglio tecnico
+#### 1. Scraper nel background.js dell'estensione RA
 
-**AtecoGrid** (modello: CountryGrid)
-- Query: `SELECT codice_ateco, descrizione_ateco, COUNT(*) as cnt, COUNT(email) as with_email, COUNT(pec) as with_pec, AVG(fatturato) as avg_fatturato FROM prospects WHERE codice_ateco IS NOT NULL GROUP BY codice_ateco, descrizione_ateco ORDER BY codice_ateco`
-- Raggruppamento gerarchico: le prime 2 cifre del codice ATECO definiscono la "sezione" (es. 46.xx = Commercio ingrosso). I sotto-codici (46.11, 46.12...) sono figli
-- Card con accent stripe colorata in base alla densita' dati
-- Filtri aggiuntivi nel dropdown: regione e provincia (query dinamica sui prospect per ATECO selezionato)
+Aggiungere al `background.js` le funzioni di scraping:
 
-**ProspectListPanel** (modello: PartnerListPanel)
-- Riceve i codici ATECO selezionati come prop
-- Query: `SELECT * FROM prospects WHERE codice_ateco IN (...) ORDER BY company_name`
-- Se si aggiungono filtri regione/provincia dal pannello sinistro, li applica anche qui
-- Dettaglio prospect inline con sezioni: Anagrafica, Contatti (da `prospect_contacts`), Dati Finanziari, Informazioni Legali
-- Indicatore qualita' contatto: verde se ha email + telefono, giallo se parziale, rosso se mancante
+**`scrapeSearchResults(params)`**: apre la Ricerca Personalizzata con filtri (ATECO, regione, provincia), estrae la lista dei risultati (ragione sociale + link al profilo). Gestisce la paginazione automatica.
 
-**ProspectCenter** (modello: Operations.tsx)
-- Barra stats globale: Totale Prospect, Con Email, Con PEC, Fatturato Medio, Settori ATECO
-- Supporto tema dark/light con lo stesso sistema ThemeCtx
-- Nessun tab aggiuntivo per ora (solo lista prospect), ma la struttura e' predisposta per aggiungere tab come "Importa" o "Campagne" in futuro
+**`scrapeCompanyProfile(url)`**: naviga a un profilo aziendale, estrae tutti i dati strutturati:
+- Anagrafica: ragione sociale, P.IVA, CF, indirizzo, CAP, citta', provincia, regione
+- ATECO: codice + descrizione
+- Forma giuridica, data costituzione
+- Finanziari: fatturato, utile, dipendenti, anno bilancio
+- Contatti: telefono, email, PEC, sito web
+- Management: lista di persone con nome, ruolo, CF
+- Rating affidabilita' e credit score
+- Salva l'HTML grezzo come backup
 
-### Gestione dati vuoti
+**`runBatchScrape(params)`**: orchestratore che:
+1. Esegue la ricerca con i filtri specificati
+2. Per ogni risultato, naviga al profilo e lo scrapa
+3. Ogni N aziende (batch di 5-10) invia i dati a `save-ra-prospects`
+4. Rispetta delay configurabili tra le richieste
+5. Reporta il progresso in tempo reale
 
-Dato che il database e' ancora vuoto, la pagina mostrera' uno stato empty con istruzioni su come importare prospect tramite l'estensione Chrome RA. Quando i dati saranno disponibili, la griglia ATECO e la lista si popoleranno automaticamente.
+#### 2. Message handler nell'estensione
+
+Aggiungere nuove azioni al listener `onMessage`:
+- `scrapeByAteco`: riceve codice ATECO + filtri geografici, avvia lo scraping batch
+- `scrapeCompany`: riceve URL di un singolo profilo, lo scrapa e ritorna i dati
+- `getScrapingStatus`: ritorna stato corrente (in corso, completato, errori)
+- `stopScraping`: interrompe lo scraping in corso
+
+#### 3. Bridge nella webapp (content.js)
+
+Il content.js gia' funziona come bridge bidirezionale. Le nuove azioni passeranno automaticamente dal webapp all'estensione.
+
+#### 4. Hook `useRAExtensionBridge` nella webapp
+
+Nuovo hook (o estensione di quello esistente) per comunicare con l'estensione RA dalla webapp:
+- `scrapeByAteco(atecoCode, filters)`: avvia scraping per codice ATECO
+- `scrapeCompany(url)`: scrapa singola azienda
+- `getStatus()`: controlla stato scraping
+
+#### 5. UI nel Prospect Center
+
+Aggiungere al pannello destro del Prospect Center un tab "Importa" con:
+- Selettore codice ATECO (dall'albero)
+- Filtri: regione, provincia, range fatturato
+- Pulsante "Avvia Scraping"
+- Barra di progresso con contatori (trovate, salvate, errori)
+- Log in tempo reale
+
+#### 6. Aggiornare `download-ra-extension.html`
+
+Rigenerare il pacchetto scaricabile con il nuovo `background.js` che include le funzioni di scraping.
+
+### File da creare/modificare
+
+**Estensione Chrome (file statici):**
+- `public/ra-extension/background.js` — aggiungere funzioni di scraping (scrapeSearchResults, scrapeCompanyProfile, runBatchScrape) e nuovi message handler
+- `public/download-ra-extension.html` — aggiornare il pacchetto generato per includere il nuovo background.js
+
+**Frontend:**
+- `src/hooks/useRAExtensionBridge.ts` — nuovo hook per comunicare con l'estensione RA (scraping, status)
+- `src/components/prospects/ProspectImporter.tsx` — nuovo componente UI per configurare e lanciare lo scraping nel Prospect Center
+- `src/pages/ProspectCenter.tsx` — aggiungere tab "Importa" con il ProspectImporter
+
+### Logica di estrazione dati (dentro background.js)
+
+La funzione `scrapeCompanyProfile` viene iniettata nella pagina del profilo aziendale e deve:
+
+1. Cercare i dati anagrafici nelle tabelle/div della pagina (selectors CSS da identificare con l'autenticazione attiva — la struttura esatta si scopre navigando la pagina da autenticati)
+2. Estrarre il management dalla sezione dedicata (tipicamente tabella con nome, ruolo, CF)
+3. Raccogliere l'HTML completo come backup per parsing futuro con AI
+4. Restituire un oggetto strutturato compatibile con la tabella `prospects` e `prospect_contacts`
+
+### Sicurezza e rate limiting
+
+- Delay minimo configurabile tra le richieste (default 8-12 secondi, come per WCA)
+- Pause lunghe automatiche ogni N profili
+- Pausa notturna (stessi orari di WCA)
+- Interruzione immediata se la sessione scade (redirect a login)
+- Esecuzione sequenziale: un solo scraping alla volta
+
+### Nota importante
+
+La struttura HTML esatta dei profili aziendali su Report Aziende non e' visibile senza autenticazione. L'implementazione iniziale usera' selettori CSS generici e l'HTML grezzo verra' salvato per consentire un raffinamento successivo dei selettori dopo i primi test con sessione autenticata.
+
