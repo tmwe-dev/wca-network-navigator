@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Activity, Pause, Square, Play, ChevronDown, ChevronUp,
-  Mail, Phone, XCircle,
+  Mail, Phone, XCircle, Loader2, AlertTriangle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCountryFlag } from "@/lib/countries";
@@ -11,6 +11,7 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { useTheme, t } from "./theme";
+import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
 export function ActiveJobBar() {
   const isDark = useTheme();
@@ -18,12 +19,14 @@ export function ActiveJobBar() {
   const { data: jobs } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
   const [expanded, setExpanded] = useState(false);
+  const { isAvailable: extensionAvailable } = useExtensionBridge();
 
   const activeJobs = (jobs || []).filter(
     (j) => j.status === "running" || j.status === "pending" || j.status === "paused"
   );
 
   if (activeJobs.length === 0) return null;
+
 
   const mainJob = activeJobs[0];
   const progress =
@@ -58,11 +61,39 @@ export function ActiveJobBar() {
             <span className={`text-xs font-medium truncate ${th.h2}`}>
               {activeJobs.length} job attiv{activeJobs.length === 1 ? "o" : "i"}
             </span>
+            {/* Extension warning */}
+            {!extensionAvailable && (
+              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-red-50 text-red-600 border border-red-200"}`}>
+                <AlertTriangle className="w-3 h-3" /> Estensione mancante
+              </span>
+            )}
+            {/* Status indicator */}
+            {mainJob.status === "running" && mainJob.last_processed_company && (
+              <span className={`flex items-center gap-1 text-[10px] ${isDark ? "text-amber-300" : "text-sky-600"}`}>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Scaricando...
+              </span>
+            )}
+            {mainJob.error_message && (
+              <span className={`text-[10px] truncate max-w-[200px] ${isDark ? "text-amber-300/80" : "text-amber-600"}`}>
+                {mainJob.error_message}
+              </span>
+            )}
             <span className={`text-xs truncate ${th.dim}`}>
               {getCountryFlag(mainJob.country_code)} {mainJob.country_name}
               {" · "}
               {mainJob.current_index}/{mainJob.total_count}
             </span>
+            {/* Contact stats */}
+            {(mainJob.contacts_found_count > 0 || mainJob.contacts_missing_count > 0) && (
+              <span className={`text-[10px] font-mono ${th.dim}`}>
+                <span className="text-emerald-500">{mainJob.contacts_found_count}</span>
+                <span className={th.dim}>✓</span>
+                {" "}
+                <span className="text-red-400">{mainJob.contacts_missing_count}</span>
+                <span className={th.dim}>✗</span>
+              </span>
+            )}
           </div>
 
           {/* Progress bar */}
