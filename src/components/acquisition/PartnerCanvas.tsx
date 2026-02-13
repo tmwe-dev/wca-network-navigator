@@ -181,18 +181,22 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
       {/* Animated border */}
       <div
         className={cn(
-          "rounded-xl border p-5 space-y-4 transition-all duration-300",
+          "rounded-2xl border p-5 space-y-4 transition-all duration-500",
           phase === "complete"
-            ? "border-emerald-500/30 bg-emerald-500/5"
-            : phase !== "idle"
-              ? "border-primary/40 bg-card shadow-lg shadow-primary/5"
-              : "border-border bg-card"
+            ? "border-emerald-500/30 bg-emerald-500/[0.06] shadow-lg shadow-emerald-500/[0.08]"
+            : phase === "extracting"
+              ? "border-violet-500/40 bg-violet-500/[0.04] shadow-lg shadow-violet-500/[0.08]"
+              : phase !== "idle"
+                ? "border-sky-500/40 bg-sky-500/[0.04] shadow-lg shadow-sky-500/[0.08]"
+                : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 bg-white/[0.02] dark:bg-white/[0.02] bg-white/40"
         )}
         style={
           phase !== "idle" && phase !== "complete"
             ? {
                 backgroundImage:
-                  "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(199 89% 48% / 0.03) 100%)",
+                  phase === "extracting"
+                    ? "linear-gradient(135deg, transparent 0%, hsl(270 100% 70% / 0.03) 100%)"
+                    : "linear-gradient(135deg, transparent 0%, hsl(199 89% 48% / 0.03) 100%)",
               }
             : undefined
         }

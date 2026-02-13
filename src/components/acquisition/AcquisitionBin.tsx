@@ -32,11 +32,11 @@ export function AcquisitionBin({ count, total, showComet, completeCount = 0, inc
 
       <div
         className={cn(
-          "flex items-center justify-center gap-3 px-6 py-3 rounded-xl border transition-all duration-300",
-          "bg-card/80 backdrop-blur-sm",
+          "flex items-center justify-center gap-4 px-8 py-3.5 rounded-2xl border transition-all duration-300",
+          "bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl shadow-lg shadow-black/[0.05]",
           pulse
-            ? "border-primary shadow-lg shadow-primary/20 scale-105"
-            : "border-border"
+            ? "border-sky-500/40 shadow-xl shadow-sky-500/[0.15] scale-105"
+            : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60"
         )}
       >
         <Archive className={cn(
