@@ -235,25 +235,348 @@ function extractProfileData() {
   return result;
 }
 
-// Extract search results from RA DataTable (injected into the page)
+// ══════════════════════════════════════════════
+// DISCOVERY: Inspect modals on search.php?tab=2 to find real field names
+// ══════════════════════════════════════════════
+function discoverFormFields() {
+  try {
+    var fields = { ateco: [], geography: [], fatturato: [], dipendenti: [], contatti: [], allInputs: [] };
+
+    // Scan all inputs/selects inside the page (including hidden ones inside modals)
+    var allInputs = document.querySelectorAll("input, select, textarea");
+    for (var i = 0; i < allInputs.length; i++) {
+      var el = allInputs[i];
+      var info = {
+        tag: el.tagName.toLowerCase(),
+        type: el.type || "",
+        name: el.name || "",
+        id: el.id || "",
+        placeholder: el.placeholder || "",
+        className: el.className || "",
+        parentId: el.parentElement ? (el.parentElement.id || "") : "",
+      };
+      fields.allInputs.push(info);
+
+      // Categorize
+      var ctx = (info.name + " " + info.id + " " + info.placeholder + " " + info.parentId).toLowerCase();
+      if (ctx.indexOf("ateco") >= 0) fields.ateco.push(info);
+      if (ctx.indexOf("region") >= 0 || ctx.indexOf("provincia") >= 0 || ctx.indexOf("comune") >= 0 || ctx.indexOf("geograf") >= 0) fields.geography.push(info);
+      if (ctx.indexOf("fatturato") >= 0 || ctx.indexOf("ricav") >= 0) fields.fatturato.push(info);
+      if (ctx.indexOf("dipendent") >= 0 || ctx.indexOf("addetti") >= 0) fields.dipendenti.push(info);
+      if (ctx.indexOf("contatt") >= 0 || ctx.indexOf("telefon") >= 0 || ctx.indexOf("email") >= 0) fields.contatti.push(info);
+    }
+
+    // Also detect modal IDs
+    var modals = document.querySelectorAll("[id*='MODAL'], [id*='modal'], .modal");
+    fields.modalIds = [];
+    for (var m = 0; m < modals.length; m++) {
+      fields.modalIds.push(modals[m].id || modals[m].className);
+    }
+
+    // Detect forms
+    var forms = document.querySelectorAll("form");
+    fields.formIds = [];
+    for (var f = 0; f < forms.length; f++) {
+      fields.formIds.push({ id: forms[f].id || "", action: forms[f].action || "", name: forms[f].name || "" });
+    }
+
+    return fields;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════
+// FILL & SUBMIT: Interact with modals on search.php?tab=2
+// ══════════════════════════════════════════════
+function fillAndSubmitSearchForm(params) {
+  return new Promise(function(resolve) {
+    try {
+      function waitMs(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+      async function run() {
+        // Helper: open a Bootstrap modal by clicking its trigger or programmatically
+        function openModal(modalId) {
+          try {
+            // Try jQuery-based Bootstrap modal
+            if (typeof jQuery !== "undefined" && jQuery(modalId).modal) {
+              jQuery(modalId).modal("show");
+              return true;
+            }
+            // Try Bootstrap 5 native
+            var el = document.querySelector(modalId);
+            if (el) {
+              // Try trigger button first
+              var trigger = document.querySelector("[data-target='" + modalId + "'], [data-bs-target='" + modalId + "'], [href='" + modalId + "']");
+              if (trigger) { trigger.click(); return true; }
+              // Fallback: show manually
+              el.style.display = "block";
+              el.classList.add("show", "in");
+              return true;
+            }
+          } catch (e) {}
+          return false;
+        }
+
+        // Helper: close modal
+        function closeModal(modalId) {
+          try {
+            if (typeof jQuery !== "undefined" && jQuery(modalId).modal) {
+              jQuery(modalId).modal("hide");
+              return;
+            }
+            var el = document.querySelector(modalId);
+            if (el) { el.style.display = "none"; el.classList.remove("show", "in"); }
+          } catch (e) {}
+        }
+
+        // Helper: set input value with events
+        function setInput(selector, value) {
+          var el = typeof selector === "string" ? document.querySelector(selector) : selector;
+          if (!el || !value) return false;
+          el.value = value;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+          return true;
+        }
+
+        // Helper: find and click an "apply/confirm" button inside a modal
+        function clickApplyInModal(modalId) {
+          var modal = document.querySelector(modalId);
+          if (!modal) return false;
+          // Look for buttons that say "Applica", "Conferma", "OK", "Salva"
+          var btns = modal.querySelectorAll("button, a.btn, input[type='button']");
+          for (var b = 0; b < btns.length; b++) {
+            var txt = (btns[b].textContent || "").trim().toLowerCase();
+            if (txt === "applica" || txt === "conferma" || txt === "ok" || txt === "salva" || txt.indexOf("applic") >= 0 || txt.indexOf("conferm") >= 0) {
+              btns[b].click();
+              return true;
+            }
+          }
+          // Fallback: click the last primary/success button
+          var primBtns = modal.querySelectorAll(".btn-primary, .btn-success");
+          if (primBtns.length > 0) { primBtns[primBtns.length - 1].click(); return true; }
+          return false;
+        }
+
+        // Helper: set checkboxes/radios inside a modal by matching values
+        function setCheckboxes(modalId, values) {
+          if (!values || values.length === 0) return;
+          var modal = document.querySelector(modalId);
+          if (!modal) return;
+          var inputs = modal.querySelectorAll("input[type='checkbox'], input[type='radio']");
+          for (var i = 0; i < inputs.length; i++) {
+            var val = (inputs[i].value || "").toLowerCase();
+            var label = "";
+            // Get associated label text
+            var lbl = inputs[i].parentElement;
+            if (lbl) label = (lbl.textContent || "").toLowerCase().trim();
+            for (var v = 0; v < values.length; v++) {
+              var target = values[v].toLowerCase();
+              if (val === target || val.indexOf(target) >= 0 || label.indexOf(target) >= 0) {
+                inputs[i].checked = true;
+                inputs[i].dispatchEvent(new Event("change", { bubbles: true }));
+                break;
+              }
+            }
+          }
+        }
+
+        // Helper: set text inputs inside a modal by label matching
+        function setModalInput(modalId, labelMatch, value) {
+          if (!value) return;
+          var modal = document.querySelector(modalId);
+          if (!modal) return;
+          var inputs = modal.querySelectorAll("input[type='text'], input[type='number'], input:not([type])");
+          for (var i = 0; i < inputs.length; i++) {
+            var ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
+            // Also check nearby label
+            var parent = inputs[i].closest(".form-group, .input-group, label, .row");
+            if (parent) ctx += " " + (parent.textContent || "").toLowerCase();
+            if (ctx.indexOf(labelMatch) >= 0) {
+              setInput(inputs[i], String(value));
+              return;
+            }
+          }
+        }
+
+        // ── 1. ATECO ──
+        if (params.atecoCode || (params.atecoCodes && params.atecoCodes.length > 0)) {
+          var codes = params.atecoCodes || [params.atecoCode];
+          // Try multiple possible modal IDs
+          var atecoModalIds = ["#MODALsettoreAteco", "#modalAteco", "#modal-ateco", "#MODALateco"];
+          var atecoOpened = false;
+          for (var am = 0; am < atecoModalIds.length; am++) {
+            if (openModal(atecoModalIds[am])) { atecoOpened = true; await waitMs(800); break; }
+          }
+          if (atecoOpened) {
+            // Try to type ATECO code in a search/input field inside the modal
+            var atecoModal = document.querySelector(atecoModalIds[am]);
+            if (atecoModal) {
+              var atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+              if (atecoInput && codes.length > 0) {
+                setInput(atecoInput, codes[0]);
+                await waitMs(500);
+              }
+              // Also try checking checkboxes matching ATECO codes
+              setCheckboxes(atecoModalIds[am], codes);
+            }
+            await waitMs(300);
+            clickApplyInModal(atecoModalIds[am]);
+            await waitMs(500);
+          } else {
+            // Fallback: try to find a hidden input for ATECO and set it directly
+            var atecoHidden = document.querySelector("input[name*='ateco'], input[name*='Ateco'], input[name*='ATECO']");
+            if (atecoHidden) setInput(atecoHidden, codes.join(","));
+          }
+        }
+
+        // ── 2. GEOGRAPHY ──
+        var regions = params.regions || (params.region ? [params.region] : []);
+        var provinces = params.provinces || (params.province ? [params.province] : []);
+        if (regions.length > 0 || provinces.length > 0) {
+          var geoModalIds = ["#MODALgeografica", "#modalGeografica", "#modal-geografia", "#MODALgeografia"];
+          var geoOpened = false;
+          for (var gm = 0; gm < geoModalIds.length; gm++) {
+            if (openModal(geoModalIds[gm])) { geoOpened = true; await waitMs(800); break; }
+          }
+          if (geoOpened) {
+            if (regions.length > 0) setCheckboxes(geoModalIds[gm], regions);
+            if (provinces.length > 0) setCheckboxes(geoModalIds[gm], provinces);
+            await waitMs(300);
+            clickApplyInModal(geoModalIds[gm]);
+            await waitMs(500);
+          } else {
+            // Fallback: hidden inputs
+            var regInput = document.querySelector("input[name*='regione'], input[name*='Regione']");
+            if (regInput && regions.length > 0) setInput(regInput, regions.join(","));
+            var provInput = document.querySelector("input[name*='provincia'], input[name*='Provincia']");
+            if (provInput && provinces.length > 0) setInput(provInput, provinces.join(","));
+          }
+        }
+
+        // ── 3. FATTURATO ──
+        if (params.filters && (params.filters.fatturato_min || params.filters.fatturato_max)) {
+          var fatModalIds = ["#MODALfatturato", "#modalFatturato", "#modal-fatturato"];
+          var fatOpened = false;
+          for (var fm = 0; fm < fatModalIds.length; fm++) {
+            if (openModal(fatModalIds[fm])) { fatOpened = true; await waitMs(800); break; }
+          }
+          if (fatOpened) {
+            setModalInput(fatModalIds[fm], "min", params.filters.fatturato_min);
+            setModalInput(fatModalIds[fm], "max", params.filters.fatturato_max);
+            await waitMs(300);
+            clickApplyInModal(fatModalIds[fm]);
+            await waitMs(500);
+          }
+        }
+
+        // ── 4. DIPENDENTI ──
+        if (params.filters && (params.filters.dipendenti_min || params.filters.dipendenti_max)) {
+          var dipModalIds = ["#MODALnumeroDipendenti", "#modalDipendenti", "#modal-dipendenti"];
+          var dipOpened = false;
+          for (var dm = 0; dm < dipModalIds.length; dm++) {
+            if (openModal(dipModalIds[dm])) { dipOpened = true; await waitMs(800); break; }
+          }
+          if (dipOpened) {
+            setModalInput(dipModalIds[dm], "min", params.filters.dipendenti_min);
+            setModalInput(dipModalIds[dm], "max", params.filters.dipendenti_max);
+            await waitMs(300);
+            clickApplyInModal(dipModalIds[dm]);
+            await waitMs(500);
+          }
+        }
+
+        // ── 5. CONTATTI ──
+        if (params.filters && (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)) {
+          var contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
+          var contOpened = false;
+          for (var cm = 0; cm < contModalIds.length; cm++) {
+            if (openModal(contModalIds[cm])) { contOpened = true; await waitMs(800); break; }
+          }
+          if (contOpened) {
+            var contValues = [];
+            if (params.filters.has_phone_and_email) contValues.push("telefono e email", "entrambi", "tel e email");
+            else {
+              if (params.filters.has_phone) contValues.push("telefono", "tel");
+              if (params.filters.has_email) contValues.push("email", "e-mail");
+            }
+            setCheckboxes(contModalIds[cm], contValues);
+            await waitMs(300);
+            clickApplyInModal(contModalIds[cm]);
+            await waitMs(500);
+          }
+        }
+
+        // ── 6. SUBMIT ──
+        await waitMs(500);
+        // Try to find and submit the main search form
+        var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata'], form[action*='search']");
+        if (form) {
+          form.submit();
+          resolve({ submitted: true, method: "form.submit" });
+          return;
+        }
+        // Fallback: find and click the search button
+        var searchBtn = document.querySelector(".btn-search, #btnCerca, button.cerca, a.cerca");
+        if (!searchBtn) {
+          // Try any button with "Cerca" text
+          var allBtns = document.querySelectorAll("button, a.btn");
+          for (var sb = 0; sb < allBtns.length; sb++) {
+            if ((allBtns[sb].textContent || "").trim().toLowerCase() === "cerca") {
+              searchBtn = allBtns[sb];
+              break;
+            }
+          }
+        }
+        if (searchBtn) {
+          searchBtn.click();
+          resolve({ submitted: true, method: "button.click" });
+          return;
+        }
+        // Last resort: submit any form on the page
+        var anyForm = document.querySelector("form");
+        if (anyForm) {
+          anyForm.submit();
+          resolve({ submitted: true, method: "anyForm.submit" });
+          return;
+        }
+        resolve({ submitted: false, error: "Nessun form o pulsante Cerca trovato" });
+      }
+
+      run();
+    } catch (e) {
+      resolve({ submitted: false, error: e.message });
+    }
+  });
+}
+
+// Extract search results from RA DataTable (injected into the results page)
 function extractSearchResults() {
   var results = [];
   try {
     // RA uses DataTables - look for the results table
-    var tables = document.querySelectorAll("table");
     var targetTable = null;
-    for (var t = 0; t < tables.length; t++) {
-      // The results table typically has company links
-      if (tables[t].querySelector("a[href*='/']") && tables[t].querySelectorAll("tbody tr").length > 0) {
-        targetTable = tables[t];
-        break;
+
+    // Try specific DataTable selectors first
+    targetTable = document.querySelector("#DataTables_Table_0, .dataTable, table.display, table.table-striped");
+    
+    if (!targetTable) {
+      // Fallback: find table with company links
+      var tables = document.querySelectorAll("table");
+      for (var t = 0; t < tables.length; t++) {
+        var tbodyRows = tables[t].querySelectorAll("tbody tr");
+        if (tbodyRows.length > 0 && tables[t].querySelector("a[href]")) {
+          targetTable = tables[t];
+          break;
+        }
       }
     }
 
     if (!targetTable) {
-      // Fallback: try DataTable wrapper
-      var dtWrapper = document.querySelector(".dataTables_wrapper, #DataTables_Table_0, .dataTable");
-      if (dtWrapper) targetTable = dtWrapper.tagName === "TABLE" ? dtWrapper : dtWrapper.querySelector("table");
+      // Last fallback: DataTable wrapper
+      var dtWrapper = document.querySelector(".dataTables_wrapper");
+      if (dtWrapper) targetTable = dtWrapper.querySelector("table");
     }
 
     if (targetTable) {
@@ -274,111 +597,58 @@ function extractSearchResults() {
           href = "https://www.reportaziende.it" + (href.startsWith("/") ? "" : "/") + href;
         }
 
-        // Try to extract P.IVA from cells (usually in one of the columns)
+        // Extract P.IVA (11 digits) and city from cells
         var piva = null;
         var city = null;
+        var province = null;
+        var ateco = null;
         for (var c = 0; c < cells.length; c++) {
           var cellText = cells[c].textContent.trim();
           // P.IVA is 11 digits
           var pivaMatch = cellText.match(/\b(\d{11})\b/);
           if (pivaMatch && !piva) piva = pivaMatch[1];
-          // City detection: short text, not a number, not the company name
-          if (!city && cellText.length > 1 && cellText.length < 50 && !/^\d+$/.test(cellText) && cellText !== name && !/\d{11}/.test(cellText)) {
+          // Province: 2-letter code in parentheses like (MI) or standalone
+          var provMatch = cellText.match(/\(([A-Z]{2})\)/);
+          if (provMatch && !province) province = provMatch[1];
+          // City: short text that's not a number and not the company name
+          if (!city && cellText.length > 1 && cellText.length < 50 && !/^\d+$/.test(cellText) && cellText !== name && !/\d{11}/.test(cellText) && !/^[A-Z]{2}$/.test(cellText)) {
             city = cellText;
           }
+          // ATECO code pattern: XX.XX.XX
+          var atecoMatch = cellText.match(/\b(\d{2}\.\d{2}(?:\.\d{1,2})?)\b/);
+          if (atecoMatch && !ateco) ateco = atecoMatch[1];
         }
 
-        results.push({ name: name, url: href, piva: piva, city: city });
+        results.push({ name: name, url: href, piva: piva, city: city, province: province, ateco: ateco });
       }
     }
 
     // Detect total results count
     var totalText = "";
-    var infoEl = document.querySelector(".dataTables_info, .risultati, .total-results");
-    if (infoEl) totalText = infoEl.textContent.trim();
+    var totalCount = 0;
+    var infoEl = document.querySelector(".dataTables_info, .risultati, .total-results, .search-results-count");
+    if (infoEl) {
+      totalText = infoEl.textContent.trim();
+      // Try to parse number like "1.234 risultati" or "Showing 1 to 25 of 1,234"
+      var numMatch = totalText.match(/(?:di|of|totale|trovate?|risultati?:?)\s*([\d.,]+)/i) || totalText.match(/([\d.,]+)\s*(?:risultati|aziende|record)/i);
+      if (numMatch) {
+        totalCount = parseInt(numMatch[1].replace(/[.,]/g, ""), 10) || 0;
+      }
+    }
 
-    // Detect pagination - check if there's a "next" page
+    // Detect pagination
     var hasNextPage = false;
-    var nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next']");
+    var nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next'], .page-item.next:not(.disabled) a");
     if (nextBtn && !nextBtn.classList.contains("disabled")) hasNextPage = true;
 
-    return { results: results, hasNextPage: hasNextPage, totalText: totalText };
+    // Also detect CTA gate (paywall modal) as sign of no session
+    var ctaGate = document.querySelector("#modalCTAGate, .cta-gate, .paywall-modal");
+    var ctaVisible = ctaGate && (ctaGate.style.display !== "none" && ctaGate.classList.contains("show"));
+
+    return { results: results, hasNextPage: hasNextPage, totalText: totalText, totalCount: totalCount, ctaGateDetected: !!ctaVisible };
   } catch (e) {
-    return { results: [], hasNextPage: false, totalText: "", error: e.message };
+    return { results: [], hasNextPage: false, totalText: "", totalCount: 0, error: e.message };
   }
-}
-
-// Fill and submit the RA search form (injected into searchPersonalizzata.php)
-function fillAndSubmitSearchForm(params) {
-  return new Promise(function(resolve) {
-    try {
-      // Wait for form to be ready
-      function tryFill() {
-        var form = document.querySelector("form") || document.querySelector("#searchForm, .search-form, [action*='search']");
-        
-        // Try to find input fields by common patterns
-        function setField(names, value) {
-          if (!value) return;
-          for (var n = 0; n < names.length; n++) {
-            var el = document.querySelector("[name='" + names[n] + "'], #" + names[n]);
-            if (el) {
-              el.value = value;
-              el.dispatchEvent(new Event("input", { bubbles: true }));
-              el.dispatchEvent(new Event("change", { bubbles: true }));
-              return true;
-            }
-          }
-          return false;
-        }
-
-        // Set ATECO code
-        if (params.atecoCode) {
-          setField(["ateco", "codice_ateco", "CodiceAteco", "ateco_code", "txtAteco"], params.atecoCode);
-        }
-        
-        // Set geographic filters
-        if (params.region) setField(["regione", "Regione", "region"], params.region);
-        if (params.province) setField(["provincia", "Provincia", "province"], params.province);
-
-        // Set financial filters
-        if (params.filters) {
-          var f = params.filters;
-          if (f.fatturato_min) setField(["fatturato_min", "FatturatoMin", "fatturato_da", "ricavi_min"], String(f.fatturato_min));
-          if (f.fatturato_max) setField(["fatturato_max", "FatturatoMax", "fatturato_a", "ricavi_max"], String(f.fatturato_max));
-          if (f.dipendenti_min) setField(["dipendenti_min", "DipendentiMin", "addetti_min"], String(f.dipendenti_min));
-          if (f.dipendenti_max) setField(["dipendenti_max", "DipendentiMax", "addetti_max"], String(f.dipendenti_max));
-          if (f.anno_fondazione_min) setField(["inizio_attivita_min", "anno_min", "AnnoMin"], String(f.anno_fondazione_min));
-          if (f.anno_fondazione_max) setField(["inizio_attivita_max", "anno_max", "AnnoMax"], String(f.anno_fondazione_max));
-          if (f.has_phone_and_email) {
-            setField(["esiste_tel_e_email", "tel_email"], "1");
-          } else {
-            if (f.has_phone) setField(["numero_telefono", "has_phone"], "1");
-            if (f.has_email) setField(["indirizzo_email", "has_email"], "1");
-          }
-        }
-
-        // Submit the form
-        if (form) {
-          form.submit();
-          resolve({ submitted: true });
-        } else {
-          // Try clicking a search button
-          var btn = document.querySelector("button[type='submit'], input[type='submit'], .btn-search, #btnSearch, button.search");
-          if (btn) {
-            btn.click();
-            resolve({ submitted: true });
-          } else {
-            resolve({ submitted: false, error: "Form non trovato" });
-          }
-        }
-      }
-
-      // Give the page time to render the form
-      setTimeout(tryFill, 2000);
-    } catch (e) {
-      resolve({ submitted: false, error: e.message });
-    }
-  });
 }
 
 // Scrape a single company profile
@@ -420,22 +690,46 @@ async function scrapeCompanyProfile(url) {
   }
 }
 
-// Search for companies by ATECO code and optional filters
-// Uses form POST submission instead of GET parameters
-async function scrapeSearchResults(params) {
+// Run field discovery on the search page (one-time diagnostic)
+async function runDiscoverFields() {
   var tab = null;
   try {
-    // Navigate to the search form page
-    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/searchPersonalizzata.php", active: false });
-
-    // Wait for page load
+    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
     await new Promise(function(resolve) {
       chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener);
-          setTimeout(resolve, 2000);
+          setTimeout(resolve, 3000);
         }
       });
+    });
+    var [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
+    await chrome.tabs.remove(tab.id); tab = null;
+    return { success: true, fields: result ? result.result : null };
+  } catch (err) {
+    if (tab) try { await chrome.tabs.remove(tab.id); } catch(e) {}
+    return { success: false, error: err.message };
+  }
+}
+
+// Search for companies using Ricerca Avanzata (search.php?tab=2) with modal interaction
+async function scrapeSearchResults(params) {
+  var tab = null;
+  try {
+    // Navigate to the Ricerca Avanzata page
+    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
+
+    // Wait for page load
+    await new Promise(function(resolve) {
+      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+      function listener(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          clearTimeout(timeout);
+          setTimeout(resolve, 2500); // Extra wait for JS/modals to initialize
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener);
     });
 
     // Check if redirected to login
@@ -445,19 +739,25 @@ async function scrapeSearchResults(params) {
       return { success: false, error: "session_expired", results: [] };
     }
 
-    // Inject the form-filling script and submit
-    await chrome.scripting.executeScript({
+    // Inject the form-filling script (interacts with modals) and submit
+    var [fillResult] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: fillAndSubmitSearchForm,
       args: [params],
     });
+
+    var fillData = fillResult && fillResult.result;
+    if (fillData && !fillData.submitted) {
+      await chrome.tabs.remove(tab.id); tab = null;
+      return { success: false, error: "Form non compilato: " + (fillData.error || "sconosciuto"), results: [] };
+    }
 
     // Wait for results page to load after form submission
     await new Promise(function(resolve) {
       var timeout = setTimeout(function() {
         chrome.tabs.onUpdated.removeListener(listener);
         resolve();
-      }, 20000);
+      }, 25000);
       function listener(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener);
@@ -484,6 +784,10 @@ async function scrapeSearchResults(params) {
     await chrome.tabs.remove(tab.id); tab = null;
 
     if (result && result.result) {
+      // Check if CTA gate was detected (paywall = not properly logged in)
+      if (result.result.ctaGateDetected && (!result.result.results || result.result.results.length === 0)) {
+        return { success: false, error: "session_expired", results: [], reason: "CTA gate detected" };
+      }
       return { success: true, ...result.result };
     }
     return { success: false, error: "Nessun risultato estratto", results: [] };
@@ -711,7 +1015,10 @@ async function saveBatch(prospects) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.source === "ra-content-bridge") {
     if (msg.action === "ping") {
-      sendResponse({ success: true, extension: "ra-cookie-sync", version: "2.0" });
+      sendResponse({ success: true, extension: "ra-cookie-sync", version: "3.0" });
+    } else if (msg.action === "discoverFields") {
+      runDiscoverFields().then(sendResponse);
+      return true;
     } else if (msg.action === "syncCookies") {
       syncRACookies().then(sendResponse);
       return true;
