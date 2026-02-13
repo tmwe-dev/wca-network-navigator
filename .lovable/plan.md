@@ -1,87 +1,58 @@
 
 
-## Ristrutturazione Completa del Prospect Center
+## Spostare Filtri Regione/Provincia a Sinistra e Rimuovere ATECO dall'Importer
 
-### Problemi attuali
+### Cosa cambia
 
-1. **Dropdown bloccati**: I `ScrollArea` dentro i `CommandList` non scorrono perche' hanno `max-h-48`/`max-h-56` troppo piccoli e il `CommandList` non ha un'altezza fissa — serve usare `className="max-h-[300px] overflow-auto"` direttamente sul `CommandList` senza `ScrollArea` annidato.
+Il pannello sinistro diventa il **centro di configurazione completo** per lo scraping: in alto i filtri Regione e Provincia (sempre visibili, non nascosti nel dropdown), sotto l'albero ATECO. Il pannello destro (tab "Importa") usa direttamente i codici ATECO selezionati a sinistra, senza duplicare il selettore.
 
-2. **Struttura ATECO piatta**: Attualmente l'AtecoGrid mostra le categorie raggruppate per prime 2 cifre ma in modo piatto, senza la struttura a cartelle espandibili (sezione lettera > divisione 2 cifre > gruppo 3 cifre).
-
-3. **Layout sbagliato**: Il pannello sinistro contiene filtri regione/provincia nei dropdown, ma dovrebbe contenere l'albero ATECO navigabile. Il pannello destro mostra la lista prospect ma dovrebbe replicare il modello dell'Operations Center con tab (Prospect, Importa/Scarica) e il canvas di stato dei job.
-
-### Nuova architettura (modello Operations Center)
+### Layout risultante
 
 ```text
-+--------------------------------------------------------------------+
-|  Prospect Center               [Report Aziende]    [RASession] [T] |
-|  [Stats bar: Totale | Email | PEC | Telefoni | Fatturato | ATECO]  |
-+--------------------------------------------------------------------+
-|  35% ALBERO ATECO              | 65% PANNELLO CONTESTUALE          |
-|  [Cerca ATECO...] [Filtri]     | [header ATECO selezionati]        |
-|                                | [Prospect] [Importa]              |
-|  v A - AGRICOLTURA             | ┌────────────────────────────────┐|
-|    v 01 - Produzioni veg...    | │ Lista prospect (come Partner   │|
-|      > 01.1 - Coltivaz...      | │ Hub): nome, citta', fatturato, │|
-|      > 01.2 - Colture perm     | │ email, telefono, responsabile, │|
-|    > 02 - Silvicoltura         | │ rating, dipendenti, crescita   │|
-|    > 03 - Pesca                | │                                │|
-|  > B - ATTIVITA ESTRATTIVE     | │ Click => dettaglio inline      │|
-|  v C - MANIFATTURIERE          | │                                │|
-|    v 10 - Alimentari           | │ Tab Importa => ProspectImporter│|
-|      ...                       | │ con status job trasparente     │|
-|                                | └────────────────────────────────┘|
-+--------------------------------------------------------------------+
++-------------------------------------------+----------------------------------------+
+|  35% PANNELLO SINISTRO                    | 65% PANNELLO DESTRO                    |
+|                                           |                                        |
+|  [Regione v] (multi-select, sempre vis.)  | [Prospect] [Importa]                   |
+|  chips: Lombardia, Veneto                 |                                        |
+|                                           | Tab Prospect: lista prospect filtrati  |
+|  [Provincia v] (filtrata per regione)     |                                        |
+|  chips: MI, BG                            | Tab Importa: status estensione,        |
+|                                           |   pulsante Avvia/Ferma, progresso,     |
+|  [Cerca ATECO...]                         |   log — USA i codici ATECO + filtri    |
+|  v A - AGRICOLTURA                        |   dal pannello sinistro                |
+|    v 01 - Produzioni veg...               |                                        |
+|      > 01.1 ...                           |                                        |
+|  > B - ATTIVITA ESTRATTIVE               |                                        |
+|  ...                                      |                                        |
++-------------------------------------------+----------------------------------------+
 ```
 
-### Modifiche dettagliate
+### Dettaglio tecnico
 
-#### 1. `src/components/prospects/AtecoGrid.tsx` — Riscrittura completa
+#### 1. `src/components/prospects/AtecoGrid.tsx`
 
-**Struttura ad albero espandibile** usando i dati statici di `ATECO_TREE`:
-- **Livello 1** (lettere A-U): sezioni principali, cliccabili per espandere
-- **Livello 2** (2 cifre: 01, 02...): divisioni, cliccabili per espandere
-- **Livello 3** (3 cifre: 01.1, 01.2...): gruppi, selezionabili
+- Spostare i `FilterMultiSelect` per Regione e Provincia **fuori dal Popover dei filtri**, rendendoli sempre visibili in cima al pannello, prima della barra di ricerca ATECO
+- Rimuovere il pulsante con icona filtro (SlidersHorizontal) e il relativo Popover, dato che i filtri sono ora inline
+- Ordine verticale: Regione multi-select, Province multi-select, barra ricerca ATECO, albero ATECO
 
-Ogni nodo mostra: icona cartella (aperta/chiusa), codice, descrizione troncata. I nodi selezionabili hanno checkbox. Selezionare una sezione o divisione seleziona tutti i figli.
+#### 2. `src/components/prospects/ProspectImporter.tsx`
 
-I filtri Regione/Provincia restano nel dropdown del pulsante filtri (come ora), ma con i dropdown corretti (senza ScrollArea annidato, con `max-h-[300px] overflow-auto` sul `CommandList`).
+- Rimuovere completamente il `MultiSelectPopover` per ATECO (righe 292-301), il selettore Regioni (302-311) e Province (312-321)
+- Rimuovere gli state locali `selectedAteco`, `selectedRegions`, `selectedProvinces` e la relativa logica
+- Ricevere via props i codici ATECO selezionati + filtri regione/provincia dal componente padre (`ProspectCenter`)
+- Nuova interfaccia props: `{ isDark: boolean; atecoCodes: string[]; regions: string[]; provinces: string[] }`
+- Il pulsante "Avvia Scraping" e' disabilitato se `atecoCodes.length === 0`, con messaggio "Seleziona almeno un codice ATECO dal pannello a sinistra"
 
-L'albero e' costruito dal dato statico `ATECO_TREE` (370 voci), arricchito con i conteggi dal database tramite `useAtecoGroups`.
+#### 3. `src/pages/ProspectCenter.tsx`
 
-#### 2. `src/components/prospects/ProspectListPanel.tsx` — Allineamento al PartnerListPanel
-
-Replicare la struttura del `PartnerListPanel` dell'Operations Center:
-- Card prospect con: nome azienda (titolo principale), citta' + provincia, fatturato in evidenza, indicatori contatto (email, PEC, telefono con icone colorate), dipendenti, responsabile (dal primo contatto in `prospect_contacts`), rating affidabilita'
-- Dettaglio inline con sezioni espanse: Anagrafica, Contatti Aziendali, Dati Finanziari, Management (da `prospect_contacts`), dati ATECO
-
-#### 3. `src/pages/ProspectCenter.tsx` — Allineamento al layout Operations
-
-Replicare esattamente la struttura di `Operations.tsx`:
-- Quando nessun ATECO selezionato: empty state con icona + istruzioni
-- Quando ATECO selezionati: header con label dei selezionati + TabsList (Prospect, Importa) nel header
-- Tab "Prospect": ProspectListPanel
-- Tab "Importa": ProspectImporter (con status dei job)
-- ActiveJobBar equivalente per RA (opzionale, se c'e' uno scraping in corso)
-
-#### 4. Fix dropdown scroll globale
-
-In tutti i `MultiSelectPopover` (sia in AtecoGrid che in ProspectImporter): rimuovere `ScrollArea` annidato dentro `CommandList` e usare `className="max-h-[300px] overflow-auto"` direttamente su `CommandList`. Questo risolve il problema dello scroll bloccato.
+- Passare `selectedAteco`, `regionFilter` e `provinceFilter` come props al `ProspectImporter`:
+  ```
+  <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} />
+  ```
 
 ### File da modificare
 
-1. **`src/components/prospects/AtecoGrid.tsx`** — Riscrittura con albero espandibile a cartelle (Collapsible), fix scroll dropdown
-2. **`src/components/prospects/ProspectListPanel.tsx`** — Allineamento card al modello PartnerListPanel con piu' dati
-3. **`src/pages/ProspectCenter.tsx`** — Ristrutturazione layout come Operations.tsx (header con tab, ActiveJobBar)
-4. **`src/components/prospects/ProspectImporter.tsx`** — Fix scroll nei dropdown MultiSelectPopover
-
-### Dettaglio tecnico albero ATECO
-
-L'albero viene costruito cosi':
-- Dalle 370 voci di `ATECO_TREE` si estraggono i 3 livelli
-- I conteggi dal database (`useAtecoGroups`) vengono mappati sui nodi foglia
-- I conteggi dei nodi padre sono la somma dei figli
-- Ogni nodo usa `Collapsible` di Radix per l'espansione
-- Click sulla checkbox seleziona/deseleziona; click sulla cartella espande/comprime
-- Selezionare un padre seleziona tutti i codici ATECO figli presenti nel database
+1. **`src/components/prospects/AtecoGrid.tsx`** — Filtri regione/provincia inline (sempre visibili), rimuovere Popover filtri
+2. **`src/components/prospects/ProspectImporter.tsx`** — Rimuovere selettori ATECO/regione/provincia, ricevere dati via props
+3. **`src/pages/ProspectCenter.tsx`** — Passare le props aggiuntive al ProspectImporter
 
