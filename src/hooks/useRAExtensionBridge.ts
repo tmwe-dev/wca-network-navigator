@@ -98,6 +98,22 @@ export function useRAExtensionBridge() {
     [sendMessage]
   );
 
+  /** Phase 1: Search only — returns list of companies without scraping profiles */
+  const searchOnly = useCallback(
+    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: any; delaySeconds?: number }) => {
+      return sendMessage("searchOnly", { params }, 600000); // 10min timeout
+    },
+    [sendMessage]
+  );
+
+  /** Phase 2: Scrape specific selected items */
+  const scrapeSelected = useCallback(
+    (params: { items: Array<{ name: string; url: string }>; delaySeconds?: number; batchSize?: number }) => {
+      return sendMessage("scrapeSelected", { params }, 1800000); // 30min timeout
+    },
+    [sendMessage]
+  );
+
   const scrapeCompany = useCallback(
     (url: string) => sendMessage("scrapeCompany", { url }, 60000),
     [sendMessage]
@@ -126,6 +142,8 @@ export function useRAExtensionBridge() {
   return {
     isAvailable,
     scrapeByAteco,
+    searchOnly,
+    scrapeSelected,
     scrapeCompany,
     getScrapingStatus,
     stopScraping,

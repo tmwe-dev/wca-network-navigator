@@ -4,6 +4,7 @@ import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
 import { ProspectListPanel } from "@/components/prospects/ProspectListPanel";
 import { ProspectImporter } from "@/components/prospects/ProspectImporter";
+import { ProspectAdvancedFilters, EMPTY_FILTERS, type ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
@@ -35,6 +36,7 @@ export default function ProspectCenter() {
   const [selectedAteco, setSelectedAteco] = useState<string[]>([]);
   const [regionFilter, setRegionFilter] = useState<string[]>([]);
   const [provinceFilter, setProvinceFilter] = useState<string[]>([]);
+  const [advFilters, setAdvFilters] = useState<ProspectFilters>(EMPTY_FILTERS);
 
   const { data: stats } = useProspectStats();
 
@@ -106,6 +108,10 @@ export default function ProspectCenter() {
                 provinceFilter={provinceFilter}
                 onProvinceChange={setProvinceFilter}
               />
+              {/* Advanced Filters */}
+              <div className="mt-2">
+                <ProspectAdvancedFilters filters={advFilters} onChange={setAdvFilters} isDark={isDark} />
+              </div>
             </div>
 
             {/* RIGHT: Contextual Panel (65%) */}
@@ -153,7 +159,7 @@ export default function ProspectCenter() {
 
                 <TabsContent value="import" className="flex-1 min-h-0 mt-0">
                   <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                    <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} />
+                    <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} filters={advFilters} />
                   </div>
                 </TabsContent>
               </Tabs>

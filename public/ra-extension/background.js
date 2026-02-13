@@ -302,7 +302,6 @@ async function scrapeCompanyProfile(url) {
 // Search for companies by ATECO code and optional filters
 async function scrapeSearchResults(params) {
   try {
-    // Build search URL
     let searchUrl = "https://www.reportaziende.it/ricerca-personalizzata?";
     const qp = [];
     if (params.atecoCode) qp.push("ateco=" + encodeURIComponent(params.atecoCode));
@@ -310,41 +309,97 @@ async function scrapeSearchResults(params) {
     if (params.province) qp.push("provincia=" + encodeURIComponent(params.province));
     if (params.minFatturato) qp.push("fatturato_min=" + params.minFatturato);
     if (params.maxFatturato) qp.push("fatturato_max=" + params.maxFatturato);
+    if (params.filters) {
+      var f = params.filters;
+      if (f.fatturato_min) qp.push("fatturato_min=" + f.fatturato_min);
+      if (f.fatturato_max) qp.push("fatturato_max=" + f.fatturato_max);
+      if (f.dipendenti_min) qp.push("dipendenti_min=" + f.dipendenti_min);
+      if (f.dipendenti_max) qp.push("dipendenti_max=" + f.dipendenti_max);
+      if (f.anno_fondazione_min) qp.push("inizio_attivita_min=" + f.anno_fondazione_min);
+      if (f.anno_fondazione_max) qp.push("inizio_attivita_max=" + f.anno_fondazione_max);
+      if (f.has_phone_and_email) qp.push("esiste_tel_e_email=1");
+      else { if (f.has_phone) qp.push("numero_telefono=1"); if (f.has_email) qp.push("indirizzo_email=1"); }
+    }
     if (params.page) qp.push("page=" + params.page);
     searchUrl += qp.join("&");
 
     const tab = await chrome.tabs.create({ url: searchUrl, active: false });
-
     await new Promise((resolve) => {
       chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-        if (tabId === tab.id && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          setTimeout(resolve, 2000);
-        }
+        if (tabId === tab.id && info.status === "complete") { chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 3000); }
       });
     });
-
-    // Check session
     const tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && tabInfo.url.includes("/login")) {
-      await chrome.tabs.remove(tab.id);
-      return { success: false, error: "session_expired", results: [] };
-    }
-
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractSearchResults,
-    });
-
+    if (tabInfo.url && tabInfo.url.includes("/login")) { await chrome.tabs.remove(tab.id); return { success: false, error: "session_expired", results: [] }; }
+    const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractSearchResults });
     await chrome.tabs.remove(tab.id);
-
-    if (result && result.result) {
-      return { success: true, ...result.result };
-    }
+    if (result && result.result) return { success: true, ...result.result };
     return { success: false, error: "No results extracted", results: [] };
-  } catch (err) {
-    return { success: false, error: err.message, results: [] };
-  }
+  } catch (err) { return { success: false, error: err.message, results: [] }; }
+}
+
+// Search Only: get list without scraping profiles
+async function runSearchOnly(params) {
+  if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
+  resetState(); scrapingState.active = true;
+  addLog("Avvio ricerca lista aziende...");
+  var delay = (params.delaySeconds || 10) * 1000;
+  var atecoCodes = params.atecoCodes || (params.atecoCode ? [params.atecoCode] : []);
+  var regions = params.regions || (params.region ? [params.region] : []);
+  var provinces = params.provinces || (params.province ? [params.province] : []);
+  try {
+    var allResults = [];
+    for (var ai = 0; ai < atecoCodes.length; ai++) {
+      if (scrapingState.stopped) break;
+      var ateco = atecoCodes[ai];
+      var regList = regions.length > 0 ? regions : [""];
+      var provList = provinces.length > 0 ? provinces : [""];
+      for (var ri = 0; ri < regList.length; ri++) {
+        for (var pi = 0; pi < provList.length; pi++) {
+          if (scrapingState.stopped) break;
+          var page = 1, hasMore = true;
+          while (hasMore && !scrapingState.stopped) {
+            addLog("Ricerca: ATECO=" + ateco + (regList[ri] ? " Reg=" + regList[ri] : "") + " pag." + page);
+            var sr = await scrapeSearchResults({ atecoCode: ateco, region: regList[ri] || undefined, province: provList[pi] || undefined, filters: params.filters, page: page });
+            if (!sr.success) { if (sr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); scrapingState.active = false; return { success: false, error: "session_expired", results: allResults, log: scrapingState.log.slice(-50) }; } addLog("Errore: " + sr.error); break; }
+            if (sr.results && sr.results.length > 0) { allResults = allResults.concat(sr.results); addLog("Trovate " + sr.results.length + " (tot: " + allResults.length + ")"); }
+            hasMore = !!sr.nextUrl && sr.results && sr.results.length > 0; page++;
+            if (hasMore) await new Promise(function(r) { setTimeout(r, delay); });
+            if (allResults.length >= 2000) { addLog("Limite 2000 raggiunto."); hasMore = false; }
+          }
+        }
+      }
+    }
+    addLog("Ricerca completata: " + allResults.length + " aziende trovate.");
+    scrapingState.active = false;
+    return { success: true, results: allResults, total: allResults.length, log: scrapingState.log.slice(-50) };
+  } catch (err) { addLog("Errore: " + err.message); scrapingState.active = false; return { success: false, error: err.message, results: [], log: scrapingState.log.slice(-50) }; }
+}
+
+// Scrape Selected: scrape only specific URLs chosen by user
+async function runScrapeSelected(params) {
+  if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
+  var items = params.items || [];
+  if (items.length === 0) return { success: false, error: "Nessun elemento" };
+  resetState(); scrapingState.active = true; scrapingState.total = items.length;
+  addLog("Scraping " + items.length + " profili selezionati");
+  var delay = (params.delaySeconds || 10) * 1000, batchSize = params.batchSize || 5, batch = [];
+  try {
+    for (var i = 0; i < items.length; i++) {
+      if (scrapingState.stopped) { addLog("Interrotto."); break; }
+      scrapingState.currentCompany = items[i].name; scrapingState.processed = i + 1;
+      addLog("Scraping " + (i+1) + "/" + items.length + ": " + items[i].name);
+      var pr = await scrapeCompanyProfile(items[i].url);
+      if (pr.success && pr.data) { batch.push(pr.data); addLog("✅ " + items[i].name); }
+      else { scrapingState.errors++; if (pr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); if (batch.length > 0) await saveBatch(batch); scrapingState.active = false; return { success: false, error: "session_expired", saved: scrapingState.saved }; } addLog("❌ " + items[i].name); }
+      if (batch.length >= batchSize) { await saveBatch(batch); batch = []; }
+      if (i < items.length - 1 && !scrapingState.stopped) { var jit = delay * (0.7 + Math.random() * 0.6); await new Promise(function(r) { setTimeout(r, jit); }); }
+    }
+    if (batch.length > 0) await saveBatch(batch);
+    addLog("Completato. Salvati: " + scrapingState.saved + ", Errori: " + scrapingState.errors);
+    scrapingState.active = false;
+    return { success: true, total: scrapingState.total, saved: scrapingState.saved, errors: scrapingState.errors };
+  } catch (err) { addLog("Errore: " + err.message); scrapingState.active = false; return { success: false, error: err.message }; }
 }
 
 // Batch scrape: search + profile extraction
@@ -510,6 +565,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true;
     } else if (msg.action === "scrapeByAteco") {
       runBatchScrape(msg.params || {}).then(sendResponse);
+      return true;
+    } else if (msg.action === "searchOnly") {
+      runSearchOnly(msg.params || {}).then(sendResponse);
+      return true;
+    } else if (msg.action === "scrapeSelected") {
+      runScrapeSelected(msg.params || {}).then(sendResponse);
       return true;
     } else if (msg.action === "scrapeCompany") {
       scrapeCompanyProfile(msg.url).then(sendResponse);
