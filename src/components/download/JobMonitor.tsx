@@ -12,7 +12,8 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";
-import { useTheme, t, DELAY_VALUES, DELAY_LABELS } from "./theme";
+import { useTheme, t } from "./theme";
+import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
 
 export function JobMonitor() {
   const isDark = useTheme();
@@ -20,6 +21,9 @@ export function JobMonitor() {
   const { data: jobs } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
   const updateSpeed = useUpdateJobSpeed();
+  const { settings: scrapingSettings } = useScrapingSettings();
+  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
+  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
 
   const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
   const recentCompleted = (jobs || []).filter(j => j.status === "completed" || j.status === "cancelled").slice(0, 5);
@@ -54,6 +58,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   pauseResume: ReturnType<typeof usePauseResumeJob>;
   updateSpeed: ReturnType<typeof useUpdateJobSpeed>;
 }) {
+  const { settings: scrapingSettings } = useScrapingSettings();
+  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
+  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
   const isDark = useTheme();
   const th = t(isDark);
   const [showSpeed, setShowSpeed] = useState(false);

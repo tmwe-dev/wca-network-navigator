@@ -22,8 +22,7 @@ interface NetworkStats {
   wca_ids: number[];
 }
 
-const DELAY_VALUES = [0, 1, 2, 3, 5, 8, 10, 15, 20, 30, 45, 60];
-const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 2: "2s", 3: "3s", 5: "5s", 8: "8s", 10: "10s", 15: "15s", 20: "20s", 30: "30s", 45: "45s", 60: "60s" };
+import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
 
 function t(dark: boolean) {
   return {
@@ -48,10 +47,14 @@ function t(dark: boolean) {
 export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; onStartRunning: () => void }) {
   const th = t(isDark);
   const queryClient = useQueryClient();
+  const { settings: scrapingSettings } = useScrapingSettings();
+  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
+  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
+  const defaultIdx = DELAY_VALUES.findIndex(v => v >= scrapingSettings.delayDefault);
   const [loading, setLoading] = useState(true);
   const [networkStats, setNetworkStats] = useState<NetworkStats[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [delayIdx, setDelayIdx] = useState(5); // default 8s
+  const [delayIdx, setDelayIdx] = useState(defaultIdx >= 0 ? defaultIdx : Math.floor(DELAY_VALUES.length / 2));
   const [prioritizeMissing, setPrioritizeMissing] = useState(true);
   const [starting, setStarting] = useState(false);
   const [hasCookie, setHasCookie] = useState<boolean | null>(null);

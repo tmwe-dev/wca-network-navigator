@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { Check, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export function AcquisitionToolbar({
   includeDeepSearch,
   onIncludeDeepSearchChange,
 }: AcquisitionToolbarProps) {
+  const { settings: scrapingSettings } = useScrapingSettings();
   const [countryOpen, setCountryOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
 
@@ -154,9 +156,9 @@ export function AcquisitionToolbar({
             <Slider
               value={[delaySeconds]}
               onValueChange={([v]) => onDelayChange(v)}
-              min={0}
-              max={60}
-              step={5}
+              min={scrapingSettings.delayMin}
+              max={scrapingSettings.delayMax}
+              step={1}
               className="w-24"
             />
           </div>

@@ -3,7 +3,9 @@ import { createContext, useContext } from "react";
 export const ThemeCtx = createContext(true);
 export const useTheme = () => useContext(ThemeCtx);
 
+/** @deprecated Use buildDelayValues/buildDelayLabels from useScrapingSettings instead */
 export const DELAY_VALUES = [0, 1, 2, 3, 5, 8, 10, 15, 20, 30, 45, 60];
+/** @deprecated Use buildDelayValues/buildDelayLabels from useScrapingSettings instead */
 export const DELAY_LABELS: Record<number, string> = { 0: "0s", 1: "1s", 2: "2s", 3: "3s", 5: "5s", 8: "8s", 10: "10s", 15: "15s", 20: "20s", 30: "30s", 45: "45s", 60: "60s" };
 
 export function t(dark: boolean) {
