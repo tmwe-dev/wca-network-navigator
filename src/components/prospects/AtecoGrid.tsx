@@ -19,6 +19,7 @@ interface AtecoGridProps {
   selected: string[];
   onToggle: (code: string) => void;
   onRemove: (code: string) => void;
+  onSelectMultiple?: (codes: string[]) => void;
   isDark: boolean;
   regionFilter: string[];
   onRegionChange: (r: string[]) => void;
@@ -150,7 +151,7 @@ function passesRankingFilter(rank: AtecoRank | undefined, filters: ProspectFilte
 /* ─── Main Component ─── */
 
 export function AtecoGrid({
-  selected, onToggle, onRemove, isDark,
+  selected, onToggle, onRemove, onSelectMultiple, isDark,
   regionFilter, onRegionChange, provinceFilter, onProvinceChange,
   rankingFilters,
 }: AtecoGridProps) {
@@ -329,6 +330,28 @@ export function AtecoGrid({
           ))}
         </div>
       )}
+
+      {/* "Seleziona tutti i filtrati" button */}
+      {(() => {
+        const hasRankFilter = rankingFilters && (rankingFilters.rank_volume_min > 0 || rankingFilters.rank_valore_min > 0 ||
+          rankingFilters.rank_intl.length > 0 || rankingFilters.rank_paga.length > 0 || rankingFilters.rank_score_min > 0);
+        if (!hasRankFilter || !onSelectMultiple) return null;
+        const visibleCodes = groups.filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)).map(g => g.codice);
+        const unselectedCount = visibleCodes.filter(c => !selectedSet.has(c)).length;
+        return (
+          <div className={`flex items-center justify-between px-2 py-1.5 rounded-xl text-xs ${isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"}`}>
+            <span className={isDark ? "text-sky-300" : "text-sky-700"}>{visibleCodes.length} categorie filtrate</span>
+            {unselectedCount > 0 && (
+              <button
+                onClick={() => onSelectMultiple(visibleCodes)}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${isDark ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30" : "bg-sky-500 text-white hover:bg-sky-600"}`}
+              >
+                Seleziona tutti ({visibleCodes.length})
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ATECO Tree */}
       <ScrollArea className="flex-1 min-h-0">

@@ -103,7 +103,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
   // ── Phase 1: Search only ──
   const handleSearch = async () => {
-    if (atecoCodes.length === 0) return;
+    if (atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0) return;
     const checkRes = await getScrapingStatus();
     if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
 
@@ -244,6 +244,11 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
                   {r}
                 </span>
               ))}
+              {provinces.length > 0 && provinces.map(p => (
+                <span key={p} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-teal-500/15 text-teal-300 border border-teal-500/25" : "bg-teal-50 text-teal-700 border border-teal-200"}`}>
+                  📍 {p}
+                </span>
+              ))}
               {(filters.fatturato_min || filters.fatturato_max) && (
                 <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/25" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                   💰 {filters.fatturato_min || "0"} — {filters.fatturato_max || "∞"}
@@ -259,7 +264,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
           <button
             onClick={handleSearch}
-            disabled={!isAvailable || atecoCodes.length === 0 || jobBlocked}
+            disabled={!isAvailable || (atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0) || jobBlocked}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
               ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
               : "bg-sky-500 text-white hover:bg-sky-600"
@@ -424,9 +429,9 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
         <div className="flex-1 flex items-center justify-center">
           <div className={`text-center space-y-2 max-w-md ${isDark ? "text-slate-500" : "text-slate-400"}`}>
             <Download className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-            {atecoCodes.length === 0 ? (
+       {atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0 ? (
               <>
-                <p className="text-sm">Seleziona almeno un codice ATECO dal pannello a sinistra.</p>
+                <p className="text-sm">Seleziona codici ATECO o filtri geografici dal pannello a sinistra.</p>
                 <p className="text-xs">Puoi anche configurare filtri avanzati (fatturato, dipendenti, ecc.).</p>
               </>
             ) : (

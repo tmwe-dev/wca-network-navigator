@@ -50,6 +50,14 @@ export default function ProspectCenter() {
     setSelectedAteco(prev => prev.filter(c => c !== code));
   }, []);
 
+  const selectMultipleAteco = useCallback((codes: string[]) => {
+    setSelectedAteco(prev => {
+      const set = new Set(prev);
+      for (const c of codes) set.add(c);
+      return Array.from(set);
+    });
+  }, []);
+
   const th = t(isDark);
 
   // Convert array filters to single string for ProspectListPanel compatibility
@@ -119,6 +127,7 @@ export default function ProspectCenter() {
                 selected={selectedAteco}
                 onToggle={toggleAteco}
                 onRemove={removeAteco}
+                onSelectMultiple={selectMultipleAteco}
                 isDark={isDark}
                 regionFilter={regionFilter}
                 onRegionChange={setRegionFilter}
