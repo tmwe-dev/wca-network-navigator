@@ -1,19 +1,19 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, Mail, Phone, Globe, MapPin, Building2, User,
-  ArrowLeft, ExternalLink, Euro, Users, FileText, ChevronRight,
+  Search, Mail, Phone, MapPin, Building2, User,
+  ArrowLeft, ExternalLink, Euro, Users, ChevronRight, Star, Shield,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { t } from "@/components/download/theme";
+import { cn } from "@/lib/utils";
 import type { Prospect } from "@/hooks/useProspects";
 
 interface ProspectListPanelProps {
@@ -79,7 +79,6 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
     }
   }, [prospects, search, sortBy]);
 
-  // Detail view
   const selectedProspect = useMemo(() => filtered.find(p => p.id === selectedId), [filtered, selectedId]);
 
   if (selectedId && selectedProspect) {
@@ -126,13 +125,13 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                   <div
                     key={prospect.id}
                     onClick={() => setSelectedId(prospect.id)}
-                    className={`p-3 cursor-pointer transition-all duration-200 group ${
-                      isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50"
-                    } ${
-                      q === "missing" ? "border-l-4 border-l-red-500" :
-                      q === "partial" ? "border-l-4 border-l-amber-400" :
-                      "border-l-4 border-l-emerald-500"
-                    }`}
+                    className={cn(
+                      "p-3 cursor-pointer transition-all duration-200 group",
+                      isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
+                      q === "missing" && "border-l-4 border-l-red-500",
+                      q === "partial" && "border-l-4 border-l-amber-400",
+                      q === "complete" && "border-l-4 border-l-emerald-500",
+                    )}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}>
@@ -154,11 +153,16 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs">
-                          <Mail className={`w-3.5 h-3.5 ${prospect.email || prospect.pec ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200"}`} />
-                          <Phone className={`w-3.5 h-3.5 ${prospect.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200"}`} />
+                          <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                          <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
                           {prospect.dipendenti != null && (
                             <span className={`flex items-center gap-0.5 ${th.dim}`}>
                               <Users className="w-3 h-3" />{prospect.dipendenti}
+                            </span>
+                          )}
+                          {prospect.rating_affidabilita && (
+                            <span className={`flex items-center gap-0.5 ${th.dim}`}>
+                              <Shield className="w-3 h-3" />{prospect.rating_affidabilita}
                             </span>
                           )}
                         </div>
@@ -265,15 +269,19 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
         <Field label="Credit Score" value={prospect.credit_score} />
       </Section>
 
-      {/* Contatti Personali */}
+      {/* Contatti Personali (Management) */}
       {contacts.length > 0 && (
-        <Section title={`Contatti Personali (${contacts.length})`}>
+        <Section title={`Management (${contacts.length})`}>
           {contacts.map((c: any) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
                 {c.role && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? "bg-white/[0.06] text-slate-400" : "bg-slate-100 text-slate-500"}`}>{c.role}</span>}
+                <div className="flex items-center gap-1 ml-auto">
+                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                  <Phone className={cn("w-3.5 h-3.5", c.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">
                 {c.email && <a href={`mailto:${c.email}`} className={`hover:underline ${th.body}`}>{c.email}</a>}
