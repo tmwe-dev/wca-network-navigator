@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid } from "@/components/download/CountryGrid";
 import { ActionPanel } from "@/components/download/ActionPanel";
 import { JobMonitor } from "@/components/download/JobMonitor";
+import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { AdvancedTools } from "@/components/download/AdvancedTools";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
@@ -14,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { getCountryFlag } from "@/lib/countries";
+import { Link } from "react-router-dom";
 
 function useGlobalStats() {
   return useQuery({
@@ -73,7 +75,7 @@ export default function Operations() {
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`}>
+      <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
@@ -158,6 +160,9 @@ export default function Operations() {
                     </TabsList>
                   </div>
 
+                  {/* Always-visible ActiveJobBar */}
+                  <ActiveJobBar />
+
                   {/* Tab Content */}
                   <div className={`flex-1 min-h-0 rounded-b-2xl border border-t-0 overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
                     <TabsContent value="partner" className="h-full m-0 data-[state=inactive]:hidden">
@@ -175,11 +180,7 @@ export default function Operations() {
                     </TabsContent>
 
                     <TabsContent value="acquire" className="h-full m-0 data-[state=inactive]:hidden">
-                      <AcquisitionEmbed
-                        countryCodes={selectedCountries.map(c => c.code)}
-                        countryNames={selectedCountries.map(c => c.name)}
-                        isDark={isDark}
-                      />
+                      <AcquisitionLink isDark={isDark} />
                     </TabsContent>
                   </div>
                 </Tabs>
@@ -202,30 +203,27 @@ function StatItem({ icon: Icon, label, value, color, isDark }: { icon: any; labe
   );
 }
 
-/* ── Acquisition Embed ── */
-/* Wraps the full AcquisizionePartner page as an inline component */
-import AcquisizionePartner from "./AcquisizionePartner";
-
-function AcquisitionEmbed({ countryCodes, countryNames, isDark }: { countryCodes: string[]; countryNames: string[]; isDark: boolean }) {
-  // We render the full AcquisizionePartner inside the tab
-  // It has its own state management and extension bridge
+/* ── Acquisition Link (replaces old iframe embed) ── */
+function AcquisitionLink({ isDark }: { isDark: boolean }) {
+  const th = t(isDark);
   return (
-    <div className="h-full overflow-auto">
-      <div className="p-4">
-        <p className={`text-sm mb-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-          Pipeline di acquisizione per {countryNames.join(", ")}. Seleziona i paesi nella toolbar qui sotto e avvia l'acquisizione.
+    <div className="h-full flex items-center justify-center p-6">
+      <div className="text-center space-y-4 max-w-md">
+        <Zap className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+        <h3 className={`text-lg font-semibold ${th.h2}`}>Pipeline di Acquisizione</h3>
+        <p className={`text-sm ${th.sub}`}>
+          L'acquisizione utilizza l'estensione Chrome per estrarre i contatti direttamente dal browser WCA. Assicurati che sia installata e la sessione WCA attiva.
         </p>
-        <div className={`rounded-xl border p-3 text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
-          💡 L'acquisizione utilizza l'estensione Chrome per estrarre i contatti direttamente dal browser. Assicurati che sia installata e la sessione WCA attiva.
+        <div className={`p-3 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
+          💡 Per avviare l'acquisizione, usa la pagina dedicata con tutti i controlli avanzati.
         </div>
-      </div>
-      {/* Render the full acquisition page inline - it has its own country selector */}
-      <div className="relative" style={{ height: 'calc(100% - 100px)' }}>
-        <iframe
-          src="/acquisizione"
-          className="w-full h-full border-0"
-          title="Acquisizione Partner"
-        />
+        <Link
+          to="/acquisizione"
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${th.btnPri}`}
+        >
+          <ExternalLink className="w-4 h-4" />
+          Apri Acquisizione Partner
+        </Link>
       </div>
     </div>
   );
