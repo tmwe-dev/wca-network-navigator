@@ -92,7 +92,7 @@ export function useRAExtensionBridge() {
   );
 
   const scrapeByAteco = useCallback(
-    (params: { atecoCode?: string; region?: string; province?: string; minFatturato?: number; maxFatturato?: number; delaySeconds?: number; batchSize?: number }) => {
+    (params: { atecoCode?: string; atecoCodes?: string[]; region?: string; regions?: string[]; province?: string; provinces?: string[]; minFatturato?: number; maxFatturato?: number; delaySeconds?: number; batchSize?: number }) => {
       return sendMessage("scrapeByAteco", { params }, 1800000); // 30min timeout
     },
     [sendMessage]

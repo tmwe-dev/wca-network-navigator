@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
@@ -6,6 +6,7 @@ import { ProspectListPanel } from "@/components/prospects/ProspectListPanel";
 import { ProspectImporter } from "@/components/prospects/ProspectImporter";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
 
 function formatCurrency(n: number | null) {
   if (n == null) return "—";
@@ -32,8 +33,8 @@ export default function ProspectCenter() {
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
 
   const [selectedAteco, setSelectedAteco] = useState<string[]>([]);
-  const [regionFilter, setRegionFilter] = useState("");
-  const [provinceFilter, setProvinceFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState<string[]>([]);
+  const [provinceFilter, setProvinceFilter] = useState<string[]>([]);
 
   const { data: stats } = useProspectStats();
 
@@ -46,6 +47,10 @@ export default function ProspectCenter() {
   }, []);
 
   const th = t(isDark);
+
+  // Convert array filters to single string for ProspectListPanel compatibility
+  const regionFilterStr = regionFilter.join(",");
+  const provinceFilterStr = provinceFilter.join(",");
 
   return (
     <ThemeCtx.Provider value={isDark}>
@@ -100,8 +105,6 @@ export default function ProspectCenter() {
                 onRegionChange={setRegionFilter}
                 provinceFilter={provinceFilter}
                 onProvinceChange={setProvinceFilter}
-                regions={stats?.regions || []}
-                provinces={stats?.provinces || []}
               />
             </div>
 
@@ -141,8 +144,8 @@ export default function ProspectCenter() {
                       <ProspectListPanel
                         atecoCodes={selectedAteco}
                         isDark={isDark}
-                        regionFilter={regionFilter}
-                        provinceFilter={provinceFilter}
+                        regionFilter={regionFilterStr}
+                        provinceFilter={provinceFilterStr}
                       />
                     </div>
                   )}
