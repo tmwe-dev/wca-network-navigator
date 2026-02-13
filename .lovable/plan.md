@@ -1,65 +1,85 @@
 
-# Fix: fillAndSubmitSearchForm non viene eseguita
 
-## Causa Root
+# Fix: Redirect 404 su ReportAziende - Verifica Sessione Prima della Ricerca
 
-`chrome.scripting.executeScript` non risolve automaticamente le Promise restituite dalle funzioni iniettate. La funzione `fillAndSubmitSearchForm` (riga 292-551) restituisce `new Promise(...)`, ma il risultato che arriva a `scrapeSearchResults` (riga 743-747) e' un oggetto Promise serializzato come `{}`.
+## Problema
 
-Di conseguenza:
-- `fillData` = `{}` (oggetto vuoto)
-- `fillData.submitted` = `undefined` (falsy)
-- Il check a riga 750 (`!fillData.submitted`) e' sempre vero
-- L'estensione ritorna immediatamente "Form non compilato" senza mai aspettare
+L'estensione apre direttamente `https://www.reportaziende.it/search.php?tab=2` senza verificare che la sessione sia attiva. Quando la sessione e' scaduta, il sito reindirizza a `errore_404_pagina_non_trovata?p=login`, causando l'errore.
+
+Il codice attuale (riga 635) fa:
+```text
+tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
+```
+
+Il check sulla sessione (righe 650-655) arriva DOPO il caricamento, ma a quel punto il sito ha gia' fatto il redirect al 404.
 
 ## Soluzione
 
-Riscrivere `fillAndSubmitSearchForm` come funzione **sincrona** che esegue le operazioni con `setTimeout` a cascata e NON restituisce una Promise. In alternativa, usare un pattern a due step:
+### 1. Auto-login preventivo in `scrapeSearchResults` (riga 630-700)
 
-1. Iniettare uno script sincrono che configura i filtri e fa il submit del form
-2. Attendere il caricamento della pagina risultati nel listener `onUpdated`
-
-### Modifiche in `public/ra-extension/background.js`
-
-**1. Convertire `fillAndSubmitSearchForm` in funzione sincrona (righe 292-551)**
-
-Rimuovere il wrapper `new Promise(...)` e la funzione interna `async run()`. Le operazioni sui modal (apertura, compilazione, click "Applica") devono essere sequenziali con `setTimeout` annidati oppure, meglio ancora, usare direttamente il DOM senza attese (dato che le modali Bootstrap sono gia' nel DOM, solo nascoste).
-
-Approccio:
-- Trovare gli input direttamente nel DOM (anche dentro modali nascoste) senza aprirle
-- Impostare i valori con `dispatchEvent`
-- Fare `form.submit()` sincrono
-- Ritornare `{ submitted: true }` come valore sincrono
+Prima di aprire la pagina di ricerca, verificare la sessione e fare auto-login se necessario:
 
 ```text
-function fillAndSubmitSearchForm(params) {
-  // Tutto sincrono - niente Promise, niente async
-  try {
-    var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata']");
-    
-    // Cercare input dentro modali (sono nel DOM anche se nascoste)
-    // Impostare valori ATECO, Geografia, Fatturato, Dipendenti
-    // ...
-    
-    if (form) { form.submit(); return { submitted: true }; }
-    return { submitted: false, error: "Form non trovato" };
-  } catch(e) {
-    return { submitted: false, error: e.message };
-  }
+async function scrapeSearchResults(params) {
+  // STEP 0: Verifica sessione - apri una pagina qualsiasi e controlla redirect
+  // Se redirect a login/404 -> esegui autoLogin() automaticamente
+  // Poi riprova ad aprire la pagina di ricerca
 }
 ```
 
-**2. Aggiornare `scrapeSearchResults` (righe 743-753)**
+Flusso:
+1. Aprire la pagina di ricerca
+2. Se il URL finale contiene "errore_404" o "login" -> eseguire `autoLogin()` automaticamente
+3. Attendere che l'utente completi il login (o che il login automatico funzioni)
+4. Riprovare ad aprire la pagina di ricerca
+5. Se ancora 404 -> restituire errore "session_expired" con messaggio chiaro
 
-Rimuovere il check su `fillData.submitted` come condizione di errore immediato, dato che il form submit causa un page navigation. Invece, dopo l'iniezione dello script, attendere semplicemente il caricamento della pagina successiva (che e' gia' gestito dal listener `onUpdated` a righe 756-769).
+### 2. Migliorare il check URL di sessione (righe 650-655)
 
-**3. Gestione alternativa: approccio "hidden input injection"**
+Aggiungere piu' pattern di redirect al check:
 
-Se le modali non espongono gli input quando sono nascoste, usare un approccio diverso: creare hidden inputs direttamente nel form con i nomi corretti dei parametri, senza toccare le modali. Questo richiede conoscere i nomi esatti dei campi POST del form.
+```text
+function isSessionExpiredUrl(url) {
+  return url && (
+    url.includes("/login3") ||
+    url.includes("errore_404") ||
+    url.includes("p=login") ||
+    url.includes("/login") ||
+    !url.includes("reportaziende.it/search")  // non e' piu' sulla pagina di ricerca
+  );
+}
+```
+
+### 3. Stessa logica per `runDiscoverFields` (riga 608-628)
+
+Anche la discovery apre `search.php?tab=2` senza verificare la sessione. Aggiungere lo stesso check.
+
+### 4. Retry con auto-login integrato
+
+Se la sessione e' scaduta durante `scrapeSearchResults`:
+
+```text
+// Dopo aver rilevato sessione scaduta:
+addLog("Sessione scaduta, tentativo auto-login...");
+var loginResult = await autoLogin();
+if (loginResult.success) {
+  // Attendi sincronizzazione cookie
+  await new Promise(r => setTimeout(r, 3000));
+  // Riprova la ricerca (un solo retry)
+  // ... ricrea il tab con search.php?tab=2
+}
+```
 
 ## File da Modificare
 
-- `public/ra-extension/background.js`: righe 292-551 (fillAndSubmitSearchForm) e 743-753 (check risultato)
+- `public/ra-extension/background.js`:
+  - Righe 630-700 (`scrapeSearchResults`): aggiungere auto-login preventivo e retry
+  - Righe 608-628 (`runDiscoverFields`): aggiungere check sessione
+  - Aggiungere funzione helper `isSessionExpiredUrl(url)`
 
-## Rischio
+## Risultato Atteso
 
-Il rischio principale e' non conoscere i nomi esatti dei parametri POST del form `cercaAvanzataForm`. Per questo, nella prima esecuzione utilizzeremo la funzione `discoverFormFields` gia' presente per mappare i campi, e li useremo nel codice sincrono.
+L'estensione non mostrera' piu' la pagina 404. Se la sessione e' scaduta:
+1. Esegue auto-login automatico
+2. Riprova la ricerca
+3. Se il login fallisce, mostra un messaggio chiaro: "Sessione scaduta - effettua il login su ReportAziende"
