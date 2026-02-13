@@ -121,7 +121,7 @@ export function ActiveJobBar() {
               <>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() =>
                     pauseResume.mutate({ jobId: mainJob.id, action: "pause" })
                   }
@@ -131,7 +131,7 @@ export function ActiveJobBar() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() =>
                     pauseResume.mutate({ jobId: mainJob.id, action: "cancel" })
                   }
@@ -238,7 +238,7 @@ function ExpandedJobRow({
           <>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() =>
                 pauseResume.mutate({ jobId: job.id, action: "pause" })
               }
@@ -248,7 +248,7 @@ function ExpandedJobRow({
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() =>
                 pauseResume.mutate({ jobId: job.id, action: "cancel" })
               }
