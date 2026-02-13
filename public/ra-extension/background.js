@@ -234,30 +234,150 @@ function extractProfileData() {
   return result;
 }
 
-// Extract search results list from a search page
+// Extract search results from RA DataTable (injected into the page)
 function extractSearchResults() {
-  const results = [];
-  // Try various common patterns for result lists
-  const rows = document.querySelectorAll("table tbody tr, .result-item, .company-row, .search-result");
-  for (const row of rows) {
-    const link = row.querySelector("a[href*='/azienda/'], a[href*='/company/'], a[href*='reportaziende.it/']");
-    if (link) {
-      const name = link.textContent.trim();
-      let href = link.getAttribute("href");
-      if (href && !href.startsWith("http")) {
-        href = "https://www.reportaziende.it" + (href.startsWith("/") ? "" : "/") + href;
-      }
-      if (name && href) {
-        results.push({ name, url: href });
+  var results = [];
+  try {
+    // RA uses DataTables - look for the results table
+    var tables = document.querySelectorAll("table");
+    var targetTable = null;
+    for (var t = 0; t < tables.length; t++) {
+      // The results table typically has company links
+      if (tables[t].querySelector("a[href*='/']") && tables[t].querySelectorAll("tbody tr").length > 0) {
+        targetTable = tables[t];
+        break;
       }
     }
+
+    if (!targetTable) {
+      // Fallback: try DataTable wrapper
+      var dtWrapper = document.querySelector(".dataTables_wrapper, #DataTables_Table_0, .dataTable");
+      if (dtWrapper) targetTable = dtWrapper.tagName === "TABLE" ? dtWrapper : dtWrapper.querySelector("table");
+    }
+
+    if (targetTable) {
+      var rows = targetTable.querySelectorAll("tbody tr");
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var cells = row.querySelectorAll("td");
+        if (cells.length < 2) continue;
+
+        // Find the link to the company profile
+        var link = row.querySelector("a[href]");
+        if (!link) continue;
+
+        var name = link.textContent.trim();
+        var href = link.getAttribute("href");
+        if (!name || !href) continue;
+        if (!href.startsWith("http")) {
+          href = "https://www.reportaziende.it" + (href.startsWith("/") ? "" : "/") + href;
+        }
+
+        // Try to extract P.IVA from cells (usually in one of the columns)
+        var piva = null;
+        var city = null;
+        for (var c = 0; c < cells.length; c++) {
+          var cellText = cells[c].textContent.trim();
+          // P.IVA is 11 digits
+          var pivaMatch = cellText.match(/\b(\d{11})\b/);
+          if (pivaMatch && !piva) piva = pivaMatch[1];
+          // City detection: short text, not a number, not the company name
+          if (!city && cellText.length > 1 && cellText.length < 50 && !/^\d+$/.test(cellText) && cellText !== name && !/\d{11}/.test(cellText)) {
+            city = cellText;
+          }
+        }
+
+        results.push({ name: name, url: href, piva: piva, city: city });
+      }
+    }
+
+    // Detect total results count
+    var totalText = "";
+    var infoEl = document.querySelector(".dataTables_info, .risultati, .total-results");
+    if (infoEl) totalText = infoEl.textContent.trim();
+
+    // Detect pagination - check if there's a "next" page
+    var hasNextPage = false;
+    var nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next']");
+    if (nextBtn && !nextBtn.classList.contains("disabled")) hasNextPage = true;
+
+    return { results: results, hasNextPage: hasNextPage, totalText: totalText };
+  } catch (e) {
+    return { results: [], hasNextPage: false, totalText: "", error: e.message };
   }
+}
 
-  // Also try to detect pagination
-  const nextLink = document.querySelector("a.next, a[rel='next'], .pagination a:last-child, a[aria-label='Next']");
-  const nextUrl = nextLink ? nextLink.getAttribute("href") : null;
+// Fill and submit the RA search form (injected into searchPersonalizzata.php)
+function fillAndSubmitSearchForm(params) {
+  return new Promise(function(resolve) {
+    try {
+      // Wait for form to be ready
+      function tryFill() {
+        var form = document.querySelector("form") || document.querySelector("#searchForm, .search-form, [action*='search']");
+        
+        // Try to find input fields by common patterns
+        function setField(names, value) {
+          if (!value) return;
+          for (var n = 0; n < names.length; n++) {
+            var el = document.querySelector("[name='" + names[n] + "'], #" + names[n]);
+            if (el) {
+              el.value = value;
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+              return true;
+            }
+          }
+          return false;
+        }
 
-  return { results, nextUrl, totalText: document.querySelector(".total-results, .risultati")?.textContent || "" };
+        // Set ATECO code
+        if (params.atecoCode) {
+          setField(["ateco", "codice_ateco", "CodiceAteco", "ateco_code", "txtAteco"], params.atecoCode);
+        }
+        
+        // Set geographic filters
+        if (params.region) setField(["regione", "Regione", "region"], params.region);
+        if (params.province) setField(["provincia", "Provincia", "province"], params.province);
+
+        // Set financial filters
+        if (params.filters) {
+          var f = params.filters;
+          if (f.fatturato_min) setField(["fatturato_min", "FatturatoMin", "fatturato_da", "ricavi_min"], String(f.fatturato_min));
+          if (f.fatturato_max) setField(["fatturato_max", "FatturatoMax", "fatturato_a", "ricavi_max"], String(f.fatturato_max));
+          if (f.dipendenti_min) setField(["dipendenti_min", "DipendentiMin", "addetti_min"], String(f.dipendenti_min));
+          if (f.dipendenti_max) setField(["dipendenti_max", "DipendentiMax", "addetti_max"], String(f.dipendenti_max));
+          if (f.anno_fondazione_min) setField(["inizio_attivita_min", "anno_min", "AnnoMin"], String(f.anno_fondazione_min));
+          if (f.anno_fondazione_max) setField(["inizio_attivita_max", "anno_max", "AnnoMax"], String(f.anno_fondazione_max));
+          if (f.has_phone_and_email) {
+            setField(["esiste_tel_e_email", "tel_email"], "1");
+          } else {
+            if (f.has_phone) setField(["numero_telefono", "has_phone"], "1");
+            if (f.has_email) setField(["indirizzo_email", "has_email"], "1");
+          }
+        }
+
+        // Submit the form
+        if (form) {
+          form.submit();
+          resolve({ submitted: true });
+        } else {
+          // Try clicking a search button
+          var btn = document.querySelector("button[type='submit'], input[type='submit'], .btn-search, #btnSearch, button.search");
+          if (btn) {
+            btn.click();
+            resolve({ submitted: true });
+          } else {
+            resolve({ submitted: false, error: "Form non trovato" });
+          }
+        }
+      }
+
+      // Give the page time to render the form
+      setTimeout(tryFill, 2000);
+    } catch (e) {
+      resolve({ submitted: false, error: e.message });
+    }
+  });
 }
 
 // Scrape a single company profile
@@ -300,42 +420,76 @@ async function scrapeCompanyProfile(url) {
 }
 
 // Search for companies by ATECO code and optional filters
+// Uses form POST submission instead of GET parameters
 async function scrapeSearchResults(params) {
+  var tab = null;
   try {
-    let searchUrl = "https://www.reportaziende.it/ricerca-personalizzata?";
-    const qp = [];
-    if (params.atecoCode) qp.push("ateco=" + encodeURIComponent(params.atecoCode));
-    if (params.region) qp.push("regione=" + encodeURIComponent(params.region));
-    if (params.province) qp.push("provincia=" + encodeURIComponent(params.province));
-    if (params.minFatturato) qp.push("fatturato_min=" + params.minFatturato);
-    if (params.maxFatturato) qp.push("fatturato_max=" + params.maxFatturato);
-    if (params.filters) {
-      var f = params.filters;
-      if (f.fatturato_min) qp.push("fatturato_min=" + f.fatturato_min);
-      if (f.fatturato_max) qp.push("fatturato_max=" + f.fatturato_max);
-      if (f.dipendenti_min) qp.push("dipendenti_min=" + f.dipendenti_min);
-      if (f.dipendenti_max) qp.push("dipendenti_max=" + f.dipendenti_max);
-      if (f.anno_fondazione_min) qp.push("inizio_attivita_min=" + f.anno_fondazione_min);
-      if (f.anno_fondazione_max) qp.push("inizio_attivita_max=" + f.anno_fondazione_max);
-      if (f.has_phone_and_email) qp.push("esiste_tel_e_email=1");
-      else { if (f.has_phone) qp.push("numero_telefono=1"); if (f.has_email) qp.push("indirizzo_email=1"); }
-    }
-    if (params.page) qp.push("page=" + params.page);
-    searchUrl += qp.join("&");
+    // Navigate to the search form page
+    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/searchPersonalizzata.php", active: false });
 
-    const tab = await chrome.tabs.create({ url: searchUrl, active: false });
-    await new Promise((resolve) => {
+    // Wait for page load
+    await new Promise(function(resolve) {
       chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-        if (tabId === tab.id && info.status === "complete") { chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 3000); }
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          setTimeout(resolve, 2000);
+        }
       });
     });
-    const tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && tabInfo.url.includes("/login")) { await chrome.tabs.remove(tab.id); return { success: false, error: "session_expired", results: [] }; }
-    const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractSearchResults });
-    await chrome.tabs.remove(tab.id);
-    if (result && result.result) return { success: true, ...result.result };
-    return { success: false, error: "No results extracted", results: [] };
-  } catch (err) { return { success: false, error: err.message, results: [] }; }
+
+    // Check if redirected to login
+    var tabInfo = await chrome.tabs.get(tab.id);
+    if (tabInfo.url && tabInfo.url.includes("/login")) {
+      await chrome.tabs.remove(tab.id); tab = null;
+      return { success: false, error: "session_expired", results: [] };
+    }
+
+    // Inject the form-filling script and submit
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: fillAndSubmitSearchForm,
+      args: [params],
+    });
+
+    // Wait for results page to load after form submission
+    await new Promise(function(resolve) {
+      var timeout = setTimeout(function() {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }, 20000);
+      function listener(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          clearTimeout(timeout);
+          setTimeout(resolve, 3000); // Extra wait for DataTable to render
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+
+    // Check for login redirect after form submit
+    tabInfo = await chrome.tabs.get(tab.id);
+    if (tabInfo.url && tabInfo.url.includes("/login")) {
+      await chrome.tabs.remove(tab.id); tab = null;
+      return { success: false, error: "session_expired", results: [] };
+    }
+
+    // Extract results from the DataTable
+    var [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: extractSearchResults,
+    });
+
+    await chrome.tabs.remove(tab.id); tab = null;
+
+    if (result && result.result) {
+      return { success: true, ...result.result };
+    }
+    return { success: false, error: "Nessun risultato estratto", results: [] };
+  } catch (err) {
+    if (tab) try { await chrome.tabs.remove(tab.id); } catch(e) {}
+    return { success: false, error: err.message, results: [] };
+  }
 }
 
 // Search Only: get list without scraping profiles
@@ -363,7 +517,7 @@ async function runSearchOnly(params) {
             var sr = await scrapeSearchResults({ atecoCode: ateco, region: regList[ri] || undefined, province: provList[pi] || undefined, filters: params.filters, page: page });
             if (!sr.success) { if (sr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); scrapingState.active = false; return { success: false, error: "session_expired", results: allResults, log: scrapingState.log.slice(-50) }; } addLog("Errore: " + sr.error); break; }
             if (sr.results && sr.results.length > 0) { allResults = allResults.concat(sr.results); addLog("Trovate " + sr.results.length + " (tot: " + allResults.length + ")"); }
-            hasMore = !!sr.nextUrl && sr.results && sr.results.length > 0; page++;
+            hasMore = sr.hasNextPage && sr.results && sr.results.length > 0; page++;
             if (hasMore) await new Promise(function(r) { setTimeout(r, delay); });
             if (allResults.length >= 2000) { addLog("Limite 2000 raggiunto."); hasMore = false; }
           }
