@@ -1,31 +1,32 @@
 
-
-# Fix: Filtri Ranking + Cerca Aziende
+# Fix: URL di Login Report Aziende (404)
 
 ## Problema
-Dopo aver selezionato Milano come provincia e applicato i filtri di ranking ATECO, il pulsante "Cerca Aziende" resta disattivato perche' richiede codici ATECO selezionati manualmente. I filtri di ranking nascondono solo visivamente le categorie nell'albero ma non le selezionano automaticamente. L'utente si aspetta che il sistema usi le categorie filtrate per la ricerca.
+L'estensione RA punta a `https://www.reportaziende.it/login` che restituisce un errore 404. La pagina di login reale si trova su `https://ecommerce2.reportaziende.it/login3/`.
+
+Inoltre, il rilevamento "sessione scaduta" controlla se l'URL contiene `/login`, che potrebbe non corrispondere ai redirect del nuovo dominio.
 
 ## Soluzione
-Aggiungere un pulsante "Seleziona tutti i visibili" che auto-seleziona tutti i codici ATECO che passano i filtri ranking attivi. Inoltre, mostrare i badge delle province nel pannello Import per conferma visiva.
+Correggere l'URL di login e aggiornare i controlli di sessione scaduta nell'estensione.
 
-## Modifiche tecniche
+## Dettagli tecnici
 
-### 1. `AtecoGrid.tsx` - Esporre i codici visibili + pulsante "Seleziona filtrati"
-- Aggiungere un pulsante sopra l'albero ATECO "Seleziona tutti i filtrati" che appare solo quando ci sono filtri ranking attivi e nessun codice selezionato
-- Questo pulsante raccoglie tutti i codici gruppo (livello 3) che passano `passesRankingFilter` e li seleziona tutti in un colpo
-- Esporre anche un contatore "X categorie visibili" per dare feedback
+### File: `public/ra-extension/background.js`
 
-### 2. `ProspectImporter.tsx` - Permettere ricerca anche senza ATECO espliciti
-- Modificare la condizione `disabled` del pulsante "Cerca Aziende": permettere la ricerca anche quando ci sono solo filtri geografici (province) senza codici ATECO
-- Quando `atecoCodes` e' vuoto ma ci sono province/regioni, la ricerca procede senza filtro ATECO (cerca tutte le aziende nella zona)
-- Aggiungere badge per le province selezionate nella sezione filtri attivi (accanto a regioni e fatturato)
+**1. URL di login (riga 81)**
+- Da: `https://www.reportaziende.it/login`
+- A: `https://ecommerce2.reportaziende.it/login3/`
 
-### 3. `ProspectCenter.tsx` - Passare callback per selezione massiva
-- Aggiungere una funzione `selectMultiple(codes: string[])` da passare all'AtecoGrid
-- Questa funzione aggiunge tutti i codici passati allo stato `selectedAteco`
+**2. Controlli sessione scaduta (righe 400, 442, 472)**
+- Aggiornare i 3 controlli `tabInfo.url.includes("/login")` per riconoscere anche il nuovo dominio:
+  - `tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404")`
+- Questo copre sia il redirect al login su ecommerce2 sia il caso in cui RA mostra la pagina 404
 
-### File da modificare
-- `src/components/prospects/AtecoGrid.tsx` -- pulsante "Seleziona filtrati" + contatore
-- `src/components/prospects/ProspectImporter.tsx` -- badge province, ricerca senza ATECO obbligatorio
-- `src/pages/ProspectCenter.tsx` -- callback selezione massiva
+**3. Selettori del form login**
+- La funzione `fillLogin` gia' cerca `input#username` e `input[type="password"]` che corrispondono ai campi reali della pagina (`input#username` type email, `input#password`). Nessuna modifica necessaria.
 
+### File: `public/ra-extension/manifest.json`
+- Gia' include `https://ecommerce2.reportaziende.it/*` nei `host_permissions`. Nessuna modifica necessaria.
+
+### Riepilogo modifiche
+- `public/ra-extension/background.js` -- 4 punti da correggere (1 URL + 3 controlli sessione)
