@@ -605,24 +605,82 @@ async function scrapeCompanyProfile(url) {
   }
 }
 
+// ── Helper: detect session-expired URLs ──
+function isSessionExpiredUrl(url) {
+  if (!url) return false;
+  return (
+    url.includes("/login3") ||
+    url.includes("errore_404") ||
+    url.includes("p=login") ||
+    (url.includes("reportaziende.it") && !url.includes("/search") && !url.includes("/azienda"))
+  );
+}
+
+// ── Helper: open a tab, wait for load, and check session; auto-login + retry once ──
+async function openTabWithSessionCheck(url) {
+  var tab = await chrome.tabs.create({ url: url, active: false });
+  await new Promise(function(resolve) {
+    var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+    function listener(tabId, info) {
+      if (tabId === tab.id && info.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(timeout);
+        setTimeout(resolve, 2500);
+      }
+    }
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+
+  var tabInfo = await chrome.tabs.get(tab.id);
+  if (isSessionExpiredUrl(tabInfo.url)) {
+    // Session expired — close tab, attempt auto-login, retry once
+    await chrome.tabs.remove(tab.id);
+    addLog("⚠️ Sessione scaduta, tentativo auto-login...");
+    var loginResult = await autoLogin();
+    if (!loginResult.success) {
+      return { tab: null, error: "session_expired", loginError: loginResult.error };
+    }
+    // Wait for login to complete (tab opens, fills form, submits)
+    await new Promise(function(r) { setTimeout(r, 8000); });
+    // Sync cookies after login
+    await syncRACookies();
+    await new Promise(function(r) { setTimeout(r, 2000); });
+
+    // Retry opening the target page
+    addLog("🔄 Riprovo dopo auto-login...");
+    tab = await chrome.tabs.create({ url: url, active: false });
+    await new Promise(function(resolve) {
+      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 20000);
+      function listener2(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener2);
+          clearTimeout(timeout);
+          setTimeout(resolve, 2500);
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener2);
+    });
+
+    tabInfo = await chrome.tabs.get(tab.id);
+    if (isSessionExpiredUrl(tabInfo.url)) {
+      await chrome.tabs.remove(tab.id);
+      return { tab: null, error: "session_expired", reason: "Auto-login fallito. Effettua il login manualmente su ReportAziende." };
+    }
+  }
+
+  return { tab: tab, error: null };
+}
+
 // Run field discovery on the search page (one-time diagnostic)
 async function runDiscoverFields() {
-  var tab = null;
   try {
-    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
-    await new Promise(function(resolve) {
-      chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-        if (tabId === tab.id && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          setTimeout(resolve, 3000);
-        }
-      });
-    });
-    var [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
-    await chrome.tabs.remove(tab.id); tab = null;
-    return { success: true, fields: result ? result.result : null };
+    var result = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
+    if (result.error) return { success: false, error: result.error, reason: result.reason };
+    var tab = result.tab;
+    var [scriptResult] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
+    await chrome.tabs.remove(tab.id);
+    return { success: true, fields: scriptResult ? scriptResult.result : null };
   } catch (err) {
-    if (tab) try { await chrome.tabs.remove(tab.id); } catch(e) {}
     return { success: false, error: err.message };
   }
 }
@@ -631,28 +689,12 @@ async function runDiscoverFields() {
 async function scrapeSearchResults(params) {
   var tab = null;
   try {
-    // Navigate to the Ricerca Avanzata page
-    tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
-
-    // Wait for page load
-    await new Promise(function(resolve) {
-      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
-      function listener(tabId, info) {
-        if (tabId === tab.id && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          clearTimeout(timeout);
-          setTimeout(resolve, 2500); // Extra wait for JS/modals to initialize
-        }
-      }
-      chrome.tabs.onUpdated.addListener(listener);
-    });
-
-    // Check if redirected to login
-    var tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && (tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404"))) {
-      await chrome.tabs.remove(tab.id); tab = null;
-      return { success: false, error: "session_expired", results: [] };
+    // Navigate with session check + auto-login retry
+    var openResult = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
+    if (openResult.error) {
+      return { success: false, error: openResult.error, results: [], reason: openResult.reason };
     }
+    tab = openResult.tab;
 
     // Inject the form-filling script (interacts with modals) and submit
     var [fillResult] = await chrome.scripting.executeScript({
@@ -684,8 +726,8 @@ async function scrapeSearchResults(params) {
     });
 
     // Check for login redirect after form submit
-    tabInfo = await chrome.tabs.get(tab.id);
-    if (tabInfo.url && (tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404"))) {
+    var tabInfo = await chrome.tabs.get(tab.id);
+    if (isSessionExpiredUrl(tabInfo.url)) {
       await chrome.tabs.remove(tab.id); tab = null;
       return { success: false, error: "session_expired", results: [] };
     }
