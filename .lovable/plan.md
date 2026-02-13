@@ -1,79 +1,45 @@
 
 
-## Fix: Impedire Job Paralleli e Proteggere da Ban
+## Allineare il Download dell'Estensione RA al Formato WCA
 
-### Il problema
+### Problema
 
-Quando selezioni piu' paesi e clicchi "Scarica", il codice `executeDownload` (ActionPanel.tsx, righe 259-267) crea **un job per ogni paese in un loop rapido**. Tutti i job vengono inseriti nel database con status "pending" quasi simultaneamente.
+Il file `download-ra-extension.html` usa template literals ES6 (backtick) per definire il contenuto dei file dell'estensione, mentre `download-wca-extension.html` usa il formato piu' robusto con stringhe tradizionali (`var`, `\n\` line continuation, concatenazione). Questo puo' causare problemi di escape e parsing.
 
-Il processore (`useDownloadProcessor`) ha un guard `processingRef.current` che impedisce di prendere un secondo job dalla stessa tab. Ma questo guard e' solo in memoria del browser:
-- Se la pagina si ricarica (es. hot reload di Lovable), il guard si resetta e un **secondo processore** parte su un altro job
-- Il risultato e' che piu' job girano in parallelo sullo stesso account WCA, moltiplicando le richieste e causando il ban
+### Fix
 
-### Soluzione (due livelli di protezione)
+**File: `public/download-ra-extension.html`**
 
-**Livello 1 - ActionPanel: creare UN SOLO job alla volta**
+Riscrivere il blocco `FILES` usando lo stesso pattern di `download-wca-extension.html`:
+- Sostituire `const` con `var`
+- Sostituire i template literals (backtick) con stringhe tradizionali e `\n\` line continuation
+- Usare variabili `SUPABASE_URL` e `SUPABASE_ANON_KEY` in cima (come fa WCA) e concatenarle nelle stringhe
+- Il manifest diventa `JSON.stringify({...}, null, 2)`
+- Il resto dei file (background.js, content.js, popup.html, popup.js) diventa stringa con escape e concatenazione
 
-Modificare `executeDownload` per:
-- Unire tutti i WCA ID di tutti i paesi selezionati in un singolo job (con la lista dei paesi nel nome)
-- Oppure, piu' semplice: creare i job uno alla volta ma con un **gate nel database** che impedisce la creazione se esiste gia' un job running/pending
+La logica di download (`downloadFile`, `downloadAll`, icon fallback) resta identica perche' e' gia' corretta.
 
-**Livello 2 - Processore: lock lato database**
+### Dettaglio tecnico
 
-Aggiungere un controllo nel processore prima di iniziare un job:
-- Prima di cambiare lo status a "running", verificare che **nessun altro job sia gia' "running"**
-- Se ce n'e' uno, non partire e aspettare
-
-### Modifiche tecniche
-
-**File: `src/components/download/ActionPanel.tsx`**
-
-Nella funzione `executeDownload`, prima del loop di creazione job, aggiungere un controllo:
+Il formato target e' quello di `download-wca-extension.html`:
 
 ```text
-// Check: nessun job attivo prima di creare nuovi job
-const { data: activeJobs } = await supabase
-  .from("download_jobs")
-  .select("id")
-  .in("status", ["pending", "running"])
-  .limit(1);
+var SUPABASE_URL = "https://...";
+var SUPABASE_ANON_KEY = "...";
 
-if (activeJobs && activeJobs.length > 0) {
-  toast({
-    title: "Job gia' in corso",
-    description: "Attendi il completamento del job attuale prima di avviarne un altro.",
-    variant: "destructive",
-  });
-  return;
-}
+var FILES = {
+  "manifest.json": JSON.stringify({ ... }, null, 2),
+  "background.js": "// commento\n\
+var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
+...",
+  "content.js": "// ...\n\
+...",
+  "popup.html": "<!DOCTYPE html>\n\
+...",
+  "popup.js": "var statusBox = ...\n\
+..."
+};
 ```
 
-Inoltre, cambiare il loop per creare i job **in sequenza con await** e non creare il secondo se il primo e' ancora pending (anche se in pratica con il gate sopra non servira').
+Questo garantisce che i file generati siano identici a quelli nella cartella `public/ra-extension/` e non ci siano problemi di escape.
 
-**File: `src/hooks/useDownloadProcessor.ts`**
-
-Nel metodo `processJob`, subito dopo il cambio status a "running" (riga ~37), aggiungere un double-check:
-
-```text
-// Verify no other job is already running (prevent parallel execution)
-const { data: runningJobs } = await supabase
-  .from("download_jobs")
-  .select("id")
-  .eq("status", "running")
-  .neq("id", jobId)
-  .limit(1);
-
-if (runningJobs && runningJobs.length > 0) {
-  // Another job is already running, put this one back to pending
-  await supabase.from("download_jobs")
-    .update({ status: "pending", error_message: "In attesa: altro job in esecuzione" })
-    .eq("id", jobId);
-  return;
-}
-```
-
-### Impatto
-- Un solo job alla volta, sempre
-- Se l'utente prova ad avviare un secondo download, riceve un messaggio chiaro
-- Se il processore rileva un job parallelo (es. dopo reload), lo rimette in coda
-- Zero rischio di richieste parallele al provider
