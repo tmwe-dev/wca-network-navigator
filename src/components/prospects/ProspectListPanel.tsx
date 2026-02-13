@@ -21,6 +21,7 @@ interface ProspectListPanelProps {
   isDark: boolean;
   regionFilter?: string;
   provinceFilter?: string;
+  quickSearch?: string;
 }
 
 function formatCurrency(n: number | null) {
@@ -38,26 +39,31 @@ function contactQuality(p: Prospect): "complete" | "partial" | "missing" {
   return "missing";
 }
 
-export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFilter }: ProspectListPanelProps) {
+export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFilter, quickSearch }: ProspectListPanelProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "fatturato" | "dipendenti">("name");
 
   const { data: prospects, isLoading } = useQuery({
-    queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter],
+    queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch],
     queryFn: async () => {
       let query = supabase.from("prospects" as any).select("*").order("company_name");
-      if (atecoCodes.length > 0) {
+
+      if (quickSearch && quickSearch.length >= 2) {
+        // Search by name or P.IVA — ignore ATECO filter
+        query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
+      } else if (atecoCodes.length > 0) {
         query = query.in("codice_ateco", atecoCodes);
       }
+
       if (regionFilter) query = query.eq("region", regionFilter);
       if (provinceFilter) query = query.eq("province", provinceFilter);
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as Prospect[];
     },
-    enabled: atecoCodes.length > 0,
+    enabled: atecoCodes.length > 0 || (!!quickSearch && quickSearch.length >= 2),
   });
 
   const filtered = useMemo(() => {

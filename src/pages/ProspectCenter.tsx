@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download } from "lucide-react";
+import { Sun, Moon, Building2, Mail, Phone, Euro, FileText, Download, Search, X } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
 import { ProspectListPanel } from "@/components/prospects/ProspectListPanel";
 import { ProspectImporter } from "@/components/prospects/ProspectImporter";
 import { ProspectAdvancedFilters, EMPTY_FILTERS, type ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
+import { Input } from "@/components/ui/input";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PROVINCE_ITALIANE } from "@/data/italianProvinces";
@@ -37,6 +38,7 @@ export default function ProspectCenter() {
   const [regionFilter, setRegionFilter] = useState<string[]>([]);
   const [provinceFilter, setProvinceFilter] = useState<string[]>([]);
   const [advFilters, setAdvFilters] = useState<ProspectFilters>(EMPTY_FILTERS);
+  const [quickSearch, setQuickSearch] = useState("");
 
   const { data: stats } = useProspectStats();
 
@@ -98,6 +100,21 @@ export default function ProspectCenter() {
           <div className="flex-1 flex min-h-0 px-6 pb-4 gap-4">
             {/* LEFT: ATECO Grid (35%) */}
             <div className="w-[35%] min-h-0 flex flex-col">
+              {/* Quick search by name / P.IVA */}
+              <div className="relative mb-2">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-sky-400/50" : "text-sky-500/50"}`} />
+                <Input
+                  placeholder="Cerca per nome o P.IVA..."
+                  value={quickSearch}
+                  onChange={e => setQuickSearch(e.target.value)}
+                  className={`pl-9 pr-8 h-10 rounded-xl text-sm ${isDark ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600" : "bg-white border-slate-200 placeholder:text-slate-400"}`}
+                />
+                {quickSearch && (
+                  <button onClick={() => setQuickSearch("")} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-500 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <AtecoGrid
                 selected={selectedAteco}
                 onToggle={toggleAteco}
@@ -128,12 +145,29 @@ export default function ProspectCenter() {
                 </TabsList>
 
                 <TabsContent value="prospect" className="flex-1 min-h-0 mt-0">
-                  {selectedAteco.length === 0 ? (
+                  {quickSearch.length >= 2 ? (
+                    <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
+                      <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+                        <Search className={`w-4 h-4 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                        <span className={`text-sm font-semibold ${th.h2}`}>
+                          Ricerca: "{quickSearch}"
+                        </span>
+                      </div>
+                      <ProspectListPanel
+                        atecoCodes={selectedAteco}
+                        isDark={isDark}
+                        regionFilter={regionFilterStr}
+                        provinceFilter={provinceFilterStr}
+                        quickSearch={quickSearch}
+                      />
+                    </div>
+                  ) : selectedAteco.length === 0 ? (
                     <div className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                       <div className="text-center space-y-3">
                         <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
                         <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
                         <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
+                        <p className={`text-xs ${th.dim}`}>oppure usa la ricerca per nome / P.IVA</p>
                         {stats && stats.total === 0 && (
                           <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
                             💡 Nessun prospect nel database. Vai su "Importa" per scaricare dati da Report Aziende.
