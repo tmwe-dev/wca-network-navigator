@@ -53,9 +53,23 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     });
   }, [isAvailable, getScrapingStatus]);
 
-  // Poll status while scraping
+  // Timer for search phase
+  const [searchElapsed, setSearchElapsed] = useState(0);
+  const searchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    if (phase !== "scraping") {
+    if (phase === "searching") {
+      setSearchElapsed(0);
+      searchTimerRef.current = setInterval(() => setSearchElapsed(prev => prev + 1), 1000);
+    } else {
+      if (searchTimerRef.current) clearInterval(searchTimerRef.current);
+    }
+    return () => { if (searchTimerRef.current) clearInterval(searchTimerRef.current); };
+  }, [phase]);
+
+  // Poll status while scraping OR searching
+  useEffect(() => {
+    if (phase !== "scraping" && phase !== "searching") {
       if (pollRef.current) clearInterval(pollRef.current);
       return;
     }
@@ -72,7 +86,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
           log: res.log || [],
         });
         setLogs(res.log || []);
-        if (!res.active) {
+        if (phase === "scraping" && !res.active) {
           setPhase("done");
           setJobBlocked(false);
         }
@@ -260,11 +274,27 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       {/* ═══ PHASE: SEARCHING ═══ */}
       {phase === "searching" && (
         <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-5 h-5 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-sky-400" : "border-sky-500"}`} />
-            <span className={`text-sm font-medium ${th.h2}`}>Ricerca in corso...</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-sky-400" : "border-sky-500"}`} />
+              <span className={`text-sm font-medium ${th.h2}`}>Ricerca in corso...</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-mono ${th.dim}`}>
+                {Math.floor(searchElapsed / 60).toString().padStart(2, "0")}:{(searchElapsed % 60).toString().padStart(2, "0")}
+              </span>
+              <button
+                onClick={() => { stopScraping(); setPhase("idle"); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
+                  ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
+                  : "bg-rose-500 text-white hover:bg-rose-600"
+                }`}
+              >
+                <Square className="w-3 h-3" />Annulla
+              </button>
+            </div>
           </div>
-          <p className={`text-xs ${th.sub}`}>L'estensione sta cercando le aziende su Report Aziende.</p>
+          <p className={`text-xs ${th.sub}`}>L'estensione sta cercando le aziende su Report Aziende. I log appariranno sotto.</p>
         </div>
       )}
 
