@@ -1,45 +1,40 @@
 
 
-## Fix: Colonna Sinistra Non Aggiornata Dopo Download
+## Fix: CountryGrid Non Mostra Email/Telefoni
 
-### Problema
+### Causa del Bug
 
-La CountryGrid (colonna sinistra) mostra 0 email e 0 telefoni per l'Albania nonostante il download sia completato con successo (11/11). Il motivo e' semplice: le query che alimentano i contatori hanno un `staleTime` di 60 secondi e **non vengono mai invalidate** dal processore di download al termine di un job.
+Il hook `useContactCompleteness()` restituisce un oggetto con questa struttura:
 
-Il processore (`useDownloadProcessor.ts`) invalida solo queste query:
-- `download-jobs`
-- `ops-global-stats`
+```text
+{
+  global: { total, withEmail, withPhone, ... },
+  byCountry: { "AL": { total_partners: 10, with_personal_email: 9, ... }, ... }
+}
+```
 
-Ma la CountryGrid si basa su tre query diverse:
-- `contact-completeness` (conteggi email/telefono per paese)
-- `partner-counts-by-country-with-type` (numero partner per paese)
-- `cache-data-by-country` (dati directory cache)
+Ma nella CountryGrid (riga 69), il codice accede cosi':
 
-Nessuna di queste viene invalidata dopo il completamento di un job, quindi i dati restano a zero finche' l'utente non ricarica manualmente la pagina.
+```text
+const { data: completeness } = useContactCompleteness();
+// ...
+const cs = completeness?.[c.code];  // <-- BUG: cerca completeness["AL"] che non esiste
+```
 
-### Soluzione
+Dovrebbe essere `completeness?.byCountry?.[c.code]`. Senza `.byCountry`, cerca la chiave "AL" al primo livello dell'oggetto (dove ci sono solo `global` e `byCountry`), quindi restituisce sempre `undefined` e i contatori mostrano zero.
 
-Aggiungere l'invalidazione di queste tre query nel processore di download, sia durante il processing (ogni N profili) che al completamento del job.
+### Fix
 
-### Modifiche tecniche
+**File: `src/components/download/CountryGrid.tsx`** (riga ~167)
 
-**File: `src/hooks/useDownloadProcessor.ts`**
+Cambiare:
+```
+const cs = completeness?.[c.code];
+```
+in:
+```
+const cs = completeness?.byCountry?.[c.code];
+```
 
-1. Nel blocco `finally` (riga 246-249), aggiungere:
-   - `queryClient.invalidateQueries({ queryKey: ["contact-completeness"] })`
-   - `queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] })`
-   - `queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] })`
-
-2. Durante il loop di processing, dopo ogni profilo salvato con successo (circa riga 190), aggiungere un'invalidazione periodica (ogni 5 profili) per aggiornare la colonna sinistra anche durante il download, non solo alla fine:
-   ```
-   if (processedSet.size % 5 === 0) {
-     queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
-     queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
-   }
-   ```
-
-### Impatto
-- Zero modifiche alla UI o al layout
-- La colonna sinistra si aggiornera' automaticamente durante e dopo i download
-- Nessun rischio di regressione: si tratta solo di aggiungere invalidazioni di cache React Query
+Una sola riga. Tutti i contatori email/telefono si popoleranno immediatamente.
 
