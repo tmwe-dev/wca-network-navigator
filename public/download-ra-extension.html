@@ -26,8 +26,11 @@
 <div class="step">5. Clicca <strong>Carica estensione non pacchettizzata</strong> → seleziona la cartella</div>
 
 <script>
-const FILES = {
-"manifest.json": `{
+var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
+var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+
+var FILES = {
+"manifest.json": JSON.stringify({
   "manifest_version": 3,
   "name": "ReportAziende Cookie Sync",
   "version": "1.0",
@@ -38,186 +41,168 @@ const FILES = {
     "https://reportaziende.it/*",
     "https://www.reportaziende.it/*",
     "https://ecommerce2.reportaziende.it/*",
-    "https://zrbditqddhjkutzjycgi.supabase.co/*"
+    SUPABASE_URL + "/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://*.lovable.app/*",
-        "https://*.lovableproject.com/*"
-      ],
-      "js": ["content.js"],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": "icon.png"
-  },
-  "icons": {
-    "48": "icon.png",
-    "128": "icon.png"
-  }
-}`,
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": true }],
+  "action": { "default_popup": "popup.html", "default_icon": "icon.png" },
+  "icons": { "48": "icon.png", "128": "icon.png" }
+}, null, 2),
 
-"background.js": `// ReportAziende Cookie Sync - Background Service Worker
+"background.js": "// ReportAziende Cookie Sync - Background Service Worker\n\
+\n\
+var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
+var SUPABASE_ANON_KEY = \"" + SUPABASE_ANON_KEY + "\";\n\
+\n\
+async function syncRACookies() {\n\
+  try {\n\
+    var cookies = await chrome.cookies.getAll({ domain: \".reportaziende.it\" });\n\
+    var cookies2 = await chrome.cookies.getAll({ domain: \"reportaziende.it\" });\n\
+    var cookies3 = await chrome.cookies.getAll({ domain: \"ecommerce2.reportaziende.it\" });\n\
+    var allCookies = [].concat(cookies, cookies2, cookies3);\n\
+    if (allCookies.length === 0) {\n\
+      return { success: false, error: \"Nessun cookie trovato per reportaziende.it\" };\n\
+    }\n\
+    var uniqueCookies = {};\n\
+    allCookies.forEach(function (c) { uniqueCookies[c.name] = c.value; });\n\
+    var cookieString = Object.entries(uniqueCookies).map(function (e) { return e[0] + \"=\" + e[1]; }).join(\"; \");\n\
+    var res = await fetch(SUPABASE_URL + \"/functions/v1/save-ra-cookie\", {\n\
+      method: \"POST\",\n\
+      headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+      body: JSON.stringify({ cookie: cookieString }),\n\
+    });\n\
+    var data = await res.json();\n\
+    return { success: true, data: data };\n\
+  } catch (err) {\n\
+    return { success: false, error: err.message };\n\
+  }\n\
+}\n\
+\n\
+async function autoLogin() {\n\
+  try {\n\
+    var res = await fetch(SUPABASE_URL + \"/functions/v1/get-ra-credentials\", {\n\
+      method: \"GET\",\n\
+      headers: { \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+    });\n\
+    var creds = await res.json();\n\
+    if (!creds.username || !creds.password) {\n\
+      return { success: false, error: \"Credenziali non configurate. Vai su Impostazioni → Report Aziende.\" };\n\
+    }\n\
+    var tab = await chrome.tabs.create({ url: \"https://www.reportaziende.it/login\", active: true });\n\
+    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {\n\
+      if (tabId === tab.id && info.status === \"complete\") {\n\
+        chrome.tabs.onUpdated.removeListener(listener);\n\
+        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillLogin, args: [creds.username, creds.password] });\n\
+      }\n\
+    });\n\
+    return { success: true, message: \"Login in corso...\" };\n\
+  } catch (err) {\n\
+    return { success: false, error: err.message };\n\
+  }\n\
+}\n\
+\n\
+function fillLogin(username, password) {\n\
+  setTimeout(function () {\n\
+    var emailField = document.querySelector('input[type=\"email\"], input[name=\"email\"], input[name=\"username\"], input#email, input#username');\n\
+    var passField = document.querySelector('input[type=\"password\"]');\n\
+    var submitBtn = document.querySelector('button[type=\"submit\"], input[type=\"submit\"]');\n\
+    if (emailField) { emailField.value = username; emailField.dispatchEvent(new Event(\"input\", { bubbles: true })); }\n\
+    if (passField) { passField.value = password; passField.dispatchEvent(new Event(\"input\", { bubbles: true })); }\n\
+    if (submitBtn) { setTimeout(function () { submitBtn.click(); }, 500); }\n\
+  }, 1500);\n\
+}\n\
+\n\
+chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {\n\
+  if (msg.source === \"ra-content-bridge\") {\n\
+    if (msg.action === \"ping\") {\n\
+      sendResponse({ success: true, extension: \"ra-cookie-sync\", version: \"1.0\" });\n\
+    } else if (msg.action === \"syncCookies\") {\n\
+      syncRACookies().then(sendResponse);\n\
+      return true;\n\
+    } else if (msg.action === \"autoLogin\") {\n\
+      autoLogin().then(sendResponse);\n\
+      return true;\n\
+    } else {\n\
+      sendResponse({ success: false, error: \"Unknown action\" });\n\
+    }\n\
+  }\n\
+  return false;\n\
+});",
 
-const SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+"content.js": "// ReportAziende Cookie Sync - Content Script Bridge\n\
+(function () {\n\
+  window.addEventListener(\"message\", function (event) {\n\
+    if (event.source !== window) return;\n\
+    var data = event.data;\n\
+    if (!data || data.direction !== \"from-webapp-ra\") return;\n\
+    chrome.runtime.sendMessage(\n\
+      { source: \"ra-content-bridge\", action: data.action },\n\
+      function (response) {\n\
+        window.postMessage({ direction: \"from-extension-ra\", action: data.action, requestId: data.requestId, response: response || { success: false, error: \"No response from extension\" } }, \"*\");\n\
+        if (data.action === \"ping\") {\n\
+          window.postMessage({ direction: \"from-extension-ra\", action: \"contentScriptReady\" }, \"*\");\n\
+        }\n\
+      }\n\
+    );\n\
+  });\n\
+  window.postMessage({ direction: \"from-extension-ra\", action: \"contentScriptReady\" }, \"*\");\n\
+})();",
 
-async function syncRACookies() {
-  try {
-    const cookies = await chrome.cookies.getAll({ domain: ".reportaziende.it" });
-    const cookies2 = await chrome.cookies.getAll({ domain: "reportaziende.it" });
-    const cookies3 = await chrome.cookies.getAll({ domain: "ecommerce2.reportaziende.it" });
-    const allCookies = [...cookies, ...cookies2, ...cookies3];
-    if (allCookies.length === 0) {
-      return { success: false, error: "Nessun cookie trovato per reportaziende.it" };
-    }
-    const uniqueCookies = {};
-    allCookies.forEach((c) => { uniqueCookies[c.name] = c.value; });
-    const cookieString = Object.entries(uniqueCookies).map(([k, v]) => k + "=" + v).join("; ");
-    const res = await fetch(SUPABASE_URL + "/functions/v1/save-ra-cookie", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ cookie: cookieString }),
-    });
-    const data = await res.json();
-    return { success: true, ...data };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
+"popup.html": '<!DOCTYPE html>\n\
+<html>\n\
+<head>\n\
+<meta charset="utf-8">\n\
+<style>\n\
+  body { width: 300px; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; background: #1a1a2e; color: #e0e0e0; }\n\
+  h2 { margin: 0 0 12px; font-size: 15px; color: #fff; }\n\
+  .status { padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 12px; }\n\
+  .ok { background: #064e3b; color: #6ee7b7; }\n\
+  .error { background: #7f1d1d; color: #fca5a5; }\n\
+  .info { background: #1e3a5f; color: #93c5fd; }\n\
+  button { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }\n\
+  .btn-primary { background: #3b82f6; color: white; }\n\
+  .btn-primary:hover { background: #2563eb; }\n\
+  .btn-secondary { background: #374151; color: #d1d5db; }\n\
+  .btn-secondary:hover { background: #4b5563; }\n\
+  #log { font-size: 11px; color: #9ca3af; margin-top: 8px; white-space: pre-wrap; max-height: 120px; overflow-y: auto; }\n\
+</style>\n\
+</head>\n\
+<body>\n\
+<h2>🏢 ReportAziende Sync</h2>\n\
+<div id="statusBox" class="status info">Pronto</div>\n\
+<button id="btnLogin" class="btn-primary">🚀 Connetti ReportAziende</button>\n\
+<button id="btnSync" class="btn-secondary">🔄 Sincronizza Cookie</button>\n\
+<div id="log"></div>\n\
+<script src="popup.js"><\/script>\n\
+</body>\n\
+</html>',
 
-async function autoLogin() {
-  try {
-    const res = await fetch(SUPABASE_URL + "/functions/v1/get-ra-credentials", {
-      method: "GET",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
-    });
-    const creds = await res.json();
-    if (!creds.username || !creds.password) {
-      return { success: false, error: "Credenziali non configurate. Vai su Impostazioni → Report Aziende." };
-    }
-    const tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/login", active: true });
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-      if (tabId === tab.id && info.status === "complete") {
-        chrome.tabs.onUpdated.removeListener(listener);
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillLogin, args: [creds.username, creds.password] });
-      }
-    });
-    return { success: true, message: "Login in corso..." };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
-
-function fillLogin(username, password) {
-  setTimeout(() => {
-    const emailField = document.querySelector('input[type="email"], input[name="email"], input[name="username"], input#email, input#username');
-    const passField = document.querySelector('input[type="password"]');
-    const submitBtn = document.querySelector('button[type="submit"], input[type="submit"]');
-    if (emailField) { emailField.value = username; emailField.dispatchEvent(new Event("input", { bubbles: true })); }
-    if (passField) { passField.value = password; passField.dispatchEvent(new Event("input", { bubbles: true })); }
-    if (submitBtn) { setTimeout(() => submitBtn.click(), 500); }
-  }, 1500);
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.source === "ra-content-bridge") {
-    if (msg.action === "ping") {
-      sendResponse({ success: true, extension: "ra-cookie-sync", version: "1.0" });
-    } else if (msg.action === "syncCookies") {
-      syncRACookies().then(sendResponse);
-      return true;
-    } else if (msg.action === "autoLogin") {
-      autoLogin().then(sendResponse);
-      return true;
-    } else {
-      sendResponse({ success: false, error: "Unknown action" });
-    }
-  }
-  return false;
-});`,
-
-"content.js": `// ReportAziende Cookie Sync - Content Script Bridge
-(function () {
-  window.addEventListener("message", function (event) {
-    if (event.source !== window) return;
-    var data = event.data;
-    if (!data || data.direction !== "from-webapp-ra") return;
-    chrome.runtime.sendMessage(
-      { source: "ra-content-bridge", action: data.action },
-      function (response) {
-        window.postMessage({ direction: "from-extension-ra", action: data.action, requestId: data.requestId, response: response || { success: false, error: "No response from extension" } }, "*");
-        if (data.action === "ping") {
-          window.postMessage({ direction: "from-extension-ra", action: "contentScriptReady" }, "*");
-        }
-      }
-    );
-  });
-  window.postMessage({ direction: "from-extension-ra", action: "contentScriptReady" }, "*");
-})();`,
-
-"popup.html": `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body { width: 300px; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; background: #1a1a2e; color: #e0e0e0; }
-  h2 { margin: 0 0 12px; font-size: 15px; color: #fff; }
-  .status { padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 12px; }
-  .ok { background: #064e3b; color: #6ee7b7; }
-  .error { background: #7f1d1d; color: #fca5a5; }
-  .info { background: #1e3a5f; color: #93c5fd; }
-  button { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-  .btn-primary { background: #3b82f6; color: white; }
-  .btn-primary:hover { background: #2563eb; }
-  .btn-secondary { background: #374151; color: #d1d5db; }
-  .btn-secondary:hover { background: #4b5563; }
-  #log { font-size: 11px; color: #9ca3af; margin-top: 8px; white-space: pre-wrap; max-height: 120px; overflow-y: auto; }
-</style>
-</head>
-<body>
-<h2>🏢 ReportAziende Sync</h2>
-<div id="statusBox" class="status info">Pronto</div>
-<button id="btnLogin" class="btn-primary">🚀 Connetti ReportAziende</button>
-<button id="btnSync" class="btn-secondary">🔄 Sincronizza Cookie</button>
-<div id="log"></div>
-<script src="popup.js"></script>
-</body>
-</html>`,
-
-"popup.js": `const statusBox = document.getElementById("statusBox");
-const logEl = document.getElementById("log");
-function setStatus(text, type) { statusBox.textContent = text; statusBox.className = "status " + type; }
-function log(msg) { logEl.textContent += new Date().toLocaleTimeString() + " " + msg + "\\n"; logEl.scrollTop = logEl.scrollHeight; }
-document.getElementById("btnLogin").addEventListener("click", async () => {
-  setStatus("Login in corso...", "info");
-  log("Avvio auto-login...");
-  chrome.runtime.sendMessage({ source: "ra-content-bridge", action: "autoLogin" }, (res) => {
-    if (res && res.success) { setStatus("Login avviato! Completa nel browser.", "ok"); log("Login avviato."); }
-    else { setStatus("Errore: " + (res?.error || "Sconosciuto"), "error"); log("Errore: " + (res?.error || "Sconosciuto")); }
-  });
-});
-document.getElementById("btnSync").addEventListener("click", async () => {
-  setStatus("Sincronizzazione...", "info");
-  log("Sync cookie in corso...");
-  chrome.runtime.sendMessage({ source: "ra-content-bridge", action: "syncCookies" }, (res) => {
-    if (res && res.success) { setStatus("✅ Cookie sincronizzato!", "ok"); log("Cookie salvato."); }
-    else { setStatus("Errore: " + (res?.error || "Sconosciuto"), "error"); log("Errore: " + (res?.error || "Sconosciuto")); }
-  });
-});`
+"popup.js": "var statusBox = document.getElementById(\"statusBox\");\n\
+var logEl = document.getElementById(\"log\");\n\
+function setStatus(text, type) { statusBox.textContent = text; statusBox.className = \"status \" + type; }\n\
+function log(msg) { logEl.textContent += new Date().toLocaleTimeString() + \" \" + msg + \"\\n\"; logEl.scrollTop = logEl.scrollHeight; }\n\
+document.getElementById(\"btnLogin\").addEventListener(\"click\", function () {\n\
+  setStatus(\"Login in corso...\", \"info\");\n\
+  log(\"Avvio auto-login...\");\n\
+  chrome.runtime.sendMessage({ source: \"ra-content-bridge\", action: \"autoLogin\" }, function (res) {\n\
+    if (res && res.success) { setStatus(\"Login avviato! Completa nel browser.\", \"ok\"); log(\"Login avviato.\"); }\n\
+    else { setStatus(\"Errore: \" + (res && res.error ? res.error : \"Sconosciuto\"), \"error\"); log(\"Errore: \" + (res && res.error ? res.error : \"Sconosciuto\")); }\n\
+  });\n\
+});\n\
+document.getElementById(\"btnSync\").addEventListener(\"click\", function () {\n\
+  setStatus(\"Sincronizzazione...\", \"info\");\n\
+  log(\"Sync cookie in corso...\");\n\
+  chrome.runtime.sendMessage({ source: \"ra-content-bridge\", action: \"syncCookies\" }, function (res) {\n\
+    if (res && res.success) { setStatus(\"✅ Cookie sincronizzato!\", \"ok\"); log(\"Cookie salvato.\"); }\n\
+    else { setStatus(\"Errore: \" + (res && res.error ? res.error : \"Sconosciuto\"), \"error\"); log(\"Errore: \" + (res && res.error ? res.error : \"Sconosciuto\")); }\n\
+  });\n\
+});"
 };
 
 function downloadFile(name, content, mimeType) {
-  const blob = new Blob([content], { type: mimeType || "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  var blob = new Blob([content], { type: mimeType || "text/plain" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
   a.href = url;
   a.download = name;
   document.body.appendChild(a);
@@ -227,27 +212,27 @@ function downloadFile(name, content, mimeType) {
 }
 
 async function downloadAll() {
-  const status = document.getElementById("status");
+  var status = document.getElementById("status");
   status.innerHTML = "";
   
-  // Download text files
-  const textFiles = Object.entries(FILES);
-  for (let i = 0; i < textFiles.length; i++) {
-    const [name, content] = textFiles[i];
-    const mime = name.endsWith(".json") ? "application/json" : 
+  var textFiles = Object.entries(FILES);
+  for (var i = 0; i < textFiles.length; i++) {
+    var name = textFiles[i][0];
+    var content = textFiles[i][1];
+    var mime = name.endsWith(".json") ? "application/json" : 
                  name.endsWith(".html") ? "text/html" : 
                  "application/javascript";
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(function (r) { setTimeout(r, 400); });
     downloadFile(name, content, mime);
   }
 
   // Download icon.png from the server
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(function (r) { setTimeout(r, 400); });
   try {
-    const res = await fetch("/ra-extension/icon.png");
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    var res = await fetch("/ra-extension/icon.png");
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
     a.href = url;
     a.download = "icon.png";
     document.body.appendChild(a);
@@ -255,10 +240,9 @@ async function downloadAll() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch(e) {
-    // Fallback: create a simple 128x128 icon
-    const canvas = document.createElement("canvas");
+    var canvas = document.createElement("canvas");
     canvas.width = 128; canvas.height = 128;
-    const ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext("2d");
     ctx.fillStyle = "#3b82f6";
     ctx.fillRect(0, 0, 128, 128);
     ctx.fillStyle = "#fff";
@@ -266,9 +250,9 @@ async function downloadAll() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("RA", 64, 64);
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+    canvas.toBlob(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
       a.href = url; a.download = "icon.png";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
