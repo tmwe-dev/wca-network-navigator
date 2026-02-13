@@ -12,7 +12,7 @@ import AcquisizionePartner from "./pages/AcquisizionePartner";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
 import Guida from "./pages/Guida";
-import Prospects from "./pages/Prospects";
+import ProspectCenter from "./pages/ProspectCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +32,7 @@ const App = () => (
             <Route path="/download-management" element={<DownloadManagement />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/prospects" element={<Prospects />} />
+            <Route path="/prospects" element={<ProspectCenter />} />
             <Route path="/guida" element={<Guida />} />
           </Route>
           <Route path="*" element={<NotFound />} />
