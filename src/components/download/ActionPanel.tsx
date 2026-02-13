@@ -248,6 +248,23 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
       toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
       return;
     }
+
+    // Gate: block if any job is already pending or running
+    const { data: activeJobs } = await supabase
+      .from("download_jobs")
+      .select("id")
+      .in("status", ["pending", "running"])
+      .limit(1);
+
+    if (activeJobs && activeJobs.length > 0) {
+      toast({
+        title: "Job già in corso",
+        description: "Attendi il completamento del job attuale prima di avviarne un altro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const idsByCountry = new Map<string, number[]>();
     for (const m of sourceMembers) {
       if (!m.wca_id || !idsToDownload.includes(m.wca_id)) continue;
