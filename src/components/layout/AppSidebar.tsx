@@ -22,9 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 
 const navItems = [
-  { title: "Partner", url: "/", icon: Globe },
-  { title: "Acquisizione", url: "/acquisizione", icon: Download },
-  { title: "Download", url: "/download-management", icon: Database },
+  { title: "Operations", url: "/", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Prospect", url: "/prospects", icon: Building2 },
   { title: "Agenda", url: "/reminders", icon: Calendar },
