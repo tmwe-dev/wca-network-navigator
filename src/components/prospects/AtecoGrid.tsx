@@ -5,8 +5,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Search, SlidersHorizontal, X, Folder, FolderOpen, Check,
-  ChevronsUpDown, ChevronRight, ChevronDown, CheckCircle, FileText,
+  Search, X, Folder, FolderOpen, Check,
+  ChevronsUpDown, ChevronRight, ChevronDown, FileText,
 } from "lucide-react";
 import { useAtecoGroups } from "@/hooks/useProspectStats";
 import { ATECO_TREE, type AtecoEntry } from "@/data/atecoCategories";
@@ -227,65 +227,48 @@ export function AtecoGrid({
     return filtered.map(p => ({ value: p.sigla, label: `${p.sigla} — ${p.nome}`, sub: p.regione }));
   }, [regionFilter]);
 
-  const hasActiveFilter = regionFilter.length > 0 || provinceFilter.length > 0;
   const selectedSet = new Set(selected);
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
-          <Input
-            placeholder="Cerca ATECO..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
-          />
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className={`relative flex items-center justify-center w-11 h-11 rounded-2xl border transition-all ${
-              isDark
-                ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]"
-                : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white shadow-sm"
-            }`}>
-              <SlidersHorizontal className="w-5 h-5" />
-              {hasActiveFilter && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className={`w-64 p-3 rounded-2xl z-50 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
-            <FilterMultiSelect
-              label="Regione"
-              placeholder="Tutte le regioni"
-              options={regionOptions}
-              selected={regionFilter}
-              onToggle={v => {
-                const next = toggle(regionFilter, v);
-                onRegionChange(next);
-                if (next.length > 0) {
-                  const validSigle = new Set(PROVINCE_ITALIANE.filter(p => next.includes(p.regione)).map(p => p.sigla));
-                  onProvinceChange(provinceFilter.filter(s => validSigle.has(s)));
-                }
-              }}
-              onClear={() => { onRegionChange([]); onProvinceChange([]); }}
-              isDark={isDark}
-            />
-            <div className="mt-3">
-              <FilterMultiSelect
-                label="Provincia"
-                placeholder="Tutte le province"
-                options={provinceOptions}
-                selected={provinceFilter}
-                onToggle={v => onProvinceChange(toggle(provinceFilter, v))}
-                onClear={() => onProvinceChange([])}
-                isDark={isDark}
-              />
-            </div>
-          </PopoverContent>
-        </Popover>
+      {/* Region & Province filters - always visible */}
+      <div className="space-y-2">
+        <FilterMultiSelect
+          label="Regione"
+          placeholder="Tutte le regioni"
+          options={regionOptions}
+          selected={regionFilter}
+          onToggle={v => {
+            const next = toggle(regionFilter, v);
+            onRegionChange(next);
+            if (next.length > 0) {
+              const validSigle = new Set(PROVINCE_ITALIANE.filter(p => next.includes(p.regione)).map(p => p.sigla));
+              onProvinceChange(provinceFilter.filter(s => validSigle.has(s)));
+            }
+          }}
+          onClear={() => { onRegionChange([]); onProvinceChange([]); }}
+          isDark={isDark}
+        />
+        <FilterMultiSelect
+          label="Provincia"
+          placeholder="Tutte le province"
+          options={provinceOptions}
+          selected={provinceFilter}
+          onToggle={v => onProvinceChange(toggle(provinceFilter, v))}
+          onClear={() => onProvinceChange([])}
+          isDark={isDark}
+        />
+      </div>
+
+      {/* Search ATECO */}
+      <div className="relative">
+        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
+        <Input
+          placeholder="Cerca ATECO..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
+        />
       </div>
 
       {/* Selected chips */}
