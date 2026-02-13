@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, CreditCard, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, CreditCard, BarChart3, X } from "lucide-react";
 import { t } from "@/components/download/theme";
 
 export interface ProspectFilters {
@@ -186,23 +186,45 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
   ].filter(Boolean).length;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-        isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
-      }`}>
-        <Filter className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-        <span className={`text-xs font-semibold ${th.h2}`}>Filtri Avanzati</span>
-        {activeCount > 0 && (
-          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
-            {activeCount}
-          </span>
-        )}
-        {open ? <ChevronDown className={`w-3.5 h-3.5 ml-auto ${th.dim}`} /> : <ChevronRight className={`w-3.5 h-3.5 ml-auto ${th.dim}`} />}
-      </CollapsibleTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+          isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+        }`}>
+          <Filter className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+          <span className={`text-xs font-semibold ${th.h2}`}>Filtri Avanzati</span>
+          {activeCount > 0 && (
+            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
+              {activeCount}
+            </span>
+          )}
+        </button>
+      </DialogTrigger>
 
-      <CollapsibleContent>
-        <div className={`mt-1 p-3 rounded-xl border space-y-3 ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/40 border-slate-200/60"}`}>
-          {/* Fatturato */}
+      <DialogContent className={`max-w-md p-0 border-0 overflow-hidden ${isDark ? "bg-slate-900" : "bg-white"}`}>
+        <DialogTitle className="sr-only">Filtri Avanzati</DialogTitle>
+
+        {/* Header */}
+        <div className={`flex items-center justify-between px-5 py-4 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}>
+          <div className="flex items-center gap-2">
+            <Filter className={`w-5 h-5 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+            <span className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>Filtri Avanzati</span>
+            {activeCount > 0 && (
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
+                {activeCount} attivi
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className={`px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+
+          {/* Sezione: Range Aziendali */}
+          <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-sky-400/80" : "text-sky-600"}`}>
+            📊 Parametri Aziendali
+          </p>
+
           <RangeRow
             label="Fatturato"
             icon={Euro}
@@ -214,7 +236,6 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             placeholder={["€ Min", "€ Max"]}
           />
 
-          {/* Dipendenti */}
           <RangeRow
             label="Dipendenti"
             icon={Users}
@@ -226,7 +247,6 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             placeholder={["Min", "Max"]}
           />
 
-          {/* Anno fondazione */}
           <RangeRow
             label="Fondazione"
             icon={Calendar}
@@ -238,26 +258,29 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             placeholder={["Anno da", "Anno a"]}
           />
 
-          {/* Contact filters */}
-          <div className={`border-t pt-2 space-y-2 ${isDark ? "border-white/[0.06]" : "border-slate-200/60"}`}>
-            <label className="flex items-center gap-2 cursor-pointer">
+          {/* Sezione: Contatti */}
+          <div className={`border-t pt-4 space-y-3 ${isDark ? "border-white/10" : "border-slate-200"}`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-emerald-400/80" : "text-emerald-600"}`}>
+              📞 Disponibilità Contatti
+            </p>
+            <label className="flex items-center gap-3 cursor-pointer">
               <Switch checked={filters.has_phone} onCheckedChange={v => update("has_phone", v)} />
-              <Phone className={`w-3 h-3 ${th.dim}`} />
-              <span className={`text-[11px] ${th.sub}`}>Ha numero di telefono</span>
+              <Phone className={`w-3.5 h-3.5 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+              <span className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>Ha numero di telefono</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer">
               <Switch checked={filters.has_email} onCheckedChange={v => update("has_email", v)} />
-              <Mail className={`w-3 h-3 ${th.dim}`} />
-              <span className={`text-[11px] ${th.sub}`}>Ha indirizzo email</span>
+              <Mail className={`w-3.5 h-3.5 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+              <span className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>Ha indirizzo email</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer">
               <Switch checked={filters.has_phone_and_email} onCheckedChange={v => update("has_phone_and_email", v)} />
-              <span className={`text-[11px] font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>📞+📧 Ha entrambi</span>
+              <span className={`text-xs font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>📞+📧 Ha entrambi</span>
             </label>
           </div>
 
-          {/* ═══ RANKING ATECO ═══ */}
-          <div className={`border-t pt-3 space-y-3 ${isDark ? "border-white/[0.06]" : "border-slate-200/60"}`}>
+          {/* Sezione: Ranking ATECO */}
+          <div className={`border-t pt-4 space-y-3 ${isDark ? "border-white/10" : "border-slate-200"}`}>
             <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-amber-400/80" : "text-amber-600"}`}>
               ⭐ Ranking ATECO
             </p>
@@ -297,11 +320,11 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             />
 
             {/* Score slider */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Star className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-amber-400/60" : "text-amber-500/60"}`} />
-                <span className={`text-[11px] ${t(isDark).sub}`}>Score minimo</span>
-                <span className={`text-[10px] font-mono font-bold ml-auto ${
+                <span className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>Score minimo</span>
+                <span className={`text-[11px] font-mono font-bold ml-auto ${
                   filters.rank_score_min > 0
                     ? isDark ? "text-amber-300" : "text-amber-600"
                     : isDark ? "text-slate-600" : "text-slate-400"
@@ -320,7 +343,7 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             </div>
           </div>
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      </DialogContent>
+    </Dialog>
   );
 }
