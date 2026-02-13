@@ -32,7 +32,7 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
+      <div className="px-3 py-2.5 border-b border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 flex items-center justify-between gap-2 bg-white/[0.02] dark:bg-white/[0.02] bg-white/30">
         <div className="flex items-center gap-2">
           <Checkbox
             checked={allSelected}
@@ -53,11 +53,11 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
             <div
               key={item.wca_id}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-300",
+                "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-300",
                 item.status === "active" &&
-                  "bg-primary/10 border border-primary/30 shadow-sm shadow-primary/10",
-                item.status === "done" && "opacity-60",
-                item.status === "pending" && "opacity-70",
+                  "bg-sky-500/[0.08] border border-sky-500/30 shadow-md shadow-sky-500/[0.08] scale-[1.01]",
+                item.status === "done" && "opacity-50",
+                item.status === "pending" && "opacity-70 hover:bg-white/[0.04]",
                 item.status === "error" && "bg-destructive/10 border border-destructive/20"
               )}
             >

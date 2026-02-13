@@ -1143,9 +1143,16 @@ export default function AcquisizionePartner() {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 p-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] gap-3 -m-6 relative overflow-hidden">
+      {/* Ambient gradient backgrounds */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-violet-500/[0.06] via-transparent to-transparent dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-sky-500/[0.05] via-transparent to-transparent dark:block hidden animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-violet-50/30 dark:hidden" />
+
+      <div className="relative z-10 flex flex-col h-full gap-3 p-4">
       {/* TOOLBAR */}
-      <Card className="p-4 bg-card/80 backdrop-blur-sm border-border">
+      <div className="p-4 bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl shadow-lg shadow-black/[0.05]">
         <AcquisitionToolbar
           selectedCountries={selectedCountries}
           onCountriesChange={setSelectedCountries}
@@ -1267,11 +1274,11 @@ export default function AcquisizionePartner() {
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
       {/* LIVE STATS BAR */}
       {(pipelineStatus === "running" || pipelineStatus === "paused" || pipelineStatus === "done") && liveStats.processed > 0 && (
-        <div className="flex items-center gap-4 px-4 py-2 rounded-lg bg-card/80 backdrop-blur-sm border border-border text-xs">
+        <div className="flex items-center gap-4 px-4 py-2.5 rounded-2xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 text-xs shadow-lg shadow-black/[0.05]">
           <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
             Progresso: <strong className="text-foreground">{liveStats.processed}/{queue.filter(q => selectedIds.has(q.wca_id)).length}</strong>
           </div>
@@ -1322,7 +1329,7 @@ export default function AcquisizionePartner() {
       {/* MAIN SPLIT */}
       <div className="flex-1 flex gap-3 min-h-0">
         {/* LEFT: Partner Queue */}
-        <Card className="w-[35%] flex flex-col bg-card/80 backdrop-blur-sm border-border overflow-hidden">
+        <div className="w-[35%] flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
           <PartnerQueue
             items={queue}
             activeIndex={activeIndex}
@@ -1338,16 +1345,16 @@ export default function AcquisizionePartner() {
             onSelectAll={() => setSelectedIds(new Set(queue.map((q) => q.wca_id)))}
             onDeselectAll={() => setSelectedIds(new Set())}
           />
-        </Card>
+        </div>
 
         {/* RIGHT: Canvas */}
-        <Card className="flex-1 flex flex-col bg-card/80 backdrop-blur-sm border-border overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
           <PartnerCanvas
             data={canvasData}
             phase={canvasPhase}
             isAnimatingOut={isAnimatingOut}
           />
-        </Card>
+        </div>
       </div>
 
       {/* BOTTOM: Acquisition Bin */}
@@ -1426,6 +1433,7 @@ export default function AcquisizionePartner() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }

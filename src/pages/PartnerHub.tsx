@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, Suspense, lazy } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CountryOverview } from "@/components/partners/CountryOverview";
@@ -391,10 +392,18 @@ export default function PartnerHub() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="flex flex-col md:flex-row h-[calc(100vh-5rem)] gap-0 -m-6 relative">
+    <div className="h-[calc(100vh-4rem)] -m-6 relative overflow-hidden">
+      {/* Ambient gradient backgrounds */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-sky-500/[0.07] via-transparent to-transparent dark:block hidden" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-violet-500/[0.05] via-transparent to-transparent dark:block hidden" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-sky-50/30 dark:hidden" />
+
+      <ResizablePanelGroup direction="horizontal" className="relative z-10 h-full">
+      <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL: Partner List ═══ */}
-      <div className="w-full md:w-[400px] flex-shrink-0 border-r flex flex-col bg-card">
-        <div className="p-4 border-b space-y-3 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-white/[0.03] dark:bg-white/[0.03] bg-white/60 backdrop-blur-xl border-r border-white/[0.08] dark:border-white/[0.08] border-slate-200/60">
+        <div className="p-4 border-b border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 space-y-3 bg-gradient-to-br from-sky-500/[0.06] via-transparent to-violet-500/[0.04]">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold flex items-center gap-2">
               <Globe className="w-5 h-5 text-primary" />
@@ -505,12 +514,14 @@ export default function PartnerHub() {
                       key={partner.id}
                       onClick={() => setSelectedId(partner.id)}
                       className={cn(
-                        "w-full text-left p-3 hover:bg-accent/50 transition-all cursor-pointer relative",
-                        selectedId === partner.id && "bg-accent",
+                        "w-full text-left p-3 transition-all duration-300 cursor-pointer relative group/card",
+                        "hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:bg-sky-50/50",
+                        "hover:scale-[1.01] hover:shadow-lg hover:shadow-sky-500/[0.06]",
+                        selectedId === partner.id && "bg-white/[0.08] dark:bg-white/[0.08] bg-sky-50/80 shadow-md shadow-sky-500/[0.08]",
                         selectedIds.has(partner.id) && "bg-primary/5",
                         q === "missing" && "border-l-4 border-l-destructive",
                         q === "partial" && "border-l-4 border-l-amber-400",
-                        q === "complete" && "border-l-4 border-l-primary",
+                        q === "complete" && "border-l-4 border-l-sky-500",
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -685,9 +696,11 @@ export default function PartnerHub() {
         partnerIds={Array.from(selectedIds)}
         onSuccess={() => setSelectedIds(new Set())}
       />
-
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={65} minSize={40}>
       {/* ═══ RIGHT PANEL: Detail ═══ */}
-      <div className="flex-1 overflow-y-auto bg-card">
+      <div className="h-full overflow-y-auto bg-transparent">
         {!selectedId ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center space-y-2">
@@ -712,6 +725,8 @@ export default function PartnerHub() {
           />
         ) : null}
       </div>
+      </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
     </TooltipProvider>
   );
