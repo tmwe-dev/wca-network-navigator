@@ -244,21 +244,23 @@ export function useDownloadProcessor() {
           await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
         }
 
-        // Anti-ban: long pause every 10 profiles (45-60s)
-        const LONG_PAUSE_EVERY = 10;
-        if (LONG_PAUSE_EVERY > 0 && processedSet.size > 0 && processedSet.size % LONG_PAUSE_EVERY === 0) {
-          const longPauseMs = 45000 + Math.random() * 15000; // 45-60s
+        // Anti-ban: long pause every N profiles (configurable from settings)
+        if (settings.antiBanEveryN > 0 && processedSet.size > 0 && processedSet.size % settings.antiBanEveryN === 0) {
+          const jitterRange = settings.antiBanDurationS * 0.3; // ±30% jitter
+          const longPauseS = settings.antiBanDurationS + (Math.random() * jitterRange * 2 - jitterRange);
           await supabase.from("download_jobs").update({
-            error_message: `⏸️ Pausa anti-ban (${Math.round(longPauseMs / 1000)}s) dopo ${processedSet.size} profili`,
+            error_message: `⏸️ Pausa anti-ban (${Math.round(longPauseS)}s) dopo ${processedSet.size} profili`,
           }).eq("id", jobId);
-          await new Promise(r => setTimeout(r, longPauseMs));
+          await new Promise(r => setTimeout(r, longPauseS * 1000));
           if (cancelRef.current) break;
           await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
         }
 
-        // Delay before next (with jitter 0.8x-1.5x for human-like pattern)
+        // Delay before next (with jitter from settings for human-like pattern)
         if (i < wcaIds.length - 1 && !cancelRef.current) {
-          const jitter = delaySeconds * 1000 * (0.8 + Math.random() * 0.7);
+          const jitterRange = settings.jitterMax - settings.jitterMin;
+          const jitterMultiplier = settings.jitterMin + Math.random() * jitterRange;
+          const jitter = delaySeconds * 1000 * jitterMultiplier;
           await new Promise(r => setTimeout(r, jitter));
         }
       }
@@ -304,10 +306,10 @@ export function useDownloadProcessor() {
         cancelRef.current = false;
         try {
           await processJob(pendingJobs[0]);
-          // Anti-ban: 30s pause between consecutive jobs
-          if (!cancelRef.current) {
-            console.log("[DownloadProcessor] Inter-job pause: 30s");
-            await new Promise(r => setTimeout(r, 30000));
+          // Anti-ban: configurable pause between consecutive jobs
+          if (!cancelRef.current && settings.interJobPauseS > 0) {
+            console.log(`[DownloadProcessor] Inter-job pause: ${settings.interJobPauseS}s`);
+            await new Promise(r => setTimeout(r, settings.interJobPauseS * 1000));
           }
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);

@@ -21,6 +21,12 @@ export interface ScrapingSettings {
   nightStartHour: number;
   enrichDefault: boolean;
   deepSearchDefault: boolean;
+  // Anti-ban settings
+  antiBanEveryN: number;
+  antiBanDurationS: number;
+  interJobPauseS: number;
+  jitterMin: number;
+  jitterMax: number;
 }
 
 const DEFAULTS: ScrapingSettings = {
@@ -43,6 +49,11 @@ const DEFAULTS: ScrapingSettings = {
   nightStartHour: 7,
   enrichDefault: false,
   deepSearchDefault: false,
+  antiBanEveryN: 10,
+  antiBanDurationS: 50,
+  interJobPauseS: 30,
+  jitterMin: 0.8,
+  jitterMax: 1.5,
 };
 
 const KEY_MAP: Record<keyof ScrapingSettings, string> = {
@@ -65,6 +76,11 @@ const KEY_MAP: Record<keyof ScrapingSettings, string> = {
   nightStartHour: "scraping_night_start_hour",
   enrichDefault: "scraping_enrich_default",
   deepSearchDefault: "scraping_deep_search_default",
+  antiBanEveryN: "scraping_antiban_every_n",
+  antiBanDurationS: "scraping_antiban_duration_s",
+  interJobPauseS: "scraping_inter_job_pause_s",
+  jitterMin: "scraping_jitter_min",
+  jitterMax: "scraping_jitter_max",
 };
 
 export const SCRAPING_KEY_MAP = KEY_MAP;
@@ -106,6 +122,11 @@ export function useScrapingSettings(): { settings: ScrapingSettings; isLoading: 
       nightStartHour: parseNum(raw[KEY_MAP.nightStartHour], DEFAULTS.nightStartHour),
       enrichDefault: parseBool(raw[KEY_MAP.enrichDefault], DEFAULTS.enrichDefault),
       deepSearchDefault: parseBool(raw[KEY_MAP.deepSearchDefault], DEFAULTS.deepSearchDefault),
+      antiBanEveryN: parseNum(raw[KEY_MAP.antiBanEveryN], DEFAULTS.antiBanEveryN),
+      antiBanDurationS: parseNum(raw[KEY_MAP.antiBanDurationS], DEFAULTS.antiBanDurationS),
+      interJobPauseS: parseNum(raw[KEY_MAP.interJobPauseS], DEFAULTS.interJobPauseS),
+      jitterMin: parseNum(raw[KEY_MAP.jitterMin], DEFAULTS.jitterMin),
+      jitterMax: parseNum(raw[KEY_MAP.jitterMax], DEFAULTS.jitterMax),
     };
   }, [raw]);
 
@@ -132,10 +153,8 @@ export function isNightPauseActive(nightPause: boolean, stopHour: number, startH
   if (!nightPause) return false;
   const hour = new Date().getHours();
   if (stopHour < startHour) {
-    // e.g. stop at 2, start at 7 → pause between 2-7
     return hour >= stopHour && hour < startHour;
   } else {
-    // e.g. stop at 22, start at 6 → pause between 22-6
     return hour >= stopHour || hour < startHour;
   }
 }
