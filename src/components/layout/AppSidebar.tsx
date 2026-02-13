@@ -24,7 +24,7 @@ import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 const navItems = [
   { title: "Operations", url: "/", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
-  { title: "Prospect", url: "/prospects", icon: Building2 },
+  { title: "Prospect Center", url: "/prospects", icon: Building2 },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
   { title: "Guida", url: "/guida", icon: BookOpen },
