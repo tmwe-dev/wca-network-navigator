@@ -1,90 +1,97 @@
 
+# Piano: Pagina Jobs per Campagne
 
-# Piano: Terminale di Download + Verifica Setting-Only
+## Cosa cambia
 
-## Cosa viene fatto
+### 1. Rinominare il pulsante in Campaigns
+Il pulsante "Genera Email" nell'header della pagina Campagne diventa **"Genera Jobs"**. Invece di aprire il dialog EmailPreview, naviga verso una nuova pagina `/campaign-jobs` passando i partner selezionati.
 
-### 1. Pannello Terminale in tempo reale
+### 2. Nuova tabella database: `campaign_jobs`
+Serve una tabella per persistere i job generati dalle campagne, separata dalle `activities` (che sono task interni). Ogni riga rappresenta un'azione da compiere verso un partner specifico.
 
-Un nuovo componente `DownloadTerminal` che mostra riga per riga cosa sta succedendo durante il download, in stile terminale (sfondo scuro, testo monospace, auto-scroll). Ogni riga mostra:
+Colonne:
+- `id` (uuid, PK)
+- `partner_id` (uuid, NOT NULL)
+- `company_name` (text)
+- `country_code` (char 2)
+- `country_name` (text)
+- `city` (text)
+- `email` (text, nullable)
+- `phone` (text, nullable)
+- `job_type` (enum: `email`, `call`) -- default `email`
+- `status` (enum: `pending`, `in_progress`, `completed`, `skipped`) -- default `pending`
+- `assigned_to` (uuid, nullable)
+- `notes` (text, nullable)
+- `batch_id` (uuid) -- per raggruppare i job creati nella stessa sessione
+- `created_at`, `completed_at`
 
-- Timestamp esatto
-- Azione in corso (download, pausa, attesa, recovery...)
-- WCA ID e nome azienda
-- Delay calcolato con jitter applicato
-- Risultato contatti (email/telefono trovati o meno)
+RLS: policy pubblica (come le altre tabelle del progetto, dato che non c'e' autenticazione).
 
-Il terminale viene alimentato tramite un sistema di "log entries" salvati nel database nella tabella `download_jobs` in un campo JSONB `terminal_log` (ultimi 100 eventi), aggiornato ad ogni profilo dal processor. In questo modo il terminale si aggiorna in tempo reale tramite polling e sopravvive ai refresh della pagina.
+### 3. Nuova pagina `/campaign-jobs`
 
-Il componente viene posizionato nella tab "Scarica" dell'Operations Center, tra ActionPanel e JobMonitor.
+Layout a due colonne (40/60):
 
-### 2. Verifica che TUTTO venga dal Settings
+**Colonna sinistra -- Elenco Jobs:**
+- Lista scrollabile di tutti i job raggruppati per batch
+- Ogni riga mostra: bandiera paese, nome azienda, citta', icona email/telefono, stato (pending/done)
+- Ogni riga e' selezionabile (click per vedere dettagli a destra)
+- Filtri in alto: tipo (email/call/tutti), stato, ricerca testo
+- Contatori in alto: totale, email disponibili, telefoni disponibili
 
-Ho verificato il codice: il processor gia' usa esclusivamente i valori da `useScrapingSettings()`. Nessun valore e' hardcoded. Ogni parametro di timing passa dal pannello Settings > Scraping:
+**Colonna destra -- Canvas di lavoro:**
+- Mostra i dettagli del job selezionato
+- Info partner: nome, paese, citta', email, telefono
+- Due azioni principali con pulsanti evidenti:
+  - **"Prepara Email"** -- apre un composer email con template precompilato
+  - **"Programma Call"** -- sposta il job nel tipo "call" e permette di impostare data/ora (integrazione futura col calendario)
+- Area note per appunti liberi
+- Pulsante "Segna come completato"
 
-- `settings.delayMin` -- delay minimo
-- `settings.delayDefault` -- delay predefinito
-- `settings.jitterMin / jitterMax` -- range jitter
-- `settings.antiBanEveryN / antiBanDurationS` -- pause periodiche
-- `settings.interJobPauseS` -- pausa tra job
-- `settings.keepAliveMs`, `settings.recoveryWait1/2/3`, ecc.
+**Header della pagina:**
+- Pulsanti di azione globale: "Segna tutti come completati", contatori statistici
+- Link per tornare alle Campagne
 
-L'unico `Math.max` presente (riga 26 del processor) confronta il delay del job con `settings.delayMin` -- entrambi vengono dal settings, nessun numero fisso nel codice.
-
-### 3. Garanzia di esecuzione strettamente sequenziale
-
-Il processor gia' scarica UN SOLO profilo alla volta (loop `for` sequenziale). Aggiungero' nel terminale un log esplicito che mostra "Inizio profilo #X" e "Fine profilo #X -- attesa Ys" per rendere visibile che non ci sono mai due profili in parallelo.
-
-## Dettaglio Tecnico
-
-### File da creare
-
-**`src/components/download/DownloadTerminal.tsx`**
-- Componente React con stile terminale (bg nero/scurissimo, font mono, scrollbar custom)
-- Legge i log dal campo `terminal_log` del job attivo tramite polling ogni 2s
-- Ogni riga mostra: `[HH:MM:SS] AZIONE -- dettagli`
-- Colori diversi per tipo: verde per successo, giallo per attesa/pausa, rosso per errore
-- Auto-scroll verso il basso, con possibilita' di scrollare verso l'alto per rileggere
-- Altezza fissa ~250px, scrollabile
-
-### File da modificare
-
-**`src/hooks/useDownloadProcessor.ts`**
-- Aggiungere una funzione helper `appendLog(jobId, entry)` che fa un update JSONB per aggiungere una riga al campo `terminal_log`
-- Chiamare `appendLog` ad ogni evento significativo:
-  - `[START]` Inizio profilo #WCA_ID
-  - `[OK]` Partner scaricato: "NomeAzienda" -- email: si/no, tel: si/no
-  - `[WAIT]` Attesa Xs (delay base Ys * jitter Z.Zx)
-  - `[PAUSE]` Pausa anti-ban Xs dopo N profili
-  - `[PAUSE]` Pausa tra job: Xs
-  - `[RECOVERY]` Tentativo recovery sessione...
-  - `[NIGHT]` Pausa notturna fino alle HH:00
-  - `[DONE]` Job completato
-  - `[ERROR]` Errore: messaggio
-
-**`src/pages/Operations.tsx`**
-- Importare e inserire `DownloadTerminal` nella tab "download", sotto ActionPanel
-
-### Migrazione database
-
-Aggiungere colonna `terminal_log` (JSONB, default `[]`) alla tabella `download_jobs` per persistere gli ultimi 100 log del terminale.
-
-## Risultato
-
-Quando parti con un download, vedrai nel terminale qualcosa come:
+### 4. Flusso completo
 
 ```text
-[19:42:03] START  Profilo #8842
-[19:42:08] OK     Acme Logistics (Dubai, AE) -- email: si, tel: si
-[19:42:08] WAIT   18s (base 15s * jitter 1.2x)
-[19:42:26] START  Profilo #8843
-[19:42:31] OK     Global Freight Co (Mumbai, IN) -- email: si, tel: no
-[19:42:31] WAIT   22s (base 15s * jitter 1.47x)
-[19:42:53] START  Profilo #8844
-...
-[19:45:12] PAUSE  Anti-ban: 52s dopo 8 profili
-[19:46:04] START  Profilo #8850
+Campagne (seleziona partner dal globo)
+    |
+    v
+Click "Genera Jobs"
+    |
+    v
+Inserisce righe in campaign_jobs (batch_id comune)
+    |
+    v
+Naviga a /campaign-jobs
+    |
+    v
+Il team lavora la lista: prepara email o programma call
 ```
 
-Ogni riga e' un singolo profilo, mai due in parallelo. Puoi verificare visivamente che i tempi corrispondono a quanto impostato nel Settings.
+### 5. Navigazione
 
+- Aggiungere la rotta `/campaign-jobs` in App.tsx
+- NON aggiungere voce nella sidebar (e' una sotto-pagina di Campaigns, raggiungibile solo da li' o tramite link diretto)
+- Aggiornare AppLayout con titolo "Campaign Jobs"
+
+## File da creare
+
+- `src/pages/CampaignJobs.tsx` -- pagina principale con layout 40/60
+- `src/components/campaigns/JobList.tsx` -- colonna sinistra con elenco
+- `src/components/campaigns/JobCanvas.tsx` -- colonna destra con dettagli e azioni
+- `src/hooks/useCampaignJobs.ts` -- hook per CRUD sulla tabella campaign_jobs
+
+## File da modificare
+
+- `src/pages/Campaigns.tsx` -- cambiare testo pulsante, logica di navigazione
+- `src/App.tsx` -- aggiungere rotta
+- `src/components/layout/AppLayout.tsx` -- aggiungere info pagina nell'header
+
+## Migrazione database
+
+Creazione tabella `campaign_jobs` con enum per `job_type` e `status`, e policy RLS pubbliche.
+
+## Dettaglio tecnico
+
+Il passaggio dei partner selezionati da Campaigns a CampaignJobs avviene tramite inserimento nel database: il pulsante "Genera Jobs" inserisce tutti i partner in `campaign_jobs` con un `batch_id` condiviso, poi naviga a `/campaign-jobs?batch=<batch_id>`. La pagina Jobs carica i dati dal DB, quindi sopravvive ai refresh.
