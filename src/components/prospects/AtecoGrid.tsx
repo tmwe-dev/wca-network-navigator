@@ -2,11 +2,13 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import {
   Search, Mail, Phone, Users, CheckCircle, SlidersHorizontal, X, FileText,
-  Building2, Euro,
+  Building2, Euro, ChevronsUpDown, Check,
 } from "lucide-react";
 import { useAtecoGroups } from "@/hooks/useProspectStats";
+import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
 import { t } from "@/components/download/theme";
 
 interface AtecoGridProps {
@@ -14,12 +16,10 @@ interface AtecoGridProps {
   onToggle: (code: string) => void;
   onRemove: (code: string) => void;
   isDark: boolean;
-  regionFilter: string;
-  onRegionChange: (r: string) => void;
-  provinceFilter: string;
-  onProvinceChange: (p: string) => void;
-  regions: string[];
-  provinces: string[];
+  regionFilter: string[];
+  onRegionChange: (r: string[]) => void;
+  provinceFilter: string[];
+  onProvinceChange: (p: string[]) => void;
 }
 
 function formatCurrency(n: number | null) {
@@ -29,10 +29,88 @@ function formatCurrency(n: number | null) {
   return `€${n.toFixed(0)}`;
 }
 
+function FilterMultiSelect({
+  label, placeholder, options, selected, onToggle, onClear, isDark,
+}: {
+  label: string; placeholder: string;
+  options: Array<{ value: string; label: string; sub?: string }>;
+  selected: string[]; onToggle: (v: string) => void; onClear: () => void; isDark: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedSet = new Set(selected);
+  return (
+    <div>
+      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</p>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs border transition-all ${isDark
+            ? "bg-white/5 border-white/10 text-slate-300 hover:bg-white/[0.08]"
+            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}>
+            <span className={selected.length === 0 ? (isDark ? "text-slate-500" : "text-slate-400") : ""}>
+              {selected.length === 0 ? placeholder : `${selected.length} sel.`}
+            </span>
+            <ChevronsUpDown className="w-3 h-3 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={`w-56 p-0 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
+          <Command className={isDark ? "bg-slate-900" : ""}>
+            <CommandInput placeholder="Cerca..." className={`text-xs ${isDark ? "text-white" : ""}`} />
+            <CommandList>
+              <CommandEmpty className={`text-xs ${isDark ? "text-slate-500" : ""}`}>Nessun risultato</CommandEmpty>
+              {selected.length > 0 && (
+                <CommandGroup>
+                  <CommandItem onSelect={onClear} className={`text-xs ${isDark ? "text-rose-400" : "text-rose-500"}`}>
+                    <X className="w-3 h-3 mr-1" /> Deseleziona tutto
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              <CommandGroup>
+                <ScrollArea className="max-h-48">
+                  {options.map(opt => (
+                    <CommandItem
+                      key={opt.value}
+                      value={`${opt.value} ${opt.label}`}
+                      onSelect={() => onToggle(opt.value)}
+                      className={`text-xs ${isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}`}
+                    >
+                      <div className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
+                        selectedSet.has(opt.value)
+                          ? "bg-sky-500 border-sky-500"
+                          : isDark ? "border-slate-600" : "border-slate-300"
+                      }`}>
+                        {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span>{opt.label}</span>
+                      {opt.sub && <span className={`ml-auto text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>{opt.sub}</span>}
+                    </CommandItem>
+                  ))}
+                </ScrollArea>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {selected.map(v => (
+            <button key={v} onClick={() => onToggle(v)}
+              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${isDark
+                ? "bg-sky-500/15 text-sky-300 border border-sky-500/25"
+                : "bg-sky-50 text-sky-700 border border-sky-200"
+              }`}>
+              {v} <X className="w-2.5 h-2.5 opacity-60" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AtecoGrid({
   selected, onToggle, onRemove, isDark,
   regionFilter, onRegionChange, provinceFilter, onProvinceChange,
-  regions, provinces,
 }: AtecoGridProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -40,7 +118,20 @@ export function AtecoGrid({
 
   const { data: atecoGroups = [], isLoading } = useAtecoGroups();
 
-  // Group by first 2 digits (section)
+  const toggle = (list: string[], item: string) =>
+    list.includes(item) ? list.filter(i => i !== item) : [...list, item];
+
+  const regionOptions = useMemo(() =>
+    REGIONI_ITALIANE.map(r => ({ value: r, label: r })),
+  []);
+
+  const provinceOptions = useMemo(() => {
+    const filtered = regionFilter.length > 0
+      ? PROVINCE_ITALIANE.filter(p => regionFilter.includes(p.regione))
+      : PROVINCE_ITALIANE;
+    return filtered.map(p => ({ value: p.sigla, label: `${p.sigla} — ${p.nome}`, sub: p.regione }));
+  }, [regionFilter]);
+
   const sections = useMemo(() => {
     let filtered = atecoGroups.filter(g => {
       const q = search.toLowerCase();
@@ -60,7 +151,7 @@ export function AtecoGrid({
   }, [atecoGroups, search, sortBy]);
 
   const selectedSet = new Set(selected);
-  const hasActiveFilter = regionFilter !== "" || provinceFilter !== "" || sortBy !== "code";
+  const hasActiveFilter = regionFilter.length > 0 || provinceFilter.length > 0 || sortBy !== "code";
 
   const sorts = [
     { key: "code" as const, label: "Codice ATECO" },
@@ -111,25 +202,35 @@ export function AtecoGrid({
               ))}
             </div>
 
-            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Regione</p>
-            <select
-              value={regionFilter}
-              onChange={e => { onRegionChange(e.target.value); onProvinceChange(""); }}
-              className={`w-full mb-3 px-3 py-1.5 rounded-lg text-xs ${th.input}`}
-            >
-              <option value="">Tutte le regioni</option>
-              {regions.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <FilterMultiSelect
+              label="Regione"
+              placeholder="Tutte le regioni"
+              options={regionOptions}
+              selected={regionFilter}
+              onToggle={v => {
+                const next = toggle(regionFilter, v);
+                onRegionChange(next);
+                // Clear provinces not in selected regions
+                if (next.length > 0) {
+                  const validSigle = new Set(PROVINCE_ITALIANE.filter(p => next.includes(p.regione)).map(p => p.sigla));
+                  onProvinceChange(provinceFilter.filter(s => validSigle.has(s)));
+                }
+              }}
+              onClear={() => { onRegionChange([]); onProvinceChange([]); }}
+              isDark={isDark}
+            />
 
-            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Provincia</p>
-            <select
-              value={provinceFilter}
-              onChange={e => onProvinceChange(e.target.value)}
-              className={`w-full px-3 py-1.5 rounded-lg text-xs ${th.input}`}
-            >
-              <option value="">Tutte le province</option>
-              {provinces.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <div className="mt-3">
+              <FilterMultiSelect
+                label="Provincia"
+                placeholder="Tutte le province"
+                options={provinceOptions}
+                selected={provinceFilter}
+                onToggle={v => onProvinceChange(toggle(provinceFilter, v))}
+                onClear={() => onProvinceChange([])}
+                isDark={isDark}
+              />
+            </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -170,14 +271,12 @@ export function AtecoGrid({
 
               return (
                 <div key={section}>
-                  {/* Section header */}
                   <div className={`flex items-center gap-2 px-2 py-1 mb-1 ${th.dim}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider">{section}</span>
                     <span className="text-[10px] truncate flex-1">{sectionDesc}</span>
                     <span className="text-[10px] font-mono">{totalInSection}</span>
                   </div>
 
-                  {/* ATECO cards */}
                   {groups.map(g => {
                     const isSelected = selectedSet.has(g.codice_ateco);
                     const dataDensity = g.with_email / Math.max(g.count, 1);
