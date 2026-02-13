@@ -29,6 +29,21 @@ export function useDownloadProcessor() {
     // Mark as running
     await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
 
+    // DB lock: verify no other job is already running (prevent parallel execution after reload)
+    const { data: runningJobs } = await supabase
+      .from("download_jobs")
+      .select("id")
+      .eq("status", "running")
+      .neq("id", jobId)
+      .limit(1);
+
+    if (runningJobs && runningJobs.length > 0) {
+      await supabase.from("download_jobs")
+        .update({ status: "pending", error_message: "In attesa: altro job in esecuzione" })
+        .eq("id", jobId);
+      return;
+    }
+
     // Keep-alive
     const keepAlive = setInterval(async () => {
       try { await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId); } catch {}
