@@ -759,7 +759,7 @@ async function runSearchOnly(params) {
   if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
   resetState(); scrapingState.active = true;
   addLog("Avvio ricerca lista aziende...");
-  var delay = (params.delaySeconds || 10) * 1000;
+  var delay = (params.delaySeconds || 20) * 1000;
   var atecoCodes = params.atecoCodes || (params.atecoCode ? [params.atecoCode] : []);
   var regions = params.regions || (params.region ? [params.region] : []);
   var provinces = params.provinces || (params.province ? [params.province] : []);
@@ -799,7 +799,7 @@ async function runScrapeSelected(params) {
   if (items.length === 0) return { success: false, error: "Nessun elemento" };
   resetState(); scrapingState.active = true; scrapingState.total = items.length;
   addLog("Scraping " + items.length + " profili selezionati");
-  var delay = (params.delaySeconds || 10) * 1000, batchSize = params.batchSize || 5, batch = [];
+  var delay = (params.delaySeconds || 20) * 1000, batchSize = params.batchSize || 5, batch = [], LONG_PAUSE_EVERY = 10, LONG_PAUSE_MS = 45000;
   try {
     for (var i = 0; i < items.length; i++) {
       if (scrapingState.stopped) { addLog("Interrotto."); break; }
@@ -809,7 +809,7 @@ async function runScrapeSelected(params) {
       if (pr.success && pr.data) { batch.push(pr.data); addLog("✅ " + items[i].name); }
       else { scrapingState.errors++; if (pr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); if (batch.length > 0) await saveBatch(batch); scrapingState.active = false; return { success: false, error: "session_expired", saved: scrapingState.saved }; } addLog("❌ " + items[i].name); }
       if (batch.length >= batchSize) { await saveBatch(batch); batch = []; }
-      if (i < items.length - 1 && !scrapingState.stopped) { var jit = delay * (0.7 + Math.random() * 0.6); await new Promise(function(r) { setTimeout(r, jit); }); }
+      if (i < items.length - 1 && !scrapingState.stopped) { var jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
     }
     if (batch.length > 0) await saveBatch(batch);
     addLog("Completato. Salvati: " + scrapingState.saved + ", Errori: " + scrapingState.errors);
@@ -828,8 +828,10 @@ async function runBatchScrape(params) {
   scrapingState.active = true;
   addLog("Avvio scraping batch: ATECO=" + (params.atecoCode || "tutti"));
 
-  const delay = (params.delaySeconds || 10) * 1000;
+  const delay = (params.delaySeconds || 20) * 1000;
   const batchSize = params.batchSize || 5;
+  const LONG_PAUSE_EVERY = 10;
+  const LONG_PAUSE_MS = 45000;
 
   try {
     // Step 1: Get search results (all pages)
@@ -916,11 +918,15 @@ async function runBatchScrape(params) {
         batch = [];
       }
 
-      // Delay between requests
+      // Delay between requests with long pause every N profiles
       if (i < allResults.length - 1 && !scrapingState.stopped) {
-        // Add some randomness ±30%
-        const jitter = delay * (0.7 + Math.random() * 0.6);
-        await new Promise((r) => setTimeout(r, jitter));
+        if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) {
+          addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili...");
+          await new Promise((r) => setTimeout(r, LONG_PAUSE_MS));
+        } else {
+          const jitter = delay * (0.8 + Math.random() * 0.8);
+          await new Promise((r) => setTimeout(r, jitter));
+        }
       }
     }
 
