@@ -137,13 +137,12 @@ function FilterMultiSelect({
 function passesRankingFilter(rank: AtecoRank | undefined, filters: ProspectFilters | undefined): boolean {
   if (!filters) return true;
   const hasRankFilter = filters.rank_volume_min > 0 || filters.rank_valore_min > 0 ||
-    filters.rank_intl.length > 0 || filters.rank_paga.length > 0 || filters.rank_score_min > 0;
+    filters.rank_intl.length > 0 || filters.rank_score_min > 0;
   if (!hasRankFilter) return true;
   if (!rank) return false;
   if (filters.rank_volume_min > 0 && rank.volume < filters.rank_volume_min) return false;
   if (filters.rank_valore_min > 0 && rank.valore < filters.rank_valore_min) return false;
   if (filters.rank_intl.length > 0 && !filters.rank_intl.includes(rank.intl)) return false;
-  if (filters.rank_paga.length > 0 && !filters.rank_paga.includes(rank.paga)) return false;
   if (filters.rank_score_min > 0 && calcScore(rank) < filters.rank_score_min) return false;
   return true;
 }
@@ -334,7 +333,7 @@ export function AtecoGrid({
       {/* "Seleziona tutti i filtrati" button */}
       {(() => {
         const hasRankFilter = rankingFilters && (rankingFilters.rank_volume_min > 0 || rankingFilters.rank_valore_min > 0 ||
-          rankingFilters.rank_intl.length > 0 || rankingFilters.rank_paga.length > 0 || rankingFilters.rank_score_min > 0);
+          rankingFilters.rank_intl.length > 0 || rankingFilters.rank_score_min > 0);
         if (!hasRankFilter || !onSelectMultiple) return null;
         const visibleCodes = groups.filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)).map(g => g.codice);
         const unselectedCount = visibleCodes.filter(c => !selectedSet.has(c)).length;

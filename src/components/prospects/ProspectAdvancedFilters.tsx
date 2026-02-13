@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, CreditCard, BarChart3, X } from "lucide-react";
+import { Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, BarChart3, X } from "lucide-react";
 import { t } from "@/components/download/theme";
 
 export interface ProspectFilters {
@@ -19,7 +19,6 @@ export interface ProspectFilters {
   rank_volume_min: number;
   rank_valore_min: number;
   rank_intl: string[];
-  rank_paga: string[];
   rank_score_min: number;
 }
 
@@ -36,12 +35,10 @@ export const EMPTY_FILTERS: ProspectFilters = {
   rank_volume_min: 0,
   rank_valore_min: 0,
   rank_intl: [],
-  rank_paga: [],
   rank_score_min: 0,
 };
 
 const INTL_OPTIONS = ["MOLTO ALTO", "ALTO", "MEDIO", "BASSO", "MOLTO DIFFICILE"];
-const PAGA_OPTIONS = ["SI - ALTA PROBABILITÀ", "SI - MEDIA PROBABILITÀ", "POSSIBILE", "IMPROBABILE"];
 
 interface Props {
   filters: ProspectFilters;
@@ -165,7 +162,7 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
     onChange({ ...filters, [key]: val });
   };
 
-  const toggleArrayItem = (key: "rank_intl" | "rank_paga", val: string) => {
+  const toggleArrayItem = (key: "rank_intl", val: string) => {
     const arr = filters[key] as string[];
     const next = arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
     update(key, next);
@@ -181,7 +178,6 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
     filters.rank_volume_min > 0,
     filters.rank_valore_min > 0,
     filters.rank_intl.length > 0,
-    filters.rank_paga.length > 0,
     filters.rank_score_min > 0,
   ].filter(Boolean).length;
 
@@ -307,15 +303,6 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
               options={INTL_OPTIONS}
               selected={filters.rank_intl}
               onToggle={v => toggleArrayItem("rank_intl", v)}
-              isDark={isDark}
-            />
-
-            <ChipMultiSelect
-              label="Prob. Pagamento"
-              icon={CreditCard}
-              options={PAGA_OPTIONS}
-              selected={filters.rank_paga}
-              onToggle={v => toggleArrayItem("rank_paga", v)}
               isDark={isDark}
             />
 
