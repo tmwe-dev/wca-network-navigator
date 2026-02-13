@@ -1,32 +1,44 @@
 
-# Fix: URL di Login Report Aziende (404)
 
-## Problema
-L'estensione RA punta a `https://www.reportaziende.it/login` che restituisce un errore 404. La pagina di login reale si trova su `https://ecommerce2.reportaziende.it/login3/`.
+# Fix: Ricerca Aziende non funziona + Rimozione filtro "Probabilita Pagamento"
 
-Inoltre, il rilevamento "sessione scaduta" controlla se l'URL contiene `/login`, che potrebbe non corrispondere ai redirect del nuovo dominio.
+## Problemi identificati
+
+### 1. Filtro "Probabilita Pagamento" causa errori
+Il filtro `rank_paga` nel pannello Filtri Avanzati crea problemi quando viene selezionato/deselezionato. L'utente vuole che venga rimosso completamente.
+
+### 2. La ricerca aziende fallisce con 404
+Ho trovato il vero problema: nel file `background.js` dell'estensione, la funzione `scrapeSearchResults` (riga 428) naviga ancora verso `https://www.reportaziende.it/searchPersonalizzata.php`. Quando l'utente non ha una sessione attiva su quel dominio, la pagina redirige al login su `ecommerce2.reportaziende.it/login3/`, e il controllo sessione lo interpreta come "session_expired", bloccando tutto.
+
+Inoltre, la funzione `fetchWithCookies` (riga 127-130) non include i cookie di `ecommerce2.reportaziende.it`, che e' il dominio dove avviene il login.
 
 ## Soluzione
-Correggere l'URL di login e aggiornare i controlli di sessione scaduta nell'estensione.
 
-## Dettagli tecnici
+### File: `src/components/prospects/ProspectAdvancedFilters.tsx`
+
+**Rimuovere il filtro "Prob. Pagamento":**
+- Eliminare `rank_paga` dall'interfaccia `ProspectFilters` e da `EMPTY_FILTERS`
+- Rimuovere la costante `PAGA_OPTIONS`
+- Rimuovere il componente `ChipMultiSelect` per "Prob. Pagamento" dal Dialog
+
+**Rimuovere `rank_paga` dal conteggio filtri attivi** (riga 184)
+
+### File: `src/components/prospects/AtecoGrid.tsx`
+
+**Aggiornare `passesRankingFilter`:**
+- Rimuovere il controllo `rank_paga` dalla funzione di filtro (riga 146)
+- Rimuovere `rank_paga` dal check `hasRankFilter` (riga 140)
 
 ### File: `public/ra-extension/background.js`
 
-**1. URL di login (riga 81)**
-- Da: `https://www.reportaziende.it/login`
-- A: `https://ecommerce2.reportaziende.it/login3/`
+**1. `fetchWithCookies` (riga 127-130):** aggiungere i cookie di `ecommerce2.reportaziende.it` nella raccolta, allineandola a `syncRACookies` che gia' li include.
 
-**2. Controlli sessione scaduta (righe 400, 442, 472)**
-- Aggiornare i 3 controlli `tabInfo.url.includes("/login")` per riconoscere anche il nuovo dominio:
-  - `tabInfo.url.includes("/login3") || tabInfo.url.includes("errore_404")`
-- Questo copre sia il redirect al login su ecommerce2 sia il caso in cui RA mostra la pagina 404
+**2. `scrapeSearchResults` (riga 428):** La URL della pagina di ricerca `https://www.reportaziende.it/searchPersonalizzata.php` e' corretta (la pagina esiste), ma il problema e' che senza sessione attiva redirige al login. Aggiungere un retry: se viene rilevato un redirect al login, tentare prima un auto-login e riprovare.
 
-**3. Selettori del form login**
-- La funzione `fillLogin` gia' cerca `input#username` e `input[type="password"]` che corrispondono ai campi reali della pagina (`input#username` type email, `input#password`). Nessuna modifica necessaria.
-
-### File: `public/ra-extension/manifest.json`
-- Gia' include `https://ecommerce2.reportaziende.it/*` nei `host_permissions`. Nessuna modifica necessaria.
+**3. Controllo sessione piu' robusto (righe 400, 442, 472):** aggiungere anche il check per `ecommerce2.reportaziende.it/login3` come pattern di redirect, mantenendo compatibilita' con entrambi i domini.
 
 ### Riepilogo modifiche
-- `public/ra-extension/background.js` -- 4 punti da correggere (1 URL + 3 controlli sessione)
+- `src/components/prospects/ProspectAdvancedFilters.tsx` -- rimozione filtro rank_paga
+- `src/components/prospects/AtecoGrid.tsx` -- rimozione rank_paga da passesRankingFilter
+- `public/ra-extension/background.js` -- fix fetchWithCookies + gestione sessione piu' robusta
+
