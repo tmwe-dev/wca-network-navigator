@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Download Estensione WCA</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #0f0f1a; color: #e0e0e0; }
+  h1 { font-size: 22px; }
+  p { color: #9ca3af; font-size: 14px; }
+  button { display: block; width: 100%; padding: 14px; margin: 10px 0; border: none; border-radius: 8px; background: #3b82f6; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #2563eb; }
+  .done { color: #6ee7b7; margin-top: 16px; }
+  .step { background: #1e1e2e; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>🌐 Estensione WCA Cookie Sync</h1>
+<p>Clicca il pulsante per scaricare tutti i 6 file. Salvali tutti nella <strong>stessa cartella</strong>.</p>
+<button onclick="downloadAll()">📦 Scarica tutti i file</button>
+<div id="status"></div>
+<h3 style="margin-top:24px;">Istruzioni:</h3>
+<div class="step">1. Crea una cartella (es. <code>wca-extension</code>) sul Desktop</div>
+<div class="step">2. Salva tutti i 6 file scaricati in quella cartella</div>
+<div class="step">3. Apri Chrome → <code>chrome://extensions/</code></div>
+<div class="step">4. Attiva <strong>Modalità sviluppatore</strong> (in alto a destra)</div>
+<div class="step">5. Clicca <strong>Carica estensione non pacchettizzata</strong> → seleziona la cartella</div>
+
+<script>
+var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
+var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+
+var FILES = {
+"manifest.json": JSON.stringify({
+  "manifest_version": 3,
+  "name": "WCA Cookie Sync",
+  "version": "3.0",
+  "description": "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
+  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
+  "host_permissions": ["https://*.wcaworld.com/*", "https://wcaworld.com/*", "https://www.wcaworld.com/*", SUPABASE_URL + "/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": true }],
+  "action": { "default_popup": "popup.html", "default_icon": "icon.png" },
+  "icons": { "48": "icon.png", "128": "icon.png" }
+}, null, 2),
+
+"background.js": "// WCA Cookie Sync - Background Service Worker\n\
+// Handles automated contact extraction, session verification, and cookie sync\n\
+\n\
+var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
+var SUPABASE_ANON_KEY = \"" + SUPABASE_ANON_KEY + "\";\n\
+\n\
+function extractContactsFromPage() {\n\
+  try {\n\
+    var result = { wcaId: null, contacts: [], companyName: null };\n\
+    var urlMatch = window.location.href.match(/\\/directory\\/members\\/(\\d+)/i);\n\
+    if (urlMatch) result.wcaId = parseInt(urlMatch[1]);\n\
+    var h1 = document.querySelector(\"h1\");\n\
+    if (h1) result.companyName = h1.textContent.trim();\n\
+    var allRows = document.querySelectorAll(\"[class*='contactperson_row'], .contactperson_row, tr.contactperson_row, div.contactperson_row\");\n\
+    if (allRows.length === 0) {\n\
+      var allEls = document.querySelectorAll(\"*\");\n\
+      var rows = [];\n\
+      for (var i = 0; i < allEls.length; i++) {\n\
+        if (allEls[i].className && typeof allEls[i].className === \"string\" && allEls[i].className.indexOf(\"contactperson_row\") >= 0) {\n\
+          rows.push(allEls[i]);\n\
+        }\n\
+      }\n\
+      allRows = rows;\n\
+    }\n\
+    for (var r = 0; r < allRows.length; r++) {\n\
+      var row = allRows[r];\n\
+      var contact = {};\n\
+      var labels = row.querySelectorAll(\"[class*='profile_label']\");\n\
+      for (var l = 0; l < labels.length; l++) {\n\
+        var labelText = labels[l].textContent.trim().replace(/:$/, \"\");\n\
+        var valEl = labels[l].nextElementSibling;\n\
+        if (!valEl || (valEl.className && valEl.className.indexOf(\"profile_val\") < 0)) {\n\
+          var parent = labels[l].parentElement;\n\
+          if (parent) { var next = parent.nextElementSibling; if (next) { valEl = next.querySelector(\"[class*='profile_val']\") || next; } }\n\
+        }\n\
+        var value = valEl ? valEl.textContent.trim() : \"\";\n\
+        if (/Members\\s*only/i.test(value) || /please.*Login/i.test(value)) value = \"\";\n\
+        if (/^Title$/i.test(labelText)) contact.title = value;\n\
+        else if (/^Name$/i.test(labelText)) contact.name = value;\n\
+        else if (/^Email$/i.test(labelText)) {\n\
+          var emailLink = valEl ? valEl.querySelector(\"a[href^='mailto:']\") : null;\n\
+          if (emailLink) { contact.email = emailLink.href.replace(\"mailto:\", \"\").trim(); }\n\
+          else if (value && value.indexOf(\"@\") >= 0) { contact.email = value; }\n\
+        }\n\
+        else if (/^Direct\\s*Line$/i.test(labelText) || /^Phone$/i.test(labelText)) contact.phone = value;\n\
+        else if (/^Mobile$/i.test(labelText)) contact.mobile = value;\n\
+      }\n\
+      if (contact.title || contact.name) {\n\
+        if (!contact.name && contact.title) contact.name = contact.title;\n\
+        result.contacts.push(contact);\n\
+      }\n\
+    }\n\
+    return result;\n\
+  } catch (e) { return { error: e.message, contacts: [] }; }\n\
+}\n\
+\n\
+function checkSessionOnPage() {\n\
+  try {\n\
+    var bodyText = document.body.innerText || \"\";\n\
+    if (/please.*log\\s*in/i.test(bodyText) || /sign\\s*in.*to.*continue/i.test(bodyText)) {\n\
+      return { authenticated: false, reason: \"login_prompt\" };\n\
+    }\n\
+    var contactRows = document.querySelectorAll(\"[class*='contactperson_row']\");\n\
+    if (contactRows.length === 0) {\n\
+      var allEls = document.querySelectorAll(\"*\");\n\
+      var rows = [];\n\
+      for (var i = 0; i < allEls.length; i++) {\n\
+        if (allEls[i].className && typeof allEls[i].className === \"string\" && allEls[i].className.indexOf(\"contactperson_row\") >= 0) rows.push(allEls[i]);\n\
+      }\n\
+      contactRows = rows;\n\
+    }\n\
+    if (contactRows.length === 0) {\n\
+      return { authenticated: document.body.innerHTML.length > 5000, reason: \"no_contact_rows_but_page_loaded\" };\n\
+    }\n\
+    var hasRealData = false;\n\
+    for (var r = 0; r < contactRows.length; r++) {\n\
+      var text = contactRows[r].innerText || \"\";\n\
+      if (text.indexOf(\"@\") >= 0 && !/Members\\s*only/i.test(text)) { hasRealData = true; break; }\n\
+    }\n\
+    return { authenticated: hasRealData || contactRows.length > 0, reason: hasRealData ? \"real_contacts\" : \"contacts_but_no_email\" };\n\
+  } catch (e) { return { authenticated: false, reason: \"error: \" + e.message }; }\n\
+}\n\
+\n\
+function waitForTabLoad(tabId, ms) {\n\
+  ms = ms || 15000;\n\
+  return new Promise(function (resolve) {\n\
+    var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, ms);\n\
+    function listener(id, info) {\n\
+      if (id === tabId && info.status === \"complete\") { clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 1500); }\n\
+    }\n\
+    chrome.tabs.onUpdated.addListener(listener);\n\
+  });\n\
+}\n\
+\n\
+function checkPageLoaded() {\n\
+  try { var len = (document.body && document.body.innerHTML) ? document.body.innerHTML.length : 0; return { length: len, loaded: len > 5000 }; }\n\
+  catch (e) { return { length: 0, loaded: false }; }\n\
+}\n\
+\n\
+async function extractContactsForId(wcaId) {\n\
+  var MAX_RETRIES = 3;\n\
+  var RETRY_DELAYS = [3000, 6000, 12000];\n\
+  for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {\n\
+    var tab = null;\n\
+    try {\n\
+      tab = await chrome.tabs.create({ url: \"https://www.wcaworld.com/directory/members/\" + wcaId, active: false });\n\
+      await waitForTabLoad(tab.id, 30000);\n\
+      var loadCheck = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: checkPageLoaded });\n\
+      var pageLoadResult = loadCheck[0] && loadCheck[0].result;\n\
+      var pageLoaded = pageLoadResult && pageLoadResult.loaded;\n\
+      if (!pageLoaded && attempt < MAX_RETRIES) {\n\
+        console.log(\"[WCA Extension] Page not loaded for \" + wcaId + \" (attempt \" + (attempt + 1) + \"/\" + (MAX_RETRIES + 1) + \"), retrying...\");\n\
+        try { chrome.tabs.remove(tab.id); } catch (e) {}\n\
+        await new Promise(function(r) { setTimeout(r, RETRY_DELAYS[attempt]); });\n\
+        continue;\n\
+      }\n\
+      var results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractContactsFromPage });\n\
+      var pageData = results[0] && results[0].result;\n\
+      if (pageData) { pageData.wcaId = wcaId; pageData.pageLoaded = !!pageLoaded; }\n\
+      return pageData || { wcaId: wcaId, contacts: [], pageLoaded: !!pageLoaded, error: \"No data\" };\n\
+    } catch (err) {\n\
+      if (attempt < MAX_RETRIES) {\n\
+        console.log(\"[WCA Extension] Error for \" + wcaId + \" (attempt \" + (attempt + 1) + \"), retrying: \" + err.message);\n\
+        await new Promise(function(r) { setTimeout(r, RETRY_DELAYS[attempt]); });\n\
+        continue;\n\
+      }\n\
+      return { wcaId: wcaId, contacts: [], pageLoaded: false, error: err.message };\n\
+    } finally {\n\
+      if (tab) { try { chrome.tabs.remove(tab.id); } catch (e) {} }\n\
+    }\n\
+  }\n\
+  return { wcaId: wcaId, contacts: [], pageLoaded: false, error: \"Max retries exceeded\" };\n\
+}\n\
+\n\
+async function verifyWcaSession() {\n\
+  var TEST_WCA_ID = 86580;\n\
+  var tab = await chrome.tabs.create({ url: \"https://www.wcaworld.com/directory/members/\" + TEST_WCA_ID, active: false });\n\
+  try {\n\
+    await waitForTabLoad(tab.id, 15000);\n\
+    var results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: checkSessionOnPage });\n\
+    var sessionResult = results[0] && results[0].result;\n\
+    if (sessionResult && sessionResult.authenticated) { await syncWcaCookiesToServer(); }\n\
+    return sessionResult || { authenticated: false, reason: \"no_result\" };\n\
+  } catch (err) { return { authenticated: false, reason: \"error: \" + err.message }; }\n\
+  finally { try { chrome.tabs.remove(tab.id); } catch (e) {} }\n\
+}\n\
+\n\
+async function syncWcaCookiesToServer() {\n\
+  try {\n\
+    var cookies = await chrome.cookies.getAll({ domain: \".wcaworld.com\" });\n\
+    if (!cookies || cookies.length === 0) cookies = await chrome.cookies.getAll({ domain: \"wcaworld.com\" });\n\
+    if (!cookies || cookies.length === 0) cookies = await chrome.cookies.getAll({ domain: \"www.wcaworld.com\" });\n\
+    if (!cookies || cookies.length === 0) return { success: false, error: \"No WCA cookies found\" };\n\
+    var cookieString = cookies.map(function (c) { return c.name + \"=\" + c.value; }).join(\"; \");\n\
+    var res = await fetch(SUPABASE_URL + \"/functions/v1/save-wca-cookie\", {\n\
+      method: \"POST\",\n\
+      headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+      body: JSON.stringify({ cookie: cookieString }),\n\
+    });\n\
+    var result = await res.json();\n\
+    return { success: true, authenticated: result.authenticated, cookieLength: cookieString.length };\n\
+  } catch (err) { return { success: false, error: err.message }; }\n\
+}\n\
+\n\
+async function sendContactsToServer(dataArray) {\n\
+  var batch = dataArray.map(function (d) { return { wcaId: d.wcaId, contacts: d.contacts }; });\n\
+  var res = await fetch(SUPABASE_URL + \"/functions/v1/save-wca-contacts\", {\n\
+    method: \"POST\",\n\
+    headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+    body: JSON.stringify({ batch: batch }),\n\
+  });\n\
+  return await res.json();\n\
+}\n\
+\n\
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {\n\
+  if (message.source !== \"wca-content-bridge\") return false;\n\
+  if (message.action === \"ping\") { sendResponse({ success: true, version: \"4.0\" }); return false; }\n\
+  if (message.action === \"extractContacts\") {\n\
+    var wcaId = message.wcaId;\n\
+    if (!wcaId) { sendResponse({ success: false, error: \"wcaId required\" }); return false; }\n\
+    (async function () {\n\
+      try {\n\
+        var result = await extractContactsForId(wcaId);\n\
+        if (result.contacts && result.contacts.length > 0) await sendContactsToServer([result]);\n\
+        sendResponse({ success: true, wcaId: wcaId, contacts: result.contacts || [], companyName: result.companyName, pageLoaded: result.pageLoaded !== undefined ? result.pageLoaded : true });\n\
+      } catch (err) { sendResponse({ success: false, error: err.message, wcaId: wcaId }); }\n\
+    })();\n\
+    return true;\n\
+  }\n\
+  if (message.action === \"verifySession\") {\n\
+    (async function () {\n\
+      try { var result = await verifyWcaSession(); sendResponse({ success: true, authenticated: result.authenticated, reason: result.reason }); }\n\
+      catch (err) { sendResponse({ success: false, authenticated: false, error: err.message }); }\n\
+    })();\n\
+    return true;\n\
+  }\n\
+  if (message.action === \"syncCookie\") {\n\
+    (async function () {\n\
+      try { var result = await syncWcaCookiesToServer(); sendResponse(result); }\n\
+      catch (err) { sendResponse({ success: false, error: err.message }); }\n\
+    })();\n\
+    return true;\n\
+  }\n\
+  return false;\n\
+});\n\
+\n\
+chrome.runtime.onInstalled.addListener(async function () {\n\
+  var extensionId = chrome.runtime.id;\n\
+  console.log(\"[WCA Extension] Installed, ID:\", extensionId);\n\
+  try {\n\
+    await fetch(SUPABASE_URL + \"/rest/v1/app_settings?key=eq.chrome_extension_id\", {\n\
+      method: \"GET\", headers: { \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+    }).then(async function (res) {\n\
+      var existing = await res.json();\n\
+      if (existing && existing.length > 0) {\n\
+        await fetch(SUPABASE_URL + \"/rest/v1/app_settings?key=eq.chrome_extension_id\", {\n\
+          method: \"PATCH\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY, \"Prefer\": \"return=minimal\" },\n\
+          body: JSON.stringify({ value: extensionId }),\n\
+        });\n\
+      } else {\n\
+        await fetch(SUPABASE_URL + \"/rest/v1/app_settings\", {\n\
+          method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY, \"Prefer\": \"return=minimal\" },\n\
+          body: JSON.stringify({ key: \"chrome_extension_id\", value: extensionId }),\n\
+        });\n\
+      }\n\
+    });\n\
+    console.log(\"[WCA Extension] ID saved to app_settings\");\n\
+  } catch (err) { console.error(\"[WCA Extension] Failed to save ID:\", err); }\n\
+  await syncWcaCookiesToServer();\n\
+});",
+
+"content.js": "// WCA Cookie Sync - Content Script Bridge\n\
+(function () {\n\
+  window.addEventListener(\"message\", function (event) {\n\
+    if (event.source !== window) return;\n\
+    var data = event.data;\n\
+    if (!data || data.direction !== \"from-webapp\") return;\n\
+    chrome.runtime.sendMessage(\n\
+      { source: \"wca-content-bridge\", action: data.action, wcaId: data.wcaId },\n\
+      function (response) {\n\
+        window.postMessage({ direction: \"from-extension\", action: data.action, requestId: data.requestId, response: response || { success: false, error: \"No response from extension\" } }, \"*\");\n\
+        if (data.action === \"ping\") {\n\
+          window.postMessage({ direction: \"from-extension\", action: \"contentScriptReady\" }, \"*\");\n\
+        }\n\
+      }\n\
+    );\n\
+  });\n\
+  window.postMessage({ direction: \"from-extension\", action: \"contentScriptReady\" }, \"*\");\n\
+})();",
+
+"popup.html": '<!DOCTYPE html>\n\
+<html>\n\
+<head>\n\
+<meta charset="utf-8">\n\
+<style>\n\
+  body { width: 360px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 20px; margin: 0; background: #0f172a; color: #e2e8f0; text-align: center; }\n\
+  h2 { font-size: 15px; margin: 0 0 16px; color: #94a3b8; font-weight: 500; }\n\
+  .status { padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; line-height: 1.4; }\n\
+  .status.ok { background: #065f46; color: #6ee7b7; }\n\
+  .status.error { background: #7f1d1d; color: #fca5a5; }\n\
+  .status.working { background: #1e3a5f; color: #93c5fd; }\n\
+  .status.idle { background: #1e293b; color: #94a3b8; }\n\
+  .btn { width: 100%; padding: 14px 8px; border: none; border-radius: 10px; color: white; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; background: #3b82f6; margin-bottom: 10px; }\n\
+  .btn:hover { background: #2563eb; }\n\
+  .btn:disabled { background: #475569; cursor: not-allowed; }\n\
+  .step-log { font-size: 11px; color: #64748b; margin-top: 12px; text-align: left; max-height: 160px; overflow-y: auto; line-height: 1.6; }\n\
+  .step-log .done { color: #6ee7b7; }\n\
+  .step-log .fail { color: #fca5a5; }\n\
+  .step-log .wait { color: #93c5fd; }\n\
+  .step-log .info { color: #fbbf24; }\n\
+</style>\n\
+</head>\n\
+<body>\n\
+  <h2>🌐 WCA Cookie Sync v3</h2>\n\
+  <div id="status" class="status idle">Pronto. Clicca Connetti per autenticarti.</div>\n\
+  <button id="mainBtn" class="btn">🚀 Connetti</button>\n\
+  <div id="log" class="step-log"></div>\n\
+  <script src="popup.js"><\/script>\n\
+</body>\n\
+</html>',
+
+"popup.js": "var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
+var SUPABASE_ANON_KEY = \"" + SUPABASE_ANON_KEY + "\";\n\
+var statusEl = document.getElementById(\"status\");\n\
+var logEl = document.getElementById(\"log\");\n\
+var mainBtn = document.getElementById(\"mainBtn\");\n\
+function setStatus(text, cls) { statusEl.className = \"status \" + cls; statusEl.textContent = text; }\n\
+function log(text, cls) { cls = cls || \"\"; var line = document.createElement(\"div\"); line.className = cls; line.textContent = text; logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight; }\n\
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }\n\
+async function getAllWcaCookies() {\n\
+  var byUrl = await chrome.cookies.getAll({ url: \"https://www.wcaworld.com/\" });\n\
+  var byDomain1 = await chrome.cookies.getAll({ domain: \".wcaworld.com\" });\n\
+  var byDomain2 = await chrome.cookies.getAll({ domain: \"www.wcaworld.com\" });\n\
+  var byDomain3 = await chrome.cookies.getAll({ domain: \"wcaworld.com\" });\n\
+  var aspxAuth = null;\n\
+  try { aspxAuth = await chrome.cookies.get({ url: \"https://www.wcaworld.com/\", name: \".ASPXAUTH\" }); } catch (e) {}\n\
+  var map = new Map();\n\
+  [byUrl, byDomain1, byDomain2, byDomain3].forEach(function (list) { list.forEach(function (c) { map.set(c.domain + \"|\" + c.name + \"|\" + c.path, c); }); });\n\
+  if (aspxAuth) map.set(\"aspxauth-direct\", aspxAuth);\n\
+  return Array.from(map.values());\n\
+}\n\
+function waitForTabLoad(tabId, ms) {\n\
+  ms = ms || 20000;\n\
+  return new Promise(function (resolve) {\n\
+    var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, ms);\n\
+    function listener(id, info) { if (id === tabId && info.status === \"complete\") { clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 1500); } }\n\
+    chrome.tabs.onUpdated.addListener(listener);\n\
+  });\n\
+}\n\
+function waitForRedirectOrTimeout(tabId, ms) {\n\
+  ms = ms || 10000;\n\
+  return new Promise(function (resolve) {\n\
+    var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, ms);\n\
+    var navigated = false;\n\
+    function listener(id, info) { if (id === tabId && info.status === \"complete\" && !navigated) { navigated = true; clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 2000); } }\n\
+    chrome.tabs.onUpdated.addListener(listener);\n\
+  });\n\
+}\n\
+async function sendCookiesAndFinish(cookieStr, tabId) {\n\
+  log(\"⑨ Invio cookie al server...\", \"wait\");\n\
+  setStatus(\"⏳ Verifica finale...\", \"working\");\n\
+  try {\n\
+    var saveRes = await fetch(SUPABASE_URL + \"/functions/v1/save-wca-cookie\", {\n\
+      method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+      body: JSON.stringify({ cookie: cookieStr }),\n\
+    });\n\
+    var saveData = await saveRes.json();\n\
+    if (tabId) { try { chrome.tabs.remove(tabId); } catch (e) {} }\n\
+    if (saveData.hasAspxAuth || saveData.authenticated) { setStatus(\"✅ Connesso! Tutto OK.\", \"ok\"); log(\"✓ Cookie salvato e sessione attiva!\", \"done\"); }\n\
+    else { setStatus(\"❌ Connessione fallita\", \"error\"); log(\"Cookie senza autenticazione.\", \"fail\"); }\n\
+  } catch (err) { setStatus(\"❌ Errore invio: \" + err.message, \"error\"); log(\"Errore: \" + err.message, \"fail\"); }\n\
+  mainBtn.disabled = false;\n\
+}\n\
+function analyzeLoginPage() {\n\
+  try {\n\
+    var forms = document.querySelectorAll(\"form\");\n\
+    var allInputs = document.querySelectorAll(\"input\");\n\
+    var inputDetails = Array.from(allInputs).filter(function (i) { return i.type !== \"hidden\"; }).map(function (i) { return (i.name || i.id || \"?\") + \"(\" + i.type + \")\"; }).join(\", \");\n\
+    return { url: window.location.href, formCount: forms.length, inputDetails: inputDetails, pageTitle: document.title };\n\
+  } catch (e) { return { error: e.message }; }\n\
+}\n\
+function fillAndSubmitLogin(username, password) {\n\
+  try {\n\
+    var userInput = document.querySelector(\"#UserName\") || document.querySelector(\"input[name='UserName']\") || document.querySelector(\"input[name='usr']\") || document.querySelector(\"input[type='text']\") || document.querySelector(\"input[type='email']\");\n\
+    var passInput = document.querySelector(\"#Password\") || document.querySelector(\"input[name='Password']\") || document.querySelector(\"input[name='pwd']\") || document.querySelector(\"input[type='password']\");\n\
+    if (!userInput || !passInput) return { success: false, error: \"Campi non trovati. User:\" + !!userInput + \" Pass:\" + !!passInput };\n\
+    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, \"value\").set;\n\
+    userInput.focus(); nativeSet.call(userInput, username); userInput.dispatchEvent(new Event(\"input\", { bubbles: true })); userInput.dispatchEvent(new Event(\"change\", { bubbles: true }));\n\
+    passInput.focus(); nativeSet.call(passInput, password); passInput.dispatchEvent(new Event(\"input\", { bubbles: true })); passInput.dispatchEvent(new Event(\"change\", { bubbles: true }));\n\
+    var submitBtn = document.querySelector(\"input[type='submit']\") || document.querySelector(\"button[type='submit']\") || document.querySelector(\".btn-login\") || document.querySelector(\"button.btn-primary\");\n\
+    var form = userInput.closest(\"form\") || document.querySelector(\"form\");\n\
+    var method = \"unknown\";\n\
+    if (submitBtn) { submitBtn.click(); method = \"button\"; }\n\
+    else if (form) { form.submit(); method = \"form\"; }\n\
+    else { return { success: false, error: \"Nessun submit trovato\" }; }\n\
+    return { success: true, method: method };\n\
+  } catch (e) { return { success: false, error: e.message }; }\n\
+}\n\
+function diagnoseAfterLogin() {\n\
+  try {\n\
+    var errorEl = document.querySelector(\".validation-summary-errors, .alert-danger, .error-message\");\n\
+    return { url: window.location.href, pageTitle: document.title, errorMessage: errorEl ? errorEl.textContent.trim().substring(0, 200) : null, isLoggedIn: !!document.querySelector(\"a[href*='Logout'], a[href*='logout'], a[href*='SignOut']\"), stillOnLoginPage: !!document.querySelector(\"input[type='password']\") };\n\
+  } catch (e) { return { error: e.message }; }\n\
+}\n\
+mainBtn.addEventListener(\"click\", async function () {\n\
+  mainBtn.disabled = true;\n\
+  logEl.innerHTML = \"\";\n\
+  setStatus(\"⏳ Avvio login automatico...\", \"working\");\n\
+  try {\n\
+    log(\"① Recupero credenziali...\", \"wait\");\n\
+    var credRes = await fetch(SUPABASE_URL + \"/functions/v1/get-wca-credentials\", {\n\
+      method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY }, body: JSON.stringify({}),\n\
+    });\n\
+    var creds = await credRes.json();\n\
+    if (!creds.username || !creds.password) throw new Error(\"Credenziali WCA non configurate.\");\n\
+    log(\"✓ Credenziali ottenute\", \"done\");\n\
+    log(\"② Apro pagina di login...\", \"wait\");\n\
+    var tab = await chrome.tabs.create({ url: \"https://www.wcaworld.com/Account/Login\", active: false });\n\
+    log(\"✓ Pagina aperta\", \"done\");\n\
+    log(\"③ Attendo caricamento...\", \"wait\");\n\
+    await waitForTabLoad(tab.id, 20000);\n\
+    log(\"✓ Pagina caricata\", \"done\");\n\
+    log(\"④ Analizzo form...\", \"wait\");\n\
+    var analyzeRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: analyzeLoginPage });\n\
+    var pageInfo = analyzeRes[0] && analyzeRes[0].result;\n\
+    if (pageInfo) log(\"   Campi: \" + (pageInfo.inputDetails || \"nessuno\"), \"wait\");\n\
+    log(\"⑤ Login automatico...\", \"wait\");\n\
+    setStatus(\"⏳ Login in corso...\", \"working\");\n\
+    var injRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillAndSubmitLogin, args: [creds.username, creds.password] });\n\
+    var formResult = injRes[0] && injRes[0].result;\n\
+    if (!formResult || !formResult.success) throw new Error((formResult && formResult.error) || \"Form non trovato\");\n\
+    log(\"✓ Form inviato (\" + formResult.method + \")\", \"done\");\n\
+    log(\"⑥ Attendo risposta...\", \"wait\");\n\
+    await waitForRedirectOrTimeout(tab.id, 10000);\n\
+    log(\"✓ OK\", \"done\");\n\
+    log(\"⑦ Verifico...\", \"wait\");\n\
+    var diagRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: diagnoseAfterLogin });\n\
+    var diag = diagRes[0] && diagRes[0].result;\n\
+    if (diag) {\n\
+      if (diag.errorMessage) log(\"   ⚠ Errore: \" + diag.errorMessage, \"fail\");\n\
+      if (diag.isLoggedIn) log(\"   ✓ Login riuscito!\", \"done\");\n\
+      if (diag.stillOnLoginPage) log(\"   ✗ Ancora sulla pagina di login\", \"fail\");\n\
+    }\n\
+    log(\"⑧ Leggo cookie...\", \"wait\");\n\
+    var allCookies = await getAllWcaCookies();\n\
+    var hasAuth = allCookies.some(function (c) { return c.name === \".ASPXAUTH\" || c.name === \".AspNet.ApplicationCookie\"; });\n\
+    log(\"   \" + allCookies.length + \" cookie, .ASPXAUTH: \" + (hasAuth ? \"✅\" : \"❌\"), hasAuth ? \"done\" : \"fail\");\n\
+    if (!hasAuth) { log(\"   Riprovo tra 5s...\", \"wait\"); await sleep(5000); allCookies = await getAllWcaCookies(); hasAuth = allCookies.some(function (c) { return c.name === \".ASPXAUTH\" || c.name === \".AspNet.ApplicationCookie\"; }); }\n\
+    if (!hasAuth && diag && diag.isLoggedIn) { log(\"   Login OK ma .ASPXAUTH non visibile. Invio cookie disponibili...\", \"wait\"); }\n\
+    if (!hasAuth && (!diag || !diag.isLoggedIn)) { if (tab.id) { try { chrome.tabs.remove(tab.id); } catch (e) {} } setStatus(\"❌ Login fallito\", \"error\"); log(\"Login non riuscito e .ASPXAUTH assente.\", \"fail\"); mainBtn.disabled = false; return; }\n\
+    var cookieStr = allCookies.map(function (c) { return c.name + \"=\" + c.value; }).join(\"; \");\n\
+    await sendCookiesAndFinish(cookieStr, tab.id);\n\
+  } catch (err) { setStatus(\"❌ \" + err.message, \"error\"); log(\"Errore: \" + err.message, \"fail\"); mainBtn.disabled = false; }\n\
+});"
+};
+
+function downloadFile(name, content, mimeType) {
+  var blob = new Blob([content], { type: mimeType || "text/plain" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function downloadAll() {
+  var status = document.getElementById("status");
+  status.innerHTML = "";
+
+  // Download text files
+  var textFiles = Object.entries(FILES);
+  for (var i = 0; i < textFiles.length; i++) {
+    var name = textFiles[i][0];
+    var content = textFiles[i][1];
+    var mime = name.endsWith(".json") ? "application/json" :
+               name.endsWith(".html") ? "text/html" :
+               "application/javascript";
+    await new Promise(function(r) { setTimeout(r, 400); });
+    downloadFile(name, content, mime);
+  }
+
+  // Download icon.png from the server
+  await new Promise(function(r) { setTimeout(r, 400); });
+  try {
+    var res = await fetch("/chrome-extension/icon.png");
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "icon.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    // Fallback: create a simple 128x128 icon
+    var canvas = document.createElement("canvas");
+    canvas.width = 128; canvas.height = 128;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("WCA", 64, 64);
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "icon.png";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  status.innerHTML = '<p class="done">✅ 6 file scaricati! Salvali tutti nella stessa cartella.</p>';
+}
+</script>
+</body>
+</html>
