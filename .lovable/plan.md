@@ -1,70 +1,79 @@
 
 
-## Fix: Popup "Verifica Sessione" Appare Anche Quando Sei Loggato
+## Fix: Impedire Job Paralleli e Proteggere da Ban
 
-### Causa del Bug
+### Il problema
 
-Quando clicchi "Scarica", il codice in `ActionPanel.tsx` fa questo:
+Quando selezioni piu' paesi e clicchi "Scarica", il codice `executeDownload` (ActionPanel.tsx, righe 259-267) crea **un job per ogni paese in un loop rapido**. Tutti i job vengono inseriti nel database con status "pending" quasi simultaneamente.
 
-1. Chiama `triggerCheck()` che invoca la funzione backend `check-wca-session`
-2. Aspetta 1.5 secondi
-3. Legge lo status dal database con una query separata
-4. Se non e' "ok", mostra il popup
+Il processore (`useDownloadProcessor`) ha un guard `processingRef.current` che impedisce di prendere un secondo job dalla stessa tab. Ma questo guard e' solo in memoria del browser:
+- Se la pagina si ricarica (es. hot reload di Lovable), il guard si resetta e un **secondo processore** parte su un altro job
+- Il risultato e' che piu' job girano in parallelo sullo stesso account WCA, moltiplicando le richieste e causando il ban
 
-Il problema e' doppio:
+### Soluzione (due livelli di protezione)
 
-- **La funzione `triggerCheck()` restituisce gia' il risultato** (status, authenticated), ma il codice lo ignora completamente e fa una seconda query al DB dopo un ritardo arbitrario di 1.5 secondi
-- **Race condition**: se l'estensione Chrome ha appena sincronizzato il cookie, la funzione backend potrebbe leggere una versione leggermente vecchia del cookie (senza `.ASPXAUTH`), marcare lo status come "expired", e il popup appare anche se l'utente e' effettivamente loggato
+**Livello 1 - ActionPanel: creare UN SOLO job alla volta**
 
-Risultato: il cookie nel database contiene `.ASPXAUTH` e lo status e' "ok", ma il popup e' apparso a causa di un check eseguito una frazione di secondo prima che il cookie fosse aggiornato.
+Modificare `executeDownload` per:
+- Unire tutti i WCA ID di tutti i paesi selezionati in un singolo job (con la lista dei paesi nel nome)
+- Oppure, piu' semplice: creare i job uno alla volta ma con un **gate nel database** che impedisce la creazione se esiste gia' un job running/pending
 
-### Fix
+**Livello 2 - Processore: lock lato database**
 
-**File: `src/components/download/ActionPanel.tsx`** (linee 225-231)
+Aggiungere un controllo nel processore prima di iniziare un job:
+- Prima di cambiare lo status a "running", verificare che **nessun altro job sia gia' "running"**
+- Se ce n'e' uno, non partire e aspettare
 
-Usare il valore di ritorno di `triggerCheck()` direttamente, eliminando il delay di 1.5 secondi e la query separata al DB. Aggiungere anche un fallback: se `triggerCheck` dice "expired" ma il cookie nel DB ha `.ASPXAUTH`, fidati del cookie (potrebbe essere stato aggiornato dopo il check).
+### Modifiche tecniche
 
-Codice attuale:
+**File: `src/components/download/ActionPanel.tsx`**
+
+Nella funzione `executeDownload`, prima del loop di creazione job, aggiungere un controllo:
+
 ```text
-const handleStartDownload = async () => {
-  await triggerCheck();
-  await new Promise(r => setTimeout(r, 1500));
-  const { data: statusData } = await supabase.from("app_settings")
-    .select("value").eq("key", "wca_session_status").maybeSingle();
-  if ((statusData?.value || "no_cookie") !== "ok") {
-    setShowSessionDialog(true);
-    return;
-  }
-  await executeDownload();
-};
+// Check: nessun job attivo prima di creare nuovi job
+const { data: activeJobs } = await supabase
+  .from("download_jobs")
+  .select("id")
+  .in("status", ["pending", "running"])
+  .limit(1);
+
+if (activeJobs && activeJobs.length > 0) {
+  toast({
+    title: "Job gia' in corso",
+    description: "Attendi il completamento del job attuale prima di avviarne un altro.",
+    variant: "destructive",
+  });
+  return;
+}
 ```
 
-Codice corretto:
+Inoltre, cambiare il loop per creare i job **in sequenza con await** e non creare il secondo se il primo e' ancora pending (anche se in pratica con il gate sopra non servira').
+
+**File: `src/hooks/useDownloadProcessor.ts`**
+
+Nel metodo `processJob`, subito dopo il cambio status a "running" (riga ~37), aggiungere un double-check:
+
 ```text
-const handleStartDownload = async () => {
-  const result = await triggerCheck();
+// Verify no other job is already running (prevent parallel execution)
+const { data: runningJobs } = await supabase
+  .from("download_jobs")
+  .select("id")
+  .eq("status", "running")
+  .neq("id", jobId)
+  .limit(1);
 
-  // Use the direct result from the check function
-  if (result?.authenticated) {
-    await executeDownload();
-    return;
-  }
-
-  // Fallback: re-read DB in case cookie was updated right before/after check
-  const { data: statusData } = await supabase.from("app_settings")
-    .select("value").eq("key", "wca_session_status").maybeSingle();
-  if (statusData?.value === "ok") {
-    await executeDownload();
-    return;
-  }
-
-  // Only show dialog if truly not authenticated
-  setShowSessionDialog(true);
-};
+if (runningJobs && runningJobs.length > 0) {
+  // Another job is already running, put this one back to pending
+  await supabase.from("download_jobs")
+    .update({ status: "pending", error_message: "In attesa: altro job in esecuzione" })
+    .eq("id", jobId);
+  return;
+}
 ```
 
 ### Impatto
-- Elimina il delay artificiale di 1.5 secondi (download parte piu' velocemente)
-- Elimina i falsi positivi del popup "sessione scaduta"
-- Mantiene il fallback di sicurezza per casi reali di sessione scaduta
-
+- Un solo job alla volta, sempre
+- Se l'utente prova ad avviare un secondo download, riceve un messaggio chiaro
+- Se il processore rileva un job parallelo (es. dopo reload), lo rimette in coda
+- Zero rischio di richieste parallele al provider
