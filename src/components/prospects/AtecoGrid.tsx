@@ -12,7 +12,8 @@ import { useAtecoGroups } from "@/hooks/useProspectStats";
 import { ATECO_TREE, type AtecoEntry } from "@/data/atecoCategories";
 import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
 import { t } from "@/components/download/theme";
-import { getAtecoRank, calcScore, scoreColor, scoreBg } from "@/data/atecoRanking";
+import { getAtecoRank, calcScore, scoreColor, scoreBg, type AtecoRank } from "@/data/atecoRanking";
+import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 
 interface AtecoGridProps {
   selected: string[];
@@ -23,6 +24,7 @@ interface AtecoGridProps {
   onRegionChange: (r: string[]) => void;
   provinceFilter: string[];
   onProvinceChange: (p: string[]) => void;
+  rankingFilters?: ProspectFilters;
 }
 
 /* ─── Helpers ─── */
@@ -129,11 +131,28 @@ function FilterMultiSelect({
   );
 }
 
+/* ─── Ranking filter helper ─── */
+
+function passesRankingFilter(rank: AtecoRank | undefined, filters: ProspectFilters | undefined): boolean {
+  if (!filters) return true;
+  const hasRankFilter = filters.rank_volume_min > 0 || filters.rank_valore_min > 0 ||
+    filters.rank_intl.length > 0 || filters.rank_paga.length > 0 || filters.rank_score_min > 0;
+  if (!hasRankFilter) return true;
+  if (!rank) return false;
+  if (filters.rank_volume_min > 0 && rank.volume < filters.rank_volume_min) return false;
+  if (filters.rank_valore_min > 0 && rank.valore < filters.rank_valore_min) return false;
+  if (filters.rank_intl.length > 0 && !filters.rank_intl.includes(rank.intl)) return false;
+  if (filters.rank_paga.length > 0 && !filters.rank_paga.includes(rank.paga)) return false;
+  if (filters.rank_score_min > 0 && calcScore(rank) < filters.rank_score_min) return false;
+  return true;
+}
+
 /* ─── Main Component ─── */
 
 export function AtecoGrid({
   selected, onToggle, onRemove, isDark,
   regionFilter, onRegionChange, provinceFilter, onProvinceChange,
+  rankingFilters,
 }: AtecoGridProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -189,18 +208,39 @@ export function AtecoGrid({
     }
   };
 
-  // Filter by search
+  // Filter by search + ranking
   const filteredSections = useMemo(() => {
-    if (!search || search.length < 2) return sections;
-    const q = search.toLowerCase();
-    return sections.filter(s => {
-      if (s.descrizione.toLowerCase().includes(q) || s.codice.toLowerCase().includes(q)) return true;
-      return childDivisions(s.codice).some(d =>
-        d.descrizione.toLowerCase().includes(q) || d.codice.toLowerCase().includes(q) ||
-        childGroups(d.codice).some(g => g.descrizione.toLowerCase().includes(q) || g.codice.toLowerCase().includes(q))
-      );
-    });
-  }, [search]);
+    const matchesSearch = (entry: AtecoEntry, q: string) =>
+      entry.descrizione.toLowerCase().includes(q) || entry.codice.toLowerCase().includes(q);
+
+    // Check if a group passes ranking
+    const groupPassesRanking = (code: string) => passesRankingFilter(getAtecoRank(code), rankingFilters);
+    // Check if a division has any visible group
+    const divHasVisibleGroup = (divCode: string) =>
+      childGroups(divCode).some(g => groupPassesRanking(g.codice));
+    // Check if a section has any visible division
+    const sectionHasVisibleDiv = (secCode: string) =>
+      childDivisions(secCode).some(d => divHasVisibleGroup(d.codice));
+
+    let result = sections;
+
+    // Apply search filter
+    if (search && search.length >= 2) {
+      const q = search.toLowerCase();
+      result = result.filter(s => {
+        if (matchesSearch(s, q)) return true;
+        return childDivisions(s.codice).some(d =>
+          matchesSearch(d, q) ||
+          childGroups(d.codice).some(g => matchesSearch(g, q))
+        );
+      });
+    }
+
+    // Apply ranking filter (hide sections with no visible children)
+    result = result.filter(s => sectionHasVisibleDiv(s.codice));
+
+    return result;
+  }, [search, rankingFilters]);
 
   // Auto-expand sections matching search
   useMemo(() => {
@@ -341,7 +381,9 @@ export function AtecoGrid({
 
                   <CollapsibleContent>
                     <div className="ml-4 border-l border-dashed pl-2 space-y-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)" }}>
-                      {childDivisions(section.codice).map(div => {
+                      {childDivisions(section.codice)
+                        .filter(div => childGroups(div.codice).some(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)))
+                        .map(div => {
                         const dCount = nodeCount.get(div.codice) || 0;
                         const isDivOpen = expanded.has(div.codice);
                         const dLeaves = allLeafCodes(div);
@@ -381,7 +423,7 @@ export function AtecoGrid({
 
                             <CollapsibleContent>
                               <div className="ml-5 space-y-0.5">
-                                {childGroups(div.codice).map(grp => {
+                                {childGroups(div.codice).filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)).map(grp => {
                                   const gCount = nodeCount.get(grp.codice) || 0;
                                   const isSel = selectedSet.has(grp.codice);
                                   const gRank = getAtecoRank(grp.codice);
