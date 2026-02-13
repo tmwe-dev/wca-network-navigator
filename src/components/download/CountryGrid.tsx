@@ -252,7 +252,7 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
             const hasDirectoryScan = exploredSet.has(c.code);
             const hasDbOnly = !hasDirectoryScan && pCount > 0;
             const isComplete = hasDirectoryScan && cCount > 0 && pCount >= cCount;
-            const cs = completeness?.[c.code];
+            const cs = completeness?.byCountry?.[c.code];
             const contactsTotal = cs?.total_partners || 0;
             const withEmail = cs?.with_personal_email || 0;
             const withPhone = cs?.with_personal_phone || 0;
