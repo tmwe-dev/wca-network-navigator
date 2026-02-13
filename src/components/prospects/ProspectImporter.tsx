@@ -1,38 +1,45 @@
-import { useState, useEffect, useRef } from "react";
-import { Play, Square, Download, Plug, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Play, Square, Download, Plug, AlertTriangle, Search, ArrowRight, RotateCcw } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
+import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { t } from "@/components/download/theme";
+import { SearchResultsTable, type SearchResult } from "./SearchResultsTable";
+import type { ProspectFilters } from "./ProspectAdvancedFilters";
 
 interface Props {
   isDark: boolean;
   atecoCodes: string[];
   regions: string[];
   provinces: string[];
+  filters: ProspectFilters;
 }
 
+type Phase = "idle" | "searching" | "results" | "scraping" | "done";
 
-export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Props) {
+export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filters }: Props) {
   const th = t(isDark);
-  const { isAvailable, scrapeByAteco, getScrapingStatus, stopScraping } = useRAExtensionBridge();
+  const { isAvailable, scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
-  const [isRunning, setIsRunning] = useState(false);
+
+  const [phase, setPhase] = useState<Phase>("idle");
   const [jobBlocked, setJobBlocked] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState<RAScrapingStatus | null>(null);
   const [logs, setLogs] = useState<Array<{ time: string; msg: string }>>([]);
   const logRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-
-  // Check if job already running on mount
+  // Check for already-running job on mount
   useEffect(() => {
     if (!isAvailable) return;
     getScrapingStatus().then(res => {
       if (res.success && res.active) {
         setJobBlocked(true);
-        setIsRunning(true);
+        setPhase("scraping");
         setStatus({
           active: true,
           total: res.total || 0,
@@ -46,16 +53,16 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
     });
   }, [isAvailable, getScrapingStatus]);
 
-  // Poll status while running
+  // Poll status while scraping
   useEffect(() => {
-    if (!isRunning) {
+    if (phase !== "scraping") {
       if (pollRef.current) clearInterval(pollRef.current);
       return;
     }
     const poll = async () => {
       const res = await getScrapingStatus();
       if (res.success) {
-        const s: RAScrapingStatus = {
+        setStatus({
           active: res.active || false,
           total: res.total || 0,
           processed: res.processed || 0,
@@ -63,11 +70,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
           errors: res.errors || 0,
           currentCompany: res.currentCompany || "",
           log: res.log || [],
-        };
-        setStatus(s);
+        });
         setLogs(res.log || []);
         if (!res.active) {
-          setIsRunning(false);
+          setPhase("done");
           setJobBlocked(false);
         }
       }
@@ -75,57 +81,114 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
     poll();
     pollRef.current = setInterval(poll, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [isRunning, getScrapingStatus]);
+  }, [phase, getScrapingStatus]);
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
 
-  const handleStart = async () => {
+  // ── Phase 1: Search only ──
+  const handleSearch = async () => {
     if (atecoCodes.length === 0) return;
-
-    // Check sequential lock
     const checkRes = await getScrapingStatus();
-    if (checkRes.success && checkRes.active) {
-      setJobBlocked(true);
-      return;
-    }
+    if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
 
-    setIsRunning(true);
+    setPhase("searching");
+    setSearchResults([]);
+    setSelected(new Set());
+    setLogs([]);
+
+    const res = await searchOnly({
+      atecoCodes,
+      regions: regions.length > 0 ? regions : undefined,
+      provinces: provinces.length > 0 ? provinces : undefined,
+      filters,
+      delaySeconds: settings.delayDefault,
+    });
+
+    if (res.success && res.results && res.results.length > 0) {
+      // Dedup against DB using partita_iva
+      const deduped = await dedupAgainstDb(res.results);
+      setSearchResults(deduped);
+      // Auto-select only new ones
+      const newSet = new Set(deduped.filter(r => !r.inDb).map(r => r.url));
+      setSelected(newSet);
+      setPhase("results");
+      setLogs(res.log || []);
+    } else {
+      setSearchResults([]);
+      setPhase("results");
+      setLogs(res.log || [{ time: new Date().toISOString(), msg: res.error || "Nessun risultato trovato" }]);
+    }
+  };
+
+  // ── Dedup: check P.IVA against prospects table ──
+  const dedupAgainstDb = async (results: SearchResult[]): Promise<SearchResult[]> => {
+    // Get all partita_iva from DB
+    const { data: existing } = await supabase
+      .from("prospects" as any)
+      .select("partita_iva, company_name")
+      .not("partita_iva", "is", null);
+
+    const dbPivas = new Set((existing || []).map((e: any) => e.partita_iva?.trim()).filter(Boolean));
+    const dbNames = new Set((existing || []).map((e: any) => e.company_name?.toLowerCase().trim()).filter(Boolean));
+
+    return results.map(r => ({
+      ...r,
+      inDb: (r.piva && dbPivas.has(r.piva.trim())) || dbNames.has(r.name.toLowerCase().trim()),
+    }));
+  };
+
+  // ── Phase 2: Scrape selected ──
+  const handleScrape = async () => {
+    if (selected.size === 0) return;
+    const checkRes = await getScrapingStatus();
+    if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
+
+    const urls = searchResults.filter(r => selected.has(r.url)).map(r => ({ name: r.name, url: r.url }));
+    setPhase("scraping");
     setJobBlocked(false);
     setLogs([]);
     setStatus(null);
 
-    const res = await scrapeByAteco({
-      atecoCodes: atecoCodes,
-      regions: regions.length > 0 ? regions : undefined,
-      provinces: provinces.length > 0 ? provinces : undefined,
+    await scrapeSelected({
+      items: urls,
       delaySeconds: settings.delayDefault,
       batchSize: 5,
     });
-
-    if (res.success) {
-      setStatus(prev => prev ? { ...prev, active: false } : null);
-    }
-    setIsRunning(false);
-    setJobBlocked(false);
   };
 
-  const handleStop = async () => {
-    await stopScraping();
+  // ── Selection handlers ──
+  const toggleUrl = useCallback((url: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url); else next.add(url);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelected(new Set(searchResults.map(r => r.url)));
+  }, [searchResults]);
+
+  const selectNew = useCallback(() => {
+    setSelected(new Set(searchResults.filter(r => !r.inDb).map(r => r.url)));
+  }, [searchResults]);
+
+  const deselectAll = useCallback(() => setSelected(new Set()), []);
+
+  const handleReset = () => {
+    setPhase("idle");
+    setSearchResults([]);
+    setSelected(new Set());
+    setStatus(null);
+    setLogs([]);
   };
 
   const progress = status && status.total > 0 ? Math.round((status.processed / status.total) * 100) : 0;
-  const phase = status?.active
-    ? status.total === 0
-      ? "Ricerca risultati..."
-      : `Scaricamento profilo ${status.processed + 1} di ${status.total}...`
-    : status
-      ? "Completato"
-      : "";
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
+    <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Extension status */}
       <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${isAvailable
         ? (isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200")
@@ -135,79 +198,132 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
         {isAvailable ? "Estensione RA connessa" : "Estensione RA non rilevata — installala e ricarica la pagina"}
       </div>
 
-      {/* Job blocked warning */}
       {jobBlocked && (
         <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${isDark
           ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
           : "bg-amber-50 text-amber-600 border border-amber-200"
         }`}>
           <AlertTriangle className="w-3.5 h-3.5" />
-          Un job è già in esecuzione. Attendi il completamento prima di avviarne un altro.
+          Un job è già in esecuzione. Attendi il completamento.
         </div>
       )}
 
-      {/* Config form */}
-      <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
-        <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Avvia Scraping</h3>
+      {/* ═══ PHASE: IDLE ═══ */}
+      {phase === "idle" && (
+        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+          <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+            Fase 1: Ricerca Aziende
+          </h3>
+          <p className={`text-xs ${th.sub}`}>
+            Cerca le aziende su Report Aziende con i filtri selezionati. Poi potrai scegliere quali scaricare.
+          </p>
 
-        {atecoCodes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {atecoCodes.map(c => (
-              <span key={c} className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
-                {c}
-              </span>
-            ))}
-            {regions.length > 0 && regions.map(r => (
-              <span key={r} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
-                {r}
-              </span>
-            ))}
-            {provinces.length > 0 && provinces.map(p => (
-              <span key={p} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/25" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                {p}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 pt-1">
-          {!isRunning ? (
-            <button
-              onClick={handleStart}
-              disabled={!isAvailable || atecoCodes.length === 0 || jobBlocked}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
-                ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
-                : "bg-sky-500 text-white hover:bg-sky-600"
-              }`}
-            >
-              <Play className="w-4 h-4" />
-              Avvia Scraping
-            </button>
-          ) : (
-            <button
-              onClick={handleStop}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isDark
-                ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
-                : "bg-rose-500 text-white hover:bg-rose-600"
-              }`}
-            >
-              <Square className="w-4 h-4" />
-              Ferma
-            </button>
+          {atecoCodes.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {atecoCodes.map(c => (
+                <span key={c} className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
+                  {c}
+                </span>
+              ))}
+              {regions.length > 0 && regions.map(r => (
+                <span key={r} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                  {r}
+                </span>
+              ))}
+              {(filters.fatturato_min || filters.fatturato_max) && (
+                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/25" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                  💰 {filters.fatturato_min || "0"} — {filters.fatturato_max || "∞"}
+                </span>
+              )}
+              {(filters.dipendenti_min || filters.dipendenti_max) && (
+                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-violet-500/15 text-violet-300 border border-violet-500/25" : "bg-violet-50 text-violet-700 border border-violet-200"}`}>
+                  👥 {filters.dipendenti_min || "0"} — {filters.dipendenti_max || "∞"}
+                </span>
+              )}
+            </div>
           )}
-          <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            Delay: {settings.delayDefault}s tra le richieste
-          </span>
-        </div>
-      </div>
 
-      {/* Progress */}
-      {status && (
+          <button
+            onClick={handleSearch}
+            disabled={!isAvailable || atecoCodes.length === 0 || jobBlocked}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
+              ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
+              : "bg-sky-500 text-white hover:bg-sky-600"
+            }`}
+          >
+            <Search className="w-4 h-4" />
+            Cerca Aziende
+          </button>
+        </div>
+      )}
+
+      {/* ═══ PHASE: SEARCHING ═══ */}
+      {phase === "searching" && (
+        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-5 h-5 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-sky-400" : "border-sky-500"}`} />
+            <span className={`text-sm font-medium ${th.h2}`}>Ricerca in corso...</span>
+          </div>
+          <p className={`text-xs ${th.sub}`}>L'estensione sta cercando le aziende su Report Aziende.</p>
+        </div>
+      )}
+
+      {/* ═══ PHASE: RESULTS ═══ */}
+      {phase === "results" && (
+        <>
+          <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
+            <div className="flex items-center justify-between">
+              <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                Fase 2: Seleziona e Scarica
+              </h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={`text-[10px] ${isDark ? "border-white/15 text-slate-400" : ""}`}>
+                  {searchResults.length} trovate
+                </Badge>
+                <button onClick={handleReset} className={`text-[10px] px-2 py-1 rounded-lg ${isDark ? "bg-white/5 text-slate-400 hover:bg-white/10" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                  <RotateCcw className="w-3 h-3 inline mr-1" />Nuova ricerca
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleScrape}
+                disabled={selected.size === 0 || !isAvailable || jobBlocked}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
+                  ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
+                  : "bg-emerald-500 text-white hover:bg-emerald-600"
+                }`}
+              >
+                <Download className="w-4 h-4" />
+                Scarica {selected.size} profili
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <span className={`text-xs ${th.dim}`}>Delay: {settings.delayDefault}s</span>
+            </div>
+          </div>
+
+          <div className={`flex-1 min-h-0 rounded-xl border overflow-hidden ${isDark ? "bg-white/[0.02] border-white/[0.08]" : "bg-white/40 border-slate-200/60"}`}>
+            <SearchResultsTable
+              results={searchResults}
+              selected={selected}
+              onToggle={toggleUrl}
+              onSelectAll={selectAll}
+              onSelectNew={selectNew}
+              onDeselectAll={deselectAll}
+              isDark={isDark}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ═══ PHASE: SCRAPING / DONE ═══ */}
+      {(phase === "scraping" || phase === "done") && status && (
         <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
-                {status.active ? phase : "Scraping completato"}
+                {status.active ? `Scaricamento profilo ${status.processed + 1} di ${status.total}...` : "Scraping completato"}
               </h3>
               {status.currentCompany && status.active && (
                 <p className={`text-xs mt-0.5 truncate ${isDark ? "text-sky-400" : "text-sky-600"}`}>
@@ -230,6 +346,27 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
             </div>
           </div>
           <Progress value={progress} className="h-2" />
+
+          <div className="flex items-center gap-2">
+            {status.active ? (
+              <button
+                onClick={() => stopScraping()}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
+                  ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
+                  : "bg-rose-500 text-white hover:bg-rose-600"
+                }`}
+              >
+                <Square className="w-3.5 h-3.5" />Ferma
+              </button>
+            ) : (
+              <button onClick={handleReset} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark
+                ? "bg-white/5 text-slate-300 hover:bg-white/10"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}>
+                <RotateCcw className="w-3.5 h-3.5" />Nuova ricerca
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -253,19 +390,19 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces }: Pro
       )}
 
       {/* Empty state */}
-      {!status && !isRunning && (
+      {phase === "idle" && !status && (
         <div className="flex-1 flex items-center justify-center">
           <div className={`text-center space-y-2 max-w-md ${isDark ? "text-slate-500" : "text-slate-400"}`}>
             <Download className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
             {atecoCodes.length === 0 ? (
               <>
                 <p className="text-sm">Seleziona almeno un codice ATECO dal pannello a sinistra.</p>
-                <p className="text-xs">Puoi anche filtrare per regione e provincia.</p>
+                <p className="text-xs">Puoi anche configurare filtri avanzati (fatturato, dipendenti, ecc.).</p>
               </>
             ) : (
               <>
-                <p className="text-sm">Premi "Avvia Scraping" per cercare e scaricare i profili aziendali da Report Aziende.</p>
-                <p className="text-xs">I dati verranno salvati automaticamente nel database.</p>
+                <p className="text-sm">Premi "Cerca Aziende" per trovare i prospect su Report Aziende.</p>
+                <p className="text-xs">Potrai poi selezionare quali scaricare. Le aziende già nel DB saranno evidenziate.</p>
               </>
             )}
           </div>
