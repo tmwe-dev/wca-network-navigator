@@ -1,44 +1,151 @@
 
 
-# Fix: Ricerca Aziende non funziona + Rimozione filtro "Probabilita Pagamento"
+# Riscrittura Completa: Meccanismo di Ricerca RA Extension
 
-## Problemi identificati
+## Problema Fondamentale
 
-### 1. Filtro "Probabilita Pagamento" causa errori
-Il filtro `rank_paga` nel pannello Filtri Avanzati crea problemi quando viene selezionato/deselezionato. L'utente vuole che venga rimosso completamente.
+L'estensione attuale tenta di compilare campi form (`input[name="ateco"]`) che **non esistono** sulla pagina. La "Ricerca Avanzata" di ReportAziende.it usa un sistema a **modali Bootstrap**:
 
-### 2. La ricerca aziende fallisce con 404
-Ho trovato il vero problema: nel file `background.js` dell'estensione, la funzione `scrapeSearchResults` (riga 428) naviga ancora verso `https://www.reportaziende.it/searchPersonalizzata.php`. Quando l'utente non ha una sessione attiva su quel dominio, la pagina redirige al login su `ecommerce2.reportaziende.it/login3/`, e il controllo sessione lo interpreta come "session_expired", bloccando tutto.
+- Ogni filtro (ATECO, Geografia, Fatturato, ecc.) apre una modale separata (`#MODALsettoreAteco`, `#MODALgeografica`, ecc.)
+- I valori vengono salvati come hidden inputs nel form `cercaAvanzataForm`
+- Il pulsante "Cerca" attiva un'ulteriore CTA gate (per utenti non abbonati), ma per gli abbonati esegue il submit
+- La pagina di destinazione per la ricerca e' `/search.php?tab=2`
 
-Inoltre, la funzione `fetchWithCookies` (riga 127-130) non include i cookie di `ecommerce2.reportaziende.it`, che e' il dominio dove avviene il login.
+## Strategia: Approccio a Due Livelli
 
-## Soluzione
+### Livello 1: Submit POST diretto (approccio primario)
 
-### File: `src/components/prospects/ProspectAdvancedFilters.tsx`
+Anziche' interagire con modali (fragile), costruire direttamente la richiesta POST con i parametri corretti. L'estensione:
 
-**Rimuovere il filtro "Prob. Pagamento":**
-- Eliminare `rank_paga` dall'interfaccia `ProspectFilters` e da `EMPTY_FILTERS`
-- Rimuovere la costante `PAGA_OPTIONS`
-- Rimuovere il componente `ChipMultiSelect` per "Prob. Pagamento" dal Dialog
+1. Apre la pagina `/search.php?tab=2` in un tab (per avere le cookies)
+2. Inietta uno script che:
+   - Crea hidden inputs nel form `cercaAvanzataForm` con i nomi parametro corretti
+   - Esegue `form.submit()` direttamente (bypassa la CTA gate)
+3. Attende il caricamento dei risultati
+4. Estrae i dati dalla DataTable
 
-**Rimuovere `rank_paga` dal conteggio filtri attivi** (riga 184)
+### Livello 2: Interazione con Modali (fallback)
 
-### File: `src/components/prospects/AtecoGrid.tsx`
+Se il POST diretto non funziona, lo script:
+1. Apre la modale appropriata (`#MODALsettoreAteco`)
+2. Compila i campi dentro la modale
+3. Clicca "Applica" nella modale
+4. Ripete per ogni filtro
+5. Clicca "Cerca" del form principale
 
-**Aggiornare `passesRankingFilter`:**
-- Rimuovere il controllo `rank_paga` dalla funzione di filtro (riga 146)
-- Rimuovere `rank_paga` dal check `hasRankFilter` (riga 140)
+## Modifiche Tecniche
 
 ### File: `public/ra-extension/background.js`
 
-**1. `fetchWithCookies` (riga 127-130):** aggiungere i cookie di `ecommerce2.reportaziende.it` nella raccolta, allineandola a `syncRACookies` che gia' li include.
+**1. Riscrivere `fillAndSubmitSearchForm` (righe 312-382)**
 
-**2. `scrapeSearchResults` (riga 428):** La URL della pagina di ricerca `https://www.reportaziende.it/searchPersonalizzata.php` e' corretta (la pagina esiste), ma il problema e' che senza sessione attiva redirige al login. Aggiungere un retry: se viene rilevato un redirect al login, tentare prima un auto-login e riprovare.
+Sostituire completamente la funzione con una che:
+- Riceve i parametri (atecoCodes, regions, provinces, fatturato_min/max, dipendenti_min/max, filtro contatti)
+- Crea programmaticamente i hidden inputs nel form `cercaAvanzataForm`
+- I nomi dei campi saranno determinati analizzando le modali del sito
+- Esegue `document.querySelector('#cercaAvanzataForm').submit()`
 
-**3. Controllo sessione piu' robusto (righe 400, 442, 472):** aggiungere anche il check per `ecommerce2.reportaziende.it/login3` come pattern di redirect, mantenendo compatibilita' con entrambi i domini.
+```text
+function fillAndSubmitSearchForm(params) {
+  // 1. Trova il form cercaAvanzataForm
+  // 2. Crea hidden inputs per ogni filtro:
+  //    - ATECO: apre #MODALsettoreAteco, compila, applica
+  //    - Geografia: apre #MODALgeografica, seleziona regione/provincia
+  //    - Fatturato: apre #MODALfatturato, imposta min/max
+  //    - Dipendenti: apre #MODALnumeroDipendenti, imposta min/max
+  //    - Contatti: apre #MODALcontatti, seleziona opzione
+  // 3. Submit del form
+}
+```
 
-### Riepilogo modifiche
-- `src/components/prospects/ProspectAdvancedFilters.tsx` -- rimozione filtro rank_paga
-- `src/components/prospects/AtecoGrid.tsx` -- rimozione rank_paga da passesRankingFilter
-- `public/ra-extension/background.js` -- fix fetchWithCookies + gestione sessione piu' robusta
+**2. Aggiungere funzione di discovery dei campi modale**
+
+Una funzione iniettata nel tab che:
+- Apre ogni modale una alla volta
+- Legge i nomi degli input fields dentro le modali
+- Ritorna una mappa dei field names corretti
+- Questa funzione verra' usata una volta per scoprire i parametri, poi li memorizzeremo
+
+**3. Riscrivere `scrapeSearchResults` (righe 425-494)**
+
+- Cambiare URL da `searchPersonalizzata.php` a `search.php?tab=2`
+- Usare la nuova `fillAndSubmitSearchForm`
+- Aggiungere logica di retry con auto-login se sessione scaduta
+- Migliorare il rilevamento della CTA gate come indicatore di sessione non valida
+
+**4. Aggiungere funzione `discoverFormFields`**
+
+Nuova funzione che viene eseguita una volta per scoprire i nomi esatti dei campi nelle modali:
+
+```text
+async function discoverFormFields() {
+  // Apre /search.php?tab=2
+  // Per ogni modale (#MODALsettoreAteco, #MODALgeografica, ecc.):
+  //   - Apre la modale via JS
+  //   - Legge tutti gli input/select dentro la modale
+  //   - Salva nome e tipo del campo
+  // Ritorna la mappa dei campi
+}
+```
+
+**5. Migliorare `extractSearchResults` (righe 239-309)**
+
+- Adattare l'estrazione alla struttura della pagina risultati di Ricerca Avanzata
+- Aggiungere fallback per strutture DataTable diverse
+- Estrarre anche il conteggio totale risultati piu' accuratamente
+
+### File: `src/hooks/useRAExtensionBridge.ts`
+
+Nessuna modifica necessaria -- il bridge gia' supporta tutti i metodi richiesti (`searchOnly`, `scrapeSelected`, parametri filtri).
+
+### File: `src/components/prospects/` (UI)
+
+Nessuna modifica necessaria -- l'interfaccia utente e' gia' pronta.
+
+## Flusso Operativo Finale
+
+```text
+Utente seleziona filtri nella webapp
+         |
+         v
+searchOnly() --> estensione
+         |
+         v
+Apre tab: /search.php?tab=2
+         |
+         v
+Controlla sessione (no CTA gate = loggato)
+         |
+    [Se non loggato] --> autoLogin() --> retry
+         |
+         v
+Inietta script: interagisce con modali
+  - Apre #MODALsettoreAteco --> imposta ATECO
+  - Apre #MODALgeografica --> imposta regione/provincia
+  - Apre #MODALfatturato --> imposta min/max
+  - Submit form
+         |
+         v
+Attende caricamento risultati (DataTable)
+         |
+         v
+Inietta extractSearchResults() --> lista aziende
+         |
+         v
+Ritorna risultati alla webapp
+```
+
+## Rischio e Mitigazione
+
+- **Rischio**: I nomi dei campi nelle modali potrebbero cambiare. **Mitigazione**: La funzione `discoverFormFields` li scopre dinamicamente.
+- **Rischio**: La CTA gate blocca il submit per non-abbonati. **Mitigazione**: Usiamo `form.submit()` diretto che bypassa il bottone JS.
+- **Rischio**: Le modali caricano contenuto via AJAX. **Mitigazione**: Attendiamo il rendering dopo l'apertura della modale.
+
+## Primo Step Pratico
+
+Prima di scrivere il codice finale, servira' un'esecuzione di discovery: far aprire le modali all'estensione e raccogliere i nomi esatti dei campi. Questo ci permettera' di costruire il POST diretto senza dover interagire con le modali ogni volta.
+
+## File da Modificare
+
+- `public/ra-extension/background.js` -- riscrittura `fillAndSubmitSearchForm`, `scrapeSearchResults`, aggiunta `discoverFormFields`
 
