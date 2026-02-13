@@ -1,106 +1,201 @@
 
-## Piano: Pannello Impostazioni Download Centralizzato
 
-### Problema
-Tutti i parametri che controllano la velocita' e il comportamento dello scraping sono hardcoded nel codice sorgente. Questo impedisce di calibrare il sistema senza modificare il codice, aumentando il rischio di blocco da parte di WCA.
+## Piano: Ristrutturazione Completa delle Maschere Operative
 
-### Soluzione
-Creare una nuova sezione "Scraping & Sicurezza" nelle Impostazioni che permetta di configurare ogni parametro critico, salvandoli in `app_settings` nel database. Tutti i componenti di download leggeranno da li' invece di usare valori fissi.
+### Obiettivo
+Trasformare Partner Hub, Acquisizione Partner e Download Management in un'unica esperienza moderna, potente e immersiva, con estetica glassmorphism avanzata, animazioni fluide e layout full-screen ergonomico.
 
-### Parametri da centralizzare
+---
 
-| Parametro | Valore attuale (hardcoded) | Dove si trova |
-|-----------|---------------------------|---------------|
-| Delay minimo tra partner | 0s | Slider min in toolbar |
-| Delay massimo tra partner | 60s | Slider max in toolbar |
-| Delay predefinito | 15s (Acquisizione), 5s (Download) | AcquisizionePartner, ActionPanel |
-| Tempo medio scraping stimato | 15s | ActionPanel (per calcolo ETA) |
-| Keep-alive interval | 30s | AcquisizionePartner |
-| Soglia auto-esclusione network | 3 tentativi | AcquisizionePartner |
-| Soglia recovery sessione | 3 vuoti consecutivi | AcquisizionePartner |
-| Soglia anti-throttling | 120s (gap tra partner) | AcquisizionePartner |
-| Pausa tra retry recovery | 3s, 10s, 30s | AcquisizionePartner |
-| Arricchimento sito (default) | OFF | AcquisizionePartner |
-| Deep Search (default) | OFF | AcquisizionePartner |
-| Max retry per partner fallito | 2 | AcquisizionePartner |
-| Pausa lunga programmata | Non presente | Da aggiungere |
+### Architettura: 3 maschere ridisegnate
 
-### Nuova UI nelle Impostazioni
+Ogni maschera usa lo schermo intero (nascondendo i margini della sidebar) con sfondi a gradiente animato, pannelli in glassmorphism e transizioni cinematografiche.
 
-Un nuovo tab **"Scraping"** (icona Shield) con tre sezioni:
+---
 
-**1. Velocita' e Limiti**
-- Slider: Delay minimo consentito (default: 10s) — impedisce di andare troppo veloci
-- Slider: Delay massimo (default: 60s)
-- Slider: Delay predefinito per nuovi job (default: 15s)
-- Input: Tempo medio scraping per calcolo ETA (default: 15s)
+### 1. Partner Hub - "Command Center"
 
-**2. Sicurezza Sessione**
-- Slider: Soglia recovery sessione (default: 3 vuoti consecutivi)
-- Slider: Soglia auto-esclusione network (default: 3 tentativi)
-- Slider: Soglia anti-throttling in secondi (default: 120s)
-- Input: Pausa recovery 1° tentativo (default: 3s)
-- Input: Pausa recovery 2° tentativo (default: 10s)
-- Input: Pausa recovery 3° tentativo (default: 30s)
-- Input: Keep-alive interval (default: 30s)
-- Input: Max retry per partner con errore di caricamento (default: 2)
+**Layout attuale**: Lista 400px fissa a sinistra + dettaglio a destra su sfondo piatto.
 
-**3. Pause Programmate**
-- Switch: Attiva pausa notturna (orario di stop/ripartenza)
-- Input: Pausa lunga ogni N partner (es. pausa di 5 minuti ogni 100 partner)
-- Questo serve per simulare un comportamento umano e ridurre il rischio di ban
+**Nuovo layout**: Full-screen con tre zone fluide.
 
-### Hook centralizzato: `useScrapingSettings`
-
-Nuovo hook che:
-- Legge tutti i parametri da `app_settings` via `useAppSettings()`
-- Li espone come oggetto tipizzato con valori di default
-- Viene usato da AcquisizionePartner, ActionPanel, AcquisitionToolbar, JobMonitor, ResyncConfigure
-
-### Chiavi in `app_settings`
-
-```
-scraping_delay_min         = "10"
-scraping_delay_max         = "60"
-scraping_delay_default     = "15"
-scraping_avg_time          = "15"
-scraping_keepalive_ms      = "30000"
-scraping_exclude_threshold = "3"
-scraping_recovery_threshold = "3"
-scraping_throttle_gap_ms   = "120000"
-scraping_recovery_wait_1   = "3000"
-scraping_recovery_wait_2   = "10000"
-scraping_recovery_wait_3   = "30000"
-scraping_max_retries       = "2"
-scraping_pause_every_n     = "0"      (0 = disattivo)
-scraping_pause_duration_s  = "300"    (5 min)
-scraping_night_pause       = "false"
-scraping_night_stop_hour   = "02"
-scraping_night_start_hour  = "07"
+```text
++------------------------------------------------------------------+
+|  [Barra di Ricerca Globale con filtri inline]     [Vista] [Theme] |
++------------------------------------------------------------------+
+|                          |                                        |
+|   LISTA PARTNER          |   DETTAGLIO PARTNER                    |
+|   (30-40% larghezza)     |   (60-70% larghezza)                  |
+|                          |                                        |
+|   Card glassmorphism     |   Header con gradiente animato         |
+|   con hover glow         |   Sezioni a schede orizzontali         |
+|   e stripe laterale      |   (Info | Contatti | Servizi | Social) |
+|   qualita' contatti      |                                        |
+|                          |   Mini-globo integrato (se filiali)     |
+|   Pannello ridimensionab.|   KPI cards con animazione contatore   |
+|                          |                                        |
++------------------------------------------------------------------+
 ```
 
-### File da modificare
+**Miglioramenti specifici**:
+- Sfondo con gradiente radiale animato che pulsa lentamente (ambient glow)
+- Card partner nella lista con effetto glassmorphism (`bg-white/[0.04] backdrop-blur-xl`)
+- Hover sulle card: glow laterale + leggero scale (1.02) + ombra colorata
+- Stripe laterale qualita' contatti con gradiente (verde/ambra/rosso) e pulsazione
+- Pannello dettaglio con header full-width a gradiente dinamico basato sul paese
+- Sezioni del dettaglio organizzate in tabs orizzontali invece di collapsible verticali
+- Contatori KPI con animazione "count-up" quando si seleziona un partner
+- Pannello ridimensionabile (react-resizable-panels) tra lista e dettaglio
+- Transizione di entrata fluida quando si seleziona un partner (scale-in + fade)
+- Vista "Paesi" con card-mappa interattive piu' grandi e hover tooltip
 
-**File nuovi:**
-- `src/hooks/useScrapingSettings.ts` — Hook centralizzato con valori tipizzati e default
+**File da modificare**:
+- `src/pages/PartnerHub.tsx` — Ristrutturazione completa del layout e dello stile
+- `src/components/partners/PartnerCard.tsx` — Nuova card glassmorphism (componente estratto)
 
-**File da modificare:**
-- `src/pages/Settings.tsx` — Aggiungere tab "Scraping"
-- `src/pages/AcquisizionePartner.tsx` — Sostituire tutte le costanti hardcoded con valori dal hook
-- `src/components/download/ActionPanel.tsx` — Usare delay default e avgScrapeTime dal hook
-- `src/components/acquisition/AcquisitionToolbar.tsx` — Leggere min/max/step dal hook
-- `src/components/download/JobMonitor.tsx` — Usare DELAY_VALUES dal hook
-- `src/components/download/ResyncConfigure.tsx` — Usare DELAY_VALUES dal hook
-- `src/components/download/theme.ts` — Rimuovere DELAY_VALUES/DELAY_LABELS (spostati nel hook)
+---
 
-### Logica pausa programmata
+### 2. Acquisizione Partner - "Mission Control"
 
-Nel loop di acquisizione (`runExtensionLoop`), dopo ogni partner processato:
-1. Controlla se `scraping_pause_every_n > 0` e se il contatore e' multiplo di quel valore → pausa di `scraping_pause_duration_s` secondi
-2. Controlla se `scraping_night_pause` e' attivo e l'ora corrente e' nell'intervallo di stop → pausa fino all'ora di ripartenza
+**Layout attuale**: Toolbar + stats bar + split 35/65 queue/canvas + bin in basso. Aspetto funzionale ma standard.
 
-### Impatto sulla sicurezza
+**Nuovo layout**: Full-screen immersivo con dashboard live.
 
-- Il delay minimo impedisce di impostare velocita' pericolose (sotto i 10s) a meno che non venga deliberatamente abbassato nelle impostazioni
-- Le pause programmate riducono drasticamente il rischio di pattern detection
-- Tutti i parametri sono modificabili senza toccare il codice
+```text
++------------------------------------------------------------------+
+|  [Paese/Network] [Delay ████████] [Enrich] [Deep]  [Play|Pause]  |
++------------------------------------------------------------------+
+|  DASHBOARD LIVE (barra compatta con KPI animati)                  |
+|  [Processati: 45/120] [Email: 38] [Tel: 29] [Completi: 25]       |
+|  [██████████████████░░░░░░░░] 37%    Session: ● Attiva            |
++------------------------------------------------------------------+
+|                                |                                  |
+|   CODA PARTNER                 |   CANVAS PARTNER                 |
+|   (35%)                        |   (65%)                          |
+|                                |                                  |
+|   Glassmorphism cards          |   Documento "costruzione live"   |
+|   con progress indicator       |   con sezioni che appaiono       |
+|   per singola voce             |   sequenzialmente con fade-in    |
+|                                |                                  |
+|   Scroll virtuale              |   Bordo animato phase-aware     |
+|   per performance              |                                  |
++------------------------------------------------------------------+
+|           [████ 45/120 partner acquisiti ████]                     |
+|           [● 25 completi  ● 20 incompleti]                        |
++------------------------------------------------------------------+
+```
+
+**Miglioramenti specifici**:
+- Sfondo scuro con gradiente radiale pulsante (effetto "respiro" della stazione)
+- Dashboard live compatta in alto con KPI animati (numeri che si aggiornano con transizione)
+- Barra di progresso principale con gradiente animato e percentuale
+- Indicatore di sessione WCA con pulsazione (verde/ambra/rosso)
+- Queue items con micro-progress: ogni riga mostra un indicatore di fase (pallino che si riempie)
+- Canvas partner con bordo che cambia colore in base alla fase (sky per download, viola per extract, emerald per complete)
+- Effetto "comet trail" piu' elaborato con particelle
+- Network Performance Bar ridisegnata come barra orizzontale compatta con sparkline
+- Animazione di transizione tra un partner e l'altro: slide-out a sinistra + slide-in da destra
+- Toolbar compatta su una riga con tutti i controlli inline
+- Sfondo della coda che si illumina leggermente quando un partner viene completato
+
+**File da modificare**:
+- `src/pages/AcquisizionePartner.tsx` — Layout e stile (logica pipeline invariata)
+- `src/components/acquisition/PartnerCanvas.tsx` — Stile glassmorphism + transizioni migliorate
+- `src/components/acquisition/PartnerQueue.tsx` — Card glassmorphism + micro-progress
+- `src/components/acquisition/AcquisitionBin.tsx` — Redesign con animazione piu' elaborata
+- `src/components/acquisition/AcquisitionToolbar.tsx` — Layout compatto inline
+- `src/components/acquisition/NetworkPerformanceBar.tsx` — Redesign compatto
+
+---
+
+### 3. Download Management - "Globe Operations"
+
+**Layout attuale**: Griglia paesi (60%) + azione/monitor (40%). Gia' glassmorphism.
+
+**Nuovo layout**: Full-screen con dashboard operativa.
+
+```text
++------------------------------------------------------------------+
+|  Download Management  [Scarica | Aggiorna]   [Session] [Theme]   |
++------------------------------------------------------------------+
+|  STATISTICHE GLOBALI (barra orizzontale compatta)                |
+|  [249 paesi] [187 scansionati] [12.450 partner] [8.200 email]   |
++------------------------------------------------------------------+
+|                                |                                  |
+|   GRIGLIA PAESI                |   PANNELLO OPERATIVO             |
+|   (60%)                        |   (40%)                          |
+|                                |                                  |
+|   Card glassmorphism con       |   ActionPanel migliorato         |
+|   gradienti per stato          |   con preview del lavoro         |
+|                                |                                  |
+|   Barra completamento          |   Job Monitor con timeline       |
+|   animata per paese            |   live e sparkline velocita'     |
+|                                |                                  |
++------------------------------------------------------------------+
+|  [Strumenti Avanzati - collapsibile]                              |
++------------------------------------------------------------------+
+```
+
+**Miglioramenti specifici**:
+- Barra statistiche globali in alto con KPI aggregati animati
+- Card paesi con hover glow piu' pronunciato e transizioni piu' fluide
+- Badge selezionati con animazione di entrata (scale-in)
+- Job Monitor con timeline grafica (non solo testo)
+- Sparkline di velocita' nel job card (profili/minuto)
+- Gradiente sfondo che cambia lentamente nel tempo (ambient animation)
+- Filtri con animazione di switch (slide + fade)
+
+**File da modificare**:
+- `src/pages/DownloadManagement.tsx` — Aggiunta barra statistiche + layout migliorato
+- `src/components/download/CountryGrid.tsx` — Hover effects potenziati
+- `src/components/download/ActionPanel.tsx` — Preview lavoro prima dell'avvio
+- `src/components/download/JobMonitor.tsx` — Timeline grafica
+
+---
+
+### Stile condiviso: Design System Glassmorphism
+
+Tutti e tre le pagine condivideranno un linguaggio visivo coerente:
+
+| Elemento | Stile |
+|----------|-------|
+| Pannelli | `bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl` |
+| Hover | Glow laterale + `scale-[1.02]` + `shadow-lg shadow-sky-500/[0.06]` |
+| Testo primario | `text-white` (dark) / `text-slate-900` (light) |
+| Testo secondario | `text-slate-400` (dark) / `text-slate-500` (light) |
+| Accenti | Sky-500 per azioni, Emerald-500 per successo, Amber-500 per warning, Rose-500 per errori |
+| Transizioni | `duration-300 ease-out` per hover, `duration-500` per entrate |
+| Sfondo | Gradienti radiali multi-layer con leggera animazione CSS |
+
+---
+
+### Dettagli Tecnici
+
+**File nuovi**:
+- `src/components/partners/PartnerCard.tsx` — Card partner estratta come componente riutilizzabile
+
+**File modificati** (solo UI/stile, logica invariata):
+- `src/pages/PartnerHub.tsx` — Layout full-screen, glassmorphism, tabs nel dettaglio, pannello ridimensionabile
+- `src/pages/AcquisizionePartner.tsx` — Layout immersivo, dashboard KPI live, stile coerente
+- `src/pages/DownloadManagement.tsx` — Barra statistiche globali, stile potenziato
+- `src/components/acquisition/PartnerCanvas.tsx` — Bordi animati, transizioni migliorate
+- `src/components/acquisition/PartnerQueue.tsx` — Card glassmorphism con micro-progress
+- `src/components/acquisition/AcquisitionBin.tsx` — Redesign con particelle animate
+- `src/components/acquisition/AcquisitionToolbar.tsx` — Layout compatto su riga singola
+- `src/components/acquisition/NetworkPerformanceBar.tsx` — Barra compatta con sparkline
+- `src/components/download/CountryGrid.tsx` — Hover glow potenziato
+- `src/components/download/ActionPanel.tsx` — Preview pre-avvio
+- `src/components/download/JobMonitor.tsx` — Timeline grafica
+
+**Nessuna modifica alla logica di business**: Tutta la pipeline di acquisizione, i job di download, la gestione sessione e le impostazioni di scraping restano invariate. Si modifica solo la presentazione visuale.
+
+**Dipendenze**: Nessuna nuova dipendenza. Si usa `react-resizable-panels` (gia' installato) per il Partner Hub.
+
+---
+
+### Ordine di Implementazione
+
+1. Partner Hub (piu' grande, componente centrale)
+2. Acquisizione Partner (stile coerente con Partner Hub)
+3. Download Management (completamento della coerenza visiva)
+
