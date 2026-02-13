@@ -1,60 +1,90 @@
 
 
-# Fix: Protezione Anti-Ban per Download WCA
+# Piano: Terminale di Download + Verifica Setting-Only
 
-## Problemi Identificati
+## Cosa viene fatto
 
-1. **Delay fisso senza jitter**: il WCA processor usa un delay costante (es. 10s esatti), pattern facilmente rilevabile come bot
-2. **Nessuna pausa lunga**: a differenza del RA processor, non ci sono pause ogni N profili
-3. **Zero pausa tra job consecutivi**: quando un job finisce, il successivo parte in 5 secondi
-4. **Delay troppo basso**: i job recenti usano 10s invece del minimo sicuro di 15s
+### 1. Pannello Terminale in tempo reale
 
-## Modifiche Pianificate
+Un nuovo componente `DownloadTerminal` che mostra riga per riga cosa sta succedendo durante il download, in stile terminale (sfondo scuro, testo monospace, auto-scroll). Ogni riga mostra:
 
-### 1. Aggiungere jitter al delay in `useDownloadProcessor.ts` (riga 248-250)
+- Timestamp esatto
+- Azione in corso (download, pausa, attesa, recovery...)
+- WCA ID e nome azienda
+- Delay calcolato con jitter applicato
+- Risultato contatti (email/telefono trovati o meno)
 
-Sostituire il delay fisso con un delay randomizzato (0.8x - 1.5x), identico alla logica gia' usata nel RA processor.
+Il terminale viene alimentato tramite un sistema di "log entries" salvati nel database nella tabella `download_jobs` in un campo JSONB `terminal_log` (ultimi 100 eventi), aggiornato ad ogni profilo dal processor. In questo modo il terminale si aggiorna in tempo reale tramite polling e sopravvive ai refresh della pagina.
+
+Il componente viene posizionato nella tab "Scarica" dell'Operations Center, tra ActionPanel e JobMonitor.
+
+### 2. Verifica che TUTTO venga dal Settings
+
+Ho verificato il codice: il processor gia' usa esclusivamente i valori da `useScrapingSettings()`. Nessun valore e' hardcoded. Ogni parametro di timing passa dal pannello Settings > Scraping:
+
+- `settings.delayMin` -- delay minimo
+- `settings.delayDefault` -- delay predefinito
+- `settings.jitterMin / jitterMax` -- range jitter
+- `settings.antiBanEveryN / antiBanDurationS` -- pause periodiche
+- `settings.interJobPauseS` -- pausa tra job
+- `settings.keepAliveMs`, `settings.recoveryWait1/2/3`, ecc.
+
+L'unico `Math.max` presente (riga 26 del processor) confronta il delay del job con `settings.delayMin` -- entrambi vengono dal settings, nessun numero fisso nel codice.
+
+### 3. Garanzia di esecuzione strettamente sequenziale
+
+Il processor gia' scarica UN SOLO profilo alla volta (loop `for` sequenziale). Aggiungero' nel terminale un log esplicito che mostra "Inizio profilo #X" e "Fine profilo #X -- attesa Ys" per rendere visibile che non ci sono mai due profili in parallelo.
+
+## Dettaglio Tecnico
+
+### File da creare
+
+**`src/components/download/DownloadTerminal.tsx`**
+- Componente React con stile terminale (bg nero/scurissimo, font mono, scrollbar custom)
+- Legge i log dal campo `terminal_log` del job attivo tramite polling ogni 2s
+- Ogni riga mostra: `[HH:MM:SS] AZIONE -- dettagli`
+- Colori diversi per tipo: verde per successo, giallo per attesa/pausa, rosso per errore
+- Auto-scroll verso il basso, con possibilita' di scrollare verso l'alto per rileggere
+- Altezza fissa ~250px, scrollabile
+
+### File da modificare
+
+**`src/hooks/useDownloadProcessor.ts`**
+- Aggiungere una funzione helper `appendLog(jobId, entry)` che fa un update JSONB per aggiungere una riga al campo `terminal_log`
+- Chiamare `appendLog` ad ogni evento significativo:
+  - `[START]` Inizio profilo #WCA_ID
+  - `[OK]` Partner scaricato: "NomeAzienda" -- email: si/no, tel: si/no
+  - `[WAIT]` Attesa Xs (delay base Ys * jitter Z.Zx)
+  - `[PAUSE]` Pausa anti-ban Xs dopo N profili
+  - `[PAUSE]` Pausa tra job: Xs
+  - `[RECOVERY]` Tentativo recovery sessione...
+  - `[NIGHT]` Pausa notturna fino alle HH:00
+  - `[DONE]` Job completato
+  - `[ERROR]` Errore: messaggio
+
+**`src/pages/Operations.tsx`**
+- Importare e inserire `DownloadTerminal` nella tab "download", sotto ActionPanel
+
+### Migrazione database
+
+Aggiungere colonna `terminal_log` (JSONB, default `[]`) alla tabella `download_jobs` per persistere gli ultimi 100 log del terminale.
+
+## Risultato
+
+Quando parti con un download, vedrai nel terminale qualcosa come:
 
 ```text
-// PRIMA (prevedibile):
-await new Promise(r => setTimeout(r, delaySeconds * 1000));
-
-// DOPO (randomizzato):
-const jitter = delaySeconds * 1000 * (0.8 + Math.random() * 0.7);
-await new Promise(r => setTimeout(r, jitter));
+[19:42:03] START  Profilo #8842
+[19:42:08] OK     Acme Logistics (Dubai, AE) -- email: si, tel: si
+[19:42:08] WAIT   18s (base 15s * jitter 1.2x)
+[19:42:26] START  Profilo #8843
+[19:42:31] OK     Global Freight Co (Mumbai, IN) -- email: si, tel: no
+[19:42:31] WAIT   22s (base 15s * jitter 1.47x)
+[19:42:53] START  Profilo #8844
+...
+[19:45:12] PAUSE  Anti-ban: 52s dopo 8 profili
+[19:46:04] START  Profilo #8850
 ```
 
-### 2. Aggiungere pausa lunga ogni 10 profili in `useDownloadProcessor.ts`
-
-Inserire una pausa di 45-60 secondi ogni 10 profili elaborati (dopo riga 247, prima del delay normale). Simile a quanto gia' implementato nel RA processor.
-
-### 3. Aggiungere pausa tra job consecutivi in `useDownloadProcessor.ts` (riga 277-300)
-
-Nel polling loop, dopo il completamento di un job, attendere 30 secondi prima di prendere il prossimo dalla coda. Questo evita che 3 job da paesi piccoli vengano eseguiti a raffica senza interruzione.
-
-### 4. Forzare delay minimo a 15s in `useDownloadProcessor.ts` (riga 26)
-
-```text
-// PRIMA:
-const delaySeconds = job.delay_seconds || settings.delayDefault;
-
-// DOPO:
-const delaySeconds = Math.max(job.delay_seconds || settings.delayDefault, settings.delayMin);
-```
-
-### 5. Forzare delay minimo anche nella creazione job in `ActionPanel.tsx`
-
-Assicurare che il valore di `delay_seconds` passato a `createJob.mutateAsync` sia almeno `scrapingSettings.delayMin`.
-
-## File da Modificare
-
-- `src/hooks/useDownloadProcessor.ts`: jitter, pause lunghe, pausa tra job, delay minimo
-- `src/components/download/ActionPanel.tsx`: validazione delay minimo alla creazione
-
-## Risultato Atteso
-
-- Delay tra profili: 12-22s (con jitter su base 15s) invece di 10s fissi
-- Pausa lunga: 45-60s ogni 10 profili
-- Pausa tra job: 30s dopo ogni job completato
-- Pattern di traffico molto meno prevedibile e piu' simile a navigazione umana
+Ogni riga e' un singolo profilo, mai due in parallelo. Puoi verificare visivamente che i tempi corrispondono a quanto impostato nel Settings.
 
