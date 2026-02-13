@@ -1,151 +1,65 @@
 
+# Fix: fillAndSubmitSearchForm non viene eseguita
 
-# Riscrittura Completa: Meccanismo di Ricerca RA Extension
+## Causa Root
 
-## Problema Fondamentale
+`chrome.scripting.executeScript` non risolve automaticamente le Promise restituite dalle funzioni iniettate. La funzione `fillAndSubmitSearchForm` (riga 292-551) restituisce `new Promise(...)`, ma il risultato che arriva a `scrapeSearchResults` (riga 743-747) e' un oggetto Promise serializzato come `{}`.
 
-L'estensione attuale tenta di compilare campi form (`input[name="ateco"]`) che **non esistono** sulla pagina. La "Ricerca Avanzata" di ReportAziende.it usa un sistema a **modali Bootstrap**:
+Di conseguenza:
+- `fillData` = `{}` (oggetto vuoto)
+- `fillData.submitted` = `undefined` (falsy)
+- Il check a riga 750 (`!fillData.submitted`) e' sempre vero
+- L'estensione ritorna immediatamente "Form non compilato" senza mai aspettare
 
-- Ogni filtro (ATECO, Geografia, Fatturato, ecc.) apre una modale separata (`#MODALsettoreAteco`, `#MODALgeografica`, ecc.)
-- I valori vengono salvati come hidden inputs nel form `cercaAvanzataForm`
-- Il pulsante "Cerca" attiva un'ulteriore CTA gate (per utenti non abbonati), ma per gli abbonati esegue il submit
-- La pagina di destinazione per la ricerca e' `/search.php?tab=2`
+## Soluzione
 
-## Strategia: Approccio a Due Livelli
+Riscrivere `fillAndSubmitSearchForm` come funzione **sincrona** che esegue le operazioni con `setTimeout` a cascata e NON restituisce una Promise. In alternativa, usare un pattern a due step:
 
-### Livello 1: Submit POST diretto (approccio primario)
+1. Iniettare uno script sincrono che configura i filtri e fa il submit del form
+2. Attendere il caricamento della pagina risultati nel listener `onUpdated`
 
-Anziche' interagire con modali (fragile), costruire direttamente la richiesta POST con i parametri corretti. L'estensione:
+### Modifiche in `public/ra-extension/background.js`
 
-1. Apre la pagina `/search.php?tab=2` in un tab (per avere le cookies)
-2. Inietta uno script che:
-   - Crea hidden inputs nel form `cercaAvanzataForm` con i nomi parametro corretti
-   - Esegue `form.submit()` direttamente (bypassa la CTA gate)
-3. Attende il caricamento dei risultati
-4. Estrae i dati dalla DataTable
+**1. Convertire `fillAndSubmitSearchForm` in funzione sincrona (righe 292-551)**
 
-### Livello 2: Interazione con Modali (fallback)
+Rimuovere il wrapper `new Promise(...)` e la funzione interna `async run()`. Le operazioni sui modal (apertura, compilazione, click "Applica") devono essere sequenziali con `setTimeout` annidati oppure, meglio ancora, usare direttamente il DOM senza attese (dato che le modali Bootstrap sono gia' nel DOM, solo nascoste).
 
-Se il POST diretto non funziona, lo script:
-1. Apre la modale appropriata (`#MODALsettoreAteco`)
-2. Compila i campi dentro la modale
-3. Clicca "Applica" nella modale
-4. Ripete per ogni filtro
-5. Clicca "Cerca" del form principale
-
-## Modifiche Tecniche
-
-### File: `public/ra-extension/background.js`
-
-**1. Riscrivere `fillAndSubmitSearchForm` (righe 312-382)**
-
-Sostituire completamente la funzione con una che:
-- Riceve i parametri (atecoCodes, regions, provinces, fatturato_min/max, dipendenti_min/max, filtro contatti)
-- Crea programmaticamente i hidden inputs nel form `cercaAvanzataForm`
-- I nomi dei campi saranno determinati analizzando le modali del sito
-- Esegue `document.querySelector('#cercaAvanzataForm').submit()`
+Approccio:
+- Trovare gli input direttamente nel DOM (anche dentro modali nascoste) senza aprirle
+- Impostare i valori con `dispatchEvent`
+- Fare `form.submit()` sincrono
+- Ritornare `{ submitted: true }` come valore sincrono
 
 ```text
 function fillAndSubmitSearchForm(params) {
-  // 1. Trova il form cercaAvanzataForm
-  // 2. Crea hidden inputs per ogni filtro:
-  //    - ATECO: apre #MODALsettoreAteco, compila, applica
-  //    - Geografia: apre #MODALgeografica, seleziona regione/provincia
-  //    - Fatturato: apre #MODALfatturato, imposta min/max
-  //    - Dipendenti: apre #MODALnumeroDipendenti, imposta min/max
-  //    - Contatti: apre #MODALcontatti, seleziona opzione
-  // 3. Submit del form
+  // Tutto sincrono - niente Promise, niente async
+  try {
+    var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata']");
+    
+    // Cercare input dentro modali (sono nel DOM anche se nascoste)
+    // Impostare valori ATECO, Geografia, Fatturato, Dipendenti
+    // ...
+    
+    if (form) { form.submit(); return { submitted: true }; }
+    return { submitted: false, error: "Form non trovato" };
+  } catch(e) {
+    return { submitted: false, error: e.message };
+  }
 }
 ```
 
-**2. Aggiungere funzione di discovery dei campi modale**
+**2. Aggiornare `scrapeSearchResults` (righe 743-753)**
 
-Una funzione iniettata nel tab che:
-- Apre ogni modale una alla volta
-- Legge i nomi degli input fields dentro le modali
-- Ritorna una mappa dei field names corretti
-- Questa funzione verra' usata una volta per scoprire i parametri, poi li memorizzeremo
+Rimuovere il check su `fillData.submitted` come condizione di errore immediato, dato che il form submit causa un page navigation. Invece, dopo l'iniezione dello script, attendere semplicemente il caricamento della pagina successiva (che e' gia' gestito dal listener `onUpdated` a righe 756-769).
 
-**3. Riscrivere `scrapeSearchResults` (righe 425-494)**
+**3. Gestione alternativa: approccio "hidden input injection"**
 
-- Cambiare URL da `searchPersonalizzata.php` a `search.php?tab=2`
-- Usare la nuova `fillAndSubmitSearchForm`
-- Aggiungere logica di retry con auto-login se sessione scaduta
-- Migliorare il rilevamento della CTA gate come indicatore di sessione non valida
-
-**4. Aggiungere funzione `discoverFormFields`**
-
-Nuova funzione che viene eseguita una volta per scoprire i nomi esatti dei campi nelle modali:
-
-```text
-async function discoverFormFields() {
-  // Apre /search.php?tab=2
-  // Per ogni modale (#MODALsettoreAteco, #MODALgeografica, ecc.):
-  //   - Apre la modale via JS
-  //   - Legge tutti gli input/select dentro la modale
-  //   - Salva nome e tipo del campo
-  // Ritorna la mappa dei campi
-}
-```
-
-**5. Migliorare `extractSearchResults` (righe 239-309)**
-
-- Adattare l'estrazione alla struttura della pagina risultati di Ricerca Avanzata
-- Aggiungere fallback per strutture DataTable diverse
-- Estrarre anche il conteggio totale risultati piu' accuratamente
-
-### File: `src/hooks/useRAExtensionBridge.ts`
-
-Nessuna modifica necessaria -- il bridge gia' supporta tutti i metodi richiesti (`searchOnly`, `scrapeSelected`, parametri filtri).
-
-### File: `src/components/prospects/` (UI)
-
-Nessuna modifica necessaria -- l'interfaccia utente e' gia' pronta.
-
-## Flusso Operativo Finale
-
-```text
-Utente seleziona filtri nella webapp
-         |
-         v
-searchOnly() --> estensione
-         |
-         v
-Apre tab: /search.php?tab=2
-         |
-         v
-Controlla sessione (no CTA gate = loggato)
-         |
-    [Se non loggato] --> autoLogin() --> retry
-         |
-         v
-Inietta script: interagisce con modali
-  - Apre #MODALsettoreAteco --> imposta ATECO
-  - Apre #MODALgeografica --> imposta regione/provincia
-  - Apre #MODALfatturato --> imposta min/max
-  - Submit form
-         |
-         v
-Attende caricamento risultati (DataTable)
-         |
-         v
-Inietta extractSearchResults() --> lista aziende
-         |
-         v
-Ritorna risultati alla webapp
-```
-
-## Rischio e Mitigazione
-
-- **Rischio**: I nomi dei campi nelle modali potrebbero cambiare. **Mitigazione**: La funzione `discoverFormFields` li scopre dinamicamente.
-- **Rischio**: La CTA gate blocca il submit per non-abbonati. **Mitigazione**: Usiamo `form.submit()` diretto che bypassa il bottone JS.
-- **Rischio**: Le modali caricano contenuto via AJAX. **Mitigazione**: Attendiamo il rendering dopo l'apertura della modale.
-
-## Primo Step Pratico
-
-Prima di scrivere il codice finale, servira' un'esecuzione di discovery: far aprire le modali all'estensione e raccogliere i nomi esatti dei campi. Questo ci permettera' di costruire il POST diretto senza dover interagire con le modali ogni volta.
+Se le modali non espongono gli input quando sono nascoste, usare un approccio diverso: creare hidden inputs direttamente nel form con i nomi corretti dei parametri, senza toccare le modali. Questo richiede conoscere i nomi esatti dei campi POST del form.
 
 ## File da Modificare
 
-- `public/ra-extension/background.js` -- riscrittura `fillAndSubmitSearchForm`, `scrapeSearchResults`, aggiunta `discoverFormFields`
+- `public/ra-extension/background.js`: righe 292-551 (fillAndSubmitSearchForm) e 743-753 (check risultato)
 
+## Rischio
+
+Il rischio principale e' non conoscere i nomi esatti dei parametri POST del form `cercaAvanzataForm`. Per questo, nella prima esecuzione utilizzeremo la funzione `discoverFormFields` gia' presente per mappare i campi, e li useremo nel codice sincrono.
