@@ -5,6 +5,7 @@ import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid } from "@/components/download/CountryGrid";
 import { ActionPanel } from "@/components/download/ActionPanel";
 import { JobMonitor } from "@/components/download/JobMonitor";
+import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { AdvancedTools } from "@/components/download/AdvancedTools";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
@@ -177,6 +178,7 @@ export default function Operations() {
 
                     <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
                       <ActionPanel selectedCountries={selectedCountries} />
+                      <DownloadTerminal />
                       <JobMonitor />
                       <AdvancedTools isDark={isDark} />
                     </TabsContent>

@@ -1,0 +1,1 @@
+ALTER TABLE public.download_jobs ADD COLUMN IF NOT EXISTS terminal_log jsonb NOT NULL DEFAULT '[]'::jsonb;
