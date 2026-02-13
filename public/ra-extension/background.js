@@ -290,265 +290,180 @@ function discoverFormFields() {
 // FILL & SUBMIT: Interact with modals on search.php?tab=2
 // ══════════════════════════════════════════════
 function fillAndSubmitSearchForm(params) {
-  return new Promise(function(resolve) {
-    try {
-      function waitMs(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-
-      async function run() {
-        // Helper: open a Bootstrap modal by clicking its trigger or programmatically
-        function openModal(modalId) {
-          try {
-            // Try jQuery-based Bootstrap modal
-            if (typeof jQuery !== "undefined" && jQuery(modalId).modal) {
-              jQuery(modalId).modal("show");
-              return true;
-            }
-            // Try Bootstrap 5 native
-            var el = document.querySelector(modalId);
-            if (el) {
-              // Try trigger button first
-              var trigger = document.querySelector("[data-target='" + modalId + "'], [data-bs-target='" + modalId + "'], [href='" + modalId + "']");
-              if (trigger) { trigger.click(); return true; }
-              // Fallback: show manually
-              el.style.display = "block";
-              el.classList.add("show", "in");
-              return true;
-            }
-          } catch (e) {}
-          return false;
-        }
-
-        // Helper: close modal
-        function closeModal(modalId) {
-          try {
-            if (typeof jQuery !== "undefined" && jQuery(modalId).modal) {
-              jQuery(modalId).modal("hide");
-              return;
-            }
-            var el = document.querySelector(modalId);
-            if (el) { el.style.display = "none"; el.classList.remove("show", "in"); }
-          } catch (e) {}
-        }
-
-        // Helper: set input value with events
-        function setInput(selector, value) {
-          var el = typeof selector === "string" ? document.querySelector(selector) : selector;
-          if (!el || !value) return false;
-          el.value = value;
-          el.dispatchEvent(new Event("input", { bubbles: true }));
-          el.dispatchEvent(new Event("change", { bubbles: true }));
-          return true;
-        }
-
-        // Helper: find and click an "apply/confirm" button inside a modal
-        function clickApplyInModal(modalId) {
-          var modal = document.querySelector(modalId);
-          if (!modal) return false;
-          // Look for buttons that say "Applica", "Conferma", "OK", "Salva"
-          var btns = modal.querySelectorAll("button, a.btn, input[type='button']");
-          for (var b = 0; b < btns.length; b++) {
-            var txt = (btns[b].textContent || "").trim().toLowerCase();
-            if (txt === "applica" || txt === "conferma" || txt === "ok" || txt === "salva" || txt.indexOf("applic") >= 0 || txt.indexOf("conferm") >= 0) {
-              btns[b].click();
-              return true;
-            }
-          }
-          // Fallback: click the last primary/success button
-          var primBtns = modal.querySelectorAll(".btn-primary, .btn-success");
-          if (primBtns.length > 0) { primBtns[primBtns.length - 1].click(); return true; }
-          return false;
-        }
-
-        // Helper: set checkboxes/radios inside a modal by matching values
-        function setCheckboxes(modalId, values) {
-          if (!values || values.length === 0) return;
-          var modal = document.querySelector(modalId);
-          if (!modal) return;
-          var inputs = modal.querySelectorAll("input[type='checkbox'], input[type='radio']");
-          for (var i = 0; i < inputs.length; i++) {
-            var val = (inputs[i].value || "").toLowerCase();
-            var label = "";
-            // Get associated label text
-            var lbl = inputs[i].parentElement;
-            if (lbl) label = (lbl.textContent || "").toLowerCase().trim();
-            for (var v = 0; v < values.length; v++) {
-              var target = values[v].toLowerCase();
-              if (val === target || val.indexOf(target) >= 0 || label.indexOf(target) >= 0) {
-                inputs[i].checked = true;
-                inputs[i].dispatchEvent(new Event("change", { bubbles: true }));
-                break;
-              }
-            }
-          }
-        }
-
-        // Helper: set text inputs inside a modal by label matching
-        function setModalInput(modalId, labelMatch, value) {
-          if (!value) return;
-          var modal = document.querySelector(modalId);
-          if (!modal) return;
-          var inputs = modal.querySelectorAll("input[type='text'], input[type='number'], input:not([type])");
-          for (var i = 0; i < inputs.length; i++) {
-            var ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
-            // Also check nearby label
-            var parent = inputs[i].closest(".form-group, .input-group, label, .row");
-            if (parent) ctx += " " + (parent.textContent || "").toLowerCase();
-            if (ctx.indexOf(labelMatch) >= 0) {
-              setInput(inputs[i], String(value));
-              return;
-            }
-          }
-        }
-
-        // ── 1. ATECO ──
-        if (params.atecoCode || (params.atecoCodes && params.atecoCodes.length > 0)) {
-          var codes = params.atecoCodes || [params.atecoCode];
-          // Try multiple possible modal IDs
-          var atecoModalIds = ["#MODALsettoreAteco", "#modalAteco", "#modal-ateco", "#MODALateco"];
-          var atecoOpened = false;
-          for (var am = 0; am < atecoModalIds.length; am++) {
-            if (openModal(atecoModalIds[am])) { atecoOpened = true; await waitMs(800); break; }
-          }
-          if (atecoOpened) {
-            // Try to type ATECO code in a search/input field inside the modal
-            var atecoModal = document.querySelector(atecoModalIds[am]);
-            if (atecoModal) {
-              var atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
-              if (atecoInput && codes.length > 0) {
-                setInput(atecoInput, codes[0]);
-                await waitMs(500);
-              }
-              // Also try checking checkboxes matching ATECO codes
-              setCheckboxes(atecoModalIds[am], codes);
-            }
-            await waitMs(300);
-            clickApplyInModal(atecoModalIds[am]);
-            await waitMs(500);
-          } else {
-            // Fallback: try to find a hidden input for ATECO and set it directly
-            var atecoHidden = document.querySelector("input[name*='ateco'], input[name*='Ateco'], input[name*='ATECO']");
-            if (atecoHidden) setInput(atecoHidden, codes.join(","));
-          }
-        }
-
-        // ── 2. GEOGRAPHY ──
-        var regions = params.regions || (params.region ? [params.region] : []);
-        var provinces = params.provinces || (params.province ? [params.province] : []);
-        if (regions.length > 0 || provinces.length > 0) {
-          var geoModalIds = ["#MODALgeografica", "#modalGeografica", "#modal-geografia", "#MODALgeografia"];
-          var geoOpened = false;
-          for (var gm = 0; gm < geoModalIds.length; gm++) {
-            if (openModal(geoModalIds[gm])) { geoOpened = true; await waitMs(800); break; }
-          }
-          if (geoOpened) {
-            if (regions.length > 0) setCheckboxes(geoModalIds[gm], regions);
-            if (provinces.length > 0) setCheckboxes(geoModalIds[gm], provinces);
-            await waitMs(300);
-            clickApplyInModal(geoModalIds[gm]);
-            await waitMs(500);
-          } else {
-            // Fallback: hidden inputs
-            var regInput = document.querySelector("input[name*='regione'], input[name*='Regione']");
-            if (regInput && regions.length > 0) setInput(regInput, regions.join(","));
-            var provInput = document.querySelector("input[name*='provincia'], input[name*='Provincia']");
-            if (provInput && provinces.length > 0) setInput(provInput, provinces.join(","));
-          }
-        }
-
-        // ── 3. FATTURATO ──
-        if (params.filters && (params.filters.fatturato_min || params.filters.fatturato_max)) {
-          var fatModalIds = ["#MODALfatturato", "#modalFatturato", "#modal-fatturato"];
-          var fatOpened = false;
-          for (var fm = 0; fm < fatModalIds.length; fm++) {
-            if (openModal(fatModalIds[fm])) { fatOpened = true; await waitMs(800); break; }
-          }
-          if (fatOpened) {
-            setModalInput(fatModalIds[fm], "min", params.filters.fatturato_min);
-            setModalInput(fatModalIds[fm], "max", params.filters.fatturato_max);
-            await waitMs(300);
-            clickApplyInModal(fatModalIds[fm]);
-            await waitMs(500);
-          }
-        }
-
-        // ── 4. DIPENDENTI ──
-        if (params.filters && (params.filters.dipendenti_min || params.filters.dipendenti_max)) {
-          var dipModalIds = ["#MODALnumeroDipendenti", "#modalDipendenti", "#modal-dipendenti"];
-          var dipOpened = false;
-          for (var dm = 0; dm < dipModalIds.length; dm++) {
-            if (openModal(dipModalIds[dm])) { dipOpened = true; await waitMs(800); break; }
-          }
-          if (dipOpened) {
-            setModalInput(dipModalIds[dm], "min", params.filters.dipendenti_min);
-            setModalInput(dipModalIds[dm], "max", params.filters.dipendenti_max);
-            await waitMs(300);
-            clickApplyInModal(dipModalIds[dm]);
-            await waitMs(500);
-          }
-        }
-
-        // ── 5. CONTATTI ──
-        if (params.filters && (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)) {
-          var contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
-          var contOpened = false;
-          for (var cm = 0; cm < contModalIds.length; cm++) {
-            if (openModal(contModalIds[cm])) { contOpened = true; await waitMs(800); break; }
-          }
-          if (contOpened) {
-            var contValues = [];
-            if (params.filters.has_phone_and_email) contValues.push("telefono e email", "entrambi", "tel e email");
-            else {
-              if (params.filters.has_phone) contValues.push("telefono", "tel");
-              if (params.filters.has_email) contValues.push("email", "e-mail");
-            }
-            setCheckboxes(contModalIds[cm], contValues);
-            await waitMs(300);
-            clickApplyInModal(contModalIds[cm]);
-            await waitMs(500);
-          }
-        }
-
-        // ── 6. SUBMIT ──
-        await waitMs(500);
-        // Try to find and submit the main search form
-        var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata'], form[action*='search']");
-        if (form) {
-          form.submit();
-          resolve({ submitted: true, method: "form.submit" });
-          return;
-        }
-        // Fallback: find and click the search button
-        var searchBtn = document.querySelector(".btn-search, #btnCerca, button.cerca, a.cerca");
-        if (!searchBtn) {
-          // Try any button with "Cerca" text
-          var allBtns = document.querySelectorAll("button, a.btn");
-          for (var sb = 0; sb < allBtns.length; sb++) {
-            if ((allBtns[sb].textContent || "").trim().toLowerCase() === "cerca") {
-              searchBtn = allBtns[sb];
-              break;
-            }
-          }
-        }
-        if (searchBtn) {
-          searchBtn.click();
-          resolve({ submitted: true, method: "button.click" });
-          return;
-        }
-        // Last resort: submit any form on the page
-        var anyForm = document.querySelector("form");
-        if (anyForm) {
-          anyForm.submit();
-          resolve({ submitted: true, method: "anyForm.submit" });
-          return;
-        }
-        resolve({ submitted: false, error: "Nessun form o pulsante Cerca trovato" });
-      }
-
-      run();
-    } catch (e) {
-      resolve({ submitted: false, error: e.message });
+  // MUST be fully synchronous — chrome.scripting.executeScript cannot resolve Promises
+  try {
+    // Helper: set input value with events
+    function setInput(el, value) {
+      if (!el || !value) return false;
+      if (typeof el === "string") el = document.querySelector(el);
+      if (!el) return false;
+      el.value = value;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
     }
-  });
+
+    // Helper: set checkboxes/radios inside a container by matching values
+    function setCheckboxes(container, values) {
+      if (!values || values.length === 0 || !container) return;
+      if (typeof container === "string") container = document.querySelector(container);
+      if (!container) return;
+      var inputs = container.querySelectorAll("input[type='checkbox'], input[type='radio']");
+      for (var i = 0; i < inputs.length; i++) {
+        var val = (inputs[i].value || "").toLowerCase();
+        var label = "";
+        var lbl = inputs[i].parentElement;
+        if (lbl) label = (lbl.textContent || "").toLowerCase().trim();
+        for (var v = 0; v < values.length; v++) {
+          var target = values[v].toLowerCase();
+          if (val === target || val.indexOf(target) >= 0 || label.indexOf(target) >= 0) {
+            inputs[i].checked = true;
+            inputs[i].dispatchEvent(new Event("change", { bubbles: true }));
+            break;
+          }
+        }
+      }
+    }
+
+    // Helper: find input by label match inside a container
+    function setInputByLabel(container, labelMatch, value) {
+      if (!value || !container) return;
+      if (typeof container === "string") container = document.querySelector(container);
+      if (!container) return;
+      var inputs = container.querySelectorAll("input[type='text'], input[type='number'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+      for (var i = 0; i < inputs.length; i++) {
+        var ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
+        var parent = inputs[i].closest(".form-group, .input-group, label, .row");
+        if (parent) ctx += " " + (parent.textContent || "").toLowerCase();
+        if (ctx.indexOf(labelMatch) >= 0) {
+          setInput(inputs[i], String(value));
+          return;
+        }
+      }
+    }
+
+    // All modal elements are already in the DOM (even when hidden).
+    // We set values directly without opening them.
+
+    // ── 1. ATECO ──
+    if (params.atecoCode || (params.atecoCodes && params.atecoCodes.length > 0)) {
+      var codes = params.atecoCodes || [params.atecoCode];
+      var atecoModalIds = ["#MODALsettoreAteco", "#modalAteco", "#modal-ateco", "#MODALateco"];
+      var atecoSet = false;
+      for (var am = 0; am < atecoModalIds.length; am++) {
+        var atecoModal = document.querySelector(atecoModalIds[am]);
+        if (atecoModal) {
+          var atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+          if (atecoInput && codes.length > 0) setInput(atecoInput, codes[0]);
+          setCheckboxes(atecoModal, codes);
+          atecoSet = true;
+          break;
+        }
+      }
+      if (!atecoSet) {
+        var atecoHidden = document.querySelector("input[name*='ateco'], input[name*='Ateco'], input[name*='ATECO']");
+        if (atecoHidden) setInput(atecoHidden, codes.join(","));
+      }
+    }
+
+    // ── 2. GEOGRAPHY ──
+    var regions = params.regions || (params.region ? [params.region] : []);
+    var provinces = params.provinces || (params.province ? [params.province] : []);
+    if (regions.length > 0 || provinces.length > 0) {
+      var geoModalIds = ["#MODALgeografica", "#modalGeografica", "#modal-geografia", "#MODALgeografia"];
+      var geoSet = false;
+      for (var gm = 0; gm < geoModalIds.length; gm++) {
+        var geoModal = document.querySelector(geoModalIds[gm]);
+        if (geoModal) {
+          if (regions.length > 0) setCheckboxes(geoModal, regions);
+          if (provinces.length > 0) setCheckboxes(geoModal, provinces);
+          geoSet = true;
+          break;
+        }
+      }
+      if (!geoSet) {
+        var regInput = document.querySelector("input[name*='regione'], input[name*='Regione']");
+        if (regInput && regions.length > 0) setInput(regInput, regions.join(","));
+        var provInput = document.querySelector("input[name*='provincia'], input[name*='Provincia']");
+        if (provInput && provinces.length > 0) setInput(provInput, provinces.join(","));
+      }
+    }
+
+    // ── 3. FATTURATO ──
+    if (params.filters && (params.filters.fatturato_min || params.filters.fatturato_max)) {
+      var fatModalIds = ["#MODALfatturato", "#modalFatturato", "#modal-fatturato"];
+      for (var fm = 0; fm < fatModalIds.length; fm++) {
+        var fatModal = document.querySelector(fatModalIds[fm]);
+        if (fatModal) {
+          setInputByLabel(fatModal, "min", params.filters.fatturato_min);
+          setInputByLabel(fatModal, "max", params.filters.fatturato_max);
+          break;
+        }
+      }
+    }
+
+    // ── 4. DIPENDENTI ──
+    if (params.filters && (params.filters.dipendenti_min || params.filters.dipendenti_max)) {
+      var dipModalIds = ["#MODALnumeroDipendenti", "#modalDipendenti", "#modal-dipendenti"];
+      for (var dm = 0; dm < dipModalIds.length; dm++) {
+        var dipModal = document.querySelector(dipModalIds[dm]);
+        if (dipModal) {
+          setInputByLabel(dipModal, "min", params.filters.dipendenti_min);
+          setInputByLabel(dipModal, "max", params.filters.dipendenti_max);
+          break;
+        }
+      }
+    }
+
+    // ── 5. CONTATTI ──
+    if (params.filters && (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)) {
+      var contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
+      for (var cm2 = 0; cm2 < contModalIds.length; cm2++) {
+        var contModal = document.querySelector(contModalIds[cm2]);
+        if (contModal) {
+          var contValues = [];
+          if (params.filters.has_phone_and_email) contValues.push("telefono e email", "entrambi", "tel e email");
+          else {
+            if (params.filters.has_phone) contValues.push("telefono", "tel");
+            if (params.filters.has_email) contValues.push("email", "e-mail");
+          }
+          setCheckboxes(contModal, contValues);
+          break;
+        }
+      }
+    }
+
+    // ── 6. SUBMIT ──
+    var form = document.querySelector("#cercaAvanzataForm, form[name='cercaAvanzata'], form[action*='search']");
+    if (form) {
+      form.submit();
+      return { submitted: true, method: "form.submit" };
+    }
+    // Fallback: click search button
+    var searchBtn = document.querySelector(".btn-search, #btnCerca, button.cerca, a.cerca");
+    if (!searchBtn) {
+      var allBtns = document.querySelectorAll("button, a.btn");
+      for (var sb = 0; sb < allBtns.length; sb++) {
+        if ((allBtns[sb].textContent || "").trim().toLowerCase() === "cerca") {
+          searchBtn = allBtns[sb];
+          break;
+        }
+      }
+    }
+    if (searchBtn) {
+      searchBtn.click();
+      return { submitted: true, method: "button.click" };
+    }
+    // Last resort
+    var anyForm = document.querySelector("form");
+    if (anyForm) {
+      anyForm.submit();
+      return { submitted: true, method: "anyForm.submit" };
+    }
+    return { submitted: false, error: "Nessun form o pulsante Cerca trovato" };
+  } catch (e) {
+    return { submitted: false, error: e.message };
+  }
 }
 
 // Extract search results from RA DataTable (injected into the results page)
