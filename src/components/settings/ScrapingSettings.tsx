@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Save, Loader2, Shield, Zap, Clock, Moon, AlertTriangle } from "lucide-react";
+import { Save, Loader2, Shield, Zap, Clock, Moon, AlertTriangle, ShieldAlert } from "lucide-react";
 import { useScrapingSettings, SCRAPING_KEY_MAP, SCRAPING_DEFAULTS, type ScrapingSettings as ScrapingSettingsType } from "@/hooks/useScrapingSettings";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
@@ -307,7 +307,114 @@ export function ScrapingSettingsPanel() {
         </CardContent>
       </Card>
 
-      {/* ── 3. Pause Programmate ── */}
+      {/* ── 3. Protezione Anti-Ban ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-destructive" />
+            <CardTitle className="text-base">Protezione Anti-Ban</CardTitle>
+          </div>
+          <CardDescription>Parametri critici per evitare il blocco dell'account WCA</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Jitter range */}
+          <div className="space-y-3">
+            <Label>Jitter sul delay (moltiplicatore random)</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Minimo</span>
+                <Input
+                  type="number"
+                  value={local.jitterMin}
+                  onChange={(e) => update("jitterMin", Math.max(0.5, Math.min(Number(e.target.value) || 0.8, local.jitterMax - 0.1)))}
+                  step={0.1}
+                  className="w-24"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Massimo</span>
+                <Input
+                  type="number"
+                  value={local.jitterMax}
+                  onChange={(e) => update("jitterMax", Math.max(local.jitterMin + 0.1, Number(e.target.value) || 1.5))}
+                  step={0.1}
+                  className="w-24"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Con delay {local.delayDefault}s: attesa reale {Math.round(local.delayDefault * local.jitterMin)}–{Math.round(local.delayDefault * local.jitterMax)}s
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Anti-ban pause every N */}
+          <div className="space-y-3">
+            <Label>Pausa anti-ban periodica</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Ogni N profili</span>
+                <Input
+                  type="number"
+                  value={local.antiBanEveryN}
+                  onChange={(e) => update("antiBanEveryN", Math.max(0, Number(e.target.value) || 0))}
+                  placeholder="0 = disattivo"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Durata base (±30%)</span>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={local.antiBanDurationS}
+                    onChange={(e) => update("antiBanDurationS", Math.max(10, Number(e.target.value) || 50))}
+                    className="w-20"
+                  />
+                  <span className="text-xs text-muted-foreground">s</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {local.antiBanEveryN > 0
+                ? `Pausa di ~${local.antiBanDurationS}s (±${Math.round(local.antiBanDurationS * 0.3)}s) ogni ${local.antiBanEveryN} profili`
+                : "Disattivato (0 = nessuna pausa anti-ban)"}
+            </p>
+            {local.antiBanEveryN === 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Disattivare la pausa anti-ban aumenta significativamente il rischio di ban
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Inter-job pause */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Pausa tra job consecutivi</Label>
+              <span className="text-sm font-mono text-primary">{local.interJobPauseS}s</span>
+            </div>
+            <Slider
+              value={[local.interJobPauseS]}
+              onValueChange={([v]) => update("interJobPauseS", v)}
+              min={0} max={120} step={5}
+            />
+            <p className="text-xs text-muted-foreground">
+              Tempo di attesa dopo il completamento di un job prima di iniziare il successivo
+            </p>
+            {local.interJobPauseS < 15 && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Pausa troppo breve tra job: rischio di raffica di richieste
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── 4. Pause Programmate ── */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
