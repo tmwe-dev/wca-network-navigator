@@ -230,6 +230,7 @@ export type Database = {
           network_name: string
           processed_ids: Json
           status: string
+          terminal_log: Json
           total_count: number
           updated_at: string
           wca_ids: Json
@@ -252,6 +253,7 @@ export type Database = {
           network_name?: string
           processed_ids?: Json
           status?: string
+          terminal_log?: Json
           total_count?: number
           updated_at?: string
           wca_ids?: Json
@@ -274,6 +276,7 @@ export type Database = {
           network_name?: string
           processed_ids?: Json
           status?: string
+          terminal_log?: Json
           total_count?: number
           updated_at?: string
           wca_ids?: Json

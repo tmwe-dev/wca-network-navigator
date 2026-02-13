@@ -19,6 +19,21 @@ export function useDownloadProcessor() {
 
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
 
+  // ── Terminal log helper ──
+  const appendLog = async (jobId: string, type: string, msg: string) => {
+    const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const entry = { ts, type, msg };
+    try {
+      // Read current log, append, keep last 100
+      const { data } = await supabase.from("download_jobs").select("terminal_log").eq("id", jobId).single();
+      const current = (data?.terminal_log as any[] || []);
+      const updated = [...current, entry].slice(-100);
+      await supabase.from("download_jobs").update({ terminal_log: updated as any }).eq("id", jobId);
+    } catch (e) {
+      console.warn("[TerminalLog] Failed to append:", e);
+    }
+  };
+
   const processJob = useCallback(async (job: any) => {
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
@@ -27,7 +42,8 @@ export function useDownloadProcessor() {
     const processedSet = new Set<number>(((job.processed_ids as number[]) || []));
 
     // Mark as running
-    await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
+    await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
+    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay base ${delaySeconds}s, jitter ${settings.jitterMin}x-${settings.jitterMax}x`);
 
     // DB lock: verify no other job is already running (prevent parallel execution after reload)
     const { data: runningJobs } = await supabase
@@ -74,6 +90,8 @@ export function useDownloadProcessor() {
 
         const wcaId = wcaIds[i];
         if (processedSet.has(wcaId)) continue;
+
+        await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
         // Check extension availability
         if (!availableRef.current && !(await checkAvailable())) {
@@ -148,6 +166,7 @@ export function useDownloadProcessor() {
           }
         } catch (err) {
           console.warn(`[DownloadProcessor] Extract failed for ${wcaId}:`, err);
+          await appendLog(jobId, "ERROR", `Estrazione fallita per #${wcaId}: ${(err as Error).message || err}`);
         }
 
         // Fallback: check DB for contacts
@@ -172,6 +191,12 @@ export function useDownloadProcessor() {
 
         processedSet.add(wcaId);
 
+        const contactLabel = hasEmail && hasPhone ? "email+tel"
+          : hasEmail ? "solo email"
+          : hasPhone ? "solo tel"
+          : "nessun contatto";
+        await appendLog(jobId, hasAny ? "OK" : "INFO", `${companyName} (#${wcaId}) — ${contactLabel}`);
+
         await supabase.from("download_jobs").update({
           current_index: processedSet.size,
           processed_ids: [...processedSet] as any,
@@ -188,8 +213,8 @@ export function useDownloadProcessor() {
           try {
             const sess = await verifySession();
             if (!sess.success || !sess.authenticated) {
+              await appendLog(jobId, "RECOVERY", "Sessione WCA non valida, tentativo recovery...");
               await syncCookie();
-              await new Promise(r => setTimeout(r, settings.recoveryWait1));
               const retry = await verifySession();
               if (!retry.success || !retry.authenticated) {
                 await supabase.from("download_jobs").update({
@@ -225,6 +250,7 @@ export function useDownloadProcessor() {
         // Night pause
         if (isNightPauseActive(settings.nightPause, settings.nightStopHour, settings.nightStartHour)) {
           const waitMs = msUntilNightEnd(settings.nightStartHour);
+          await appendLog(jobId, "NIGHT", `Pausa notturna fino alle ${settings.nightStartHour}:00`);
           await supabase.from("download_jobs").update({
             error_message: `🌙 Pausa notturna fino alle ${settings.nightStartHour}:00`,
           }).eq("id", jobId);
@@ -236,6 +262,7 @@ export function useDownloadProcessor() {
         // Periodic pause
         if (settings.pauseEveryN > 0 && processedSet.size > 0 && processedSet.size % settings.pauseEveryN === 0) {
           const pauseMin = Math.round(settings.pauseDurationS / 60);
+          await appendLog(jobId, "PAUSE", `Pausa programmata ${pauseMin} min dopo ${processedSet.size} profili`);
           await supabase.from("download_jobs").update({
             error_message: `⏸️ Pausa programmata (${pauseMin} min)`,
           }).eq("id", jobId);
@@ -246,8 +273,9 @@ export function useDownloadProcessor() {
 
         // Anti-ban: long pause every N profiles (configurable from settings)
         if (settings.antiBanEveryN > 0 && processedSet.size > 0 && processedSet.size % settings.antiBanEveryN === 0) {
-          const jitterRange = settings.antiBanDurationS * 0.3; // ±30% jitter
+          const jitterRange = settings.antiBanDurationS * 0.3;
           const longPauseS = settings.antiBanDurationS + (Math.random() * jitterRange * 2 - jitterRange);
+          await appendLog(jobId, "PAUSE", `Anti-ban: ${Math.round(longPauseS)}s dopo ${processedSet.size} profili`);
           await supabase.from("download_jobs").update({
             error_message: `⏸️ Pausa anti-ban (${Math.round(longPauseS)}s) dopo ${processedSet.size} profili`,
           }).eq("id", jobId);
@@ -260,6 +288,8 @@ export function useDownloadProcessor() {
         if (i < wcaIds.length - 1 && !cancelRef.current) {
           const jitterRange = settings.jitterMax - settings.jitterMin;
           const jitterMultiplier = settings.jitterMin + Math.random() * jitterRange;
+          const actualDelay = Math.round(delaySeconds * jitterMultiplier);
+          await appendLog(jobId, "WAIT", `${actualDelay}s (base ${delaySeconds}s × jitter ${jitterMultiplier.toFixed(2)}x)`);
           const jitter = delaySeconds * 1000 * jitterMultiplier;
           await new Promise(r => setTimeout(r, jitter));
         }
@@ -267,6 +297,7 @@ export function useDownloadProcessor() {
 
       // Complete job
       if (!cancelRef.current) {
+        await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
             body: { jobId, action: "complete" },
