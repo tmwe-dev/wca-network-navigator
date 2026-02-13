@@ -300,7 +300,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
             ⚠️ {scanError}
           </div>
         )}
-        <Button variant="outline" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className={th.btnStop}>
+        <Button variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className={th.btnStop}>
           <Square className="w-4 h-4 mr-1" /> Interrompi
         </Button>
       </div>
@@ -405,7 +405,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
             <Settings2 className="w-3.5 h-3.5" /> Opzioni <ChevronDown className="w-3 h-3" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2">
-            <Button variant="outline" size="sm" onClick={() => { setScanComplete(false); setScannedMembers([]); handleStartScan(); }} className={`w-full text-xs ${th.btnPause}`}>
+            <Button variant="ghost" size="sm" onClick={() => { setScanComplete(false); setScannedMembers([]); handleStartScan(); }} className={`w-full text-xs ${th.btnPause}`}>
               <RefreshCw className="w-3.5 h-3.5 mr-1" /> Aggiorna dalla directory
             </Button>
           </CollapsibleContent>

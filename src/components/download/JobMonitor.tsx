@@ -127,19 +127,19 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {(job.processed_ids as number[])?.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setShowViewer(true)} className={`h-7 text-xs ${th.btnTest}`}>
+            <Button size="sm" variant="ghost" onClick={() => setShowViewer(true)} className={`h-7 text-xs ${th.btnTest}`}>
               <List className="w-3 h-3 mr-1" /> Dati
             </Button>
           )}
           {isActive && (
             <>
-              <Button size="sm" variant="outline" onClick={() => setShowSpeed(!showSpeed)} className={`h-7 ${th.btnPause}`}>
+              <Button size="sm" variant="ghost" onClick={() => setShowSpeed(!showSpeed)} className={`h-7 ${th.btnPause}`}>
                 <Settings2 className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "pause" })} className={`h-7 text-xs ${th.btnPause}`}>
+              <Button size="sm" variant="ghost" onClick={() => pauseResume.mutate({ jobId: job.id, action: "pause" })} className={`h-7 text-xs ${th.btnPause}`}>
                 <Pause className="w-3 h-3 mr-1" /> Pausa
               </Button>
-              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={`h-7 text-xs ${th.btnStop}`}>
+              <Button size="sm" variant="ghost" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={`h-7 text-xs ${th.btnStop}`}>
                 <Square className="w-3 h-3 mr-1" /> Stop
               </Button>
             </>
@@ -149,7 +149,7 @@ function JobCard({ job, pauseResume, updateSpeed }: {
               <Button size="sm" onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })} className={`h-7 text-xs ${th.btnResume}`}>
                 <Play className="w-3 h-3 mr-1" /> Riprendi
               </Button>
-              <Button size="sm" variant="outline" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={`h-7 text-xs ${th.btnStop}`}>
+              <Button size="sm" variant="ghost" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={`h-7 text-xs ${th.btnStop}`}>
                 <Square className="w-3 h-3 mr-1" /> Annulla
               </Button>
             </>
