@@ -1,111 +1,85 @@
 
 
-## Implementare lo Scraping di Report Aziende via Chrome Extension
+## Memorizzare Codici ATECO + Tendine Multi-Selezione per Regioni, Province, ATECO nell'Importer
 
-### Situazione attuale
+### Obiettivo
 
-L'estensione RA attualmente gestisce solo **cookie sync** e **auto-login**. Lo scraping vero (estrazione dati dalle pagine) non e' ancora implementato. Report Aziende richiede autenticazione per tutte le ricerche e i profili aziendali, quindi lo scraping deve avvenire tramite l'estensione Chrome che ha accesso ai cookie di sessione.
+1. Salvare i codici ATECO dal file Excel come dato statico nel progetto (file TypeScript con l'albero completo: ~370 voci con codice, descrizione, livello e categoria padre)
+2. Sostituire i campi di testo libero nel ProspectImporter con **tendine multi-selezione** per:
+   - **Regioni italiane** (20 regioni, selezione multipla)
+   - **Province italiane** (tutte le 107 province, selezione multipla)
+   - **Codici ATECO** (dall'albero appena importato, selezione multipla)
+3. Mostrare lo status dei job in modo trasparente (gia' parzialmente implementato, va migliorato)
+4. Rispettare l'esecuzione sequenziale (un solo job alla volta)
 
-### Cosa c'e' su Report Aziende
+### File da creare
 
-Dalla ricognizione del sito emergono queste risorse:
+**`src/data/atecoCategories.ts`** -- File statico con l'albero completo ATECO estratto dal file Excel. Struttura:
+```typescript
+export interface AtecoEntry {
+  codice: string;
+  descrizione: string;
+  livello: 1 | 2 | 3; // 1=sezione(lettera), 2=divisione(2 cifre), 3=gruppo
+  padre: string;       // codice della categoria padre
+}
+export const ATECO_TREE: AtecoEntry[] = [
+  { codice: "A", descrizione: "AGRICOLTURA SILVICOLTURA E PESCA", livello: 1, padre: "" },
+  { codice: "01", descrizione: "Produzioni vegetali e animali...", livello: 2, padre: "A" },
+  // ... tutte le 370 voci dal file
+];
+```
 
-**Pagina ATECO** (`/ricerca-ateco`): albero completo dei codici ATECO con link ai risultati. Ogni codice punta a `/ateco-XX_YY_ZZ` con la lista delle aziende. L'albero e' gerarchico:
-- Sezione (lettera): A = Agricoltura, B = Estrazione, C = Manifatturiero...
-- Divisione (2 cifre): 01, 02, 46, 52...
-- Gruppo (3 cifre): 01.1, 52.2...
-- Classe (5-6 cifre): 01.11.00, 52.29.10...
+**`src/data/italianProvinces.ts`** -- File statico con tutte le 20 regioni e 107 province italiane:
+```typescript
+export const REGIONI_ITALIANE: string[] = [
+  "Abruzzo", "Basilicata", "Calabria", "Campania", ...
+];
+export const PROVINCE_ITALIANE: Array<{ sigla: string; nome: string; regione: string }> = [
+  { sigla: "AG", nome: "Agrigento", regione: "Sicilia" },
+  // ... tutte le 107 province
+];
+```
 
-**Ricerca Personalizzata** (`/ricerca-personalizzata`): filtri per Regione, Provincia, Comune, CAP, Codice ATECO, Fatturato, Dipendenti, EBITDA, ecc. Restituisce tabelle di risultati con link ai profili.
+### File da modificare
 
-**Profili aziendali**: contengono dati anagrafici (P.IVA, sede, ATECO), finanziari (fatturato, utile, dipendenti), management (nomi, ruoli, CF) e contatti (email, PEC, telefono).
+**`src/components/prospects/ProspectImporter.tsx`** -- Rifattorizzare il form:
+- Rimuovere i 3 campi di testo (atecoCode, region, province)
+- Aggiungere 3 componenti **Popover + Command** (stile Combobox multi-select) per:
+  - **ATECO**: lista gerarchica con ricerca, multi-selezione, chip rimovibili
+  - **Regioni**: lista delle 20 regioni, multi-selezione
+  - **Province**: lista filtrata per regioni selezionate, multi-selezione
+- Sezione di stato job con: barra di progresso, contatori (trovate/salvate/errori), log in tempo reale, nome dell'azienda corrente
+- Blocco creazione se un job e' gia' in corso (controllo via `getScrapingStatus`)
 
-### Piano di implementazione
+**`src/components/prospects/AtecoGrid.tsx`** -- Aggiornare i filtri nel dropdown:
+- Regioni: usare Combobox multi-selezione (Popover + Command) invece del semplice `<select>`
+- Province: usare Combobox multi-selezione filtrata per regione selezionata
 
-#### 1. Scraper nel background.js dell'estensione RA
+**`src/pages/ProspectCenter.tsx`** -- Aggiornare la gestione dei filtri:
+- `regionFilter` e `provinceFilter` diventano array (`string[]`) per supportare multi-selezione
+- Passare gli array ai componenti figli
 
-Aggiungere al `background.js` le funzioni di scraping:
+**`src/hooks/useRAExtensionBridge.ts`** -- Aggiornare il tipo dei parametri di `scrapeByAteco` per accettare array:
+- `atecoCode` diventa `atecoCodes: string[]`
+- `region` diventa `regions: string[]`
+- `province` diventa `provinces: string[]`
 
-**`scrapeSearchResults(params)`**: apre la Ricerca Personalizzata con filtri (ATECO, regione, provincia), estrae la lista dei risultati (ragione sociale + link al profilo). Gestisce la paginazione automatica.
+### Dettaglio tecnico
 
-**`scrapeCompanyProfile(url)`**: naviga a un profilo aziendale, estrae tutti i dati strutturati:
-- Anagrafica: ragione sociale, P.IVA, CF, indirizzo, CAP, citta', provincia, regione
-- ATECO: codice + descrizione
-- Forma giuridica, data costituzione
-- Finanziari: fatturato, utile, dipendenti, anno bilancio
-- Contatti: telefono, email, PEC, sito web
-- Management: lista di persone con nome, ruolo, CF
-- Rating affidabilita' e credit score
-- Salva l'HTML grezzo come backup
+**Combobox multi-selezione**: usa il pattern gia' esistente nel progetto (Popover + Command di shadcn/ui). Ogni tendina mostra:
+- Campo di ricerca in alto
+- Lista di opzioni con checkbox
+- Chip dei selezionati sotto il trigger
+- Pulsante "Deseleziona tutto"
 
-**`runBatchScrape(params)`**: orchestratore che:
-1. Esegue la ricerca con i filtri specificati
-2. Per ogni risultato, naviga al profilo e lo scrapa
-3. Ogni N aziende (batch di 5-10) invia i dati a `save-ra-prospects`
-4. Rispetta delay configurabili tra le richieste
-5. Reporta il progresso in tempo reale
+**Filtro province cascata**: quando si seleziona una o piu' regioni, la lista delle province viene filtrata automaticamente per mostrare solo quelle delle regioni selezionate.
 
-#### 2. Message handler nell'estensione
+**Status job trasparente**: il pannello di progresso gia' esistente viene arricchito con:
+- Fase corrente ("Ricerca risultati..." / "Scaricamento profilo X di Y...")
+- Nome azienda corrente ben visibile
+- Badge con contatori live (trovate, salvate, errori)
+- Disabilitazione del pulsante "Avvia" se un job e' gia' attivo
+- Messaggio chiaro "Un job e' gia' in esecuzione" se si tenta di avviarne un altro
 
-Aggiungere nuove azioni al listener `onMessage`:
-- `scrapeByAteco`: riceve codice ATECO + filtri geografici, avvia lo scraping batch
-- `scrapeCompany`: riceve URL di un singolo profilo, lo scrapa e ritorna i dati
-- `getScrapingStatus`: ritorna stato corrente (in corso, completato, errori)
-- `stopScraping`: interrompe lo scraping in corso
-
-#### 3. Bridge nella webapp (content.js)
-
-Il content.js gia' funziona come bridge bidirezionale. Le nuove azioni passeranno automaticamente dal webapp all'estensione.
-
-#### 4. Hook `useRAExtensionBridge` nella webapp
-
-Nuovo hook (o estensione di quello esistente) per comunicare con l'estensione RA dalla webapp:
-- `scrapeByAteco(atecoCode, filters)`: avvia scraping per codice ATECO
-- `scrapeCompany(url)`: scrapa singola azienda
-- `getStatus()`: controlla stato scraping
-
-#### 5. UI nel Prospect Center
-
-Aggiungere al pannello destro del Prospect Center un tab "Importa" con:
-- Selettore codice ATECO (dall'albero)
-- Filtri: regione, provincia, range fatturato
-- Pulsante "Avvia Scraping"
-- Barra di progresso con contatori (trovate, salvate, errori)
-- Log in tempo reale
-
-#### 6. Aggiornare `download-ra-extension.html`
-
-Rigenerare il pacchetto scaricabile con il nuovo `background.js` che include le funzioni di scraping.
-
-### File da creare/modificare
-
-**Estensione Chrome (file statici):**
-- `public/ra-extension/background.js` — aggiungere funzioni di scraping (scrapeSearchResults, scrapeCompanyProfile, runBatchScrape) e nuovi message handler
-- `public/download-ra-extension.html` — aggiornare il pacchetto generato per includere il nuovo background.js
-
-**Frontend:**
-- `src/hooks/useRAExtensionBridge.ts` — nuovo hook per comunicare con l'estensione RA (scraping, status)
-- `src/components/prospects/ProspectImporter.tsx` — nuovo componente UI per configurare e lanciare lo scraping nel Prospect Center
-- `src/pages/ProspectCenter.tsx` — aggiungere tab "Importa" con il ProspectImporter
-
-### Logica di estrazione dati (dentro background.js)
-
-La funzione `scrapeCompanyProfile` viene iniettata nella pagina del profilo aziendale e deve:
-
-1. Cercare i dati anagrafici nelle tabelle/div della pagina (selectors CSS da identificare con l'autenticazione attiva — la struttura esatta si scopre navigando la pagina da autenticati)
-2. Estrarre il management dalla sezione dedicata (tipicamente tabella con nome, ruolo, CF)
-3. Raccogliere l'HTML completo come backup per parsing futuro con AI
-4. Restituire un oggetto strutturato compatibile con la tabella `prospects` e `prospect_contacts`
-
-### Sicurezza e rate limiting
-
-- Delay minimo configurabile tra le richieste (default 8-12 secondi, come per WCA)
-- Pause lunghe automatiche ogni N profili
-- Pausa notturna (stessi orari di WCA)
-- Interruzione immediata se la sessione scade (redirect a login)
-- Esecuzione sequenziale: un solo scraping alla volta
-
-### Nota importante
-
-La struttura HTML esatta dei profili aziendali su Report Aziende non e' visibile senza autenticazione. L'implementazione iniziale usera' selettori CSS generici e l'HTML grezzo verra' salvato per consentire un raffinamento successivo dei selettori dopo i primi test con sessione autenticata.
+**Esecuzione sequenziale**: prima di avviare un nuovo scraping, si chiama `getScrapingStatus()`. Se `active === true`, il pulsante e' disabilitato e un avviso spiega che bisogna attendere il completamento del job corrente.
 
