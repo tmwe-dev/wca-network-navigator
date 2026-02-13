@@ -1,58 +1,166 @@
 
+# Guida Report Aziende - Ricerca Personalizzata
 
-## Spostare Filtri Regione/Provincia a Sinistra e Rimuovere ATECO dall'Importer
+## Struttura della pagina originale
 
-### Cosa cambia
+La pagina `searchPersonalizzata.php` di Report Aziende ha un layout a 2 colonne (4/8) con 3 sezioni operative:
 
-Il pannello sinistro diventa il **centro di configurazione completo** per lo scraping: in alto i filtri Regione e Provincia (sempre visibili, non nascosti nel dropdown), sotto l'albero ATECO. Il pannello destro (tab "Importa") usa direttamente i codici ATECO selezionati a sinistra, senza duplicare il selettore.
+### SEZIONE 1: Filtri di ricerca (colonna sinistra)
+Accordion con checkbox. Selezionando un checkbox si attiva il filtro e appare un campo input per impostare il valore (min/max per i numerici, dropdown per i geografici, testo libero per denominazione/CF/PIVA).
 
-### Layout risultante
+### SEZIONE 2: Campi da visualizzare nei risultati (colonna sinistra, sotto la Sezione 1)
+Accordion identico alla Sezione 1, ma serve per scegliere quali colonne mostrare nella tabella risultati. "Denominazione" e' sempre selezionata e non rimovibile.
 
-```text
-+-------------------------------------------+----------------------------------------+
-|  35% PANNELLO SINISTRO                    | 65% PANNELLO DESTRO                    |
-|                                           |                                        |
-|  [Regione v] (multi-select, sempre vis.)  | [Prospect] [Importa]                   |
-|  chips: Lombardia, Veneto                 |                                        |
-|                                           | Tab Prospect: lista prospect filtrati  |
-|  [Provincia v] (filtrata per regione)     |                                        |
-|  chips: MI, BG                            | Tab Importa: status estensione,        |
-|                                           |   pulsante Avvia/Ferma, progresso,     |
-|  [Cerca ATECO...]                         |   log — USA i codici ATECO + filtri    |
-|  v A - AGRICOLTURA                        |   dal pannello sinistro                |
-|    v 01 - Produzioni veg...               |                                        |
-|      > 01.1 ...                           |                                        |
-|  > B - ATTIVITA ESTRATTIVE               |                                        |
-|  ...                                      |                                        |
-+-------------------------------------------+----------------------------------------+
-```
+### SEZIONE 3: Tabella risultati (larghezza intera, sotto le colonne)
+DataTable con le colonne selezionate nella Sezione 2, filtrate secondo i criteri della Sezione 1.
 
-### Dettaglio tecnico
+---
 
-#### 1. `src/components/prospects/AtecoGrid.tsx`
+## Mappa completa di tutti i filtri e campi
 
-- Spostare i `FilterMultiSelect` per Regione e Provincia **fuori dal Popover dei filtri**, rendendoli sempre visibili in cima al pannello, prima della barra di ricerca ATECO
-- Rimuovere il pulsante con icona filtro (SlidersHorizontal) e il relativo Popover, dato che i filtri sono ora inline
-- Ordine verticale: Regione multi-select, Province multi-select, barra ricerca ATECO, albero ATECO
+Ogni voce puo' essere sia un FILTRO (Sezione 1) che un CAMPO visualizzabile (Sezione 2). Il `value` e' il parametro tecnico usato internamente dal sito.
 
-#### 2. `src/components/prospects/ProspectImporter.tsx`
+### 1. GEOGRAFICI
 
-- Rimuovere completamente il `MultiSelectPopover` per ATECO (righe 292-301), il selettore Regioni (302-311) e Province (312-321)
-- Rimuovere gli state locali `selectedAteco`, `selectedRegions`, `selectedProvinces` e la relativa logica
-- Ricevere via props i codici ATECO selezionati + filtri regione/provincia dal componente padre (`ProspectCenter`)
-- Nuova interfaccia props: `{ isDark: boolean; atecoCodes: string[]; regions: string[]; provinces: string[] }`
-- Il pulsante "Avvia Scraping" e' disabilitato se `atecoCodes.length === 0`, con messaggio "Seleziona almeno un codice ATECO dal pannello a sinistra"
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `regione` | Regione | Dropdown multi-selezione (20 regioni italiane) |
+| `provincia` | Provincia | Dropdown multi-selezione (107 province, filtrate per regione) |
+| `comune` | Comune | Testo libero / autocomplete |
+| `cap` | CAP | Testo libero |
 
-#### 3. `src/pages/ProspectCenter.tsx`
+### 2. ANAGRAFICI
 
-- Passare `selectedAteco`, `regionFilter` e `provinceFilter` come props al `ProspectImporter`:
-  ```
-  <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} />
-  ```
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `denominazione` | Denominazione | Testo libero (contiene) |
+| `cf` | Codice Fiscale | Testo esatto |
+| `piva` | Partita IVA | Testo esatto |
+| `forma_giuridica` | Forma giuridica | Dropdown (SRL, SPA, SAS, SNC, ecc.) |
+| `ateco` | Codice ATECO | Albero gerarchico (gia' implementato nel progetto) |
+| `inizio_attivita` | Inizio attivita' | Range date (da/a) |
 
-### File da modificare
+### 3. BILANCIO - CONTO ECONOMICO
 
-1. **`src/components/prospects/AtecoGrid.tsx`** — Filtri regione/provincia inline (sempre visibili), rimuovere Popover filtri
-2. **`src/components/prospects/ProspectImporter.tsx`** — Rimuovere selettori ATECO/regione/provincia, ricevere dati via props
-3. **`src/pages/ProspectCenter.tsx`** — Passare le props aggiuntive al ProspectImporter
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `fatturato` | Fatturato | Range numerico (min/max in EUR) |
+| `ricavi_operativi` | Ricavi operativi | Range numerico |
+| `valore_produzione` | Totale valore della produzione | Range numerico |
+| `totale_costi_produzione` | Totale costi della produzione | Range numerico |
+| `costo_acquisti` | Costo per acquisti | Range numerico |
+| `costo_servizi` | Costo per servizi | Range numerico |
+| `costo_godimento_beni` | Costo per godimento di beni di terzi | Range numerico |
+| `oneri_gestione` | Oneri diversi di gestione | Range numerico |
+| `mol` | Margine operativo lordo (EBITDA) | Range numerico |
+| `ammortamenti` | Ammortamenti e svalutazioni | Range numerico |
+| `ebit` | Risultato operativo (EBIT) | Range numerico |
+| `oneri_finanziari` | Proventi e oneri finanziari | Range numerico |
+| `risultato_prima_imposte` | Risultato prima delle imposte | Range numerico |
+| `imposte` | Imposte sul reddito d'esercizio | Range numerico |
+| `utile` | Utile (Perdita) dell'esercizio | Range numerico |
+| `flusso_cassa` | Flusso di cassa | Range numerico |
 
+### 4A. STATO PATRIMONIALE ATTIVO
+
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `immobilizzazioni_immateriali` | Immobilizzazioni immateriali | Range numerico |
+| `immobilizzazioni_materiali` | Immobilizzazioni materiali | Range numerico |
+| `immobilizzazioni` | Totale immobilizzazioni | Range numerico |
+| `crediti_totali` | Totale crediti | Range numerico |
+| `crediti` | Crediti entro 12 mesi | Range numerico |
+| `imposte_anticipate` | Imposte anticipate | Range numerico |
+| `liquidita` | Totale disponibilita' liquide | Range numerico |
+| `attivo_circolante` | Totale attivo circolante | Range numerico |
+| `ratei_attivi` | Ratei e risconti attivi | Range numerico |
+| `totale_attivo` | Totale attivo | Range numerico |
+
+### 4B. STATO PATRIMONIALE PASSIVO
+
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `patrimonio` | Patrimonio netto | Range numerico |
+| `capitale_sociale` | Capitale Sociale | Range numerico |
+| `riserve` | Altre riserve | Range numerico |
+| `utile` | Utile (Perdita) dell'esercizio | Range numerico |
+| `tfr` | Fondi TFR | Range numerico |
+| `debiti_totali` | Totale debiti | Range numerico |
+| `debiti_breve` | Debiti entro 12 mesi | Range numerico |
+| `debiti_lungo` | Debiti oltre i 12 mesi | Range numerico |
+| `ratei_passivi` | Ratei e risconti passivi | Range numerico |
+| `totale_passivo` | Totale passivo | Range numerico |
+
+### 5. INDICI DI BILANCIO
+
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `var_ricavi` | Variazione dei ricavi (%) | Range percentuale |
+| `var_produzione` | Variazione valore della produzione (%) | Range percentuale |
+| `var_attivo` | Variazione dell'attivo (%) | Range percentuale |
+| `var_patrimonio` | Variazione del patrimonio netto (%) | Range percentuale |
+| `ros` | R.O.S. (Return On Sales) (%) | Range percentuale |
+| `roi` | R.O.I. (Return On Investment) (%) | Range percentuale |
+| `roe` | R.O.E. (Return On Equity) (%) | Range percentuale |
+| `indice_liquidita` | Indice di liquidita' immediata (Acid Test) | Range numerico (ratio) |
+| `pfn` | P.F.N. (Posizione Finanziaria Netta) | Range numerico |
+
+### 6. PERSONALE
+
+| value | Label | Tipo filtro |
+|-------|-------|-------------|
+| `dipendenti` | Numero dipendenti | Range numerico (intero) |
+| `costo_personale` | Costo del personale | Range numerico |
+
+### 7. CONTATTI (solo filtri, non campi visualizzabili come range)
+
+**Come filtri:**
+
+| value | Label | Tipo |
+|-------|-------|------|
+| `numero_telefono` | Esiste numero di telefono | Checkbox booleano (si/no) |
+| `indirizzo_email` | Esiste indirizzo email | Checkbox booleano |
+| `esiste_tel_o_email` | Esiste telefono o email | Checkbox booleano |
+| `esiste_tel_e_email` | Esiste telefono e email | Checkbox booleano |
+
+**Come campi visualizzabili:**
+
+| value | Label |
+|-------|-------|
+| `telefono` | Numero di telefono |
+| `email` | Indirizzo email |
+
+---
+
+## Colonna destra (sticky)
+
+La colonna destra mostra in tempo reale:
+- **Riepilogo filtri attivi**: chip rimovibili con il nome del filtro e il valore impostato
+- **Riepilogo campi selezionati**: chip rimovibili (tranne "Denominazione" che e' obbligatoria)
+- **Pulsante "Cerca"**: avvia la ricerca
+- **Pulsante "Reset filtri"**: pulisce tutti i filtri
+
+---
+
+## Flusso operativo
+
+1. L'utente apre un accordion nella Sezione 1 e attiva un filtro (es. "Fatturato")
+2. Appare un campo input inline (es. due campi "Da" e "A" per il range)
+3. L'utente imposta i valori (es. 1.000.000 - 10.000.000)
+4. Il filtro appare come chip nella colonna destra
+5. L'utente apre la Sezione 2 e seleziona i campi da visualizzare
+6. Clicca "Cerca"
+7. La tabella risultati appare sotto con le colonne scelte e i dati filtrati
+
+---
+
+## Note per l'implementazione nello scraper
+
+- Il sito usa un form POST con input hidden generati dinamicamente via JavaScript
+- I filtri numerici usano sempre due campi: `{value}_min` e `{value}_max`
+- I filtri percentuali usano la stessa logica min/max ma i valori sono in percentuale (es. 5 = 5%)
+- I filtri geografici (regione, provincia) sono dropdown con valori standard italiani
+- Il filtro ATECO e' un campo di testo con autocomplete (nel nostro progetto abbiamo gia' l'albero completo)
+- I filtri contatti (telefono/email) sono booleani: "esiste" o "non esiste"
+- La tabella risultati viene caricata via AJAX in un DataTable con paginazione server-side
+- L'export dei risultati (CSV/Excel) e' disponibile dopo la ricerca
