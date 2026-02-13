@@ -1,48 +1,31 @@
 
 
-# Filtri Ranking ATECO nei Filtri Avanzati
+# Fix: Filtri Ranking + Cerca Aziende
 
-## Obiettivo
-Aggiungere nel pannello Filtri Avanzati (sotto l'AtecoGrid, a sinistra) dei selettori per filtrare le categorie ATECO visibili nell'albero in base ai parametri di ranking: Volume, Valore, Internazionalita, Probabilita di Pagamento e Score complessivo.
+## Problema
+Dopo aver selezionato Milano come provincia e applicato i filtri di ranking ATECO, il pulsante "Cerca Aziende" resta disattivato perche' richiede codici ATECO selezionati manualmente. I filtri di ranking nascondono solo visivamente le categorie nell'albero ma non le selezionano automaticamente. L'utente si aspetta che il sistema usi le categorie filtrate per la ricerca.
 
-## Cosa cambia per l'utente
-- Nei Filtri Avanzati appare una nuova sezione "Ranking ATECO" con 5 controlli:
-  - **Volume minimo** (1-5 stelle): slider o selettore stelle
-  - **Valore/kg minimo** (1-5 stelle): slider o selettore stelle
-  - **Internazionalita**: multi-select tra MOLTO ALTO, ALTO, MEDIO, BASSO
-  - **Probabilita pagamento**: multi-select tra SI - ALTA, SI - MEDIA, POSSIBILE
-  - **Score minimo**: slider 0-20
-- L'AtecoGrid nasconde automaticamente le sezioni/divisioni/gruppi che non raggiungono i criteri selezionati
-- I conteggi si aggiornano di conseguenza
+## Soluzione
+Aggiungere un pulsante "Seleziona tutti i visibili" che auto-seleziona tutti i codici ATECO che passano i filtri ranking attivi. Inoltre, mostrare i badge delle province nel pannello Import per conferma visiva.
 
-## Dettagli tecnici
+## Modifiche tecniche
 
-### 1. Estendere `ProspectFilters` in `ProspectAdvancedFilters.tsx`
-Aggiungere i nuovi campi all'interfaccia e a `EMPTY_FILTERS`:
-- `rank_volume_min: number` (0 = disattivo, 1-5)
-- `rank_valore_min: number` (0 = disattivo, 1-5)
-- `rank_intl: string[]` (es. `["MOLTO ALTO", "ALTO"]`)
-- `rank_paga: string[]` (es. `["SI - ALTA PROBABILITA"]`)
-- `rank_score_min: number` (0 = disattivo)
+### 1. `AtecoGrid.tsx` - Esporre i codici visibili + pulsante "Seleziona filtrati"
+- Aggiungere un pulsante sopra l'albero ATECO "Seleziona tutti i filtrati" che appare solo quando ci sono filtri ranking attivi e nessun codice selezionato
+- Questo pulsante raccoglie tutti i codici gruppo (livello 3) che passano `passesRankingFilter` e li seleziona tutti in un colpo
+- Esporre anche un contatore "X categorie visibili" per dare feedback
 
-### 2. Aggiungere i controlli UI in `ProspectAdvancedFilters.tsx`
-- Sezione "Ranking ATECO" con:
-  - Due righe con stelline cliccabili (1-5) per Volume e Valore
-  - Due multi-select compatti per Internazionalita e Pagamento
-  - Uno slider per Score minimo (0-20)
+### 2. `ProspectImporter.tsx` - Permettere ricerca anche senza ATECO espliciti
+- Modificare la condizione `disabled` del pulsante "Cerca Aziende": permettere la ricerca anche quando ci sono solo filtri geografici (province) senza codici ATECO
+- Quando `atecoCodes` e' vuoto ma ci sono province/regioni, la ricerca procede senza filtro ATECO (cerca tutte le aziende nella zona)
+- Aggiungere badge per le province selezionate nella sezione filtri attivi (accanto a regioni e fatturato)
 
-### 3. Modificare `AtecoGrid.tsx` per applicare i filtri ranking
-- Ricevere `advFilters` come prop (o solo i campi ranking)
-- Prima di renderizzare ogni sezione/divisione/gruppo, verificare se il suo ranking soddisfa i criteri
-- Se un gruppo non passa i filtri, viene nascosto
-- Se tutti i gruppi di una divisione sono nascosti, la divisione scompare
-- Se tutte le divisioni di una sezione sono nascoste, la sezione scompare
-
-### 4. Aggiornare `ProspectCenter.tsx`
-- Passare `advFilters` (o i campi ranking) all'AtecoGrid come nuova prop
+### 3. `ProspectCenter.tsx` - Passare callback per selezione massiva
+- Aggiungere una funzione `selectMultiple(codes: string[])` da passare all'AtecoGrid
+- Questa funzione aggiunge tutti i codici passati allo stato `selectedAteco`
 
 ### File da modificare
-- `src/components/prospects/ProspectAdvancedFilters.tsx` -- nuovi campi + UI ranking
-- `src/components/prospects/AtecoGrid.tsx` -- filtraggio albero per ranking
-- `src/pages/ProspectCenter.tsx` -- passare filtri ranking all'AtecoGrid
+- `src/components/prospects/AtecoGrid.tsx` -- pulsante "Seleziona filtrati" + contatore
+- `src/components/prospects/ProspectImporter.tsx` -- badge province, ricerca senza ATECO obbligatorio
+- `src/pages/ProspectCenter.tsx` -- callback selezione massiva
 
