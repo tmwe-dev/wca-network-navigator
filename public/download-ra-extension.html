@@ -49,94 +49,22 @@ var FILES = {
   "icons": { "48": "icon.png", "128": "icon.png" }
 }, null, 2),
 
-"background.js": "// ReportAziende Cookie Sync - Background Service Worker\n\
-\n\
-var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
-var SUPABASE_ANON_KEY = \"" + SUPABASE_ANON_KEY + "\";\n\
-\n\
-async function syncRACookies() {\n\
-  try {\n\
-    var cookies = await chrome.cookies.getAll({ domain: \".reportaziende.it\" });\n\
-    var cookies2 = await chrome.cookies.getAll({ domain: \"reportaziende.it\" });\n\
-    var cookies3 = await chrome.cookies.getAll({ domain: \"ecommerce2.reportaziende.it\" });\n\
-    var allCookies = [].concat(cookies, cookies2, cookies3);\n\
-    if (allCookies.length === 0) {\n\
-      return { success: false, error: \"Nessun cookie trovato per reportaziende.it\" };\n\
-    }\n\
-    var uniqueCookies = {};\n\
-    allCookies.forEach(function (c) { uniqueCookies[c.name] = c.value; });\n\
-    var cookieString = Object.entries(uniqueCookies).map(function (e) { return e[0] + \"=\" + e[1]; }).join(\"; \");\n\
-    var res = await fetch(SUPABASE_URL + \"/functions/v1/save-ra-cookie\", {\n\
-      method: \"POST\",\n\
-      headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
-      body: JSON.stringify({ cookie: cookieString }),\n\
-    });\n\
-    var data = await res.json();\n\
-    return { success: true, data: data };\n\
-  } catch (err) {\n\
-    return { success: false, error: err.message };\n\
-  }\n\
-}\n\
-\n\
-async function autoLogin() {\n\
-  try {\n\
-    var res = await fetch(SUPABASE_URL + \"/functions/v1/get-ra-credentials\", {\n\
-      method: \"GET\",\n\
-      headers: { \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
-    });\n\
-    var creds = await res.json();\n\
-    if (!creds.username || !creds.password) {\n\
-      return { success: false, error: \"Credenziali non configurate. Vai su Impostazioni → Report Aziende.\" };\n\
-    }\n\
-    var tab = await chrome.tabs.create({ url: \"https://www.reportaziende.it/login\", active: true });\n\
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {\n\
-      if (tabId === tab.id && info.status === \"complete\") {\n\
-        chrome.tabs.onUpdated.removeListener(listener);\n\
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillLogin, args: [creds.username, creds.password] });\n\
-      }\n\
-    });\n\
-    return { success: true, message: \"Login in corso...\" };\n\
-  } catch (err) {\n\
-    return { success: false, error: err.message };\n\
-  }\n\
-}\n\
-\n\
-function fillLogin(username, password) {\n\
-  setTimeout(function () {\n\
-    var emailField = document.querySelector('input[type=\"email\"], input[name=\"email\"], input[name=\"username\"], input#email, input#username');\n\
-    var passField = document.querySelector('input[type=\"password\"]');\n\
-    var submitBtn = document.querySelector('button[type=\"submit\"], input[type=\"submit\"]');\n\
-    if (emailField) { emailField.value = username; emailField.dispatchEvent(new Event(\"input\", { bubbles: true })); }\n\
-    if (passField) { passField.value = password; passField.dispatchEvent(new Event(\"input\", { bubbles: true })); }\n\
-    if (submitBtn) { setTimeout(function () { submitBtn.click(); }, 500); }\n\
-  }, 1500);\n\
-}\n\
-\n\
-chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {\n\
-  if (msg.source === \"ra-content-bridge\") {\n\
-    if (msg.action === \"ping\") {\n\
-      sendResponse({ success: true, extension: \"ra-cookie-sync\", version: \"1.0\" });\n\
-    } else if (msg.action === \"syncCookies\") {\n\
-      syncRACookies().then(sendResponse);\n\
-      return true;\n\
-    } else if (msg.action === \"autoLogin\") {\n\
-      autoLogin().then(sendResponse);\n\
-      return true;\n\
-    } else {\n\
-      sendResponse({ success: false, error: \"Unknown action\" });\n\
-    }\n\
-  }\n\
-  return false;\n\
-});",
+"background.js": (function() {
+  // Fetch the latest background.js from server
+  return "DYNAMIC_LOAD";
+})(),
 
-"content.js": "// ReportAziende Cookie Sync - Content Script Bridge\n\
+"content.js": "// ReportAziende Cookie Sync + Scraper - Content Script Bridge\n\
 (function () {\n\
   window.addEventListener(\"message\", function (event) {\n\
     if (event.source !== window) return;\n\
     var data = event.data;\n\
     if (!data || data.direction !== \"from-webapp-ra\") return;\n\
+    var msg = { source: \"ra-content-bridge\", action: data.action };\n\
+    if (data.params) msg.params = data.params;\n\
+    if (data.url) msg.url = data.url;\n\
     chrome.runtime.sendMessage(\n\
-      { source: \"ra-content-bridge\", action: data.action },\n\
+      msg,\n\
       function (response) {\n\
         window.postMessage({ direction: \"from-extension-ra\", action: data.action, requestId: data.requestId, response: response || { success: false, error: \"No response from extension\" } }, \"*\");\n\
         if (data.action === \"ping\") {\n\
@@ -213,12 +141,23 @@ function downloadFile(name, content, mimeType) {
 
 async function downloadAll() {
   var status = document.getElementById("status");
-  status.innerHTML = "";
+  status.innerHTML = "<p style='color:#93c5fd;'>Preparazione file...</p>";
   
+  // Fetch background.js from server (always latest version)
+  try {
+    var bgRes = await fetch("/ra-extension/background.js");
+    var bgContent = await bgRes.text();
+    FILES["background.js"] = bgContent;
+  } catch(e) {
+    status.innerHTML = "<p style='color:#fca5a5;'>Errore: impossibile scaricare background.js dal server.</p>";
+    return;
+  }
+
   var textFiles = Object.entries(FILES);
   for (var i = 0; i < textFiles.length; i++) {
     var name = textFiles[i][0];
     var content = textFiles[i][1];
+    if (content === "DYNAMIC_LOAD") continue; // skip placeholder
     var mime = name.endsWith(".json") ? "application/json" : 
                  name.endsWith(".html") ? "text/html" : 
                  "application/javascript";
