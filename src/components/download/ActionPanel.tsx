@@ -223,11 +223,24 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient]);
 
   const handleStartDownload = async () => {
-    await triggerCheck();
-    await new Promise(r => setTimeout(r, 1500));
-    const { data: statusData } = await supabase.from("app_settings").select("value").eq("key", "wca_session_status").maybeSingle();
-    if ((statusData?.value || "no_cookie") !== "ok") { setShowSessionDialog(true); return; }
-    await executeDownload();
+    const result = await triggerCheck();
+
+    // Use the direct result from the check function
+    if (result?.authenticated) {
+      await executeDownload();
+      return;
+    }
+
+    // Fallback: re-read DB in case cookie was updated right before/after check
+    const { data: statusData } = await supabase.from("app_settings")
+      .select("value").eq("key", "wca_session_status").maybeSingle();
+    if (statusData?.value === "ok") {
+      await executeDownload();
+      return;
+    }
+
+    // Only show dialog if truly not authenticated
+    setShowSessionDialog(true);
   };
 
   const executeDownload = async () => {
