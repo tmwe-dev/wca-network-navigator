@@ -1,85 +1,60 @@
 
 
-# Fix: Redirect 404 su ReportAziende - Verifica Sessione Prima della Ricerca
+# Fix: Protezione Anti-Ban per Download WCA
 
-## Problema
+## Problemi Identificati
 
-L'estensione apre direttamente `https://www.reportaziende.it/search.php?tab=2` senza verificare che la sessione sia attiva. Quando la sessione e' scaduta, il sito reindirizza a `errore_404_pagina_non_trovata?p=login`, causando l'errore.
+1. **Delay fisso senza jitter**: il WCA processor usa un delay costante (es. 10s esatti), pattern facilmente rilevabile come bot
+2. **Nessuna pausa lunga**: a differenza del RA processor, non ci sono pause ogni N profili
+3. **Zero pausa tra job consecutivi**: quando un job finisce, il successivo parte in 5 secondi
+4. **Delay troppo basso**: i job recenti usano 10s invece del minimo sicuro di 15s
 
-Il codice attuale (riga 635) fa:
-```text
-tab = await chrome.tabs.create({ url: "https://www.reportaziende.it/search.php?tab=2", active: false });
-```
+## Modifiche Pianificate
 
-Il check sulla sessione (righe 650-655) arriva DOPO il caricamento, ma a quel punto il sito ha gia' fatto il redirect al 404.
+### 1. Aggiungere jitter al delay in `useDownloadProcessor.ts` (riga 248-250)
 
-## Soluzione
-
-### 1. Auto-login preventivo in `scrapeSearchResults` (riga 630-700)
-
-Prima di aprire la pagina di ricerca, verificare la sessione e fare auto-login se necessario:
+Sostituire il delay fisso con un delay randomizzato (0.8x - 1.5x), identico alla logica gia' usata nel RA processor.
 
 ```text
-async function scrapeSearchResults(params) {
-  // STEP 0: Verifica sessione - apri una pagina qualsiasi e controlla redirect
-  // Se redirect a login/404 -> esegui autoLogin() automaticamente
-  // Poi riprova ad aprire la pagina di ricerca
-}
+// PRIMA (prevedibile):
+await new Promise(r => setTimeout(r, delaySeconds * 1000));
+
+// DOPO (randomizzato):
+const jitter = delaySeconds * 1000 * (0.8 + Math.random() * 0.7);
+await new Promise(r => setTimeout(r, jitter));
 ```
 
-Flusso:
-1. Aprire la pagina di ricerca
-2. Se il URL finale contiene "errore_404" o "login" -> eseguire `autoLogin()` automaticamente
-3. Attendere che l'utente completi il login (o che il login automatico funzioni)
-4. Riprovare ad aprire la pagina di ricerca
-5. Se ancora 404 -> restituire errore "session_expired" con messaggio chiaro
+### 2. Aggiungere pausa lunga ogni 10 profili in `useDownloadProcessor.ts`
 
-### 2. Migliorare il check URL di sessione (righe 650-655)
+Inserire una pausa di 45-60 secondi ogni 10 profili elaborati (dopo riga 247, prima del delay normale). Simile a quanto gia' implementato nel RA processor.
 
-Aggiungere piu' pattern di redirect al check:
+### 3. Aggiungere pausa tra job consecutivi in `useDownloadProcessor.ts` (riga 277-300)
+
+Nel polling loop, dopo il completamento di un job, attendere 30 secondi prima di prendere il prossimo dalla coda. Questo evita che 3 job da paesi piccoli vengano eseguiti a raffica senza interruzione.
+
+### 4. Forzare delay minimo a 15s in `useDownloadProcessor.ts` (riga 26)
 
 ```text
-function isSessionExpiredUrl(url) {
-  return url && (
-    url.includes("/login3") ||
-    url.includes("errore_404") ||
-    url.includes("p=login") ||
-    url.includes("/login") ||
-    !url.includes("reportaziende.it/search")  // non e' piu' sulla pagina di ricerca
-  );
-}
+// PRIMA:
+const delaySeconds = job.delay_seconds || settings.delayDefault;
+
+// DOPO:
+const delaySeconds = Math.max(job.delay_seconds || settings.delayDefault, settings.delayMin);
 ```
 
-### 3. Stessa logica per `runDiscoverFields` (riga 608-628)
+### 5. Forzare delay minimo anche nella creazione job in `ActionPanel.tsx`
 
-Anche la discovery apre `search.php?tab=2` senza verificare la sessione. Aggiungere lo stesso check.
-
-### 4. Retry con auto-login integrato
-
-Se la sessione e' scaduta durante `scrapeSearchResults`:
-
-```text
-// Dopo aver rilevato sessione scaduta:
-addLog("Sessione scaduta, tentativo auto-login...");
-var loginResult = await autoLogin();
-if (loginResult.success) {
-  // Attendi sincronizzazione cookie
-  await new Promise(r => setTimeout(r, 3000));
-  // Riprova la ricerca (un solo retry)
-  // ... ricrea il tab con search.php?tab=2
-}
-```
+Assicurare che il valore di `delay_seconds` passato a `createJob.mutateAsync` sia almeno `scrapingSettings.delayMin`.
 
 ## File da Modificare
 
-- `public/ra-extension/background.js`:
-  - Righe 630-700 (`scrapeSearchResults`): aggiungere auto-login preventivo e retry
-  - Righe 608-628 (`runDiscoverFields`): aggiungere check sessione
-  - Aggiungere funzione helper `isSessionExpiredUrl(url)`
+- `src/hooks/useDownloadProcessor.ts`: jitter, pause lunghe, pausa tra job, delay minimo
+- `src/components/download/ActionPanel.tsx`: validazione delay minimo alla creazione
 
 ## Risultato Atteso
 
-L'estensione non mostrera' piu' la pagina 404. Se la sessione e' scaduta:
-1. Esegue auto-login automatico
-2. Riprova la ricerca
-3. Se il login fallisce, mostra un messaggio chiaro: "Sessione scaduta - effettua il login su ReportAziende"
+- Delay tra profili: 12-22s (con jitter su base 15s) invece di 10s fissi
+- Pausa lunga: 45-60s ogni 10 profili
+- Pausa tra job: 30s dopo ogni job completato
+- Pattern di traffico molto meno prevedibile e piu' simile a navigazione umana
+
