@@ -107,6 +107,7 @@ export default function ProspectCenter() {
                 onRegionChange={setRegionFilter}
                 provinceFilter={provinceFilter}
                 onProvinceChange={setProvinceFilter}
+                rankingFilters={advFilters}
               />
               {/* Advanced Filters */}
               <div className="mt-2">

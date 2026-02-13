@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Euro, Users, Calendar, Phone, Mail, Filter } from "lucide-react";
+import { ChevronDown, ChevronRight, Euro, Users, Calendar, Phone, Mail, Filter, Star, Globe, CreditCard, BarChart3 } from "lucide-react";
 import { t } from "@/components/download/theme";
 
 export interface ProspectFilters {
@@ -15,6 +16,11 @@ export interface ProspectFilters {
   has_phone: boolean;
   has_email: boolean;
   has_phone_and_email: boolean;
+  rank_volume_min: number;
+  rank_valore_min: number;
+  rank_intl: string[];
+  rank_paga: string[];
+  rank_score_min: number;
 }
 
 export const EMPTY_FILTERS: ProspectFilters = {
@@ -27,7 +33,15 @@ export const EMPTY_FILTERS: ProspectFilters = {
   has_phone: false,
   has_email: false,
   has_phone_and_email: false,
+  rank_volume_min: 0,
+  rank_valore_min: 0,
+  rank_intl: [],
+  rank_paga: [],
+  rank_score_min: 0,
 };
+
+const INTL_OPTIONS = ["MOLTO ALTO", "ALTO", "MEDIO", "BASSO", "MOLTO DIFFICILE"];
+const PAGA_OPTIONS = ["SI - ALTA PROBABILITÀ", "SI - MEDIA PROBABILITÀ", "POSSIBILE", "IMPROBABILE"];
 
 interface Props {
   filters: ProspectFilters;
@@ -66,12 +80,95 @@ function RangeRow({ label, icon: Icon, minVal, maxVal, onMinChange, onMaxChange,
   );
 }
 
+function StarSelector({ label, icon: Icon, value, onChange, isDark }: {
+  label: string; icon: any; value: number; onChange: (v: number) => void; isDark: boolean;
+}) {
+  const th = t(isDark);
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-amber-400/60" : "text-amber-500/60"}`} />
+      <span className={`text-[11px] w-20 shrink-0 ${th.sub}`}>{label}</span>
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map(star => (
+          <button
+            key={star}
+            onClick={() => onChange(value === star ? 0 : star)}
+            className="p-0.5 transition-all"
+            title={value === star ? "Rimuovi filtro" : `Minimo ${star} stelle`}
+          >
+            <Star className={`w-4 h-4 ${
+              star <= value
+                ? "text-amber-400 fill-amber-400"
+                : isDark ? "text-white/15" : "text-slate-300"
+            }`} />
+          </button>
+        ))}
+      </div>
+      {value > 0 && (
+        <span className={`text-[9px] font-mono ${isDark ? "text-amber-300/60" : "text-amber-600/60"}`}>≥{value}</span>
+      )}
+    </div>
+  );
+}
+
+function ChipMultiSelect({ label, icon: Icon, options, selected, onToggle, isDark }: {
+  label: string; icon: any; options: string[]; selected: string[];
+  onToggle: (v: string) => void; isDark: boolean;
+}) {
+  const th = t(isDark);
+  const selectedSet = new Set(selected);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Icon className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-violet-400/60" : "text-violet-500/60"}`} />
+        <span className={`text-[11px] ${th.sub}`}>{label}</span>
+      </div>
+      <div className="flex flex-wrap gap-1 ml-5">
+        {options.map(opt => {
+          const active = selectedSet.has(opt);
+          // Shorten display labels
+          const short = opt
+            .replace("SI - ALTA PROBABILITÀ", "Alta")
+            .replace("SI - MEDIA PROBABILITÀ", "Media")
+            .replace("POSSIBILE", "Possibile")
+            .replace("IMPROBABILE", "Improbabile")
+            .replace("MOLTO ALTO", "Molto Alto")
+            .replace("MOLTO DIFFICILE", "Molto Diff.");
+          return (
+            <button
+              key={opt}
+              onClick={() => onToggle(opt)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
+                active
+                  ? isDark
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    : "bg-violet-50 text-violet-700 border-violet-300"
+                  : isDark
+                    ? "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:border-white/15"
+                    : "bg-white/50 text-slate-400 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              {short}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
   const th = t(isDark);
   const [open, setOpen] = useState(false);
 
-  const update = (key: keyof ProspectFilters, val: string | boolean) => {
+  const update = (key: keyof ProspectFilters, val: string | boolean | number | string[]) => {
     onChange({ ...filters, [key]: val });
+  };
+
+  const toggleArrayItem = (key: "rank_intl" | "rank_paga", val: string) => {
+    const arr = filters[key] as string[];
+    const next = arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
+    update(key, next);
   };
 
   const activeCount = [
@@ -81,6 +178,11 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
     filters.has_phone,
     filters.has_email,
     filters.has_phone_and_email,
+    filters.rank_volume_min > 0,
+    filters.rank_valore_min > 0,
+    filters.rank_intl.length > 0,
+    filters.rank_paga.length > 0,
+    filters.rank_score_min > 0,
   ].filter(Boolean).length;
 
   return (
@@ -152,6 +254,70 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
               <Switch checked={filters.has_phone_and_email} onCheckedChange={v => update("has_phone_and_email", v)} />
               <span className={`text-[11px] font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>📞+📧 Ha entrambi</span>
             </label>
+          </div>
+
+          {/* ═══ RANKING ATECO ═══ */}
+          <div className={`border-t pt-3 space-y-3 ${isDark ? "border-white/[0.06]" : "border-slate-200/60"}`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-amber-400/80" : "text-amber-600"}`}>
+              ⭐ Ranking ATECO
+            </p>
+
+            <StarSelector
+              label="Volume"
+              icon={BarChart3}
+              value={filters.rank_volume_min}
+              onChange={v => update("rank_volume_min", v)}
+              isDark={isDark}
+            />
+
+            <StarSelector
+              label="Valore/kg"
+              icon={Euro}
+              value={filters.rank_valore_min}
+              onChange={v => update("rank_valore_min", v)}
+              isDark={isDark}
+            />
+
+            <ChipMultiSelect
+              label="Internazionalità"
+              icon={Globe}
+              options={INTL_OPTIONS}
+              selected={filters.rank_intl}
+              onToggle={v => toggleArrayItem("rank_intl", v)}
+              isDark={isDark}
+            />
+
+            <ChipMultiSelect
+              label="Prob. Pagamento"
+              icon={CreditCard}
+              options={PAGA_OPTIONS}
+              selected={filters.rank_paga}
+              onToggle={v => toggleArrayItem("rank_paga", v)}
+              isDark={isDark}
+            />
+
+            {/* Score slider */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Star className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-amber-400/60" : "text-amber-500/60"}`} />
+                <span className={`text-[11px] ${t(isDark).sub}`}>Score minimo</span>
+                <span className={`text-[10px] font-mono font-bold ml-auto ${
+                  filters.rank_score_min > 0
+                    ? isDark ? "text-amber-300" : "text-amber-600"
+                    : isDark ? "text-slate-600" : "text-slate-400"
+                }`}>
+                  {filters.rank_score_min > 0 ? `≥ ${filters.rank_score_min}` : "Off"}
+                </span>
+              </div>
+              <Slider
+                min={0}
+                max={20}
+                step={1}
+                value={[filters.rank_score_min]}
+                onValueChange={([v]) => update("rank_score_min", v)}
+                className="ml-5"
+              />
+            </div>
           </div>
         </div>
       </CollapsibleContent>
