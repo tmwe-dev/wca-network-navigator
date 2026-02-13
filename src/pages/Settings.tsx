@@ -10,7 +10,9 @@ import {
   Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
+  Zap,
 } from "lucide-react";
+import { ScrapingSettingsPanel } from "@/components/settings/ScrapingSettings";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { usePartners } from "@/hooks/usePartners";
@@ -214,6 +216,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="blacklist" className="flex items-center gap-2">
             <Shield className="w-4 h-4" /> Blacklist
+          </TabsTrigger>
+          <TabsTrigger value="scraping" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" /> Scraping
           </TabsTrigger>
           <TabsTrigger value="reportaziende" className="flex items-center gap-2">
             <FileText className="w-4 h-4" /> Report Aziende
@@ -432,6 +437,11 @@ export default function Settings() {
         {/* ════════════════ BLACKLIST ════════════════ */}
         <TabsContent value="blacklist">
           <BlacklistManager />
+        </TabsContent>
+
+        {/* ════════════════ SCRAPING ════════════════ */}
+        <TabsContent value="scraping">
+          <ScrapingSettingsPanel />
         </TabsContent>
 
         {/* ════════════════ REPORT AZIENDE ════════════════ */}

@@ -15,7 +15,8 @@ import { getCountryFlag } from "@/lib/countries";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
-import { useTheme, t, DELAY_VALUES, DELAY_LABELS } from "./theme";
+import { useTheme, t } from "./theme";
+import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
 import { WcaSessionDialog } from "./WcaSessionIndicator";
 
 interface ActionPanelProps {
@@ -30,6 +31,10 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
   const [showSessionDialog, setShowSessionDialog] = useState(false);
 
+  const { settings: scrapingSettings } = useScrapingSettings();
+  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
+  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
+
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
   const networks = selectedNetwork === "__all__" ? [] : [selectedNetwork];
@@ -37,9 +42,10 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
 
   const countryCodes = selectedCountries.map(c => c.code);
 
-  // Speed
-  const [delayIndex, setDelayIndex] = useState(4);
-  const delay = DELAY_VALUES[delayIndex];
+  // Speed — find closest index to default
+  const defaultIdx = DELAY_VALUES.findIndex(v => v >= scrapingSettings.delayDefault);
+  const [delayIndex, setDelayIndex] = useState(defaultIdx >= 0 ? defaultIdx : Math.floor(DELAY_VALUES.length / 2));
+  const delay = DELAY_VALUES[delayIndex] ?? scrapingSettings.delayDefault;
   const [includeExisting, setIncludeExisting] = useState(false);
 
   // Scanning state
@@ -113,7 +119,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   const idsToDownload = includeExisting ? uniqueIds : missingIds;
 
   // Time estimate
-  const avgScrapeTime = 15;
+  const avgScrapeTime = scrapingSettings.avgScrapeTime;
   const totalTime = idsToDownload.length * (delay + avgScrapeTime);
   const estimateLabel = totalTime >= 3600
     ? `~${(totalTime / 3600).toFixed(1)} ore`
