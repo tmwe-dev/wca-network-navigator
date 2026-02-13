@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
-  ArrowDownAZ, ListChecks, X,
+  SlidersHorizontal, X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -106,6 +105,10 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
     });
   };
 
+  const filterLabel = filterMode === "all" ? "Tutti" : filterMode === "explored" ? "Scansionati" : filterMode === "partial" ? "Parziali" : "Mai esplorati";
+  const sortLabel = sortBy === "name" ? "Nome A-Z" : sortBy === "partners" ? "N° partner ↓" : "Completamento";
+  const hasActiveFilter = filterMode !== "all" || sortBy !== "name";
+
   const filters = [
     { key: "all" as const, label: "Tutti", count: WCA_COUNTRIES.length, icon: Globe },
     { key: "explored" as const, label: "Scansionati", count: exploredCount, icon: CheckCircle },
@@ -113,103 +116,135 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
     { key: "missing" as const, label: "Mai esplorati", count: missingCount, icon: Download },
   ];
 
+  const sorts = [
+    { key: "name" as const, label: "Nome A-Z" },
+    { key: "partners" as const, label: "N° partner ↓" },
+    { key: "completion" as const, label: "Completamento" },
+  ];
+
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      {/* === TOOLBAR === */}
-      <div className={`rounded-2xl border p-3 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-        {/* Row 1: Search + Sort + Select All */}
-        <div className="flex items-center gap-2 mb-2.5">
-          <div className="relative flex-1">
-            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
-            <Input
-              placeholder="Cerca paese..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className={`pl-10 h-9 rounded-xl text-sm ${th.input}`}
-            />
-          </div>
+      {/* === TOOLBAR: Search + Filter Dropdown === */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
+          <Input
+            placeholder="Cerca paese..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
+          />
+        </div>
 
-          <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-            <SelectTrigger className={`w-[150px] h-9 rounded-xl text-xs gap-1 ${th.selTrigger}`}>
-              <ArrowDownAZ className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className={th.selContent}>
-              <SelectItem value="name">Nome A-Z</SelectItem>
-              <SelectItem value="partners">N° partner ↓</SelectItem>
-              <SelectItem value="completion">Completamento</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <button
-            onClick={handleSelectAll}
-            className={`flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-medium transition-all whitespace-nowrap border ${
-              allFilteredSelected
-                ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300 hover:bg-sky-500/30" : "bg-sky-100 border-sky-300 text-sky-700 hover:bg-sky-200"
-                : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white shadow-sm"
-            }`}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className={`relative flex items-center justify-center w-11 h-11 rounded-2xl border transition-all ${
+                isDark
+                  ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]"
+                  : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white shadow-sm"
+              }`}
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              {hasActiveFilter && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className={`w-64 p-3 rounded-2xl ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}
           >
-            <ListChecks className="w-3.5 h-3.5" />
-            {allFilteredSelected ? "Deseleziona" : "Seleziona"} {filtered.length}
-          </button>
-        </div>
+            {/* Sort section */}
+            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Ordinamento</p>
+            <div className="flex flex-col gap-1 mb-3">
+              {sorts.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setSortBy(s.key)}
+                  className={`text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    sortBy === s.key
+                      ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-50 text-sky-700"
+                      : isDark ? "text-slate-400 hover:bg-white/[0.05]" : "text-slate-500 hover:bg-slate-50"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
 
-        {/* Row 2: Filter tabs */}
-        <div className={`flex items-center gap-1 p-0.5 rounded-xl ${isDark ? "bg-white/[0.03]" : "bg-slate-100/60"}`}>
-          {filters.map(f => {
-            const active = filterMode === f.key;
-            const Icon = f.icon;
-            return (
-              <button
-                key={f.key}
-                onClick={() => setFilterMode(f.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                  active
-                    ? isDark
-                      ? "bg-white/[0.1] text-white shadow-sm shadow-white/[0.05]"
-                      : "bg-white text-slate-800 shadow-sm"
-                    : isDark
-                      ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]"
-                      : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{f.label}</span>
-                <span className={`text-[10px] font-mono ${active ? "opacity-70" : "opacity-50"}`}>{f.count}</span>
-              </button>
-            );
-          })}
-        </div>
+            {/* Filter section */}
+            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Filtro</p>
+            <div className="flex flex-col gap-1 mb-3">
+              {filters.map(f => {
+                const Icon = f.icon;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilterMode(f.key)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      filterMode === f.key
+                        ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-50 text-sky-700"
+                        : isDark ? "text-slate-400 hover:bg-white/[0.05]" : "text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span className="flex-1">{f.label}</span>
+                    <span className="font-mono text-[10px] opacity-60">{f.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Select all */}
+            <button
+              onClick={handleSelectAll}
+              className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+                allFilteredSelected
+                  ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                  : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300" : "bg-white/70 border-slate-200 text-slate-600"
+              }`}
+            >
+              {allFilteredSelected ? "Deseleziona" : "Seleziona"} {filtered.length}
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
 
-      {/* === SELECTED BADGES === */}
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 items-center">
-          <span className={`text-[10px] uppercase tracking-wider font-semibold mr-1 ${th.dim}`}>
-            {selected.length} selezionati
-          </span>
-          {selected.slice(0, 12).map(c => (
-            <Badge
-              key={c.code}
-              className={`flex items-center gap-1 cursor-pointer text-[10px] py-0.5 transition-all ${
-                isDark
-                  ? "bg-sky-500/15 text-sky-300 border-sky-500/25 hover:bg-sky-500/25"
-                  : "bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100"
-              }`}
-              onClick={() => onRemove(c.code)}
-            >
-              {getCountryFlag(c.code)} {c.name} <X className="w-2.5 h-2.5 opacity-50" />
-            </Badge>
-          ))}
-          {selected.length > 12 && (
-            <span className={`text-[10px] ${th.dim}`}>+{selected.length - 12} altri</span>
-          )}
+      {/* Active filter indicator */}
+      {hasActiveFilter && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] uppercase tracking-wider font-semibold ${th.dim}`}>{filterLabel}</span>
+          <span className={`text-[10px] ${th.dim}`}>·</span>
+          <span className={`text-[10px] uppercase tracking-wider font-semibold ${th.dim}`}>{sortLabel}</span>
+          <span className={`text-[10px] font-mono ${th.dim}`}>({filtered.length})</span>
         </div>
       )}
 
-      {/* === COUNTRY GRID === */}
+      {/* === SELECTED FLAGS === */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 items-center">
+          {selected.map(c => (
+            <button
+              key={c.code}
+              onClick={() => onRemove(c.code)}
+              className="group relative text-2xl leading-none hover:scale-110 transition-transform"
+              title={c.name}
+            >
+              {getCountryFlag(c.code)}
+              <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${
+                isDark ? "bg-slate-800 border border-slate-600" : "bg-white border border-slate-300 shadow-sm"
+              }`}>
+                <X className="w-2 h-2" />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* === COUNTRY LIST (single column) === */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 pr-2">
+        <div className="flex flex-col gap-2 pr-2">
           {filtered.map(c => {
             const isSelected = selectedCodes.has(c.code);
             const pCount = partnerCounts[c.code] || 0;
@@ -224,7 +259,27 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
             const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
             const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
 
-            // Determine the accent color for the left stripe
+            // Card tint based on status
+            const cardTint = isSelected
+              ? isDark
+                ? "bg-sky-950/60 border-sky-400/30 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10"
+                : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/50 shadow-lg shadow-sky-200/40"
+              : isComplete
+                ? isDark
+                  ? "bg-emerald-950/40 border-emerald-500/20 hover:bg-emerald-950/60 hover:border-emerald-400/30"
+                  : "bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
+                : hasDirectoryScan
+                  ? isDark
+                    ? "bg-slate-800/50 border-slate-600/30 hover:bg-slate-800/70 hover:border-slate-500/40"
+                    : "bg-white/70 border-slate-200 hover:bg-white hover:border-slate-300"
+                  : hasDbOnly
+                    ? isDark
+                      ? "bg-amber-950/30 border-amber-500/15 hover:bg-amber-950/50 hover:border-amber-400/25"
+                      : "bg-amber-50/50 border-amber-200/60 hover:bg-amber-50 hover:border-amber-300"
+                    : isDark
+                      ? "bg-slate-900/40 border-slate-700/20 hover:bg-slate-800/40 hover:border-slate-600/30"
+                      : "bg-slate-50/50 border-slate-200/60 hover:bg-slate-50 hover:border-slate-300";
+
             const stripeColor = isComplete
               ? "from-emerald-400 to-teal-500"
               : pCount > 0
@@ -237,36 +292,20 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
               <button
                 key={c.code}
                 onClick={() => onToggle(c.code, c.name)}
-                className={`group relative overflow-hidden rounded-xl border text-left transition-all duration-300 ${
-                  isSelected
-                    ? isDark
-                      ? "bg-sky-500/[0.08] border-sky-400/30 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/[0.08]"
-                      : "bg-sky-50/80 border-sky-300 ring-1 ring-sky-300/50 shadow-lg shadow-sky-200/40"
-                    : isDark
-                      ? "bg-white/[0.03] backdrop-blur-md border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.15] hover:shadow-xl hover:shadow-sky-500/[0.04]"
-                      : "bg-white/50 backdrop-blur-md border-white/70 hover:bg-white/80 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/60"
-                }`}
+                className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 ${cardTint}`}
               >
                 {/* Left accent stripe */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${stripeColor} transition-all duration-300 ${
-                  isSelected ? "opacity-100" : "opacity-40 group-hover:opacity-80"
+                <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${stripeColor} transition-all duration-300 ${
+                  isSelected ? "opacity-100" : "opacity-50 group-hover:opacity-90"
                 }`} />
 
-                {/* Hover glow effect */}
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none ${
-                  isDark
-                    ? "bg-gradient-to-br from-sky-500/[0.04] via-transparent to-transparent"
-                    : "bg-gradient-to-br from-sky-100/30 via-transparent to-transparent"
-                }`} />
-
-                <div className="relative p-3 pl-4">
+                <div className="relative p-3.5 pl-5">
                   {/* Header: flag + name + status */}
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span className="text-2xl leading-none flex-shrink-0">{getCountryFlag(c.code)}</span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-semibold truncate ${th.h2}`}>{c.name}</p>
-                        {/* Status line */}
+                        <p className={`text-sm font-bold truncate ${th.h2}`}>{c.name}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {isComplete && (
                             <span className={`text-[9px] font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
@@ -289,6 +328,25 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                         </div>
                       </div>
                     </div>
+
+                    {/* Right: contact stats inline */}
+                    {pCount > 0 && (
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
+                        <div className="flex items-center gap-1">
+                          <Mail className={`w-3.5 h-3.5 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
+                          <span className={`text-xs font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Phone className={`w-3.5 h-3.5 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
+                          <span className={`text-xs font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className={`w-3.5 h-3.5 ${th.dim}`} />
+                          <span className={`text-xs font-mono font-bold ${th.mono}`}>{pCount}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {isSelected && (
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/20" : "bg-sky-100"}`}>
                         <CheckCircle className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
@@ -296,47 +354,26 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                     )}
                   </div>
 
-                  {/* Stats row — compact horizontal layout */}
+                  {/* Progress bar */}
                   {pCount > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      <div className="flex items-center gap-3 text-[10px]">
-                        <div className="flex items-center gap-1">
-                          <Users className={`w-3 h-3 ${th.dim}`} />
-                          <span className={th.dim}>Resp.</span>
-                          <span className={`font-mono font-bold ${withEmail > 0 || withPhone > 0 ? th.mono : (isDark ? "text-rose-400" : "text-rose-500")}`}>
-                            {cs ? Math.max(withEmail, withPhone) : 0}/{pCount}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Mail className={`w-3 h-3 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                          <span className={`font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className={`w-3 h-3 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
-                          <span className={`font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
-                        </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            pctEmail >= 60
+                              ? "bg-gradient-to-r from-emerald-400 to-teal-500"
+                              : pctEmail >= 30
+                                ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                                : "bg-gradient-to-r from-rose-400 to-red-500"
+                          }`}
+                          style={{ width: `${pctEmail}%` }}
+                        />
                       </div>
-
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-2">
-                        <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              pctEmail >= 60
-                                ? "bg-gradient-to-r from-emerald-400 to-teal-500"
-                                : pctEmail >= 30
-                                  ? "bg-gradient-to-r from-amber-400 to-orange-500"
-                                  : "bg-gradient-to-r from-rose-400 to-red-500"
-                            }`}
-                            style={{ width: `${pctEmail}%` }}
-                          />
-                        </div>
-                        <span className={`text-[9px] font-mono tabular-nums w-8 text-right ${
-                          pctEmail >= 60 ? (isDark ? "text-emerald-400" : "text-emerald-600") : pctEmail >= 30 ? (isDark ? "text-amber-400" : "text-amber-600") : (isDark ? "text-rose-400" : "text-rose-500")
-                        }`}>
-                          {pctEmail}%
-                        </span>
-                      </div>
+                      <span className={`text-[9px] font-mono tabular-nums w-8 text-right ${
+                        pctEmail >= 60 ? (isDark ? "text-emerald-400" : "text-emerald-600") : pctEmail >= 30 ? (isDark ? "text-amber-400" : "text-amber-600") : (isDark ? "text-rose-400" : "text-rose-500")
+                      }`}>
+                        {pctEmail}%
+                      </span>
                     </div>
                   )}
                 </div>
