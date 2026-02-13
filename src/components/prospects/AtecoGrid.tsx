@@ -3,11 +3,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Search, Mail, Phone, Users, CheckCircle, SlidersHorizontal, X, FileText,
-  Building2, Euro, ChevronsUpDown, Check,
+  Search, SlidersHorizontal, X, Folder, FolderOpen, Check,
+  ChevronsUpDown, ChevronRight, ChevronDown, CheckCircle, FileText,
 } from "lucide-react";
 import { useAtecoGroups } from "@/hooks/useProspectStats";
+import { ATECO_TREE, type AtecoEntry } from "@/data/atecoCategories";
 import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
 import { t } from "@/components/download/theme";
 
@@ -22,15 +24,35 @@ interface AtecoGridProps {
   onProvinceChange: (p: string[]) => void;
 }
 
-function formatCurrency(n: number | null) {
-  if (n == null) return "—";
-  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `€${(n / 1_000).toFixed(0)}K`;
-  return `€${n.toFixed(0)}`;
+/* ─── Helpers ─── */
+
+const sections = ATECO_TREE.filter(a => a.livello === 1);
+const divisions = ATECO_TREE.filter(a => a.livello === 2);
+const groups = ATECO_TREE.filter(a => a.livello === 3);
+
+function childDivisions(sectionCode: string) {
+  return divisions.filter(d => d.padre === sectionCode);
+}
+function childGroups(divisionCode: string) {
+  return groups.filter(g => g.padre === divisionCode);
 }
 
+/** Get all leaf (group-level) codes under a section or division */
+function allLeafCodes(entry: AtecoEntry): string[] {
+  if (entry.livello === 3) return [entry.codice];
+  if (entry.livello === 2) return childGroups(entry.codice).map(g => g.codice);
+  // section
+  return childDivisions(entry.codice).flatMap(d => childGroups(d.codice).map(g => g.codice));
+}
+
+function toggle(list: string[], item: string) {
+  return list.includes(item) ? list.filter(i => i !== item) : [...list, item];
+}
+
+/* ─── Filter Multi-Select (for region/province) ─── */
+
 function FilterMultiSelect({
-  label, placeholder, options, selected, onToggle, onClear, isDark,
+  label, placeholder, options, selected, onToggle: onTgl, onClear, isDark,
 }: {
   label: string; placeholder: string;
   options: Array<{ value: string; label: string; sub?: string }>;
@@ -53,10 +75,10 @@ function FilterMultiSelect({
             <ChevronsUpDown className="w-3 h-3 opacity-50" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className={`w-56 p-0 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
+        <PopoverContent className={`w-56 p-0 z-50 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
           <Command className={isDark ? "bg-slate-900" : ""}>
             <CommandInput placeholder="Cerca..." className={`text-xs ${isDark ? "text-white" : ""}`} />
-            <CommandList>
+            <CommandList className="max-h-[300px] overflow-auto">
               <CommandEmpty className={`text-xs ${isDark ? "text-slate-500" : ""}`}>Nessun risultato</CommandEmpty>
               {selected.length > 0 && (
                 <CommandGroup>
@@ -66,26 +88,24 @@ function FilterMultiSelect({
                 </CommandGroup>
               )}
               <CommandGroup>
-                <ScrollArea className="max-h-48">
-                  {options.map(opt => (
-                    <CommandItem
-                      key={opt.value}
-                      value={`${opt.value} ${opt.label}`}
-                      onSelect={() => onToggle(opt.value)}
-                      className={`text-xs ${isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}`}
-                    >
-                      <div className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
-                        selectedSet.has(opt.value)
-                          ? "bg-sky-500 border-sky-500"
-                          : isDark ? "border-slate-600" : "border-slate-300"
-                      }`}>
-                        {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-white" />}
-                      </div>
-                      <span>{opt.label}</span>
-                      {opt.sub && <span className={`ml-auto text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>{opt.sub}</span>}
-                    </CommandItem>
-                  ))}
-                </ScrollArea>
+                {options.map(opt => (
+                  <CommandItem
+                    key={opt.value}
+                    value={`${opt.value} ${opt.label}`}
+                    onSelect={() => onTgl(opt.value)}
+                    className={`text-xs ${isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}`}
+                  >
+                    <div className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
+                      selectedSet.has(opt.value)
+                        ? "bg-sky-500 border-sky-500"
+                        : isDark ? "border-slate-600" : "border-slate-300"
+                    }`}>
+                      {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-white" />}
+                    </div>
+                    <span>{opt.label}</span>
+                    {opt.sub && <span className={`ml-auto text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>{opt.sub}</span>}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -94,7 +114,7 @@ function FilterMultiSelect({
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {selected.map(v => (
-            <button key={v} onClick={() => onToggle(v)}
+            <button key={v} onClick={() => onTgl(v)}
               className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${isDark
                 ? "bg-sky-500/15 text-sky-300 border border-sky-500/25"
                 : "bg-sky-50 text-sky-700 border border-sky-200"
@@ -108,23 +128,98 @@ function FilterMultiSelect({
   );
 }
 
+/* ─── Main Component ─── */
+
 export function AtecoGrid({
   selected, onToggle, onRemove, isDark,
   regionFilter, onRegionChange, provinceFilter, onProvinceChange,
 }: AtecoGridProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "count" | "fatturato">("code");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const { data: atecoGroups = [], isLoading } = useAtecoGroups();
+  const { data: atecoGroups = [] } = useAtecoGroups();
 
-  const toggle = (list: string[], item: string) =>
-    list.includes(item) ? list.filter(i => i !== item) : [...list, item];
+  // Map of ateco code => count from DB
+  const countMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const g of atecoGroups) m.set(g.codice_ateco, g.count);
+    return m;
+  }, [atecoGroups]);
 
-  const regionOptions = useMemo(() =>
-    REGIONI_ITALIANE.map(r => ({ value: r, label: r })),
-  []);
+  // Count for a node (sum of leaf children)
+  const nodeCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of sections) {
+      let sTotal = 0;
+      for (const d of childDivisions(s.codice)) {
+        let dTotal = 0;
+        for (const g of childGroups(d.codice)) {
+          const c = countMap.get(g.codice) || 0;
+          m.set(g.codice, c);
+          dTotal += c;
+        }
+        m.set(d.codice, dTotal);
+        sTotal += dTotal;
+      }
+      m.set(s.codice, sTotal);
+    }
+    return m;
+  }, [countMap]);
 
+  const toggleExpand = (code: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  };
+
+  // Select/deselect all leaves under a node
+  const toggleBranch = (entry: AtecoEntry) => {
+    const leaves = allLeafCodes(entry);
+    const allSelected = leaves.every(c => selected.includes(c));
+    if (allSelected) {
+      // deselect all
+      for (const c of leaves) if (selected.includes(c)) onRemove(c);
+    } else {
+      // select all missing
+      for (const c of leaves) if (!selected.includes(c)) onToggle(c);
+    }
+  };
+
+  // Filter by search
+  const filteredSections = useMemo(() => {
+    if (!search || search.length < 2) return sections;
+    const q = search.toLowerCase();
+    return sections.filter(s => {
+      if (s.descrizione.toLowerCase().includes(q) || s.codice.toLowerCase().includes(q)) return true;
+      return childDivisions(s.codice).some(d =>
+        d.descrizione.toLowerCase().includes(q) || d.codice.toLowerCase().includes(q) ||
+        childGroups(d.codice).some(g => g.descrizione.toLowerCase().includes(q) || g.codice.toLowerCase().includes(q))
+      );
+    });
+  }, [search]);
+
+  // Auto-expand sections matching search
+  useMemo(() => {
+    if (search.length >= 2) {
+      const q = search.toLowerCase();
+      const toExpand = new Set<string>();
+      for (const s of sections) {
+        for (const d of childDivisions(s.codice)) {
+          if (d.descrizione.toLowerCase().includes(q) || d.codice.toLowerCase().includes(q) ||
+            childGroups(d.codice).some(g => g.descrizione.toLowerCase().includes(q) || g.codice.toLowerCase().includes(q))) {
+            toExpand.add(s.codice);
+            toExpand.add(d.codice);
+          }
+        }
+      }
+      if (toExpand.size > 0) setExpanded(toExpand);
+    }
+  }, [search]);
+
+  const regionOptions = useMemo(() => REGIONI_ITALIANE.map(r => ({ value: r, label: r })), []);
   const provinceOptions = useMemo(() => {
     const filtered = regionFilter.length > 0
       ? PROVINCE_ITALIANE.filter(p => regionFilter.includes(p.regione))
@@ -132,32 +227,8 @@ export function AtecoGrid({
     return filtered.map(p => ({ value: p.sigla, label: `${p.sigla} — ${p.nome}`, sub: p.regione }));
   }, [regionFilter]);
 
-  const sections = useMemo(() => {
-    let filtered = atecoGroups.filter(g => {
-      const q = search.toLowerCase();
-      return g.codice_ateco.toLowerCase().includes(q) || g.descrizione_ateco.toLowerCase().includes(q);
-    });
-
-    if (sortBy === "count") filtered = [...filtered].sort((a, b) => b.count - a.count);
-    else if (sortBy === "fatturato") filtered = [...filtered].sort((a, b) => (b.avg_fatturato || 0) - (a.avg_fatturato || 0));
-
-    const map = new Map<string, typeof filtered>();
-    for (const g of filtered) {
-      const sec = g.codice_ateco.substring(0, 2);
-      if (!map.has(sec)) map.set(sec, []);
-      map.get(sec)!.push(g);
-    }
-    return map;
-  }, [atecoGroups, search, sortBy]);
-
+  const hasActiveFilter = regionFilter.length > 0 || provinceFilter.length > 0;
   const selectedSet = new Set(selected);
-  const hasActiveFilter = regionFilter.length > 0 || provinceFilter.length > 0 || sortBy !== "code";
-
-  const sorts = [
-    { key: "code" as const, label: "Codice ATECO" },
-    { key: "count" as const, label: "N° prospect ↓" },
-    { key: "fatturato" as const, label: "Fatturato medio ↓" },
-  ];
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
@@ -166,13 +237,12 @@ export function AtecoGrid({
         <div className="relative flex-1">
           <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
           <Input
-            placeholder="Cerca codice ATECO..."
+            placeholder="Cerca ATECO..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
           />
         </div>
-
         <Popover>
           <PopoverTrigger asChild>
             <button className={`relative flex items-center justify-center w-11 h-11 rounded-2xl border transition-all ${
@@ -186,22 +256,7 @@ export function AtecoGrid({
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className={`w-64 p-3 rounded-2xl ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
-            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Ordinamento</p>
-            <div className="flex flex-col gap-1 mb-3">
-              {sorts.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setSortBy(s.key)}
-                  className={`text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    sortBy === s.key
-                      ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-50 text-sky-700"
-                      : isDark ? "text-slate-400 hover:bg-white/[0.05]" : "text-slate-500 hover:bg-slate-50"
-                  }`}
-                >{s.label}</button>
-              ))}
-            </div>
-
+          <PopoverContent align="end" className={`w-64 p-3 rounded-2xl z-50 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
             <FilterMultiSelect
               label="Regione"
               placeholder="Tutte le regioni"
@@ -210,7 +265,6 @@ export function AtecoGrid({
               onToggle={v => {
                 const next = toggle(regionFilter, v);
                 onRegionChange(next);
-                // Clear provinces not in selected regions
                 if (next.length > 0) {
                   const validSigle = new Set(PROVINCE_ITALIANE.filter(p => next.includes(p.regione)).map(p => p.sigla));
                   onProvinceChange(provinceFilter.filter(s => validSigle.has(s)));
@@ -219,7 +273,6 @@ export function AtecoGrid({
               onClear={() => { onRegionChange([]); onProvinceChange([]); }}
               isDark={isDark}
             />
-
             <div className="mt-3">
               <FilterMultiSelect
                 label="Provincia"
@@ -253,90 +306,116 @@ export function AtecoGrid({
         </div>
       )}
 
-      {/* ATECO List */}
+      {/* ATECO Tree */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-2 pr-2">
-          {isLoading ? (
-            <div className={`text-center py-12 ${th.dim}`}>Caricamento codici ATECO...</div>
-          ) : sections.size === 0 ? (
+        <div className="flex flex-col gap-0.5 pr-2">
+          {filteredSections.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <FileText className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
               <p className={`text-sm ${th.sub}`}>Nessun codice ATECO trovato</p>
-              <p className={`text-xs ${th.dim}`}>Importa prospect tramite l'estensione RA per popolare la griglia</p>
             </div>
           ) : (
-            [...sections.entries()].map(([section, groups]) => {
-              const sectionDesc = groups[0]?.descrizione_ateco?.split(" - ")[0] || "";
-              const totalInSection = groups.reduce((s, g) => s + g.count, 0);
+            filteredSections.map(section => {
+              const sCount = nodeCount.get(section.codice) || 0;
+              const isOpen = expanded.has(section.codice);
+              const sLeaves = allLeafCodes(section);
+              const allSel = sLeaves.length > 0 && sLeaves.every(c => selectedSet.has(c));
+              const someSel = sLeaves.some(c => selectedSet.has(c));
 
               return (
-                <div key={section}>
-                  <div className={`flex items-center gap-2 px-2 py-1 mb-1 ${th.dim}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider">{section}</span>
-                    <span className="text-[10px] truncate flex-1">{sectionDesc}</span>
-                    <span className="text-[10px] font-mono">{totalInSection}</span>
+                <Collapsible key={section.codice} open={isOpen} onOpenChange={() => toggleExpand(section.codice)}>
+                  <div className={`flex items-center gap-1 rounded-xl px-2 py-1.5 transition-all ${
+                    isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+                  }`}>
+                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                      {isOpen
+                        ? <FolderOpen className={`w-4 h-4 shrink-0 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                        : <Folder className={`w-4 h-4 shrink-0 ${th.dim}`} />}
+                      <span className={`text-xs font-bold uppercase tracking-wide ${th.h2}`}>{section.codice}</span>
+                      <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{section.descrizione}</span>
+                      {isOpen ? <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} /> : <ChevronRight className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} />}
+                    </CollapsibleTrigger>
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleBranch(section); }}
+                      className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
+                        allSel ? "bg-sky-500 border-sky-500" : someSel ? "bg-sky-500/40 border-sky-400" : isDark ? "border-white/15 hover:border-white/30" : "border-slate-300 hover:border-slate-400"
+                      }`}
+                    >
+                      {(allSel || someSel) && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                    <span className={`text-[10px] font-mono w-8 text-right ${th.dim}`}>{sCount || ""}</span>
                   </div>
 
-                  {groups.map(g => {
-                    const isSelected = selectedSet.has(g.codice_ateco);
-                    const dataDensity = g.with_email / Math.max(g.count, 1);
-                    const stripeColor = dataDensity >= 0.6
-                      ? "from-emerald-400 to-teal-500"
-                      : dataDensity >= 0.3
-                        ? "from-amber-400 to-orange-500"
-                        : "from-rose-400 to-red-500";
+                  <CollapsibleContent>
+                    <div className="ml-4 border-l border-dashed pl-2 space-y-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)" }}>
+                      {childDivisions(section.codice).map(div => {
+                        const dCount = nodeCount.get(div.codice) || 0;
+                        const isDivOpen = expanded.has(div.codice);
+                        const dLeaves = allLeafCodes(div);
+                        const allDSel = dLeaves.length > 0 && dLeaves.every(c => selectedSet.has(c));
+                        const someDSel = dLeaves.some(c => selectedSet.has(c));
 
-                    const cardTint = isSelected
-                      ? isDark
-                        ? "bg-sky-950/60 border-sky-400/30 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10"
-                        : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/50 shadow-lg shadow-sky-200/40"
-                      : isDark
-                        ? "bg-slate-900/40 border-slate-700/20 hover:bg-slate-800/40 hover:border-slate-600/30"
-                        : "bg-white/70 border-slate-200 hover:bg-white hover:border-slate-300";
-
-                    return (
-                      <button
-                        key={g.codice_ateco}
-                        onClick={() => onToggle(g.codice_ateco)}
-                        className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 w-full mb-1.5 ${cardTint}`}
-                      >
-                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${stripeColor} transition-all duration-300 ${
-                          isSelected ? "opacity-100" : "opacity-50 group-hover:opacity-90"
-                        }`} />
-
-                        <div className="relative p-3 pl-5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className={`text-sm font-bold truncate ${th.h2}`}>{g.codice_ateco}</p>
-                              <p className={`text-[11px] truncate ${th.sub}`}>{g.descrizione_ateco}</p>
+                        return (
+                          <Collapsible key={div.codice} open={isDivOpen} onOpenChange={() => toggleExpand(div.codice)}>
+                            <div className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${
+                              isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+                            }`}>
+                              <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                                {isDivOpen
+                                  ? <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-sky-400/70" : "text-sky-400"}`} />
+                                  : <Folder className={`w-3.5 h-3.5 shrink-0 ${th.dim}`} />}
+                                <span className={`text-xs font-semibold ${th.h2}`}>{div.codice}</span>
+                                <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{div.descrizione}</span>
+                                {isDivOpen ? <ChevronDown className={`w-3 h-3 shrink-0 ${th.dim}`} /> : <ChevronRight className={`w-3 h-3 shrink-0 ${th.dim}`} />}
+                              </CollapsibleTrigger>
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleBranch(div); }}
+                                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                                  allDSel ? "bg-sky-500 border-sky-500" : someDSel ? "bg-sky-500/40 border-sky-400" : isDark ? "border-white/15 hover:border-white/30" : "border-slate-300 hover:border-slate-400"
+                                }`}
+                              >
+                                {(allDSel || someDSel) && <Check className="w-2.5 h-2.5 text-white" />}
+                              </button>
+                              <span className={`text-[10px] font-mono w-7 text-right ${th.dim}`}>{dCount || ""}</span>
                             </div>
-                            <div className="flex items-center gap-2.5 flex-shrink-0">
-                              <div className="flex items-center gap-1">
-                                <Mail className={`w-3.5 h-3.5 ${g.with_email > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                                <span className={`text-xs font-mono font-bold ${g.with_email > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : th.dim}`}>{g.with_email}</span>
+
+                            <CollapsibleContent>
+                              <div className="ml-5 space-y-0.5">
+                                {childGroups(div.codice).map(grp => {
+                                  const gCount = nodeCount.get(grp.codice) || 0;
+                                  const isSel = selectedSet.has(grp.codice);
+
+                                  return (
+                                    <button
+                                      key={grp.codice}
+                                      onClick={() => onToggle(grp.codice)}
+                                      className={`w-full flex items-center gap-2 rounded-lg px-2 py-1 text-left transition-all ${
+                                        isSel
+                                          ? isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"
+                                          : isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                                        isSel ? "bg-sky-500 border-sky-500" : isDark ? "border-white/15" : "border-slate-300"
+                                      }`}>
+                                        {isSel && <Check className="w-2.5 h-2.5 text-white" />}
+                                      </div>
+                                      <span className={`text-[11px] font-medium ${th.h2}`}>{grp.codice}</span>
+                                      <span className={`text-[11px] truncate flex-1 ${th.sub}`}>{grp.descrizione}</span>
+                                      {gCount > 0 && (
+                                        <span className={`text-[10px] font-mono ${isDark ? "text-sky-400/70" : "text-sky-500"}`}>{gCount}</span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Users className={`w-3.5 h-3.5 ${th.dim}`} />
-                                <span className={`text-xs font-mono font-bold ${th.mono}`}>{g.count}</span>
-                              </div>
-                              {g.avg_fatturato != null && (
-                                <div className="flex items-center gap-1">
-                                  <Euro className={`w-3.5 h-3.5 ${isDark ? "text-emerald-400" : "text-emerald-500"}`} />
-                                  <span className={`text-[10px] font-mono ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(g.avg_fatturato)}</span>
-                                </div>
-                              )}
-                              {isSelected && (
-                                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-sky-500/20" : "bg-sky-100"}`}>
-                                  <CheckCircle className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               );
             })
           )}

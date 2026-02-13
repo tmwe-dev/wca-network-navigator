@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { ATECO_TREE } from "@/data/atecoCategories";
 import { REGIONI_ITALIANE, PROVINCE_ITALIANE } from "@/data/italianProvinces";
 import { t } from "@/components/download/theme";
@@ -60,7 +60,7 @@ function MultiSelectPopover({
         <PopoverContent className={`w-72 p-0 ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`} align="start">
           <Command className={isDark ? "bg-slate-900" : ""}>
             <CommandInput placeholder="Cerca..." className={isDark ? "text-white" : ""} />
-            <CommandList>
+            <CommandList className="max-h-[300px] overflow-auto">
               <CommandEmpty className={isDark ? "text-slate-500" : ""}>Nessun risultato</CommandEmpty>
               {selected.length > 0 && (
                 <CommandGroup>
@@ -70,28 +70,26 @@ function MultiSelectPopover({
                 </CommandGroup>
               )}
               <CommandGroup>
-                <ScrollArea className="max-h-56">
-                  {options.map(opt => (
-                    <CommandItem
-                      key={opt.value}
-                      value={`${opt.value} ${opt.label}`}
-                      onSelect={() => onToggle(opt.value)}
-                      className={isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}
-                    >
-                      <div className={`w-4 h-4 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
-                        selectedSet.has(opt.value)
-                          ? isDark ? "bg-sky-500 border-sky-500" : "bg-sky-500 border-sky-500"
-                          : isDark ? "border-slate-600" : "border-slate-300"
-                      }`}>
-                        {selectedSet.has(opt.value) && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium">{opt.label}</span>
-                        {opt.sub && <span className={`ml-1.5 text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>{opt.sub}</span>}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </ScrollArea>
+                {options.map(opt => (
+                  <CommandItem
+                    key={opt.value}
+                    value={`${opt.value} ${opt.label}`}
+                    onSelect={() => onToggle(opt.value)}
+                    className={isDark ? "text-slate-300 aria-selected:bg-white/10" : ""}
+                  >
+                    <div className={`w-4 h-4 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
+                      selectedSet.has(opt.value)
+                        ? "bg-sky-500 border-sky-500"
+                        : isDark ? "border-slate-600" : "border-slate-300"
+                    }`}>
+                      {selectedSet.has(opt.value) && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium">{opt.label}</span>
+                      {opt.sub && <span className={`ml-1.5 text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>{opt.sub}</span>}
+                    </div>
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </Command>
