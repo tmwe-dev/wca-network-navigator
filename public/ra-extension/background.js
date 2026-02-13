@@ -127,7 +127,8 @@ function fillLogin(username, password) {
 async function fetchWithCookies(url) {
   const cookies = await chrome.cookies.getAll({ domain: ".reportaziende.it" });
   const cookies2 = await chrome.cookies.getAll({ domain: "reportaziende.it" });
-  const allCookies = [...cookies, ...cookies2];
+  const cookies3 = await chrome.cookies.getAll({ domain: "ecommerce2.reportaziende.it" });
+  const allCookies = [...cookies, ...cookies2, ...cookies3];
   const uniqueCookies = {};
   allCookies.forEach((c) => { uniqueCookies[c.name] = c.value; });
   const cookieStr = Object.entries(uniqueCookies).map(([k, v]) => `${k}=${v}`).join("; ");
