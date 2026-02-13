@@ -187,6 +187,12 @@ export function useDownloadProcessor() {
           } catch {}
         }
 
+        // Periodic invalidation of CountryGrid queries (every 5 profiles)
+        if (processedSet.size > 0 && processedSet.size % 5 === 0) {
+          queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
+          queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
+        }
+
         // Consecutive empty auto-recovery
         if (consecutiveEmpty >= settings.recoveryThreshold) {
           try {
@@ -246,6 +252,9 @@ export function useDownloadProcessor() {
       clearInterval(keepAlive);
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["ops-global-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
+      queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
+      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     }
   }, [settings, checkAvailable, extractContacts, verifySession, syncCookie, queryClient]);
 
