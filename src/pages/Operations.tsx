@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { getCountryFlag } from "@/lib/countries";
 import { Link } from "react-router-dom";
 
@@ -45,6 +46,7 @@ export default function Operations() {
   const [activeTab, setActiveTab] = useState("partner");
   const { data: globalStats } = useGlobalStats();
   const { data: jobs } = useDownloadJobs();
+  useDownloadProcessor(); // Background processor: picks up pending/running jobs
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
   const countryJobs = useMemo(() => {
