@@ -19,6 +19,7 @@ import {
   Snowflake, Pill, ShoppingCart, Home, FileCheck, Warehouse,
   Anchor, Box, Container, Trophy, ShieldCheck, FileText,
   ArrowLeft, ExternalLink, MessageSquare, Clock, ArrowUpRight,
+  Wand2,
 } from "lucide-react";
 import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -74,6 +75,7 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   const [filterIncomplete, setFilterIncomplete] = useState(false);
+  const [generatingAliases, setGeneratingAliases] = useState(false);
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -81,6 +83,28 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
   });
 
   const toggleFavorite = useToggleFavorite();
+  const queryClient = useQueryClient();
+
+  const handleGenerateAliases = useCallback(async () => {
+    if (!countryCodes.length) return;
+    setGeneratingAliases(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-aliases", {
+        body: { countryCodes },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Alias generati: ${data.processed} aziende, ${data.contacts} contatti`);
+        queryClient.invalidateQueries({ queryKey: ["partners"] });
+      } else {
+        toast.error(data?.error || "Errore nella generazione alias");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Errore");
+    } finally {
+      setGeneratingAliases(false);
+    }
+  }, [countryCodes, queryClient]);
 
   const filteredPartners = useMemo(() => {
     let list = filterIncomplete
@@ -151,6 +175,16 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
             >
               <Filter className="w-3 h-3" />
               Incompleti
+            </button>
+            <button
+              onClick={handleGenerateAliases}
+              disabled={generatingAliases || !countryCodes.length}
+              className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border transition-all shrink-0 ${
+                isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-400 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-500 hover:bg-white"
+              } disabled:opacity-40`}
+            >
+              {generatingAliases ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+              Alias
             </button>
           </div>
           <p className={`text-xs ${th.dim}`}>
