@@ -12,7 +12,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
 
-// Theme context - reuse from parent
 const ThemeCtx = createContext(true);
 
 interface NetworkStats {
@@ -22,7 +21,7 @@ interface NetworkStats {
   wca_ids: number[];
 }
 
-import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 
 function t(dark: boolean) {
   return {
@@ -48,18 +47,14 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   const th = t(isDark);
   const queryClient = useQueryClient();
   const { settings: scrapingSettings } = useScrapingSettings();
-  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
-  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
-  const defaultIdx = DELAY_VALUES.findIndex(v => v >= scrapingSettings.delayDefault);
   const [loading, setLoading] = useState(true);
   const [networkStats, setNetworkStats] = useState<NetworkStats[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [delayIdx, setDelayIdx] = useState(defaultIdx >= 0 ? defaultIdx : Math.floor(DELAY_VALUES.length / 2));
+  const [delay, setDelay] = useState(scrapingSettings.baseDelay);
   const [prioritizeMissing, setPrioritizeMissing] = useState(true);
   const [starting, setStarting] = useState(false);
   const [hasCookie, setHasCookie] = useState<boolean | null>(null);
 
-  // Load network stats
   useEffect(() => {
     loadStats();
     checkCookie();
@@ -77,12 +72,10 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   async function loadStats() {
     setLoading(true);
     try {
-      // Get all partner networks with partner info
       const { data: pnData } = await supabase
         .from("partner_networks")
         .select("network_name, partner_id, partners!inner(wca_id)");
 
-      // Get contacts with email
       const { data: contactsData } = await supabase
         .from("partner_contacts")
         .select("partner_id, email");
@@ -91,7 +84,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         (contactsData || []).filter(c => c.email).map(c => c.partner_id)
       );
 
-      // Group by network
       const byNetwork = new Map<string, { partnerIds: Set<string>; wcaIds: Set<number> }>();
       for (const pn of (pnData || [])) {
         const nn = pn.network_name;
@@ -146,20 +138,16 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
     setStarting(true);
 
     try {
-      // Collect all WCA IDs from selected networks
-      // If prioritizing missing, we need to reorder
       let allWcaIds: number[] = [];
       for (const ns of totalSelected) {
         allWcaIds.push(...ns.wca_ids);
       }
-      // Deduplicate
       allWcaIds = [...new Set(allWcaIds)];
 
       if (prioritizeMissing) {
-        // Get partner IDs without contacts email
-        const { data: partnersWithoutEmail } = await supabase
+        const { data: partnersAll } = await supabase
           .from("partners")
-          .select("wca_id")
+          .select("id, wca_id")
           .in("wca_id", allWcaIds)
           .not("wca_id", "is", null);
 
@@ -172,13 +160,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           (contactsWithEmail || []).map(c => c.partner_id)
         );
 
-        // Get partners that have email
-        const { data: partnersAll } = await supabase
-          .from("partners")
-          .select("id, wca_id")
-          .in("wca_id", allWcaIds)
-          .not("wca_id", "is", null);
-
         const withEmailWcaIds = new Set<number>();
         const withoutEmailWcaIds: number[] = [];
 
@@ -190,7 +171,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           }
         }
 
-        // Put missing first, then existing
         const orderedIds = [
           ...withoutEmailWcaIds,
           ...allWcaIds.filter(id => withEmailWcaIds.has(id)),
@@ -200,7 +180,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       const networkNames = [...selected].join(", ");
 
-      // Create the resync job
       const { data, error } = await supabase
         .from("download_jobs")
         .insert({
@@ -209,7 +188,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           network_name: networkNames,
           wca_ids: allWcaIds as any,
           total_count: allWcaIds.length,
-          delay_seconds: DELAY_VALUES[delayIdx],
+          delay_seconds: delay,
           status: "pending",
           job_type: "resync",
         } as any)
@@ -218,7 +197,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       if (error) throw error;
 
-      // Trigger the processor
       await supabase.functions.invoke("process-download-job", {
         body: { jobId: data.id },
       });
@@ -252,21 +230,18 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         </p>
       </div>
 
-      {/* Cookie warning */}
       {hasCookie === false && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className={`text-sm font-medium ${th.h2}`}>Cookie WCA non configurato</p>
             <p className={`text-xs mt-1 ${th.sub}`}>
-              Vai in Impostazioni e inserisci il cookie di sessione WCA prima di avviare il re-sync,
-              altrimenti i contatti non saranno visibili.
+              Vai in Impostazioni e inserisci il cookie di sessione WCA prima di avviare il re-sync.
             </p>
           </div>
         </div>
       )}
 
-      {/* Network list */}
       <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-sm font-medium ${th.h2}`}>Seleziona Network</h3>
@@ -328,10 +303,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         )}
       </div>
 
-      {/* Options */}
       {selected.size > 0 && (
         <div className={`${th.panel} border ${isDark ? "border-slate-700/50" : "border-slate-200"} rounded-2xl p-5 space-y-5`}>
-          {/* Priority toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <Checkbox
               checked={prioritizeMissing}
@@ -343,18 +316,17 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
             </div>
           </label>
 
-          {/* Delay slider */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className={`text-sm ${th.label}`}>Velocità</span>
-              <span className={`text-sm font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[delayIdx]]}</span>
+              <span className={`text-sm ${th.label}`}>Delay</span>
+              <span className={`text-sm font-mono ${th.hi}`}>{delay}s</span>
             </div>
             <Slider
-              min={0}
-              max={DELAY_VALUES.length - 1}
+              min={10}
+              max={60}
               step={1}
-              value={[delayIdx]}
-              onValueChange={([v]) => setDelayIdx(v)}
+              value={[delay]}
+              onValueChange={([v]) => setDelay(v)}
             />
             <div className={`flex justify-between text-[10px] mt-1 ${th.dim}`}>
               <span>Veloce</span>
@@ -362,7 +334,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
             </div>
           </div>
 
-          {/* Summary */}
           <div className={`${th.infoBox} rounded-xl p-4 border`}>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -380,7 +351,6 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
             </div>
           </div>
 
-          {/* Start button */}
           <Button
             onClick={startResync}
             disabled={starting || hasCookie === false}

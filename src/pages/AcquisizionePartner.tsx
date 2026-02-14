@@ -11,7 +11,7 @@ import { AcquisitionBin } from "@/components/acquisition/AcquisitionBin";
 import { NetworkPerformanceBar, NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 import { ToastAction } from "@/components/ui/toast";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
-import { useScrapingSettings, isNightPauseActive, msUntilNightEnd } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings, calcDelay } from "@/hooks/useScrapingSettings";
 
 type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
@@ -33,9 +33,9 @@ export default function AcquisizionePartner() {
   // Toolbar state
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [delaySeconds, setDelaySeconds] = useState(scrapingSettings.delayDefault);
-  const [includeEnrich, setIncludeEnrich] = useState(scrapingSettings.enrichDefault);
-  const [includeDeepSearch, setIncludeDeepSearch] = useState(scrapingSettings.deepSearchDefault);
+  const [delaySeconds, setDelaySeconds] = useState(scrapingSettings.baseDelay);
+  const [includeEnrich, setIncludeEnrich] = useState(false);
+  const [includeDeepSearch, setIncludeDeepSearch] = useState(false);
 
   // Pipeline state
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
@@ -327,17 +327,17 @@ export default function AcquisizionePartner() {
             // Auto-recover: try syncCookie + verify, never pause
             setSessionHealth("recovering");
             await syncCookie();
-            await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait1));
+            await new Promise((r) => setTimeout(r, 3000));
             const retryResult = await verifySession();
             if (retryResult.success && retryResult.authenticated) {
               setSessionHealth("active");
               toast({ title: "🔄 Sessione ripristinata", description: "Recovery automatico riuscito." });
             } else {
               // Second attempt with longer wait
-              await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait2));
+               await new Promise((r) => setTimeout(r, 10000));
               if (cancelRef.current) break;
               await syncCookie();
-              await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait1));
+               await new Promise((r) => setTimeout(r, 3000));
               const retryResult2 = await verifySession();
               if (retryResult2.success && retryResult2.authenticated) {
                 setSessionHealth("active");
@@ -446,7 +446,7 @@ export default function AcquisizionePartner() {
           // Attempt 1: syncCookie
           try {
            await syncCookie();
-            await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait1));
+             await new Promise((r) => setTimeout(r, 3000));
             const recheck = await verifySession();
             if (recheck.success && recheck.authenticated) {
               setSessionHealth("active");
@@ -456,9 +456,9 @@ export default function AcquisizionePartner() {
             } else {
               // Attempt 2: wait longer and retry
               console.log("[AutoRecovery] First attempt failed, retrying...");
-              await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait2));
+              await new Promise((r) => setTimeout(r, 10000));
               await syncCookie();
-              await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait1));
+              await new Promise((r) => setTimeout(r, 3000));
               const recheck2 = await verifySession();
               if (recheck2.success && recheck2.authenticated) {
                 setSessionHealth("active");
@@ -469,7 +469,7 @@ export default function AcquisizionePartner() {
                 // Attempt 3: wait longer and try one last time
                 console.log("[AutoRecovery] Second attempt failed, waiting...");
                 await supabase.from("download_jobs").update({ error_message: "🔄 Tentativo di recovery sessione in corso..." }).eq("id", jobId);
-                await new Promise((r) => setTimeout(r, scrapingSettings.recoveryWait3));
+                await new Promise((r) => setTimeout(r, 30000));
                 if (cancelRef.current) break;
                 await syncCookie();
                 await new Promise((r) => setTimeout(r, 5000));
@@ -599,11 +599,11 @@ export default function AcquisizionePartner() {
         )
       );
 
-      // ── Anti-throttling: detect long gaps between partners ──
+      // ── Anti-throttling: detect long gaps ──
       const now = Date.now();
       const elapsed = now - lastProcessedTime;
       lastProcessedTime = now;
-      if (elapsed > scrapingSettings.throttleGapMs) { // likely throttled
+      if (elapsed > 120000) { // 2 minutes gap = likely throttled
         console.warn(`[AntiThrottle] ${Math.round(elapsed / 1000)}s gap detected, syncing cookie...`);
         try {
           await syncCookie();
@@ -611,32 +611,10 @@ export default function AcquisizionePartner() {
         } catch { /* non-blocking */ }
       }
 
-      // ── Scheduled pauses ──
-      const loopTotal = processedSet.size;
-
-      // Night pause check
-      if (isNightPauseActive(scrapingSettings.nightPause, scrapingSettings.nightStopHour, scrapingSettings.nightStartHour)) {
-        const waitMs = msUntilNightEnd(scrapingSettings.nightStartHour);
-        console.log(`[NightPause] Pausing until ${scrapingSettings.nightStartHour}:00 (${Math.round(waitMs / 60000)} min)`);
-        await supabase.from("download_jobs").update({ error_message: `🌙 Pausa notturna fino alle ${scrapingSettings.nightStartHour}:00` }).eq("id", jobId);
-        await new Promise((r) => setTimeout(r, waitMs));
-        if (cancelRef.current) break;
-        await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-      }
-
-      // Periodic pause check
-      if (scrapingSettings.pauseEveryN > 0 && loopTotal > 0 && loopTotal % scrapingSettings.pauseEveryN === 0) {
-        const pauseMin = Math.round(scrapingSettings.pauseDurationS / 60);
-        console.log(`[ScheduledPause] ${loopTotal} partner processed — pausing ${pauseMin} min`);
-        await supabase.from("download_jobs").update({ error_message: `⏸️ Pausa programmata (${pauseMin} min) dopo ${loopTotal} partner` }).eq("id", jobId);
-        await new Promise((r) => setTimeout(r, scrapingSettings.pauseDurationS * 1000));
-        if (cancelRef.current) break;
-        await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-      }
-
-      // Wait delay before next
+      // Simplified delay: baseDelay ± variation
       if (i < items.length - 1 && !cancelRef.current) {
-        await new Promise((r) => setTimeout(r, delaySeconds * 1000));
+        const actualDelay = calcDelay(scrapingSettings.baseDelay, scrapingSettings.variation);
+        await new Promise((r) => setTimeout(r, actualDelay * 1000));
       }
     }
 

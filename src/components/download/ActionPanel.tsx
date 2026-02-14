@@ -16,7 +16,7 @@ import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { useTheme, t } from "./theme";
-import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { WcaSessionDialog } from "./WcaSessionIndicator";
 
 interface ActionPanelProps {
@@ -32,8 +32,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   const [showSessionDialog, setShowSessionDialog] = useState(false);
 
   const { settings: scrapingSettings } = useScrapingSettings();
-  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
-  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
@@ -42,10 +40,8 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
 
   const countryCodes = selectedCountries.map(c => c.code);
 
-  // Speed — find closest index to default
-  const defaultIdx = DELAY_VALUES.findIndex(v => v >= scrapingSettings.delayDefault);
-  const [delayIndex, setDelayIndex] = useState(defaultIdx >= 0 ? defaultIdx : Math.floor(DELAY_VALUES.length / 2));
-  const delay = DELAY_VALUES[delayIndex] ?? scrapingSettings.delayDefault;
+  // Speed — simple slider around baseDelay
+  const [delay, setDelay] = useState(scrapingSettings.baseDelay);
   const [includeExisting, setIncludeExisting] = useState(false);
 
   // Scanning state
@@ -119,8 +115,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   const idsToDownload = includeExisting ? uniqueIds : missingIds;
 
   // Time estimate
-  const avgScrapeTime = scrapingSettings.avgScrapeTime;
-  const totalTime = idsToDownload.length * (delay + avgScrapeTime);
+  const totalTime = idsToDownload.length * (delay + 5);
   const estimateLabel = totalTime >= 3600
     ? `~${(totalTime / 3600).toFixed(1)} ore`
     : totalTime >= 60 ? `~${Math.ceil(totalTime / 60)} min` : `~${totalTime}s`;
@@ -225,13 +220,11 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   const handleStartDownload = async () => {
     const result = await triggerCheck();
 
-    // Use the direct result from the check function
     if (result?.authenticated) {
       await executeDownload();
       return;
     }
 
-    // Fallback: re-read DB in case cookie was updated right before/after check
     const { data: statusData } = await supabase.from("app_settings")
       .select("value").eq("key", "wca_session_status").maybeSingle();
     if (statusData?.value === "ok") {
@@ -239,7 +232,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
       return;
     }
 
-    // Only show dialog if truly not authenticated
     setShowSessionDialog(true);
   };
 
@@ -249,7 +241,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
       return;
     }
 
-    // Gate: block if any job is already pending or running
     const { data: activeJobs } = await supabase
       .from("download_jobs")
       .select("id")
@@ -279,7 +270,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
       await createJob.mutateAsync({
         country_code: country.code, country_name: country.name,
         network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-        wca_ids: countryIds, delay_seconds: Math.max(delay, scrapingSettings.delayMin),
+        wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
       });
     }
   };
@@ -291,7 +282,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
 
   const isLoading = loadingCache || loadingDb;
 
-  // ── No countries selected ──
   if (selectedCountries.length === 0) {
     return (
       <div className={`${th.panel} border ${th.panelSlate} rounded-2xl p-6 text-center`}>
@@ -300,7 +290,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
     );
   }
 
-  // ── Loading ──
   if (isLoading) {
     return (
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6 flex items-center justify-center`}>
@@ -310,7 +299,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
     );
   }
 
-  // ── Scanning ──
   if (isScanning) {
     return (
       <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-6 space-y-4 text-center`}>
@@ -337,20 +325,17 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
     );
   }
 
-  // ── Ready / Download panel ──
   const countryLabel = selectedCountries.length === 1
     ? `${getCountryFlag(selectedCountries[0].code)} ${selectedCountries[0].name}`
     : `${selectedCountries.length} paesi`;
 
   return (
     <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-5 space-y-4`}>
-      {/* Header */}
       <div>
         <h3 className={`text-lg font-semibold ${th.h2}`}>Scarica Partner</h3>
         <p className={`text-sm ${th.sub}`}>{countryLabel}</p>
       </div>
 
-      {/* Network selector */}
       <div>
         <label className={`text-xs mb-1.5 block ${th.label}`}>Network</label>
         <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
@@ -364,7 +349,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
         </Select>
       </div>
 
-      {/* Summary */}
       <div className={`p-3 rounded-xl border space-y-2 ${th.infoBox}`}>
         <div className="flex items-center justify-between">
           <span className={`text-sm ${th.body}`}>Nella directory</span>
@@ -381,7 +365,6 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
         </div>
       </div>
 
-      {/* Include existing toggle */}
       {downloadedCount > 0 && (
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
           <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
@@ -389,28 +372,25 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
         </label>
       )}
 
-      {/* All downloaded */}
       {missingIds.length === 0 && !includeExisting && (
         <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
           ✅ Tutti scaricati! Spunta sopra per aggiornare.
         </div>
       )}
 
-      {/* Speed */}
       {idsToDownload.length > 0 && (
         <div>
           <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
             <Timer className="w-3.5 h-3.5" />
-            Velocità: <span className={`font-mono font-bold ${th.hi}`}>{DELAY_LABELS[delay]}</span>
+            Delay: <span className={`font-mono font-bold ${th.hi}`}>{delay}s</span>
           </label>
-          <Slider value={[delayIndex]} onValueChange={([v]) => setDelayIndex(v)} min={0} max={DELAY_VALUES.length - 1} step={1} />
+          <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} />
           <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
             <span>Veloce</span><span>Lento</span>
           </div>
         </div>
       )}
 
-      {/* Time estimate */}
       {idsToDownload.length > 0 && (
         <div className={`p-2 rounded-lg border text-center ${th.infoBox}`}>
           <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
@@ -418,37 +398,45 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
         </div>
       )}
 
-      {/* Download button */}
       <Button
         onClick={handleStartDownload}
         disabled={idsToDownload.length === 0 || createJob.isPending}
         className={`w-full ${th.btnPri}`}
       >
-        {createJob.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-        {idsToDownload.length > 0 ? `Scarica ${idsToDownload.length} partner` : "Tutti scaricati ✓"}
+        {createJob.isPending ? (
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</>
+        ) : (
+          <><Zap className="w-4 h-4 mr-2" /> Scarica {idsToDownload.length} partner</>
+        )}
       </Button>
 
-      {/* Rescan option */}
-      {hasCache && (
+      {skippedCountries.length > 0 && (
         <Collapsible>
-          <CollapsibleTrigger className={`flex items-center gap-1.5 text-xs w-full justify-center ${th.sub} hover:opacity-80`}>
-            <Settings2 className="w-3.5 h-3.5" /> Opzioni <ChevronDown className="w-3 h-3" />
+          <CollapsibleTrigger className={`flex items-center gap-1 text-xs ${th.dim}`}>
+            <ChevronDown className="w-3 h-3" /> {skippedCountries.length} paesi saltati
           </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
-            <Button variant="ghost" size="sm" onClick={() => { setScanComplete(false); setScannedMembers([]); handleStartScan(); }} className={`w-full text-xs ${th.btnPause}`}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Aggiorna dalla directory
+          <CollapsibleContent className={`mt-1 text-xs space-y-0.5 ${th.dim}`}>
+            {skippedCountries.map(s => <p key={s}>• {s}</p>)}
+            <Button size="sm" variant="ghost" onClick={handleStartScan} className={`h-6 text-xs mt-1 ${th.dim}`}>
+              <RefreshCw className="w-3 h-3 mr-1" /> Riprova
             </Button>
           </CollapsibleContent>
         </Collapsible>
       )}
 
-      {skippedCountries.length > 0 && (
-        <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
-          ⚠️ {skippedCountries.length} paesi saltati: {skippedCountries.join(', ')}
+      {hasCache && !scanComplete && (
+        <div className="text-center">
+          <Button size="sm" variant="ghost" onClick={handleStartScan} className={`text-xs ${th.dim}`}>
+            <RefreshCw className="w-3 h-3 mr-1" /> Aggiorna scansione
+          </Button>
         </div>
       )}
 
-      <WcaSessionDialog open={showSessionDialog} onOpenChange={setShowSessionDialog} onRetry={handleSessionRetry} />
+      <WcaSessionDialog
+        open={showSessionDialog}
+        onOpenChange={setShowSessionDialog}
+        onRetry={handleSessionRetry}
+      />
     </div>
   );
 }
