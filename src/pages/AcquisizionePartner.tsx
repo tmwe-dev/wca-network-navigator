@@ -406,10 +406,10 @@ export default function AcquisizionePartner() {
           (async () => {
             try {
               const { data: enrichResult } = await supabase.functions.invoke("enrich-partner-website", { body: { partnerId } });
-              if (enrichResult?.enrichment_data) {
-                const ed = enrichResult.enrichment_data;
+              if (enrichResult?.enrichment) {
+                const ed = enrichResult.enrichment;
                 setCanvasData((prev) =>
-                  prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employees, founded: ed.year_founded, fleet: ed.own_fleet } : prev
+                  prev ? { ...prev, key_markets: ed.key_markets || [], key_routes: ed.key_routes || [], warehouse_sqm: ed.warehouse_sqm, employees: ed.employee_count, founded: ed.founding_year ? String(ed.founding_year) : undefined, fleet: ed.has_own_fleet ? (ed.fleet_details || "Sì") : undefined } : prev
                 );
               }
             } catch { /* non-blocking */ }
@@ -423,8 +423,19 @@ export default function AcquisizionePartner() {
             try {
               const { data: deepResult } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId } });
               if (deepResult) {
+                // Deep search saves logo and social links directly to DB, re-fetch them
+                const [{ data: updatedPartner }, { data: socialLinks }] = await Promise.all([
+                  supabase.from("partners").select("logo_url").eq("id", partnerId!).maybeSingle(),
+                  supabase.from("partner_social_links").select("*").eq("partner_id", partnerId!),
+                ]);
                 setCanvasData((prev) =>
-                  prev ? { ...prev, logo_url: deepResult.logo_url || prev.logo_url, linkedin_links: (deepResult.social_links || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: l.contact_name || "LinkedIn", url: l.url })) } : prev
+                  prev ? {
+                    ...prev,
+                    logo_url: updatedPartner?.logo_url || prev.logo_url,
+                    linkedin_links: (socialLinks || [])
+                      .filter((l: any) => l.platform === "linkedin")
+                      .map((l: any) => ({ name: "LinkedIn", url: l.url })),
+                  } : prev
                 );
               }
             } catch { /* non-blocking */ }
@@ -1205,6 +1216,41 @@ export default function AcquisizionePartner() {
             }}
             onSelectAll={() => setSelectedIds(new Set(queue.map((q) => q.wca_id)))}
             onDeselectAll={() => setSelectedIds(new Set())}
+            onPartnerClick={async (wcaId) => {
+              // Load completed partner data from DB for review
+              const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+              if (!partner) return;
+              const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
+                supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
+                supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
+                supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+                supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
+              ]);
+              const ed = partner.enrichment_data as any;
+              setCanvasData({
+                company_name: partner.company_name,
+                city: partner.city,
+                country_code: partner.country_code,
+                country_name: partner.country_name,
+                logo_url: partner.logo_url || undefined,
+                contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
+                services: (svcs || []).map(s => s.service_category),
+                key_markets: ed?.key_markets || [],
+                key_routes: ed?.key_routes || [],
+                networks: (nets || []).map(n => n.network_name),
+                rating: partner.rating ? Number(partner.rating) : undefined,
+                website: partner.website || undefined,
+                profile_description: partner.profile_description || undefined,
+                linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
+                warehouse_sqm: ed?.warehouse_sqm,
+                employees: ed?.employee_count,
+                founded: ed?.founding_year ? String(ed.founding_year) : undefined,
+                fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
+                contactSource: "extension",
+              });
+              setCanvasPhase("complete");
+              setIsAnimatingOut(false);
+            }}
           />
         </div>
 

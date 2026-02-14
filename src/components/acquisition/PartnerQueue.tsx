@@ -24,9 +24,10 @@ interface PartnerQueueProps {
   onToggle: (wcaId: number) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  onPartnerClick?: (wcaId: number) => void;
 }
 
-export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll }: PartnerQueueProps) {
+export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
   const selectedCount = items.filter((i) => selectedIds.has(i.wca_id)).length;
   const allSelected = items.length > 0 && selectedCount === items.length;
 
@@ -52,11 +53,12 @@ export function PartnerQueue({ items, activeIndex, selectedIds, onToggle, onSele
           {items.map((item) => (
             <div
               key={item.wca_id}
+              onClick={() => item.status === "done" && onPartnerClick?.(item.wca_id)}
               className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-300",
                 item.status === "active" &&
                   "bg-sky-500/[0.08] border border-sky-500/30 shadow-md shadow-sky-500/[0.08] scale-[1.01]",
-                item.status === "done" && "opacity-50",
+                item.status === "done" && "opacity-70 hover:opacity-100 hover:bg-emerald-500/[0.06] cursor-pointer",
                 item.status === "pending" && "opacity-70 hover:bg-white/[0.04]",
                 item.status === "error" && "bg-destructive/10 border border-destructive/20"
               )}
