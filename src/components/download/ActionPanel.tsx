@@ -205,7 +205,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           countryPages = result.pagination.total_pages;
           hasNext = result.pagination.has_next_page || result.members.length >= 50;
           page++;
-          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 0));
+          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 3000));
         }
 
         if (countryFailed) {
@@ -213,6 +213,11 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           if (!skipped.includes(label)) { skipped.push(label); setSkippedCountries([...skipped]); }
         }
         if (countryMembers.length > 0) await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
+      }
+
+      // Pause between countries (minimum 10s)
+      if (ci < selectedCountries.length - 1 && !abortRef.current) {
+        await new Promise(r => setTimeout(r, 10000));
       }
     }
 
