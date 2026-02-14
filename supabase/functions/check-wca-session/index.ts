@@ -6,12 +6,11 @@ const corsHeaders = {
 }
 
 /**
- * Check WCA session status WITHOUT making any HTTP requests to WCA.
- * This prevents IP-mismatch session invalidation.
+ * Check WCA session status.
  * 
- * Status is determined from:
- * 1. Presence of .ASPXAUTH in stored cookie
- * 2. Recent download job results (contacts found vs missing)
+ * Two modes:
+ * 1. Direct status update: body contains { status, source } — frontend confirmed via extension
+ * 2. DB-only check: no body or empty — checks cookie string and job history (fallback)
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,7 +22,27 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
-    // Read cookie from app_settings (include updated_at to compare timestamps)
+    // Parse body if present
+    let body: any = null
+    try {
+      const text = await req.text()
+      if (text) body = JSON.parse(text)
+    } catch { /* empty body is fine */ }
+
+    // MODE 1: Direct status update from frontend (extension verified)
+    if (body?.status && body?.source) {
+      const status = body.status === 'ok' ? 'ok' : 'expired'
+      await upsertStatus(supabase, status, new Date().toISOString())
+      return respond({
+        authenticated: status === 'ok',
+        status,
+        source: body.source,
+        method: 'direct_update',
+        checkedAt: new Date().toISOString(),
+      })
+    }
+
+    // MODE 2: DB-only check (fallback when extension is not available)
     const { data: settings } = await supabase
       .from('app_settings')
       .select('key, value, updated_at')
@@ -46,11 +65,6 @@ Deno.serve(async (req) => {
 
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
 
-    if (!hasAspxAuth) {
-      await upsertStatus(supabase, 'expired', new Date().toISOString())
-      return respond({ authenticated: false, status: 'expired', reason: 'no_aspxauth_in_cookie' })
-    }
-
     // Check recent job activity for signs of session death
     const { data: recentJobs } = await supabase
       .from('download_jobs')
@@ -62,19 +76,40 @@ Deno.serve(async (req) => {
     let status = 'ok'
     let jobSignal: string | null = null
 
-    if (recentJobs && recentJobs.length > 0) {
-      const job = recentJobs[0]
-      
-      if (job.status === 'paused' && job.error_message?.includes('consecutivi senza contatti')) {
-        // Only mark expired if cookie was saved BEFORE the job paused
-        // If cookie was refreshed AFTER the job pause, the session is likely restored
-        if (cookieUpdatedAt && new Date(cookieUpdatedAt) > new Date(job.updated_at)) {
-          // Cookie is fresher than the paused job — session is OK
+    // If no .ASPXAUTH but cookie exists, check if recent jobs worked fine
+    if (!hasAspxAuth) {
+      // Check if a recent successful job suggests the session is actually working
+      if (recentJobs && recentJobs.length > 0) {
+        const job = recentJobs[0]
+        if (job.status === 'completed' && job.contacts_found_count > 0) {
+          // Jobs completed successfully — session likely works despite missing .ASPXAUTH string
           status = 'ok'
-          jobSignal = 'job_paused_but_cookie_refreshed'
-        } else {
+          jobSignal = 'aspxauth_missing_but_jobs_ok'
+        } else if (job.status === 'paused' && job.error_message?.includes('consecutivi senza contatti')) {
           status = 'expired'
           jobSignal = 'job_paused_empty_profiles'
+        } else {
+          // No clear signal — mark as expired (conservative)
+          status = 'expired'
+          jobSignal = 'no_aspxauth_no_clear_signal'
+        }
+      } else {
+        // No jobs at all — can't determine, mark expired
+        status = 'expired'
+        jobSignal = 'no_aspxauth_no_jobs'
+      }
+    } else {
+      // Has .ASPXAUTH — check job signals
+      if (recentJobs && recentJobs.length > 0) {
+        const job = recentJobs[0]
+        if (job.status === 'paused' && job.error_message?.includes('consecutivi senza contatti')) {
+          if (cookieUpdatedAt && new Date(cookieUpdatedAt) > new Date(job.updated_at)) {
+            status = 'ok'
+            jobSignal = 'job_paused_but_cookie_refreshed'
+          } else {
+            status = 'expired'
+            jobSignal = 'job_paused_empty_profiles'
+          }
         }
       }
     }
@@ -88,7 +123,7 @@ Deno.serve(async (req) => {
       checkedAt: new Date().toISOString(),
       hasAspxAuth,
       jobSignal,
-      method: 'db_only', // No HTTP requests to WCA
+      method: 'db_only',
     })
   } catch (error) {
     console.error('check-wca-session error:', error)

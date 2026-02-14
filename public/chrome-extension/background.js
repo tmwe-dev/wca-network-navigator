@@ -242,22 +242,55 @@ async function verifyWcaSession() {
   }
 }
 
-// ── Sync all WCA cookies to the server ──
+// ── Sync all WCA cookies to the server (improved .ASPXAUTH capture) ──
 async function syncWcaCookiesToServer() {
   try {
-    var cookies = await chrome.cookies.getAll({ domain: ".wcaworld.com" });
-    if (!cookies || cookies.length === 0) {
-      cookies = await chrome.cookies.getAll({ domain: "wcaworld.com" });
-    }
-    if (!cookies || cookies.length === 0) {
-      cookies = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });
+    // Collect cookies from multiple sources to maximize .ASPXAUTH capture
+    var cookieMap = {}; // name -> value (deduplication)
+
+    // Method 1: domain-based getAll
+    var domainVariants = [".wcaworld.com", "wcaworld.com", "www.wcaworld.com"];
+    for (var d = 0; d < domainVariants.length; d++) {
+      try {
+        var cookies = await chrome.cookies.getAll({ domain: domainVariants[d] });
+        for (var c = 0; c < cookies.length; c++) {
+          cookieMap[cookies[c].name] = cookies[c].value;
+        }
+      } catch (e) { /* ignore */ }
     }
 
-    if (!cookies || cookies.length === 0) {
+    // Method 2: URL-based getAll (may capture HttpOnly cookies better)
+    try {
+      var urlCookies = await chrome.cookies.getAll({ url: "https://www.wcaworld.com/" });
+      for (var u = 0; u < urlCookies.length; u++) {
+        cookieMap[urlCookies[u].name] = urlCookies[u].value;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Method 3: Direct .ASPXAUTH lookup by name (explicit HttpOnly capture attempt)
+    try {
+      var aspxCookie = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
+      if (aspxCookie) {
+        cookieMap[aspxCookie.name] = aspxCookie.value;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Also try ASP.NET_SessionId
+    try {
+      var sessionCookie = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: "ASP.NET_SessionId" });
+      if (sessionCookie) {
+        cookieMap[sessionCookie.name] = sessionCookie.value;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Build cookie string
+    var names = Object.keys(cookieMap);
+    if (names.length === 0) {
       return { success: false, error: "No WCA cookies found" };
     }
 
-    var cookieString = cookies.map(function (c) { return c.name + "=" + c.value; }).join("; ");
+    var cookieString = names.map(function (name) { return name + "=" + cookieMap[name]; }).join("; ");
+    var hasAspxAuth = !!cookieMap[".ASPXAUTH"];
 
     var res = await fetch(SUPABASE_URL + "/functions/v1/save-wca-cookie", {
       method: "POST",
@@ -269,7 +302,7 @@ async function syncWcaCookiesToServer() {
       body: JSON.stringify({ cookie: cookieString }),
     });
     var result = await res.json();
-    return { success: true, authenticated: result.authenticated, cookieLength: cookieString.length };
+    return { success: true, authenticated: result.authenticated, cookieLength: cookieString.length, hasAspxAuth: hasAspxAuth };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -298,7 +331,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.source !== "wca-content-bridge") return false;
 
   if (message.action === "ping") {
-    sendResponse({ success: true, version: "4.0" });
+    sendResponse({ success: true, version: "5.0" });
     return false;
   }
 

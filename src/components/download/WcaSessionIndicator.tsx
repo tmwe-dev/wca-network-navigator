@@ -2,14 +2,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, CheckCircle, Key } from "lucide-react";
+import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, CheckCircle, Key, Plug } from "lucide-react";
 import { useTheme, t } from "./theme";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useWcaSessionStatus, CheckStep } from "@/hooks/useWcaSessionStatus";
 import { toast } from "@/hooks/use-toast";
+
+function stepLabel(step: CheckStep): string {
+  switch (step) {
+    case "syncing_cookie": return "Sincronizzazione cookie...";
+    case "verifying_session": return "Verifica contatti reali...";
+    case "updating_db": return "Aggiornamento stato...";
+    default: return "Verifica in corso...";
+  }
+}
 
 export function WcaSessionIndicator() {
   const isDark = useTheme();
-  const { status, checkedAt, diagnostics, triggerCheck, isChecking } = useWcaSessionStatus();
+  const { status, checkedAt, diagnostics, triggerCheck, isChecking, checkStep } = useWcaSessionStatus();
 
   const isOk = status === "ok";
 
@@ -18,12 +27,15 @@ export function WcaSessionIndicator() {
     if (result) {
       toast({
         title: result.status === "ok" ? "✅ Sessione attiva" : "❌ Sessione non attiva",
-        description: result.status === "ok" ? "Cookie .ASPXAUTH valido" : "Sincronizza il cookie dall'estensione Chrome",
+        description: result.status === "ok"
+          ? `Contatti reali visibili (${result.diagnostics?.method || "verificato"})`
+          : result.diagnostics?.reason || "Sincronizza il cookie dall'estensione Chrome",
       });
     } else {
       toast({ title: "Errore", description: "Verifica fallita", variant: "destructive" });
     }
   };
+
   const dotColor = isOk
     ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
     : (isDark ? "bg-red-400" : "bg-red-500");
@@ -61,18 +73,17 @@ export function WcaSessionIndicator() {
             {diagnostics && (
               <div className={`text-xs rounded-lg p-2 space-y-1 ${isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
                 <div className="flex items-center gap-1">
-                  <Key className="w-3 h-3" />
-                  <span>.ASPXAUTH: {diagnostics.hasAspxAuth ? "✅" : "❌ Mancante"}</span>
+                  <Plug className="w-3 h-3" />
+                  <span>Metodo: {diagnostics.method === "extension_verify" ? "Estensione Chrome" : "Controllo DB"}</span>
                 </div>
-                {diagnostics.contactsTotal != null && (
-                  <>
-                    <div>Contatti trovati: {diagnostics.contactsTotal}</div>
-                    <div>Nomi reali visibili: {diagnostics.contactsWithRealName || 0}</div>
-                    <div>Email visibili: {diagnostics.contactsWithEmail || 0}</div>
-                    {diagnostics.membersOnlyCount > 0 && (
-                      <div className="text-amber-500">"Members only": {diagnostics.membersOnlyCount}x</div>
-                    )}
-                  </>
+                {diagnostics.reason && (
+                  <div>Risultato: {diagnostics.reason}</div>
+                )}
+                {diagnostics.hasAspxAuth !== undefined && (
+                  <div className="flex items-center gap-1">
+                    <Key className="w-3 h-3" />
+                    <span>.ASPXAUTH: {diagnostics.hasAspxAuth ? "✅" : "❌ (non bloccante)"}</span>
+                  </div>
                 )}
               </div>
             )}
@@ -80,13 +91,13 @@ export function WcaSessionIndicator() {
             {!isOk && (
               <div className="space-y-2">
                 <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Usa l'estensione Chrome per sincronizzare il cookie .ASPXAUTH.
+                  Assicurati di essere loggato su wcaworld.com e che l'estensione Chrome sia attiva.
                 </p>
               </div>
             )}
             <Button size="sm" variant="outline" onClick={handleVerify} disabled={isChecking} className="w-full">
               {isChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
-              {isChecking ? "Verifica in corso..." : "Verifica ora"}
+              {isChecking ? stepLabel(checkStep) : "Verifica ora"}
             </Button>
           </div>
         </PopoverContent>
@@ -98,7 +109,7 @@ export function WcaSessionIndicator() {
 export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolean; onOpenChange: (o: boolean) => void; onRetry: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const { status, diagnostics, triggerCheck, isChecking } = useWcaSessionStatus();
+  const { status, diagnostics, triggerCheck, isChecking, checkStep } = useWcaSessionStatus();
 
   const handleRetry = async () => {
     const result = await triggerCheck();
@@ -117,32 +128,31 @@ export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolea
             Sessione WCA non attiva
           </DialogTitle>
           <DialogDescription className={th.dlgSub}>
-            I contatti personali non sono visibili. Serve una sessione autenticata con .ASPXAUTH.
+            I contatti personali non sono visibili. L'estensione Chrome verificherà la sessione reale.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <ol className={`text-sm space-y-3 ${th.body}`}>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepAct}`}>1</span>
-              <span>Vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a>, fai login, e usa l'estensione Chrome per sincronizzare il cookie</span>
+              <span>Vai su <a href="https://www.wcaworld.com" target="_blank" rel="noopener" className={`underline ${th.hi}`}>wcaworld.com</a> e fai login</span>
             </li>
             <li className="flex gap-3">
               <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${th.stepWait}`}>2</span>
-              <span>Torna qui e clicca <strong>Verifica sessione</strong> per confermare</span>
+              <span>Clicca <strong>Verifica sessione</strong> — l'estensione aprirà un profilo di test per confermare</span>
             </li>
           </ol>
           
           {diagnostics && (
             <div className={`text-xs rounded-lg p-2 ${isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
-              <div>.ASPXAUTH: {diagnostics.hasAspxAuth ? "✅" : "❌ Mancante"}</div>
-              <div>Nomi visibili: {diagnostics.contactsWithRealName || 0}/{diagnostics.contactsTotal || 0}</div>
-              {diagnostics.membersOnlyCount > 0 && <div className="text-amber-500">"Members only": {diagnostics.membersOnlyCount}x</div>}
+              <div>Metodo: {diagnostics.method === "extension_verify" ? "Estensione Chrome (test reale)" : "Controllo DB"}</div>
+              {diagnostics.reason && <div>Risultato: {diagnostics.reason}</div>}
             </div>
           )}
 
           <Button onClick={handleRetry} disabled={isChecking} className={`w-full ${th.btnPri}`}>
             {isChecking ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            {isChecking ? "Verifica in corso..." : "Verifica sessione"}
+            {isChecking ? stepLabel(checkStep) : "Verifica sessione"}
           </Button>
           {status === "ok" && (
             <div className={`p-3 rounded-lg border text-sm text-center ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>

@@ -1,9 +1,12 @@
-// WCA session status hook with manual check support
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+// WCA session status hook — uses Extension Bridge as primary verification method
+import { useState, useRef, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
 export type WcaSessionStatus = "ok" | "expired" | "no_cookie" | "checking" | "error";
+
+export type CheckStep = "idle" | "syncing_cookie" | "verifying_session" | "updating_db" | "done";
 
 export interface WcaDiagnostics {
   hasAspxAuth?: boolean;
@@ -11,11 +14,17 @@ export interface WcaDiagnostics {
   contactsTotal?: number;
   contactsWithRealName?: number;
   contactsWithEmail?: number;
+  method?: string;
+  reason?: string;
 }
 
 export function useWcaSessionStatus() {
   const [isChecking, setIsChecking] = useState(false);
-  
+  const [checkStep, setCheckStep] = useState<CheckStep>("idle");
+  const [diagnostics, setDiagnostics] = useState<WcaDiagnostics | null>(null);
+  const queryClient = useQueryClient();
+  const { isAvailable: extensionAvailable, syncCookie, verifySession, checkAvailable } = useExtensionBridge();
+
   const statusQuery = useQuery({
     queryKey: ["wca-session-status"],
     queryFn: async () => {
@@ -35,11 +44,60 @@ export function useWcaSessionStatus() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  let lastDiagnostics: WcaDiagnostics | null = null;
-
-  const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean; diagnostics?: WcaDiagnostics } | null> => {
-    setIsChecking(true);
+  // Update session status in DB via edge function
+  const updateStatusInDb = useCallback(async (status: string, source: string) => {
     try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
+      await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ status, source }),
+      });
+    } catch (err) {
+      console.error("Failed to update WCA status in DB:", err);
+    }
+  }, []);
+
+  const triggerCheck = useCallback(async (): Promise<{ status: WcaSessionStatus; authenticated: boolean; diagnostics?: WcaDiagnostics } | null> => {
+    setIsChecking(true);
+    setCheckStep("idle");
+
+    try {
+      // Try extension bridge first (primary method)
+      const extAvailable = extensionAvailable || await checkAvailable();
+
+      if (extAvailable) {
+        // Step 1: Sync cookies from browser to server
+        setCheckStep("syncing_cookie");
+        await syncCookie();
+
+        // Step 2: Verify session by opening a real WCA profile
+        setCheckStep("verifying_session");
+        const verifyResult = await verifySession();
+
+        const authenticated = verifyResult.success && verifyResult.authenticated === true;
+        const finalStatus: WcaSessionStatus = authenticated ? "ok" : "expired";
+        const diag: WcaDiagnostics = {
+          method: "extension_verify",
+          reason: verifyResult.reason || (authenticated ? "real_contacts_visible" : "no_real_contacts"),
+        };
+
+        // Step 3: Update DB with the real result
+        setCheckStep("updating_db");
+        await updateStatusInDb(finalStatus, "extension_verify");
+
+        setDiagnostics(diag);
+        setCheckStep("done");
+        queryClient.invalidateQueries({ queryKey: ["wca-session-status"] });
+
+        return { status: finalStatus, authenticated, diagnostics: diag };
+      }
+
+      // Fallback: use edge function check (DB-only, no extension)
+      setCheckStep("verifying_session");
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
       const res = await fetch(url, {
         method: "POST",
@@ -49,27 +107,36 @@ export function useWcaSessionStatus() {
         },
       });
       const data = await res.json();
-      lastDiagnostics = data.diagnostics || null;
-      statusQuery.refetch();
+      const diag: WcaDiagnostics = {
+        hasAspxAuth: data.hasAspxAuth,
+        method: "edge_function_fallback",
+        reason: data.jobSignal || data.reason,
+      };
+      setDiagnostics(diag);
+      setCheckStep("done");
+      queryClient.invalidateQueries({ queryKey: ["wca-session-status"] });
+
       return {
         status: (data.status || "error") as WcaSessionStatus,
         authenticated: !!data.authenticated,
-        diagnostics: data.diagnostics,
+        diagnostics: diag,
       };
     } catch (err) {
       console.error("WCA session check failed:", err);
+      setCheckStep("done");
       return null;
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [extensionAvailable, checkAvailable, syncCookie, verifySession, updateStatusInDb, queryClient]);
 
   return {
     status: statusQuery.data?.status ?? "checking",
     checkedAt: statusQuery.data?.checkedAt ?? null,
-    diagnostics: lastDiagnostics,
+    diagnostics,
     isLoading: statusQuery.isLoading,
     isChecking,
+    checkStep,
     triggerCheck,
   };
 }
