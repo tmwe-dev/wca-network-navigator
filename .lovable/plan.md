@@ -1,96 +1,69 @@
 
 
-# Rifattorizzazione Verifica Sessione WCA
+# Fix: Cruscotto mancante, indicatore sessione errato, terminale inattivo
 
-## Il Problema Reale
+## Problemi identificati
 
-Sei loggato su WCA, ma il sistema non lo riconosce. Ecco perche':
+### 1. Indicatore sessione mostra "Non configurato" (ma la sessione e' OK)
+Nel database lo stato e' `ok` e il cookie `.ASPXAUTH` e' presente. Il problema e' nel componente `WcaSessionIndicator.tsx` riga 42: la label `"Non configurato"` viene mostrata per qualsiasi stato che non sia `"ok"` o `"expired"` -- incluso `"checking"` che e' il valore di default durante il caricamento iniziale. Dato che la query React ha `refetchInterval: 5min`, se il primo caricamento e' lento l'utente vede "Non configurato" anche con sessione attiva.
 
-Il flusso attuale funziona cosi':
-1. L'estensione Chrome raccoglie i cookie con `chrome.cookies.getAll`
-2. Li invia al server come stringa
-3. Il server cerca `.ASPXAUTH=` nella stringa
-4. Se non lo trova, segna "expired"
+### 2. Cruscotto statistiche non appare
+La barra delle statistiche globali (Paesi scansionati, Partner, Email, Telefoni) dipende dalla query `ops-global-stats`. Se la query e' in corso o lenta, il blocco `{globalStats && (...)}` non rende nulla e sembra che il cruscotto sia "scomparso". Serve un placeholder/skeleton durante il caricamento.
 
-**Il cookie `.ASPXAUTH` e' HttpOnly** -- il browser lo usa per le richieste ma `chrome.cookies.getAll` spesso non riesce a catturarlo (dipende dal dominio esatto, dal flag secure, ecc.). Anche il popup dell'estensione lo sa: c'e' un messaggio "Login OK ma .ASPXAUTH non visibile".
+### 3. Terminale non processa nulla
+Non e' un bug: nel database ci sono 40 job cancellati e 34 completati, zero job `pending` o `running`. Il processore funziona correttamente ma non ha nulla da fare. Il terminale dovrebbe mostrare un messaggio chiaro quando non ci sono job attivi.
 
-Risultato: sei loggato, l'estensione funziona, i contatti sono accessibili, ma il semaforo e' rosso perche' il cookie salvato nel database non contiene `.ASPXAUTH`.
+## Correzioni
 
-## Soluzione
+### File: `src/components/download/WcaSessionIndicator.tsx`
 
-Smettere di dipendere dalla stringa `.ASPXAUTH` nel cookie. Usare invece l'estensione Chrome per fare un **test reale**: aprire un profilo WCA di test e verificare se i contatti personali sono visibili. Questo metodo e' infallibile perche' usa il browser dell'utente (gia' loggato).
+Riga 42 -- correggere la mappa delle label per coprire tutti gli stati:
+- `"ok"` -> "WCA Connesso"
+- `"expired"` -> "Sessione Scaduta"
+- `"checking"` -> "Verifica..." (con icona di loading)
+- `"no_cookie"` -> "Non configurato"
+- `"error"` -> "Errore connessione"
 
-## Modifiche
+Anche il colore del dot deve cambiare: `"checking"` deve avere un colore giallo/ambra, non rosso.
 
-### 1. `src/hooks/useWcaSessionStatus.ts` -- Riscrittura
+### File: `src/pages/Operations.tsx`
 
-Il hook usera' l'extension bridge come metodo primario:
+Aggiungere uno skeleton/placeholder per il cruscotto statistiche durante il caricamento:
+- Mentre `globalStats` e' undefined (query in corso), mostrare una barra con skeleton animati
+- Cosi' il layout non "salta" e l'utente vede che sta caricando
 
-- `triggerCheck()` chiamera' prima `syncCookie()` (ri-sincronizza i cookie dal browser)
-- Poi chiamera' `verifySession()` tramite l'extension bridge (apre un profilo di test e verifica se i dati privati sono accessibili)
-- Aggiornera' lo stato nel database in base al risultato reale
-- Se l'estensione non e' disponibile, cade sul vecchio metodo (edge function)
+### File: `src/components/download/DownloadTerminal.tsx`
 
-### 2. `supabase/functions/check-wca-session/index.ts` -- Aggiunta endpoint di aggiornamento diretto
+Aggiungere un messaggio quando non ci sono job attivi:
+- Se non ci sono job running/pending, mostrare "Nessun job attivo. Seleziona un paese e avvia un download."
 
-Aggiungere la possibilita' di ricevere un `status` esplicito dal frontend:
-- Se il body contiene `{ status: "ok", source: "extension_verify" }`, aggiornare direttamente lo stato senza controllare il cookie
-- Questo permette al frontend di dire "ho verificato con l'estensione, la sessione funziona"
+## Dettaglio tecnico
 
-### 3. `src/components/download/WcaSessionIndicator.tsx` -- Aggiornamento UI
+### WcaSessionIndicator -- nuova logica label/colore
 
-- Il pulsante "Verifica ora" usera' il nuovo flusso (extension bridge)
-- Mostrare feedback piu' dettagliato: "Sincronizzazione cookie...", "Apertura profilo di test...", "Verifica contatti..."
-- Toast con risultato chiaro
+```
+// Riga 39-42, sostituire con:
+const dotColor = isOk
+  ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
+  : status === "checking"
+    ? (isDark ? "bg-amber-400" : "bg-amber-500")
+    : (isDark ? "bg-red-400" : "bg-red-500");
 
-### 4. `public/chrome-extension/background.js` -- Migliorare `syncWcaCookiesToServer`
-
-La funzione `syncWcaCookiesToServer` attualmente usa solo `chrome.cookies.getAll({ domain })`. Aggiungere anche il tentativo con `chrome.cookies.get` diretto per `.ASPXAUTH`:
-- Tentare `chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" })` esplicitamente
-- Se trovato, aggiungerlo alla stringa cookie
-- Questo aumenta le probabilita' di catturare il cookie HttpOnly
-
----
-
-## Dettaglio Tecnico
-
-### `useWcaSessionStatus.ts` -- Nuovo flusso `triggerCheck`
-
-```text
-triggerCheck()
-  |
-  +-- Estensione disponibile?
-  |     |
-  |     +-- SI: syncCookie() -> verifySession() -> aggiorna DB
-  |     |        (apre profilo test, controlla contatti reali)
-  |     |
-  |     +-- NO: chiama edge function check-wca-session (fallback)
-  |
-  +-- Mostra risultato con toast
+const label = isOk
+  ? "WCA Connesso"
+  : status === "expired"
+    ? "Sessione Scaduta"
+    : status === "checking"
+      ? "Verifica..."
+      : status === "no_cookie"
+        ? "Non configurato"
+        : "Errore";
 ```
 
-Il hook importera' `useExtensionBridge` e lo usera' per:
-1. `syncCookie()` -- forza re-invio cookie al server
-2. `verifySession()` -- apre profilo WCA ID 86580 in tab nascosta, controlla se email/nomi reali sono visibili
-3. Se `verifySession` ritorna `authenticated: true`, chiama l'edge function con `{ status: "ok", source: "extension_verify" }` per aggiornare il DB
+### Operations.tsx -- skeleton cruscotto
 
-### `check-wca-session/index.ts` -- Modifica
+Sostituire `{globalStats && (...)}` con un blocco che mostra sempre la barra, con skeleton se i dati non sono ancora pronti. Usare `Skeleton` da `@/components/ui/skeleton`.
 
-Aggiungere al corpo della richiesta:
-- Se `body.status` esiste e `body.source === "extension_verify"`, fare upsert diretto dello stato senza controllare il cookie
-- Altrimenti, comportamento invariato (controllo cookie nel DB)
+### DownloadTerminal.tsx
 
-### `background.js` -- Miglioramento cattura cookie
-
-```text
-Attuale:
-  chrome.cookies.getAll({ domain: ".wcaworld.com" })
-  -> manca .ASPXAUTH (HttpOnly)
-
-Nuovo:
-  chrome.cookies.getAll({ domain: ".wcaworld.com" })
-  + chrome.cookies.get({ url, name: ".ASPXAUTH" })  // tentativo diretto
-  + chrome.cookies.getAll({ url: "https://www.wcaworld.com/" })  // per URL
-  -> unifica tutto in un unico set, poi invia
-```
-
+Aggiungere controllo: se nessun job attivo, mostrare messaggio "idle" invece del terminale vuoto.
