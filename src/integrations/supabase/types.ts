@@ -1099,7 +1099,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_directory_counts: {
+        Args: never
+        Returns: {
+          country_code: string
+          is_verified: boolean
+          member_count: number
+        }[]
+      }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"

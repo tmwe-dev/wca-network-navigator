@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, FolderDown } from "lucide-react";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
@@ -25,14 +25,16 @@ function useGlobalStats() {
   return useQuery({
     queryKey: ["ops-global-stats"],
     queryFn: async () => {
-      const [{ count: totalPartners }, { count: withEmail }, { count: withPhone }, { data: cacheData }] = await Promise.all([
+      const [{ count: totalPartners }, { count: withEmail }, { count: withPhone }, { data: dirCounts }] = await Promise.all([
         supabase.from("partners").select("*", { count: "exact", head: true }),
         supabase.from("partner_contacts").select("*", { count: "exact", head: true }).not("email", "is", null),
         supabase.from("partner_contacts").select("*", { count: "exact", head: true }).or("direct_phone.not.is.null,mobile.not.is.null"),
-        supabase.from("directory_cache").select("country_code"),
+        supabase.rpc("get_directory_counts"),
       ]);
-      const scannedCountries = new Set((cacheData || []).map((c: any) => c.country_code)).size;
-      return { totalPartners: totalPartners || 0, withEmail: withEmail || 0, withPhone: withPhone || 0, scannedCountries };
+      const rows = (dirCounts || []) as any[];
+      const scannedCountries = rows.length;
+      const totalDirectory = rows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0);
+      return { totalPartners: totalPartners || 0, withEmail: withEmail || 0, withPhone: withPhone || 0, scannedCountries, totalDirectory };
     },
     staleTime: 60_000,
   });
@@ -124,6 +126,8 @@ export default function Operations() {
                   <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
                   <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
                   <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
+                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+                  <StatItem icon={FolderDown} label="In directory" value={globalStats.totalDirectory.toLocaleString()} color={isDark ? "text-violet-400" : "text-violet-500"} isDark={isDark} />
                 </>
               ) : (
                 <>
