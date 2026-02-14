@@ -1,40 +1,86 @@
 
-# Nascondere paesi senza dati nella directory
+# Correzioni Enrichment, Deep Search e Visualizzazione Risultati
 
-## Cosa cambia
+## Problemi identificati
 
-Per default, la Country Grid mostrera' solo i paesi che hanno almeno un record nella directory (`cacheCounts[code] > 0`). Un toggle in alto permettera' di mostrare anche i paesi vuoti.
+### 1. Enrichment: risposta non letta correttamente
+La edge function `enrich-partner-website` restituisce `{ success, enrichment }`, ma il codice frontend cerca `enrichResult.enrichment_data` (che non esiste). Inoltre i nomi dei campi non corrispondono:
+- La funzione restituisce `employee_count` -- il canvas si aspetta `employees`
+- La funzione restituisce `founding_year` -- il canvas si aspetta `year_founded`  
+- La funzione restituisce `has_own_fleet` + `fleet_details` -- il canvas si aspetta `own_fleet`
+- La funzione NON restituisce `key_routes` (rotte con bandiere) -- il campo non viene estratto
 
-## Modifica
+### 2. Deep Search: risposta non letta correttamente
+La edge function `deep-search-partner` salva logo e social links direttamente nel database ma restituisce solo contatori (`socialLinksFound`, `logoFound`). Il frontend tenta di leggere `deepResult.logo_url` e `deepResult.social_links` che non esistono nella risposta. Quindi il canvas non mostra mai il logo trovato ne' i link LinkedIn.
 
-### File: `src/components/download/CountryGrid.tsx`
+### 3. Nessuna visualizzazione post-completamento
+Dopo che un partner viene acquisito, il canvas si anima e scompare. Non e' possibile cliccare su un partner "completato" nella coda per rivedere i risultati.
 
-1. **Nuovo stato**: `const [showEmpty, setShowEmpty] = useState(false)`
+### 4. Logo troppo piccolo
+Il logo nel canvas e' confinato in un quadrato 56x56px. L'utente chiede una visualizzazione piu' ampia a banner.
 
-2. **Filtro aggiuntivo** nella logica `filtered` (riga 77-83): aggiungere prima del return finale del filtro `"all"`:
-   - Se `showEmpty` e' `false`, escludere i paesi dove `cacheCounts[c.code]` e' `0` o `undefined` (cioe' nessun membro nella directory)
-   - I paesi gia' selezionati vengono sempre mostrati, indipendentemente dal toggle
+---
 
-3. **Toggle nell'area toolbar** (vicino al "Solo Dir" toggle, riga 178-183): aggiungere un toggle con label "Mostra vuoti" e icona `Globe`, che controlla `showEmpty`
+## Piano di correzione
 
-4. **Aggiornare i contatori** (`missingCount`, `exploredCount`, etc.) per riflettere il filtro attivo
+### File: `src/pages/AcquisizionePartner.tsx`
 
-### Dettaglio tecnico
+**A) Fix lettura risposta Enrichment (riga 409-413)**
 
-Nel blocco filtro (riga 77-83), dopo il check `matchesSearch`:
-
-```text
-// Se showEmpty e' false, nascondi paesi senza record in directory
-// (a meno che non siano gia' selezionati)
-if (!showEmpty && !cacheCounts[c.code] && !selectedCodes.has(c.code)) return false;
+Cambiare da:
+```
+enrichResult.enrichment_data
+ed.key_markets, ed.key_routes, ed.warehouse_sqm, ed.employees, ed.year_founded, ed.own_fleet
+```
+A:
+```
+enrichResult.enrichment (campo corretto della risposta)
+ed.key_markets, [], ed.warehouse_sqm, ed.employee_count, ed.founding_year, ed.fleet_details
 ```
 
-Il toggle verra' posizionato nella riga dei controlli (riga 161-183), accanto al toggle "Solo Dir", con lo stesso stile compatto:
+**B) Fix lettura risposta Deep Search (righe 424-429)**
 
-```text
-<label>
-  <Switch checked={showEmpty} onCheckedChange={setShowEmpty} />
-  <Globe className="w-3 h-3" />
-  Tutti
-</label>
+Dopo che la Deep Search completa, il logo e i social links sono gia' nel database. Invece di leggere dalla risposta (che contiene solo contatori), fare una query al DB per recuperare:
+- `logo_url` dal partner aggiornato
+- Social links dalla tabella `partner_social_links`
+
 ```
+// Dopo deepResult, ricarica dati aggiornati dal DB
+const { data: updatedPartner } = await supabase
+  .from("partners").select("logo_url").eq("id", partnerId).single();
+const { data: socialLinks } = await supabase
+  .from("partner_social_links").select("*").eq("partner_id", partnerId);
+// Aggiorna canvas con dati reali
+```
+
+**C) Aggiungere click su partner completati nella coda**
+
+Quando un item nella queue con status "done" viene cliccato, ricaricare i dati del partner dal DB e mostrarli nel canvas (senza rifare l'acquisizione).
+
+### File: `src/components/acquisition/PartnerQueue.tsx`
+
+Aggiungere un `onPartnerClick` callback per gli item con status "done". Quando cliccato, emette l'evento con il `wca_id`.
+
+### File: `src/components/acquisition/PartnerCanvas.tsx`
+
+**D) Logo banner**
+
+Sostituire il logo quadrato 56x56 con una sezione banner piu' ampia nella parte superiore della card:
+- Se il logo e' presente, mostrarlo con altezza massima ~48px e larghezza automatica (max-w-[200px])
+- Posizionato accanto al nome dell'azienda, con dimensioni proporzionali al logo originale
+- Rimuovere il contenitore quadrato rigido
+
+### File: `supabase/functions/enrich-partner-website/index.ts`
+
+**E) Aggiungere estrazione key_routes**
+
+Aggiornare il prompt AI per estrarre anche le rotte principali (`key_routes`) come array di oggetti `{from, to}` con nomi di paesi, che verranno poi mappati alle bandiere nel canvas.
+
+---
+
+## Riepilogo file modificati
+
+1. `src/pages/AcquisizionePartner.tsx` -- fix mapping risposta enrichment/deep search + click review
+2. `src/components/acquisition/PartnerQueue.tsx` -- aggiungere click handler su item completati
+3. `src/components/acquisition/PartnerCanvas.tsx` -- logo banner + migliore layout
+4. `supabase/functions/enrich-partner-website/index.ts` -- aggiungere key_routes al prompt AI
