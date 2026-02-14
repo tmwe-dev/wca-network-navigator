@@ -1,82 +1,83 @@
 
 
-# Piano: Deduplicazione Contatti per Email e Nome
+# Piano: Deduplicazione Rigorosa — Una Persona, Un Record, Una Email
 
-## Problema riscontrato
+## Problema
 
-Asia Pamir Logistics ha 8 contatti nel DB, di cui **3 sono duplicati esatti** di Mr. Nesar Ahmad Naziri (stesso nome, stesso titolo "Manager", stessa email). Questo succede perche' il sistema di deduplicazione si basa solo sul campo `title` del contatto. Se lo scraper gira piu' volte, o se ci sono inserimenti concorrenti, i duplicati non vengono catturati.
+Ci sono **3 punti** nel codice che salvano contatti, e ognuno ha una logica diversa:
 
-Inoltre, la stessa persona puo' avere **piu' ruoli** (es. "Manager" e "Operations") con email diverse, creando righe separate per la stessa persona fisica.
+1. **`useDownloadProcessor.ts`** (frontend, download loop): dedup solo per `name` — non controlla email, non unisce ruoli
+2. **`save-wca-contacts/index.ts`** (edge function): dedup multi-chiave ma non unisce persone con stesso nome ed email diversa
+3. **`scrape-wca-partners/index.ts`** (edge function): stessa logica di save-wca-contacts
+
+Il caso "Ms. Genta Toska" mostra che la stessa persona appare con due ruoli (Sales, Finance) e due email diverse (una delle quali errata: `t.lamaj@...` assegnata a Toska). Il sistema deve:
+- Riconoscere che e' la stessa persona (stesso nome)
+- Tenere una sola email (quella coerente col nome)
+- Unire i titoli in un solo record
 
 ## Soluzione
 
-### 1. Fix della logica di deduplicazione (prevenzione futura)
+### Regola unica: dedup per NOME come chiave primaria
 
-Modificare `saveContactsBatch` in `scrape-wca-partners/index.ts` e la logica equivalente in `save-wca-contacts/index.ts`:
+Il **nome della persona** diventa la chiave principale di deduplicazione. Se due contatti hanno lo stesso nome (case-insensitive), sono la stessa persona. I titoli vengono concatenati ("Sales / Finance"), e l'email viene scelta con una logica di validazione:
 
-- Costruire **3 indici di lookup**: per `title`, per `email`, per `name`
-- Prima di inserire un nuovo contatto, verificare:
-  1. Esiste gia' un contatto con lo stesso `title`? --> aggiorna
-  2. Esiste gia' un contatto con la stessa `email`? --> aggiorna (aggiungi titolo se diverso)
-  3. Esiste gia' un contatto con lo stesso `name`? --> aggiorna
-  4. Nessun match --> inserisci
-- Deduplicare anche i contatti in ingresso (dal parsing) prima di salvarli: se due contatti hanno la stessa email, unirli in uno solo
-
-### 2. Pulizia duplicati esistenti (una tantum)
-
-Eseguire una query SQL che:
-- Trova contatti duplicati per lo stesso `partner_id` con stessa `email` (non null)
-- Trova contatti duplicati per lo stesso `partner_id` con stesso `name` e `title`
-- Mantiene solo il record piu' completo (con piu' campi compilati) e cancella gli altri
-
-### 3. Raggruppamento contatti per persona nel frontend
-
-Questo e' gia' gestito dalla logica di deduplicazione: una volta puliti i duplicati, ogni persona apparira' una sola volta.
-
----
-
-## Dettaglio tecnico
+```text
+Email corretta = quella il cui prefisso (prima della @) contiene
+                 iniziale nome o cognome della persona
+Esempio: "Ms. Genta Toska" -> g.toska@... e' corretta
+         "Ms. Genta Toska" -> t.lamaj@... e' sbagliata (appartiene a Lamaj)
+```
 
 ### File da modificare
 
-**`supabase/functions/scrape-wca-partners/index.ts`** (funzione `saveContactsBatch`, righe 973-1017)
+#### 1. `src/hooks/useDownloadProcessor.ts` (righe 135-156)
 
-Logica attuale:
-```
-existingByTitle = Map(title -> contact)
-per ogni contatto: se title esiste, aggiorna; altrimenti inserisci
-```
+Sostituire il salvataggio contatti ingenuo con una logica completa:
+- Deduplicare i contatti in ingresso per nome (unire titoli, scegliere email migliore)
+- Prima di inserire, controllare se esiste gia' un contatto con stesso nome O stessa email
+- Se esiste: aggiornare campi mancanti, unire titoli
+- Se non esiste: inserire
 
-Nuova logica:
-```
-existingByTitle = Map(title -> contact)
-existingByEmail = Map(email -> contact)  // NUOVO
-existingByName  = Map(name -> contact)   // NUOVO
+#### 2. `supabase/functions/save-wca-contacts/index.ts`
 
-// Dedup contatti in ingresso: unisci quelli con stessa email
-deduplicatedContacts = mergeByEmail(contacts)
+Rafforzare la dedup in ingresso:
+- Dopo il merge per email, fare un secondo pass di merge per **nome** (case-insensitive)
+- Per ogni gruppo con stesso nome, scegliere l'email piu' coerente (matching iniziale/cognome)
+- Nella fase di match con il DB, dare **priorita' al nome** rispetto al titolo
 
-per ogni contatto:
-  match = existingByTitle[title] || existingByEmail[email] || existingByName[name]
-  se match: aggiorna campi mancanti
-  altrimenti: inserisci
-```
+#### 3. `supabase/functions/scrape-wca-partners/index.ts` (funzione `saveContactsBatch`)
 
-**`supabase/functions/save-wca-contacts/index.ts`** (stessa logica, righe 54-112)
+Stessa logica di save-wca-contacts:
+- Dedup input per nome dopo dedup per email
+- Match DB: nome -> email -> titolo (invertire la priorita' attuale titolo -> email -> nome)
 
-Applicare la stessa strategia di dedup multi-chiave.
+### Pulizia una tantum: International Trans
 
-### Migrazione SQL -- pulizia duplicati
+Eseguire una query per unire i due record di Ms. Genta Toska:
+- Tenere il record con email `g.toska@internationaltrans06.com` (coerente col nome)
+- Aggiungere il titolo "Sales / Finance" e il telefono
+- Eliminare il record con email `t.lamaj@...`
+
+### Logica di selezione email (comune a tutti e 3 i punti)
 
 ```text
--- Trova e rimuovi duplicati per email (mantieni il piu' completo)
--- Trova e rimuovi duplicati per nome+titolo esatto
--- Solo per lo stesso partner_id
+function bestEmail(name, emails[]):
+  cognome = ultima parola del nome (senza Mr/Ms/Dr)
+  iniziale = prima lettera del nome proprio
+  per ogni email:
+    prefisso = parte prima della @
+    se prefisso contiene cognome.toLowerCase() -> punteggio +2
+    se prefisso contiene iniziale.toLowerCase() -> punteggio +1
+  ritorna email con punteggio piu' alto
+  se nessun match: ritorna la prima email non-null
 ```
 
-La query identifica per ogni gruppo di duplicati il record "migliore" (con piu' campi compilati: email, direct_phone, mobile) e cancella gli altri.
+### Ordine di priorita' nel match DB (tutti e 3 i punti)
 
-### Nessuna modifica frontend necessaria
+```text
+Vecchio: title -> email -> name
+Nuovo:   name -> email -> title
+```
 
-La pulizia avviene tutta lato backend e database. Il frontend mostrera' automaticamente i contatti senza duplicati.
+Il nome e' piu' stabile del titolo (una persona puo' cambiare ruolo ma non nome).
 
