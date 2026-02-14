@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, OctagonX } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid } from "@/components/download/CountryGrid";
@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs, useEmergencyStop } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { getCountryFlag } from "@/lib/countries";
 import { Link } from "react-router-dom";
@@ -47,7 +47,8 @@ export default function Operations() {
   const [activeTab, setActiveTab] = useState("partner");
   const { data: globalStats } = useGlobalStats();
   const { data: jobs } = useDownloadJobs();
-  useDownloadProcessor(); // Background processor: picks up pending/running jobs
+  const emergencyStopMutation = useEmergencyStop();
+  const { emergencyStop: stopProcessor } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
   const countryJobs = useMemo(() => {
@@ -89,10 +90,20 @@ export default function Operations() {
             <div className="flex items-center gap-3">
               <h1 className={`text-lg font-semibold ${th.h1}`}>Operations Center</h1>
               {activeJobs.length > 0 && (
-                <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
-                  {activeJobs.length} job attivi
-                </span>
+                <>
+                  <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
+                    {activeJobs.length} job attivi
+                  </span>
+                  <button
+                    onClick={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg shadow-red-900/30 animate-pulse"
+                    style={{ animationDuration: '2s' }}
+                  >
+                    <OctagonX className="w-4 h-4" />
+                    BLOCCA TUTTO
+                  </button>
+                </>
               )}
             </div>
             <div className="flex items-center gap-3">

@@ -430,5 +430,10 @@ export function useDownloadProcessor() {
     };
   }, [processJob]);
 
-  return { isProcessing: processingRef.current };
+  const emergencyStop = useCallback(() => {
+    cancelRef.current = true;
+    processingRef.current = false;
+  }, []);
+
+  return { isProcessing: processingRef.current, emergencyStop };
 }
