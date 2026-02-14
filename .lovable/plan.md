@@ -1,97 +1,112 @@
 
-# Piano: Pagina Jobs per Campagne
+# Piano: Contatti nelle Schede Job + Sezione Template in Settings
 
-## Cosa cambia
+## Panoramica
 
-### 1. Rinominare il pulsante in Campaigns
-Il pulsante "Genera Email" nell'header della pagina Campagne diventa **"Genera Jobs"**. Invece di aprire il dialog EmailPreview, naviga verso una nuova pagina `/campaign-jobs` passando i partner selezionati.
+Attualmente i job mostrano solo il nome azienda e un singolo email/telefono generico. In realta' ogni azienda ha piu' contatti (persone reali con nome, ruolo, email personale, telefono diretto). Il sistema deve mostrare questi contatti e permettere di scegliere a chi scrivere o chi chiamare.
 
-### 2. Nuova tabella database: `campaign_jobs`
-Serve una tabella per persistere i job generati dalle campagne, separata dalle `activities` (che sono task interni). Ogni riga rappresenta un'azione da compiere verso un partner specifico.
+Inoltre, serve una nuova sezione "Template" nelle Impostazioni per caricare documenti (brochure, PDF, allegati) da associare alle email.
 
-Colonne:
+---
+
+## 1. Caricare i contatti nella pagina Jobs
+
+### Modifiche a `src/hooks/useCampaignJobs.ts`
+
+Aggiungere una query separata che, dato un array di `partner_id`, carica tutti i contatti dalla tabella `partner_contacts`. Questo viene esposto come hook `useJobContacts(partnerIds)`.
+
+Struttura contatto:
+- `name` (es. "Mr. Christian Halpaus")
+- `title` (es. "CEO")
+- `email` (es. "christian@iff.com")
+- `direct_phone`, `mobile`
+- `partner_id` (per collegare al job)
+
+### Modifiche a `src/components/campaigns/JobList.tsx`
+
+Nella lista, sotto il nome azienda, mostrare il numero di contatti disponibili (es. "3 contatti") e un'icona che indica quanti hanno email/telefono.
+
+### Modifiche a `src/components/campaigns/JobCanvas.tsx`
+
+La canvas diventa la scheda di lavoro completa. Quando selezioni un job:
+
+**Sezione superiore -- Info Azienda:**
+- Nome azienda, paese, citta' (come ora)
+- Email e telefono generici dell'azienda (dalla tabella `partners`)
+
+**Sezione centrale -- Lista Contatti:**
+- Elenco di tutte le persone associate a quell'azienda (da `partner_contacts`)
+- Ogni contatto mostra: nome, ruolo/titolo, email personale, telefono diretto, mobile
+- Checkbox per selezionare uno o piu' contatti come destinatari
+- Indicatori visivi: verde se ha email, blu se ha telefono, grigio se mancano dati
+
+**Sezione azioni:**
+- "Prepara Email" e "Programma Call" agiscono sui contatti selezionati
+- Area note (come ora)
+- "Segna come completato"
+
+---
+
+## 2. Sezione Template nelle Impostazioni
+
+### Migrazione database
+
+Creare una tabella `email_templates` per i documenti/template:
 - `id` (uuid, PK)
-- `partner_id` (uuid, NOT NULL)
-- `company_name` (text)
-- `country_code` (char 2)
-- `country_name` (text)
-- `city` (text)
-- `email` (text, nullable)
-- `phone` (text, nullable)
-- `job_type` (enum: `email`, `call`) -- default `email`
-- `status` (enum: `pending`, `in_progress`, `completed`, `skipped`) -- default `pending`
-- `assigned_to` (uuid, nullable)
-- `notes` (text, nullable)
-- `batch_id` (uuid) -- per raggruppare i job creati nella stessa sessione
-- `created_at`, `completed_at`
+- `name` (text) -- nome descrittivo (es. "Brochure Servizi 2026")
+- `file_url` (text) -- URL del file nello storage
+- `file_name` (text) -- nome file originale
+- `file_size` (integer) -- dimensione in bytes
+- `file_type` (text) -- mime type
+- `category` (text) -- es. "brochure", "listino", "presentazione"
+- `created_at`, `updated_at`
+- RLS pubblica
 
-RLS: policy pubblica (come le altre tabelle del progetto, dato che non c'e' autenticazione).
+Creare un bucket di storage `templates` (pubblico) per i file uploadati.
 
-### 3. Nuova pagina `/campaign-jobs`
+### Nuovo componente `src/components/settings/TemplateManager.tsx`
 
-Layout a due colonne (40/60):
+Pannello di gestione template con:
+- Upload di file (drag & drop o click) verso il bucket `templates`
+- Lista dei template caricati con: nome, tipo file, dimensione, data caricamento
+- Possibilita' di rinominare, categorizzare e cancellare template
+- Preview del nome file e icona in base al tipo (PDF, DOC, immagine)
 
-**Colonna sinistra -- Elenco Jobs:**
-- Lista scrollabile di tutti i job raggruppati per batch
-- Ogni riga mostra: bandiera paese, nome azienda, citta', icona email/telefono, stato (pending/done)
-- Ogni riga e' selezionabile (click per vedere dettagli a destra)
-- Filtri in alto: tipo (email/call/tutti), stato, ricerca testo
-- Contatori in alto: totale, email disponibili, telefoni disponibili
+### Modifiche a `src/pages/Settings.tsx`
 
-**Colonna destra -- Canvas di lavoro:**
-- Mostra i dettagli del job selezionato
-- Info partner: nome, paese, citta', email, telefono
-- Due azioni principali con pulsanti evidenti:
-  - **"Prepara Email"** -- apre un composer email con template precompilato
-  - **"Programma Call"** -- sposta il job nel tipo "call" e permette di impostare data/ora (integrazione futura col calendario)
-- Area note per appunti liberi
-- Pulsante "Segna come completato"
+Aggiungere una nuova tab **"Template"** con icona `FileText` che mostra il `TemplateManager`.
 
-**Header della pagina:**
-- Pulsanti di azione globale: "Segna tutti come completati", contatori statistici
-- Link per tornare alle Campagne
+---
 
-### 4. Flusso completo
+## 3. Collegamento Template ai Jobs (predisposizione)
+
+Nella JobCanvas, sotto le azioni, aggiungere una sezione "Allegati" che mostra i template disponibili (caricati dal bucket) con checkbox per selezionare quali allegare. Questo prepara il terreno per quando verra' implementato il composer email vero e proprio.
+
+---
+
+## Dettaglio tecnico -- File
+
+### Da creare:
+- `src/components/settings/TemplateManager.tsx` -- gestione upload/lista template
+- Migrazione SQL -- tabella `email_templates` + bucket storage `templates`
+
+### Da modificare:
+- `src/hooks/useCampaignJobs.ts` -- aggiungere hook `useJobContacts`
+- `src/components/campaigns/JobCanvas.tsx` -- espandere con lista contatti e sezione allegati
+- `src/components/campaigns/JobList.tsx` -- mostrare conteggio contatti
+- `src/pages/CampaignJobs.tsx` -- passare i contatti alla canvas
+- `src/pages/Settings.tsx` -- aggiungere tab Template
+
+### Flusso dati contatti:
 
 ```text
-Campagne (seleziona partner dal globo)
-    |
-    v
-Click "Genera Jobs"
-    |
-    v
-Inserisce righe in campaign_jobs (batch_id comune)
-    |
-    v
-Naviga a /campaign-jobs
-    |
-    v
-Il team lavora la lista: prepara email o programma call
+CampaignJobs (pagina)
+  |-- Raccoglie tutti i partner_id unici dai jobs
+  |-- Chiama useJobContacts(partnerIds)
+  |-- Passa contactsByPartnerId a JobCanvas
+  |
+  JobCanvas
+    |-- Riceve job + contacts[] per quel partner
+    |-- Mostra lista contatti con checkbox
+    |-- Azioni (email/call) agiscono sui selezionati
 ```
-
-### 5. Navigazione
-
-- Aggiungere la rotta `/campaign-jobs` in App.tsx
-- NON aggiungere voce nella sidebar (e' una sotto-pagina di Campaigns, raggiungibile solo da li' o tramite link diretto)
-- Aggiornare AppLayout con titolo "Campaign Jobs"
-
-## File da creare
-
-- `src/pages/CampaignJobs.tsx` -- pagina principale con layout 40/60
-- `src/components/campaigns/JobList.tsx` -- colonna sinistra con elenco
-- `src/components/campaigns/JobCanvas.tsx` -- colonna destra con dettagli e azioni
-- `src/hooks/useCampaignJobs.ts` -- hook per CRUD sulla tabella campaign_jobs
-
-## File da modificare
-
-- `src/pages/Campaigns.tsx` -- cambiare testo pulsante, logica di navigazione
-- `src/App.tsx` -- aggiungere rotta
-- `src/components/layout/AppLayout.tsx` -- aggiungere info pagina nell'header
-
-## Migrazione database
-
-Creazione tabella `campaign_jobs` con enum per `job_type` e `status`, e policy RLS pubbliche.
-
-## Dettaglio tecnico
-
-Il passaggio dei partner selezionati da Campaigns a CampaignJobs avviene tramite inserimento nel database: il pulsante "Genera Jobs" inserisce tutti i partner in `campaign_jobs` con un `batch_id` condiviso, poi naviga a `/campaign-jobs?batch=<batch_id>`. La pagina Jobs carica i dati dal DB, quindi sopravvive ai refresh.
