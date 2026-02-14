@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,8 +34,10 @@ export function useWcaSessionStatus() {
 
   // Store latest diagnostics from check
   let lastDiagnostics: WcaDiagnostics | null = null;
+  const [isChecking, setIsChecking] = useState(false);
 
   const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean; diagnostics?: WcaDiagnostics } | null> => {
+    setIsChecking(true);
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-wca-session`;
       const res = await fetch(url, {
@@ -55,6 +58,8 @@ export function useWcaSessionStatus() {
     } catch (err) {
       console.error("WCA session check failed:", err);
       return null;
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -63,6 +68,7 @@ export function useWcaSessionStatus() {
     checkedAt: statusQuery.data?.checkedAt ?? null,
     diagnostics: lastDiagnostics,
     isLoading: statusQuery.isLoading,
+    isChecking,
     triggerCheck,
   };
 }
