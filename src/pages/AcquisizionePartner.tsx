@@ -1022,245 +1022,214 @@ export default function AcquisizionePartner() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-sky-500/[0.05] via-transparent to-transparent dark:block hidden animate-pulse" style={{ animationDuration: '8s' }} />
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-violet-50/30 dark:hidden" />
 
-      <div className="relative z-10 flex flex-col h-full gap-3 p-4">
-      {/* TOOLBAR */}
-      <div className="p-4 bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl shadow-lg shadow-black/[0.05]">
-        <AcquisitionToolbar
-          selectedCountries={selectedCountries}
-          onCountriesChange={setSelectedCountries}
-          selectedNetworks={selectedNetworks}
-          onNetworksChange={setSelectedNetworks}
-          delaySeconds={delaySeconds}
-          onDelayChange={setDelaySeconds}
-          includeEnrich={includeEnrich}
-          onIncludeEnrichChange={setIncludeEnrich}
-          includeDeepSearch={includeDeepSearch}
-          onIncludeDeepSearchChange={setIncludeDeepSearch}
-        />
+      <div className="relative z-10 flex flex-col h-full gap-2 p-3">
+      {/* TWO-COLUMN LAYOUT */}
+      <div className="flex-1 grid grid-cols-[35%_1fr] gap-3 min-h-0">
+        {/* LEFT COLUMN: Controls + Queue */}
+        <div className="flex flex-col gap-2 min-h-0">
+          {/* Toolbar */}
+          <div className="p-3 bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl shadow-lg shadow-black/[0.05]">
+            <AcquisitionToolbar
+              selectedCountries={selectedCountries}
+              onCountriesChange={setSelectedCountries}
+              selectedNetworks={selectedNetworks}
+              onNetworksChange={setSelectedNetworks}
+              delaySeconds={delaySeconds}
+              onDelayChange={setDelaySeconds}
+              includeEnrich={includeEnrich}
+              onIncludeEnrichChange={setIncludeEnrich}
+              includeDeepSearch={includeDeepSearch}
+              onIncludeDeepSearchChange={setIncludeDeepSearch}
+            />
 
-        {/* Scan + Stats + Extension indicator */}
-        <div className="flex items-center gap-3 mt-3">
-          <Button
-            onClick={handleScan}
-            disabled={selectedCountries.length === 0 || pipelineStatus === "scanning" || pipelineStatus === "running"}
-            variant="outline"
-            size="sm"
-          >
-            {pipelineStatus === "scanning" ? "Scansione..." : "Scansiona Directory"}
-          </Button>
-
-          {/* Extension status */}
-          <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${extensionAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}>
-            <Plug className="w-3 h-3" />
-            <span>{extensionAvailable ? "Estensione attiva" : "Estensione non rilevata"}</span>
-          </div>
-
-          {/* WCA Session Health Indicator */}
-          {(pipelineStatus === "running" || pipelineStatus === "paused") && (
-            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${
-              sessionHealth === "active" ? "bg-emerald-500/10 text-emerald-500" :
-              sessionHealth === "checking" ? "bg-amber-500/10 text-amber-500" :
-              sessionHealth === "recovering" ? "bg-amber-500/10 text-amber-500" :
-              sessionHealth === "dead" ? "bg-destructive/10 text-destructive" :
-              "bg-muted text-muted-foreground"
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${
-                sessionHealth === "active" ? "bg-emerald-500" :
-                sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-amber-500 animate-pulse" :
-                sessionHealth === "dead" ? "bg-destructive" :
-                "bg-muted-foreground"
-              }`} />
-              <span>{
-                sessionHealth === "active" ? "Sessione WCA attiva" :
-                sessionHealth === "checking" ? "Verifica sessione..." :
-                sessionHealth === "recovering" ? "Ripristino sessione..." :
-                sessionHealth === "dead" ? "Sessione scaduta" :
-                "Sessione non verificata"
-              }</span>
-            </div>
-          )}
-
-          {scanStats && (
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>
-                Trovati: <strong className="text-foreground">{scanStats.total}</strong>
-              </span>
-              <span>
-                Già scaricati: <strong className="text-emerald-500">{scanStats.existing}</strong>
-              </span>
-              <span>
-                Nuovi: <strong className="text-primary">{scanStats.missing}</strong>
-              </span>
-            </div>
-          )}
-
-          {queue.length > 0 && pipelineStatus !== "running" && selectedIds.size > 0 && (
-            <Button
-              onClick={startPipeline}
-              className="ml-auto gap-2"
-              size="sm"
-            >
-              <Play className="w-4 h-4" />
-              Avvia Acquisizione ({selectedIds.size})
-            </Button>
-          )}
-
-          {pipelineStatus === "running" && (
-            <div className="ml-auto flex items-center gap-2">
+            {/* Scan + Extension + Session */}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <Button
+                onClick={handleScan}
+                disabled={selectedCountries.length === 0 || pipelineStatus === "scanning" || pipelineStatus === "running"}
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  pauseRef.current = !pauseRef.current;
-                  const newStatus = pauseRef.current ? "paused" : "running";
-                  setPipelineStatus(newStatus);
-                  if (activeJobId) {
-                    supabase.from("download_jobs").update({ status: newStatus }).eq("id", activeJobId).then(() => {});
-                  }
-                }}
+                className="text-xs"
               >
-                {pauseRef.current ? (
-                  <>
-                    <Play className="w-4 h-4 mr-1" /> Riprendi
-                  </>
-                ) : (
-                  <>
-                    <Pause className="w-4 h-4 mr-1" /> Pausa
-                  </>
-                )}
+                {pipelineStatus === "scanning" ? "Scansione..." : "Scansiona"}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  cancelRef.current = true;
-                  setPipelineStatus("idle");
-                  if (activeJobId) {
-                    supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", activeJobId).then(() => {});
-                    setActiveJobId(null);
-                  }
-                }}
-              >
-                <Square className="w-4 h-4 mr-1" /> Stop
-              </Button>
+
+              <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${extensionAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}>
+                <Plug className="w-3 h-3" />
+                <span>{extensionAvailable ? "Ext ✓" : "Ext ✗"}</span>
+              </div>
+
+              {(pipelineStatus === "running" || pipelineStatus === "paused") && (
+                <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
+                  sessionHealth === "active" ? "bg-emerald-500/10 text-emerald-500" :
+                  sessionHealth === "dead" ? "bg-destructive/10 text-destructive" :
+                  "bg-muted text-muted-foreground"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    sessionHealth === "active" ? "bg-emerald-500" :
+                    sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-amber-500 animate-pulse" :
+                    sessionHealth === "dead" ? "bg-destructive" : "bg-muted-foreground"
+                  }`} />
+                  <span>{
+                    sessionHealth === "active" ? "WCA ✓" :
+                    sessionHealth === "checking" ? "Verifica..." :
+                    sessionHealth === "recovering" ? "Ripristino..." :
+                    sessionHealth === "dead" ? "Sessione ✗" : "WCA ?"
+                  }</span>
+                </div>
+              )}
+            </div>
+
+            {/* Scan stats */}
+            {scanStats && (
+              <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                <span>Trovati: <strong className="text-foreground">{scanStats.total}</strong></span>
+                <span>Già: <strong className="text-emerald-500">{scanStats.existing}</strong></span>
+                <span>Nuovi: <strong className="text-primary">{scanStats.missing}</strong></span>
+              </div>
+            )}
+          </div>
+
+          {/* Live Stats (compact) */}
+          {(pipelineStatus === "running" || pipelineStatus === "paused" || pipelineStatus === "done") && liveStats.processed > 0 && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 rounded-xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 text-[10px]">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <strong className="text-foreground">{liveStats.processed}/{queue.filter(q => selectedIds.has(q.wca_id)).length}</strong>
+              </div>
+              <div className="h-1.5 flex-1 min-w-[60px] max-w-[120px] bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${(liveStats.processed / Math.max(queue.filter(q => selectedIds.has(q.wca_id)).length, 1)) * 100}%` }}
+                />
+              </div>
+              <span className="text-sky-500 flex items-center gap-0.5"><Mail className="w-3 h-3" />{liveStats.withEmail}</span>
+              <span className="text-violet-500 flex items-center gap-0.5"><Phone className="w-3 h-3" />{liveStats.withPhone}</span>
+              <span className="text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />{liveStats.complete}</span>
+              {liveStats.empty > 0 && <span className="text-destructive flex items-center gap-0.5"><XCircle className="w-3 h-3" />{liveStats.empty}</span>}
+              {liveStats.failedLoads > 0 && <span className="text-amber-500 flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />{liveStats.failedLoads}</span>}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* LIVE STATS BAR */}
-      {(pipelineStatus === "running" || pipelineStatus === "paused" || pipelineStatus === "done") && liveStats.processed > 0 && (
-        <div className="flex items-center gap-4 px-4 py-2.5 rounded-2xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 text-xs shadow-lg shadow-black/[0.05]">
-          <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-            Progresso: <strong className="text-foreground">{liveStats.processed}/{queue.filter(q => selectedIds.has(q.wca_id)).length}</strong>
-          </div>
-          <div className="h-2 flex-1 max-w-[200px] bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${(liveStats.processed / Math.max(queue.filter(q => selectedIds.has(q.wca_id)).length, 1)) * 100}%` }}
+          {/* Network Performance */}
+          {Object.keys(networkStats).length > 0 && (
+            <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60">
+              <NetworkPerformanceBar
+                stats={networkStats}
+                excludedNetworks={excludedNetworks}
+                onExclude={handleExcludeNetwork}
+                onReinclude={handleReincludeNetwork}
+                regressions={networkRegressions}
+              />
+            </div>
+          )}
+
+          {/* Partner Queue */}
+          <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05] min-h-0">
+            <PartnerQueue
+              items={queue}
+              activeIndex={activeIndex}
+              selectedIds={selectedIds}
+              onToggle={(wcaId) => {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(wcaId)) next.delete(wcaId);
+                  else next.add(wcaId);
+                  return next;
+                });
+              }}
+              onSelectAll={() => setSelectedIds(new Set(queue.map((q) => q.wca_id)))}
+              onDeselectAll={() => setSelectedIds(new Set())}
+              onPartnerClick={async (wcaId) => {
+                const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+                if (!partner) return;
+                const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
+                  supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
+                  supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
+                  supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+                  supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
+                ]);
+                const ed = partner.enrichment_data as any;
+                setCanvasData({
+                  company_name: partner.company_name,
+                  city: partner.city,
+                  country_code: partner.country_code,
+                  country_name: partner.country_name,
+                  logo_url: partner.logo_url || undefined,
+                  contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
+                  services: (svcs || []).map(s => s.service_category),
+                  key_markets: ed?.key_markets || [],
+                  key_routes: ed?.key_routes || [],
+                  networks: (nets || []).map(n => n.network_name),
+                  rating: partner.rating ? Number(partner.rating) : undefined,
+                  website: partner.website || undefined,
+                  profile_description: partner.profile_description || undefined,
+                  linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
+                  warehouse_sqm: ed?.warehouse_sqm,
+                  employees: ed?.employee_count,
+                  founded: ed?.founding_year ? String(ed.founding_year) : undefined,
+                  fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
+                  contactSource: "extension",
+                });
+                setCanvasPhase("complete");
+                setIsAnimatingOut(false);
+              }}
             />
           </div>
-          <div className="flex items-center gap-1 text-sky-500">
-            <Mail className="w-3 h-3" />
-            <span>{liveStats.withEmail}</span>
-          </div>
-          <div className="flex items-center gap-1 text-violet-500">
-            <Phone className="w-3 h-3" />
-            <span>{liveStats.withPhone}</span>
-          </div>
-          <div className="flex items-center gap-1 text-emerald-500">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>{liveStats.complete} completi</span>
-          </div>
-          {liveStats.empty > 0 && (
-            <div className="flex items-center gap-1 text-destructive">
-              <XCircle className="w-3 h-3" />
-              <span>{liveStats.empty} vuoti</span>
-            </div>
-          )}
-          {liveStats.failedLoads > 0 && (
-            <div className="flex items-center gap-1 text-amber-500">
-              <AlertTriangle className="w-3 h-3" />
-              <span>{liveStats.failedLoads} caricamenti falliti</span>
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* NETWORK PERFORMANCE BAR */}
-      {Object.keys(networkStats).length > 0 && (
-        <NetworkPerformanceBar
-          stats={networkStats}
-          excludedNetworks={excludedNetworks}
-          onExclude={handleExcludeNetwork}
-          onReinclude={handleReincludeNetwork}
-          regressions={networkRegressions}
-        />
-      )}
-
-      {/* MAIN SPLIT */}
-      <div className="flex-1 flex gap-3 min-h-0">
-        {/* LEFT: Partner Queue */}
-        <div className="w-[35%] flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
-          <PartnerQueue
-            items={queue}
-            activeIndex={activeIndex}
-            selectedIds={selectedIds}
-            onToggle={(wcaId) => {
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(wcaId)) next.delete(wcaId);
-                else next.add(wcaId);
-                return next;
-              });
-            }}
-            onSelectAll={() => setSelectedIds(new Set(queue.map((q) => q.wca_id)))}
-            onDeselectAll={() => setSelectedIds(new Set())}
-            onPartnerClick={async (wcaId) => {
-              // Load completed partner data from DB for review
-              const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
-              if (!partner) return;
-              const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
-                supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
-                supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-                supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-                supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
-              ]);
-              const ed = partner.enrichment_data as any;
-              setCanvasData({
-                company_name: partner.company_name,
-                city: partner.city,
-                country_code: partner.country_code,
-                country_name: partner.country_name,
-                logo_url: partner.logo_url || undefined,
-                contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
-                services: (svcs || []).map(s => s.service_category),
-                key_markets: ed?.key_markets || [],
-                key_routes: ed?.key_routes || [],
-                networks: (nets || []).map(n => n.network_name),
-                rating: partner.rating ? Number(partner.rating) : undefined,
-                website: partner.website || undefined,
-                profile_description: partner.profile_description || undefined,
-                linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
-                warehouse_sqm: ed?.warehouse_sqm,
-                employees: ed?.employee_count,
-                founded: ed?.founding_year ? String(ed.founding_year) : undefined,
-                fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
-                contactSource: "extension",
-              });
-              setCanvasPhase("complete");
-              setIsAnimatingOut(false);
-            }}
-          />
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            {queue.length > 0 && pipelineStatus !== "running" && selectedIds.size > 0 && (
+              <Button onClick={startPipeline} size="sm" className="flex-1 gap-1.5 text-xs">
+                <Play className="w-3.5 h-3.5" />
+                Avvia ({selectedIds.size})
+              </Button>
+            )}
+            {pipelineStatus === "running" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => {
+                    pauseRef.current = !pauseRef.current;
+                    const newStatus = pauseRef.current ? "paused" : "running";
+                    setPipelineStatus(newStatus);
+                    if (activeJobId) {
+                      supabase.from("download_jobs").update({ status: newStatus }).eq("id", activeJobId).then(() => {});
+                    }
+                  }}
+                >
+                  {pauseRef.current ? <><Play className="w-3.5 h-3.5 mr-1" /> Riprendi</> : <><Pause className="w-3.5 h-3.5 mr-1" /> Pausa</>}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    cancelRef.current = true;
+                    setPipelineStatus("idle");
+                    if (activeJobId) {
+                      supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", activeJobId).then(() => {});
+                      setActiveJobId(null);
+                    }
+                  }}
+                >
+                  <Square className="w-3.5 h-3.5 mr-1" /> Stop
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* RIGHT: Canvas */}
-        <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
-          <PartnerCanvas
-            data={canvasData}
-            phase={canvasPhase}
-            isAnimatingOut={isAnimatingOut}
-          />
+        {/* RIGHT COLUMN: Canvas */}
+        <div className="flex flex-col gap-2 min-h-0">
+          <div className="flex-1 flex flex-col bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 rounded-2xl overflow-hidden shadow-lg shadow-black/[0.05]">
+            <PartnerCanvas
+              data={canvasData}
+              phase={canvasPhase}
+              isAnimatingOut={isAnimatingOut}
+            />
+          </div>
         </div>
       </div>
 
