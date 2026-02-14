@@ -360,33 +360,34 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                       </div>
                     </div>
 
-                    {/* Right: directory count + contact stats inline */}
-                    {(pCount > 0 || (hasDirectoryScan && cCount > 0)) && (
-                      <div className="flex items-center gap-2.5 flex-shrink-0">
-                        {hasDirectoryScan && cCount > 0 && (
-                          <div className="flex items-center gap-1">
-                            <FolderDown className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
-                            <span className={`text-sm font-mono font-bold ${isDark ? "text-sky-400" : "text-sky-600"}`}>{cCount}</span>
+                    {/* Right side stats */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Directory total — always prominent when available */}
+                      {hasDirectoryScan && cCount > 0 && (
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${
+                          isDark ? "bg-sky-500/15 border border-sky-500/25" : "bg-sky-50 border border-sky-200"
+                        }`}>
+                          <FolderDown className={`w-4 h-4 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                          <span className={`text-base font-mono font-extrabold ${isDark ? "text-sky-300" : "text-sky-700"}`}>{cCount}</span>
+                        </div>
+                      )}
+                      {pCount > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-0.5">
+                            <Mail className={`w-3 h-3 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
+                            <span className={`text-[11px] font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
                           </div>
-                        )}
-                        {pCount > 0 && (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <Mail className={`w-3.5 h-3.5 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                              <span className={`text-xs font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Phone className={`w-3.5 h-3.5 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
-                              <span className={`text-xs font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className={`w-3.5 h-3.5 ${th.dim}`} />
-                              <span className={`text-xs font-mono font-bold ${th.mono}`}>{pCount}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+                          <div className="flex items-center gap-0.5">
+                            <Phone className={`w-3 h-3 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
+                            <span className={`text-[11px] font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <Users className={`w-3 h-3 ${th.dim}`} />
+                            <span className={`text-[11px] font-mono font-bold ${th.mono}`}>{pCount}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {isSelected && (
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/20" : "bg-sky-100"}`}>
