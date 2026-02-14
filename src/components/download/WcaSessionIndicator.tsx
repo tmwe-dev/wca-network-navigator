@@ -5,12 +5,25 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, CheckCircle, Key } from "lucide-react";
 import { useTheme, t } from "./theme";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { toast } from "@/hooks/use-toast";
 
 export function WcaSessionIndicator() {
   const isDark = useTheme();
-  const { status, checkedAt, diagnostics, triggerCheck, isLoading } = useWcaSessionStatus();
+  const { status, checkedAt, diagnostics, triggerCheck, isChecking } = useWcaSessionStatus();
 
   const isOk = status === "ok";
+
+  const handleVerify = async () => {
+    const result = await triggerCheck();
+    if (result) {
+      toast({
+        title: result.status === "ok" ? "✅ Sessione attiva" : "❌ Sessione non attiva",
+        description: result.status === "ok" ? "Cookie .ASPXAUTH valido" : "Sincronizza il cookie dall'estensione Chrome",
+      });
+    } else {
+      toast({ title: "Errore", description: "Verifica fallita", variant: "destructive" });
+    }
+  };
   const dotColor = isOk
     ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
     : (isDark ? "bg-red-400" : "bg-red-500");
@@ -71,9 +84,9 @@ export function WcaSessionIndicator() {
                 </p>
               </div>
             )}
-            <Button size="sm" variant="outline" onClick={triggerCheck} disabled={isLoading} className="w-full">
-              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
-              Verifica ora
+            <Button size="sm" variant="outline" onClick={handleVerify} disabled={isChecking} className="w-full">
+              {isChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+              {isChecking ? "Verifica in corso..." : "Verifica ora"}
             </Button>
           </div>
         </PopoverContent>
@@ -85,10 +98,13 @@ export function WcaSessionIndicator() {
 export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolean; onOpenChange: (o: boolean) => void; onRetry: () => void }) {
   const isDark = useTheme();
   const th = t(isDark);
-  const { status, diagnostics, triggerCheck, isLoading } = useWcaSessionStatus();
+  const { status, diagnostics, triggerCheck, isChecking } = useWcaSessionStatus();
 
   const handleRetry = async () => {
-    await triggerCheck();
+    const result = await triggerCheck();
+    if (result?.status === "ok") {
+      toast({ title: "✅ Sessione attiva", description: "Contatti personali visibili." });
+    }
     setTimeout(() => { onRetry(); }, 2000);
   };
 
@@ -124,9 +140,9 @@ export function WcaSessionDialog({ open, onOpenChange, onRetry }: { open: boolea
             </div>
           )}
 
-          <Button onClick={handleRetry} disabled={isLoading} className={`w-full ${th.btnPri}`}>
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Verifica sessione
+          <Button onClick={handleRetry} disabled={isChecking} className={`w-full ${th.btnPri}`}>
+            {isChecking ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            {isChecking ? "Verifica in corso..." : "Verifica sessione"}
           </Button>
           {status === "ok" && (
             <div className={`p-3 rounded-lg border text-sm text-center ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
