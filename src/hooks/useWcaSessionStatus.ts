@@ -13,6 +13,8 @@ export interface WcaDiagnostics {
 }
 
 export function useWcaSessionStatus() {
+  const [isChecking, setIsChecking] = useState(false);
+  
   const statusQuery = useQuery({
     queryKey: ["wca-session-status"],
     queryFn: async () => {
@@ -29,12 +31,10 @@ export function useWcaSessionStatus() {
         checkedAt: map.wca_session_checked_at || null,
       };
     },
-    refetchInterval: 5 * 60 * 1000, // Every 5 minutes — avoid excessive WCA requests
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Store latest diagnostics from check
   let lastDiagnostics: WcaDiagnostics | null = null;
-  const [isChecking, setIsChecking] = useState(false);
 
   const triggerCheck = async (): Promise<{ status: WcaSessionStatus; authenticated: boolean; diagnostics?: WcaDiagnostics } | null> => {
     setIsChecking(true);
