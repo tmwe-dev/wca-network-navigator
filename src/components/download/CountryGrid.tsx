@@ -6,6 +6,7 @@ import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
   SlidersHorizontal, X, FolderDown,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useContactCompleteness } from "@/hooks/useContactCompleteness";
@@ -17,9 +18,11 @@ interface CountryGridProps {
   selected: { code: string; name: string }[];
   onToggle: (code: string, name: string) => void;
   onRemove: (code: string) => void;
+  directoryOnly?: boolean;
+  onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
-export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDirectoryOnlyChange }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -221,24 +224,33 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
         </div>
       )}
 
-      {/* === SELECTED FLAGS === */}
+      {/* === SELECTED FLAGS + Solo Directory switch === */}
       {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1 items-center">
-          {selected.map(c => (
-            <button
-              key={c.code}
-              onClick={() => onRemove(c.code)}
-              className="group relative text-2xl leading-none hover:scale-110 transition-transform"
-              title={c.name}
-            >
-              {getCountryFlag(c.code)}
-              <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${
-                isDark ? "bg-slate-800 border border-slate-600" : "bg-white border border-slate-300 shadow-sm"
-              }`}>
-                <X className="w-2 h-2" />
-              </span>
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-1 items-center flex-1">
+            {selected.map(c => (
+              <button
+                key={c.code}
+                onClick={() => onRemove(c.code)}
+                className="group relative text-2xl leading-none hover:scale-110 transition-transform"
+                title={c.name}
+              >
+                {getCountryFlag(c.code)}
+                <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${
+                  isDark ? "bg-slate-800 border border-slate-600" : "bg-white border border-slate-300 shadow-sm"
+                }`}>
+                  <X className="w-2 h-2" />
+                </span>
+              </button>
+            ))}
+          </div>
+          {onDirectoryOnlyChange && (
+            <label className={`flex items-center gap-1.5 text-[10px] cursor-pointer whitespace-nowrap ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+              <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-75" />
+              <FolderDown className="w-3 h-3" />
+              Solo Dir
+            </label>
+          )}
         </div>
       )}
 
@@ -317,12 +329,7 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                               {pCount}/{cCount} · {dlPct}%
                             </span>
                           )}
-                          {hasDirectoryScan && cCount > 0 && (
-                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-mono ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-                              <FolderDown className="w-2.5 h-2.5" />
-                              {cCount} in directory
-                            </span>
-                          )}
+                          
                           {hasDbOnly && (
                             <span className={`text-[9px] font-mono ${isDark ? "text-amber-400/70" : "text-amber-600/70"}`}>
                               {pCount} partner
@@ -335,21 +342,31 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                       </div>
                     </div>
 
-                    {/* Right: contact stats inline */}
-                    {pCount > 0 && (
+                    {/* Right: directory count + contact stats inline */}
+                    {(pCount > 0 || (hasDirectoryScan && cCount > 0)) && (
                       <div className="flex items-center gap-2.5 flex-shrink-0">
-                        <div className="flex items-center gap-1">
-                          <Mail className={`w-3.5 h-3.5 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                          <span className={`text-xs font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className={`w-3.5 h-3.5 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
-                          <span className={`text-xs font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className={`w-3.5 h-3.5 ${th.dim}`} />
-                          <span className={`text-xs font-mono font-bold ${th.mono}`}>{pCount}</span>
-                        </div>
+                        {hasDirectoryScan && cCount > 0 && (
+                          <div className="flex items-center gap-1">
+                            <FolderDown className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                            <span className={`text-sm font-mono font-bold ${isDark ? "text-sky-400" : "text-sky-600"}`}>{cCount}</span>
+                          </div>
+                        )}
+                        {pCount > 0 && (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <Mail className={`w-3.5 h-3.5 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
+                              <span className={`text-xs font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Phone className={`w-3.5 h-3.5 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
+                              <span className={`text-xs font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users className={`w-3.5 h-3.5 ${th.dim}`} />
+                              <span className={`text-xs font-mono font-bold ${th.mono}`}>{pCount}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 

@@ -46,6 +46,7 @@ export default function Operations() {
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [activeTab, setActiveTab] = useState("partner");
+  const [directoryOnly, setDirectoryOnly] = useState(false);
   const { data: globalStats } = useGlobalStats();
   const { data: jobs } = useDownloadJobs();
   const emergencyStopMutation = useEmergencyStop();
@@ -134,6 +135,8 @@ export default function Operations() {
                 selected={selectedCountries}
                 onToggle={toggleCountry}
                 onRemove={removeCountry}
+                directoryOnly={directoryOnly}
+                onDirectoryOnlyChange={setDirectoryOnly}
               />
             </div>
 
@@ -185,7 +188,7 @@ export default function Operations() {
                     </TabsContent>
 
                     <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
-                      <ActionPanel selectedCountries={selectedCountries} />
+                      <ActionPanel selectedCountries={selectedCountries} directoryOnly={directoryOnly} onDirectoryOnlyChange={setDirectoryOnly} />
                       <DownloadTerminal />
                       <JobMonitor />
                       <AdvancedTools isDark={isDark} />
