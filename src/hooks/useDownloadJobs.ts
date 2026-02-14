@@ -139,3 +139,45 @@ export function useUpdateJobSpeed() {
     },
   });
 }
+
+export function useEmergencyStop() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      // Get all active jobs
+      const { data: activeJobs } = await supabase
+        .from("download_jobs")
+        .select("id, terminal_log")
+        .in("status", ["running", "pending"]);
+
+      if (!activeJobs || activeJobs.length === 0) return 0;
+
+      // Update all to cancelled with EMERGENCY STOP message
+      const { error } = await supabase
+        .from("download_jobs")
+        .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
+        .in("status", ["running", "pending"]);
+
+      if (error) throw error;
+
+      // Append emergency stop to terminal logs
+      const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      for (const job of activeJobs) {
+        const log = [...((job.terminal_log as any[]) || []), { ts, type: "STOP", msg: "🛑 EMERGENCY STOP attivato dall'utente" }].slice(-100);
+        await supabase.from("download_jobs").update({ terminal_log: log as any }).eq("id", job.id);
+      }
+
+      return activeJobs.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      if (count && count > 0) {
+        toast({ title: "🛑 EMERGENCY STOP", description: `${count} job bloccati immediatamente`, variant: "destructive" });
+      }
+    },
+    onError: (err) => {
+      toast({ title: "Errore Emergency Stop", description: err.message, variant: "destructive" });
+    },
+  });
+}
