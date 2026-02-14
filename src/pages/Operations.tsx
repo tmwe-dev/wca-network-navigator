@@ -93,17 +93,16 @@ export default function Operations() {
             <div className="flex items-center gap-3">
               <h1 className={`text-lg font-semibold ${th.h1}`}>Operations Center</h1>
               {activeJobs.length > 0 && (
-                <>
-                  <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
-                    {activeJobs.length} job attivi
-                  </span>
-                  <SpeedGauge
-                    lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
-                    onStop={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
-                  />
-                </>
+                <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
+                  {activeJobs.length} job attivi
+                </span>
               )}
+              <SpeedGauge
+                lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
+                onStop={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
+                idle={activeJobs.length === 0}
+              />
             </div>
             <div className="flex items-center gap-3">
               <WcaSessionIndicator />

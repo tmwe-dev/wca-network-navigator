@@ -5,9 +5,10 @@ import { ThemeCtx, t } from "@/components/download/theme";
 interface SpeedGaugeProps {
   lastUpdatedAt: string | null;
   onStop: () => void;
+  idle?: boolean;
 }
 
-export function SpeedGauge({ lastUpdatedAt, onStop }: SpeedGaugeProps) {
+export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
   const isDark = useContext(ThemeCtx);
   const [elapsed, setElapsed] = useState(0);
 
@@ -94,8 +95,13 @@ export function SpeedGauge({ lastUpdatedAt, onStop }: SpeedGaugeProps) {
       {/* STOP button */}
       <button
         onClick={onStop}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg shadow-red-900/30 animate-pulse"
-        style={{ animationDuration: "2s" }}
+        disabled={idle}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+          idle
+            ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
+            : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/30 animate-pulse"
+        }`}
+        style={idle ? undefined : { animationDuration: "2s" }}
       >
         <OctagonX className="w-4 h-4" />
         STOP
