@@ -132,30 +132,102 @@ export function useDownloadProcessor() {
             continue;
           }
 
-          if (result.success && result.contacts && result.contacts.length > 0 && partnerId) {
-            // Save contacts to DB
+        if (result.success && result.contacts && result.contacts.length > 0 && partnerId) {
+            // --- Deduplicate incoming contacts by name (name-first strategy) ---
+            const mergedByName = new Map<string, { title: string; name: string; email?: string; phone?: string; mobile?: string; emails: string[] }>();
             for (const c of result.contacts) {
-              const contactName = c.name || c.title || "Sconosciuto";
-              // Upsert: check if contact exists
-              const { data: existingContact } = await supabase
-                .from("partner_contacts")
-                .select("id")
-                .eq("partner_id", partnerId)
-                .eq("name", contactName)
-                .maybeSingle();
+              const rawName = c.name || c.title || "Sconosciuto";
+              const nameKey = rawName.trim().toLowerCase();
+              if (mergedByName.has(nameKey)) {
+                const ex = mergedByName.get(nameKey)!;
+                if (c.title && !ex.title.includes(c.title)) ex.title = `${ex.title} / ${c.title}`;
+                if (c.email) ex.emails.push(c.email);
+                if (c.phone && !ex.phone) ex.phone = c.phone;
+                if (c.mobile && !ex.mobile) ex.mobile = c.mobile;
+              } else {
+                mergedByName.set(nameKey, {
+                  name: rawName,
+                  title: c.title || rawName,
+                  email: c.email || undefined,
+                  phone: c.phone || undefined,
+                  mobile: c.mobile || undefined,
+                  emails: c.email ? [c.email] : [],
+                });
+              }
+            }
 
-              if (!existingContact) {
+            // bestEmail: pick email whose prefix matches person's surname/initial
+            const pickBestEmail = (personName: string, emails: string[]): string | null => {
+              const valid = emails.filter(e => e && /\S+@\S+\.\S+/.test(e));
+              if (valid.length === 0) return null;
+              if (valid.length === 1) return valid[0];
+              const parts = personName.replace(/^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?)\s*/i, "").trim().split(/\s+/);
+              const surname = (parts[parts.length - 1] || "").toLowerCase();
+              const initial = (parts[0] || "").charAt(0).toLowerCase();
+              let best = valid[0], bestScore = 0;
+              for (const e of valid) {
+                const prefix = e.split("@")[0].toLowerCase();
+                let score = 0;
+                if (surname && prefix.includes(surname)) score += 2;
+                if (initial && prefix.includes(initial)) score += 1;
+                if (score > bestScore) { bestScore = score; best = e; }
+              }
+              return best;
+            };
+
+            // Get existing contacts for this partner
+            const { data: existingContacts } = await supabase
+              .from("partner_contacts")
+              .select("id, name, title, email, direct_phone, mobile")
+              .eq("partner_id", partnerId);
+
+            const existingByName = new Map<string, any>();
+            const existingByEmail = new Map<string, any>();
+            for (const e of (existingContacts || [])) {
+              if (e.name) existingByName.set(e.name.trim().toLowerCase(), e);
+              if (e.email) existingByEmail.set(e.email.trim().toLowerCase(), e);
+            }
+            const usedIds = new Set<string>();
+
+            for (const [, c] of mergedByName) {
+              const bestEmail = pickBestEmail(c.name, c.emails);
+              const nameKey = c.name.trim().toLowerCase();
+              const emailKey = bestEmail?.trim().toLowerCase();
+
+              // Match priority: name -> email -> (no title match needed)
+              let ex = existingByName.get(nameKey);
+              if (!ex && emailKey) ex = existingByEmail.get(emailKey);
+
+              if (ex && !usedIds.has(ex.id)) {
+                usedIds.add(ex.id);
+                const updates: Record<string, string> = {};
+                if (c.title && c.title !== ex.title && !ex.title?.includes(c.title)) {
+                  updates.title = ex.title ? `${ex.title} / ${c.title}` : c.title;
+                }
+                if (bestEmail && !ex.email) updates.email = bestEmail;
+                if (bestEmail && ex.email && emailKey !== ex.email.trim().toLowerCase()) {
+                  // Replace if new email is a better match for the person's name
+                  const currentScore = (() => { const p = ex.email.split("@")[0].toLowerCase(); const parts = c.name.replace(/^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?)\s*/i,"").trim().split(/\s+/); const s=(parts[parts.length-1]||"").toLowerCase(); const i=(parts[0]||"").charAt(0).toLowerCase(); return (s&&p.includes(s)?2:0)+(i&&p.includes(i)?1:0); })();
+                  const newScore = (() => { const p = bestEmail.split("@")[0].toLowerCase(); const parts = c.name.replace(/^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?)\s*/i,"").trim().split(/\s+/); const s=(parts[parts.length-1]||"").toLowerCase(); const i=(parts[0]||"").charAt(0).toLowerCase(); return (s&&p.includes(s)?2:0)+(i&&p.includes(i)?1:0); })();
+                  if (newScore > currentScore) updates.email = bestEmail;
+                }
+                if (c.phone && !ex.direct_phone) updates.direct_phone = c.phone;
+                if (c.mobile && !ex.mobile) updates.mobile = c.mobile;
+                if (Object.keys(updates).length > 0) {
+                  await supabase.from("partner_contacts").update(updates).eq("id", ex.id);
+                }
+              } else if (!ex) {
                 await supabase.from("partner_contacts").insert({
                   partner_id: partnerId,
-                  name: contactName,
-                  title: c.title || null,
-                  email: c.email || null,
+                  name: c.name,
+                  title: c.title,
+                  email: bestEmail,
                   direct_phone: c.phone || null,
                   mobile: c.mobile || null,
                 });
               }
 
-              if (c.email) hasEmail = true;
+              if (bestEmail) hasEmail = true;
               if (c.phone || c.mobile) hasPhone = true;
             }
 
