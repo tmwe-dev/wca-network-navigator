@@ -22,9 +22,11 @@ import { WcaSessionDialog } from "./WcaSessionIndicator";
 
 interface ActionPanelProps {
   selectedCountries: { code: string; name: string }[];
+  directoryOnly?: boolean;
+  onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
-export function ActionPanel({ selectedCountries }: ActionPanelProps) {
+export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange }: ActionPanelProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const queryClient = useQueryClient();
@@ -44,7 +46,8 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   // Speed — simple slider around baseDelay
   const [delay, setDelay] = useState(scrapingSettings.baseDelay);
   const [includeExisting, setIncludeExisting] = useState(false);
-  const [directoryOnly, setDirectoryOnly] = useState(false);
+  const directoryOnly = directoryOnlyProp ?? false;
+  const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
 
   // Scanning state
   const [isScanning, setIsScanning] = useState(false);
