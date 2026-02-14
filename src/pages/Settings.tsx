@@ -11,6 +11,7 @@ import {
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
   Zap,
+  Paperclip,
 } from "lucide-react";
 import { ScrapingSettingsPanel } from "@/components/settings/ScrapingSettings";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
@@ -22,6 +23,7 @@ import { toast as toastHook } from "@/hooks/use-toast";
 import { CSVImport } from "@/components/partners/CSVImport";
 import { WCAScraper } from "@/components/partners/WCAScraper";
 import BlacklistManager from "@/components/settings/BlacklistManager";
+import TemplateManager from "@/components/settings/TemplateManager";
 
 /* ── Export field config ── */
 
@@ -222,6 +224,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="reportaziende" className="flex items-center gap-2">
             <FileText className="w-4 h-4" /> Report Aziende
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <Paperclip className="w-4 h-4" /> Template
           </TabsTrigger>
         </TabsList>
 
@@ -438,6 +443,11 @@ export default function Settings() {
         {/* ════════════════ REPORT AZIENDE ════════════════ */}
         <TabsContent value="reportaziende">
           <ReportAziendeSettings settings={settings} updateSetting={updateSetting} />
+        </TabsContent>
+
+        {/* ════════════════ TEMPLATE ════════════════ */}
+        <TabsContent value="templates">
+          <TemplateManager />
         </TabsContent>
       </Tabs>
     </div>
