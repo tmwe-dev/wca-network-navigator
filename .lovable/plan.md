@@ -1,69 +1,70 @@
 
+# Eliminazione di TUTTI i recovery e chiamate parallele
 
-# Fix: Cruscotto mancante, indicatore sessione errato, terminale inattivo
+## Problema
+Il processore di download, mentre scarica profili, lancia chiamate aggiuntive a WCA in parallelo:
+- Ogni 3 profili apre una tab per verificare la sessione (verifySession)
+- Se la verifica fallisce, apre ALTRE tab per il recovery (syncCookie + verifySession)
+- Se ci sono N profili vuoti consecutivi, apre ALTRE tab per auto-recovery
+- L'estensione ha 3 retry interni per ogni profilo fallito, aprendo tab aggiuntive
+- Il tutto genera un traffico multiplo e sovrapposto verso WCA
 
-## Problemi identificati
+## Modifiche
 
-### 1. Indicatore sessione mostra "Non configurato" (ma la sessione e' OK)
-Nel database lo stato e' `ok` e il cookie `.ASPXAUTH` e' presente. Il problema e' nel componente `WcaSessionIndicator.tsx` riga 42: la label `"Non configurato"` viene mostrata per qualsiasi stato che non sia `"ok"` o `"expired"` -- incluso `"checking"` che e' il valore di default durante il caricamento iniziale. Dato che la query React ha `refetchInterval: 5min`, se il primo caricamento e' lento l'utente vede "Non configurato" anche con sessione attiva.
+### 1. `src/hooks/useDownloadProcessor.ts`
 
-### 2. Cruscotto statistiche non appare
-La barra delle statistiche globali (Paesi scansionati, Partner, Email, Telefoni) dipende dalla query `ops-global-stats`. Se la query e' in corso o lenta, il blocco `{globalStats && (...)}` non rende nulla e sembra che il cruscotto sia "scomparso". Serve un placeholder/skeleton durante il caricamento.
+**Rimuovere completamente il session health check (righe 311-328):**
+Eliminare l'intero blocco che ogni 3 profili chiama `verifySession()` e `syncCookie()`. Zero chiamate extra a WCA durante il processing.
 
-### 3. Terminale non processa nulla
-Non e' un bug: nel database ci sono 40 job cancellati e 34 completati, zero job `pending` o `running`. Il processore funziona correttamente ma non ha nulla da fare. Il terminale dovrebbe mostrare un messaggio chiaro quando non ci sono job attivi.
+**Rimuovere completamente l'auto-recovery per profili vuoti consecutivi (righe 336-348):**
+Eliminare l'intero blocco che al raggiungimento della soglia `recoveryThreshold` chiama `syncCookie()` e `verifySession()`. Se ci sono profili vuoti, semplicemente continua.
 
-## Correzioni
+**Rimuovere `verifySession` e `syncCookie` dalle dipendenze dell'hook:**
+Non servono piu' nel processore. L'unica cosa che il processore fa e' `extractContacts` -- una richiesta alla volta, con il delay configurato.
 
-### File: `src/components/download/WcaSessionIndicator.tsx`
+**Rimuovere la variabile `consecutiveEmpty` e tutta la logica associata:**
+Non serve piu' nessun conteggio di profili vuoti consecutivi per triggerare recovery.
 
-Riga 42 -- correggere la mappa delle label per coprire tutti gli stati:
-- `"ok"` -> "WCA Connesso"
-- `"expired"` -> "Sessione Scaduta"
-- `"checking"` -> "Verifica..." (con icona di loading)
-- `"no_cookie"` -> "Non configurato"
-- `"error"` -> "Errore connessione"
+### 2. `public/chrome-extension/background.js`
 
-Anche il colore del dot deve cambiare: `"checking"` deve avere un colore giallo/ambra, non rosso.
+**Ridurre MAX_RETRIES a 1 (massimo 1 tentativo extra):**
+Da `MAX_RETRIES = 3` a `MAX_RETRIES = 1`. Se il profilo non carica al secondo tentativo, restituisce errore.
 
-### File: `src/pages/Operations.tsx`
+**Rimuovere syncCookie dalla verifySession (riga 233-234):**
+Quando `verifyWcaSession()` trova la sessione autenticata, NON deve chiamare `syncWcaCookiesToServer()`. Zero chiamate extra.
 
-Aggiungere uno skeleton/placeholder per il cruscotto statistiche durante il caricamento:
-- Mentre `globalStats` e' undefined (query in corso), mostrare una barra con skeleton animati
-- Cosi' il layout non "salta" e l'utente vede che sta caricando
+### 3. `src/hooks/useScrapingSettings.ts`
 
-### File: `src/components/download/DownloadTerminal.tsx`
+**Rimuovere `recoveryThreshold` dalle impostazioni:**
+Non viene piu' usato (l'auto-recovery e' stato eliminato). Rimuovere il campo dalla interface, dai default e dalla mappa delle chiavi DB.
 
-Aggiungere un messaggio quando non ci sono job attivi:
-- Se non ci sono job running/pending, mostrare "Nessun job attivo. Seleziona un paese e avvia un download."
+### 4. `src/components/settings/ScrapingSettings.tsx`
+
+**Rimuovere il controllo "Soglia recovery sessione" dalla UI:**
+Eliminare lo slider e la descrizione del recoveryThreshold perche' il parametro non esiste piu'.
+
+## Risultato finale
+
+Il processore fara' UNA SOLA cosa per ogni profilo:
+1. `extractContacts(wcaId)` -- apre una tab, estrae, chiude la tab
+2. Attende il delay configurato (baseDelay +/- variation)
+3. Passa al profilo successivo
+
+Nessun'altra chiamata a WCA. Mai. Zero recovery, zero verifiche, zero sync paralleli.
 
 ## Dettaglio tecnico
 
-### WcaSessionIndicator -- nuova logica label/colore
+Il flusso del processore diventa:
 
-```
-// Riga 39-42, sostituire con:
-const dotColor = isOk
-  ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
-  : status === "checking"
-    ? (isDark ? "bg-amber-400" : "bg-amber-500")
-    : (isDark ? "bg-red-400" : "bg-red-500");
-
-const label = isOk
-  ? "WCA Connesso"
-  : status === "expired"
-    ? "Sessione Scaduta"
-    : status === "checking"
-      ? "Verifica..."
-      : status === "no_cookie"
-        ? "Non configurato"
-        : "Errore";
+```text
+Per ogni profilo nel job:
+  1. Controlla cancellazione/pausa (solo DB, nessuna chiamata WCA)
+  2. Verifica estensione disponibile (solo ping locale, nessuna tab WCA)
+  3. Crea/trova partner nel DB (solo Supabase, nessuna chiamata WCA)
+  4. extractContacts(wcaId) -- UNICA chiamata WCA
+  5. Salva risultati nel DB
+  6. Attende delay
+  7. Ripeti
 ```
 
-### Operations.tsx -- skeleton cruscotto
-
-Sostituire `{globalStats && (...)}` con un blocco che mostra sempre la barra, con skeleton se i dati non sono ancora pronti. Usare `Skeleton` da `@/components/ui/skeleton`.
-
-### DownloadTerminal.tsx
-
-Aggiungere controllo: se nessun job attivo, mostrare messaggio "idle" invece del terminale vuoto.
+La verifica sessione resta disponibile SOLO tramite il pulsante manuale "Verifica ora" nell'interfaccia, mai automaticamente durante il processing.
