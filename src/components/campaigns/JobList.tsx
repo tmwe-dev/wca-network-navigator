@@ -179,6 +179,7 @@ export function JobList({
                             onClick={() => onFocusContact(contact.id)}
                           >
                             <span className="font-medium text-foreground truncate">{contact.name}</span>
+                            {contact.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 shrink-0">{contact.contact_alias}</span>}
                             {contact.title && (
                               <span className="text-muted-foreground truncate hidden sm:inline">· {contact.title}</span>
                             )}

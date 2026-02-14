@@ -105,6 +105,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               >
                 {partner.company_name}
               </Link>
+              {partner.company_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 shrink-0">{partner.company_alias}</span>}
               <Button
                 variant="ghost"
                 size="icon"
