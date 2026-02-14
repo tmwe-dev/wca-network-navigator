@@ -1,34 +1,41 @@
 
+# Riposizionamento Directory Count e Switch "Solo Directory"
 
-# Evidenza Directory nelle Card Paese
+## Due modifiche
 
-## Cosa cambia
+### 1. Directory count sulla DESTRA della card paese (bold + icona)
 
-Aggiungere nelle card paese (pannello sinistro) un indicatore chiaro del numero di aziende trovate nella directory WCA, visibile sempre quando la directory e' stata scaricata.
+Attualmente il conteggio directory e' inline sotto il nome del paese, poco visibile. Viene spostato nell'area destra della card (dove ci sono Mail/Phone/Users), come primo elemento prominente.
 
-## Dettaglio
+- Rimuovere il badge `FolderDown {cCount} in directory` dalla sezione status sotto il nome (righe 320-324)
+- Aggiungerlo nell'area destra (righe 338-356), PRIMA delle stats contatti, come numero bold con icona `FolderDown`:
+  - Sempre visibile quando `hasDirectoryScan && cCount > 0`
+  - Stile: `text-sm font-bold font-mono` con colore sky, icona `FolderDown` accanto
+  - Visibile anche quando `pCount === 0` (attualmente l'area destra appare solo se `pCount > 0`)
+- La condizione `pCount > 0` viene allargata a `(pCount > 0 || cCount > 0)` per mostrare l'area destra anche quando c'e' solo la directory
 
-Nella riga sotto il nome paese (righe 309-327 di `CountryGrid.tsx`), aggiungere un badge con icona `FolderDown` che mostra il totale directory, ad esempio:
+### 2. Switch "Solo Directory" nel pannello sinistro, sopra le bandiere
 
-- **Directory scaricata**: badge con `📁 42 in directory` (colore sky/blu)
-- **Directory non scaricata**: nessun badge (resta "Non esplorato")
-- **Download completo**: il badge directory resta visibile accanto al check "Completo", cosi' si vede sempre il totale di riferimento
+Lo switch "Solo Directory" attualmente si trova dentro il tab Scarica (pannello destro, ActionPanel). Viene spostato/duplicato nel pannello sinistro della CountryGrid.
 
-Attualmente il conteggio directory (`cCount`) e' mostrato solo come rapporto `pCount/cCount` ed e' poco leggibile. La modifica lo rende un dato autonomo e sempre visibile.
+- Aggiungere una prop `directoryOnly` e `onDirectoryOnlyChange` a `CountryGrid`
+- Posizionare lo switch nella riga tra le bandiere selezionate e la lista paesi, allineato a destra
+- Lo stato `directoryOnly` viene gestito in `Operations.tsx` e passato sia a `CountryGrid` (per la visualizzazione) che a `ActionPanel` (per la logica di download)
 
-## Modifiche tecniche
+### File modificati
 
-### `src/components/download/CountryGrid.tsx`
+- **`src/components/download/CountryGrid.tsx`**:
+  - Rimuovere badge directory dalla sezione status sotto il nome
+  - Aggiungere numero directory bold sulla destra della card
+  - Aggiungere props `directoryOnly` / `onDirectoryOnlyChange`
+  - Aggiungere switch "Solo Directory" sopra la lista, accanto alle bandiere selezionate
+  - Importare `Switch` da ui e `FolderDown` (gia' importato)
 
-1. Importare `FolderDown` da lucide-react (riga 6)
-2. Nella sezione status sotto il nome paese (righe 309-327), aggiungere in tutti i casi in cui `hasDirectoryScan && cCount > 0` un badge:
-   ```
-   <span className="text-[9px] font-mono text-sky-400">
-     📁 {cCount} in directory
-   </span>
-   ```
-3. Per il caso `isComplete`, mostrare sia "Completo" che il totale directory
-4. Per il caso `hasDirectoryScan && !isComplete`, mostrare il badge directory + il progresso download separatamente
+- **`src/pages/Operations.tsx`**:
+  - Aggiungere stato `directoryOnly` con `useState(false)`
+  - Passare `directoryOnly` e `onDirectoryOnlyChange` a `CountryGrid`
+  - Passare `directoryOnly` a `ActionPanel` come prop
 
-Nessun altro file viene modificato.
-
+- **`src/components/download/ActionPanel.tsx`**:
+  - Accettare `directoryOnly` come prop invece di stato locale
+  - Rimuovere lo stato `useState` locale per `directoryOnly`
