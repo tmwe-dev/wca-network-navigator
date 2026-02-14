@@ -53,15 +53,12 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const { data: cacheData = {} } = useQuery({
     queryKey: ["cache-data-by-country"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("directory_cache")
-        .select("country_code, total_results, download_verified");
+      const { data } = await supabase.rpc("get_directory_counts");
       const result: Record<string, { count: number; verified: boolean }> = {};
       (data || []).forEach((r: any) => {
-        const prev = result[r.country_code];
         result[r.country_code] = {
-          count: (prev?.count || 0) + (r.total_results || 0),
-          verified: prev?.verified !== false ? (r.download_verified === true) : false,
+          count: Number(r.member_count) || 0,
+          verified: r.is_verified === true,
         };
       });
       return result;
