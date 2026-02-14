@@ -28,6 +28,7 @@ export interface PartnerContact {
   direct_phone: string | null;
   mobile: string | null;
   is_primary: boolean | null;
+  contact_alias: string | null;
 }
 
 export function useCampaignJobs(batchId?: string | null) {

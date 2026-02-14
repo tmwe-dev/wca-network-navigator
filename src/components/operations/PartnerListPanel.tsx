@@ -230,7 +230,10 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className={`font-semibold text-sm truncate ${th.h2}`}>{partner.city}</p>
-                              <p className={`text-xs truncate ${th.sub}`}>{partner.company_name}</p>
+                              <p className={`text-xs truncate ${th.sub}`}>
+                                {partner.company_name}
+                                {partner.company_alias && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">{partner.company_alias}</span>}
+                              </p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {years > 0 && (
@@ -312,7 +315,10 @@ function PartnerDetail({ partner, onBack, onToggleFavorite, isDark }: { partner:
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className={`text-lg font-bold truncate ${th.h2}`}>{partner.company_name}</h2>
+          <h2 className={`text-lg font-bold truncate ${th.h2}`}>
+            {partner.company_name}
+            {partner.company_alias && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 font-normal align-middle">{partner.company_alias}</span>}
+          </h2>
           <p className={`text-sm ${th.sub}`}>
             {getCountryFlag(partner.country_code)} {partner.city}, {partner.country_name}
           </p>
@@ -361,6 +367,7 @@ function PartnerDetail({ partner, onBack, onToggleFavorite, isDark }: { partner:
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
+                {c.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">{c.contact_alias}</span>}
                 {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">Primary</span>}
                 <div className="flex items-center gap-1 ml-auto">
                   <Mail className={cn("w-3.5 h-3.5", c.email ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
