@@ -1,83 +1,65 @@
 
 
-# Piano: Deduplicazione Rigorosa — Una Persona, Un Record, Una Email
+# Piano: Tasto Emergency Stop e Parametri Anti-Ban Piu' Sicuri
 
-## Problema
+## 1. Tasto EMERGENCY STOP
 
-Ci sono **3 punti** nel codice che salvano contatti, e ognuno ha una logica diversa:
+Aggiungere un grosso tasto rosso "BLOCCA TUTTO" visibile in modo permanente nell'Operations Center quando ci sono job attivi. Non nascosto in una tab, ma sempre visibile nella top bar o come floating button.
 
-1. **`useDownloadProcessor.ts`** (frontend, download loop): dedup solo per `name` — non controlla email, non unisce ruoli
-2. **`save-wca-contacts/index.ts`** (edge function): dedup multi-chiave ma non unisce persone con stesso nome ed email diversa
-3. **`scrape-wca-partners/index.ts`** (edge function): stessa logica di save-wca-contacts
+### Comportamento
 
-Il caso "Ms. Genta Toska" mostra che la stessa persona appare con due ruoli (Sales, Finance) e due email diverse (una delle quali errata: `t.lamaj@...` assegnata a Toska). Il sistema deve:
-- Riconoscere che e' la stessa persona (stesso nome)
-- Tenere una sola email (quella coerente col nome)
-- Unire i titoli in un solo record
+- Un click cancella **tutti** i job con status `running` o `pending` (non solo uno)
+- Imposta `cancelRef.current = true` per interrompere immediatamente il loop in corso
+- Aggiorna lo status di ogni job a `cancelled` nel DB
+- Scrive nel terminal log "EMERGENCY STOP attivato dall'utente"
+- Mostra conferma visiva (toast rosso)
 
-## Soluzione
+### Implementazione
 
-### Regola unica: dedup per NOME come chiave primaria
-
-Il **nome della persona** diventa la chiave principale di deduplicazione. Se due contatti hanno lo stesso nome (case-insensitive), sono la stessa persona. I titoli vengono concatenati ("Sales / Finance"), e l'email viene scelta con una logica di validazione:
-
-```text
-Email corretta = quella il cui prefisso (prima della @) contiene
-                 iniziale nome o cognome della persona
-Esempio: "Ms. Genta Toska" -> g.toska@... e' corretta
-         "Ms. Genta Toska" -> t.lamaj@... e' sbagliata (appartiene a Lamaj)
+**`src/hooks/useDownloadJobs.ts`**: aggiungere una mutation `useEmergencyStop` che:
+```
+UPDATE download_jobs SET status = 'cancelled', error_message = 'EMERGENCY STOP'
+WHERE status IN ('running', 'pending')
 ```
 
-### File da modificare
+**`src/hooks/useDownloadProcessor.ts`**: esporre una funzione `emergencyStop()` che imposta `cancelRef.current = true` e chiama la mutation. Restituire questa funzione dal hook.
 
-#### 1. `src/hooks/useDownloadProcessor.ts` (righe 135-156)
+**`src/pages/Operations.tsx`**: rendere visibile il tasto Emergency Stop nella top bar, accanto a "N job attivi". Stile: sfondo rosso, icona octagon/stop, testo "BLOCCA TUTTO".
 
-Sostituire il salvataggio contatti ingenuo con una logica completa:
-- Deduplicare i contatti in ingresso per nome (unire titoli, scegliere email migliore)
-- Prima di inserire, controllare se esiste gia' un contatto con stesso nome O stessa email
-- Se esiste: aggiornare campi mancanti, unire titoli
-- Se non esiste: inserire
+### Posizione UI
 
-#### 2. `supabase/functions/save-wca-contacts/index.ts`
+Il tasto appare nella barra superiore dell'Operations Center, a fianco del badge "N job attivi", con:
+- Sfondo rosso intenso (`bg-red-600 hover:bg-red-700`)
+- Icona `OctagonX` o `ShieldAlert`
+- Testo "BLOCCA TUTTO"
+- Visibile SOLO quando ci sono job attivi (running o pending)
+- Nessuna conferma richiesta (azione immediata per emergenza)
 
-Rafforzare la dedup in ingresso:
-- Dopo il merge per email, fare un secondo pass di merge per **nome** (case-insensitive)
-- Per ogni gruppo con stesso nome, scegliere l'email piu' coerente (matching iniziale/cognome)
-- Nella fase di match con il DB, dare **priorita' al nome** rispetto al titolo
+## 2. Parametri anti-ban piu' sicuri (consigliati)
 
-#### 3. `supabase/functions/scrape-wca-partners/index.ts` (funzione `saveContactsBatch`)
+Attualmente i parametri nel DB sono troppo aggressivi per un sito che ha gia' bloccato 4 volte. Suggerisco di aggiornare via SQL:
 
-Stessa logica di save-wca-contacts:
-- Dedup input per nome dopo dedup per email
-- Match DB: nome -> email -> titolo (invertire la priorita' attuale titolo -> email -> nome)
+| Parametro | Attuale | Consigliato |
+|---|---|---|
+| `scraping_delay_min` | 10s | **15s** |
+| `scraping_delay_default` | 9s | **20s** |
+| `scraping_jitter_min` | 1.3 | **1.5** |
+| `scraping_jitter_max` | 1.5 (default) | **2.5** |
+| `scraping_antiban_duration_s` | 20s | **60s** |
+| `scraping_antiban_every_n` | 10 (default) | **8** |
+| `scraping_inter_job_pause_s` | 30s (default) | **60s** |
 
-### Pulizia una tantum: International Trans
+Questo porterebbe il delay effettivo minimo da 13s a **22.5s** e il massimo a **50s**, con pause anti-ban di 1 minuto ogni 8 profili. Molto piu' sicuro.
 
-Eseguire una query per unire i due record di Ms. Genta Toska:
-- Tenere il record con email `g.toska@internationaltrans06.com` (coerente col nome)
-- Aggiungere il titolo "Sales / Finance" e il telefono
-- Eliminare il record con email `t.lamaj@...`
+Non modifico questi valori automaticamente: li applichero' solo se approvi, perche' rallentano il processo.
 
-### Logica di selezione email (comune a tutti e 3 i punti)
+## File da modificare
 
-```text
-function bestEmail(name, emails[]):
-  cognome = ultima parola del nome (senza Mr/Ms/Dr)
-  iniziale = prima lettera del nome proprio
-  per ogni email:
-    prefisso = parte prima della @
-    se prefisso contiene cognome.toLowerCase() -> punteggio +2
-    se prefisso contiene iniziale.toLowerCase() -> punteggio +1
-  ritorna email con punteggio piu' alto
-  se nessun match: ritorna la prima email non-null
-```
+1. **`src/hooks/useDownloadJobs.ts`** -- aggiungere `useEmergencyStop()` mutation
+2. **`src/hooks/useDownloadProcessor.ts`** -- esporre `emergencyStop()` e collegare al cancelRef
+3. **`src/pages/Operations.tsx`** -- aggiungere il tasto rosso nella top bar
 
-### Ordine di priorita' nel match DB (tutti e 3 i punti)
+## Come raggiungere il Terminal
 
-```text
-Vecchio: title -> email -> name
-Nuovo:   name -> email -> title
-```
-
-Il nome e' piu' stabile del titolo (una persona puo' cambiare ruolo ma non nome).
+Il terminal e' visibile in: **Operations Center -> seleziona un paese -> tab "Scarica"** (seconda tab). Appare sotto il pannello di download e sopra il monitor dei job. Se vuoi che sia visibile anche senza selezionare un paese (nella vista globale), posso spostarlo li'.
 
