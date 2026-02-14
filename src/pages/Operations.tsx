@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, OctagonX } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink } from "lucide-react";
+import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid } from "@/components/download/CountryGrid";
@@ -95,14 +96,10 @@ export default function Operations() {
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
                     {activeJobs.length} job attivi
                   </span>
-                  <button
-                    onClick={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg shadow-red-900/30 animate-pulse"
-                    style={{ animationDuration: '2s' }}
-                  >
-                    <OctagonX className="w-4 h-4" />
-                    BLOCCA TUTTO
-                  </button>
+                  <SpeedGauge
+                    lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
+                    onStop={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
+                  />
                 </>
               )}
             </div>
