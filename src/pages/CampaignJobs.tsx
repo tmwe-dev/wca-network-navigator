@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,22 +12,83 @@ export default function CampaignJobs() {
   const batchId = searchParams.get("batch");
   const { data: jobs = [] } = useCampaignJobs(batchId);
   const updateJob = useUpdateCampaignJob();
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  // Focus: which contact row was clicked (shows details in canvas)
+  const [focusedContactId, setFocusedContactId] = useState<string | null>(null);
+  // Bulk selection: checked contacts across all companies
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
 
   // Collect unique partner IDs for contacts query
   const partnerIds = useMemo(() => [...new Set(jobs.map(j => j.partner_id))], [jobs]);
   const { data: contactsByPartner = {} } = useJobContacts(partnerIds);
 
-  const selectedJob = useMemo(
-    () => jobs.find(j => j.id === selectedJobId) || null,
-    [jobs, selectedJobId]
-  );
+  // All contacts flat
+  const allContacts = useMemo(() => Object.values(contactsByPartner).flat(), [contactsByPartner]);
 
-  const selectedJobContacts = selectedJob
-    ? (contactsByPartner[selectedJob.partner_id] || [])
+  // Find the job for a focused contact
+  const focusedContact = useMemo(
+    () => allContacts.find(c => c.id === focusedContactId) || null,
+    [allContacts, focusedContactId]
+  );
+  const focusedJob = useMemo(
+    () => (focusedContact ? jobs.find(j => j.partner_id === focusedContact.partner_id) : null) || null,
+    [focusedContact, jobs]
+  );
+  const focusedJobContacts = focusedJob
+    ? (contactsByPartner[focusedJob.partner_id] || [])
     : [];
 
   const pendingCount = jobs.filter(j => j.status === "pending" || j.status === "in_progress").length;
+
+  // Selection handlers
+  const toggleContact = useCallback((contactId: string) => {
+    setSelectedContactIds(prev => {
+      const next = new Set(prev);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedContactIds(new Set(allContacts.map(c => c.id)));
+  }, [allContacts]);
+
+  const selectAllWithEmail = useCallback(() => {
+    setSelectedContactIds(new Set(allContacts.filter(c => c.email).map(c => c.id)));
+  }, [allContacts]);
+
+  const selectAllWithPhone = useCallback(() => {
+    setSelectedContactIds(new Set(allContacts.filter(c => c.direct_phone || c.mobile).map(c => c.id)));
+  }, [allContacts]);
+
+  const deselectAll = useCallback(() => {
+    setSelectedContactIds(new Set());
+  }, []);
+
+  // Bulk actions: find jobs for selected contacts
+  const getJobsForSelectedContacts = useCallback(() => {
+    const partnerIdsFromContacts = new Set(
+      allContacts.filter(c => selectedContactIds.has(c.id)).map(c => c.partner_id)
+    );
+    return jobs.filter(j => partnerIdsFromContacts.has(j.partner_id));
+  }, [allContacts, selectedContactIds, jobs]);
+
+  const handleBulkSetType = useCallback(async (type: "email" | "call") => {
+    const targetJobs = getJobsForSelectedContacts();
+    await Promise.all(
+      targetJobs.map(j => updateJob.mutateAsync({ id: j.id, job_type: type }))
+    );
+    toast.success(`${targetJobs.length} job impostati come ${type}`);
+  }, [getJobsForSelectedContacts, updateJob]);
+
+  const handleBulkComplete = useCallback(async () => {
+    const targetJobs = getJobsForSelectedContacts().filter(j => j.status !== "completed" && j.status !== "skipped");
+    await Promise.all(
+      targetJobs.map(j => updateJob.mutateAsync({ id: j.id, status: "completed", completed_at: new Date().toISOString() }))
+    );
+    toast.success(`${targetJobs.length} job completati`);
+  }, [getJobsForSelectedContacts, updateJob]);
 
   const handleCompleteAll = () => {
     const pending = jobs.filter(j => j.status !== "completed" && j.status !== "skipped");
@@ -63,13 +124,27 @@ export default function CampaignJobs() {
         <div className="w-[40%] min-h-0">
           <JobList
             jobs={jobs}
-            selectedJobId={selectedJobId}
-            onSelectJob={setSelectedJobId}
             contactsByPartner={contactsByPartner}
+            focusedContactId={focusedContactId}
+            onFocusContact={setFocusedContactId}
+            selectedContactIds={selectedContactIds}
+            onToggleContact={toggleContact}
+            onSelectAll={selectAll}
+            onSelectAllWithEmail={selectAllWithEmail}
+            onSelectAllWithPhone={selectAllWithPhone}
+            onDeselectAll={deselectAll}
+            totalContacts={allContacts.length}
           />
         </div>
         <div className="flex-1 min-h-0">
-          <JobCanvas job={selectedJob} contacts={selectedJobContacts} />
+          <JobCanvas
+            job={focusedJob}
+            contacts={focusedJobContacts}
+            focusedContactId={focusedContactId}
+            selectedContactIds={selectedContactIds}
+            onBulkSetType={handleBulkSetType}
+            onBulkComplete={handleBulkComplete}
+          />
         </div>
       </div>
     </div>
