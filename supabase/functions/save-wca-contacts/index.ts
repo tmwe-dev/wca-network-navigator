@@ -51,40 +51,69 @@ Deno.serve(async (req) => {
       let updated = 0
       let inserted = 0
 
+      // --- Deduplicate incoming contacts by email ---
+      const deduped: any[] = []
+      const seenEmails = new Map<string, number>()
+      for (const c of contacts) {
+        if (!c.title && !c.name) continue
+        if (/Members\s*only|Login|please.*login/i.test(c.name || '')) continue
+        if (/Members\s*only|Login|please.*login/i.test(c.title || '')) continue
+        const emailKey = c.email?.trim().toLowerCase()
+        if (emailKey && /\S+@\S+\.\S+/.test(emailKey) && seenEmails.has(emailKey)) {
+          const idx = seenEmails.get(emailKey)!
+          const ex = deduped[idx]
+          if (c.name && !ex.name) ex.name = c.name
+          if (c.phone && !ex.phone) ex.phone = c.phone
+          if (c.mobile && !ex.mobile) ex.mobile = c.mobile
+          if (c.title && c.title !== ex.title) ex.title = `${ex.title} / ${c.title}`
+        } else {
+          if (emailKey && /\S+@\S+\.\S+/.test(emailKey)) seenEmails.set(emailKey, deduped.length)
+          deduped.push({ ...c })
+        }
+      }
+
       // Get existing contacts
       const { data: existing } = await supabase
         .from('partner_contacts')
         .select('id, title, name, email, direct_phone, mobile')
         .eq('partner_id', partnerId)
 
-      const existingByTitle = new Map((existing || []).map((e: any) => [e.title, e]))
+      // Build 3 lookup indices
+      const existingByTitle = new Map<string, any>()
+      const existingByEmail = new Map<string, any>()
+      const existingByName = new Map<string, any>()
+      for (const e of (existing || [])) {
+        if (e.title) existingByTitle.set(e.title, e)
+        if (e.email) existingByEmail.set(e.email.trim().toLowerCase(), e)
+        if (e.name) existingByName.set(e.name.trim().toLowerCase(), e)
+      }
 
-      for (const c of contacts) {
-        if (!c.title && !c.name) continue
-        // Skip garbage
-        if (/Members\s*only|Login|please.*login/i.test(c.name || '')) continue
-        if (/Members\s*only|Login|please.*login/i.test(c.title || '')) continue
+      const usedIds = new Set<string>()
 
+      for (const c of deduped) {
         const title = c.title || c.name || 'Unknown'
-        const ex = existingByTitle.get(title)
+        const emailKey = c.email?.trim().toLowerCase()
+        const nameKey = c.name?.trim().toLowerCase()
 
-        if (ex) {
+        // Multi-key match: title -> email -> name
+        let ex = existingByTitle.get(title)
+        if (!ex && emailKey) ex = existingByEmail.get(emailKey)
+        if (!ex && nameKey) ex = existingByName.get(nameKey)
+
+        if (ex && !usedIds.has(ex.id)) {
+          usedIds.add(ex.id)
           // Update existing contact with new data (only fill empty fields or upgrade)
           const updates: Record<string, string> = {}
           
-          // Update name if current is generic (same as title) and we have a real name
           if (c.name && c.name !== title && (!ex.name || ex.name === ex.title)) {
             updates.name = c.name
           }
-          // Fill email if missing
           if (c.email && !ex.email && /\S+@\S+\.\S+/.test(c.email)) {
             updates.email = c.email
           }
-          // Fill phone if missing
           if (c.phone && !ex.direct_phone && /[+\d]/.test(c.phone)) {
             updates.direct_phone = c.phone
           }
-          // Fill mobile if missing  
           if (c.mobile && !ex.mobile && /[+\d]/.test(c.mobile)) {
             updates.mobile = c.mobile
           }
@@ -93,7 +122,7 @@ Deno.serve(async (req) => {
             await supabase.from('partner_contacts').update(updates).eq('id', ex.id)
             updated++
           }
-        } else {
+        } else if (!ex) {
           // Insert new contact
           const validEmail = c.email && /\S+@\S+\.\S+/.test(c.email) && !/wcaworld/i.test(c.email) ? c.email : null
           const validPhone = c.phone && /[+\d]/.test(c.phone) && !/Members/i.test(c.phone) ? c.phone : null
