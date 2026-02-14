@@ -127,7 +127,7 @@ export default function Operations() {
                   <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
                   <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
                   <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                  <StatItem icon={FolderDown} label="In directory" value={globalStats.totalDirectory.toLocaleString()} color={isDark ? "text-violet-400" : "text-violet-500"} isDark={isDark} />
+                  <StatItem icon={FolderDown} label="In directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} color={isDark ? "text-violet-400" : "text-violet-500"} isDark={isDark} />
                 </>
               ) : (
                 <>
