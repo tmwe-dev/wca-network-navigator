@@ -60,19 +60,19 @@ export function AcquisitionToolbar({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Row 1: Country + Network selectors + WCA status */}
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-2">
+      {/* Selectors stacked */}
+      <div className="flex flex-col gap-2">
         {/* Country selector */}
         <Popover open={countryOpen} onOpenChange={setCountryOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2 min-w-[180px] justify-between">
+            <Button variant="outline" size="sm" className="gap-2 w-full justify-between text-xs">
               <span className="truncate">
                 {selectedCountries.length === 0
                   ? "Seleziona Paesi"
                   : `${selectedCountries.length} paes${selectedCountries.length === 1 ? "e" : "i"}`}
               </span>
-              <ChevronDown className="w-4 h-4 opacity-50" />
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-0" align="start">
@@ -106,13 +106,13 @@ export function AcquisitionToolbar({
         {/* Network selector */}
         <Popover open={networkOpen} onOpenChange={setNetworkOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
+            <Button variant="outline" size="sm" className="gap-2 w-full justify-between text-xs">
               <span className="truncate">
                 {selectedNetworks.length === 0
                   ? "Tutti i Network"
                   : `${selectedNetworks.length} network`}
               </span>
-              <ChevronDown className="w-4 h-4 opacity-50" />
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0" align="start">
@@ -141,53 +141,29 @@ export function AcquisitionToolbar({
             </Command>
           </PopoverContent>
         </Popover>
-
-
-        {/* Pipeline options */}
-        <div className="flex items-center gap-4 ml-auto">
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-            <Switch checked={includeEnrich} onCheckedChange={onIncludeEnrichChange} />
-            Arricchimento Sito
-          </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-            <Switch checked={includeDeepSearch} onCheckedChange={onIncludeDeepSearchChange} />
-            Deep Search
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Velocità: {delaySeconds}s</span>
-            <Slider
-              value={[delaySeconds]}
-              onValueChange={([v]) => onDelayChange(v)}
-              min={sliderMin}
-              max={sliderMax}
-              step={1}
-              className="w-24"
-            />
-          </div>
-        </div>
       </div>
 
-      {/* Row 2: Selected country chips */}
+      {/* Selected country chips */}
       {selectedCountries.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {selectedCountries.map((code) => {
             const country = WCA_COUNTRIES.find((c) => c.code === code);
             return (
               <Badge
                 key={code}
                 variant="secondary"
-                className="gap-1 cursor-pointer hover:bg-destructive/20 transition-colors"
+                className="gap-1 cursor-pointer hover:bg-destructive/20 transition-colors text-[10px] px-1.5 py-0.5"
                 onClick={() => toggleCountry(code)}
               >
                 {getCountryFlag(code)} {country?.name || code}
-                <X className="w-3 h-3" />
+                <X className="w-2.5 h-2.5" />
               </Badge>
             );
           })}
           {selectedCountries.length > 1 && (
             <Badge
               variant="outline"
-              className="cursor-pointer hover:bg-destructive/20"
+              className="cursor-pointer hover:bg-destructive/20 text-[10px] px-1.5 py-0.5"
               onClick={() => onCountriesChange([])}
             >
               Rimuovi tutti
@@ -195,6 +171,29 @@ export function AcquisitionToolbar({
           )}
         </div>
       )}
+
+      {/* Pipeline options compact */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+          <Switch checked={includeEnrich} onCheckedChange={onIncludeEnrichChange} className="scale-75" />
+          Enrich
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+          <Switch checked={includeDeepSearch} onCheckedChange={onIncludeDeepSearchChange} className="scale-75" />
+          Deep Search
+        </label>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap">{delaySeconds}s</span>
+          <Slider
+            value={[delaySeconds]}
+            onValueChange={([v]) => onDelayChange(v)}
+            min={sliderMin}
+            max={sliderMax}
+            step={1}
+            className="w-20"
+          />
+        </div>
+      </div>
     </div>
   );
 }
