@@ -108,12 +108,28 @@ export function useDownloadProcessor() {
         if (existing) {
           partnerId = existing.id;
         } else {
+          // Lookup real name from directory_cache before creating placeholder
+          let realName = `WCA ${wcaId}`;
+          let realCity = "";
+          const { data: cacheEntries } = await supabase
+            .from("directory_cache")
+            .select("members")
+            .eq("country_code", job.country_code);
+          for (const entry of (cacheEntries || [])) {
+            const members = entry.members as any[];
+            const match = members?.find((m: any) => m.wca_id === wcaId);
+            if (match) {
+              realName = match.company_name || realName;
+              realCity = match.city || "";
+              break;
+            }
+          }
           const { data: newP } = await supabase.from("partners").insert({
             wca_id: wcaId,
-            company_name: `WCA ${wcaId}`,
+            company_name: realName,
             country_code: job.country_code,
             country_name: job.country_name,
-            city: "",
+            city: realCity,
           }).select("id").single();
           if (newP) partnerId = newP.id;
         }
@@ -234,6 +250,23 @@ export function useDownloadProcessor() {
             if (result.companyName && !result.companyName.startsWith("WCA ")) {
               companyName = result.companyName;
               await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
+            }
+          }
+
+          // Post-extraction fallback: if name is still a placeholder, try directory_cache
+          if (companyName.startsWith("WCA ") && partnerId) {
+            const { data: cacheEntries } = await supabase
+              .from("directory_cache")
+              .select("members")
+              .eq("country_code", job.country_code);
+            for (const entry of (cacheEntries || [])) {
+              const members = entry.members as any[];
+              const match = members?.find((m: any) => m.wca_id === wcaId);
+              if (match?.company_name && !match.company_name.startsWith("WCA ")) {
+                companyName = match.company_name;
+                await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
+                break;
+              }
             }
           }
         } catch (err) {
