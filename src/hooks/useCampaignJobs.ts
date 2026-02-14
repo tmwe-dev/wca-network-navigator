@@ -19,6 +19,17 @@ export interface CampaignJob {
   completed_at: string | null;
 }
 
+export interface PartnerContact {
+  id: string;
+  partner_id: string;
+  name: string;
+  title: string | null;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  is_primary: boolean | null;
+}
+
 export function useCampaignJobs(batchId?: string | null) {
   return useQuery({
     queryKey: ["campaign-jobs", batchId],
@@ -34,6 +45,41 @@ export function useCampaignJobs(batchId?: string | null) {
     },
     staleTime: 5_000,
     refetchInterval: 8_000,
+  });
+}
+
+export function useJobContacts(partnerIds: string[]) {
+  return useQuery({
+    queryKey: ["job-contacts", partnerIds],
+    queryFn: async () => {
+      if (!partnerIds.length) return {} as Record<string, PartnerContact[]>;
+      const { data, error } = await supabase
+        .from("partner_contacts")
+        .select("id, partner_id, name, title, email, direct_phone, mobile, is_primary")
+        .in("partner_id", partnerIds);
+      if (error) throw error;
+      const map: Record<string, PartnerContact[]> = {};
+      (data || []).forEach((c) => {
+        if (!map[c.partner_id]) map[c.partner_id] = [];
+        map[c.partner_id].push(c as PartnerContact);
+      });
+      return map;
+    },
+    enabled: partnerIds.length > 0,
+  });
+}
+
+export function useEmailTemplates() {
+  return useQuery({
+    queryKey: ["email-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_templates")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
   });
 }
 

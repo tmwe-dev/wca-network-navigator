@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JobList } from "@/components/campaigns/JobList";
 import { JobCanvas } from "@/components/campaigns/JobCanvas";
-import { useCampaignJobs, useUpdateCampaignJob } from "@/hooks/useCampaignJobs";
+import { useCampaignJobs, useJobContacts, useUpdateCampaignJob } from "@/hooks/useCampaignJobs";
 import { toast } from "sonner";
 
 export default function CampaignJobs() {
@@ -14,10 +14,18 @@ export default function CampaignJobs() {
   const updateJob = useUpdateCampaignJob();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
+  // Collect unique partner IDs for contacts query
+  const partnerIds = useMemo(() => [...new Set(jobs.map(j => j.partner_id))], [jobs]);
+  const { data: contactsByPartner = {} } = useJobContacts(partnerIds);
+
   const selectedJob = useMemo(
     () => jobs.find(j => j.id === selectedJobId) || null,
     [jobs, selectedJobId]
   );
+
+  const selectedJobContacts = selectedJob
+    ? (contactsByPartner[selectedJob.partner_id] || [])
+    : [];
 
   const pendingCount = jobs.filter(j => j.status === "pending" || j.status === "in_progress").length;
 
@@ -53,10 +61,15 @@ export default function CampaignJobs() {
       {/* Two-column layout */}
       <div className="flex-1 flex min-h-0">
         <div className="w-[40%] min-h-0">
-          <JobList jobs={jobs} selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} />
+          <JobList
+            jobs={jobs}
+            selectedJobId={selectedJobId}
+            onSelectJob={setSelectedJobId}
+            contactsByPartner={contactsByPartner}
+          />
         </div>
         <div className="flex-1 min-h-0">
-          <JobCanvas job={selectedJob} />
+          <JobCanvas job={selectedJob} contacts={selectedJobContacts} />
         </div>
       </div>
     </div>
