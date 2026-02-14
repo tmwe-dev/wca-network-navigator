@@ -1,108 +1,82 @@
 
+# Piano: Visualizzare gli Alias nei Componenti Partner e Job
 
-# Piano: Alias Azienda e Contatto con Generazione AI
+## Panoramica
 
-## Cosa sono gli alias
+Mostrare gli alias (azienda e contatto) accanto ai nomi originali, con uno stile visivo distinto che indica che il lavoro di generazione e' stato completato. Se l'alias non e' presente, non viene mostrato nulla di aggiuntivo.
 
-Quando scrivi un'email a un cliente, non usi mai il nome completo formale. Scrivi "Buongiorno signor Rossini" e non "Buongiorno signor Filippo Rossini". Scrivi "Procter & Gamble" e non "Procter & Gamble SPA". Gli alias sono versioni naturali e colloquiali dei nomi, come li userebbe una persona reale in una comunicazione.
+## Dove appaiono gli alias
 
-## Cosa viene creato
+### 1. Operations Center - Lista Partner (PartnerListPanel.tsx)
 
-### 1. Due nuove colonne nel database
-
-**Tabella `partners`**: nuova colonna `company_alias` (text, nullable)
-- Esempio: "Approved Holdings, LLC., dba Approved" --> "Approved Holdings"
-- Esempio: "World Transport Overseas d.o.o. Sarajevo" --> "World Transport"
-
-**Tabella `partner_contacts`**: nuova colonna `contact_alias` (text, nullable)
-- Esempio: "Mr. Christian Halpaus" --> "Halpaus" oppure "Christian"
-- Esempio: "Ms. Kourtney Ragsdale" --> "Ragsdale"
-- Esempio: "President" (senza nome reale) --> resta vuoto
-
-### 2. Edge Function `generate-aliases`
-
-Una nuova funzione backend che:
-- Riceve un elenco di country codes
-- Carica tutti i partner di quei paesi che hanno almeno un contatto con email o telefono
-- Lavora in batch (es. 20 partner alla volta) per efficienza
-- Invia al modello AI un prompt che dice: "Per ogni azienda e contatto, genera un alias naturale come lo userebbe un italiano in un'email professionale"
-- Salva i risultati nelle nuove colonne
-- Salta i partner che hanno gia' un alias (non sovrascrive)
-
-Il prompt AI sara' strutturato per restituire output via tool calling (JSON strutturato), cosi' da evitare errori di parsing.
-
-Modello usato: `google/gemini-2.5-flash` (veloce, economico, piu' che sufficiente per questo compito semplice).
-
-### 3. Pulsante nell'Operations Center
-
-Nella Country Grid, ogni card paese avra' un piccolo indicatore che mostra quanti partner hanno gia' l'alias generato. Nella tab "Partner" (pannello destro), verra' aggiunto un pulsante **"Genera Alias"** nella toolbar in alto, che lancia la generazione per i paesi selezionati.
-
-Il pulsante:
-- Mostra un contatore del progresso ("12/45 alias generati...")
-- Disabilita le interazioni durante l'elaborazione
-- Al termine mostra un toast con il riepilogo
-
----
-
-## Dettaglio tecnico
-
-### Migrazione database
+Nella riga di ogni partner nella lista, accanto al nome azienda (riga 233), aggiungere l'alias azienda con un badge colorato:
 
 ```text
-ALTER TABLE partners ADD COLUMN company_alias text;
-ALTER TABLE partner_contacts ADD COLUMN contact_alias text;
+Milano
+Procter & Gamble SPA  [Procter & Gamble]  <-- badge verde/teal
 ```
 
-### Edge Function `generate-aliases`
+L'alias appare come un piccolo tag con sfondo `emerald/teal` che indica "nome pronto per l'uso nelle email".
 
-Riceve: `{ countryCodes: string[] }`
+### 2. Operations Center - Dettaglio Partner (PartnerListPanel.tsx, PartnerDetail)
 
-Logica:
-1. Carica partner dei paesi indicati con i loro contatti (solo quelli con email o telefono)
-2. Filtra quelli senza alias
-3. Raggruppa in batch da 20
-4. Per ogni batch, chiama l'AI con tool calling:
+Nell'header del dettaglio (riga 315), accanto al nome azienda, mostrare l'alias con sfondo diverso:
 
 ```text
-Tool: generate_aliases
-Parametri:
-  aliases: array di oggetti:
-    - partner_id: string
-    - company_alias: string (nome azienda abbreviato, naturale)
-    - contacts: array di:
-      - contact_id: string
-      - contact_alias: string (cognome o nome, come lo direbbe un italiano)
+← Procter & Gamble SPA  [Procter & Gamble]
 ```
 
-5. Salva i risultati nel DB
-
-### File da creare
-
-- `supabase/functions/generate-aliases/index.ts`
-- Migrazione SQL per le due colonne
-
-### File da modificare
-
-- `src/components/operations/PartnerListPanel.tsx` -- aggiungere pulsante "Genera Alias" nella toolbar
-- `src/pages/Operations.tsx` -- nessuna modifica necessaria (il pulsante e' dentro PartnerListPanel)
-- `supabase/config.toml` -- aggiungere configurazione per la nuova funzione
-
-### Flusso utente
+Nella sezione contatti (riga 363), accanto al nome del contatto, mostrare l'alias contatto:
 
 ```text
-Operations Center
-  |-- Seleziona uno o piu' paesi
-  |-- Tab "Partner"
-  |-- Click "Genera Alias" nella toolbar
-  |-- Progresso visibile (toast o barra)
-  |-- Alias salvati nel DB
-  |-- Lista partner si aggiorna mostrando gli alias
+👤 Mr. Filippo Rossini  [Rossini]  Primary
 ```
 
-### Dove appaiono gli alias
+Anche qui badge con sfondo `violet/purple` per distinguere l'alias persona dall'alias azienda.
 
-Una volta generati, gli alias saranno disponibili come campi nelle tabelle e potranno essere usati:
-- Nella pagina Campaign Jobs, per personalizzare le email
-- Nel composer email (futuro), come variabili dinamiche
-- Ovunque serva il nome "naturale" del partner o contatto
+### 3. Campaign Jobs - Lista Contatti (JobList.tsx)
 
+Nella riga di ogni contatto (riga 181), accanto al nome, mostrare l'alias contatto:
+
+```text
+☑ Mr. Filippo Rossini  [Rossini]  · CEO
+```
+
+### 4. PartnerCard.tsx (opzionale)
+
+Nella card partner (usata in altre viste), mostrare l'alias azienda accanto al nome nella riga del link.
+
+## Stile visivo
+
+- **Alias azienda**: badge con sfondo `bg-teal-100 text-teal-700` (light) / `bg-teal-900/30 text-teal-400` (dark), font size `text-[10px]`
+- **Alias contatto**: badge con sfondo `bg-violet-100 text-violet-700` (light) / `bg-violet-900/30 text-violet-400` (dark), font size `text-[10px]`
+- Entrambi con bordo arrotondato (`rounded`), padding compatto (`px-1.5 py-0.5`)
+- Appaiono solo se il campo alias e' valorizzato (non null/vuoto)
+
+## Dettaglio tecnico -- File da modificare
+
+### `src/components/operations/PartnerListPanel.tsx`
+
+**Lista partner (riga ~233)**: dopo `{partner.company_name}`, aggiungere condizionale:
+```
+{partner.company_alias && <span className="...alias-badge...">{partner.company_alias}</span>}
+```
+
+**Dettaglio header (riga ~315)**: dopo il titolo h2 con `partner.company_name`, aggiungere l'alias azienda.
+
+**Contatti (riga ~363)**: dopo `{c.name}`, aggiungere:
+```
+{c.contact_alias && <span className="...alias-badge...">{c.contact_alias}</span>}
+```
+
+### `src/components/campaigns/JobList.tsx`
+
+**Riga contatto (riga ~181)**: dopo `{contact.name}`, aggiungere l'alias contatto se presente.
+
+### `src/components/partners/PartnerCard.tsx`
+
+**Nome azienda (riga ~101)**: dopo il Link con `partner.company_name`, aggiungere l'alias azienda.
+
+### Nessuna migrazione necessaria
+
+Le colonne `company_alias` e `contact_alias` esistono gia' nel database. I dati sono gia' caricati dalle query esistenti (`usePartners`, `usePartner`).
