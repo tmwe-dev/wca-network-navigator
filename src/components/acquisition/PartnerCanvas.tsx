@@ -221,11 +221,11 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               <img
                 src={data.logo_url}
                 alt=""
-                className="w-14 h-14 rounded-lg object-contain bg-muted border border-border"
+                className="max-h-12 max-w-[200px] rounded-lg object-contain"
               />
             ) : (
-              <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Building2 className="w-7 h-7 text-primary" />
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Building2 className="w-6 h-6 text-primary" />
               </div>
             )}
             <div className="flex-1 min-w-0">
