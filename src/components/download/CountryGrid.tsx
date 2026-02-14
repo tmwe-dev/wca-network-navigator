@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
-  SlidersHorizontal, X,
+  SlidersHorizontal, X, FolderDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -306,7 +306,7 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                       <span className="text-2xl leading-none flex-shrink-0">{getCountryFlag(c.code)}</span>
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-bold truncate ${th.h2}`}>{c.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {isComplete && (
                             <span className={`text-[9px] font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
                               ✓ Completo
@@ -315,6 +315,12 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
                           {!isComplete && hasDirectoryScan && (
                             <span className={`text-[9px] font-mono ${th.dim}`}>
                               {pCount}/{cCount} · {dlPct}%
+                            </span>
+                          )}
+                          {hasDirectoryScan && cCount > 0 && (
+                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-mono ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+                              <FolderDown className="w-2.5 h-2.5" />
+                              {cCount} in directory
                             </span>
                           )}
                           {hasDbOnly && (
