@@ -973,20 +973,61 @@ async function saveNetworksBatch(supabase: any, partnerId: string, networks: { n
 async function saveContactsBatch(supabase: any, partnerId: string, contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[]) {
   if (!contacts.length) return
 
-  const { data: existing } = await supabase
+  // --- Deduplicate incoming contacts by email first ---
+  const deduped: typeof contacts = []
+  const seenEmails = new Map<string, number>()
+  for (const c of contacts) {
+    if (!c.title && !c.name) continue
+    const emailKey = c.email?.trim().toLowerCase()
+    if (emailKey && seenEmails.has(emailKey)) {
+      const idx = seenEmails.get(emailKey)!
+      const existing = deduped[idx]
+      // Merge: keep most complete data
+      if (c.name && !existing.name) existing.name = c.name
+      if (c.phone && !existing.phone) existing.phone = c.phone
+      if (c.mobile && !existing.mobile) existing.mobile = c.mobile
+      // Append title if different
+      if (c.title && c.title !== existing.title) {
+        existing.title = `${existing.title} / ${c.title}`
+      }
+    } else {
+      if (emailKey) seenEmails.set(emailKey, deduped.length)
+      deduped.push({ ...c })
+    }
+  }
+
+  const { data: existingRows } = await supabase
     .from('partner_contacts')
     .select('id, title, name, email, direct_phone, mobile')
     .eq('partner_id', partnerId)
 
-  const existingByTitle = new Map((existing || []).map((e: any) => [e.title, e]))
+  // Build 3 lookup indices
+  const existingByTitle = new Map<string, any>()
+  const existingByEmail = new Map<string, any>()
+  const existingByName = new Map<string, any>()
+  for (const e of (existingRows || [])) {
+    if (e.title) existingByTitle.set(e.title, e)
+    if (e.email) existingByEmail.set(e.email.trim().toLowerCase(), e)
+    if (e.name) existingByName.set(e.name.trim().toLowerCase(), e)
+  }
   
   const toInsert: any[] = []
   const toUpdate: any[] = []
+  const usedIds = new Set<string>()
   
-  for (const c of contacts) {
-    if (!c.title) continue
-    const ex = existingByTitle.get(c.title)
-    if (ex) {
+  for (const c of deduped) {
+    if (!c.title && !c.name) continue
+    const title = c.title || c.name || 'Unknown'
+    const emailKey = c.email?.trim().toLowerCase()
+    const nameKey = c.name?.trim().toLowerCase()
+
+    // Multi-key match: title -> email -> name
+    let ex = existingByTitle.get(title)
+    if (!ex && emailKey) ex = existingByEmail.get(emailKey)
+    if (!ex && nameKey) ex = existingByName.get(nameKey)
+
+    if (ex && !usedIds.has(ex.id)) {
+      usedIds.add(ex.id)
       const updates: any = {}
       if (c.name && c.name !== ex.name && ex.name === ex.title) updates.name = c.name
       if (c.email && !ex.email) updates.email = c.email
@@ -995,11 +1036,11 @@ async function saveContactsBatch(supabase: any, partnerId: string, contacts: { t
       if (Object.keys(updates).length > 0) {
         toUpdate.push({ id: ex.id, ...updates })
       }
-    } else {
+    } else if (!ex) {
       toInsert.push({
         partner_id: partnerId,
-        name: c.name || c.title,
-        title: c.title,
+        name: c.name || title,
+        title,
         email: c.email || null,
         direct_phone: c.phone || null,
         mobile: c.mobile || null,
