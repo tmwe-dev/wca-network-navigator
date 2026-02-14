@@ -28,6 +28,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const [search, setSearch] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
+  const [showEmpty, setShowEmpty] = useState(false);
 
   const { data: partnerData = {} } = useQuery({
     queryKey: ["partner-counts-by-country-with-type"],
@@ -77,6 +78,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const filtered = WCA_COUNTRIES.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
+    if (!showEmpty && !cacheCounts[c.code] && !selectedCodes.has(c.code)) return false;
     if (filterMode === "missing") return !exploredSet.has(c.code) && !partialSet.has(c.code);
     if (filterMode === "explored") return exploredSet.has(c.code);
     if (filterMode === "partial") return partialSet.has(c.code);
@@ -266,6 +268,11 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
             Solo Dir
           </label>
         )}
+        <label className={`flex items-center gap-1.5 text-[10px] cursor-pointer whitespace-nowrap ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+          <Switch checked={showEmpty} onCheckedChange={setShowEmpty} className="scale-75" />
+          <Globe className="w-3 h-3" />
+          Tutti
+        </label>
       </div>
 
       {/* === COUNTRY LIST (single column) === */}
