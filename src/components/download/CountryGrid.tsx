@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
-  SlidersHorizontal, X, FolderDown,
+  SlidersHorizontal, X, FolderDown, Trophy, CheckSquare,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
@@ -224,10 +224,11 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
         </div>
       )}
 
-      {/* === SELECTED FLAGS + Solo Directory switch === */}
-      {selected.length > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap gap-1 items-center flex-1">
+      {/* === CONTROLS: Select All + Solo Dir + Flags === */}
+      <div className="flex items-center gap-2">
+        {/* Flags */}
+        {selected.length > 0 && (
+          <div className="flex flex-wrap gap-1 items-center flex-1 min-w-0">
             {selected.map(c => (
               <button
                 key={c.code}
@@ -244,15 +245,31 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
               </button>
             ))}
           </div>
-          {onDirectoryOnlyChange && (
-            <label className={`flex items-center gap-1.5 text-[10px] cursor-pointer whitespace-nowrap ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-              <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-75" />
-              <FolderDown className="w-3 h-3" />
-              Solo Dir
-            </label>
-          )}
-        </div>
-      )}
+        )}
+        {selected.length === 0 && <div className="flex-1" />}
+
+        {/* Select All button */}
+        <button
+          onClick={handleSelectAll}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border whitespace-nowrap ${
+            allFilteredSelected
+              ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+              : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white shadow-sm"
+          }`}
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+          {allFilteredSelected ? "Deseleziona" : "Seleziona"} ({filtered.length})
+        </button>
+
+        {/* Solo Dir toggle */}
+        {onDirectoryOnlyChange && (
+          <label className={`flex items-center gap-1.5 text-[10px] cursor-pointer whitespace-nowrap ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+            <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-75" />
+            <FolderDown className="w-3 h-3" />
+            Solo Dir
+          </label>
+        )}
+      </div>
 
       {/* === COUNTRY LIST (single column) === */}
       <ScrollArea className="flex-1 min-h-0">
@@ -320,8 +337,9 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                         <p className={`text-sm font-bold truncate ${th.h2}`}>{c.name}</p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {isComplete && (
-                            <span className={`text-[9px] font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                              ✓ Completo
+                            <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                              <Trophy className={`w-3.5 h-3.5 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                              Completo
                             </span>
                           )}
                           {!isComplete && hasDirectoryScan && (
