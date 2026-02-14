@@ -82,39 +82,84 @@ async function autoLogin() {
       active: true,
     });
 
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-      if (tabId === tab.id && info.status === "complete") {
-        chrome.tabs.onUpdated.removeListener(listener);
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: fillLogin,
-          args: [creds.username, creds.password],
-        });
+    // Wait for login page to load
+    await new Promise(function(resolve) {
+      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+      function listener(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          clearTimeout(timeout);
+          setTimeout(resolve, 1500);
+        }
       }
+      chrome.tabs.onUpdated.addListener(listener);
     });
 
-    return { success: true, message: "Login in corso..." };
+    // Fill and submit the login form
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: fillLogin,
+      args: [creds.username, creds.password],
+    });
+
+    // Wait for form submission and redirect (fillLogin has internal 1.5s + 0.5s delays)
+    await new Promise(function(r) { setTimeout(r, 4000); });
+
+    // Wait for navigation after submit
+    await new Promise(function(resolve) {
+      var timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 15000);
+      function listener2(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener2);
+          clearTimeout(timeout);
+          setTimeout(resolve, 2000);
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener2);
+    });
+
+    // Verify the final URL — success means we're NOT on login or error page
+    var tabInfo = await chrome.tabs.get(tab.id);
+    var finalUrl = tabInfo.url || "";
+    if (finalUrl.includes("/login3") || finalUrl.includes("errore_404") || finalUrl.includes("p=login")) {
+      return { success: false, error: "Login fallito: la pagina è ancora su login/errore. Verificare le credenziali." };
+    }
+
+    // Login successful — sync cookies
+    await syncRACookies();
+
+    return { success: true, message: "Login completato con successo." };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
 function fillLogin(username, password) {
-  setTimeout(() => {
-    const emailField = document.querySelector('input[type="email"], input[name="email"], input[name="username"], input#email, input#username');
-    const passField = document.querySelector('input[type="password"]');
-    const submitBtn = document.querySelector('button[type="submit"], input[type="submit"]');
+  setTimeout(function() {
+    var emailField = document.querySelector('input#username, input[name="username"], input[type="email"], input#email');
+    var passField = document.querySelector('input#password, input[type="password"]');
+    var submitBtn = document.querySelector('input[type="submit"].btn_blu, input[type="submit"], button[type="submit"]');
 
     if (emailField) {
       emailField.value = username;
       emailField.dispatchEvent(new Event("input", { bubbles: true }));
+      emailField.dispatchEvent(new Event("change", { bubbles: true }));
     }
     if (passField) {
       passField.value = password;
       passField.dispatchEvent(new Event("input", { bubbles: true }));
+      passField.dispatchEvent(new Event("change", { bubbles: true }));
     }
+
+    // Check "Resta collegato" / remember me
+    var rememberMe = document.querySelector('#rememberme, input[name="rememberme"], input[name="remember"]');
+    if (rememberMe && !rememberMe.checked) {
+      rememberMe.checked = true;
+      rememberMe.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
     if (submitBtn) {
-      setTimeout(() => submitBtn.click(), 500);
+      setTimeout(function() { submitBtn.click(); }, 500);
     }
   }, 1500);
 }
@@ -609,10 +654,8 @@ async function scrapeCompanyProfile(url) {
 function isSessionExpiredUrl(url) {
   if (!url) return false;
   return (
-    url.includes("/login3") ||
     url.includes("errore_404") ||
-    url.includes("p=login") ||
-    (url.includes("reportaziende.it") && !url.includes("/search") && !url.includes("/azienda"))
+    url.includes("p=login")
   );
 }
 
@@ -641,7 +684,7 @@ async function openTabWithSessionCheck(url) {
       return { tab: null, error: "session_expired", loginError: loginResult.error };
     }
     // Wait for login to complete (tab opens, fills form, submits)
-    await new Promise(function(r) { setTimeout(r, 8000); });
+    await new Promise(function(r) { setTimeout(r, 12000); });
     // Sync cookies after login
     await syncRACookies();
     await new Promise(function(r) { setTimeout(r, 2000); });
