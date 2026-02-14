@@ -117,8 +117,8 @@ export function DownloadTerminal() {
         className="h-[220px] overflow-y-auto p-2 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
       >
         {entries.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-slate-600 text-xs">
-            Nessun log disponibile. Avvia un download per vedere l'attività.
+          <div className="h-full flex items-center justify-center text-slate-600 text-xs text-center px-4">
+            {activeJob ? "In attesa di log..." : "Nessun job attivo. Seleziona un paese e avvia un download."}
           </div>
         ) : (
           entries.map((entry, idx) => {
