@@ -216,21 +216,33 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
             show("header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           )}
         >
-          <div className="flex items-start gap-4">
-            {data.logo_url ? (
-              <img
-                src={data.logo_url}
-                alt=""
-                className="max-h-12 max-w-[200px] rounded-lg object-contain"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 className="w-6 h-6 text-primary" />
+          <div className="grid grid-cols-[minmax(80px,1fr)_2fr] gap-4">
+            {/* Logo column */}
+            <div className="flex items-center justify-center min-h-[64px]">
+              {data.logo_url ? (
+                <img
+                  src={data.logo_url}
+                  alt=""
+                  className="max-h-16 max-w-full object-contain"
+                />
+              ) : (
+                <Building2 className="w-10 h-10 text-muted-foreground/30" />
+              )}
+            </div>
+            {/* Info column */}
+            <div className="min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="text-lg font-bold text-foreground truncate">{data.company_name}</h2>
+                {data.rating != null && data.rating > 0 && (
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 shrink-0">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                      {data.rating.toFixed(1)}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-foreground truncate">{data.company_name}</h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                 <span className="text-xl">{getCountryFlag(data.country_code)}</span>
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="font-medium">{data.city}</span>
@@ -243,14 +255,6 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
                 </div>
               )}
             </div>
-            {data.rating != null && data.rating > 0 && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                  {data.rating.toFixed(1)}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
