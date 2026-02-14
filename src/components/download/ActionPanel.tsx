@@ -50,6 +50,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
 
   // Scanning state
+  const [skipCachedDirs, setSkipCachedDirs] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
@@ -158,10 +159,18 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     const allMembers: DirectoryMember[] = [];
     const skipped: string[] = [];
 
+    // Build set of already-cached country codes to skip
+    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;
       setCurrentCountryIdx(ci);
       const country = selectedCountries[ci];
+
+      // Skip countries with existing directory cache if option is enabled
+      if (skipCachedDirs && cachedCountryCodes.has(country.code)) {
+        continue;
+      }
 
       for (const netKey of networkKeys) {
         if (abortRef.current) break;
@@ -225,7 +234,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     setScanComplete(true);
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
     queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
-  }, [selectedCountries, networkKeys, saveScanToCache, queryClient]);
+  }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
   const handleStartDownload = async () => {
     const result = await triggerCheck();
@@ -401,6 +410,10 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
               ✅ Directory già scaricata: {totalCount} aziende trovate
             </div>
           ) : null}
+          <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
+            <Switch checked={skipCachedDirs} onCheckedChange={setSkipCachedDirs} />
+            Salta directory già scaricate
+          </label>
           <Button
             onClick={handleStartScan}
             disabled={isScanning}
