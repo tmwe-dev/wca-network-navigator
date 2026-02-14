@@ -1,13 +1,16 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
-import { useScrapingSettings, isNightPauseActive, msUntilNightEnd } from "./useScrapingSettings";
+import { useScrapingSettings, calcDelay } from "./useScrapingSettings";
 import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Background download processor for Operations Center.
  * Monitors pending/running download_jobs and processes them via Chrome Extension.
- * Simplified version of AcquisizionePartner's runExtensionLoop — no UI canvas, no AI enrichment.
+ * 
+ * Rules:
+ * 1. One request at a time (sequential, DB lock)
+ * 2. Minimum baseDelay ± variation seconds between requests (hard floor 10s)
  */
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts, verifySession, syncCookie } = useExtensionBridge();
@@ -24,7 +27,6 @@ export function useDownloadProcessor() {
     const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     const entry = { ts, type, msg };
     try {
-      // Read current log, append, keep last 100
       const { data } = await supabase.from("download_jobs").select("terminal_log").eq("id", jobId).single();
       const current = (data?.terminal_log as any[] || []);
       const updated = [...current, entry].slice(-100);
@@ -38,14 +40,13 @@ export function useDownloadProcessor() {
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
-    const delaySeconds = Math.max(job.delay_seconds || settings.delayDefault, settings.delayMin);
     const processedSet = new Set<number>(((job.processed_ids as number[]) || []));
 
     // Mark as running
     await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
-    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay base ${delaySeconds}s, jitter ${settings.jitterMin}x-${settings.jitterMax}x`);
+    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${settings.baseDelay}s ±${settings.variation}s`);
 
-    // DB lock: verify no other job is already running (prevent parallel execution after reload)
+    // DB lock: verify no other job is already running
     const { data: runningJobs } = await supabase
       .from("download_jobs")
       .select("id")
@@ -77,7 +78,6 @@ export function useDownloadProcessor() {
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
         if (!freshJob || freshJob.status === "cancelled") { cancelRef.current = true; break; }
         if (freshJob.status === "paused") {
-          // Wait until resumed
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
             if (cancelRef.current) break;
@@ -143,13 +143,12 @@ export function useDownloadProcessor() {
           const result = await extractContacts(wcaId);
 
           if (result.pageLoaded === false) {
-            // Page didn't load, skip and continue
             await new Promise(r => setTimeout(r, 5000));
             continue;
           }
 
-        if (result.success && result.contacts && result.contacts.length > 0 && partnerId) {
-            // --- Deduplicate incoming contacts by name (name-first strategy) ---
+          if (result.success && result.contacts && result.contacts.length > 0 && partnerId) {
+            // --- Deduplicate incoming contacts by name ---
             const mergedByName = new Map<string, { title: string; name: string; email?: string; phone?: string; mobile?: string; emails: string[] }>();
             for (const c of result.contacts) {
               const rawName = c.name || c.title || "Sconosciuto";
@@ -172,7 +171,6 @@ export function useDownloadProcessor() {
               }
             }
 
-            // bestEmail: pick email whose prefix matches person's surname/initial
             const pickBestEmail = (personName: string, emails: string[]): string | null => {
               const valid = emails.filter(e => e && /\S+@\S+\.\S+/.test(e));
               if (valid.length === 0) return null;
@@ -191,7 +189,6 @@ export function useDownloadProcessor() {
               return best;
             };
 
-            // Get existing contacts for this partner
             const { data: existingContacts } = await supabase
               .from("partner_contacts")
               .select("id, name, title, email, direct_phone, mobile")
@@ -210,7 +207,6 @@ export function useDownloadProcessor() {
               const nameKey = c.name.trim().toLowerCase();
               const emailKey = bestEmail?.trim().toLowerCase();
 
-              // Match priority: name -> email -> (no title match needed)
               let ex = existingByName.get(nameKey);
               if (!ex && emailKey) ex = existingByEmail.get(emailKey);
 
@@ -222,7 +218,6 @@ export function useDownloadProcessor() {
                 }
                 if (bestEmail && !ex.email) updates.email = bestEmail;
                 if (bestEmail && ex.email && emailKey !== ex.email.trim().toLowerCase()) {
-                  // Replace if new email is a better match for the person's name
                   const currentScore = (() => { const p = ex.email.split("@")[0].toLowerCase(); const parts = c.name.replace(/^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?)\s*/i,"").trim().split(/\s+/); const s=(parts[parts.length-1]||"").toLowerCase(); const i=(parts[0]||"").charAt(0).toLowerCase(); return (s&&p.includes(s)?2:0)+(i&&p.includes(i)?1:0); })();
                   const newScore = (() => { const p = bestEmail.split("@")[0].toLowerCase(); const parts = c.name.replace(/^(Mr\.?|Ms\.?|Mrs\.?|Dr\.?)\s*/i,"").trim().split(/\s+/); const s=(parts[parts.length-1]||"").toLowerCase(); const i=(parts[0]||"").charAt(0).toLowerCase(); return (s&&p.includes(s)?2:0)+(i&&p.includes(i)?1:0); })();
                   if (newScore > currentScore) updates.email = bestEmail;
@@ -325,7 +320,7 @@ export function useDownloadProcessor() {
                 await supabase.from("download_jobs").update({
                   error_message: "⚠️ Sessione WCA in recovery...",
                 }).eq("id", jobId);
-                await new Promise(r => setTimeout(r, settings.recoveryWait2));
+                await new Promise(r => setTimeout(r, 10000)); // hardcoded 10s recovery wait
                 await syncCookie();
               }
             }
@@ -342,61 +337,21 @@ export function useDownloadProcessor() {
         if (consecutiveEmpty >= settings.recoveryThreshold) {
           try {
             await syncCookie();
-            await new Promise(r => setTimeout(r, settings.recoveryWait1));
+            await new Promise(r => setTimeout(r, 3000)); // hardcoded 3s recovery wait
             const check = await verifySession();
             if (check.success && check.authenticated) {
               consecutiveEmpty = 0;
               await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
             }
           } catch {}
-          consecutiveEmpty = 0; // Reset to avoid spam
+          consecutiveEmpty = 0;
         }
 
-        // Night pause
-        if (isNightPauseActive(settings.nightPause, settings.nightStopHour, settings.nightStartHour)) {
-          const waitMs = msUntilNightEnd(settings.nightStartHour);
-          await appendLog(jobId, "NIGHT", `Pausa notturna fino alle ${settings.nightStartHour}:00`);
-          await supabase.from("download_jobs").update({
-            error_message: `🌙 Pausa notturna fino alle ${settings.nightStartHour}:00`,
-          }).eq("id", jobId);
-          await new Promise(r => setTimeout(r, waitMs));
-          if (cancelRef.current) break;
-          await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-        }
-
-        // Periodic pause
-        if (settings.pauseEveryN > 0 && processedSet.size > 0 && processedSet.size % settings.pauseEveryN === 0) {
-          const pauseMin = Math.round(settings.pauseDurationS / 60);
-          await appendLog(jobId, "PAUSE", `Pausa programmata ${pauseMin} min dopo ${processedSet.size} profili`);
-          await supabase.from("download_jobs").update({
-            error_message: `⏸️ Pausa programmata (${pauseMin} min)`,
-          }).eq("id", jobId);
-          await new Promise(r => setTimeout(r, settings.pauseDurationS * 1000));
-          if (cancelRef.current) break;
-          await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-        }
-
-        // Anti-ban: long pause every N profiles (configurable from settings)
-        if (settings.antiBanEveryN > 0 && processedSet.size > 0 && processedSet.size % settings.antiBanEveryN === 0) {
-          const jitterRange = settings.antiBanDurationS * 0.3;
-          const longPauseS = settings.antiBanDurationS + (Math.random() * jitterRange * 2 - jitterRange);
-          await appendLog(jobId, "PAUSE", `Anti-ban: ${Math.round(longPauseS)}s dopo ${processedSet.size} profili`);
-          await supabase.from("download_jobs").update({
-            error_message: `⏸️ Pausa anti-ban (${Math.round(longPauseS)}s) dopo ${processedSet.size} profili`,
-          }).eq("id", jobId);
-          await new Promise(r => setTimeout(r, longPauseS * 1000));
-          if (cancelRef.current) break;
-          await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-        }
-
-        // Delay before next (with jitter from settings for human-like pattern)
+        // Simplified delay: baseDelay ± variation, hard floor 10s
         if (i < wcaIds.length - 1 && !cancelRef.current) {
-          const jitterRange = settings.jitterMax - settings.jitterMin;
-          const jitterMultiplier = settings.jitterMin + Math.random() * jitterRange;
-          const actualDelay = Math.round(delaySeconds * jitterMultiplier);
-          await appendLog(jobId, "WAIT", `${actualDelay}s (base ${delaySeconds}s × jitter ${jitterMultiplier.toFixed(2)}x)`);
-          const jitter = delaySeconds * 1000 * jitterMultiplier;
-          await new Promise(r => setTimeout(r, jitter));
+          const actualDelay = calcDelay(settings.baseDelay, settings.variation);
+          await appendLog(jobId, "WAIT", `${actualDelay}s`);
+          await new Promise(r => setTimeout(r, actualDelay * 1000));
         }
       }
 
@@ -442,11 +397,6 @@ export function useDownloadProcessor() {
         cancelRef.current = false;
         try {
           await processJob(pendingJobs[0]);
-          // Anti-ban: configurable pause between consecutive jobs
-          if (!cancelRef.current && settings.interJobPauseS > 0) {
-            console.log(`[DownloadProcessor] Inter-job pause: ${settings.interJobPauseS}s`);
-            await new Promise(r => setTimeout(r, settings.interJobPauseS * 1000));
-          }
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);
         } finally {

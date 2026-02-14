@@ -117,7 +117,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       regions: regions.length > 0 ? regions : undefined,
       provinces: provinces.length > 0 ? provinces : undefined,
       filters,
-      delaySeconds: settings.delayDefault,
+      delaySeconds: settings.baseDelay,
     });
 
     if (res.success && res.results && res.results.length > 0) {
@@ -167,7 +167,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
     await scrapeSelected({
       items: urls,
-      delaySeconds: settings.delayDefault,
+      delaySeconds: settings.baseDelay,
       batchSize: 5,
     });
   };
@@ -334,7 +334,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
                 Scarica {selected.size} profili
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <span className={`text-xs ${th.dim}`}>Delay: {settings.delayDefault}s</span>
+              <span className={`text-xs ${th.dim}`}>Delay: {settings.baseDelay}s</span>
             </div>
           </div>
 

@@ -21,14 +21,14 @@ export function SpeedGauge({ lastUpdatedAt, onStop }: SpeedGaugeProps) {
     return () => clearInterval(id);
   }, [lastUpdatedAt]);
 
-  const capped = Math.min(elapsed, 60);
-  // 0s = left (danger), 60s = right (safe). Angle: -90 to +90
-  const angle = -90 + (capped / 60) * 180;
+  const capped = Math.min(elapsed, 30);
+  // 0s = left (danger), 30s = right (safe). Angle: -90 to +90
+  const angle = -90 + (capped / 30) * 180;
 
-  // Zone colors
+  // Zone colors: red <10s, yellow 10-15s, green >15s
   const getColor = (s: number) => {
-    if (s < 15) return isDark ? "#ef4444" : "#dc2626"; // red
-    if (s < 30) return isDark ? "#f59e0b" : "#d97706"; // amber
+    if (s < 10) return isDark ? "#ef4444" : "#dc2626"; // red
+    if (s < 15) return isDark ? "#f59e0b" : "#d97706"; // amber
     return isDark ? "#22c55e" : "#16a34a"; // green
   };
 
@@ -59,11 +59,11 @@ export function SpeedGauge({ lastUpdatedAt, onStop }: SpeedGaugeProps) {
     <div className="flex items-center gap-2">
       <div className="relative" style={{ width: 80, height: 52 }}>
         <svg viewBox="0 0 80 52" width={80} height={52}>
-          {/* Red zone: 0-15s → -90° to -45° */}
-          <path d={makeArc(-90, -45)} fill="none" stroke="#ef4444" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
-          {/* Yellow zone: 15-30s → -45° to 0° */}
-          <path d={makeArc(-45, 0)} fill="none" stroke="#f59e0b" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
-          {/* Green zone: 30-60s → 0° to 90° */}
+          {/* Red zone: 0-10s → -90° to -30° */}
+          <path d={makeArc(-90, -30)} fill="none" stroke="#ef4444" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+          {/* Yellow zone: 10-15s → -30° to 0° */}
+          <path d={makeArc(-30, 0)} fill="none" stroke="#f59e0b" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+          {/* Green zone: 15-30s → 0° to 90° */}
           <path d={makeArc(0, 90)} fill="none" stroke="#22c55e" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
 
           {/* Needle */}

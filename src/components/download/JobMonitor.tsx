@@ -13,7 +13,7 @@ import {
 } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";
 import { useTheme, t } from "./theme";
-import { useScrapingSettings, buildDelayValues, buildDelayLabels } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 
 export function JobMonitor() {
   const isDark = useTheme();
@@ -21,9 +21,6 @@ export function JobMonitor() {
   const { data: jobs } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
   const updateSpeed = useUpdateJobSpeed();
-  const { settings: scrapingSettings } = useScrapingSettings();
-  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
-  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
 
   const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
   const recentCompleted = (jobs || []).filter(j => j.status === "completed" || j.status === "cancelled").slice(0, 5);
@@ -58,13 +55,13 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   pauseResume: ReturnType<typeof usePauseResumeJob>;
   updateSpeed: ReturnType<typeof useUpdateJobSpeed>;
 }) {
-  const { settings: scrapingSettings } = useScrapingSettings();
-  const DELAY_VALUES = buildDelayValues(scrapingSettings.delayMin, scrapingSettings.delayMax);
-  const DELAY_LABELS = buildDelayLabels(DELAY_VALUES);
   const isDark = useTheme();
   const th = t(isDark);
   const [showSpeed, setShowSpeed] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
+  const [localDelay, setLocalDelay] = useState(job.delay_seconds);
+
+  useEffect(() => setLocalDelay(job.delay_seconds), [job.delay_seconds]);
 
   const prevIndexRef = useRef(job.current_index);
   const recentTimesRef = useRef<number[]>([]);
@@ -99,13 +96,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
     ? { running: "text-amber-400", paused: "text-yellow-400", completed: "text-emerald-400", cancelled: "text-slate-500", error: "text-red-400", pending: "text-blue-400" }
     : { running: "text-sky-600", paused: "text-yellow-600", completed: "text-emerald-600", cancelled: "text-slate-400", error: "text-red-600", pending: "text-blue-600" };
 
-  const handleSpeedChange = (delayIdx: number) => {
-    updateSpeed.mutate({ jobId: job.id, delay_seconds: DELAY_VALUES[delayIdx] });
+  const handleSpeedChange = (newDelay: number) => {
+    updateSpeed.mutate({ jobId: job.id, delay_seconds: newDelay });
   };
-  const currentDelayIdx = DELAY_VALUES.findIndex(v => v >= job.delay_seconds);
-  const delayIdx = currentDelayIdx >= 0 ? currentDelayIdx : 4;
-  const [localDelayIdx, setLocalDelayIdx] = useState(delayIdx);
-  useEffect(() => setLocalDelayIdx(delayIdx), [delayIdx]);
 
   return (
     <div className={`${th.panel} border ${isActive ? th.panelAmber : isPaused ? th.panelAmber : th.panelSlate} rounded-2xl p-4 space-y-2.5`}>
@@ -161,7 +154,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Timing */}
       {(isActive || isPaused) && job.current_index > 0 && (() => {
         const elapsedMs = new Date(job.updated_at).getTime() - new Date(job.created_at).getTime();
         const elapsedSec = Math.max(elapsedMs / 1000, 1);
@@ -196,7 +188,6 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         </div>
       )}
 
-      {/* Contact summary */}
       {(job.contacts_found_count > 0 || job.contacts_missing_count > 0) && (() => {
         const found = job.contacts_found_count || 0;
         const missing = job.contacts_missing_count || 0;
@@ -220,9 +211,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
       {showSpeed && (isActive || isPaused) && (
         <div className={`p-2 rounded-lg border ${th.infoBox}`}>
           <label className={`text-xs flex items-center gap-1.5 mb-1.5 ${th.label}`}>
-            <Timer className="w-3 h-3" /> Delay: <span className={`font-mono ${th.hi}`}>{DELAY_LABELS[DELAY_VALUES[localDelayIdx]]}</span>
+            <Timer className="w-3 h-3" /> Delay: <span className={`font-mono ${th.hi}`}>{localDelay}s</span>
           </label>
-          <Slider value={[localDelayIdx]} onValueChange={([v]) => setLocalDelayIdx(v)} onValueCommit={([v]) => handleSpeedChange(v)} min={0} max={DELAY_VALUES.length - 1} step={1} />
+          <Slider value={[localDelay]} onValueChange={([v]) => setLocalDelay(v)} onValueCommit={([v]) => handleSpeedChange(v)} min={10} max={60} step={1} />
         </div>
       )}
 

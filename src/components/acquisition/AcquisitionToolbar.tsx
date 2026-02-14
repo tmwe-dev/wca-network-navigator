@@ -38,6 +38,8 @@ export function AcquisitionToolbar({
   onIncludeDeepSearchChange,
 }: AcquisitionToolbarProps) {
   const { settings: scrapingSettings } = useScrapingSettings();
+  const sliderMin = Math.max(scrapingSettings.baseDelay - scrapingSettings.variation, 10);
+  const sliderMax = scrapingSettings.baseDelay + scrapingSettings.variation + 30;
   const [countryOpen, setCountryOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
 
@@ -156,8 +158,8 @@ export function AcquisitionToolbar({
             <Slider
               value={[delaySeconds]}
               onValueChange={([v]) => onDelayChange(v)}
-              min={scrapingSettings.delayMin}
-              max={scrapingSettings.delayMax}
+              min={sliderMin}
+              max={sliderMax}
               step={1}
               className="w-24"
             />
