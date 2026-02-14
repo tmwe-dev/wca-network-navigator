@@ -4,8 +4,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square,
+  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   // Speed — simple slider around baseDelay
   const [delay, setDelay] = useState(scrapingSettings.baseDelay);
   const [includeExisting, setIncludeExisting] = useState(false);
+  const [directoryOnly, setDirectoryOnly] = useState(false);
 
   // Scanning state
   const [isScanning, setIsScanning] = useState(false);
@@ -332,8 +334,22 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
   return (
     <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-5 space-y-4`}>
       <div>
-        <h3 className={`text-lg font-semibold ${th.h2}`}>Scarica Partner</h3>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-lg font-semibold ${th.h2}`}>Scarica Partner</h3>
+          <label className={`flex items-center gap-2 text-xs cursor-pointer ${th.body}`}>
+            <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} />
+            <span className="flex items-center gap-1">
+              <FolderDown className="w-3.5 h-3.5" />
+              Solo Directory
+            </span>
+          </label>
+        </div>
         <p className={`text-sm ${th.sub}`}>{countryLabel}</p>
+        {directoryOnly && (
+          <div className={`p-2 rounded-lg border text-xs ${isDark ? "bg-sky-500/10 border-sky-500/20 text-sky-300" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
+            💡 Scarica solo l'elenco aziende dalla directory WCA senza aprire i singoli profili
+          </div>
+        )}
       </div>
 
       <div>
@@ -354,61 +370,87 @@ export function ActionPanel({ selectedCountries }: ActionPanelProps) {
           <span className={`text-sm ${th.body}`}>Nella directory</span>
           <span className={`font-mono font-bold ${th.hi}`}>{totalCount}</span>
         </div>
-        <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
-        <div className="flex items-center justify-between">
-          <span className={`text-sm font-medium ${th.acEm}`}>✓ Già scaricati</span>
-          <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
-          <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
-        </div>
+        {!directoryOnly && (
+          <>
+            <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-medium ${th.acEm}`}>✓ Già scaricati</span>
+              <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
+              <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
+            </div>
+          </>
+        )}
       </div>
 
-      {downloadedCount > 0 && (
-        <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
-          <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
-          Ri-scarica anche i {downloadedCount} esistenti
-        </label>
-      )}
+      {directoryOnly ? (
+        /* ── Directory-only mode: just scan button ── */
+        <>
+          {hasCache && totalCount > 0 ? (
+            <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+              ✅ Directory già scaricata: {totalCount} aziende trovate
+            </div>
+          ) : null}
+          <Button
+            onClick={handleStartScan}
+            disabled={isScanning}
+            className={`w-full ${th.btnPri}`}
+          >
+            <FolderDown className="w-4 h-4 mr-2" />
+            {hasCache ? "Aggiorna Directory" : "Scarica Directory"}
+          </Button>
+        </>
+      ) : (
+        /* ── Full download mode ── */
+        <>
+          {downloadedCount > 0 && (
+            <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
+              <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
+              Ri-scarica anche i {downloadedCount} esistenti
+            </label>
+          )}
 
-      {missingIds.length === 0 && !includeExisting && (
-        <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-          ✅ Tutti scaricati! Spunta sopra per aggiornare.
-        </div>
-      )}
+          {missingIds.length === 0 && !includeExisting && (
+            <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+              ✅ Tutti scaricati! Spunta sopra per aggiornare.
+            </div>
+          )}
 
-      {idsToDownload.length > 0 && (
-        <div>
-          <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
-            <Timer className="w-3.5 h-3.5" />
-            Delay: <span className={`font-mono font-bold ${th.hi}`}>{delay}s</span>
-          </label>
-          <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} />
-          <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
-            <span>Veloce</span><span>Lento</span>
-          </div>
-        </div>
-      )}
+          {idsToDownload.length > 0 && (
+            <div>
+              <label className={`text-xs flex items-center gap-1.5 mb-2 ${th.label}`}>
+                <Timer className="w-3.5 h-3.5" />
+                Delay: <span className={`font-mono font-bold ${th.hi}`}>{delay}s</span>
+              </label>
+              <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} />
+              <div className={`flex justify-between text-xs mt-1 ${th.dim}`}>
+                <span>Veloce</span><span>Lento</span>
+              </div>
+            </div>
+          )}
 
-      {idsToDownload.length > 0 && (
-        <div className={`p-2 rounded-lg border text-center ${th.infoBox}`}>
-          <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
-          <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
-        </div>
-      )}
+          {idsToDownload.length > 0 && (
+            <div className={`p-2 rounded-lg border text-center ${th.infoBox}`}>
+              <p className={`text-xs ${th.dim}`}>Tempo stimato</p>
+              <p className={`text-lg font-mono ${th.hi}`}>{estimateLabel}</p>
+            </div>
+          )}
 
-      <Button
-        onClick={handleStartDownload}
-        disabled={idsToDownload.length === 0 || createJob.isPending}
-        className={`w-full ${th.btnPri}`}
-      >
-        {createJob.isPending ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</>
-        ) : (
-          <><Zap className="w-4 h-4 mr-2" /> Scarica {idsToDownload.length} partner</>
-        )}
-      </Button>
+          <Button
+            onClick={handleStartDownload}
+            disabled={idsToDownload.length === 0 || createJob.isPending}
+            className={`w-full ${th.btnPri}`}
+          >
+            {createJob.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</>
+            ) : (
+              <><Zap className="w-4 h-4 mr-2" /> Scarica {idsToDownload.length} partner</>
+            )}
+          </Button>
+        </>
+      )}
 
       {skippedCountries.length > 0 && (
         <Collapsible>
