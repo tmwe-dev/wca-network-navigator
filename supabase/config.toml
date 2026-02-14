@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.save-ra-prospects]
 verify_jwt = false
+
+[functions.generate-aliases]
+verify_jwt = false

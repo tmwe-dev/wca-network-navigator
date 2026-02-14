@@ -540,6 +540,7 @@ export type Database = {
       }
       partner_contacts: {
         Row: {
+          contact_alias: string | null
           created_at: string | null
           direct_phone: string | null
           email: string | null
@@ -551,6 +552,7 @@ export type Database = {
           title: string | null
         }
         Insert: {
+          contact_alias?: string | null
           created_at?: string | null
           direct_phone?: string | null
           email?: string | null
@@ -562,6 +564,7 @@ export type Database = {
           title?: string | null
         }
         Update: {
+          contact_alias?: string | null
           created_at?: string | null
           direct_phone?: string | null
           email?: string | null
@@ -694,6 +697,7 @@ export type Database = {
           ai_parsed_at: string | null
           branch_cities: Json | null
           city: string
+          company_alias: string | null
           company_name: string
           country_code: string
           country_name: string
@@ -728,6 +732,7 @@ export type Database = {
           ai_parsed_at?: string | null
           branch_cities?: Json | null
           city: string
+          company_alias?: string | null
           company_name: string
           country_code: string
           country_name: string
@@ -762,6 +767,7 @@ export type Database = {
           ai_parsed_at?: string | null
           branch_cities?: Json | null
           city?: string
+          company_alias?: string | null
           company_name?: string
           country_code?: string
           country_name?: string
