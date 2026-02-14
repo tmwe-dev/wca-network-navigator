@@ -1,35 +1,67 @@
 
-# Ridisegno Header PartnerCanvas: Logo a sinistra, Info a destra
+
+# Layout a Due Colonne per Acquisizione Partner
 
 ## Problema attuale
+La pagina ha una struttura verticale con toolbar, stats bar, network bar tutti impilati in alto, sprecando circa meta' dello schermo verticale prima di arrivare ai dati. La coda dei partner e il canvas sono compressi nello spazio rimanente.
 
-Il logo e il nome azienda sono affiancati nello stesso `flex` row, ma quando il logo e' grande o ha proporzioni scomode, il testo viene schiacciato e troncato. Inoltre il logo appare dentro un contenitore troppo rigido.
-
-## Soluzione
-
-Dividere l'header in due colonne distinte con layout a griglia:
+## Nuova struttura
 
 ```text
-+---------------------------+-------------------------------+
-|                           |  Nome Azienda         ★ 4.0  |
-|     LOGO                  |  🇦🇫  Kabul · Afghanistan     |
-|  (spazio libero)          |  🌐 http://www.example.com    |
-+---------------------------+-------------------------------+
++----------------------------------+----------------------------------------------+
+| COLONNA SINISTRA (35%)           | COLONNA DESTRA (65%)                         |
+|                                  |                                              |
+| [Selettori Paesi/Network]        |                                              |
+| [Chips paesi selezionati]        |                                              |
+| [Scansiona] [Ext] [Sessione]     |                                              |
+| [Enrich] [Deep Search] [Speed]   |        PARTNER CANVAS                        |
+| [Scan stats: trovati/nuovi]      |        (scheda partner corrente)             |
+|                                  |                                              |
+| --- Live Stats (compatte) ---    |                                              |
+| --- Network Performance ---      |                                              |
+|                                  |                                              |
+| ════════════════════════════     |                                              |
+| PARTNER QUEUE                    |                                              |
+| (lista scrollabile)              |                                              |
+|                                  |                                              |
+| [▶ Avvia / ⏸ Pausa / ■ Stop]    |                                              |
++----------------------------------+----------------------------------------------+
+|              ACQUISITION BIN (centrato in basso)                                |
++---------------------------------------------------------------------------------+
 ```
 
-### File: `src/components/acquisition/PartnerCanvas.tsx` (righe 219-254)
+## Dettaglio tecnico
 
-Sostituire il blocco `flex items-start gap-4` con un layout a griglia `grid grid-cols-[minmax(80px,1fr)_2fr]`:
+### File: `src/pages/AcquisizionePartner.tsx` (righe 1017-1265)
 
-1. **Colonna sinistra (logo)**: 
-   - Contenitore con `flex items-center justify-center min-h-[64px]`
-   - Logo con `max-h-16 max-w-full object-contain` (senza bordi, senza sfondo quadrato)
-   - Il logo "respira" liberamente nello spazio disponibile, senza rounded-lg ne' background
-   - Se assente, mostra l'icona Building2 placeholder
+Ristrutturare il JSX del return:
 
-2. **Colonna destra (info azienda)**:
-   - Nome azienda (h2 bold) con il rating (stelline) sulla stessa riga, allineato a destra
-   - Bandiera + citta' + paese sotto
-   - Website sotto ancora
+1. **Layout principale**: `grid grid-cols-[35%_1fr]` al posto della struttura verticale attuale
+2. **Colonna sinistra**: contiene in verticale:
+   - Toolbar compattata (selettori paesi/network impilati verticalmente invece che orizzontali, switches e slider sotto)
+   - Pulsante Scansiona + indicatori estensione/sessione + scan stats (compatti)
+   - Live Stats Bar (compattata, impilata verticalmente)
+   - Network Performance Bar
+   - Partner Queue (flex-1, occupa tutto lo spazio rimanente)
+   - Pulsanti azione (Avvia/Pausa/Stop) in fondo
+3. **Colonna destra**: contiene solo il PartnerCanvas, che occupa tutto lo spazio disponibile
 
-Il logo apparira' senza sfondo forzato, pulito, come un marchio professionale nella card.
+### File: `src/components/acquisition/AcquisitionToolbar.tsx`
+
+Compattare per layout verticale:
+- Rimuovere `ml-auto` dai controlli pipeline (Enrich, Deep Search, Velocita')
+- Impilare i controlli in righe compatte invece che in un unico row largo
+- Ridurre padding e gap
+
+### Risultato
+
+- Lo schermo viene sfruttato interamente senza sprechi verticali
+- I filtri e la coda sono sempre visibili a sinistra
+- Il canvas occupa il 65% della larghezza e tutta l'altezza disponibile
+- Nessun scrolling necessario per vedere i dati del partner
+
+### File modificati
+
+1. `src/pages/AcquisizionePartner.tsx` -- ristrutturazione layout da verticale a due colonne
+2. `src/components/acquisition/AcquisitionToolbar.tsx` -- compattamento per colonna stretta
+
