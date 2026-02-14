@@ -19,6 +19,7 @@ import { useDownloadJobs, useEmergencyStop } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { getCountryFlag } from "@/lib/countries";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function useGlobalStats() {
   return useQuery({
@@ -113,19 +114,28 @@ export default function Operations() {
           </div>
 
           {/* ═══ GLOBAL STATS BAR ═══ */}
-          {globalStats && (
-            <div className="flex-shrink-0 mx-6 mb-3">
-              <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                <StatItem icon={Globe} label="Paesi scansionati" value={globalStats.scannedCountries} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} color={isDark ? "text-emerald-400" : "text-emerald-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
-              </div>
+          <div className="flex-shrink-0 mx-6 mb-3">
+            <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+              {globalStats ? (
+                <>
+                  <StatItem icon={Globe} label="Paesi scansionati" value={globalStats.scannedCountries} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
+                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} color={isDark ? "text-emerald-400" : "text-emerald-500"} isDark={isDark} />
+                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+                  <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
+                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+                  <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
+                </>
+              ) : (
+                <>
+                  <Skeleton className={`h-5 w-32 ${isDark ? "bg-white/[0.06]" : ""}`} />
+                  <Skeleton className={`h-5 w-28 ${isDark ? "bg-white/[0.06]" : ""}`} />
+                  <Skeleton className={`h-5 w-24 ${isDark ? "bg-white/[0.06]" : ""}`} />
+                  <Skeleton className={`h-5 w-28 ${isDark ? "bg-white/[0.06]" : ""}`} />
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {/* ═══ MAIN SPLIT ═══ */}
           <div className="flex-1 flex min-h-0 px-6 pb-4 gap-4">

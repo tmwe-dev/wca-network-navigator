@@ -38,8 +38,18 @@ export function WcaSessionIndicator() {
 
   const dotColor = isOk
     ? (isDark ? "bg-emerald-400" : "bg-emerald-500")
-    : (isDark ? "bg-red-400" : "bg-red-500");
-  const label = isOk ? "WCA Connesso" : status === "expired" ? "Sessione Scaduta" : "Non configurato";
+    : status === "checking"
+      ? (isDark ? "bg-amber-400" : "bg-amber-500")
+      : (isDark ? "bg-red-400" : "bg-red-500");
+  const label = isOk
+    ? "WCA Connesso"
+    : status === "expired"
+      ? "Sessione Scaduta"
+      : status === "checking"
+        ? "Verifica..."
+        : status === "no_cookie"
+          ? "Non configurato"
+          : "Errore";
 
   return (
     <TooltipProvider>
