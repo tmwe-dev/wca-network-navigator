@@ -1,41 +1,38 @@
 
-# Riposizionamento Directory Count e Switch "Solo Directory"
 
-## Due modifiche
+# Seleziona Tutti + Coppa Completamento
 
-### 1. Directory count sulla DESTRA della card paese (bold + icona)
+## Cosa cambia
 
-Attualmente il conteggio directory e' inline sotto il nome del paese, poco visibile. Viene spostato nell'area destra della card (dove ci sono Mail/Phone/Users), come primo elemento prominente.
+### 1. Pulsante "Seleziona tutti" visibile in alto
 
-- Rimuovere il badge `FolderDown {cCount} in directory` dalla sezione status sotto il nome (righe 320-324)
-- Aggiungerlo nell'area destra (righe 338-356), PRIMA delle stats contatti, come numero bold con icona `FolderDown`:
-  - Sempre visibile quando `hasDirectoryScan && cCount > 0`
-  - Stile: `text-sm font-bold font-mono` con colore sky, icona `FolderDown` accanto
-  - Visibile anche quando `pCount === 0` (attualmente l'area destra appare solo se `pCount > 0`)
-- La condizione `pCount > 0` viene allargata a `(pCount > 0 || cCount > 0)` per mostrare l'area destra anche quando c'e' solo la directory
+Spostare il pulsante "Seleziona tutti" dal dropdown (dove e' nascosto nel popover filtri) a una posizione visibile, accanto allo switch "Solo Dir" e alle bandiere. Il pulsante seleziona/deseleziona tutti i paesi filtrati (rispettando il filtro attivo: "Mai esplorati", "Scansionati", ecc.).
 
-### 2. Switch "Solo Directory" nel pannello sinistro, sopra le bandiere
+Layout della riga sopra la lista:
+```text
+[🇮🇹 🇩🇪 🇫🇷 ...]  [Seleziona tutti (N)]  [Solo Dir toggle]
+```
 
-Lo switch "Solo Directory" attualmente si trova dentro il tab Scarica (pannello destro, ActionPanel). Viene spostato/duplicato nel pannello sinistro della CountryGrid.
+- Se il filtro e' su "Mai esplorati", seleziona solo quelli mai esplorati
+- Se il filtro e' su "Tutti", seleziona tutti
+- Il conteggio mostra quanti paesi verranno selezionati/deselezionati
+- Il pulsante diventa "Deseleziona tutti" quando sono gia' tutti selezionati
 
-- Aggiungere una prop `directoryOnly` e `onDirectoryOnlyChange` a `CountryGrid`
-- Posizionare lo switch nella riga tra le bandiere selezionate e la lista paesi, allineato a destra
-- Lo stato `directoryOnly` viene gestito in `Operations.tsx` e passato sia a `CountryGrid` (per la visualizzazione) che a `ActionPanel` (per la logica di download)
+### 2. Coppa sui paesi completati
 
-### File modificati
+Aggiungere un'icona coppa (Trophy da lucide-react) sulla sinistra della card dei paesi dove `isComplete === true` (directory scaricata e tutti i partner nel DB). La coppa sostituisce/affianca il testo "Completo" gia' presente, rendendolo visivamente immediato.
 
-- **`src/components/download/CountryGrid.tsx`**:
-  - Rimuovere badge directory dalla sezione status sotto il nome
-  - Aggiungere numero directory bold sulla destra della card
-  - Aggiungere props `directoryOnly` / `onDirectoryOnlyChange`
-  - Aggiungere switch "Solo Directory" sopra la lista, accanto alle bandiere selezionate
-  - Importare `Switch` da ui e `FolderDown` (gia' importato)
+- Colore: emerald/gold
+- Posizione: accanto alla bandiera o come badge sovrapposto
+- Mantiene tutti i colori card esistenti (emerald per completi, amber per parziali, etc.)
 
-- **`src/pages/Operations.tsx`**:
-  - Aggiungere stato `directoryOnly` con `useState(false)`
-  - Passare `directoryOnly` e `onDirectoryOnlyChange` a `CountryGrid`
-  - Passare `directoryOnly` a `ActionPanel` come prop
+## File da modificare
 
-- **`src/components/download/ActionPanel.tsx`**:
-  - Accettare `directoryOnly` come prop invece di stato locale
-  - Rimuovere lo stato `useState` locale per `directoryOnly`
+### `src/components/download/CountryGrid.tsx`
+
+1. **Import**: aggiungere `Trophy` da lucide-react
+2. **Riga bandiere** (righe 227-255): rendere la riga visibile sempre (non solo quando `selected.length > 0`) per mostrare il pulsante "Seleziona tutti" anche senza selezione. Aggiungere un bottone compatto "Seleziona tutti (N)" tra le bandiere e lo switch Solo Dir
+3. **Card paese** (righe 321-326): nel blocco `isComplete`, aggiungere icona `Trophy` colorata emerald/gold accanto al testo "Completo"
+
+Nessun altro file viene modificato.
+
