@@ -153,8 +153,8 @@ function checkPageLoaded() {
 
 // ── Extract contacts for a single WCA ID (with retry for failed loads) ──
 async function extractContactsForId(wcaId) {
-  var MAX_RETRIES = 3;
-  var RETRY_DELAYS = [3000, 6000, 12000];
+  var MAX_RETRIES = 1;
+  var RETRY_DELAYS = [5000];
 
   for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     var tab = null;
@@ -229,10 +229,8 @@ async function verifyWcaSession() {
 
     var sessionResult = results[0] && results[0].result;
 
-    // If authenticated, also sync the cookie
-    if (sessionResult && sessionResult.authenticated) {
-      await syncWcaCookiesToServer();
-    }
+
+
 
     return sessionResult || { authenticated: false, reason: "no_result" };
   } catch (err) {
