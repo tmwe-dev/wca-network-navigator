@@ -116,22 +116,6 @@ export function ScrapingSettingsPanel() {
 
           <Separator />
 
-          {/* Recovery threshold */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Soglia recovery sessione</Label>
-              <span className="text-sm font-mono text-primary">{local.recoveryThreshold} vuoti</span>
-            </div>
-            <Slider
-              value={[local.recoveryThreshold]}
-              onValueChange={([v]) => update("recoveryThreshold", v)}
-              min={1} max={10} step={1}
-            />
-            <p className="text-xs text-muted-foreground">Dopo N partner vuoti consecutivi, tenta il recovery automatico</p>
-          </div>
-
-          <Separator />
-
           {/* Max retries */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

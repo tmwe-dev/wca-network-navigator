@@ -5,7 +5,6 @@ export interface ScrapingSettings {
   baseDelay: number;
   variation: number;
   keepAliveMs: number;
-  recoveryThreshold: number;
   excludeThreshold: number;
   maxRetries: number;
 }
@@ -14,7 +13,6 @@ const DEFAULTS: ScrapingSettings = {
   baseDelay: 15,
   variation: 3,
   keepAliveMs: 30000,
-  recoveryThreshold: 3,
   excludeThreshold: 3,
   maxRetries: 2,
 };
@@ -23,7 +21,6 @@ const KEY_MAP: Record<keyof ScrapingSettings, string> = {
   baseDelay: "scraping_base_delay",
   variation: "scraping_variation",
   keepAliveMs: "scraping_keepalive_ms",
-  recoveryThreshold: "scraping_recovery_threshold",
   excludeThreshold: "scraping_exclude_threshold",
   maxRetries: "scraping_max_retries",
 };
@@ -46,7 +43,6 @@ export function useScrapingSettings(): { settings: ScrapingSettings; isLoading: 
       baseDelay: parseNum(raw[KEY_MAP.baseDelay], DEFAULTS.baseDelay),
       variation: parseNum(raw[KEY_MAP.variation], DEFAULTS.variation),
       keepAliveMs: parseNum(raw[KEY_MAP.keepAliveMs], DEFAULTS.keepAliveMs),
-      recoveryThreshold: parseNum(raw[KEY_MAP.recoveryThreshold], DEFAULTS.recoveryThreshold),
       excludeThreshold: parseNum(raw[KEY_MAP.excludeThreshold], DEFAULTS.excludeThreshold),
       maxRetries: parseNum(raw[KEY_MAP.maxRetries], DEFAULTS.maxRetries),
     };

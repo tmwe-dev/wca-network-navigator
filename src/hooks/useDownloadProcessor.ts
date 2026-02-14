@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
  * 2. Minimum baseDelay ± variation seconds between requests (hard floor 10s)
  */
 export function useDownloadProcessor() {
-  const { isAvailable, checkAvailable, extractContacts, verifySession, syncCookie } = useExtensionBridge();
+  const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const { settings } = useScrapingSettings();
   const queryClient = useQueryClient();
   const processingRef = useRef(false);
@@ -66,7 +66,6 @@ export function useDownloadProcessor() {
       try { await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId); } catch {}
     }, settings.keepAliveMs);
 
-    let consecutiveEmpty = 0;
     let contactsFound = job.contacts_found_count || 0;
     let contactsMissing = job.contacts_missing_count || 0;
 
@@ -281,8 +280,8 @@ export function useDownloadProcessor() {
 
         // Update counters
         const hasAny = hasEmail || hasPhone;
-        if (hasAny) { contactsFound++; consecutiveEmpty = 0; }
-        else { contactsMissing++; consecutiveEmpty++; }
+        if (hasAny) { contactsFound++; }
+        else { contactsMissing++; }
 
         const contactResult = hasEmail && hasPhone ? "email+phone"
           : hasEmail ? "email_only"
@@ -308,44 +307,14 @@ export function useDownloadProcessor() {
           error_message: null,
         }).eq("id", jobId);
 
-        // Session health check every 3 partners
-        if ((i - startIndex + 1) % 3 === 0) {
-          try {
-            const sess = await verifySession();
-            if (!sess.success || !sess.authenticated) {
-              await appendLog(jobId, "RECOVERY", "Sessione WCA non valida, tentativo recovery...");
-              await syncCookie();
-              const retry = await verifySession();
-              if (!retry.success || !retry.authenticated) {
-                await supabase.from("download_jobs").update({
-                  error_message: "⚠️ Sessione WCA in recovery...",
-                }).eq("id", jobId);
-                await new Promise(r => setTimeout(r, 10000)); // hardcoded 10s recovery wait
-                await syncCookie();
-              }
-            }
-          } catch {}
-        }
-
         // Periodic invalidation of CountryGrid queries (every 5 profiles)
         if (processedSet.size > 0 && processedSet.size % 5 === 0) {
           queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
         }
 
-        // Consecutive empty auto-recovery
-        if (consecutiveEmpty >= settings.recoveryThreshold) {
-          try {
-            await syncCookie();
-            await new Promise(r => setTimeout(r, 3000)); // hardcoded 3s recovery wait
-            const check = await verifySession();
-            if (check.success && check.authenticated) {
-              consecutiveEmpty = 0;
-              await supabase.from("download_jobs").update({ error_message: null }).eq("id", jobId);
-            }
-          } catch {}
-          consecutiveEmpty = 0;
-        }
+
+
 
         // Simplified delay: baseDelay ± variation, hard floor 10s
         if (i < wcaIds.length - 1 && !cancelRef.current) {
@@ -377,7 +346,7 @@ export function useDownloadProcessor() {
       queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
       queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     }
-  }, [settings, checkAvailable, extractContacts, verifySession, syncCookie, queryClient]);
+  }, [settings, checkAvailable, extractContacts, queryClient]);
 
   // Main polling loop: check for pending jobs every 5s
   useEffect(() => {
