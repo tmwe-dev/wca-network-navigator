@@ -1,82 +1,82 @@
 
-# Piano: Visualizzare gli Alias nei Componenti Partner e Job
 
-## Panoramica
+# Piano: Deduplicazione Contatti per Email e Nome
 
-Mostrare gli alias (azienda e contatto) accanto ai nomi originali, con uno stile visivo distinto che indica che il lavoro di generazione e' stato completato. Se l'alias non e' presente, non viene mostrato nulla di aggiuntivo.
+## Problema riscontrato
 
-## Dove appaiono gli alias
+Asia Pamir Logistics ha 8 contatti nel DB, di cui **3 sono duplicati esatti** di Mr. Nesar Ahmad Naziri (stesso nome, stesso titolo "Manager", stessa email). Questo succede perche' il sistema di deduplicazione si basa solo sul campo `title` del contatto. Se lo scraper gira piu' volte, o se ci sono inserimenti concorrenti, i duplicati non vengono catturati.
 
-### 1. Operations Center - Lista Partner (PartnerListPanel.tsx)
+Inoltre, la stessa persona puo' avere **piu' ruoli** (es. "Manager" e "Operations") con email diverse, creando righe separate per la stessa persona fisica.
 
-Nella riga di ogni partner nella lista, accanto al nome azienda (riga 233), aggiungere l'alias azienda con un badge colorato:
+## Soluzione
+
+### 1. Fix della logica di deduplicazione (prevenzione futura)
+
+Modificare `saveContactsBatch` in `scrape-wca-partners/index.ts` e la logica equivalente in `save-wca-contacts/index.ts`:
+
+- Costruire **3 indici di lookup**: per `title`, per `email`, per `name`
+- Prima di inserire un nuovo contatto, verificare:
+  1. Esiste gia' un contatto con lo stesso `title`? --> aggiorna
+  2. Esiste gia' un contatto con la stessa `email`? --> aggiorna (aggiungi titolo se diverso)
+  3. Esiste gia' un contatto con lo stesso `name`? --> aggiorna
+  4. Nessun match --> inserisci
+- Deduplicare anche i contatti in ingresso (dal parsing) prima di salvarli: se due contatti hanno la stessa email, unirli in uno solo
+
+### 2. Pulizia duplicati esistenti (una tantum)
+
+Eseguire una query SQL che:
+- Trova contatti duplicati per lo stesso `partner_id` con stessa `email` (non null)
+- Trova contatti duplicati per lo stesso `partner_id` con stesso `name` e `title`
+- Mantiene solo il record piu' completo (con piu' campi compilati) e cancella gli altri
+
+### 3. Raggruppamento contatti per persona nel frontend
+
+Questo e' gia' gestito dalla logica di deduplicazione: una volta puliti i duplicati, ogni persona apparira' una sola volta.
+
+---
+
+## Dettaglio tecnico
+
+### File da modificare
+
+**`supabase/functions/scrape-wca-partners/index.ts`** (funzione `saveContactsBatch`, righe 973-1017)
+
+Logica attuale:
+```
+existingByTitle = Map(title -> contact)
+per ogni contatto: se title esiste, aggiorna; altrimenti inserisci
+```
+
+Nuova logica:
+```
+existingByTitle = Map(title -> contact)
+existingByEmail = Map(email -> contact)  // NUOVO
+existingByName  = Map(name -> contact)   // NUOVO
+
+// Dedup contatti in ingresso: unisci quelli con stessa email
+deduplicatedContacts = mergeByEmail(contacts)
+
+per ogni contatto:
+  match = existingByTitle[title] || existingByEmail[email] || existingByName[name]
+  se match: aggiorna campi mancanti
+  altrimenti: inserisci
+```
+
+**`supabase/functions/save-wca-contacts/index.ts`** (stessa logica, righe 54-112)
+
+Applicare la stessa strategia di dedup multi-chiave.
+
+### Migrazione SQL -- pulizia duplicati
 
 ```text
-Milano
-Procter & Gamble SPA  [Procter & Gamble]  <-- badge verde/teal
+-- Trova e rimuovi duplicati per email (mantieni il piu' completo)
+-- Trova e rimuovi duplicati per nome+titolo esatto
+-- Solo per lo stesso partner_id
 ```
 
-L'alias appare come un piccolo tag con sfondo `emerald/teal` che indica "nome pronto per l'uso nelle email".
+La query identifica per ogni gruppo di duplicati il record "migliore" (con piu' campi compilati: email, direct_phone, mobile) e cancella gli altri.
 
-### 2. Operations Center - Dettaglio Partner (PartnerListPanel.tsx, PartnerDetail)
+### Nessuna modifica frontend necessaria
 
-Nell'header del dettaglio (riga 315), accanto al nome azienda, mostrare l'alias con sfondo diverso:
+La pulizia avviene tutta lato backend e database. Il frontend mostrera' automaticamente i contatti senza duplicati.
 
-```text
-← Procter & Gamble SPA  [Procter & Gamble]
-```
-
-Nella sezione contatti (riga 363), accanto al nome del contatto, mostrare l'alias contatto:
-
-```text
-👤 Mr. Filippo Rossini  [Rossini]  Primary
-```
-
-Anche qui badge con sfondo `violet/purple` per distinguere l'alias persona dall'alias azienda.
-
-### 3. Campaign Jobs - Lista Contatti (JobList.tsx)
-
-Nella riga di ogni contatto (riga 181), accanto al nome, mostrare l'alias contatto:
-
-```text
-☑ Mr. Filippo Rossini  [Rossini]  · CEO
-```
-
-### 4. PartnerCard.tsx (opzionale)
-
-Nella card partner (usata in altre viste), mostrare l'alias azienda accanto al nome nella riga del link.
-
-## Stile visivo
-
-- **Alias azienda**: badge con sfondo `bg-teal-100 text-teal-700` (light) / `bg-teal-900/30 text-teal-400` (dark), font size `text-[10px]`
-- **Alias contatto**: badge con sfondo `bg-violet-100 text-violet-700` (light) / `bg-violet-900/30 text-violet-400` (dark), font size `text-[10px]`
-- Entrambi con bordo arrotondato (`rounded`), padding compatto (`px-1.5 py-0.5`)
-- Appaiono solo se il campo alias e' valorizzato (non null/vuoto)
-
-## Dettaglio tecnico -- File da modificare
-
-### `src/components/operations/PartnerListPanel.tsx`
-
-**Lista partner (riga ~233)**: dopo `{partner.company_name}`, aggiungere condizionale:
-```
-{partner.company_alias && <span className="...alias-badge...">{partner.company_alias}</span>}
-```
-
-**Dettaglio header (riga ~315)**: dopo il titolo h2 con `partner.company_name`, aggiungere l'alias azienda.
-
-**Contatti (riga ~363)**: dopo `{c.name}`, aggiungere:
-```
-{c.contact_alias && <span className="...alias-badge...">{c.contact_alias}</span>}
-```
-
-### `src/components/campaigns/JobList.tsx`
-
-**Riga contatto (riga ~181)**: dopo `{contact.name}`, aggiungere l'alias contatto se presente.
-
-### `src/components/partners/PartnerCard.tsx`
-
-**Nome azienda (riga ~101)**: dopo il Link con `partner.company_name`, aggiungere l'alias azienda.
-
-### Nessuna migrazione necessaria
-
-Le colonne `company_alias` e `contact_alias` esistono gia' nel database. I dati sono gia' caricati dalle query esistenti (`usePartners`, `usePartner`).
