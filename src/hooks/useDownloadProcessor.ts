@@ -401,11 +401,12 @@ export function useDownloadProcessor() {
       } catch (err) {
         console.error("[DownloadProcessor] Error:", err);
       } finally {
-        processingRef.current = false;
-        // Cooldown only after actually processing a job
+        // Cooldown PRIMA di rilasciare il mutex
         if (didProcess && !stoppedRef.current && !cancelRef.current) {
           await new Promise(r => setTimeout(r, 30000));
         }
+        // Rilascia il mutex DOPO il cooldown
+        processingRef.current = false;
       }
     };
 
