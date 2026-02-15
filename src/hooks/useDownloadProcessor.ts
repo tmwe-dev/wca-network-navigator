@@ -6,17 +6,32 @@ import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Background download processor for Operations Center.
- * Uses MODULE-LEVEL singleton state to survive component remounts (HMR, navigation).
+ * Uses WINDOW-LEVEL singleton state to survive both component remounts AND HMR.
  * 
- * Anti-duplication: uses an incremental activeLoopId instead of a boolean.
- * Each loop instance knows its own ID; if it doesn't match activeLoopId, it exits.
- * This is immune to HMR because the new module generates a new ID.
+ * Anti-duplication: uses an incremental activeLoopId on window.__dlProcessorState__.
+ * Each loop instance knows its own ID; if it doesn't match, it exits.
+ * Since window persists across HMR module reloads, old loops are always killed.
  */
 
-// ── MODULE-LEVEL singleton state (survives component remounts) ──
-let moduleCancel = false;
-let moduleStopped = false;
-let activeLoopId = 0;
+// ── WINDOW-LEVEL singleton state (survives HMR + component remounts) ──
+const DL_STATE_KEY = '__dlProcessorState__';
+
+interface DlProcessorState {
+  cancel: boolean;
+  stopped: boolean;
+  activeLoopId: number;
+}
+
+function getDlState(): DlProcessorState {
+  if (!(window as any)[DL_STATE_KEY]) {
+    (window as any)[DL_STATE_KEY] = {
+      cancel: false,
+      stopped: false,
+      activeLoopId: 0,
+    };
+  }
+  return (window as any)[DL_STATE_KEY];
+}
 
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
@@ -49,6 +64,7 @@ export function useDownloadProcessor() {
 
   // processJob receives loopId to verify ownership before critical operations
   const processJob = useCallback(async (job: any, loopId: number) => {
+    const state = getDlState();
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
@@ -56,7 +72,7 @@ export function useDownloadProcessor() {
     const s = settingsRef.current;
 
     // Verify loop ownership before starting
-    if (loopId !== activeLoopId || moduleStopped) return;
+    if (loopId !== state.activeLoopId || state.stopped) return;
 
     await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
     await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${s.baseDelay}s ±${s.variation}s`);
@@ -99,20 +115,20 @@ export function useDownloadProcessor() {
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
         // Check ALL stop conditions including loopId ownership
-        if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
+        if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
 
         // Check job status from DB (pause/cancel from UI)
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
-        if (!freshJob || freshJob.status === "cancelled") { moduleCancel = true; break; }
+        if (!freshJob || freshJob.status === "cancelled") { state.cancel = true; break; }
         if (freshJob.status === "paused") {
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
-            if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
+            if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
             const { data: check } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
-            if (!check || check.status === "cancelled") { moduleCancel = true; break; }
+            if (!check || check.status === "cancelled") { state.cancel = true; break; }
             if (check.status === "running") break;
           }
-          if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
+          if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
         }
 
         const wcaId = wcaIds[i];
@@ -121,7 +137,7 @@ export function useDownloadProcessor() {
         await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
         // Verify loop ownership before opening extension tab
-        if (loopId !== activeLoopId) break;
+        if (loopId !== state.activeLoopId) break;
 
         // Check extension availability
         if (!availableRef.current && !(await checkAvailableRef.current())) {
@@ -129,7 +145,7 @@ export function useDownloadProcessor() {
             status: "paused",
             error_message: "⚠️ Estensione Chrome non disponibile. Installala e ripremi il job.",
           }).eq("id", jobId);
-          moduleCancel = true;
+          state.cancel = true;
           break;
         }
 
@@ -172,7 +188,7 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped && loopId === activeLoopId) {
+            if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
               const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
               await appendLog(jobId, "WAIT", `${actualDelay}s`);
               await new Promise(r => setTimeout(r, actualDelay * 1000));
@@ -280,7 +296,7 @@ export function useDownloadProcessor() {
               await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
             }
 
-            // Save full profile data (backup: edge function also saves this)
+            // Save full profile data
             if (result.profile && partnerId) {
               const p = result.profile;
               const profileUpdate: Record<string, any> = {};
@@ -371,7 +387,7 @@ export function useDownloadProcessor() {
         }
 
         // Delay between profiles
-        if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped && loopId === activeLoopId) {
+        if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
           const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
           await appendLog(jobId, "WAIT", `${actualDelay}s`);
           await new Promise(r => setTimeout(r, actualDelay * 1000));
@@ -379,7 +395,7 @@ export function useDownloadProcessor() {
       }
 
       // Complete job (only if this loop instance is still the active one)
-      if (!moduleCancel && !moduleStopped && loopId === activeLoopId) {
+      if (!state.cancel && !state.stopped && loopId === state.activeLoopId) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
@@ -406,13 +422,14 @@ export function useDownloadProcessor() {
   const processJobRef = useRef(processJob);
   useEffect(() => { processJobRef.current = processJob; }, [processJob]);
 
-  // Main polling loop: mount-only, uses incremental loopId for anti-duplication
+  // Main polling loop: mount-only, uses window-level activeLoopId for anti-duplication
   useEffect(() => {
-    const myId = ++activeLoopId; // New session — invalidates any previous loop
-    moduleCancel = false; // Reset cancel on fresh mount
+    const state = getDlState();
+    const myId = ++state.activeLoopId; // New session — invalidates any previous loop
+    state.cancel = false; // Reset cancel on fresh mount
 
     const loop = async () => {
-      while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+      while (myId === state.activeLoopId && !state.stopped && !state.cancel) {
         try {
           const { data: jobs } = await supabase
             .from("download_jobs")
@@ -422,7 +439,7 @@ export function useDownloadProcessor() {
             .order("created_at", { ascending: true })
             .limit(1);
 
-          if (jobs && jobs.length > 0 && myId === activeLoopId && !moduleStopped && !moduleCancel) {
+          if (jobs && jobs.length > 0 && myId === state.activeLoopId && !state.stopped && !state.cancel) {
             const { data: fresh } = await supabase
               .from("download_jobs")
               .select("status")
@@ -433,7 +450,7 @@ export function useDownloadProcessor() {
               await processJobRef.current(jobs[0], myId);
 
               // Cooldown inter-job (30s)
-              if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+              if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
                 await new Promise(r => setTimeout(r, 30000));
               }
               continue;
@@ -444,7 +461,7 @@ export function useDownloadProcessor() {
         }
 
         // No job found or error: wait 5s and retry
-        if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+        if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
           await new Promise(r => setTimeout(r, 5000));
         }
       }
@@ -452,26 +469,24 @@ export function useDownloadProcessor() {
 
     loop();
     return () => {
-      moduleCancel = true;
-      // The old loop will exit because moduleCancel = true
-      // AND because the next mount will generate a new myId !== activeLoopId
+      state.cancel = true;
     };
   }, []); // Mount-only — no dependencies
 
   const emergencyStop = useCallback(() => {
-    moduleCancel = true;
-    moduleStopped = true;
+    const state = getDlState();
+    state.cancel = true;
+    state.stopped = true;
   }, []);
 
   const resetStop = useCallback(() => {
-    moduleStopped = false;
-    moduleCancel = false;
-    // Force a new loop by incrementing activeLoopId — but the useEffect
-    // won't re-run (mount-only). The user must navigate away and back,
-    // or we can start the loop manually here:
-    const myId = ++activeLoopId;
+    const state = getDlState();
+    state.stopped = false;
+    state.cancel = false;
+    const myId = ++state.activeLoopId;
+
     const loopFn = async () => {
-      while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+      while (myId === state.activeLoopId && !state.stopped && !state.cancel) {
         try {
           const { data: jobs } = await supabase
             .from("download_jobs")
@@ -481,7 +496,7 @@ export function useDownloadProcessor() {
             .order("created_at", { ascending: true })
             .limit(1);
 
-          if (jobs && jobs.length > 0 && myId === activeLoopId && !moduleStopped && !moduleCancel) {
+          if (jobs && jobs.length > 0 && myId === state.activeLoopId && !state.stopped && !state.cancel) {
             const { data: fresh } = await supabase
               .from("download_jobs")
               .select("status")
@@ -490,7 +505,7 @@ export function useDownloadProcessor() {
 
             if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
               await processJobRef.current(jobs[0], myId);
-              if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+              if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
                 await new Promise(r => setTimeout(r, 30000));
               }
               continue;
@@ -499,7 +514,7 @@ export function useDownloadProcessor() {
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);
         }
-        if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+        if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
           await new Promise(r => setTimeout(r, 5000));
         }
       }
