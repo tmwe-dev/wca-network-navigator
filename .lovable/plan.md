@@ -1,137 +1,112 @@
 
 
-# Estrazione COMPLETA del profilo WCA
+# Fix duplicazione: loop immune a HMR e re-render
 
-## Problema
+## Causa radice confermata dal terminal log
 
-La funzione `extractContactsFromPage()` in `background.js` estrae SOLO i contatti (nome, email, telefono). Ignora completamente:
-- Profilo aziendale (descrizione, indirizzo, sito web)
-- Telefono/fax/mobile aziendali
-- Network di appartenenza e date di scadenza
-- Servizi offerti e certificazioni
-- Tipo di ufficio (Head Office / Branch)
-- Sedi secondarie (branches)
-- HTML grezzo della pagina (necessario per il parsing AI successivo)
+Il terminal log del job Afghanistan mostra chiaramente ogni riga duplicata (INFO x2, START x2, OK x2, WAIT x2), tutte allo stesso secondo. Due istanze concorrenti di `processJob` stanno girando sullo stesso profilo.
 
-Questo significa che i partner nel database hanno solo `company_name` e `city`, senza nessun dato utile per il riassunto AI, il rating, o la ricerca avanzata.
+La causa e' duplice:
+
+### Bug 1: il while loop non controlla moduleCancel
+Dopo che il cleanup setta `moduleCancel = true`, il vecchio `processJob` esce (break al for-loop). Ma il while loop continua: la sua condizione e' `moduleLoopRunning && !moduleStopped`, che NON controlla `moduleCancel`. Il loop trova lo stesso job "running", resetta `moduleCancel = false` (riga 429), e richiama processJob.
+
+### Bug 2: HMR resetta le variabili di modulo
+Durante l'Hot Module Replacement (sviluppo), il modulo viene ricaricato da zero. Le variabili `moduleCancel`, `moduleStopped`, `moduleLoopRunning` vengono reinizializzate a `false`. Il nuovo mount crea un nuovo loop mentre il vecchio codice async e' ancora in esecuzione nel suo contesto JavaScript.
 
 ## Soluzione
 
-### 1. `public/chrome-extension/background.js` -- Riscrivere `extractContactsFromPage()`
+### File: `src/hooks/useDownloadProcessor.ts`
 
-La funzione deve estrarre TUTTO il contenuto della pagina WCA. La struttura della pagina WCA usa coppie `profile_label` / `profile_val` per tutti i campi. La funzione deve:
+**Cambiamento 1: Usare un ID univoco per il loop**
 
-- Scansionare TUTTE le coppie label/value nella pagina (non solo quelle dentro `contactperson_row`)
-- Estrarre i campi aziendali: Address, Phone, Fax, Mobile, Emergency Phone, Email, Website, Member Since, Membership Expires, Office Type
-- Estrarre la descrizione/profilo (il blocco di testo libero)
-- Estrarre i network di appartenenza (lista di network con relative date)
-- Estrarre i servizi offerti (lista di tag/categorie)
-- Estrarre le certificazioni (IATA, ISO, ecc.)
-- Estrarre le branch cities se presenti
-- Catturare l'HTML grezzo dell'intera pagina (`document.body.innerHTML`)
-- Continuare a estrarre i contatti come fa adesso
-
-Il risultato restituito diventa:
+Invece di un booleano `moduleLoopRunning`, usare un **ID di sessione** (numero incrementale). Ogni loop conosce il proprio ID. Se l'ID corrente non corrisponde a quello attivo, il loop si ferma. Questo e' immune a HMR perche' il nuovo modulo genera un nuovo ID.
 
 ```text
-{
-  wcaId: number,
-  companyName: string,
-  contacts: [...],           // come adesso
-  profileHtml: string,       // HTML grezzo completo
-  profile: {
-    address: string,
-    phone: string,
-    fax: string,
-    mobile: string,
-    emergencyPhone: string,
-    email: string,
-    website: string,
-    memberSince: string,
-    membershipExpires: string,
-    officeType: string,
-    description: string,
-    networks: [{ name, id, expires }],
-    services: string[],
-    certifications: string[],
-    branchCities: string[]
-  }
-}
+Prima:
+  let moduleLoopRunning = false;
+
+Dopo:
+  let activeLoopId = 0;        // ID della sessione loop attiva
+  let currentLoopId = 0;       // contatore incrementale
 ```
 
-### 2. `public/chrome-extension/background.js` -- Aggiornare `sendContactsToServer()`
+**Cambiamento 2: il while loop controlla anche moduleCancel**
 
-Il payload inviato a `save-wca-contacts` deve includere anche i dati del profilo, non solo i contatti.
+```text
+Prima:
+  while (moduleLoopRunning && !moduleStopped) {
 
-### 3. `supabase/functions/save-wca-contacts/index.ts` -- Salvare il profilo
+Dopo:
+  while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+```
 
-Dopo aver salvato i contatti, la funzione deve aggiornare la tabella `partners` con tutti i campi del profilo:
-- `phone`, `fax`, `mobile`, `emergency_phone`, `email`, `website`
-- `address`, `profile_description`
-- `membership_expires`, `member_since`
-- `office_type`
-- `has_branches`, `branch_cities`
-- `raw_profile_html`
+**Cambiamento 3: processJob controlla il loop ID**
 
-E inserire/aggiornare le tabelle correlate:
-- `partner_networks` (upsert per network_name)
-- `partner_services` (upsert per service_category, se il valore matcha l'enum)
-- `partner_certifications` (upsert per certification, se il valore matcha l'enum)
+Dentro processJob, prima di ogni operazione critica (apertura tab via estensione), verificare che il loop sia ancora quello attivo. Se non lo e', uscire immediatamente.
 
-### 4. `src/hooks/useDownloadProcessor.ts` -- Passare il profilo al processore
+**Cambiamento 4: rimuovere il reset di moduleCancel dentro il loop**
 
-Il `processJob` gia' riceve il risultato di `extractContacts`. Dopo aver gestito i contatti, deve anche:
-- Aggiornare il partner con `profile_description`, `address`, `website`, `phone`, `fax`, `raw_profile_html`
-- Aggiornare le date `membership_expires`, `member_since`
-- Inserire i network in `partner_networks`
+La riga 429 (`moduleCancel = false`) viene spostata FUORI dal loop, nel punto dove l'utente esplicitamente avvia/riprende un job (resetStop), non nel loop automatico.
 
-Dato che `save-wca-contacts` gia' viene chiamato dall'estensione (background.js chiama `sendContactsToServer` subito dopo l'estrazione), e il processore gestisce i contatti localmente, la soluzione piu' pulita e':
-- L'estensione invia il profilo completo a `save-wca-contacts`
-- `save-wca-contacts` salva TUTTO (contatti + profilo) in un'unica transazione
-- Il processore (`useDownloadProcessor`) si limita a verificare il risultato e aggiornare i contatori, senza duplicare la logica di salvataggio
+**Cambiamento 5: rimuovere la dipendenza da processJob nel useEffect**
 
-### 5. `src/hooks/useExtensionBridge.ts` -- Aggiornare il tipo di risposta
+Il useEffect del loop non deve dipendere da `[processJob]`. Deve avere `[]` come dependencies (mount-only). `processJob` viene gia' acceduto tramite ref, quindi la dipendenza e' inutile e causa re-run del useEffect.
 
-Aggiungere i campi del profilo a `ExtensionResponse`:
+### Implementazione dettagliata
 
 ```typescript
-type ExtensionResponse = {
-  success: boolean;
-  contacts?: Array<{...}>;
-  companyName?: string;
-  wcaId?: number;
-  pageLoaded?: boolean;
-  profile?: {
-    address?: string;
-    phone?: string;
-    fax?: string;
-    mobile?: string;
-    emergencyPhone?: string;
-    email?: string;
-    website?: string;
-    memberSince?: string;
-    membershipExpires?: string;
-    officeType?: string;
-    description?: string;
-    networks?: Array<{ name: string; id?: string; expires?: string }>;
-    services?: string[];
-    certifications?: string[];
-    branchCities?: string[];
+// ── MODULE-LEVEL singleton state ──
+let moduleCancel = false;
+let moduleStopped = false;
+let activeLoopId = 0;
+
+// Dentro il componente:
+
+// Il processJob deve ricevere il loopId come parametro
+const processJob = useCallback(async (job: any, loopId: number) => {
+  // ... tutto come prima, ma ogni check diventa:
+  if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
+  // ... e prima di extractContacts:
+  if (loopId !== activeLoopId) return; // loop cambiato, non aprire tab
+}, [queryClient]);
+
+const processJobRef = useRef(processJob);
+useEffect(() => { processJobRef.current = processJob; }, [processJob]);
+
+// Il loop usa [] come dependencies (mount-only)
+useEffect(() => {
+  const myId = ++activeLoopId; // Nuova sessione, invalida la precedente
+
+  const loop = async () => {
+    while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+      // ... trova job ...
+      if (job) {
+        await processJobRef.current(job, myId);
+        // ... cooldown ...
+      } else {
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
   };
-  profileHtml?: string;
-  // ... rest
-};
+
+  loop();
+  return () => {
+    moduleCancel = true;
+    // Il vecchio loop uscira' perche' moduleCancel = true
+    // Il NUOVO mount generera' un nuovo myId che invalida il vecchio
+  };
+}, []); // NESSUNA dipendenza — mount-only
 ```
 
-## File modificati
+### Riepilogo cambiamenti
 
-1. `public/chrome-extension/background.js` -- Estrazione completa + invio profilo
-2. `supabase/functions/save-wca-contacts/index.ts` -- Salvataggio profilo in partners + tabelle correlate
-3. `src/hooks/useExtensionBridge.ts` -- Tipo aggiornato
-4. `src/hooks/useDownloadProcessor.ts` -- Passare profilo e HTML al salvataggio locale (backup)
+Un solo file: `src/hooks/useDownloadProcessor.ts`
 
-## Note importanti
-
-- L'HTML grezzo (`raw_profile_html`) e' fondamentale per il parsing AI successivo (`parse-profile-ai`, `analyze-partner`)
-- I network, servizi e certificazioni devono matchare gli enum esistenti nel database per evitare errori di inserimento
-- La logica di estrazione usa le classi CSS della pagina WCA (`profile_label`, `profile_val`, `contactperson_row`) che sono stabili da anni
+1. Sostituire `moduleLoopRunning` con `activeLoopId` (contatore incrementale)
+2. Aggiungere `loopId` come parametro di `processJob` e verificarlo prima di ogni operazione critica
+3. Aggiungere `processJobRef` per accedere a processJob senza dipendenza nel useEffect
+4. Cambiare la condizione while per controllare `myId === activeLoopId && !moduleStopped && !moduleCancel`
+5. Cambiare dependencies del useEffect da `[processJob]` a `[]`
+6. Rimuovere `moduleCancel = false` dal loop (riga 429) — il reset avviene solo in `resetStop`
+7. Aggiornare `emergencyStop` e `resetStop` per lavorare con `activeLoopId`
