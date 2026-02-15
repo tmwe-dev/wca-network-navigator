@@ -370,7 +370,7 @@ export function useDownloadProcessor() {
   useEffect(() => {
     const checkJobs = async () => {
       // Guard: if stopped or cancelled or already processing, skip
-      if (stoppedRef.current || cancelRef.current || processingRef.current) return;
+      if (stoppedRef.current || processingRef.current) return;
 
       // Fresh DB check: only pick up pending/running jobs
       const { data: pendingJobs } = await supabase
