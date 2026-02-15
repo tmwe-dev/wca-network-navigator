@@ -6,20 +6,25 @@ import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Background download processor for Operations Center.
- * Monitors pending/running download_jobs and processes them via Chrome Extension.
+ * Uses MODULE-LEVEL singleton state to survive component remounts (HMR, navigation).
  * 
  * Rules:
  * 1. One request at a time (sequential, DB lock)
  * 2. Minimum baseDelay ± variation seconds between requests (hard floor 10s)
  * 3. Zero retry: each WCA profile gets exactly 1 request
- * 4. stoppedRef prevents ghost restarts after emergency stop
+ * 4. moduleStopped prevents ghost restarts after emergency stop
+ * 5. moduleLoopRunning prevents duplicate loops on remount
  */
+
+// ── MODULE-LEVEL singleton state (survives component remounts) ──
+let moduleCancel = false;
+let moduleStopped = false;
+let moduleLoopRunning = false;
+
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const { settings } = useScrapingSettings();
   const queryClient = useQueryClient();
-  const cancelRef = useRef(false);
-  const stoppedRef = useRef(false);
   const availableRef = useRef(isAvailable);
 
   // Stable refs to avoid re-creating processJob on every render
@@ -95,20 +100,20 @@ export function useDownloadProcessor() {
 
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
-        if (cancelRef.current || stoppedRef.current) break;
+        if (moduleCancel || moduleStopped) break;
 
         // Check job status from DB (pause/cancel from UI)
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
-        if (!freshJob || freshJob.status === "cancelled") { cancelRef.current = true; break; }
+        if (!freshJob || freshJob.status === "cancelled") { moduleCancel = true; break; }
         if (freshJob.status === "paused") {
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
-            if (cancelRef.current || stoppedRef.current) break;
+            if (moduleCancel || moduleStopped) break;
             const { data: check } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
-            if (!check || check.status === "cancelled") { cancelRef.current = true; break; }
+            if (!check || check.status === "cancelled") { moduleCancel = true; break; }
             if (check.status === "running") break;
           }
-          if (cancelRef.current || stoppedRef.current) break;
+          if (moduleCancel || moduleStopped) break;
         }
 
         const wcaId = wcaIds[i];
@@ -122,7 +127,7 @@ export function useDownloadProcessor() {
             status: "paused",
             error_message: "⚠️ Estensione Chrome non disponibile. Installala e ripremi il job.",
           }).eq("id", jobId);
-          cancelRef.current = true; // Prevent completion block from overwriting "paused"
+          moduleCancel = true; // Prevent completion block from overwriting "paused"
           break;
         }
 
@@ -166,7 +171,7 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !cancelRef.current && !stoppedRef.current) {
+            if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped) {
               const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
               await appendLog(jobId, "WAIT", `${actualDelay}s`);
               await new Promise(r => setTimeout(r, actualDelay * 1000));
@@ -334,7 +339,7 @@ export function useDownloadProcessor() {
         }
 
         // Simplified delay: baseDelay ± variation, hard floor 10s
-        if (i < wcaIds.length - 1 && !cancelRef.current && !stoppedRef.current) {
+        if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped) {
           const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
           await appendLog(jobId, "WAIT", `${actualDelay}s`);
           await new Promise(r => setTimeout(r, actualDelay * 1000));
@@ -342,7 +347,7 @@ export function useDownloadProcessor() {
       }
 
       // Complete job
-      if (!cancelRef.current && !stoppedRef.current) {
+      if (!moduleCancel && !moduleStopped) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
@@ -365,12 +370,14 @@ export function useDownloadProcessor() {
     }
   }, [queryClient]); // Only queryClient — everything else via refs
 
-  // Main polling loop: single-threaded async while loop
+  // Main polling loop: single-threaded async while loop (singleton via moduleLoopRunning)
   useEffect(() => {
-    let alive = true;
+    // If a loop is already active (from a previous mount), do NOT create another
+    if (moduleLoopRunning) return;
+    moduleLoopRunning = true;
 
     const loop = async () => {
-      while (alive && !stoppedRef.current) {
+      while (moduleLoopRunning && !moduleStopped) {
         try {
           const { data: jobs } = await supabase
             .from("download_jobs")
@@ -380,7 +387,7 @@ export function useDownloadProcessor() {
             .order("created_at", { ascending: true })
             .limit(1);
 
-          if (jobs && jobs.length > 0 && alive && !stoppedRef.current) {
+          if (jobs && jobs.length > 0 && moduleLoopRunning && !moduleStopped) {
             const { data: fresh } = await supabase
               .from("download_jobs")
               .select("status")
@@ -388,11 +395,11 @@ export function useDownloadProcessor() {
               .single();
 
             if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-              cancelRef.current = false;
+              moduleCancel = false;
               await processJob(jobs[0]);
 
               // Cooldown inter-job (30s)
-              if (alive && !stoppedRef.current && !cancelRef.current) {
+              if (moduleLoopRunning && !moduleStopped && !moduleCancel) {
                 await new Promise(r => setTimeout(r, 30000));
               }
               continue;
@@ -403,24 +410,30 @@ export function useDownloadProcessor() {
         }
 
         // No job found or error: wait 5s and retry
-        if (alive && !stoppedRef.current) {
+        if (moduleLoopRunning && !moduleStopped) {
           await new Promise(r => setTimeout(r, 5000));
         }
       }
+      moduleLoopRunning = false;
     };
 
     loop();
-    return () => { alive = false; cancelRef.current = true; };
+    return () => {
+      moduleCancel = true;
+      // Do NOT set moduleLoopRunning = false here!
+      // The loop will stop on its own when it sees moduleCancel = true
+    };
   }, [processJob]);
 
   const emergencyStop = useCallback(() => {
-    cancelRef.current = true;
-    stoppedRef.current = true;
+    moduleCancel = true;
+    moduleStopped = true;
   }, []);
 
   const resetStop = useCallback(() => {
-    stoppedRef.current = false;
-    cancelRef.current = false;
+    moduleStopped = false;
+    moduleCancel = false;
+    moduleLoopRunning = false; // allows next mount to start a new loop
   }, []);
 
   return { emergencyStop, resetStop };
