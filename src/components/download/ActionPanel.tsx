@@ -24,9 +24,10 @@ interface ActionPanelProps {
   selectedCountries: { code: string; name: string }[];
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
+  onJobStarting?: () => void;
 }
 
-export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange }: ActionPanelProps) {
+export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange, onJobStarting }: ActionPanelProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const queryClient = useQueryClient();
@@ -255,6 +256,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   };
 
   const executeDownload = async () => {
+    onJobStarting?.();
     if (idsToDownload.length === 0) {
       toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
       return;

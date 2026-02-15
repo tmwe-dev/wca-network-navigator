@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query";
  * Rules:
  * 1. One request at a time (sequential, DB lock)
  * 2. Minimum baseDelay ± variation seconds between requests (hard floor 10s)
+ * 3. Zero retry: each WCA profile gets exactly 1 request
+ * 4. stoppedRef prevents ghost restarts after emergency stop
  */
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
@@ -18,9 +20,18 @@ export function useDownloadProcessor() {
   const queryClient = useQueryClient();
   const processingRef = useRef(false);
   const cancelRef = useRef(false);
+  const stoppedRef = useRef(false);
   const availableRef = useRef(isAvailable);
 
+  // Stable refs to avoid re-creating processJob on every render
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+
+  const checkAvailableRef = useRef(checkAvailable);
+  useEffect(() => { checkAvailableRef.current = checkAvailable; }, [checkAvailable]);
+  const extractContactsRef = useRef(extractContacts);
+  useEffect(() => { extractContactsRef.current = extractContacts; }, [extractContacts]);
 
   // ── Terminal log helper ──
   const appendLog = async (jobId: string, type: string, msg: string) => {
@@ -36,15 +47,17 @@ export function useDownloadProcessor() {
     }
   };
 
+  // processJob has NO reactive dependencies — uses refs only
   const processJob = useCallback(async (job: any) => {
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
     const processedSet = new Set<number>(((job.processed_ids as number[]) || []));
+    const s = settingsRef.current;
 
     // Mark as running
     await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
-    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${settings.baseDelay}s ±${settings.variation}s`);
+    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${s.baseDelay}s ±${s.variation}s`);
 
     // DB lock: verify no other job is already running
     const { data: runningJobs } = await supabase
@@ -76,14 +89,14 @@ export function useDownloadProcessor() {
     // Keep-alive
     const keepAlive = setInterval(async () => {
       try { await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId); } catch {}
-    }, settings.keepAliveMs);
+    }, s.keepAliveMs);
 
     let contactsFound = job.contacts_found_count || 0;
     let contactsMissing = job.contacts_missing_count || 0;
 
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
-        if (cancelRef.current) break;
+        if (cancelRef.current || stoppedRef.current) break;
 
         // Check job status from DB (pause/cancel from UI)
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
@@ -91,12 +104,12 @@ export function useDownloadProcessor() {
         if (freshJob.status === "paused") {
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
-            if (cancelRef.current) break;
+            if (cancelRef.current || stoppedRef.current) break;
             const { data: check } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
             if (!check || check.status === "cancelled") { cancelRef.current = true; break; }
             if (check.status === "running") break;
           }
-          if (cancelRef.current) break;
+          if (cancelRef.current || stoppedRef.current) break;
         }
 
         const wcaId = wcaIds[i];
@@ -105,10 +118,10 @@ export function useDownloadProcessor() {
         await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
         // Check extension availability
-        if (!availableRef.current && !(await checkAvailable())) {
+        if (!availableRef.current && !(await checkAvailableRef.current())) {
           await supabase.from("download_jobs").update({
             status: "paused",
-            error_message: "⚠️ Estensione Chrome non disponibile. Installala e riprendi il job.",
+            error_message: "⚠️ Estensione Chrome non disponibile. Installala e ripremi il job.",
           }).eq("id", jobId);
           break;
         }
@@ -139,8 +152,9 @@ export function useDownloadProcessor() {
         let companyName = existing?.company_name || `WCA ${wcaId}`;
 
         try {
-          const result = await extractContacts(wcaId);
+          const result = await extractContactsRef.current(wcaId);
 
+          // ZERO RETRY: if page didn't load, mark as skipped and move on
           if (result.pageLoaded === false) {
             await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
             contactsMissing++;
@@ -152,8 +166,8 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !cancelRef.current) {
-              const actualDelay = calcDelay(settings.baseDelay, settings.variation);
+            if (i < wcaIds.length - 1 && !cancelRef.current && !stoppedRef.current) {
+              const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
               await appendLog(jobId, "WAIT", `${actualDelay}s`);
               await new Promise(r => setTimeout(r, actualDelay * 1000));
             }
@@ -319,19 +333,16 @@ export function useDownloadProcessor() {
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
         }
 
-
-
-
         // Simplified delay: baseDelay ± variation, hard floor 10s
-        if (i < wcaIds.length - 1 && !cancelRef.current) {
-          const actualDelay = calcDelay(settings.baseDelay, settings.variation);
+        if (i < wcaIds.length - 1 && !cancelRef.current && !stoppedRef.current) {
+          const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
           await appendLog(jobId, "WAIT", `${actualDelay}s`);
           await new Promise(r => setTimeout(r, actualDelay * 1000));
         }
       }
 
       // Complete job
-      if (!cancelRef.current) {
+      if (!cancelRef.current && !stoppedRef.current) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
@@ -352,13 +363,15 @@ export function useDownloadProcessor() {
       queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
       queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     }
-  }, [settings, checkAvailable, extractContacts, queryClient]);
+  }, [queryClient]); // Only queryClient — everything else via refs
 
-  // Main polling loop: check for pending jobs every 5s
+  // Main polling loop: mount-once, stable interval
   useEffect(() => {
     const checkJobs = async () => {
-      if (processingRef.current) return;
+      // Guard: if stopped or cancelled or already processing, skip
+      if (stoppedRef.current || cancelRef.current || processingRef.current) return;
 
+      // Fresh DB check: only pick up pending/running jobs
       const { data: pendingJobs } = await supabase
         .from("download_jobs")
         .select("*")
@@ -368,6 +381,16 @@ export function useDownloadProcessor() {
         .limit(1);
 
       if (pendingJobs && pendingJobs.length > 0) {
+        // Double-check: re-read the job to ensure it wasn't cancelled between query and now
+        const { data: freshCheck } = await supabase
+          .from("download_jobs")
+          .select("status")
+          .eq("id", pendingJobs[0].id)
+          .single();
+        
+        if (!freshCheck || freshCheck.status === "cancelled" || freshCheck.status === "completed") return;
+        if (stoppedRef.current || cancelRef.current) return;
+
         processingRef.current = true;
         cancelRef.current = false;
         try {
@@ -386,12 +409,18 @@ export function useDownloadProcessor() {
       clearInterval(interval);
       cancelRef.current = true;
     };
-  }, [processJob]);
+  }, [processJob]); // processJob is stable (only depends on queryClient)
 
   const emergencyStop = useCallback(() => {
     cancelRef.current = true;
+    stoppedRef.current = true;
     processingRef.current = false;
   }, []);
 
-  return { isProcessing: processingRef.current, emergencyStop };
+  const resetStop = useCallback(() => {
+    stoppedRef.current = false;
+    cancelRef.current = false;
+  }, []);
+
+  return { isProcessing: processingRef.current, emergencyStop, resetStop };
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, RotateCcw, Loader2 } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,8 +49,8 @@ export default function AcquisizionePartner() {
   const [qualityIncomplete, setQualityIncomplete] = useState(0);
   const [showComet, setShowComet] = useState(false);
   const [showSessionAlert, setShowSessionAlert] = useState(false);
-  const [showRetryDialog, setShowRetryDialog] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [resumeLoading, setResumeLoading] = useState(true);
@@ -637,29 +637,19 @@ export default function AcquisizionePartner() {
             failedLoads: 0,
           });
 
-          if (job.status === "running") {
-            // AUTO-RESUME: extension-driven, restart loop from where we left off
-            setPipelineStatus("running");
-            pauseRef.current = false;
-            cancelRef.current = false;
+      if (job.status === "running" || job.status === "paused") {
+            // NO AUTO-RESUME: show as paused, require manual click to restart
+            setPipelineStatus("paused");
+            pauseRef.current = true;
+            
+            // Mark running jobs as paused in DB to prevent ghost restarts
+            if (job.status === "running") {
+              await supabase.from("download_jobs").update({ status: "paused" }).eq("id", job.id);
+            }
 
             toast({
-              title: "Acquisizione attiva ripresa",
-              description: `${processedIds.size}/${wcaIds.length} partner processati. Ripresa estrazione via estensione.`,
-            });
-
-            const startIdx = queueItems.findIndex(q => q.status !== "done");
-            runExtensionLoop(job.id, queueItems, startIdx >= 0 ? startIdx : 0).then((finalStats) => {
-              setCanvasPhase("idle");
-              setCanvasData(null);
-              setPipelineStatus("done");
-              setActiveJobId(null);
-              if (finalStats) {
-                toast({
-                  title: "Acquisizione completata!",
-                  description: `${finalStats.processed} partner processati — Completi: ${finalStats.complete}, Incompleti: ${finalStats.processed - finalStats.complete}`,
-                });
-              }
+              title: "Acquisizione precedente trovata",
+              description: `${processedIds.size}/${wcaIds.length} partner già processati. Premi Riprendi per continuare.`,
             });
           } else {
             setPipelineStatus("paused");
@@ -939,10 +929,7 @@ export default function AcquisizionePartner() {
         description: `${localStats.processed} partner processati — Completi: ${localStats.complete}, Incompleti: ${localStats.processed - localStats.complete}`,
       });
 
-      if (localStats.empty > 0) {
-        setRetryCount(localStats.empty);
-        setShowRetryDialog(true);
-      }
+      // Zero Retry: no retry dialog — skipped profiles stay in DB for manual review
     }
   }, [queue, includeEnrich, includeDeepSearch, delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop, waitForExtension]);
 
@@ -1239,49 +1226,8 @@ export default function AcquisizionePartner() {
       </AlertDialog>
 
       {/* Retry Incomplete Dialog */}
-      <AlertDialog open={showRetryDialog} onOpenChange={setShowRetryDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-primary" />
-              Partner senza contatti
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {retryCount} partner sono stati scaricati senza email o telefoni.
-              Vuoi ritentare l'acquisizione solo per questi partner?
-              Assicurati che la sessione WCA sia attiva.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={() => setShowRetryDialog(false)}>
-              No, chiudi
-            </AlertDialogAction>
-            <AlertDialogAction onClick={() => {
-              setShowRetryDialog(false);
-              // Select only empty partners and restart
-              const emptyWcaIds = new Set<number>();
-              queue.forEach((q) => {
-                if (q.status === "done" && selectedIds.has(q.wca_id)) {
-                  // Check if this partner had no contacts in the bin
-                  emptyWcaIds.add(q.wca_id);
-                }
-              });
-              // Reset statuses for retry
-              setQueue((prev) =>
-                prev.map((q) =>
-                  emptyWcaIds.has(q.wca_id) ? { ...q, status: "pending" as const } : q
-                )
-              );
-              setSelectedIds(emptyWcaIds);
-              // Auto-start after short delay
-              setTimeout(() => startPipeline(), 500);
-            }}>
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Riprova ({retryCount})
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
       </div>
     </div>
   );
