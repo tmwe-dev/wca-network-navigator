@@ -1,5 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
+type ExtensionProfile = {
+  address?: string;
+  phone?: string;
+  fax?: string;
+  mobile?: string;
+  emergencyPhone?: string;
+  email?: string;
+  website?: string;
+  memberSince?: string;
+  membershipExpires?: string;
+  officeType?: string;
+  description?: string;
+  networks?: Array<{ name: string; id?: string; expires?: string | null }>;
+  services?: string[];
+  certifications?: string[];
+  branchCities?: string[];
+};
+
 type ExtensionResponse = {
   success: boolean;
   contacts?: Array<{
@@ -17,6 +35,8 @@ type ExtensionResponse = {
   reason?: string;
   cookieLength?: number;
   pageLoaded?: boolean;
+  profile?: ExtensionProfile;
+  profileHtml?: string;
 };
 
 /**
@@ -66,7 +86,7 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // CONTINUOUS polling every 3s — never stops, so extension is detected even if installed/reloaded later
+  // CONTINUOUS polling every 3s
   useEffect(() => {
     const doPing = () => {
       window.postMessage(
@@ -120,7 +140,7 @@ export function useExtensionBridge() {
     []
   );
 
-  // Check if extension is available (with retries) — 5 attempts, 3s timeout each
+  // Check if extension is available (with retries)
   const checkAvailable = useCallback(async (): Promise<boolean> => {
     if (availableRef.current) return true;
 
@@ -135,7 +155,7 @@ export function useExtensionBridge() {
     return false;
   }, [sendMessage]);
 
-  // Wait for extension to become available (up to maxWaitMs)
+  // Wait for extension to become available
   const waitForExtension = useCallback(
     (maxWaitMs = 10000): Promise<boolean> => {
       return new Promise((resolve) => {
