@@ -369,41 +369,39 @@ export function useDownloadProcessor() {
   // Main polling loop: mount-once, stable interval
   useEffect(() => {
     const checkJobs = async () => {
-      // Guard: if stopped or cancelled or already processing, skip
       if (stoppedRef.current || processingRef.current) return;
 
-      // Fresh DB check: only pick up pending/running jobs
-      const { data: pendingJobs } = await supabase
-        .from("download_jobs")
-        .select("*")
-        .in("status", ["pending", "running"])
-        .eq("job_type", "download")
-        .order("created_at", { ascending: true })
-        .limit(1);
+      // MUTEX: lock IMMEDIATELY before any async work
+      processingRef.current = true;
 
-      if (pendingJobs && pendingJobs.length > 0) {
-        // Double-check: re-read the job to ensure it wasn't cancelled between query and now
+      try {
+        const { data: pendingJobs } = await supabase
+          .from("download_jobs")
+          .select("*")
+          .in("status", ["pending", "running"])
+          .eq("job_type", "download")
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (!pendingJobs || pendingJobs.length === 0) return;
+
         const { data: freshCheck } = await supabase
           .from("download_jobs")
           .select("status")
           .eq("id", pendingJobs[0].id)
           .single();
-        
-        if (!freshCheck || freshCheck.status === "cancelled" || freshCheck.status === "completed") return;
-        if (stoppedRef.current || cancelRef.current) return;
 
-        processingRef.current = true;
+        if (!freshCheck || freshCheck.status === "cancelled" || freshCheck.status === "completed") return;
+        if (stoppedRef.current) return;
+
         cancelRef.current = false;
-        try {
-          await processJob(pendingJobs[0]);
-        } catch (err) {
-          console.error("[DownloadProcessor] Error:", err);
-        } finally {
-          processingRef.current = false;
-          // Inter-job pause: 30s cooldown before picking up next country job
-          if (!stoppedRef.current && !cancelRef.current) {
-            await new Promise(r => setTimeout(r, 30000));
-          }
+        await processJob(pendingJobs[0]);
+      } catch (err) {
+        console.error("[DownloadProcessor] Error:", err);
+      } finally {
+        processingRef.current = false;
+        if (!stoppedRef.current && !cancelRef.current) {
+          await new Promise(r => setTimeout(r, 30000));
         }
       }
     };
