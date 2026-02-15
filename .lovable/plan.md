@@ -1,55 +1,48 @@
 
-# Eliminazione Retry dall'Estensione Chrome
+# Animazione Live "Card Flip" nel Viewer Dati Scaricati
 
-## Problema identificato
+## Concetto
 
-Il file `public/chrome-extension/background.js` contiene un loop di retry interno (righe 155-212):
+Aggiungere al dialogo "Dati Scaricati" due modalita':
 
-```javascript
-var MAX_RETRIES = 1;        // ← permette 1 retry
-var RETRY_DELAYS = [5000];  // ← dopo 5 secondi
-for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    // apre un TAB per ogni tentativo
-    tab = await chrome.tabs.create({ url: "..." });
-    ...
-    if (!pageLoaded && attempt < MAX_RETRIES) {
-        chrome.tabs.remove(tab.id);
-        continue;  // ← APRE UN SECONDO TAB
-    }
-}
-```
+1. **Modalita' manuale** (job non attivo): navigazione libera avanti/indietro come ora
+2. **Modalita' LIVE** (job attivo): un toggle "LIVE" appare nella toolbar. Quando attivato, il viewer si posiziona automaticamente sull'ultimo partner scaricato e ad ogni nuovo partner esegue un'animazione "card flip":
+   - La card corrente **cade all'indietro** (rotazione 3D sull'asse X, da 0 a -90 gradi, con opacity che va a 0)
+   - Dopo 300ms, la nuova card **sale dal basso** (da +90 gradi a 0, con opacity da 0 a 1)
+   - Effetto visivo: come una carta che si ribalta su un tavolo e ne appare una nuova
 
-Per ogni profilo WCA, se la pagina non carica al primo tentativo, l'estensione:
-1. Apre il tab 1 -- la pagina non carica
-2. Chiude il tab 1
-3. Aspetta 5 secondi
-4. Apre il tab 2 -- secondo tentativo
+## Modifiche tecniche
 
-Questo viola la politica "Zero Retry" e spiega le aperture extra che vedi nel browser.
+### 1. JobMonitor.tsx
+- Passare `jobStatus={job.status}` come nuova prop a `JobDataViewer`, cosi' il viewer sa se il job e' attivo
 
-## Soluzione
+### 2. JobDataViewer.tsx
 
-Rimuovere completamente il loop di retry da `extractContactsForId()`:
+**Nuove prop:**
+- `jobStatus: string` -- per sapere se il job e' "running"
 
-- `MAX_RETRIES` da 1 a 0 (o rimuovere il loop del tutto)
-- Un solo tab per profilo: se non carica, restituisce `pageLoaded: false` e l'app lo marca come `skipped`
-- La funzione diventa lineare: apri tab, aspetta, estrai, chiudi tab, fine
+**Nuovi state:**
+- `liveMode: boolean` -- toggle per la modalita' live (default: false)
+- `animPhase: "idle" | "exit" | "enter"` -- fase dell'animazione corrente
 
-### Codice risultante (semplificato)
+**Logica live:**
+- Quando `liveMode` e' attivo e `processedIds.length` cambia (nuovo partner scaricato):
+  1. Imposta `animPhase = "exit"` (la card corrente cade, durata 400ms)
+  2. Dopo 400ms, aggiorna `currentIndex` all'ultimo partner e imposta `animPhase = "enter"` (la nuova card sale, durata 400ms)
+  3. Dopo altri 400ms, torna a `animPhase = "idle"`
+- Il refetch dei dati usa `refetchInterval: 5000` quando liveMode e' attivo, per catturare i nuovi partner
 
-La funzione `extractContactsForId` diventa:
-1. Apre un singolo tab
-2. Aspetta il caricamento (max 30s)
-3. Verifica se la pagina e' caricata
-4. Se si': estrae i contatti
-5. Se no: restituisce `pageLoaded: false`
-6. Chiude il tab
-7. Nessun loop, nessun retry
+**Animazione CSS (inline styles con perspective 3D):**
+- `exit`: `transform: perspective(600px) rotateX(-90deg); opacity: 0; transition: all 0.4s ease-in`
+- `enter`: partenza da `rotateX(90deg)` e transizione a `rotateX(0deg); opacity: 1; transition: all 0.4s ease-out`
+- `idle`: nessuna trasformazione
 
-### File modificato
+**UI aggiuntiva:**
+- Quando il job e' "running", appare un bottone/toggle "LIVE" nella barra di navigazione, con un pallino verde pulsante
+- In modalita' LIVE i bottoni avanti/indietro sono disabilitati (la navigazione e' automatica)
+- Il contatore mostra "LIVE -- Partner N di M" con un'icona animata
 
-1. `public/chrome-extension/background.js` -- rimozione loop retry da `extractContactsForId`, funzione linearizzata
+### File modificati
 
-### Nota importante
-
-Dopo la modifica, dovrai reinstallare l'estensione Chrome (vai su `chrome://extensions`, rimuovi la vecchia e carica di nuovo la cartella `chrome-extension`) perche' le modifiche al background script non si applicano automaticamente.
+1. `src/components/download/JobDataViewer.tsx` -- aggiunta prop jobStatus, toggle LIVE, animazione 3D card flip, refetch automatico
+2. `src/components/download/JobMonitor.tsx` -- passaggio prop jobStatus a JobDataViewer
