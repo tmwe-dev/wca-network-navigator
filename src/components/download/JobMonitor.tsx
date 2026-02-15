@@ -12,6 +12,7 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";
+import { JobTerminalViewer } from "./JobTerminalViewer";
 import { useTheme, t } from "./theme";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 
@@ -59,6 +60,7 @@ function JobCard({ job, pauseResume, updateSpeed }: {
   const th = t(isDark);
   const [showSpeed, setShowSpeed] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [localDelay, setLocalDelay] = useState(job.delay_seconds);
 
   useEffect(() => setLocalDelay(job.delay_seconds), [job.delay_seconds]);
@@ -124,6 +126,9 @@ function JobCard({ job, pauseResume, updateSpeed }: {
               <List className="w-3 h-3 mr-1" /> Dati
             </Button>
           )}
+          <Button size="sm" variant="ghost" onClick={() => setShowTerminal(true)} className={`h-7 text-xs ${th.btnTest}`}>
+            <Activity className="w-3 h-3 mr-1" /> Terminal
+          </Button>
           {isActive && (
             <>
               <Button size="sm" variant="ghost" onClick={() => setShowSpeed(!showSpeed)} className={`h-7 ${th.btnPause}`}>
@@ -233,6 +238,11 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         countryName={job.country_name} countryCode={job.country_code}
         networkName={job.network_name} isDark={isDark}
         jobStatus={job.status}
+      />
+      <JobTerminalViewer
+        open={showTerminal} onOpenChange={setShowTerminal}
+        jobId={job.id} jobStatus={job.status}
+        countryName={job.country_name} isDark={isDark}
       />
     </div>
   );
