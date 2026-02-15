@@ -147,6 +147,11 @@ function JobCard({ job, pauseResume, updateSpeed }: {
               </Button>
             </>
           )}
+          {job.status === "cancelled" && job.current_index < job.total_count && (
+            <Button size="sm" onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })} className={`h-7 text-xs ${th.btnResume}`}>
+              <Play className="w-3 h-3 mr-1" /> Riavvia
+            </Button>
+          )}
         </div>
       </div>
 
