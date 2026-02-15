@@ -61,6 +61,18 @@ export function useDownloadProcessor() {
       return;
     }
 
+    // Pre-load directory cache map (once, no per-profile queries)
+    const cacheMap = new Map<number, { name: string; city: string }>();
+    const { data: cacheEntries } = await supabase
+      .from("directory_cache")
+      .select("members")
+      .eq("country_code", job.country_code);
+    for (const entry of (cacheEntries || [])) {
+      for (const m of (entry.members as any[] || [])) {
+        if (m.wca_id) cacheMap.set(m.wca_id, { name: m.company_name || `WCA ${m.wca_id}`, city: m.city || "" });
+      }
+    }
+
     // Keep-alive
     const keepAlive = setInterval(async () => {
       try { await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId); } catch {}
@@ -107,22 +119,10 @@ export function useDownloadProcessor() {
         if (existing) {
           partnerId = existing.id;
         } else {
-          // Lookup real name from directory_cache before creating placeholder
-          let realName = `WCA ${wcaId}`;
-          let realCity = "";
-          const { data: cacheEntries } = await supabase
-            .from("directory_cache")
-            .select("members")
-            .eq("country_code", job.country_code);
-          for (const entry of (cacheEntries || [])) {
-            const members = entry.members as any[];
-            const match = members?.find((m: any) => m.wca_id === wcaId);
-            if (match) {
-              realName = match.company_name || realName;
-              realCity = match.city || "";
-              break;
-            }
-          }
+          // Use pre-loaded cacheMap (no per-profile DB query)
+          const cached = cacheMap.get(wcaId);
+          const realName = cached?.name || `WCA ${wcaId}`;
+          const realCity = cached?.city || "";
           const { data: newP } = await supabase.from("partners").insert({
             wca_id: wcaId,
             company_name: realName,
@@ -142,7 +142,21 @@ export function useDownloadProcessor() {
           const result = await extractContacts(wcaId);
 
           if (result.pageLoaded === false) {
-            await new Promise(r => setTimeout(r, 5000));
+            await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
+            contactsMissing++;
+            processedSet.add(wcaId);
+            await supabase.from("download_jobs").update({
+              current_index: processedSet.size,
+              processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId,
+              last_contact_result: "skipped",
+              contacts_missing_count: contactsMissing,
+            }).eq("id", jobId);
+            if (i < wcaIds.length - 1 && !cancelRef.current) {
+              const actualDelay = calcDelay(settings.baseDelay, settings.variation);
+              await appendLog(jobId, "WAIT", `${actualDelay}s`);
+              await new Promise(r => setTimeout(r, actualDelay * 1000));
+            }
             continue;
           }
 
@@ -247,20 +261,12 @@ export function useDownloadProcessor() {
             }
           }
 
-          // Post-extraction fallback: if name is still a placeholder, try directory_cache
+          // Post-extraction fallback: if name is still a placeholder, use pre-loaded cacheMap
           if (companyName.startsWith("WCA ") && partnerId) {
-            const { data: cacheEntries } = await supabase
-              .from("directory_cache")
-              .select("members")
-              .eq("country_code", job.country_code);
-            for (const entry of (cacheEntries || [])) {
-              const members = entry.members as any[];
-              const match = members?.find((m: any) => m.wca_id === wcaId);
-              if (match?.company_name && !match.company_name.startsWith("WCA ")) {
-                companyName = match.company_name;
-                await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
-                break;
-              }
+            const cached = cacheMap.get(wcaId);
+            if (cached?.name && !cached.name.startsWith("WCA ")) {
+              companyName = cached.name;
+              await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
             }
           }
         } catch (err) {
