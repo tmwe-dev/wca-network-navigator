@@ -91,7 +91,6 @@ export default function AcquisizionePartner() {
     const AUTO_EXCLUDE_THRESHOLD = scrapingSettings.excludeThreshold;
     
     let localNetworkStats: Record<string, { success: number; empty: number }> = { ...networkStats };
-    const retryQueue: { item: QueueItem; retries: number }[] = [];
     
 
     // Keep-alive: prevent browser throttling during overnight runs
@@ -225,25 +224,28 @@ export default function AcquisizionePartner() {
         try {
           const extResult = await extensionExtract(item.wca_id);
 
-          // ── Check if page actually loaded (anti-throttling) ──
+          // ── Check if page actually loaded (zero retry: mark as done + failed) ──
           if (extResult.pageLoaded === false) {
-            console.warn(`[Pipeline] Page not loaded for ${item.wca_id}, queuing for retry`);
+            console.warn(`[Pipeline] Page not loaded for ${item.wca_id}, marking as skipped (no retry)`);
             localStats = { ...localStats, failedLoads: localStats.failedLoads + 1 };
             setLiveStats(localStats);
-            if (retryQueue.filter(r => r.item.wca_id === item.wca_id).length === 0) {
-              const existingRetries = retryQueue.find(r => r.item.wca_id === item.wca_id);
-              if (!existingRetries || existingRetries.retries < scrapingSettings.maxRetries) {
-                retryQueue.push({ item, retries: (existingRetries?.retries || 0) + 1 });
-              }
-            }
+            processedSet.add(item.wca_id);
             setQueue((prev) =>
               prev.map((q) =>
-                q.wca_id === item.wca_id ? { ...q, status: "pending" as const } : q
+                q.wca_id === item.wca_id ? { ...q, status: "done" as const } : q
               )
             );
-            // Don't count as processed, skip to next
+            await supabase.from("download_jobs").update({
+              current_index: processedSet.size,
+              processed_ids: [...processedSet] as any,
+              last_processed_wca_id: item.wca_id,
+              last_contact_result: "skipped",
+              contacts_missing_count: localStats.empty + localStats.failedLoads,
+            }).eq("id", jobId);
+            // Standard delay before next profile
             if (i < items.length - 1 && !cancelRef.current) {
-              await new Promise((r) => setTimeout(r, 5000)); // Longer delay for failed loads
+              const actualDelay = calcDelay(scrapingSettings.baseDelay, scrapingSettings.variation);
+              await new Promise((r) => setTimeout(r, actualDelay * 1000));
             }
             continue;
           }
@@ -509,35 +511,6 @@ export default function AcquisizionePartner() {
       if (i < items.length - 1 && !cancelRef.current) {
         const actualDelay = calcDelay(scrapingSettings.baseDelay, scrapingSettings.variation);
         await new Promise((r) => setTimeout(r, actualDelay * 1000));
-      }
-    }
-
-    // ── Process retry queue (failed loads) ──
-    if (retryQueue.length > 0 && !cancelRef.current) {
-      console.log(`[RetryQueue] Processing ${retryQueue.length} failed loads...`);
-      for (const retryItem of retryQueue) {
-        if (cancelRef.current) break;
-        while (pauseRef.current) {
-          await new Promise((r) => setTimeout(r, 500));
-          if (cancelRef.current) break;
-        }
-        if (cancelRef.current) break;
-
-        // Re-run extraction for this item
-        setActiveIndex(items.findIndex(q => q.wca_id === retryItem.item.wca_id));
-        setQueue((prev) => prev.map((q) => q.wca_id === retryItem.item.wca_id ? { ...q, status: "active" as const } : q));
-        setCanvasPhase("extracting");
-
-        try {
-          const extResult = await extensionExtract(retryItem.item.wca_id);
-          if (extResult.pageLoaded !== false && extResult.success && extResult.contacts && extResult.contacts.length > 0) {
-            localStats = { ...localStats, failedLoads: Math.max(0, localStats.failedLoads - 1) };
-            setLiveStats(localStats);
-          }
-        } catch { /* non-blocking */ }
-
-        setQueue((prev) => prev.map((q) => q.wca_id === retryItem.item.wca_id ? { ...q, status: "done" as const } : q));
-        await new Promise((r) => setTimeout(r, delaySeconds * 1000));
       }
     }
 
