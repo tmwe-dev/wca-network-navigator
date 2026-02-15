@@ -18,7 +18,6 @@ export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const { settings } = useScrapingSettings();
   const queryClient = useQueryClient();
-  const processingRef = useRef(false);
   const cancelRef = useRef(false);
   const stoppedRef = useRef(false);
   const availableRef = useRef(isAvailable);
@@ -366,62 +365,57 @@ export function useDownloadProcessor() {
     }
   }, [queryClient]); // Only queryClient — everything else via refs
 
-  // Main polling loop: mount-once, stable interval
+  // Main polling loop: single-threaded async while loop
   useEffect(() => {
-    const checkJobs = async () => {
-      if (stoppedRef.current || processingRef.current) return;
+    let alive = true;
 
-      // MUTEX: lock IMMEDIATELY before any async work
-      processingRef.current = true;
+    const loop = async () => {
+      while (alive && !stoppedRef.current) {
+        try {
+          const { data: jobs } = await supabase
+            .from("download_jobs")
+            .select("*")
+            .in("status", ["pending", "running"])
+            .eq("job_type", "download")
+            .order("created_at", { ascending: true })
+            .limit(1);
 
-      let didProcess = false;
-      try {
-        const { data: pendingJobs } = await supabase
-          .from("download_jobs")
-          .select("*")
-          .in("status", ["pending", "running"])
-          .eq("job_type", "download")
-          .order("created_at", { ascending: true })
-          .limit(1);
+          if (jobs && jobs.length > 0 && alive && !stoppedRef.current) {
+            const { data: fresh } = await supabase
+              .from("download_jobs")
+              .select("status")
+              .eq("id", jobs[0].id)
+              .single();
 
-        if (!pendingJobs || pendingJobs.length === 0) return;
+            if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
+              cancelRef.current = false;
+              await processJob(jobs[0]);
 
-        const { data: freshCheck } = await supabase
-          .from("download_jobs")
-          .select("status")
-          .eq("id", pendingJobs[0].id)
-          .single();
-
-        if (!freshCheck || freshCheck.status === "cancelled" || freshCheck.status === "completed") return;
-        if (stoppedRef.current) return;
-
-        cancelRef.current = false;
-        didProcess = true;
-        await processJob(pendingJobs[0]);
-      } catch (err) {
-        console.error("[DownloadProcessor] Error:", err);
-      } finally {
-        // Cooldown PRIMA di rilasciare il mutex
-        if (didProcess && !stoppedRef.current && !cancelRef.current) {
-          await new Promise(r => setTimeout(r, 30000));
+              // Cooldown inter-job (30s)
+              if (alive && !stoppedRef.current && !cancelRef.current) {
+                await new Promise(r => setTimeout(r, 30000));
+              }
+              continue;
+            }
+          }
+        } catch (err) {
+          console.error("[DownloadProcessor] Error:", err);
         }
-        // Rilascia il mutex DOPO il cooldown
-        processingRef.current = false;
+
+        // No job found or error: wait 5s and retry
+        if (alive && !stoppedRef.current) {
+          await new Promise(r => setTimeout(r, 5000));
+        }
       }
     };
 
-    checkJobs();
-    const interval = setInterval(checkJobs, 5000);
-    return () => {
-      clearInterval(interval);
-      cancelRef.current = true;
-    };
-  }, [processJob]); // processJob is stable (only depends on queryClient)
+    loop();
+    return () => { alive = false; cancelRef.current = true; };
+  }, [processJob]);
 
   const emergencyStop = useCallback(() => {
     cancelRef.current = true;
     stoppedRef.current = true;
-    processingRef.current = false;
   }, []);
 
   const resetStop = useCallback(() => {
@@ -429,5 +423,5 @@ export function useDownloadProcessor() {
     cancelRef.current = false;
   }, []);
 
-  return { isProcessing: processingRef.current, emergencyStop, resetStop };
+  return { emergencyStop, resetStop };
 }
