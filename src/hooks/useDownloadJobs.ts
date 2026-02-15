@@ -147,19 +147,20 @@ export function useResumeAllJobs() {
     mutationFn: async () => {
       const { data: jobs } = await supabase
         .from("download_jobs")
-        .select("id")
-        .eq("status", "cancelled")
-        .filter("current_index", "lt", "total_count" as any);
+        .select("id, current_index, total_count")
+        .eq("status", "cancelled");
 
-      if (!jobs || jobs.length === 0) return 0;
+      const incomplete = (jobs || []).filter(j => j.current_index < j.total_count);
+      if (incomplete.length === 0) return 0;
 
+      const ids = incomplete.map(j => j.id);
       const { error } = await supabase
         .from("download_jobs")
         .update({ status: "running", error_message: null })
-        .eq("status", "cancelled");
+        .in("id", ids);
 
       if (error) throw error;
-      return jobs.length;
+      return incomplete.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
