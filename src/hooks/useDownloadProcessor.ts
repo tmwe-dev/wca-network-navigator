@@ -374,6 +374,7 @@ export function useDownloadProcessor() {
       // MUTEX: lock IMMEDIATELY before any async work
       processingRef.current = true;
 
+      let didProcess = false;
       try {
         const { data: pendingJobs } = await supabase
           .from("download_jobs")
@@ -395,12 +396,14 @@ export function useDownloadProcessor() {
         if (stoppedRef.current) return;
 
         cancelRef.current = false;
+        didProcess = true;
         await processJob(pendingJobs[0]);
       } catch (err) {
         console.error("[DownloadProcessor] Error:", err);
       } finally {
         processingRef.current = false;
-        if (!stoppedRef.current && !cancelRef.current) {
+        // Cooldown only after actually processing a job
+        if (didProcess && !stoppedRef.current && !cancelRef.current) {
           await new Promise(r => setTimeout(r, 30000));
         }
       }
