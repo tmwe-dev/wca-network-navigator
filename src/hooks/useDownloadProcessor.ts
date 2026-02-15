@@ -123,6 +123,7 @@ export function useDownloadProcessor() {
             status: "paused",
             error_message: "⚠️ Estensione Chrome non disponibile. Installala e ripremi il job.",
           }).eq("id", jobId);
+          cancelRef.current = true; // Prevent completion block from overwriting "paused"
           break;
         }
 
