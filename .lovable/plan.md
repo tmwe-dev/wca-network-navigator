@@ -1,92 +1,52 @@
 
 
-# Fix DEFINITIVO: anti-duplicazione immune a HMR
+# Aggiungere "Riavvia Tutti" per i job fermati
 
-## Problema confermato
+## Situazione attuale
 
-Il terminal log di Algeria mostra ANCORA duplicazioni su ogni profilo dal #2 in poi (START x2, OK x2, WAIT x2). Il fix con `activeLoopId` a livello di modulo NON funziona.
+Esiste solo il pulsante "BLOCCA TUTTO" nella barra superiore. Dopo un Emergency Stop, per far ripartire i job bisogna cliccare "Riavvia" uno per uno nel JobMonitor -- impraticabile con molti job.
 
-## Causa radice
+## Cosa cambia
 
-Quando Vite esegue un Hot Module Replacement (HMR):
-1. Crea un NUOVO modulo JavaScript con variabili NUOVE (`activeLoopId = 0`)
-2. Il vecchio modulo e i suoi loop async continuano a girare nel vecchio contesto JS
-3. Il vecchio loop controlla `myId === activeLoopId` contro la SUA copia di `activeLoopId` -- che corrisponde sempre
-4. Il nuovo modulo incrementa la SUA copia a 1, ma il vecchio loop non la vede
+### 1. Nuovo hook `useResumeAllJobs` in `src/hooks/useDownloadJobs.ts`
 
-In pratica: le variabili a livello di modulo NON sopravvivono all'HMR nel modo sperato. Ogni istanza del modulo ha la propria copia.
+Una mutation che:
+- Trova tutti i job con status `cancelled` che hanno `current_index < total_count` (cioe' incompleti)
+- Li aggiorna tutti a `status: 'running'` e `error_message: null` in una sola query
+- Mostra un toast con il conteggio dei job riavviati
 
-## Soluzione
+### 2. Pulsante nella barra superiore di Operations (`src/pages/Operations.tsx`)
 
-Spostare lo stato singleton su `window` (oggetto globale del browser), che e' l'UNICO posto condiviso tra tutte le istanze del modulo durante l'HMR.
+Accanto al pulsante "BLOCCA TUTTO" (SpeedGauge), appare un pulsante "RIAVVIA TUTTI" che:
+- E' visibile SOLO quando ci sono job cancellati/incompleti e NESSUN job attivo in corso
+- Chiama `resetStop()` (per sbloccare il processor) e poi `resumeAll.mutate()`
+- Usa un'icona Play con stile verde/emerald per contrasto visivo col rosso dello stop
 
-### File: `src/hooks/useDownloadProcessor.ts`
-
-Sostituire le variabili a livello di modulo con proprieta' su `window`:
+### 3. Flusso utente
 
 ```text
-Prima (NON FUNZIONA con HMR):
-  let moduleCancel = false;
-  let moduleStopped = false;
-  let activeLoopId = 0;
-
-Dopo (IMMUNE a HMR):
-  const DL_STATE_KEY = '__dlProcessorState__';
-  
-  interface DlProcessorState {
-    cancel: boolean;
-    stopped: boolean;
-    activeLoopId: number;
-  }
-  
-  function getDlState(): DlProcessorState {
-    if (!(window as any)[DL_STATE_KEY]) {
-      (window as any)[DL_STATE_KEY] = {
-        cancel: false,
-        stopped: false,
-        activeLoopId: 0,
-      };
-    }
-    return (window as any)[DL_STATE_KEY];
-  }
+[Job in corso] --> Clicca "BLOCCA TUTTO" --> Tutti i job diventano "cancelled"
+                                          --> Appare il pulsante "RIAVVIA TUTTI"
+                                          --> Un click li rimette tutti in "running"
+                                          --> Il processor li riprende automaticamente dal current_index
 ```
 
-Ogni accesso a `moduleCancel`, `moduleStopped`, `activeLoopId` diventa:
+## Dettagli tecnici
 
-```text
-const state = getDlState();
-state.cancel = true;          // invece di moduleCancel = true
-state.activeLoopId++;          // invece di ++activeLoopId
-```
+### `useDownloadJobs.ts` - nuovo export
 
-Il while loop:
-
-```text
-const state = getDlState();
-const myId = ++state.activeLoopId;
-
-while (myId === state.activeLoopId && !state.stopped && !state.cancel) {
-  ...
+```typescript
+export function useResumeAllJobs() {
+  // UPDATE download_jobs SET status='running', error_message=null
+  // WHERE status='cancelled' AND current_index < total_count
+  // Restituisce il count dei job riavviati
 }
 ```
 
-In questo modo, quando HMR crea un nuovo modulo:
-- Il nuovo modulo chiama `getDlState()` e ottiene LO STESSO oggetto del vecchio
-- Incrementa `activeLoopId` -- il vecchio loop vede il cambio perche' condividono lo stesso oggetto
-- Il vecchio loop esce immediatamente al prossimo check
+### `Operations.tsx` - nuovo pulsante
 
-### Modifiche specifiche
+Posizionato nella riga della barra superiore (riga ~109), accanto a `WcaSessionIndicator`. Visibile solo quando:
+- `cancelledIncompleteJobs.length > 0`
+- `activeJobs.length === 0`
 
-1. Rimuovere le 3 variabili a livello di modulo (`moduleCancel`, `moduleStopped`, `activeLoopId`)
-2. Aggiungere `getDlState()` che usa `window.__dlProcessorState__`
-3. Sostituire OGNI riferimento a `moduleCancel` con `state.cancel`
-4. Sostituire OGNI riferimento a `moduleStopped` con `state.stopped`
-5. Sostituire OGNI riferimento a `activeLoopId` con `state.activeLoopId`
-6. Il `processJob`, il loop `useEffect`, `emergencyStop` e `resetStop` usano tutti `getDlState()`
-7. Il cleanup del `useEffect` setta `state.cancel = true`
-8. Il `resetStop` resetta `state.cancel = false`, `state.stopped = false` e incrementa `state.activeLoopId`
-
-### Nessun altro file modificato
-
-Un solo file: `src/hooks/useDownloadProcessor.ts`
-
+Nessun altro file modificato. Due file totali.
