@@ -1,102 +1,85 @@
 
+# Rifattorizzazione Completa: Gestione Stop/Start dei Job
 
-# Zero Retry: Ogni Interazione WCA = 1 Solo Tentativo
+## Problemi trovati (analisi riga per riga)
 
-## Riepilogo delle modifiche
+### BUG 1: Loop di polling instabile (`useDownloadProcessor.ts`)
+`processJob` dipende da `settings` (riga 355), che cambia ad ogni render. Questo causa la ri-creazione del `useEffect` di polling (riga 358), che nel cleanup imposta `cancelRef = true`, ma subito dopo il nuovo effetto imposta `cancelRef = false` (riga 372). Risultato: un job fermato puo' ripartire da solo.
 
-Tre aree di intervento per garantire che ogni contatto con WCA avvenga una sola volta, senza eccezioni.
+### BUG 2: Race condition nell'Emergency Stop
+Quando premi "BLOCCA TUTTO", `cancelRef = true` e `processingRef = false` vengono impostati lato client, e il DB viene aggiornato a "cancelled". Ma il polling loop gira ogni 5 secondi: se scatta **prima** che l'update del DB sia completato, trova il job ancora "running", imposta `cancelRef = false` e lo riavvia.
 
----
+### BUG 3: Auto-resume al montaggio del componente
+`AcquisizionePartner.tsx` (riga 640) riprende automaticamente qualsiasi job con status "running" quando il componente viene montato. Se navighi via e torni, il job riparte anche se lo avevi appena fermato.
 
-## 1. Download Profili (`useDownloadProcessor.ts`)
-
-**Problema**: Righe 144-147 -- quando `pageLoaded === false`, il sistema aspetta 5 secondi e poi `continue`, ritentando lo stesso profilo nel loop (perche' non viene aggiunto a `processedSet`).
-
-**Soluzione**: Invece di `continue`, il profilo viene marcato come `skipped` in `processedSet`, loggato come "SKIP" nel terminale, contato come `contactsMissing`, e il loop prosegue al profilo successivo senza alcuna richiesta aggiuntiva a WCA.
-
-Codice attuale (righe 144-147):
-```
-if (result.pageLoaded === false) {
-  await new Promise(r => setTimeout(r, 5000));
-  continue;
-}
-```
-
-Nuovo codice:
-```
-if (result.pageLoaded === false) {
-  await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
-  contactsMissing++;
-  processedSet.add(wcaId);
-  // Aggiorna il job e prosegui (nessun retry)
-  await supabase.from("download_jobs").update({
-    current_index: processedSet.size,
-    processed_ids: [...processedSet] as any,
-    last_processed_wca_id: wcaId,
-    last_contact_result: "skipped",
-    contacts_missing_count: contactsMissing,
-  }).eq("id", jobId);
-  // Delay standard prima del prossimo profilo
-  if (i < wcaIds.length - 1 && !cancelRef.current) {
-    const actualDelay = calcDelay(settings.baseDelay, settings.variation);
-    await appendLog(jobId, "WAIT", `${actualDelay}s`);
-    await new Promise(r => setTimeout(r, actualDelay * 1000));
-  }
-  continue;
-}
-```
-
-**Seconda ottimizzazione** (righe 104-134): il blocco "Ensure partner exists" interroga `directory_cache` per ogni profilo nuovo. Dato che gli ID vengono gia' dal job (che a sua volta li ha presi dalla cache), possiamo pre-caricare la mappa `wcaId -> {name, city}` dalla cache UNA SOLA VOLTA all'inizio del job, eliminando query ripetute.
-
-Nuovo approccio: prima del loop, caricare tutti i membri dalla cache:
-```
-// Pre-load directory cache map (una volta)
-const cacheMap = new Map<number, { name: string; city: string }>();
-const { data: cacheEntries } = await supabase
-  .from("directory_cache")
-  .select("members")
-  .eq("country_code", job.country_code);
-for (const entry of (cacheEntries || [])) {
-  for (const m of (entry.members as any[] || [])) {
-    if (m.wca_id) cacheMap.set(m.wca_id, { name: m.company_name || `WCA ${m.wca_id}`, city: m.city || "" });
-  }
-}
-```
-
-Poi nel loop, sostituire la query `directory_cache` con un semplice `cacheMap.get(wcaId)`.
-
-Stessa ottimizzazione per il blocco "Post-extraction fallback" (righe 251-265): usare `cacheMap` invece di interrogare di nuovo il DB.
+### BUG 4: Dialog "Riprova" viola la politica Zero Retry
+Il dialog a fine acquisizione (righe 1259-1278) offre di ritentare i partner senza contatti, generando nuove richieste WCA per gli stessi profili.
 
 ---
 
-## 2. Pipeline Acquisizione (`AcquisizionePartner.tsx`)
+## Piano di correzione
 
-**Problema**: Righe 229-248 -- quando `pageLoaded === false`, il profilo viene messo in una `retryQueue`. Poi righe 515-541 processano tutta la retry queue con nuove richieste WCA.
+### 1. Stabilizzare `useDownloadProcessor.ts`
 
-**Soluzione**: 
-- Rimuovere completamente la `retryQueue` (riga 94)
-- Quando `pageLoaded === false`, marcare il profilo come `done` (non `pending`), incrementare il contatore `failedLoads`, e proseguire senza nessun retry
-- Eliminare l'intero blocco "Process retry queue" (righe 515-542)
+- Spostare `settings` in un `useRef` (settingsRef) aggiornato tramite `useEffect`, cosi' `processJob` non dipende piu' da `settings` e non viene ricreato
+- Il polling `useEffect` diventa a montaggio singolo (`[]`), eliminando la ri-creazione dell'intervallo
+- Aggiungere un **DB check** nel polling: prima di avviare un job, verificare che non sia stato cancellato nel frattempo (query fresca)
+- `emergencyStop` deve anche impostare un flag `stoppedRef = true` che il polling controlla prima di prendere nuovi job
+
+### 2. Proteggere il polling dal restart dopo Stop
+
+Aggiungere nel `checkJobs`:
+```
+// Se e' stato dato un emergency stop, non prendere nuovi job per 10 secondi
+if (stoppedRef.current) return;
+```
+
+Il flag viene resettato solo quando l'utente avvia manualmente un nuovo job.
+
+### 3. Correggere auto-resume in `AcquisizionePartner.tsx`
+
+- All'avvio (riga 640), NON auto-riprendere i job "running" — mostrarli come "paused" e richiedere un click manuale per riprendere
+- Questo impedisce che un job fermato riparta automaticamente navigando tra le pagine
+
+### 4. Rimuovere il dialog "Riprova"
+
+- Eliminare il dialog "Riprova" (righe 1242-1284) e lo state `showRetryDialog`/`retryCount`
+- I partner senza contatti restano nel database come "skipped" per revisione manuale futura
+- Se l'utente vuole ritentarli, dovra' creare un nuovo job dedicato manualmente
 
 ---
 
-## 3. Scansione Directory (`scrape-wca-directory`)
+## Dettaglio tecnico
 
-La edge function `scrape-wca-directory` gia' non ha retry interni -- fa una sola chiamata Firecrawl per pagina. Anche `handleScan` in `AcquisizionePartner.tsx` non ritenta le pagine fallite. Nessuna modifica necessaria qui.
+### File: `src/hooks/useDownloadProcessor.ts`
 
----
+1. Aggiungere `settingsRef` e `stoppedRef`:
+```
+const settingsRef = useRef(settings);
+useEffect(() => { settingsRef.current = settings; }, [settings]);
+const stoppedRef = useRef(false);
+```
 
-## Risultato finale
+2. Dentro `processJob`, usare `settingsRef.current` invece di `settings` ovunque
 
-| Scenario | Prima | Dopo |
-|---|---|---|
-| 80 profili, tutto OK | 80 richieste WCA | 80 richieste WCA |
-| 80 profili, 10 falliti | fino a 160 richieste | **80 richieste** |
-| Caso peggiore assoluto | illimitato (loop) | **esattamente N richieste = N profili** |
+3. Rimuovere `settings` dalle dipendenze di `processJob` e `useEffect`
 
-I profili saltati (`skipped`) restano nel database con `last_contact_result: "skipped"` e possono essere rieseguiti con un nuovo job dedicato in un secondo momento.
+4. Nel polling loop, aggiungere il guard:
+```
+if (stoppedRef.current || cancelRef.current) return;
+```
+
+5. In `emergencyStop`, aggiungere `stoppedRef.current = true`
+
+6. Esporre un `resetStop` per permettere l'avvio manuale di nuovi job
+
+### File: `src/pages/AcquisizionePartner.tsx`
+
+1. Riga 640-663: Cambiare auto-resume in mostro-come-paused
+2. Righe 1242-1284: Rimuovere il blocco dialog "Riprova" e gli state correlati (`showRetryDialog`, `retryCount`)
+3. Riga 942-945: Rimuovere il trigger del dialog retry
 
 ### File modificati
-1. `src/hooks/useDownloadProcessor.ts` -- rimuovere retry su `pageLoaded === false`, pre-caricare cache map
-2. `src/pages/AcquisizionePartner.tsx` -- rimuovere `retryQueue` e relativo blocco di processing
 
+1. `src/hooks/useDownloadProcessor.ts` — stabilizzazione refs, guard anti-restart, stoppedRef
+2. `src/pages/AcquisizionePartner.tsx` — rimozione auto-resume e dialog retry
