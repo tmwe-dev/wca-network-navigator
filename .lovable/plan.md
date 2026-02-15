@@ -1,85 +1,73 @@
 
-# Rifattorizzazione Completa: Gestione Stop/Start dei Job
+# Rifattorizzazione Filtri, Card e Controllo Download
 
-## Problemi trovati (analisi riga per riga)
+## 1. Toolbar Filtri e Ordinamenti (CountryGrid.tsx)
 
-### BUG 1: Loop di polling instabile (`useDownloadProcessor.ts`)
-`processJob` dipende da `settings` (riga 355), che cambia ad ogni render. Questo causa la ri-creazione del `useEffect` di polling (riga 358), che nel cleanup imposta `cancelRef = true`, ma subito dopo il nuovo effetto imposta `cancelRef = false` (riga 372). Risultato: un job fermato puo' ripartire da solo.
+**Problema attuale**: I filtri e gli ordinamenti sono nascosti dentro un popover (icona ingranaggio) — poco intuitivo, difficile da scoprire.
 
-### BUG 2: Race condition nell'Emergency Stop
-Quando premi "BLOCCA TUTTO", `cancelRef = true` e `processingRef = false` vengono impostati lato client, e il DB viene aggiornato a "cancelled". Ma il polling loop gira ogni 5 secondi: se scatta **prima** che l'update del DB sia completato, trova il job ancora "running", imposta `cancelRef = false` e lo riavvia.
+**Soluzione**: Sostituire il popover con controlli visibili direttamente nella toolbar:
 
-### BUG 3: Auto-resume al montaggio del componente
-`AcquisizionePartner.tsx` (riga 640) riprende automaticamente qualsiasi job con status "running" quando il componente viene montato. Se navighi via e torni, il job riparte anche se lo avevi appena fermato.
+- **Ordinamento**: Una riga di bottoni segmentati sempre visibili: `Nome A-Z | N. Partner | Directory | Completamento`
+  - "Directory" e' il nuovo ordinamento richiesto: ordina per `cCount` (numero di aziende nella directory WCA)
+- **Filtri**: Una riga di chip cliccabili sotto la ricerca: `Tutti (247) | Scansionati (85) | Parziali (12) | Mai esplorati (150)`
+  - Il chip attivo ha sfondo colorato, gli altri sono ghost
+- Rimuovere completamente il `Popover` con `SlidersHorizontal` — tutto visibile a colpo d'occhio
+- I toggle "Solo Dir" e "Tutti" restano come switch compatti a destra
 
-### BUG 4: Dialog "Riprova" viola la politica Zero Retry
-Il dialog a fine acquisizione (righe 1259-1278) offre di ritentare i partner senza contatti, generando nuove richieste WCA per gli stessi profili.
-
----
-
-## Piano di correzione
-
-### 1. Stabilizzare `useDownloadProcessor.ts`
-
-- Spostare `settings` in un `useRef` (settingsRef) aggiornato tramite `useEffect`, cosi' `processJob` non dipende piu' da `settings` e non viene ricreato
-- Il polling `useEffect` diventa a montaggio singolo (`[]`), eliminando la ri-creazione dell'intervallo
-- Aggiungere un **DB check** nel polling: prima di avviare un job, verificare che non sia stato cancellato nel frattempo (query fresca)
-- `emergencyStop` deve anche impostare un flag `stoppedRef = true` che il polling controlla prima di prendere nuovi job
-
-### 2. Proteggere il polling dal restart dopo Stop
-
-Aggiungere nel `checkJobs`:
-```
-// Se e' stato dato un emergency stop, non prendere nuovi job per 10 secondi
-if (stoppedRef.current) return;
-```
-
-Il flag viene resettato solo quando l'utente avvia manualmente un nuovo job.
-
-### 3. Correggere auto-resume in `AcquisizionePartner.tsx`
-
-- All'avvio (riga 640), NON auto-riprendere i job "running" — mostrarli come "paused" e richiedere un click manuale per riprendere
-- Questo impedisce che un job fermato riparta automaticamente navigando tra le pagine
-
-### 4. Rimuovere il dialog "Riprova"
-
-- Eliminare il dialog "Riprova" (righe 1242-1284) e lo state `showRetryDialog`/`retryCount`
-- I partner senza contatti restano nel database come "skipped" per revisione manuale futura
-- Se l'utente vuole ritentarli, dovra' creare un nuovo job dedicato manualmente
+**Risultato**: Un bambino vede subito come filtrare (clicca il chip) e come ordinare (clicca il bottone).
 
 ---
 
-## Dettaglio tecnico
+## 2. Redesign Card Paese (CountryGrid.tsx)
 
-### File: `src/hooks/useDownloadProcessor.ts`
+**Problema attuale**: Le icone delle statistiche (Mail, Phone, Users) sono `w-3 h-3` con testo `text-[11px]` — troppo piccole su un monitor grande. La card ha dimensioni compatte (`p-3.5`) che non sfruttano lo spazio disponibile.
 
-1. Aggiungere `settingsRef` e `stoppedRef`:
+**Soluzione**:
+- Aumentare padding card da `p-3.5 pl-5` a `p-4 pl-6`
+- Bandiera paese da `text-2xl` a `text-3xl`
+- Nome paese da `text-sm` a `text-base`
+- Sezione statistiche (destra) riorganizzata in blocchetti leggibili:
+  - Directory badge: icona `w-5 h-5`, numero `text-lg font-bold`
+  - Partner/Email/Phone: icone `w-4 h-4`, numeri `text-sm font-bold` (da 11px a 14px)
+  - Ogni stat in un mini-badge con sfondo per separazione visiva
+- Percentuale e barra di progresso: testo da `text-[9px]` a `text-xs`
+- Status label ("Completo", "Non esplorato"): da `text-[9px]` a `text-xs`
+
+---
+
+## 3. Pausa tra Paesi nel Download (ActionPanel.tsx)
+
+**Situazione attuale**: 
+- **Scansione directory**: C'e' una pausa di 10 secondi tra un paese e l'altro (riga 229)
+- **Download profili**: I job vengono creati tutti immediatamente (`executeDownload` righe 288-296), e il processore li esegue in sequenza. Ma tra la fine del job di un paese e l'inizio del successivo **non c'e' alcuna pausa** — il polling trova il prossimo job `pending` e lo avvia subito
+
+**Soluzione**: Aggiungere nel `useDownloadProcessor.ts`, dopo il completamento di un job e prima di prendere il successivo nel polling loop, una pausa di 30 secondi:
 ```
-const settingsRef = useRef(settings);
-useEffect(() => { settingsRef.current = settings; }, [settings]);
-const stoppedRef = useRef(false);
+// Dopo il completamento, pausa inter-job
+await new Promise(r => setTimeout(r, 30000));
 ```
+Questo garantisce un intervallo di 30 secondi tra un paese e l'altro, simulando un comportamento umano che controlla i risultati prima di proseguire.
 
-2. Dentro `processJob`, usare `settingsRef.current` invece di `settings` ovunque
+---
 
-3. Rimuovere `settings` dalle dipendenze di `processJob` e `useEffect`
+## 4. Rimozione Retry dalla Scansione Directory (ActionPanel.tsx)
 
-4. Nel polling loop, aggiungere il guard:
-```
-if (stoppedRef.current || cancelRef.current) return;
-```
+**Problema**: Le righe 188-199 contengono un loop `for (let attempt = 1; attempt <= 3; attempt++)` per la scansione directory Firecrawl. Questo viola la politica "Zero Retry" approvata in precedenza.
 
-5. In `emergencyStop`, aggiungere `stoppedRef.current = true`
+**Soluzione**: Rimuovere il loop di retry. Una sola chiamata a `scrapeWcaDirectory`: se fallisce, il paese viene segnato come "scansione incompleta" e si procede al successivo senza tentativi aggiuntivi.
 
-6. Esporre un `resetStop` per permettere l'avvio manuale di nuovi job
+---
 
-### File: `src/pages/AcquisizionePartner.tsx`
+## 5. Esclusione Download ID gia' Presenti (ActionPanel.tsx)
 
-1. Riga 640-663: Cambiare auto-resume in mostro-come-paused
-2. Righe 1242-1284: Rimuovere il blocco dialog "Riprova" e gli state correlati (`showRetryDialog`, `retryCount`)
-3. Riga 942-945: Rimuovere il trigger del dialog retry
+**Situazione attuale**: Il sistema gia' esclude gli ID presenti nel database per default. La variabile `missingIds` (riga 119) filtra via tutti i `wca_id` gia' nella tabella `partners`. Il checkbox "Ri-scarica anche i N esistenti" (riga 432-435) permette di forzare il re-download.
 
-### File modificati
+**Nessuna modifica necessaria**: Il comportamento e' gia' corretto. Per default, solo gli ID mancanti vengono scaricati. Il flag esiste per chi vuole aggiornare i dati esistenti.
 
-1. `src/hooks/useDownloadProcessor.ts` — stabilizzazione refs, guard anti-restart, stoppedRef
-2. `src/pages/AcquisizionePartner.tsx` — rimozione auto-resume e dialog retry
+---
+
+## File modificati
+
+1. **`src/components/download/CountryGrid.tsx`** — Toolbar con filtri/ordinamenti visibili, nuovo sort "Directory", card ridisegnata con dimensioni maggiori
+2. **`src/components/download/ActionPanel.tsx`** — Rimozione loop retry 3-tentativi dalla scansione directory
+3. **`src/hooks/useDownloadProcessor.ts`** — Aggiunta pausa 30s tra job di paesi diversi nel polling loop
