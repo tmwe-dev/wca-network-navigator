@@ -399,6 +399,10 @@ export function useDownloadProcessor() {
           console.error("[DownloadProcessor] Error:", err);
         } finally {
           processingRef.current = false;
+          // Inter-job pause: 30s cooldown before picking up next country job
+          if (!stoppedRef.current && !cancelRef.current) {
+            await new Promise(r => setTimeout(r, 30000));
+          }
         }
       }
     };

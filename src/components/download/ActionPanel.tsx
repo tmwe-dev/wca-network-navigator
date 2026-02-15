@@ -186,17 +186,15 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           setCurrentPage(page);
           let result: DirectoryResult | null = null;
           let lastError = "";
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-              result = await scrapeWcaDirectory(country.code, netKey, page);
-              if (result.success) break;
+          try {
+            result = await scrapeWcaDirectory(country.code, netKey, page);
+            if (!result.success) {
               lastError = result.error || "Errore sconosciuto";
               result = null;
-            } catch (err) {
-              lastError = err instanceof Error ? err.message : "Errore di rete";
-              result = null;
             }
-            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : "Errore di rete";
+            result = null;
           }
 
           if (!result || !result.success) {
