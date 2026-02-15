@@ -156,7 +156,7 @@ export function useResumeAllJobs() {
       const ids = incomplete.map(j => j.id);
       const { error } = await supabase
         .from("download_jobs")
-        .update({ status: "running", error_message: null })
+        .update({ status: "pending", error_message: null })
         .in("id", ids);
 
       if (error) throw error;
