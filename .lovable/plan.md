@@ -1,113 +1,95 @@
 
-# Refactoring completo: polling loop a singolo thread
 
-## Problema strutturale
+# Fix definitivo: singleton a livello di modulo
 
-Il polling attuale usa `setInterval(checkJobs, 5000)` + `checkJobs()` immediato al mount. Questo crea DUE entry point concorrenti. In piu':
+## Causa radice trovata
 
-- `emergencyStop` imposta `processingRef.current = false` mentre `processJob` potrebbe essere ancora in esecuzione
-- Se `queryClient` cambia, l'effetto si smonta e rimonta, creando un NUOVO intervallo mentre il vecchio `processJob` potrebbe essere ancora attivo
-- `setInterval` non aspetta che la callback precedente finisca: se `checkJobs` impiega piu' di 5 secondi (e lo fa sempre, con le query DB), i tick si sovrappongono
+Il problema NON e' nel loop (il `while` loop e' corretto). Il problema e' che `cancelRef` e `stoppedRef` sono creati DENTRO il componente (righe 21-22). Quando il componente si rimonta (HMR, navigazione, re-render profondo):
 
-Nessuna combinazione di flag/mutex puo' risolvere questo in modo affidabile con `setInterval`.
+```text
+VECCHIO componente:
+  cancelRef_OLD = useRef(false)     <-- oggetto A
+  loop_OLD -> processJob_OLD -> extractContacts(wcaId) [in attesa 60s]
 
-## Soluzione: loop ricorsivo con `setTimeout`
+Cleanup: cancelRef_OLD.current = true   <-- imposta oggetto A
 
-Sostituire l'intero meccanismo `setInterval` + mutex con un singolo loop `while(true)` che:
-1. Controlla se ci sono job
-2. Se si, processa UN job
-3. Aspetta il cooldown
-4. Ricomincia dal punto 1
+NUOVO componente:
+  cancelRef_NEW = useRef(false)     <-- oggetto B (NUOVO, inizializzato a false!)
+  loop_NEW -> trova stesso job "running" -> processJob_NEW -> extractContacts(wcaId) [DUPLICATO!]
+```
 
-Un solo thread. Un solo flusso. Zero race condition.
+Due oggetti ref diversi. Il vecchio `processJob` non sa che il nuovo esiste. Due tab si aprono per lo stesso profilo.
 
-## Implementazione
+## Soluzione
+
+Spostare TUTTI i flag di controllo a livello di modulo (fuori dalla funzione `useDownloadProcessor`). Cosi' sopravvivono ai remount e c'e' un solo stato globale.
 
 ### File: `src/hooks/useDownloadProcessor.ts`
 
-Riscrivere il blocco del polling loop (righe 369-419) cosi':
+**Prima del componente** (righe 1-16), aggiungere:
+
+```typescript
+// ── MODULE-LEVEL singleton state (survives component remounts) ──
+let moduleCancel = false;
+let moduleStopped = false;
+let moduleLoopRunning = false;  // true = un loop e' gia' attivo, non crearne un altro
+```
+
+**Dentro il componente**, eliminare le righe 21-22 (`cancelRef`, `stoppedRef`) e sostituire ogni riferimento:
+
+- `cancelRef.current` diventa `moduleCancel`
+- `stoppedRef.current` diventa `moduleStopped`
+
+**Nel `useEffect` del loop** (riga 369), aggiungere una guardia singleton:
 
 ```typescript
 useEffect(() => {
-  let alive = true;
+  // Se un loop e' gia' attivo (da un mount precedente), non crearne un altro
+  if (moduleLoopRunning) return;
+  moduleLoopRunning = true;
 
   const loop = async () => {
-    while (alive && !stoppedRef.current) {
-      try {
-        const { data: jobs } = await supabase
-          .from("download_jobs")
-          .select("*")
-          .in("status", ["pending", "running"])
-          .eq("job_type", "download")
-          .order("created_at", { ascending: true })
-          .limit(1);
-
-        if (jobs && jobs.length > 0 && alive && !stoppedRef.current) {
-          const { data: fresh } = await supabase
-            .from("download_jobs")
-            .select("status")
-            .eq("id", jobs[0].id)
-            .single();
-
-          if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-            cancelRef.current = false;
-            await processJob(jobs[0]);
-
-            // Cooldown inter-job (30s) -- solo se non e' stato fermato
-            if (alive && !stoppedRef.current && !cancelRef.current) {
-              await new Promise(r => setTimeout(r, 30000));
-            }
-            continue; // Ricomincia subito a cercare il prossimo job
-          }
-        }
-      } catch (err) {
-        console.error("[DownloadProcessor] Error:", err);
-      }
-
-      // Nessun job trovato o errore: aspetta 5s e riprova
-      if (alive && !stoppedRef.current) {
-        await new Promise(r => setTimeout(r, 5000));
-      }
+    while (moduleLoopRunning && !moduleStopped) {
+      // ... logica esistente invariata, ma con moduleCancel/moduleStopped ...
     }
+    moduleLoopRunning = false;
   };
 
   loop();
-  return () => { alive = false; cancelRef.current = true; };
+  return () => {
+    moduleCancel = true;
+    // NON impostare moduleLoopRunning = false qui!
+    // Il loop si fermera' da solo quando vede moduleCancel = true
+  };
 }, [processJob]);
 ```
 
-### Cosa cambia
+**`processJob`**: sostituire tutti i `cancelRef.current` con `moduleCancel` e `stoppedRef.current` con `moduleStopped`. Circa 10 sostituzioni meccaniche.
 
-1. **Eliminato `setInterval`** -- nessun timer concorrente, un solo flusso `while`
-2. **Eliminato `processingRef`** -- non serve piu' un mutex, il loop e' intrinsecamente sequenziale
-3. **`alive` flag** -- booleano locale catturato dalla closure, azzerato nel cleanup. Impossibile da corrompere dall'esterno
-4. **`emergencyStop`** -- imposta solo `stoppedRef = true` e `cancelRef = true`. Non tocca piu' `processingRef` (che non esiste piu')
-5. **Un solo punto di ingresso** -- `loop()` chiamato una volta, mai duplicato
-
-### Aggiornamento `emergencyStop` e `resetStop`
+**`emergencyStop` e `resetStop`**:
 
 ```typescript
 const emergencyStop = useCallback(() => {
-  cancelRef.current = true;
-  stoppedRef.current = true;
+  moduleCancel = true;
+  moduleStopped = true;
 }, []);
 
 const resetStop = useCallback(() => {
-  stoppedRef.current = false;
-  cancelRef.current = false;
+  moduleStopped = false;
+  moduleCancel = false;
+  moduleLoopRunning = false;  // permette al prossimo mount di avviare un nuovo loop
 }, []);
-
-return { emergencyStop, resetStop };
 ```
 
-- Rimosso `processingRef.current = false` da `emergencyStop` (non esiste piu')
-- Rimosso `isProcessing` dal return (era comunque sempre `false` perche' i ref non causano re-render)
+### Riepilogo cambiamenti
 
-### Riepilogo modifiche
+Un solo file: `src/hooks/useDownloadProcessor.ts`
 
-Un solo file modificato: `src/hooks/useDownloadProcessor.ts`
-- Eliminata la variabile `processingRef`
-- Riscritto il `useEffect` del polling (righe 369-419) con un `while` loop
-- Semplificato `emergencyStop` (2 righe)
-- Semplificato il return (senza `isProcessing`)
-- `processJob` e tutta la logica di estrazione contatti restano IDENTICI
+1. Aggiungere 3 variabili a livello di modulo (`moduleCancel`, `moduleStopped`, `moduleLoopRunning`)
+2. Rimuovere `cancelRef` e `stoppedRef` (useRef)
+3. Sostituire meccanicamente ogni `.current` con la variabile di modulo corrispondente
+4. Aggiungere guardia `if (moduleLoopRunning) return` nel useEffect del loop
+5. Aggiornare cleanup, emergencyStop e resetStop
+
+Zero modifiche alla logica di processJob, all'estrazione contatti, o al salvataggio dati. Solo i flag di controllo cambiano da ref locale a variabile di modulo.
+
