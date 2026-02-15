@@ -1,51 +1,113 @@
 
+# Refactoring completo: polling loop a singolo thread
 
-# Fix definitivo: eliminazione race condition nel polling loop
+## Problema strutturale
 
-## Problema identificato
+Il polling attuale usa `setInterval(checkJobs, 5000)` + `checkJobs()` immediato al mount. Questo crea DUE entry point concorrenti. In piu':
 
-Il bug e' nel blocco `finally` del polling loop. La sequenza e':
+- `emergencyStop` imposta `processingRef.current = false` mentre `processJob` potrebbe essere ancora in esecuzione
+- Se `queryClient` cambia, l'effetto si smonta e rimonta, creando un NUOVO intervallo mentre il vecchio `processJob` potrebbe essere ancora attivo
+- `setInterval` non aspetta che la callback precedente finisca: se `checkJobs` impiega piu' di 5 secondi (e lo fa sempre, con le query DB), i tick si sovrappongono
 
-```text
-1. processJob() completa (o e' in corso)
-2. finally: processingRef = false    <-- MUTEX RILASCIATO
-3. finally: await 30s cooldown       <-- 30 secondi di attesa
-                ^
-                |-- durante questi 30s, il setInterval ogni 5s chiama checkJobs()
-                |-- processingRef e' false --> entra!
-                |-- trova lo stesso job "running" nel DB
-                |-- chiama processJob() di NUOVO --> DUPLICATO!
-```
+Nessuna combinazione di flag/mutex puo' risolvere questo in modo affidabile con `setInterval`.
 
-Il mutex viene rilasciato PRIMA del cooldown, creando una finestra di 30 secondi in cui il polling puo' rientrare e lanciare una seconda (o terza) istanza di processJob sullo stesso job.
+## Soluzione: loop ricorsivo con `setTimeout`
 
-## Soluzione
+Sostituire l'intero meccanismo `setInterval` + mutex con un singolo loop `while(true)` che:
+1. Controlla se ci sono job
+2. Se si, processa UN job
+3. Aspetta il cooldown
+4. Ricomincia dal punto 1
 
-Spostare il cooldown PRIMA del rilascio del mutex, oppure (piu' pulito) tenere il mutex durante il cooldown. Il `processingRef.current = false` deve essere l'ULTIMA istruzione del `finally`.
+Un solo thread. Un solo flusso. Zero race condition.
 
-### Modifica a `src/hooks/useDownloadProcessor.ts`
+## Implementazione
 
-Ristrutturare il `finally` block cosi':
+### File: `src/hooks/useDownloadProcessor.ts`
+
+Riscrivere il blocco del polling loop (righe 369-419) cosi':
 
 ```typescript
-} finally {
-  // Cooldown PRIMA di rilasciare il mutex
-  if (didProcess && !stoppedRef.current && !cancelRef.current) {
-    await new Promise(r => setTimeout(r, 30000));
-  }
-  // Rilascia il mutex DOPO il cooldown
-  processingRef.current = false;
-}
+useEffect(() => {
+  let alive = true;
+
+  const loop = async () => {
+    while (alive && !stoppedRef.current) {
+      try {
+        const { data: jobs } = await supabase
+          .from("download_jobs")
+          .select("*")
+          .in("status", ["pending", "running"])
+          .eq("job_type", "download")
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (jobs && jobs.length > 0 && alive && !stoppedRef.current) {
+          const { data: fresh } = await supabase
+            .from("download_jobs")
+            .select("status")
+            .eq("id", jobs[0].id)
+            .single();
+
+          if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
+            cancelRef.current = false;
+            await processJob(jobs[0]);
+
+            // Cooldown inter-job (30s) -- solo se non e' stato fermato
+            if (alive && !stoppedRef.current && !cancelRef.current) {
+              await new Promise(r => setTimeout(r, 30000));
+            }
+            continue; // Ricomincia subito a cercare il prossimo job
+          }
+        }
+      } catch (err) {
+        console.error("[DownloadProcessor] Error:", err);
+      }
+
+      // Nessun job trovato o errore: aspetta 5s e riprova
+      if (alive && !stoppedRef.current) {
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
+  };
+
+  loop();
+  return () => { alive = false; cancelRef.current = true; };
+}, [processJob]);
 ```
 
-### Perche' funziona
+### Cosa cambia
 
-- Il mutex resta `true` per tutta la durata del cooldown
-- Ogni tick del `setInterval` durante il cooldown vede `processingRef === true` e fa `return` immediatamente
-- Zero finestre di race condition
-- Nessuna possibilita' di esecuzioni concorrenti
+1. **Eliminato `setInterval`** -- nessun timer concorrente, un solo flusso `while`
+2. **Eliminato `processingRef`** -- non serve piu' un mutex, il loop e' intrinsecamente sequenziale
+3. **`alive` flag** -- booleano locale catturato dalla closure, azzerato nel cleanup. Impossibile da corrompere dall'esterno
+4. **`emergencyStop`** -- imposta solo `stoppedRef = true` e `cancelRef = true`. Non tocca piu' `processingRef` (che non esiste piu')
+5. **Un solo punto di ingresso** -- `loop()` chiamato una volta, mai duplicato
 
-### File modificato
+### Aggiornamento `emergencyStop` e `resetStop`
 
-**`src/hooks/useDownloadProcessor.ts`** -- Solo il blocco `finally` (righe 403-409): invertire l'ordine tra cooldown e rilascio del mutex.
+```typescript
+const emergencyStop = useCallback(() => {
+  cancelRef.current = true;
+  stoppedRef.current = true;
+}, []);
 
+const resetStop = useCallback(() => {
+  stoppedRef.current = false;
+  cancelRef.current = false;
+}, []);
+
+return { emergencyStop, resetStop };
+```
+
+- Rimosso `processingRef.current = false` da `emergencyStop` (non esiste piu')
+- Rimosso `isProcessing` dal return (era comunque sempre `false` perche' i ref non causano re-render)
+
+### Riepilogo modifiche
+
+Un solo file modificato: `src/hooks/useDownloadProcessor.ts`
+- Eliminata la variabile `processingRef`
+- Riscritto il `useEffect` del polling (righe 369-419) con un `while` loop
+- Semplificato `emergencyStop` (2 righe)
+- Semplificato il return (senza `isProcessing`)
+- `processJob` e tutta la logica di estrazione contatti restano IDENTICI
