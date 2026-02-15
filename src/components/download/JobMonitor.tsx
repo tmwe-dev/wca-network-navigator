@@ -232,6 +232,7 @@ function JobCard({ job, pauseResume, updateSpeed }: {
         processedIds={(job.processed_ids as number[]) || []}
         countryName={job.country_name} countryCode={job.country_code}
         networkName={job.network_name} isDark={isDark}
+        jobStatus={job.status}
       />
     </div>
   );
