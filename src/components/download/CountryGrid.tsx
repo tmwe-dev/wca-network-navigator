@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
-  SlidersHorizontal, X, FolderDown, Trophy, CheckSquare,
+  X, FolderDown, Trophy, CheckSquare, ArrowDownAZ, BarChart3, Percent,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
@@ -27,7 +26,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
-  const [sortBy, setSortBy] = useState<"name" | "partners" | "completion">("name");
+  const [sortBy, setSortBy] = useState<"name" | "partners" | "directory" | "completion">("name");
   const [showEmpty, setShowEmpty] = useState(false);
 
   const { data: partnerData = {} } = useQuery({
@@ -86,6 +85,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "partners") return (partnerCounts[b.code] || 0) - (partnerCounts[a.code] || 0);
+    if (sortBy === "directory") return (cacheCounts[b.code] || 0) - (cacheCounts[a.code] || 0);
     const compA = cacheCounts[a.code] ? (partnerCounts[a.code] || 0) / cacheCounts[a.code] : exploredSet.has(a.code) ? 1 : -1;
     const compB = cacheCounts[b.code] ? (partnerCounts[b.code] || 0) / cacheCounts[b.code] : exploredSet.has(b.code) ? 1 : -1;
     return compA - compB;
@@ -107,10 +107,6 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     });
   };
 
-  const filterLabel = filterMode === "all" ? "Tutti" : filterMode === "explored" ? "Scansionati" : filterMode === "partial" ? "Parziali" : "Mai esplorati";
-  const sortLabel = sortBy === "name" ? "Nome A-Z" : sortBy === "partners" ? "N° partner ↓" : "Completamento";
-  const hasActiveFilter = filterMode !== "all" || sortBy !== "name";
-
   const filters = [
     { key: "all" as const, label: "Tutti", count: WCA_COUNTRIES.length, icon: Globe },
     { key: "explored" as const, label: "Scansionati", count: exploredCount, icon: CheckCircle },
@@ -119,113 +115,71 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   ];
 
   const sorts = [
-    { key: "name" as const, label: "Nome A-Z" },
-    { key: "partners" as const, label: "N° partner ↓" },
-    { key: "completion" as const, label: "Completamento" },
+    { key: "name" as const, label: "Nome", icon: ArrowDownAZ },
+    { key: "partners" as const, label: "Partner", icon: Users },
+    { key: "directory" as const, label: "Directory", icon: FolderDown },
+    { key: "completion" as const, label: "Completamento", icon: Percent },
   ];
+
+  const chipBase = `px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border`;
+  const chipActive = isDark
+    ? "bg-sky-500/20 border-sky-500/30 text-sky-300 shadow-sm shadow-sky-500/10"
+    : "bg-sky-100 border-sky-300 text-sky-700 shadow-sm";
+  const chipInactive = isDark
+    ? "bg-white/[0.03] border-white/[0.08] text-slate-400 hover:bg-white/[0.06] hover:text-slate-300"
+    : "bg-white/50 border-slate-200 text-slate-500 hover:bg-white hover:text-slate-700";
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      {/* === TOOLBAR: Search + Filter Dropdown === */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
-          <Input
-            placeholder="Cerca paese..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
-          />
-        </div>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              className={`relative flex items-center justify-center w-11 h-11 rounded-2xl border transition-all ${
-                isDark
-                  ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]"
-                  : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white shadow-sm"
-              }`}
-            >
-              <SlidersHorizontal className="w-5 h-5" />
-              {hasActiveFilter && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className={`w-64 p-3 rounded-2xl ${isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}
-          >
-            {/* Sort section */}
-            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Ordinamento</p>
-            <div className="flex flex-col gap-1 mb-3">
-              {sorts.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setSortBy(s.key)}
-                  className={`text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    sortBy === s.key
-                      ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-50 text-sky-700"
-                      : isDark ? "text-slate-400 hover:bg-white/[0.05]" : "text-slate-500 hover:bg-slate-50"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Filter section */}
-            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${th.dim}`}>Filtro</p>
-            <div className="flex flex-col gap-1 mb-3">
-              {filters.map(f => {
-                const Icon = f.icon;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setFilterMode(f.key)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      filterMode === f.key
-                        ? isDark ? "bg-sky-500/20 text-sky-300" : "bg-sky-50 text-sky-700"
-                        : isDark ? "text-slate-400 hover:bg-white/[0.05]" : "text-slate-500 hover:bg-slate-50"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span className="flex-1">{f.label}</span>
-                    <span className="font-mono text-[10px] opacity-60">{f.count}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Select all */}
-            <button
-              onClick={handleSelectAll}
-              className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
-                allFilteredSelected
-                  ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                  : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300" : "bg-white/70 border-slate-200 text-slate-600"
-              }`}
-            >
-              {allFilteredSelected ? "Deseleziona" : "Seleziona"} {filtered.length}
-            </button>
-          </PopoverContent>
-        </Popover>
+      {/* === SEARCH === */}
+      <div className="relative">
+        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${th.dim}`} />
+        <Input
+          placeholder="Cerca paese..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className={`pl-12 h-11 rounded-2xl text-base ${th.input}`}
+        />
       </div>
 
-      {/* Active filter indicator */}
-      {hasActiveFilter && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[10px] uppercase tracking-wider font-semibold ${th.dim}`}>{filterLabel}</span>
-          <span className={`text-[10px] ${th.dim}`}>·</span>
-          <span className={`text-[10px] uppercase tracking-wider font-semibold ${th.dim}`}>{sortLabel}</span>
-          <span className={`text-[10px] font-mono ${th.dim}`}>({filtered.length})</span>
-        </div>
-      )}
+      {/* === FILTER CHIPS === */}
+      <div className="flex flex-wrap gap-1.5">
+        {filters.map(f => {
+          const Icon = f.icon;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilterMode(f.key)}
+              className={`${chipBase} ${filterMode === f.key ? chipActive : chipInactive} flex items-center gap-1.5`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {f.label}
+              <span className="font-mono text-[10px] opacity-70">{f.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* === SORT BUTTONS === */}
+      <div className="flex items-center gap-1.5">
+        <span className={`text-[10px] uppercase tracking-wider font-semibold mr-1 ${th.dim}`}>Ordina:</span>
+        {sorts.map(s => {
+          const Icon = s.icon;
+          return (
+            <button
+              key={s.key}
+              onClick={() => setSortBy(s.key)}
+              className={`${chipBase} ${sortBy === s.key ? chipActive : chipInactive} flex items-center gap-1 py-1`}
+            >
+              <Icon className="w-3 h-3" />
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* === CONTROLS: Select All + Solo Dir + Flags === */}
       <div className="flex items-center gap-2">
-        {/* Flags */}
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-1 items-center flex-1 min-w-0">
             {selected.map(c => (
@@ -247,7 +201,6 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
         )}
         {selected.length === 0 && <div className="flex-1" />}
 
-        {/* Select All button */}
         <button
           onClick={handleSelectAll}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border whitespace-nowrap ${
@@ -260,7 +213,6 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
           {allFilteredSelected ? "Deseleziona" : "Seleziona"} ({filtered.length})
         </button>
 
-        {/* Solo Dir toggle */}
         {onDirectoryOnlyChange && (
           <label className={`flex items-center gap-1.5 text-[10px] cursor-pointer whitespace-nowrap ${isDark ? "text-sky-400" : "text-sky-600"}`}>
             <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-75" />
@@ -275,9 +227,9 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
         </label>
       </div>
 
-      {/* === COUNTRY LIST (single column) === */}
+      {/* === COUNTRY LIST === */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-2 pr-2">
+        <div className="flex flex-col gap-2.5 pr-2">
           {filtered.map(c => {
             const isSelected = selectedCodes.has(c.code);
             const pCount = partnerCounts[c.code] || 0;
@@ -292,7 +244,6 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
             const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
             const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
 
-            // Card tint based on status
             const cardTint = isSelected
               ? isDark
                 ? "bg-sky-950/60 border-sky-400/30 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10"
@@ -332,78 +283,82 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                   isSelected ? "opacity-100" : "opacity-50 group-hover:opacity-90"
                 }`} />
 
-                <div className="relative p-3.5 pl-5">
+                <div className="relative p-4 pl-6">
                   {/* Header: flag + name + status */}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-2xl leading-none flex-shrink-0">{getCountryFlag(c.code)}</span>
+                      <span className="text-3xl leading-none flex-shrink-0">{getCountryFlag(c.code)}</span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-bold truncate ${th.h2}`}>{c.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <p className={`text-base font-bold truncate ${th.h2}`}>{c.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {isComplete && (
-                            <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                              <Trophy className={`w-3.5 h-3.5 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                            <span className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                              <Trophy className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
                               Completo
                             </span>
                           )}
                           {!isComplete && hasDirectoryScan && (
-                            <span className={`text-[9px] font-mono ${th.dim}`}>
+                            <span className={`text-xs font-mono ${th.dim}`}>
                               {pCount}/{cCount} · {dlPct}%
                             </span>
                           )}
-                          
                           {hasDbOnly && (
-                            <span className={`text-[9px] font-mono ${isDark ? "text-amber-400/70" : "text-amber-600/70"}`}>
+                            <span className={`text-xs font-mono ${isDark ? "text-amber-400/70" : "text-amber-600/70"}`}>
                               {pCount} partner
                             </span>
                           )}
                           {!hasDirectoryScan && pCount === 0 && (
-                            <span className={`text-[9px] ${th.dim}`}>Non esplorato</span>
+                            <span className={`text-xs ${th.dim}`}>Non esplorato</span>
                           )}
                         </div>
                       </div>
                     </div>
 
                     {/* Right side stats */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Directory total — always prominent when available */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       {hasDirectoryScan && cCount > 0 && (
-                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${
                           isDark ? "bg-sky-500/15 border border-sky-500/25" : "bg-sky-50 border border-sky-200"
                         }`}>
-                          <FolderDown className={`w-4 h-4 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
-                          <span className={`text-base font-mono font-extrabold ${isDark ? "text-sky-300" : "text-sky-700"}`}>{cCount}</span>
+                          <FolderDown className={`w-5 h-5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                          <span className={`text-lg font-mono font-extrabold ${isDark ? "text-sky-300" : "text-sky-700"}`}>{cCount}</span>
                         </div>
                       )}
                       {pCount > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex items-center gap-0.5">
-                            <Mail className={`w-3 h-3 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                            <span className={`text-[11px] font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
+                        <div className="flex items-center gap-3">
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
+                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
+                          }`}>
+                            <Mail className={`w-4 h-4 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
+                            <span className={`text-sm font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
                           </div>
-                          <div className="flex items-center gap-0.5">
-                            <Phone className={`w-3 h-3 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
-                            <span className={`text-[11px] font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
+                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
+                          }`}>
+                            <Phone className={`w-4 h-4 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
+                            <span className={`text-sm font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
                           </div>
-                          <div className="flex items-center gap-0.5">
-                            <Users className={`w-3 h-3 ${th.dim}`} />
-                            <span className={`text-[11px] font-mono font-bold ${th.mono}`}>{pCount}</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
+                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
+                          }`}>
+                            <Users className={`w-4 h-4 ${th.dim}`} />
+                            <span className={`text-sm font-mono font-bold ${th.mono}`}>{pCount}</span>
                           </div>
                         </div>
                       )}
                     </div>
 
                     {isSelected && (
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/20" : "bg-sky-100"}`}>
-                        <CheckCircle className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/20" : "bg-sky-100"}`}>
+                        <CheckCircle className={`w-4 h-4 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
                       </div>
                     )}
                   </div>
 
                   {/* Progress bar */}
                   {pCount > 0 && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             pctEmail >= 60
@@ -415,7 +370,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                           style={{ width: `${pctEmail}%` }}
                         />
                       </div>
-                      <span className={`text-[9px] font-mono tabular-nums w-8 text-right ${
+                      <span className={`text-xs font-mono tabular-nums w-10 text-right ${
                         pctEmail >= 60 ? (isDark ? "text-emerald-400" : "text-emerald-600") : pctEmail >= 30 ? (isDark ? "text-amber-400" : "text-amber-600") : (isDark ? "text-rose-400" : "text-rose-500")
                       }`}>
                         {pctEmail}%
