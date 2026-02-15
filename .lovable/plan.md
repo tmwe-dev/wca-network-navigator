@@ -1,43 +1,48 @@
 
+# Fix: Download processor si blocca dopo 2 profili
 
-# Percentuale Download Grande nella Card Paese
+## Diagnosi
 
-## Situazione attuale
+Il processore di download ha un bug nel loop di polling che impedisce la ripresa dei job.
 
-La percentuale di completamento download (`dlPct = pCount / cCount`) esiste gia' nel codice (riga 245) ma viene mostrata piccola nel sottotitolo come testo `text-xs font-mono` insieme ad altri dati (es. "15/20 · 75%"). Non e' visivamente prominente.
+### Flusso del bug
 
-## Modifica proposta
+1. Il job processa alcuni profili
+2. L'estensione Chrome diventa momentaneamente non disponibile (o un qualsiasi break nel loop interno)
+3. La fix precedente imposta `cancelRef.current = true` (riga 126) per evitare che il job venga marcato come "completed"
+4. Il job viene messo in pausa nel DB -- fin qui tutto corretto
+5. L'utente clicca "Riavvia" nel JobMonitor --> il DB viene aggiornato a status="running"
+6. Ma il loop di polling (riga 373) controlla `cancelRef.current` come guardia di ingresso:
+   ```
+   if (stoppedRef.current || cancelRef.current || processingRef.current) return;
+   ```
+7. `cancelRef` e' ancora `true` --> il polling salta OGNI tick --> il job non viene mai ripreso
+8. Il processore e' effettivamente morto
 
-Aggiungere un **grande indicatore percentuale** sul lato destro di ogni card paese, ben visibile e separato dalle altre statistiche:
+### Problema secondario
 
-- **Posizione**: A destra, prima del badge directory e delle statistiche email/telefono
-- **Dimensione**: `text-2xl font-extrabold` -- il dato piu' grande della card
-- **Colore dinamico**: 
-  - Verde (100%) -- download completo
-  - Giallo/Ambra (1-99%) -- download parziale
-  - Rosso (0%) -- nessun download
-  - Grigio per paesi senza dati directory (nessuna percentuale mostrata)
-- **Formato**: Numero grande con simbolo "%" piu' piccolo a fianco (es. **75**%)
-- **Sfondo**: Mini-badge con bordo colorato per risaltare (come il badge directory gia' esistente)
+Il pulsante "Riavvia" in JobMonitor chiama solo `pauseResume.mutate({ action: "resume" })` che aggiorna il DB, ma **non** chiama `resetStop()` del processore per pulire i flag interni.
 
-### Logica
+## Soluzione
 
+### 1. Rimuovere `cancelRef` dalla guardia del polling (`useDownloadProcessor.ts`, riga 373)
+
+`cancelRef` serve solo come segnale interno per interrompere il loop di `processJob`. Non deve bloccare il polling esterno. La riga 396 lo resetta gia' a `false` prima di ogni nuova esecuzione di `processJob`.
+
+Cambiare da:
+```typescript
+if (stoppedRef.current || cancelRef.current || processingRef.current) return;
 ```
-Se il paese ha dati nella directory (cCount > 0):
-  dlPct = Math.round((pCount / cCount) * 100)
-  Mostra: "75%" grande a destra
-Altrimenti:
-  Non mostra la percentuale (il paese non e' stato ancora scansionato)
+A:
+```typescript
+if (stoppedRef.current || processingRef.current) return;
 ```
 
-### Layout card aggiornato
+Questo garantisce che:
+- `stoppedRef` blocca dopo emergency stop (richiede reset manuale)
+- `processingRef` blocca esecuzioni concorrenti
+- `cancelRef` resta un segnale interno per il loop di processJob, resettato automaticamente a ogni nuovo job (riga 396)
 
-```
-[Stripe] [Flag] [Nome + stato]          [%%] [Dir badge] [Email] [Phone] [Users] [✓]
-```
+### File modificato
 
-La percentuale diventa il primo dato numerico che si legge a colpo d'occhio.
-
-## File modificato
-
-1. **`src/components/download/CountryGrid.tsx`** -- Aggiunta badge percentuale grande nella sezione "Right side stats" di ogni card, con colore dinamico basato su `dlPct`
+**`src/hooks/useDownloadProcessor.ts`** -- Una sola riga: rimuovere `cancelRef.current` dalla condizione di guardia del polling loop.
