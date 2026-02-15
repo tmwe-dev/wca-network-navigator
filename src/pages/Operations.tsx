@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, FolderDown } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, FolderDown, Play } from "lucide-react";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useDownloadJobs, useEmergencyStop } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs, useEmergencyStop, useResumeAllJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { getCountryFlag } from "@/lib/countries";
 import { Link } from "react-router-dom";
@@ -53,9 +53,11 @@ export default function Operations() {
   const { data: globalStats } = useGlobalStats();
   const { data: jobs } = useDownloadJobs();
   const emergencyStopMutation = useEmergencyStop();
+  const resumeAllMutation = useResumeAllJobs();
   const { emergencyStop: stopProcessor, resetStop } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
+  const cancelledIncompleteJobs = useMemo(() => (jobs || []).filter(j => j.status === "cancelled" && j.current_index < j.total_count), [jobs]);
   const countryJobs = useMemo(() => {
     if (selectedCountries.length === 0) return jobs || [];
     const codes = new Set(selectedCountries.map(c => c.code));
@@ -108,6 +110,15 @@ export default function Operations() {
             </div>
             <div className="flex items-center gap-3">
               <WcaSessionIndicator />
+              {cancelledIncompleteJobs.length > 0 && activeJobs.length === 0 && (
+                <button
+                  onClick={() => { resetStop(); resumeAllMutation.mutate(); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${isDark ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  RIAVVIA TUTTI ({cancelledIncompleteJobs.length})
+                </button>
+              )}
               <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>

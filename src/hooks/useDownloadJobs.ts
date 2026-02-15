@@ -140,6 +140,39 @@ export function useUpdateJobSpeed() {
   });
 }
 
+export function useResumeAllJobs() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: jobs } = await supabase
+        .from("download_jobs")
+        .select("id")
+        .eq("status", "cancelled")
+        .filter("current_index", "lt", "total_count" as any);
+
+      if (!jobs || jobs.length === 0) return 0;
+
+      const { error } = await supabase
+        .from("download_jobs")
+        .update({ status: "running", error_message: null })
+        .eq("status", "cancelled");
+
+      if (error) throw error;
+      return jobs.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      if (count && count > 0) {
+        toast({ title: "▶️ Riavviati", description: `${count} job rimessi in esecuzione` });
+      }
+    },
+    onError: (err) => {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
 export function useEmergencyStop() {
   const queryClient = useQueryClient();
 
