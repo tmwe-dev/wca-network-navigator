@@ -8,18 +8,15 @@ import { useQueryClient } from "@tanstack/react-query";
  * Background download processor for Operations Center.
  * Uses MODULE-LEVEL singleton state to survive component remounts (HMR, navigation).
  * 
- * Rules:
- * 1. One request at a time (sequential, DB lock)
- * 2. Minimum baseDelay ± variation seconds between requests (hard floor 10s)
- * 3. Zero retry: each WCA profile gets exactly 1 request
- * 4. moduleStopped prevents ghost restarts after emergency stop
- * 5. moduleLoopRunning prevents duplicate loops on remount
+ * Anti-duplication: uses an incremental activeLoopId instead of a boolean.
+ * Each loop instance knows its own ID; if it doesn't match activeLoopId, it exits.
+ * This is immune to HMR because the new module generates a new ID.
  */
 
 // ── MODULE-LEVEL singleton state (survives component remounts) ──
 let moduleCancel = false;
 let moduleStopped = false;
-let moduleLoopRunning = false;
+let activeLoopId = 0;
 
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
@@ -27,7 +24,6 @@ export function useDownloadProcessor() {
   const queryClient = useQueryClient();
   const availableRef = useRef(isAvailable);
 
-  // Stable refs to avoid re-creating processJob on every render
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
@@ -51,15 +47,17 @@ export function useDownloadProcessor() {
     }
   };
 
-  // processJob has NO reactive dependencies — uses refs only
-  const processJob = useCallback(async (job: any) => {
+  // processJob receives loopId to verify ownership before critical operations
+  const processJob = useCallback(async (job: any, loopId: number) => {
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
     const processedSet = new Set<number>(((job.processed_ids as number[]) || []));
     const s = settingsRef.current;
 
-    // Mark as running
+    // Verify loop ownership before starting
+    if (loopId !== activeLoopId || moduleStopped) return;
+
     await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
     await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${s.baseDelay}s ±${s.variation}s`);
 
@@ -78,7 +76,7 @@ export function useDownloadProcessor() {
       return;
     }
 
-    // Pre-load directory cache map (once, no per-profile queries)
+    // Pre-load directory cache map
     const cacheMap = new Map<number, { name: string; city: string }>();
     const { data: cacheEntries } = await supabase
       .from("directory_cache")
@@ -100,7 +98,8 @@ export function useDownloadProcessor() {
 
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
-        if (moduleCancel || moduleStopped) break;
+        // Check ALL stop conditions including loopId ownership
+        if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
 
         // Check job status from DB (pause/cancel from UI)
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
@@ -108,12 +107,12 @@ export function useDownloadProcessor() {
         if (freshJob.status === "paused") {
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
-            if (moduleCancel || moduleStopped) break;
+            if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
             const { data: check } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
             if (!check || check.status === "cancelled") { moduleCancel = true; break; }
             if (check.status === "running") break;
           }
-          if (moduleCancel || moduleStopped) break;
+          if (moduleCancel || moduleStopped || loopId !== activeLoopId) break;
         }
 
         const wcaId = wcaIds[i];
@@ -121,13 +120,16 @@ export function useDownloadProcessor() {
 
         await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
+        // Verify loop ownership before opening extension tab
+        if (loopId !== activeLoopId) break;
+
         // Check extension availability
         if (!availableRef.current && !(await checkAvailableRef.current())) {
           await supabase.from("download_jobs").update({
             status: "paused",
             error_message: "⚠️ Estensione Chrome non disponibile. Installala e ripremi il job.",
           }).eq("id", jobId);
-          moduleCancel = true; // Prevent completion block from overwriting "paused"
+          moduleCancel = true;
           break;
         }
 
@@ -137,7 +139,6 @@ export function useDownloadProcessor() {
         if (existing) {
           partnerId = existing.id;
         } else {
-          // Use pre-loaded cacheMap (no per-profile DB query)
           const cached = cacheMap.get(wcaId);
           const realName = cached?.name || `WCA ${wcaId}`;
           const realCity = cached?.city || "";
@@ -159,7 +160,7 @@ export function useDownloadProcessor() {
         try {
           const result = await extractContactsRef.current(wcaId);
 
-          // ZERO RETRY: if page didn't load, mark as skipped and move on
+          // ZERO RETRY: if page didn't load, mark as skipped
           if (result.pageLoaded === false) {
             await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
             contactsMissing++;
@@ -171,7 +172,7 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped) {
+            if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped && loopId === activeLoopId) {
               const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
               await appendLog(jobId, "WAIT", `${actualDelay}s`);
               await new Promise(r => setTimeout(r, actualDelay * 1000));
@@ -363,22 +364,22 @@ export function useDownloadProcessor() {
           error_message: null,
         }).eq("id", jobId);
 
-        // Periodic invalidation of CountryGrid queries (every 5 profiles)
+        // Periodic invalidation
         if (processedSet.size > 0 && processedSet.size % 5 === 0) {
           queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
         }
 
-        // Simplified delay: baseDelay ± variation, hard floor 10s
-        if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped) {
+        // Delay between profiles
+        if (i < wcaIds.length - 1 && !moduleCancel && !moduleStopped && loopId === activeLoopId) {
           const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
           await appendLog(jobId, "WAIT", `${actualDelay}s`);
           await new Promise(r => setTimeout(r, actualDelay * 1000));
         }
       }
 
-      // Complete job
-      if (!moduleCancel && !moduleStopped) {
+      // Complete job (only if this loop instance is still the active one)
+      if (!moduleCancel && !moduleStopped && loopId === activeLoopId) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
@@ -399,16 +400,19 @@ export function useDownloadProcessor() {
       queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
       queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     }
-  }, [queryClient]); // Only queryClient — everything else via refs
+  }, [queryClient]);
 
-  // Main polling loop: single-threaded async while loop (singleton via moduleLoopRunning)
+  // Ref to always access latest processJob without useEffect dependency
+  const processJobRef = useRef(processJob);
+  useEffect(() => { processJobRef.current = processJob; }, [processJob]);
+
+  // Main polling loop: mount-only, uses incremental loopId for anti-duplication
   useEffect(() => {
-    // If a loop is already active (from a previous mount), do NOT create another
-    if (moduleLoopRunning) return;
-    moduleLoopRunning = true;
+    const myId = ++activeLoopId; // New session — invalidates any previous loop
+    moduleCancel = false; // Reset cancel on fresh mount
 
     const loop = async () => {
-      while (moduleLoopRunning && !moduleStopped) {
+      while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
         try {
           const { data: jobs } = await supabase
             .from("download_jobs")
@@ -418,7 +422,7 @@ export function useDownloadProcessor() {
             .order("created_at", { ascending: true })
             .limit(1);
 
-          if (jobs && jobs.length > 0 && moduleLoopRunning && !moduleStopped) {
+          if (jobs && jobs.length > 0 && myId === activeLoopId && !moduleStopped && !moduleCancel) {
             const { data: fresh } = await supabase
               .from("download_jobs")
               .select("status")
@@ -426,11 +430,10 @@ export function useDownloadProcessor() {
               .single();
 
             if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-              moduleCancel = false;
-              await processJob(jobs[0]);
+              await processJobRef.current(jobs[0], myId);
 
               // Cooldown inter-job (30s)
-              if (moduleLoopRunning && !moduleStopped && !moduleCancel) {
+              if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
                 await new Promise(r => setTimeout(r, 30000));
               }
               continue;
@@ -441,20 +444,19 @@ export function useDownloadProcessor() {
         }
 
         // No job found or error: wait 5s and retry
-        if (moduleLoopRunning && !moduleStopped) {
+        if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
           await new Promise(r => setTimeout(r, 5000));
         }
       }
-      moduleLoopRunning = false;
     };
 
     loop();
     return () => {
       moduleCancel = true;
-      // Do NOT set moduleLoopRunning = false here!
-      // The loop will stop on its own when it sees moduleCancel = true
+      // The old loop will exit because moduleCancel = true
+      // AND because the next mount will generate a new myId !== activeLoopId
     };
-  }, [processJob]);
+  }, []); // Mount-only — no dependencies
 
   const emergencyStop = useCallback(() => {
     moduleCancel = true;
@@ -464,7 +466,45 @@ export function useDownloadProcessor() {
   const resetStop = useCallback(() => {
     moduleStopped = false;
     moduleCancel = false;
-    moduleLoopRunning = false; // allows next mount to start a new loop
+    // Force a new loop by incrementing activeLoopId — but the useEffect
+    // won't re-run (mount-only). The user must navigate away and back,
+    // or we can start the loop manually here:
+    const myId = ++activeLoopId;
+    const loopFn = async () => {
+      while (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+        try {
+          const { data: jobs } = await supabase
+            .from("download_jobs")
+            .select("*")
+            .in("status", ["pending", "running"])
+            .eq("job_type", "download")
+            .order("created_at", { ascending: true })
+            .limit(1);
+
+          if (jobs && jobs.length > 0 && myId === activeLoopId && !moduleStopped && !moduleCancel) {
+            const { data: fresh } = await supabase
+              .from("download_jobs")
+              .select("status")
+              .eq("id", jobs[0].id)
+              .single();
+
+            if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
+              await processJobRef.current(jobs[0], myId);
+              if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+                await new Promise(r => setTimeout(r, 30000));
+              }
+              continue;
+            }
+          }
+        } catch (err) {
+          console.error("[DownloadProcessor] Error:", err);
+        }
+        if (myId === activeLoopId && !moduleStopped && !moduleCancel) {
+          await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+    };
+    loopFn();
   }, []);
 
   return { emergencyStop, resetStop };
