@@ -1,73 +1,55 @@
 
-# Rifattorizzazione Filtri, Card e Controllo Download
+# Eliminazione Retry dall'Estensione Chrome
 
-## 1. Toolbar Filtri e Ordinamenti (CountryGrid.tsx)
+## Problema identificato
 
-**Problema attuale**: I filtri e gli ordinamenti sono nascosti dentro un popover (icona ingranaggio) — poco intuitivo, difficile da scoprire.
+Il file `public/chrome-extension/background.js` contiene un loop di retry interno (righe 155-212):
 
-**Soluzione**: Sostituire il popover con controlli visibili direttamente nella toolbar:
-
-- **Ordinamento**: Una riga di bottoni segmentati sempre visibili: `Nome A-Z | N. Partner | Directory | Completamento`
-  - "Directory" e' il nuovo ordinamento richiesto: ordina per `cCount` (numero di aziende nella directory WCA)
-- **Filtri**: Una riga di chip cliccabili sotto la ricerca: `Tutti (247) | Scansionati (85) | Parziali (12) | Mai esplorati (150)`
-  - Il chip attivo ha sfondo colorato, gli altri sono ghost
-- Rimuovere completamente il `Popover` con `SlidersHorizontal` — tutto visibile a colpo d'occhio
-- I toggle "Solo Dir" e "Tutti" restano come switch compatti a destra
-
-**Risultato**: Un bambino vede subito come filtrare (clicca il chip) e come ordinare (clicca il bottone).
-
----
-
-## 2. Redesign Card Paese (CountryGrid.tsx)
-
-**Problema attuale**: Le icone delle statistiche (Mail, Phone, Users) sono `w-3 h-3` con testo `text-[11px]` — troppo piccole su un monitor grande. La card ha dimensioni compatte (`p-3.5`) che non sfruttano lo spazio disponibile.
-
-**Soluzione**:
-- Aumentare padding card da `p-3.5 pl-5` a `p-4 pl-6`
-- Bandiera paese da `text-2xl` a `text-3xl`
-- Nome paese da `text-sm` a `text-base`
-- Sezione statistiche (destra) riorganizzata in blocchetti leggibili:
-  - Directory badge: icona `w-5 h-5`, numero `text-lg font-bold`
-  - Partner/Email/Phone: icone `w-4 h-4`, numeri `text-sm font-bold` (da 11px a 14px)
-  - Ogni stat in un mini-badge con sfondo per separazione visiva
-- Percentuale e barra di progresso: testo da `text-[9px]` a `text-xs`
-- Status label ("Completo", "Non esplorato"): da `text-[9px]` a `text-xs`
-
----
-
-## 3. Pausa tra Paesi nel Download (ActionPanel.tsx)
-
-**Situazione attuale**: 
-- **Scansione directory**: C'e' una pausa di 10 secondi tra un paese e l'altro (riga 229)
-- **Download profili**: I job vengono creati tutti immediatamente (`executeDownload` righe 288-296), e il processore li esegue in sequenza. Ma tra la fine del job di un paese e l'inizio del successivo **non c'e' alcuna pausa** — il polling trova il prossimo job `pending` e lo avvia subito
-
-**Soluzione**: Aggiungere nel `useDownloadProcessor.ts`, dopo il completamento di un job e prima di prendere il successivo nel polling loop, una pausa di 30 secondi:
+```javascript
+var MAX_RETRIES = 1;        // ← permette 1 retry
+var RETRY_DELAYS = [5000];  // ← dopo 5 secondi
+for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // apre un TAB per ogni tentativo
+    tab = await chrome.tabs.create({ url: "..." });
+    ...
+    if (!pageLoaded && attempt < MAX_RETRIES) {
+        chrome.tabs.remove(tab.id);
+        continue;  // ← APRE UN SECONDO TAB
+    }
+}
 ```
-// Dopo il completamento, pausa inter-job
-await new Promise(r => setTimeout(r, 30000));
-```
-Questo garantisce un intervallo di 30 secondi tra un paese e l'altro, simulando un comportamento umano che controlla i risultati prima di proseguire.
 
----
+Per ogni profilo WCA, se la pagina non carica al primo tentativo, l'estensione:
+1. Apre il tab 1 -- la pagina non carica
+2. Chiude il tab 1
+3. Aspetta 5 secondi
+4. Apre il tab 2 -- secondo tentativo
 
-## 4. Rimozione Retry dalla Scansione Directory (ActionPanel.tsx)
+Questo viola la politica "Zero Retry" e spiega le aperture extra che vedi nel browser.
 
-**Problema**: Le righe 188-199 contengono un loop `for (let attempt = 1; attempt <= 3; attempt++)` per la scansione directory Firecrawl. Questo viola la politica "Zero Retry" approvata in precedenza.
+## Soluzione
 
-**Soluzione**: Rimuovere il loop di retry. Una sola chiamata a `scrapeWcaDirectory`: se fallisce, il paese viene segnato come "scansione incompleta" e si procede al successivo senza tentativi aggiuntivi.
+Rimuovere completamente il loop di retry da `extractContactsForId()`:
 
----
+- `MAX_RETRIES` da 1 a 0 (o rimuovere il loop del tutto)
+- Un solo tab per profilo: se non carica, restituisce `pageLoaded: false` e l'app lo marca come `skipped`
+- La funzione diventa lineare: apri tab, aspetta, estrai, chiudi tab, fine
 
-## 5. Esclusione Download ID gia' Presenti (ActionPanel.tsx)
+### Codice risultante (semplificato)
 
-**Situazione attuale**: Il sistema gia' esclude gli ID presenti nel database per default. La variabile `missingIds` (riga 119) filtra via tutti i `wca_id` gia' nella tabella `partners`. Il checkbox "Ri-scarica anche i N esistenti" (riga 432-435) permette di forzare il re-download.
+La funzione `extractContactsForId` diventa:
+1. Apre un singolo tab
+2. Aspetta il caricamento (max 30s)
+3. Verifica se la pagina e' caricata
+4. Se si': estrae i contatti
+5. Se no: restituisce `pageLoaded: false`
+6. Chiude il tab
+7. Nessun loop, nessun retry
 
-**Nessuna modifica necessaria**: Il comportamento e' gia' corretto. Per default, solo gli ID mancanti vengono scaricati. Il flag esiste per chi vuole aggiornare i dati esistenti.
+### File modificato
 
----
+1. `public/chrome-extension/background.js` -- rimozione loop retry da `extractContactsForId`, funzione linearizzata
 
-## File modificati
+### Nota importante
 
-1. **`src/components/download/CountryGrid.tsx`** — Toolbar con filtri/ordinamenti visibili, nuovo sort "Directory", card ridisegnata con dimensioni maggiori
-2. **`src/components/download/ActionPanel.tsx`** — Rimozione loop retry 3-tentativi dalla scansione directory
-3. **`src/hooks/useDownloadProcessor.ts`** — Aggiunta pausa 30s tra job di paesi diversi nel polling loop
+Dopo la modifica, dovrai reinstallare l'estensione Chrome (vai su `chrome://extensions`, rimuovi la vecchia e carica di nuovo la cartella `chrome-extension`) perche' le modifiche al background script non si applicano automaticamente.
