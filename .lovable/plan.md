@@ -1,95 +1,51 @@
 
 
-# Refactoring del polling loop in useDownloadProcessor
+# Fix definitivo: eliminazione race condition nel polling loop
 
-## Problema confermato dai log
+## Problema identificato
 
-I log del terminale mostrano chiaramente ogni profilo processato DUE volte:
-```
-START #150648 -> OK Fatton -> WAIT -> OK Fatton (duplicato!)
-START #119630 -> START #119630 (duplicato!) -> OK Freyer -> WAIT -> OK Freyer (duplicato!)
-```
-
-## Causa radice: race condition nel mutex
-
-Il polling loop ha una finestra temporale in cui due chiamate `checkJobs()` possono eseguire contemporaneamente:
+Il bug e' nel blocco `finally` del polling loop. La sequenza e':
 
 ```text
-Tick 1 (mount):    guard(false) --> await DB query... --> processingRef = true --> processJob()
-                                        ^
-Tick 2 (5s later): guard(false) --------|--- passa perche' processingRef e' ancora false!
-                                            --> await DB query --> processingRef = true --> processJob() (DUPLICATO!)
+1. processJob() completa (o e' in corso)
+2. finally: processingRef = false    <-- MUTEX RILASCIATO
+3. finally: await 30s cooldown       <-- 30 secondi di attesa
+                ^
+                |-- durante questi 30s, il setInterval ogni 5s chiama checkJobs()
+                |-- processingRef e' false --> entra!
+                |-- trova lo stesso job "running" nel DB
+                |-- chiama processJob() di NUOVO --> DUPLICATO!
 ```
 
-Il problema e' che `processingRef.current = true` viene impostato DOPO le query asincrone al DB (riga 395), non immediatamente dopo il controllo della guardia (riga 373).
+Il mutex viene rilasciato PRIMA del cooldown, creando una finestra di 30 secondi in cui il polling puo' rientrare e lanciare una seconda (o terza) istanza di processJob sullo stesso job.
 
-## Soluzione: mutex sincrono immediato
+## Soluzione
+
+Spostare il cooldown PRIMA del rilascio del mutex, oppure (piu' pulito) tenere il mutex durante il cooldown. Il `processingRef.current = false` deve essere l'ULTIMA istruzione del `finally`.
 
 ### Modifica a `src/hooks/useDownloadProcessor.ts`
 
-Ristrutturare il polling loop cosi':
-
-1. Spostare `processingRef.current = true` IMMEDIATAMENTE dopo la guardia, PRIMA di qualsiasi operazione asincrona
-2. Rimuovere il check ridondante di `cancelRef.current` alla riga 393 (e' incoerente con la rimozione dalla riga 373)
-3. Semplificare il flusso per eliminare la finestra di race condition
+Ristrutturare il `finally` block cosi':
 
 ```typescript
-// Main polling loop
-useEffect(() => {
-  const checkJobs = async () => {
-    if (stoppedRef.current || processingRef.current) return;
-
-    // MUTEX: blocca IMMEDIATAMENTE, prima di qualsiasi async
-    processingRef.current = true;
-
-    try {
-      const { data: pendingJobs } = await supabase
-        .from("download_jobs")
-        .select("*")
-        .in("status", ["pending", "running"])
-        .eq("job_type", "download")
-        .order("created_at", { ascending: true })
-        .limit(1);
-
-      if (!pendingJobs || pendingJobs.length === 0) return; // finally rilascera' il mutex
-
-      const { data: freshCheck } = await supabase
-        .from("download_jobs")
-        .select("status")
-        .eq("id", pendingJobs[0].id)
-        .single();
-
-      if (!freshCheck || freshCheck.status === "cancelled" || freshCheck.status === "completed") return;
-      if (stoppedRef.current) return;
-
-      cancelRef.current = false;
-      await processJob(pendingJobs[0]);
-    } catch (err) {
-      console.error("[DownloadProcessor] Error:", err);
-    } finally {
-      processingRef.current = false;
-      // Cooldown inter-job solo se il job e' finito normalmente
-      if (!stoppedRef.current && !cancelRef.current) {
-        await new Promise(r => setTimeout(r, 30000));
-      }
-    }
-  };
-
-  checkJobs();
-  const interval = setInterval(checkJobs, 5000);
-  return () => {
-    clearInterval(interval);
-    cancelRef.current = true;
-  };
-}, [processJob]);
+} finally {
+  // Cooldown PRIMA di rilasciare il mutex
+  if (didProcess && !stoppedRef.current && !cancelRef.current) {
+    await new Promise(r => setTimeout(r, 30000));
+  }
+  // Rilascia il mutex DOPO il cooldown
+  processingRef.current = false;
+}
 ```
 
-### Differenze chiave rispetto al codice attuale
+### Perche' funziona
 
-1. `processingRef.current = true` spostato dalla riga 395 (dopo 2 query DB) a subito dopo la guardia (sincrono, zero finestra di race)
-2. Il `finally` rilascia sempre il mutex, anche se non ci sono job da processare
-3. Rimosso il check `cancelRef.current` dalla riga 393 (incoerente)
-4. `cancelRef.current = false` spostato dentro il blocco protetto dal mutex
+- Il mutex resta `true` per tutta la durata del cooldown
+- Ogni tick del `setInterval` durante il cooldown vede `processingRef === true` e fa `return` immediatamente
+- Zero finestre di race condition
+- Nessuna possibilita' di esecuzioni concorrenti
 
-Nessuna altra modifica al file -- il `processJob`, l'emergency stop e il reset restano invariati.
+### File modificato
+
+**`src/hooks/useDownloadProcessor.ts`** -- Solo il blocco `finally` (righe 403-409): invertire l'ordine tra cooldown e rilascio del mutex.
 
