@@ -278,6 +278,37 @@ export function useDownloadProcessor() {
               companyName = result.companyName;
               await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
             }
+
+            // Save full profile data (backup: edge function also saves this)
+            if (result.profile && partnerId) {
+              const p = result.profile;
+              const profileUpdate: Record<string, any> = {};
+              if (p.address) profileUpdate.address = p.address;
+              if (p.phone) profileUpdate.phone = p.phone;
+              if (p.fax) profileUpdate.fax = p.fax;
+              if (p.mobile) profileUpdate.mobile = p.mobile;
+              if (p.emergencyPhone) profileUpdate.emergency_phone = p.emergencyPhone;
+              if (p.email) profileUpdate.email = p.email;
+              if (p.website) profileUpdate.website = p.website;
+              if (p.description) profileUpdate.profile_description = p.description;
+              if (p.memberSince) profileUpdate.member_since = p.memberSince;
+              if (p.membershipExpires) profileUpdate.membership_expires = p.membershipExpires;
+              if (p.officeType) {
+                const ot = p.officeType.toLowerCase();
+                if (ot.includes("head") || ot.includes("main")) profileUpdate.office_type = "head_office";
+                else if (ot.includes("branch")) profileUpdate.office_type = "branch";
+              }
+              if (p.branchCities && p.branchCities.length > 0) {
+                profileUpdate.has_branches = true;
+                profileUpdate.branch_cities = p.branchCities;
+              }
+              if (result.profileHtml) {
+                profileUpdate.raw_profile_html = result.profileHtml;
+              }
+              if (Object.keys(profileUpdate).length > 0) {
+                await supabase.from("partners").update(profileUpdate).eq("id", partnerId);
+              }
+            }
           }
 
           // Post-extraction fallback: if name is still a placeholder, use pre-loaded cacheMap
