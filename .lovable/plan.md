@@ -1,48 +1,43 @@
 
-# Animazione Live "Card Flip" nel Viewer Dati Scaricati
 
-## Concetto
+# Percentuale Download Grande nella Card Paese
 
-Aggiungere al dialogo "Dati Scaricati" due modalita':
+## Situazione attuale
 
-1. **Modalita' manuale** (job non attivo): navigazione libera avanti/indietro come ora
-2. **Modalita' LIVE** (job attivo): un toggle "LIVE" appare nella toolbar. Quando attivato, il viewer si posiziona automaticamente sull'ultimo partner scaricato e ad ogni nuovo partner esegue un'animazione "card flip":
-   - La card corrente **cade all'indietro** (rotazione 3D sull'asse X, da 0 a -90 gradi, con opacity che va a 0)
-   - Dopo 300ms, la nuova card **sale dal basso** (da +90 gradi a 0, con opacity da 0 a 1)
-   - Effetto visivo: come una carta che si ribalta su un tavolo e ne appare una nuova
+La percentuale di completamento download (`dlPct = pCount / cCount`) esiste gia' nel codice (riga 245) ma viene mostrata piccola nel sottotitolo come testo `text-xs font-mono` insieme ad altri dati (es. "15/20 · 75%"). Non e' visivamente prominente.
 
-## Modifiche tecniche
+## Modifica proposta
 
-### 1. JobMonitor.tsx
-- Passare `jobStatus={job.status}` come nuova prop a `JobDataViewer`, cosi' il viewer sa se il job e' attivo
+Aggiungere un **grande indicatore percentuale** sul lato destro di ogni card paese, ben visibile e separato dalle altre statistiche:
 
-### 2. JobDataViewer.tsx
+- **Posizione**: A destra, prima del badge directory e delle statistiche email/telefono
+- **Dimensione**: `text-2xl font-extrabold` -- il dato piu' grande della card
+- **Colore dinamico**: 
+  - Verde (100%) -- download completo
+  - Giallo/Ambra (1-99%) -- download parziale
+  - Rosso (0%) -- nessun download
+  - Grigio per paesi senza dati directory (nessuna percentuale mostrata)
+- **Formato**: Numero grande con simbolo "%" piu' piccolo a fianco (es. **75**%)
+- **Sfondo**: Mini-badge con bordo colorato per risaltare (come il badge directory gia' esistente)
 
-**Nuove prop:**
-- `jobStatus: string` -- per sapere se il job e' "running"
+### Logica
 
-**Nuovi state:**
-- `liveMode: boolean` -- toggle per la modalita' live (default: false)
-- `animPhase: "idle" | "exit" | "enter"` -- fase dell'animazione corrente
+```
+Se il paese ha dati nella directory (cCount > 0):
+  dlPct = Math.round((pCount / cCount) * 100)
+  Mostra: "75%" grande a destra
+Altrimenti:
+  Non mostra la percentuale (il paese non e' stato ancora scansionato)
+```
 
-**Logica live:**
-- Quando `liveMode` e' attivo e `processedIds.length` cambia (nuovo partner scaricato):
-  1. Imposta `animPhase = "exit"` (la card corrente cade, durata 400ms)
-  2. Dopo 400ms, aggiorna `currentIndex` all'ultimo partner e imposta `animPhase = "enter"` (la nuova card sale, durata 400ms)
-  3. Dopo altri 400ms, torna a `animPhase = "idle"`
-- Il refetch dei dati usa `refetchInterval: 5000` quando liveMode e' attivo, per catturare i nuovi partner
+### Layout card aggiornato
 
-**Animazione CSS (inline styles con perspective 3D):**
-- `exit`: `transform: perspective(600px) rotateX(-90deg); opacity: 0; transition: all 0.4s ease-in`
-- `enter`: partenza da `rotateX(90deg)` e transizione a `rotateX(0deg); opacity: 1; transition: all 0.4s ease-out`
-- `idle`: nessuna trasformazione
+```
+[Stripe] [Flag] [Nome + stato]          [%%] [Dir badge] [Email] [Phone] [Users] [✓]
+```
 
-**UI aggiuntiva:**
-- Quando il job e' "running", appare un bottone/toggle "LIVE" nella barra di navigazione, con un pallino verde pulsante
-- In modalita' LIVE i bottoni avanti/indietro sono disabilitati (la navigazione e' automatica)
-- Il contatore mostra "LIVE -- Partner N di M" con un'icona animata
+La percentuale diventa il primo dato numerico che si legge a colpo d'occhio.
 
-### File modificati
+## File modificato
 
-1. `src/components/download/JobDataViewer.tsx` -- aggiunta prop jobStatus, toggle LIVE, animazione 3D card flip, refetch automatico
-2. `src/components/download/JobMonitor.tsx` -- passaggio prop jobStatus a JobDataViewer
+1. **`src/components/download/CountryGrid.tsx`** -- Aggiunta badge percentuale grande nella sezione "Right side stats" di ogni card, con colore dinamico basato su `dlPct`
