@@ -1,95 +1,137 @@
 
 
-# Fix definitivo: singleton a livello di modulo
+# Estrazione COMPLETA del profilo WCA
 
-## Causa radice trovata
+## Problema
 
-Il problema NON e' nel loop (il `while` loop e' corretto). Il problema e' che `cancelRef` e `stoppedRef` sono creati DENTRO il componente (righe 21-22). Quando il componente si rimonta (HMR, navigazione, re-render profondo):
+La funzione `extractContactsFromPage()` in `background.js` estrae SOLO i contatti (nome, email, telefono). Ignora completamente:
+- Profilo aziendale (descrizione, indirizzo, sito web)
+- Telefono/fax/mobile aziendali
+- Network di appartenenza e date di scadenza
+- Servizi offerti e certificazioni
+- Tipo di ufficio (Head Office / Branch)
+- Sedi secondarie (branches)
+- HTML grezzo della pagina (necessario per il parsing AI successivo)
 
-```text
-VECCHIO componente:
-  cancelRef_OLD = useRef(false)     <-- oggetto A
-  loop_OLD -> processJob_OLD -> extractContacts(wcaId) [in attesa 60s]
-
-Cleanup: cancelRef_OLD.current = true   <-- imposta oggetto A
-
-NUOVO componente:
-  cancelRef_NEW = useRef(false)     <-- oggetto B (NUOVO, inizializzato a false!)
-  loop_NEW -> trova stesso job "running" -> processJob_NEW -> extractContacts(wcaId) [DUPLICATO!]
-```
-
-Due oggetti ref diversi. Il vecchio `processJob` non sa che il nuovo esiste. Due tab si aprono per lo stesso profilo.
+Questo significa che i partner nel database hanno solo `company_name` e `city`, senza nessun dato utile per il riassunto AI, il rating, o la ricerca avanzata.
 
 ## Soluzione
 
-Spostare TUTTI i flag di controllo a livello di modulo (fuori dalla funzione `useDownloadProcessor`). Cosi' sopravvivono ai remount e c'e' un solo stato globale.
+### 1. `public/chrome-extension/background.js` -- Riscrivere `extractContactsFromPage()`
 
-### File: `src/hooks/useDownloadProcessor.ts`
+La funzione deve estrarre TUTTO il contenuto della pagina WCA. La struttura della pagina WCA usa coppie `profile_label` / `profile_val` per tutti i campi. La funzione deve:
 
-**Prima del componente** (righe 1-16), aggiungere:
+- Scansionare TUTTE le coppie label/value nella pagina (non solo quelle dentro `contactperson_row`)
+- Estrarre i campi aziendali: Address, Phone, Fax, Mobile, Emergency Phone, Email, Website, Member Since, Membership Expires, Office Type
+- Estrarre la descrizione/profilo (il blocco di testo libero)
+- Estrarre i network di appartenenza (lista di network con relative date)
+- Estrarre i servizi offerti (lista di tag/categorie)
+- Estrarre le certificazioni (IATA, ISO, ecc.)
+- Estrarre le branch cities se presenti
+- Catturare l'HTML grezzo dell'intera pagina (`document.body.innerHTML`)
+- Continuare a estrarre i contatti come fa adesso
 
-```typescript
-// ── MODULE-LEVEL singleton state (survives component remounts) ──
-let moduleCancel = false;
-let moduleStopped = false;
-let moduleLoopRunning = false;  // true = un loop e' gia' attivo, non crearne un altro
+Il risultato restituito diventa:
+
+```text
+{
+  wcaId: number,
+  companyName: string,
+  contacts: [...],           // come adesso
+  profileHtml: string,       // HTML grezzo completo
+  profile: {
+    address: string,
+    phone: string,
+    fax: string,
+    mobile: string,
+    emergencyPhone: string,
+    email: string,
+    website: string,
+    memberSince: string,
+    membershipExpires: string,
+    officeType: string,
+    description: string,
+    networks: [{ name, id, expires }],
+    services: string[],
+    certifications: string[],
+    branchCities: string[]
+  }
+}
 ```
 
-**Dentro il componente**, eliminare le righe 21-22 (`cancelRef`, `stoppedRef`) e sostituire ogni riferimento:
+### 2. `public/chrome-extension/background.js` -- Aggiornare `sendContactsToServer()`
 
-- `cancelRef.current` diventa `moduleCancel`
-- `stoppedRef.current` diventa `moduleStopped`
+Il payload inviato a `save-wca-contacts` deve includere anche i dati del profilo, non solo i contatti.
 
-**Nel `useEffect` del loop** (riga 369), aggiungere una guardia singleton:
+### 3. `supabase/functions/save-wca-contacts/index.ts` -- Salvare il profilo
+
+Dopo aver salvato i contatti, la funzione deve aggiornare la tabella `partners` con tutti i campi del profilo:
+- `phone`, `fax`, `mobile`, `emergency_phone`, `email`, `website`
+- `address`, `profile_description`
+- `membership_expires`, `member_since`
+- `office_type`
+- `has_branches`, `branch_cities`
+- `raw_profile_html`
+
+E inserire/aggiornare le tabelle correlate:
+- `partner_networks` (upsert per network_name)
+- `partner_services` (upsert per service_category, se il valore matcha l'enum)
+- `partner_certifications` (upsert per certification, se il valore matcha l'enum)
+
+### 4. `src/hooks/useDownloadProcessor.ts` -- Passare il profilo al processore
+
+Il `processJob` gia' riceve il risultato di `extractContacts`. Dopo aver gestito i contatti, deve anche:
+- Aggiornare il partner con `profile_description`, `address`, `website`, `phone`, `fax`, `raw_profile_html`
+- Aggiornare le date `membership_expires`, `member_since`
+- Inserire i network in `partner_networks`
+
+Dato che `save-wca-contacts` gia' viene chiamato dall'estensione (background.js chiama `sendContactsToServer` subito dopo l'estrazione), e il processore gestisce i contatti localmente, la soluzione piu' pulita e':
+- L'estensione invia il profilo completo a `save-wca-contacts`
+- `save-wca-contacts` salva TUTTO (contatti + profilo) in un'unica transazione
+- Il processore (`useDownloadProcessor`) si limita a verificare il risultato e aggiornare i contatori, senza duplicare la logica di salvataggio
+
+### 5. `src/hooks/useExtensionBridge.ts` -- Aggiornare il tipo di risposta
+
+Aggiungere i campi del profilo a `ExtensionResponse`:
 
 ```typescript
-useEffect(() => {
-  // Se un loop e' gia' attivo (da un mount precedente), non crearne un altro
-  if (moduleLoopRunning) return;
-  moduleLoopRunning = true;
-
-  const loop = async () => {
-    while (moduleLoopRunning && !moduleStopped) {
-      // ... logica esistente invariata, ma con moduleCancel/moduleStopped ...
-    }
-    moduleLoopRunning = false;
+type ExtensionResponse = {
+  success: boolean;
+  contacts?: Array<{...}>;
+  companyName?: string;
+  wcaId?: number;
+  pageLoaded?: boolean;
+  profile?: {
+    address?: string;
+    phone?: string;
+    fax?: string;
+    mobile?: string;
+    emergencyPhone?: string;
+    email?: string;
+    website?: string;
+    memberSince?: string;
+    membershipExpires?: string;
+    officeType?: string;
+    description?: string;
+    networks?: Array<{ name: string; id?: string; expires?: string }>;
+    services?: string[];
+    certifications?: string[];
+    branchCities?: string[];
   };
-
-  loop();
-  return () => {
-    moduleCancel = true;
-    // NON impostare moduleLoopRunning = false qui!
-    // Il loop si fermera' da solo quando vede moduleCancel = true
-  };
-}, [processJob]);
+  profileHtml?: string;
+  // ... rest
+};
 ```
 
-**`processJob`**: sostituire tutti i `cancelRef.current` con `moduleCancel` e `stoppedRef.current` con `moduleStopped`. Circa 10 sostituzioni meccaniche.
+## File modificati
 
-**`emergencyStop` e `resetStop`**:
+1. `public/chrome-extension/background.js` -- Estrazione completa + invio profilo
+2. `supabase/functions/save-wca-contacts/index.ts` -- Salvataggio profilo in partners + tabelle correlate
+3. `src/hooks/useExtensionBridge.ts` -- Tipo aggiornato
+4. `src/hooks/useDownloadProcessor.ts` -- Passare profilo e HTML al salvataggio locale (backup)
 
-```typescript
-const emergencyStop = useCallback(() => {
-  moduleCancel = true;
-  moduleStopped = true;
-}, []);
+## Note importanti
 
-const resetStop = useCallback(() => {
-  moduleStopped = false;
-  moduleCancel = false;
-  moduleLoopRunning = false;  // permette al prossimo mount di avviare un nuovo loop
-}, []);
-```
-
-### Riepilogo cambiamenti
-
-Un solo file: `src/hooks/useDownloadProcessor.ts`
-
-1. Aggiungere 3 variabili a livello di modulo (`moduleCancel`, `moduleStopped`, `moduleLoopRunning`)
-2. Rimuovere `cancelRef` e `stoppedRef` (useRef)
-3. Sostituire meccanicamente ogni `.current` con la variabile di modulo corrispondente
-4. Aggiungere guardia `if (moduleLoopRunning) return` nel useEffect del loop
-5. Aggiornare cleanup, emergencyStop e resetStop
-
-Zero modifiche alla logica di processJob, all'estrazione contatti, o al salvataggio dati. Solo i flag di controllo cambiano da ref locale a variabile di modulo.
-
+- L'HTML grezzo (`raw_profile_html`) e' fondamentale per il parsing AI successivo (`parse-profile-ai`, `analyze-partner`)
+- I network, servizi e certificazioni devono matchare gli enum esistenti nel database per evitare errori di inserimento
+- La logica di estrazione usa le classi CSS della pagina WCA (`profile_label`, `profile_val`, `contactperson_row`) che sono stabili da anni
