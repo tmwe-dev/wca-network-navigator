@@ -77,6 +77,20 @@ export function useCreateDownloadJob() {
       wca_ids: number[];
       delay_seconds: number;
     }) => {
+      // Guard anti-duplicato: skip se esiste già un job pending/running per stesso paese+network
+      const { data: existing } = await supabase
+        .from("download_jobs")
+        .select("id")
+        .eq("country_code", params.country_code)
+        .eq("network_name", params.network_name)
+        .in("status", ["pending", "running"])
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log(`[CreateJob] Skip duplicato per ${params.country_code}/${params.network_name}`);
+        return existing[0].id;
+      }
+
       const { data, error } = await supabase
         .from("download_jobs")
         .insert({
@@ -179,20 +193,46 @@ export function useResumeAllJobs() {
     mutationFn: async () => {
       const { data: jobs } = await supabase
         .from("download_jobs")
-        .select("id, current_index, total_count")
+        .select("id, current_index, total_count, country_code, network_name")
         .eq("status", "cancelled");
 
       const incomplete = (jobs || []).filter(j => j.current_index < j.total_count);
       if (incomplete.length === 0) return 0;
 
-      const ids = incomplete.map(j => j.id);
+      // Deduplicazione: per ogni country_code+network_name, tieni solo il job con current_index più alto
+      const bestByKey = new Map<string, typeof incomplete[0]>();
+      const duplicateIds: string[] = [];
+      for (const j of incomplete) {
+        const key = `${j.country_code}__${j.network_name}`;
+        const existing = bestByKey.get(key);
+        if (existing) {
+          if (j.current_index > existing.current_index) {
+            duplicateIds.push(existing.id);
+            bestByKey.set(key, j);
+          } else {
+            duplicateIds.push(j.id);
+          }
+        } else {
+          bestByKey.set(key, j);
+        }
+      }
+
+      // Cancella definitivamente i duplicati
+      if (duplicateIds.length > 0) {
+        await supabase.from("download_jobs").delete().in("id", duplicateIds);
+      }
+
+      // Rimetti in pending solo i sopravvissuti
+      const survivorIds = [...bestByKey.values()].map(j => j.id);
+      if (survivorIds.length === 0) return 0;
+
       const { error } = await supabase
         .from("download_jobs")
         .update({ status: "pending", error_message: null })
-        .in("id", ids);
+        .in("id", survivorIds);
 
       if (error) throw error;
-      return incomplete.length;
+      return survivorIds.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });

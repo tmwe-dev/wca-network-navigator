@@ -236,21 +236,17 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
   const handleStartDownload = async () => {
+    // Step 1: check session (single call)
     const result = await triggerCheck();
 
-    if (result?.authenticated) {
-      await executeDownload();
+    // Step 2: if not authenticated, show dialog and STOP
+    if (!result?.authenticated) {
+      setShowSessionDialog(true);
       return;
     }
 
-    const { data: statusData } = await supabase.from("app_settings")
-      .select("value").eq("key", "wca_session_status").maybeSingle();
-    if (statusData?.value === "ok") {
-      await executeDownload();
-      return;
-    }
-
-    setShowSessionDialog(true);
+    // Step 3: proceed to download
+    await executeDownload();
   };
 
   const executeDownload = async () => {
