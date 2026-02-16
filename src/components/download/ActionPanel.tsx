@@ -19,7 +19,7 @@ import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "
 import { useTheme, t } from "./theme";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { WcaSessionDialog } from "./WcaSessionIndicator";
-import { useCountryStats } from "@/hooks/useCountryStats";
+
 
 interface ActionPanelProps {
   selectedCountries: { code: string; name: string }[];
@@ -37,7 +37,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const [showSessionDialog, setShowSessionDialog] = useState(false);
 
   const { settings: scrapingSettings } = useScrapingSettings();
-  const { data: countryStatsData } = useCountryStats();
+  
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
@@ -103,6 +103,23 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     enabled: countryCodes.length > 0,
   });
 
+  // Load wca_ids of partners WITHOUT profile (lightweight query)
+  const { data: noProfileIds = [] } = useQuery({
+    queryKey: ["no-profile-wca-ids", countryCodes],
+    queryFn: async () => {
+      if (countryCodes.length === 0) return [];
+      const { data } = await supabase
+        .from("partners")
+        .select("wca_id")
+        .in("country_code", countryCodes)
+        .not("wca_id", "is", null)
+        .is("raw_profile_html", null);
+      return (data || []).map(p => p.wca_id!);
+    },
+    staleTime: 30_000,
+    enabled: countryCodes.length > 0,
+  });
+
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
     const members = entry.members as any[];
     return (members || []).map((m: any) => ({
@@ -123,23 +140,27 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
   const totalCount = uniqueIds.length;
 
-  // Aggregate without_profile from country stats
-  const noProfileCount = useMemo(() => {
-    if (!countryStatsData) return 0;
-    return countryCodes.reduce((sum, cc) => sum + (countryStatsData.byCountry[cc]?.without_profile || 0), 0);
-  }, [countryStatsData, countryCodes]);
+  // Set of wca_ids without profile for precise filtering
+  const noProfileWcaSet = useMemo(() => new Set(noProfileIds), [noProfileIds]);
+
+  // Count of partners in directory that are missing profiles
+  const noProfileInDirectoryCount = useMemo(() => {
+    return uniqueIds.filter(id => noProfileWcaSet.has(id)).length;
+  }, [uniqueIds, noProfileWcaSet]);
+
+  // Also count new partners (not in DB at all) as needing profile
+  const noProfileTotalCount = noProfileInDirectoryCount + missingIds.length;
 
   // IDs to download based on mode
   const idsToDownload = useMemo(() => {
     if (downloadMode === "all") return uniqueIds;
     if (downloadMode === "no_profile") {
-      // Download existing partners that are missing profiles + new ones
-      const existingIds = uniqueIds.filter(id => dbWcaSet.has(id));
-      // We include all existing since we can't filter by profile here; the processor will check
-      return [...missingIds, ...existingIds.filter(() => noProfileCount > 0)];
+      // Only partners in directory that are missing profile + completely new ones
+      const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
+      return [...new Set([...missingIds, ...existingNoProfile])];
     }
     return missingIds; // "new" mode
-  }, [downloadMode, uniqueIds, missingIds, dbWcaSet, noProfileCount]);
+  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet]);
 
   // Time estimate
   const totalTime = idsToDownload.length * (delay + 5);
@@ -410,10 +431,10 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
               <span className={`text-sm font-medium ${th.acEm}`}>✓ Già scaricati</span>
               <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
             </div>
-            {noProfileCount > 0 && (
+            {noProfileInDirectoryCount > 0 && (
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${isDark ? "text-orange-400" : "text-orange-600"}`}>⚠ Senza profilo</span>
-                <span className={`font-mono font-bold ${isDark ? "text-orange-400" : "text-orange-600"}`}>{noProfileCount}</span>
+                <span className={`font-mono font-bold ${isDark ? "text-orange-400" : "text-orange-600"}`}>{noProfileInDirectoryCount}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -457,7 +478,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
                 </SelectTrigger>
                 <SelectContent className={th.selContent}>
                   <SelectItem value="new">Solo nuovi ({missingIds.length})</SelectItem>
-                  <SelectItem value="no_profile">Profili mancanti ({noProfileCount})</SelectItem>
+                  <SelectItem value="no_profile">Profili mancanti ({noProfileTotalCount})</SelectItem>
                   <SelectItem value="all">Aggiorna tutti ({downloadedCount})</SelectItem>
                 </SelectContent>
               </Select>
