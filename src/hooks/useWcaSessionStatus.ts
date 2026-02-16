@@ -1,10 +1,10 @@
 // WCA session status hook — uses Extension Bridge as primary verification method
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
-export type WcaSessionStatus = "ok" | "expired" | "no_cookie" | "checking" | "error";
+export type WcaSessionStatus = "ok" | "expired" | "unknown" | "no_cookie" | "checking" | "error";
 
 export type CheckStep = "idle" | "syncing_cookie" | "verifying_session" | "updating_db" | "done";
 
@@ -129,6 +129,22 @@ export function useWcaSessionStatus() {
       setIsChecking(false);
     }
   }, [extensionAvailable, checkAvailable, syncCookie, verifySession, updateStatusInDb, queryClient]);
+
+  // Auto-check on mount: if status is not "ok", automatically verify via extension
+  const autoCheckDone = useRef(false);
+  useEffect(() => {
+    if (autoCheckDone.current) return;
+    if (statusQuery.isLoading) return;
+    const currentStatus = statusQuery.data?.status;
+    if (currentStatus && currentStatus !== "ok" && currentStatus !== "checking") {
+      autoCheckDone.current = true;
+      // Small delay to let extension polling detect availability
+      const timer = setTimeout(() => {
+        triggerCheck();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusQuery.isLoading, statusQuery.data?.status, triggerCheck]);
 
   return {
     status: statusQuery.data?.status ?? "checking",
