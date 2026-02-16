@@ -198,6 +198,7 @@ export function useDeleteQueuedJobs() {
 
   return useMutation({
     mutationFn: async () => {
+      // Count first for feedback
       const { data: jobs } = await supabase
         .from("download_jobs")
         .select("id")
@@ -205,6 +206,7 @@ export function useDeleteQueuedJobs() {
 
       if (!jobs || jobs.length === 0) return 0;
 
+      // Delete ALL pending + paused (including "featured" pending job)
       const { error } = await supabase
         .from("download_jobs")
         .delete()
@@ -214,6 +216,7 @@ export function useDeleteQueuedJobs() {
       return jobs.length;
     },
     onSuccess: (count) => {
+      // Force immediate UI refresh
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       if (count && count > 0) {
         toast({ title: "🗑️ Eliminati", description: `${count} job rimossi dalla coda` });

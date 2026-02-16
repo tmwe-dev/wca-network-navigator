@@ -23,6 +23,7 @@ interface DlProcessorState {
   stopped: boolean;
   activeLoopId: number;
   processing: boolean; // MUTEX: true while a job is being processed
+  abortController: AbortController | null; // For immediate delay interruption
 }
 
 function getDlState(): DlProcessorState {
@@ -32,9 +33,19 @@ function getDlState(): DlProcessorState {
       stopped: false,
       activeLoopId: 0,
       processing: false,
+      abortController: null,
     };
   }
   return (window as any)[DL_STATE_KEY];
+}
+
+/** Abortable delay — resolves after ms OR rejects immediately on abort */
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new DOMException("Aborted", "AbortError")); return; }
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+  });
 }
 
 export function useDownloadProcessor() {
@@ -85,7 +96,7 @@ export function useDownloadProcessor() {
       }
 
       if (status === "unknown") {
-        await new Promise(r => setTimeout(r, 5000));
+        await abortableDelay(5000, getDlState().abortController?.signal ?? undefined);
         const { data: recheck } = await supabase
           .from("app_settings")
           .select("value")
@@ -180,6 +191,10 @@ export function useDownloadProcessor() {
       }
     }
 
+    // Create a fresh AbortController for this job
+    const ac = new AbortController();
+    state.abortController = ac;
+
     // Keep-alive
     const keepAlive = setInterval(async () => {
       try { await supabase.from("download_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId); } catch {}
@@ -188,22 +203,25 @@ export function useDownloadProcessor() {
     let contactsFound = job.contacts_found_count || 0;
     let contactsMissing = job.contacts_missing_count || 0;
 
+    /** Quick bail check */
+    const shouldStop = () => state.cancel || state.stopped || loopId !== state.activeLoopId || ac.signal.aborted;
+
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
-        if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
+        if (shouldStop()) break;
 
         // Check job status from DB (pause/cancel from UI)
         const { data: freshJob } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
         if (!freshJob || freshJob.status === "cancelled") { state.cancel = true; break; }
         if (freshJob.status === "paused") {
           while (true) {
-            await new Promise(r => setTimeout(r, 2000));
-            if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
+            try { await abortableDelay(2000, ac.signal); } catch { break; }
+            if (shouldStop()) break;
             const { data: check } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
             if (!check || check.status === "cancelled") { state.cancel = true; break; }
             if (check.status === "running") break;
           }
-          if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
+          if (shouldStop()) break;
         }
 
         const wcaId = wcaIds[i];
@@ -214,7 +232,7 @@ export function useDownloadProcessor() {
         // ── Adaptive timing: measure extraction duration ──
         const extractionStartMs = Date.now();
 
-        if (loopId !== state.activeLoopId) break;
+        if (shouldStop()) break;
 
         // Check extension availability
         if (!availableRef.current && !(await checkAvailableRef.current())) {
@@ -267,12 +285,12 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
+            if (i < wcaIds.length - 1 && !shouldStop()) {
               const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
               const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
               const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
               await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
-              await new Promise(r => setTimeout(r, adaptiveDelay * 1000));
+              try { await abortableDelay(adaptiveDelay * 1000, ac.signal); } catch { break; }
             }
             continue;
           }
@@ -479,17 +497,17 @@ export function useDownloadProcessor() {
         }
 
         // ── Adaptive delay: subtract extraction time from target ──
-        if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
+        if (i < wcaIds.length - 1 && !shouldStop()) {
           const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
           const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
           const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
           await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
-          await new Promise(r => setTimeout(r, adaptiveDelay * 1000));
+          try { await abortableDelay(adaptiveDelay * 1000, ac.signal); } catch { break; }
         }
       }
 
       // Complete job
-      if (!state.cancel && !state.stopped && loopId === state.activeLoopId) {
+      if (!shouldStop()) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
           await supabase.functions.invoke("process-download-job", {
@@ -505,6 +523,7 @@ export function useDownloadProcessor() {
     } finally {
       clearInterval(keepAlive);
       state.processing = false; // RELEASE MUTEX
+      state.abortController = null;
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["ops-global-stats"] });
       queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
@@ -524,7 +543,7 @@ export function useDownloadProcessor() {
       while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
         // ── FIX 5: Acquire mutex synchronously BEFORE any async work ──
         if (state.processing) {
-          await new Promise(r => setTimeout(r, 5000));
+          try { await abortableDelay(5000, state.abortController?.signal ?? undefined); } catch { break; }
           continue;
         }
 
@@ -542,7 +561,7 @@ export function useDownloadProcessor() {
           if (runningNow && runningNow.length > 0) {
             // A job is already running, release mutex and wait
             state.processing = false;
-            await new Promise(r => setTimeout(r, 10000));
+            try { await abortableDelay(10000, state.abortController?.signal ?? undefined); } catch { break; }
             continue;
           }
 
@@ -560,7 +579,7 @@ export function useDownloadProcessor() {
 
             // Cooldown inter-job (30s)
             if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
-              await new Promise(r => setTimeout(r, 30000));
+              try { await abortableDelay(30000, state.abortController?.signal ?? undefined); } catch { break; }
             }
             continue;
           } else {
@@ -574,7 +593,7 @@ export function useDownloadProcessor() {
 
         // No job found or error: wait 15s and retry
         if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
-          await new Promise(r => setTimeout(r, 15000));
+          try { await abortableDelay(15000, state.abortController?.signal ?? undefined); } catch { break; }
         }
       }
     };
@@ -599,7 +618,16 @@ export function useDownloadProcessor() {
     const state = getDlState();
     state.cancel = true;
     state.stopped = true;
-  }, []);
+    state.abortController?.abort(); // Interrupt any in-progress delay immediately
+    // Immediately update DB — don't wait for the loop to reach its check
+    supabase
+      .from("download_jobs")
+      .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
+      .in("status", ["running", "pending"])
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      });
+  }, [queryClient]);
 
   // resetStop: resets flags, invalidates old loops via activeLoopId, starts ONE new loop.
   // Safe because the old loop will exit on next iteration when it sees mismatched loopId.
