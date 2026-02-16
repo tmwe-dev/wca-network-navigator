@@ -10,10 +10,11 @@ import {
   Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
-  Zap,
+  Zap, Crown,
   Paperclip,
 } from "lucide-react";
 import { ScrapingSettingsPanel } from "@/components/settings/ScrapingSettings";
+import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
 import { usePartners } from "@/hooks/usePartners";
@@ -227,6 +228,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Paperclip className="w-4 h-4" /> Template
+          </TabsTrigger>
+          <TabsTrigger value="abbonamento" className="flex items-center gap-2">
+            <Crown className="w-4 h-4" /> Abbonamento
           </TabsTrigger>
         </TabsList>
 
@@ -448,6 +452,11 @@ export default function Settings() {
         {/* ════════════════ TEMPLATE ════════════════ */}
         <TabsContent value="templates">
           <TemplateManager />
+        </TabsContent>
+
+        {/* ════════════════ ABBONAMENTO ════════════════ */}
+        <TabsContent value="abbonamento">
+          <SubscriptionPanel />
         </TabsContent>
       </Tabs>
     </div>
