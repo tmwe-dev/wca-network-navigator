@@ -1,93 +1,42 @@
 
 
-# Spostare i Filtri nella Sidebar Sinistra
+# Fix Modalita' "Profili Mancanti" nel Download
 
-## Concetto
+## Problema
 
-Eliminare il dropdown "Filtra per stato" dalla CountryGrid (colonna 2) e rendere cliccabili le StatItem nella sidebar sinistra (colonna 1). Ogni statistica diventa un filtro diretto:
+Quando selezioni 31 paesi e vai al download, la modalita' "Profili mancanti" non funziona correttamente. Il codice attuale ha due difetti:
 
-| Click su... | Filtro applicato |
-|---|---|
-| **Paesi** (Globe) | Tutti i paesi con dati (equivale a "Tutti") |
-| **Partner** (Users) | Paesi con almeno 1 partner nel DB |
-| **Profili** (FileText) | Paesi con profili presenti; secondo click filtra "senza profilo" |
-| **Email** (Mail) | Paesi filtrati per presenza email |
-| **Telefoni** (Phone) | Paesi filtrati per presenza telefoni |
-| **Directory** (FolderDown) | Paesi mai esplorati / senza directory |
+1. **Nessuna query per sapere QUALI partner non hanno profilo** -- la query `dbPartners` non scarica il campo `raw_profile_html`, quindi il sistema non sa quali partner specifici mancano di profilo
+2. **Logica filtro rotta** -- il codice `existingIds.filter(() => noProfileCount > 0)` e' un booleano costante: se c'e' anche un solo partner senza profilo tra tutti i paesi, include TUTTI i partner esistenti nel download
 
-Il filtro attivo viene evidenziato visivamente con un bordo/sfondo colorato sulla StatItem corrispondente.
+## Soluzione
 
-## Modifiche per File
+### File: `src/components/download/ActionPanel.tsx`
 
-### 1. `src/pages/Operations.tsx`
-- Aggiungere uno stato `filterMode` (tipo stringa) al livello Operations, inizializzato a `"all"`
-- Passare `filterMode` e `setFilterMode` sia alla sidebar (COL 1) che alla CountryGrid (COL 2)
-- Rendere ogni `StatItem` cliccabile: al click cambia `filterMode`
-- Aggiungere un prop `active` a `StatItem` per evidenziare il filtro corrente (bordo colorato + sfondo leggermente piu' intenso)
+**1. Aggiungere query leggera per i wca_id senza profilo**
 
-### 2. `src/components/download/CountryGrid.tsx`
-- Rimuovere il Select dropdown del filtro (righe 146-155)
-- Rimuovere lo stato locale `filterMode` -- ora viene ricevuto come prop
-- Accettare `filterMode` come prop dall'esterno
-- Mantenere solo: Search + Sort dropdown + Select All button
-- La logica di filtraggio resta identica, usa solo il prop invece dello stato locale
+Una nuova query React Query che scarica SOLO i `wca_id` (numeri interi, pochi KB) dei partner che non hanno `raw_profile_html`:
 
-### 3. `StatItem` (in Operations.tsx)
-- Aggiungere prop `onClick` e `active`
-- Quando `active=true`: bordo piu' visibile, sfondo leggermente colorato, cursore pointer
-- Quando ha `onClick`: `cursor-pointer` e hover effect
-
-## Dettagli Tecnici
-
-### Mappatura StatItem -> FilterKey
-
-```text
-"Paesi"    -> filterMode = "all"       (mostra tutti con dati)
-"Partner"  -> filterMode = "todo"      (paesi da lavorare)
-"Profili"  -> filterMode = "no_profile" (paesi con profili mancanti)
-"Email"    -> filterMode = "all" + sort by email coverage
-"Telefoni" -> filterMode = "all" + sort by phone coverage  
-"Directory"-> filterMode = "missing"   (mai esplorati)
+```
+SELECT wca_id FROM partners 
+WHERE country_code IN (...) 
+AND wca_id IS NOT NULL 
+AND raw_profile_html IS NULL
 ```
 
-Nota: per Email e Telefoni, il click potrebbe semplicemente impostare il filtro "all" e cambiare l'ordinamento a "completion" per evidenziare i paesi con meno copertura. Oppure piu' semplicemente, restano filtri visivi e solo Paesi/Partner/Profili/Directory sono cliccabili come filtri effettivi -- i 4 filtri originali mappati 1:1.
+Questo evita di scaricare l'intero HTML (che puo' pesare 10-50KB per partner).
 
-### Flusso dati
+**2. Correggere la logica `idsToDownload`**
 
-```text
-Operations.tsx
-  |-- filterMode state + setFilterMode
-  |-- COL 1: StatItem(onClick => setFilterMode("all"|"todo"|...))
-  |-- COL 2: CountryGrid(filterMode={filterMode})  -- no piu' stato locale
-```
+Creare un Set `noProfileWcaSet` dalla query sopra e usarlo per filtrare:
+- Modalita' "no_profile": include solo i partner nella directory che sono nel Set (senza profilo) PIU' quelli completamente nuovi (non ancora nel DB)
+- Le altre modalita' restano invariate
 
-### CountryGrid props aggiornate
+**3. Aggiornare il conteggio nel Select dropdown**
 
-```text
-interface CountryGridProps {
-  selected: ...;
-  onToggle: ...;
-  onRemove: ...;
-  filterMode: FilterKey;        // nuovo: ricevuto da Operations
-  onFilterChange: (f: FilterKey) => void;  // opzionale se serve feedback
-  directoryOnly?: boolean;
-  onDirectoryOnlyChange?: (v: boolean) => void;
-}
-```
+Il conteggio mostrato accanto a "Profili mancanti" sara' calcolato dall'intersezione tra la directory e il Set reale, non piu' dal valore aggregato dell'RPC (che conta tutti i partner nel DB, anche quelli fuori dalla directory selezionata).
 
-### StatItem aggiornato
+### Risultato
 
-```text
-function StatItem({ ..., onClick, active }: {
-  ...existing props...
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  // Se active, bordo colorato + sfondo piu' intenso
-  // Se onClick, cursor-pointer + hover
-}
-```
+Selezionando "Profili mancanti" dal dropdown, il sistema scarichera' SOLO i partner che effettivamente non hanno il profilo HTML, saltando quelli gia' completi. Il conteggio mostrera' il numero esatto di partner da ri-scaricare.
 
-## Risultato Visivo
-
-La sidebar sinistra diventa interattiva: cliccando su "Profili" (183), la lista paesi si filtra immediatamente mostrando solo i paesi con profili mancanti. La StatItem "Profili" si illumina con un bordo viola. Nella CountryGrid sparisce il dropdown filtro, liberando spazio verticale per la lista paesi.
