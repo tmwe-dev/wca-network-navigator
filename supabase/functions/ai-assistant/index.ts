@@ -12,24 +12,77 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const SYSTEM_PROMPT = `Sei l'assistente AI dell'Operations Center di WCA Network Navigator. Hai accesso diretto al database dei partner logistici mondiali della rete WCA.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SYSTEM PROMPT — narrativo, senza codice, ricco di contesto
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CONTESTO DEL SISTEMA:
-- La piattaforma gestisce partner di spedizioni internazionali (freight forwarders) organizzati per paese
-- Ogni partner ha: company_name, city, country_code, country_name, email, phone, website, rating (0-5), wca_id
-- I partner possono avere profili scaricati (raw_profile_html/raw_profile_markdown) con descrizioni dettagliate
-- I contatti dei partner sono in una tabella separata (partner_contacts) con nome, email, telefono, titolo
-- I download_jobs tracciano lo scaricamento dei dati dai network WCA
-- I country_code sono codici ISO a 2 lettere (IT, US, BR, DE, etc.)
+const SYSTEM_PROMPT = `Sei l'assistente intelligente dell'Operations Center, il cuore operativo di una piattaforma che gestisce la rete mondiale di partner logistici WCA (World Cargo Alliance). Il tuo compito è aiutare l'operatore a esplorare, analizzare e comprendere i dati della rete, rispondendo in modo naturale, preciso e operativo.
 
-REGOLE:
-- Rispondi SEMPRE in italiano
-- Usa i tool per ottenere dati reali prima di rispondere
-- Quando mostri liste di partner, includi: nome, citta', email se disponibile
-- Per domande sui conteggi, usa search_partners con count_only=true
-- Sii conciso ma completo
-- Formatta le risposte con markdown (tabelle, liste, grassetto)
-- Se non trovi risultati, dillo chiaramente`;
+CHI SEI E COME TI COMPORTI
+
+Sei un collega esperto di logistica internazionale e freight forwarding. Conosci perfettamente la struttura dei dati, le relazioni tra le tabelle e il significato operativo di ogni informazione. Non sei un chatbot generico: sei uno strumento di lavoro che ragiona sui dati reali prima di rispondere.
+
+Quando l'utente ti fa una domanda, il tuo primo istinto è interrogare il database per ottenere dati concreti. Non inventare mai numeri, non stimare, non approssimare. Se non hai dati sufficienti, dillo chiaramente e suggerisci cosa potrebbe fare l'utente per ottenere quello che cerca.
+
+Rispondi sempre in italiano. Usa un tono professionale ma accessibile, come un collega di lavoro competente. Formatta le risposte con markdown quando utile: tabelle per confronti, liste per elenchi, grassetto per evidenziare.
+
+IL MONDO IN CUI OPERI
+
+La piattaforma raccoglie e organizza informazioni su migliaia di aziende di spedizioni internazionali sparse in tutto il mondo. Queste aziende sono "partner" — membri di vari network professionali sotto l'ombrello WCA. I network principali includono WCA (il network base), WCA Dangerous Goods, WCA Perishables, WCA Projects, WCA eCommerce, WCA Pharma, WCA Time Critical, WCA Relocations, Elite Global Logistics, Lognet Global, GAA Global Affinity, IFC Infinite Connection e altri.
+
+Ogni partner ha una sede principale (head_office) e può avere filiali (branch) in altre città. I partner sono identificati univocamente da un wca_id numerico e organizzati per paese tramite country_code ISO a 2 lettere.
+
+I DATI CHE HAI A DISPOSIZIONE
+
+La tabella principale è "partners", che contiene l'anagrafica di ogni azienda: nome, città, paese, email generale, telefono, sito web, indirizzo, tipo di ufficio (sede o filiale), rating numerico da 0 a 5 con dettagli, stato attivo/inattivo, se è un preferito dell'operatore, e date di membership.
+
+Ogni partner può avere un profilo scaricato — un documento HTML completo (raw_profile_html) e la sua versione markdown (raw_profile_markdown) che descrive in dettaglio l'azienda: servizi offerti, capacità operative, infrastruttura, specializzazioni. Quando il profilo è stato analizzato dall'AI, il campo ai_parsed_at è valorizzato. Un partner può anche essere stato arricchito con dati dal web (enriched_at, enrichment_data).
+
+I contatti delle persone che lavorano per ogni partner sono nella tabella "partner_contacts". Ogni contatto ha nome, titolo/ruolo, email personale, telefono diretto e cellulare. Un partner può avere molti contatti, e uno di essi è marcato come primario.
+
+I network a cui appartiene ogni partner sono nella tabella "partner_networks", con il nome del network, l'ID membro e la data di scadenza. I servizi offerti sono in "partner_services" con categorie predefinite: air_freight, ocean_fcl, ocean_lcl, road_freight, rail_freight, project_cargo, dangerous_goods, perishables, pharma, ecommerce, relocations, customs_broker, warehousing, nvocc. Le certificazioni sono in "partner_certifications": IATA, BASC, ISO, C-TPAT, AEO.
+
+Esiste una blacklist ("blacklist_entries") che segnala aziende con problemi di pagamento o affidabilità. Ogni voce contiene il nome dell'azienda, il paese, la città, l'importo dovuto, il numero di reclami e può essere collegata a un partner nel database tramite matched_partner_id.
+
+Il sistema tiene traccia dei partner che non hanno contatti ("partners_no_contacts") — aziende per le quali lo scraping non ha trovato informazioni di contatto. Questo è un indicatore di qualità dei dati importante.
+
+STATO DEI DOWNLOAD E DELLA DIRECTORY
+
+La piattaforma scarica i dati dal sito WCA attraverso job automatizzati. La tabella "download_jobs" traccia ogni operazione di scaricamento con: paese, stato (running, pending, completed, cancelled), progresso (current_index su total_count), contatti trovati vs mancanti, ultimo partner processato, eventuali errori, e il network di riferimento.
+
+La "directory_cache" contiene l'elenco dei membri per ogni paese come risulta dalla directory WCA — è la fotografia di "chi dovrebbe esserci". Confrontando directory_cache con i partner effettivamente scaricati si capisce la completezza dei dati per ogni paese.
+
+La funzione "get_country_stats" restituisce per ogni paese: totale partner nel database, quanti hanno profilo, quanti no, quanti hanno email, quanti hanno telefono. La funzione "get_directory_counts" dice quanti membri risultano nella directory per ogni paese.
+
+Lo stato di completezza di un paese si misura così: un paese è "completato" quando il numero di partner scaricati è uguale o superiore a quelli in directory E tutti hanno il profilo. È "parziale" quando mancano partner o profili. È "mai esplorato" quando non ci sono dati.
+
+I REMINDER E LE INTERAZIONI
+
+L'operatore può creare reminder ("reminders") associati a un partner con titolo, descrizione, data di scadenza, priorità (low, medium, high) e stato (pending, completed). Le interazioni ("interactions") tracciano chiamate, email, meeting e note con i partner.
+
+LINK SOCIAL
+
+I partner possono avere link ai social media ("partner_social_links"): LinkedIn, Facebook, Instagram, Twitter, WhatsApp. Questi possono essere associati all'azienda o a un contatto specifico.
+
+COME USARE I TOOL
+
+Hai a disposizione diversi strumenti per interrogare il database. Usali liberamente e in combinazione per rispondere alle domande dell'utente. Se una domanda richiede dati da più fonti, chiama più tool in sequenza. Non esitare a fare ricerche incrociate.
+
+Per domande sui conteggi ("quanti partner ha X"), usa search_partners con count_only. Per panoramiche generali, usa get_global_summary o get_country_overview. Per informazioni specifiche su un'azienda, usa get_partner_detail. Per verificare affidabilità, controlla sempre anche la blacklist con check_blacklist.
+
+Quando l'utente chiede di "trovare" partner con caratteristiche specifiche (servizi, certificazioni, rating), usa i filtri appropriati. Quando chiede lo stato di un paese, combina get_country_overview con get_directory_status per dare il quadro completo.
+
+Se l'utente menziona un partner per nome, cercalo prima con search_partners e poi usa get_partner_detail per il dettaglio completo. Se il nome è ambiguo, mostra le opzioni trovate e chiedi quale intende.
+
+FORMATTAZIONE
+
+Quando presenti liste di partner, usa tabelle markdown con colonne: Nome, Città, Email, Rating. Per le statistiche paese, usa tabelle con: Paese, Partner, Profili, Email, Telefoni, Copertura. Per i job, mostra: Paese, Stato, Progresso, Network.
+
+Per risposte brevi (conteggi, conferme), sii sintetico. Per analisi comparative o panoramiche, struttura la risposta con sezioni e sottotitoli.`;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TOOL DEFINITIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const tools = [
   {
@@ -37,38 +90,26 @@ const tools = [
     function: {
       name: "search_partners",
       description:
-        "Search partners by country, rating, email/profile presence. Returns partner list or count.",
+        "Search and filter partners across the database. Supports filtering by country, city, name, rating, email/phone/profile presence, office type, favorites, branches, and services. Can return full results or just a count.",
       parameters: {
         type: "object",
         properties: {
-          country_code: {
-            type: "string",
-            description: "ISO 2-letter country code (e.g. IT, US, BR)",
-          },
-          has_email: {
-            type: "boolean",
-            description: "Filter by email presence",
-          },
-          has_profile: {
-            type: "boolean",
-            description: "Filter by profile (raw_profile_html) presence",
-          },
-          min_rating: {
-            type: "number",
-            description: "Minimum rating (0-5)",
-          },
-          search_name: {
-            type: "string",
-            description: "Search by company name (partial match)",
-          },
-          limit: {
-            type: "number",
-            description: "Max results to return (default 20)",
-          },
-          count_only: {
-            type: "boolean",
-            description: "Return only the count, not the full list",
-          },
+          country_code: { type: "string", description: "ISO 2-letter country code" },
+          city: { type: "string", description: "City name (partial match)" },
+          search_name: { type: "string", description: "Company name (partial match)" },
+          has_email: { type: "boolean", description: "Has email address" },
+          has_phone: { type: "boolean", description: "Has phone number (in partner_contacts)" },
+          has_profile: { type: "boolean", description: "Has downloaded profile (raw_profile_html)" },
+          min_rating: { type: "number", description: "Minimum rating (0-5)" },
+          office_type: { type: "string", enum: ["head_office", "branch"], description: "Filter by office type" },
+          is_favorite: { type: "boolean", description: "Filter favorites only" },
+          has_branches: { type: "boolean", description: "Has branch offices" },
+          service: { type: "string", enum: ["air_freight","ocean_fcl","ocean_lcl","road_freight","rail_freight","project_cargo","dangerous_goods","perishables","pharma","ecommerce","relocations","customs_broker","warehousing","nvocc"], description: "Filter by service category" },
+          certification: { type: "string", enum: ["IATA","BASC","ISO","C-TPAT","AEO"], description: "Filter by certification" },
+          network_name: { type: "string", description: "Filter by network membership name" },
+          sort_by: { type: "string", enum: ["rating", "name", "recent"], description: "Sort order (default: rating)" },
+          limit: { type: "number", description: "Max results (default 20, max 50)" },
+          count_only: { type: "boolean", description: "Return only the count" },
         },
         additionalProperties: false,
       },
@@ -78,16 +119,27 @@ const tools = [
     type: "function",
     function: {
       name: "get_country_overview",
-      description:
-        "Get aggregated statistics for all countries or a specific country: total partners, with/without profile, with email, with phone.",
+      description: "Get aggregated statistics per country: total partners, profiles, emails, phones. Can focus on one country or return top countries ranked by size.",
       parameters: {
         type: "object",
         properties: {
-          country_code: {
-            type: "string",
-            description:
-              "Optional ISO 2-letter country code. If omitted, returns all countries.",
-          },
+          country_code: { type: "string", description: "Optional: specific country code" },
+          sort_by: { type: "string", enum: ["total", "missing_profiles", "missing_emails"], description: "How to rank countries (default: total)" },
+          limit: { type: "number", description: "Max countries to return (default 30)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_directory_status",
+      description: "Check the directory scanning status for countries: how many members are in the WCA directory vs how many are downloaded in our database. Shows data completeness gaps.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "Optional: specific country code" },
         },
         additionalProperties: false,
       },
@@ -97,20 +149,13 @@ const tools = [
     type: "function",
     function: {
       name: "list_jobs",
-      description:
-        "List download jobs, optionally filtered by status (running, pending, completed, cancelled).",
+      description: "List download jobs with their status, progress, and errors. Useful for monitoring active operations and reviewing history.",
       parameters: {
         type: "object",
         properties: {
-          status: {
-            type: "string",
-            enum: ["running", "pending", "completed", "cancelled"],
-            description: "Filter by job status",
-          },
-          country_code: {
-            type: "string",
-            description: "Filter by country code",
-          },
+          status: { type: "string", enum: ["running", "pending", "completed", "cancelled"], description: "Filter by status" },
+          country_code: { type: "string", description: "Filter by country" },
+          limit: { type: "number", description: "Max results (default 20)" },
         },
         additionalProperties: false,
       },
@@ -120,20 +165,12 @@ const tools = [
     type: "function",
     function: {
       name: "get_partner_detail",
-      description:
-        "Get full details of a specific partner including contacts, networks, and profile summary.",
+      description: "Get complete details of a specific partner: company info, all contacts with their roles and emails, network memberships, services, certifications, profile summary, social links, and blacklist status.",
       parameters: {
         type: "object",
         properties: {
-          partner_id: {
-            type: "string",
-            description: "UUID of the partner",
-          },
-          company_name: {
-            type: "string",
-            description:
-              "Company name to search (used if partner_id not provided)",
-          },
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to search (if ID not known)" },
         },
         additionalProperties: false,
       },
@@ -143,59 +180,163 @@ const tools = [
     type: "function",
     function: {
       name: "get_global_summary",
-      description:
-        "Get a high-level summary of the entire database: total partners, countries scanned, profiles downloaded, emails available.",
+      description: "High-level summary of the entire database: total partners, countries, profiles, emails, phones, directory coverage, active jobs. The big picture.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "check_blacklist",
+      description: "Search the blacklist for companies flagged for payment issues or reliability problems. Can search by company name or country.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          company_name: { type: "string", description: "Company name to check (partial match)" },
+          country: { type: "string", description: "Country name to filter" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_reminders",
+      description: "List reminders (tasks/follow-ups) associated with partners. Can filter by status and priority.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["pending", "completed"], description: "Filter by status" },
+          priority: { type: "string", enum: ["low", "medium", "high"], description: "Filter by priority" },
+          partner_name: { type: "string", description: "Filter by partner name" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_partners_without_contacts",
+      description: "List partners that have no contact information at all — useful for identifying data quality gaps that need re-scraping.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "Optional: filter by country" },
+          limit: { type: "number", description: "Max results (default 30)" },
+        },
         additionalProperties: false,
       },
     },
   },
 ];
 
-// ── Tool Execution ──
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TOOL EXECUTION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function executeSearchPartners(args: Record<string, unknown>) {
+  const isCount = !!args.count_only;
+
+  // If filtering by service, certification, or network, we need partner_ids first
+  let partnerIdFilter: string[] | null = null;
+
+  if (args.service) {
+    const { data } = await supabase
+      .from("partner_services")
+      .select("partner_id")
+      .eq("service_category", args.service);
+    partnerIdFilter = (data || []).map((r: any) => r.partner_id);
+    if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+  }
+
+  if (args.certification) {
+    const { data } = await supabase
+      .from("partner_certifications")
+      .select("partner_id")
+      .eq("certification", args.certification);
+    const certIds = (data || []).map((r: any) => r.partner_id);
+    partnerIdFilter = partnerIdFilter
+      ? partnerIdFilter.filter(id => certIds.includes(id))
+      : certIds;
+    if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+  }
+
+  if (args.network_name) {
+    const { data } = await supabase
+      .from("partner_networks")
+      .select("partner_id")
+      .ilike("network_name", `%${args.network_name}%`);
+    const netIds = (data || []).map((r: any) => r.partner_id);
+    partnerIdFilter = partnerIdFilter
+      ? partnerIdFilter.filter(id => netIds.includes(id))
+      : netIds;
+    if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+  }
+
+  // If filtering by has_phone, get partner_ids with phone contacts
+  if (args.has_phone !== undefined) {
+    if (args.has_phone) {
+      const { data } = await supabase
+        .from("partner_contacts")
+        .select("partner_id")
+        .or("direct_phone.not.is.null,mobile.not.is.null");
+      const phoneIds = [...new Set((data || []).map((r: any) => r.partner_id))];
+      partnerIdFilter = partnerIdFilter
+        ? partnerIdFilter.filter(id => phoneIds.includes(id))
+        : phoneIds;
+      if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+    }
+  }
+
   let query = supabase.from("partners").select(
-    args.count_only
+    isCount
       ? "id"
-      : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html",
-    args.count_only ? { count: "exact", head: true } : undefined
+      : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches",
+    isCount ? { count: "exact", head: true } : undefined
   );
 
-  if (args.country_code)
-    query = query.eq("country_code", String(args.country_code).toUpperCase());
+  if (partnerIdFilter) query = query.in("id", partnerIdFilter.slice(0, 500));
+  if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
+  if (args.city) query = query.ilike("city", `%${args.city}%`);
+  if (args.search_name) query = query.ilike("company_name", `%${args.search_name}%`);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_email === false) query = query.is("email", null);
-  if (args.has_profile === true)
-    query = query.not("raw_profile_html", "is", null);
+  if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
   if (args.has_profile === false) query = query.is("raw_profile_html", null);
   if (args.min_rating) query = query.gte("rating", Number(args.min_rating));
-  if (args.search_name)
-    query = query.ilike("company_name", `%${args.search_name}%`);
+  if (args.office_type) query = query.eq("office_type", args.office_type);
+  if (args.is_favorite === true) query = query.eq("is_favorite", true);
+  if (args.has_branches === true) query = query.eq("has_branches", true);
 
-  query = query
-    .order("rating", { ascending: false, nullsFirst: false })
-    .limit(Number(args.limit) || 20);
+  const sortBy = String(args.sort_by || "rating");
+  if (sortBy === "name") query = query.order("company_name", { ascending: true });
+  else if (sortBy === "recent") query = query.order("created_at", { ascending: false });
+  else query = query.order("rating", { ascending: false, nullsFirst: false });
+
+  const limit = Math.min(Number(args.limit) || 20, 50);
+  query = query.limit(limit);
 
   const { data, error, count } = await query;
   if (error) return { error: error.message };
-
-  if (args.count_only) return { count };
+  if (isCount) return { count };
 
   return {
     count: data?.length,
-    partners: (data || []).map((p: Record<string, unknown>) => ({
+    partners: (data || []).map((p: any) => ({
       id: p.id,
       company_name: p.company_name,
       city: p.city,
-      country: p.country_name,
-      email: p.email || "N/A",
-      phone: p.phone || "N/A",
-      rating: p.rating ?? "N/A",
+      country: `${p.country_name} (${p.country_code})`,
+      email: p.email || null,
+      phone: p.phone || null,
+      rating: p.rating ?? null,
       has_profile: !!p.raw_profile_html,
-      website: p.website || "N/A",
+      website: p.website || null,
+      is_favorite: p.is_favorite,
+      office_type: p.office_type,
+      has_branches: p.has_branches,
     })),
   };
 }
@@ -206,50 +347,92 @@ async function executeCountryOverview(args: Record<string, unknown>) {
 
   let stats = data || [];
   if (args.country_code) {
-    stats = stats.filter(
-      (s: Record<string, unknown>) =>
-        s.country_code === String(args.country_code).toUpperCase()
-    );
+    stats = stats.filter((s: any) => s.country_code === String(args.country_code).toUpperCase());
   }
 
-  // Sort by total_partners desc
-  stats.sort(
-    (a: Record<string, unknown>, b: Record<string, unknown>) =>
-      (Number(b.total_partners) || 0) - (Number(a.total_partners) || 0)
-  );
+  const sortBy = String(args.sort_by || "total");
+  if (sortBy === "missing_profiles") stats.sort((a: any, b: any) => (b.without_profile || 0) - (a.without_profile || 0));
+  else if (sortBy === "missing_emails") stats.sort((a: any, b: any) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
+  else stats.sort((a: any, b: any) => (b.total_partners || 0) - (a.total_partners || 0));
+
+  const limit = Number(args.limit) || 30;
 
   return {
     total_countries: stats.length,
-    countries: stats.slice(0, 50).map((s: Record<string, unknown>) => ({
+    countries: stats.slice(0, limit).map((s: any) => ({
       country_code: s.country_code,
       total_partners: s.total_partners,
+      hq: s.hq_count,
+      branches: s.branch_count,
       with_profile: s.with_profile,
       without_profile: s.without_profile,
       with_email: s.with_email,
       with_phone: s.with_phone,
+      profile_coverage: s.total_partners ? `${Math.round((s.with_profile / s.total_partners) * 100)}%` : "0%",
     })),
   };
+}
+
+async function executeDirectoryStatus(args: Record<string, unknown>) {
+  const { data: dirData } = await supabase.rpc("get_directory_counts");
+  const { data: statsData } = await supabase.rpc("get_country_stats");
+  
+  const dirMap: Record<string, { members: number; verified: boolean }> = {};
+  for (const r of (dirData || []) as any[]) {
+    dirMap[r.country_code] = { members: Number(r.member_count), verified: r.is_verified };
+  }
+  
+  const statsMap: Record<string, any> = {};
+  for (const r of (statsData || []) as any[]) {
+    statsMap[r.country_code] = r;
+  }
+
+  const allCodes = [...new Set([...Object.keys(dirMap), ...Object.keys(statsMap)])];
+  
+  if (args.country_code) {
+    const code = String(args.country_code).toUpperCase();
+    const dir = dirMap[code];
+    const db = statsMap[code];
+    return {
+      country_code: code,
+      directory_members: dir?.members || 0,
+      directory_verified: dir?.verified || false,
+      db_partners: db?.total_partners || 0,
+      db_with_profile: db?.with_profile || 0,
+      db_without_profile: db?.without_profile || 0,
+      gap: (dir?.members || 0) - (db?.total_partners || 0),
+      status: !dir && !db ? "mai_esplorato" : !dir ? "no_directory" : (db?.total_partners || 0) >= (dir?.members || 0) && (db?.without_profile || 0) === 0 ? "completato" : "incompleto",
+    };
+  }
+
+  const results = allCodes.map(code => ({
+    country_code: code,
+    directory_members: dirMap[code]?.members || 0,
+    db_partners: statsMap[code]?.total_partners || 0,
+    gap: (dirMap[code]?.members || 0) - (statsMap[code]?.total_partners || 0),
+    profiles_missing: statsMap[code]?.without_profile || 0,
+  })).filter(r => r.gap > 0 || r.profiles_missing > 0)
+    .sort((a, b) => b.gap - a.gap);
+
+  return { countries_with_gaps: results.length, gaps: results.slice(0, 30) };
 }
 
 async function executeListJobs(args: Record<string, unknown>) {
   let query = supabase
     .from("download_jobs")
-    .select(
-      "id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, last_processed_company, error_message, network_name"
-    )
+    .select("id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, last_processed_company, error_message, network_name")
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(Number(args.limit) || 20);
 
   if (args.status) query = query.eq("status", args.status);
-  if (args.country_code)
-    query = query.eq("country_code", String(args.country_code).toUpperCase());
+  if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
 
   const { data, error } = await query;
   if (error) return { error: error.message };
 
   return {
     count: data?.length,
-    jobs: (data || []).map((j: Record<string, unknown>) => ({
+    jobs: (data || []).map((j: any) => ({
       id: j.id,
       country: `${j.country_name} (${j.country_code})`,
       status: j.status,
@@ -257,326 +440,308 @@ async function executeListJobs(args: Record<string, unknown>) {
       progress: `${j.current_index}/${j.total_count}`,
       found: j.contacts_found_count,
       missing: j.contacts_missing_count,
-      last_company: j.last_processed_company || "N/A",
+      last_company: j.last_processed_company || null,
       network: j.network_name,
       error: j.error_message || null,
+      created: j.created_at,
     })),
   };
 }
 
 async function executePartnerDetail(args: Record<string, unknown>) {
-  let partner: Record<string, unknown> | null = null;
+  let partner: any = null;
 
   if (args.partner_id) {
-    const { data } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("id", args.partner_id)
-      .single();
+    const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
     partner = data;
   } else if (args.company_name) {
-    const { data } = await supabase
-      .from("partners")
-      .select("*")
-      .ilike("company_name", `%${args.company_name}%`)
-      .limit(1)
-      .single();
+    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${args.company_name}%`).limit(1).single();
     partner = data;
   }
 
   if (!partner) return { error: "Partner non trovato" };
 
-  // Get contacts
-  const { data: contacts } = await supabase
-    .from("partner_contacts")
-    .select("name, email, title, direct_phone, mobile")
-    .eq("partner_id", partner.id as string);
-
-  // Get networks
-  const { data: networks } = await supabase
-    .from("partner_networks")
-    .select("network_name, expires")
-    .eq("partner_id", partner.id as string);
+  // Parallel queries
+  const [contactsRes, networksRes, servicesRes, certsRes, socialsRes, blacklistRes] = await Promise.all([
+    supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", partner.id),
+    supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", partner.id),
+    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+    supabase.from("partner_certifications").select("certification").eq("partner_id", partner.id),
+    supabase.from("partner_social_links").select("platform, url").eq("partner_id", partner.id),
+    supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", partner.id),
+  ]);
 
   return {
     id: partner.id,
     company_name: partner.company_name,
+    alias: partner.company_alias,
     city: partner.city,
     country: `${partner.country_name} (${partner.country_code})`,
-    email: partner.email || "N/A",
-    phone: partner.phone || "N/A",
-    website: partner.website || "N/A",
-    rating: partner.rating ?? "N/A",
-    address: partner.address || "N/A",
-    has_profile: !!partner.raw_profile_html,
-    profile_summary: partner.raw_profile_markdown
-      ? String(partner.raw_profile_markdown).substring(0, 1500)
-      : null,
-    contacts: (contacts || []).map((c: Record<string, unknown>) => ({
-      name: c.name,
-      title: c.title || "N/A",
-      email: c.email || "N/A",
-      phone: c.direct_phone || c.mobile || "N/A",
-    })),
-    networks: (networks || []).map((n: Record<string, unknown>) => ({
-      name: n.network_name,
-      expires: n.expires,
-    })),
+    address: partner.address || null,
+    email: partner.email || null,
+    phone: partner.phone || null,
+    mobile: partner.mobile || null,
+    fax: partner.fax || null,
+    website: partner.website || null,
+    rating: partner.rating,
+    rating_details: partner.rating_details,
+    office_type: partner.office_type,
+    has_branches: partner.has_branches,
+    branch_cities: partner.branch_cities,
+    is_favorite: partner.is_favorite,
+    is_active: partner.is_active,
     wca_id: partner.wca_id,
     member_since: partner.member_since,
+    membership_expires: partner.membership_expires,
+    has_profile: !!partner.raw_profile_html,
+    profile_summary: partner.raw_profile_markdown ? String(partner.raw_profile_markdown).substring(0, 2000) : null,
+    contacts: (contactsRes.data || []).map((c: any) => ({
+      name: c.name,
+      title: c.title,
+      email: c.email,
+      phone: c.direct_phone || c.mobile,
+      is_primary: c.is_primary,
+    })),
+    networks: (networksRes.data || []).map((n: any) => ({ name: n.network_name, expires: n.expires })),
+    services: (servicesRes.data || []).map((s: any) => s.service_category),
+    certifications: (certsRes.data || []).map((c: any) => c.certification),
+    social_links: (socialsRes.data || []).map((s: any) => ({ platform: s.platform, url: s.url })),
+    blacklist_matches: (blacklistRes.data || []).map((b: any) => ({ company: b.company_name, owed: b.total_owed_amount, claims: b.claims, status: b.status })),
   };
 }
 
 async function executeGlobalSummary() {
-  const { data: stats } = await supabase.rpc("get_country_stats");
-  const rows = stats || [];
+  const [statsRes, dirRes, jobsRes] = await Promise.all([
+    supabase.rpc("get_country_stats"),
+    supabase.rpc("get_directory_counts"),
+    supabase.from("download_jobs").select("id, status").in("status", ["running", "pending"]),
+  ]);
 
-  const totals = rows.reduce(
-    (
-      acc: Record<string, number>,
-      r: Record<string, unknown>
-    ) => ({
-      partners: acc.partners + (Number(r.total_partners) || 0),
-      with_profile: acc.with_profile + (Number(r.with_profile) || 0),
-      without_profile: acc.without_profile + (Number(r.without_profile) || 0),
-      with_email: acc.with_email + (Number(r.with_email) || 0),
-      with_phone: acc.with_phone + (Number(r.with_phone) || 0),
-    }),
-    {
-      partners: 0,
-      with_profile: 0,
-      without_profile: 0,
-      with_email: 0,
-      with_phone: 0,
-    }
-  );
+  const rows = statsRes.data || [];
+  const totals = rows.reduce((acc: any, r: any) => ({
+    partners: acc.partners + (Number(r.total_partners) || 0),
+    with_profile: acc.with_profile + (Number(r.with_profile) || 0),
+    without_profile: acc.without_profile + (Number(r.without_profile) || 0),
+    with_email: acc.with_email + (Number(r.with_email) || 0),
+    with_phone: acc.with_phone + (Number(r.with_phone) || 0),
+  }), { partners: 0, with_profile: 0, without_profile: 0, with_email: 0, with_phone: 0 });
 
-  const { data: dirData } = await supabase.rpc("get_directory_counts");
-  const dirRows = dirData || [];
-  const dirTotal = dirRows.reduce(
-    (sum: number, r: Record<string, unknown>) =>
-      sum + (Number(r.member_count) || 0),
-    0
-  );
-
-  const { data: activeJobs } = await supabase
-    .from("download_jobs")
-    .select("id")
-    .in("status", ["running", "pending"]);
+  const dirRows = dirRes.data || [];
+  const dirTotal = dirRows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0);
 
   return {
-    total_countries_scanned: rows.length,
-    total_partners_in_db: totals.partners,
+    total_countries_with_data: rows.length,
+    total_partners: totals.partners,
     with_profile: totals.with_profile,
     without_profile: totals.without_profile,
     with_email: totals.with_email,
     with_phone: totals.with_phone,
-    profile_coverage: totals.partners
-      ? `${Math.round((totals.with_profile / totals.partners) * 100)}%`
-      : "0%",
-    email_coverage: totals.partners
-      ? `${Math.round((totals.with_email / totals.partners) * 100)}%`
-      : "0%",
-    directory_total: dirTotal,
-    directory_countries: dirRows.length,
-    active_jobs: activeJobs?.length || 0,
+    profile_coverage: totals.partners ? `${Math.round((totals.with_profile / totals.partners) * 100)}%` : "0%",
+    email_coverage: totals.partners ? `${Math.round((totals.with_email / totals.partners) * 100)}%` : "0%",
+    directory_members_total: dirTotal,
+    directory_countries_scanned: dirRows.length,
+    download_gap: dirTotal - totals.partners,
+    active_jobs: jobsRes.data?.length || 0,
   };
 }
 
-async function executeTool(
-  name: string,
-  args: Record<string, unknown>
-): Promise<unknown> {
+async function executeCheckBlacklist(args: Record<string, unknown>) {
+  let query = supabase.from("blacklist_entries").select("company_name, country, city, total_owed_amount, claims, status, blacklist_no, matched_partner_id");
+
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.country) query = query.ilike("country", `%${args.country}%`);
+
+  query = query.order("total_owed_amount", { ascending: false, nullsFirst: false }).limit(20);
+
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+
+  return {
+    count: data?.length || 0,
+    entries: (data || []).map((b: any) => ({
+      company: b.company_name,
+      country: b.country,
+      city: b.city,
+      owed: b.total_owed_amount,
+      claims: b.claims,
+      status: b.status,
+      has_matched_partner: !!b.matched_partner_id,
+    })),
+  };
+}
+
+async function executeListReminders(args: Record<string, unknown>) {
+  let query = supabase.from("reminders").select("id, title, description, due_date, priority, status, partner_id, created_at")
+    .order("due_date", { ascending: true }).limit(30);
+
+  if (args.status) query = query.eq("status", args.status);
+  if (args.priority) query = query.eq("priority", args.priority);
+
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+
+  // Enrich with partner names
+  const partnerIds = [...new Set((data || []).map((r: any) => r.partner_id))];
+  const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
+  const nameMap: Record<string, string> = {};
+  for (const p of (partners || []) as any[]) nameMap[p.id] = p.company_name;
+
+  let results = (data || []).map((r: any) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    due_date: r.due_date,
+    priority: r.priority,
+    status: r.status,
+    partner: nameMap[r.partner_id] || "Sconosciuto",
+  }));
+
+  if (args.partner_name) {
+    const search = String(args.partner_name).toLowerCase();
+    results = results.filter(r => r.partner.toLowerCase().includes(search));
+  }
+
+  return { count: results.length, reminders: results };
+}
+
+async function executePartnersWithoutContacts(args: Record<string, unknown>) {
+  let query = supabase.from("partners_no_contacts").select("wca_id, company_name, city, country_code, retry_count, scraped_at")
+    .eq("resolved", false)
+    .order("scraped_at", { ascending: false })
+    .limit(Number(args.limit) || 30);
+
+  if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
+
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+
+  return {
+    count: data?.length || 0,
+    partners: (data || []).map((p: any) => ({
+      wca_id: p.wca_id,
+      company_name: p.company_name,
+      city: p.city,
+      country_code: p.country_code,
+      retry_count: p.retry_count,
+      last_scraped: p.scraped_at,
+    })),
+  };
+}
+
+async function executeTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
-    case "search_partners":
-      return executeSearchPartners(args);
-    case "get_country_overview":
-      return executeCountryOverview(args);
-    case "list_jobs":
-      return executeListJobs(args);
-    case "get_partner_detail":
-      return executePartnerDetail(args);
-    case "get_global_summary":
-      return executeGlobalSummary();
-    default:
-      return { error: `Unknown tool: ${name}` };
+    case "search_partners": return executeSearchPartners(args);
+    case "get_country_overview": return executeCountryOverview(args);
+    case "get_directory_status": return executeDirectoryStatus(args);
+    case "list_jobs": return executeListJobs(args);
+    case "get_partner_detail": return executePartnerDetail(args);
+    case "get_global_summary": return executeGlobalSummary();
+    case "check_blacklist": return executeCheckBlacklist(args);
+    case "list_reminders": return executeListReminders(args);
+    case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
+    default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
 
-// ── Main Handler ──
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MAIN HANDLER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { messages, context } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Build context-aware system prompt
     let systemPrompt = SYSTEM_PROMPT;
     if (context) {
-      systemPrompt += `\n\nCONTESTO CORRENTE DELL'UTENTE:`;
+      systemPrompt += "\n\nCONTESTO CORRENTE DELL'UTENTE:";
       if (context.selectedCountries?.length) {
-        systemPrompt += `\n- Paesi selezionati: ${context.selectedCountries
-          .map((c: { code: string; name: string }) => `${c.name} (${c.code})`)
-          .join(", ")}`;
+        systemPrompt += `\nL'utente sta guardando questi paesi: ${context.selectedCountries.map((c: any) => `${c.name} (${c.code})`).join(", ")}.`;
       }
-      if (context.filterMode) {
-        systemPrompt += `\n- Filtro attivo: ${context.filterMode}`;
+      if (context.filterMode && context.filterMode !== "all") {
+        const filterLabels: Record<string, string> = {
+          todo: "paesi con dati incompleti",
+          no_profile: "paesi con profili mancanti",
+          missing: "paesi mai esplorati",
+        };
+        systemPrompt += `\nFiltro attivo: ${filterLabels[context.filterMode] || context.filterMode}.`;
       }
     }
 
-    const allMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ];
+    const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
-    // First call with tools
-    let response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: allMessages,
-          tools,
-        }),
-      }
-    );
+    // First call with tools (non-streaming to allow tool execution)
+    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools }),
+    });
 
     if (!response.ok) {
       const status = response.status;
       const text = await response.text();
       console.error("AI gateway error:", status, text);
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Troppe richieste, riprova tra poco." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crediti AI esauriti." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "Errore AI gateway" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const errorMsg = status === 429 ? "Troppe richieste, riprova tra poco." : status === 402 ? "Crediti AI esauriti." : "Errore AI gateway";
+      return new Response(JSON.stringify({ error: errorMsg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let result = await response.json();
     let assistantMessage = result.choices?.[0]?.message;
 
-    // Tool calling loop (max 5 iterations)
+    // Tool calling loop
     let iterations = 0;
     while (assistantMessage?.tool_calls?.length && iterations < 5) {
       iterations++;
       const toolResults = [];
 
       for (const tc of assistantMessage.tool_calls) {
-        console.log(`Tool call: ${tc.function.name}`, tc.function.arguments);
+        console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
         const args = JSON.parse(tc.function.arguments || "{}");
         const toolResult = await executeTool(tc.function.name, args);
-        console.log(`Tool result for ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
-        toolResults.push({
-          role: "tool",
-          tool_call_id: tc.id,
-          content: JSON.stringify(toolResult),
-        });
+        console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
+        toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
       }
 
-      // Send tool results back for final answer (streaming)
       allMessages.push(assistantMessage);
       allMessages.push(...toolResults);
 
-      response = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: allMessages,
-            tools,
-            stream: true,
-          }),
-        }
-      );
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools, stream: true }),
+      });
 
       if (!response.ok) {
-        const t = await response.text();
-        console.error("AI gateway error on tool response:", response.status, t);
-        return new Response(
-          JSON.stringify({ error: "Errore durante l'elaborazione" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error("AI error on tool response:", response.status, await response.text());
+        return new Response(JSON.stringify({ error: "Errore durante l'elaborazione" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Check if it's streaming (text/event-stream) or JSON
       const contentType = response.headers.get("content-type") || "";
       if (contentType.includes("text/event-stream")) {
-        // Stream directly to client
-        return new Response(response.body, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
+        return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
 
-      // Non-streaming response, check for more tool calls
       result = await response.json();
       assistantMessage = result.choices?.[0]?.message;
     }
 
-    // If we exhausted tool calls without streaming, do a final streaming call
     if (assistantMessage?.content) {
-      // Return as a simple JSON response
-      return new Response(
-        JSON.stringify({ content: assistantMessage.content }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ content: assistantMessage.content }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fallback: make a final streaming call
     allMessages.push(assistantMessage);
-    const finalResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: allMessages,
-          stream: true,
-        }),
-      }
-    );
-
-    return new Response(finalResponse.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, stream: true }),
     });
+
+    return new Response(finalResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
   } catch (e) {
     console.error("ai-assistant error:", e);
-    return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Errore sconosciuto",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
