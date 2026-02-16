@@ -21,16 +21,17 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/** Read directory totals from the SAME query key used by CountryGrid — zero extra network calls */
 function useDirectoryTotal() {
   return useQuery({
-    queryKey: ["ops-directory-total"],
+    queryKey: ["cache-data-by-country"],
     queryFn: async () => {
       const { data } = await supabase.rpc("get_directory_counts");
-      const rows = (data || []) as any[];
-      return {
-        scannedCountries: rows.length,
-        totalDirectory: rows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0),
-      };
+      const result: Record<string, { count: number; verified: boolean }> = {};
+      (data || []).forEach((r: any) => {
+        result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
+      });
+      return result;
     },
     staleTime: 60_000,
   });
@@ -52,14 +53,18 @@ export default function Operations() {
   const [aiOpen, setAiOpen] = useState(false);
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
+  const dirTotals = dirData ? {
+    scannedCountries: Object.keys(dirData).length,
+    totalDirectory: Object.values(dirData).reduce((sum, v) => sum + v.count, 0),
+  } : null;
   const globalStats = countryStatsData ? {
     totalPartners: countryStatsData.global.total,
     withEmail: countryStatsData.global.withEmail,
     withPhone: countryStatsData.global.withPhone,
     withProfile: countryStatsData.global.withProfile,
     withoutProfile: countryStatsData.global.withoutProfile,
-    scannedCountries: dirData?.scannedCountries || 0,
-    totalDirectory: dirData?.totalDirectory || 0,
+    scannedCountries: dirTotals?.scannedCountries || 0,
+    totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
   const emergencyStopMutation = useEmergencyStop();
