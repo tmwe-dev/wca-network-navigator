@@ -135,20 +135,6 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
   }, [partners, filterIncomplete, sortBy]);
 
   const { data: selectedPartner, isLoading: detailLoading } = usePartner(selectedId || "");
-
-  if (selectedId && selectedPartner) {
-    return (
-      <div className="h-full overflow-auto">
-        <PartnerDetail
-          partner={selectedPartner}
-          onBack={() => setSelectedId(null)}
-          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-          isDark={isDark}
-        />
-      </div>
-    );
-  }
-
   const { data: countryStatsData } = useCountryStats();
 
   // Aggregate stats for selected countries
@@ -167,6 +153,19 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
     });
     return { total, withProfile, withoutProfile, withEmail, withPhone };
   }, [countryStatsData, countryCodes]);
+
+  if (selectedId && selectedPartner) {
+    return (
+      <div className="h-full overflow-auto">
+        <PartnerDetail
+          partner={selectedPartner}
+          onBack={() => setSelectedId(null)}
+          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+          isDark={isDark}
+        />
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider delayDuration={200}>
