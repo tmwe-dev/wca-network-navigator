@@ -691,8 +691,10 @@ serve(async (req) => {
     let result = await response.json();
     let assistantMessage = result.choices?.[0]?.message;
 
-    // Tool calling loop
+    // Tool calling loop — track last partner list result for structured data
     let iterations = 0;
+    let lastPartnerResult: any = null;
+
     while (assistantMessage?.tool_calls?.length && iterations < 5) {
       iterations++;
       const toolResults = [];
@@ -703,15 +705,45 @@ serve(async (req) => {
         const toolResult = await executeTool(tc.function.name, args);
         console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
+
+        // Track partner list results for structured rendering
+        const tr = toolResult as any;
+        if (tr?.partners && Array.isArray(tr.partners) && tr.partners.length > 0 && tc.function.name === "search_partners") {
+          // Enrich with services and certifications for each partner
+          const partnerIds = tr.partners.map((p: any) => p.id);
+          const [svcRes, certRes] = await Promise.all([
+            supabase.from("partner_services").select("partner_id, service_category").in("partner_id", partnerIds),
+            supabase.from("partner_certifications").select("partner_id, certification").in("partner_id", partnerIds),
+          ]);
+          const svcMap: Record<string, string[]> = {};
+          for (const s of (svcRes.data || []) as any[]) {
+            if (!svcMap[s.partner_id]) svcMap[s.partner_id] = [];
+            svcMap[s.partner_id].push(s.service_category);
+          }
+          const certMap: Record<string, string[]> = {};
+          for (const c of (certRes.data || []) as any[]) {
+            if (!certMap[c.partner_id]) certMap[c.partner_id] = [];
+            certMap[c.partner_id].push(c.certification);
+          }
+          lastPartnerResult = tr.partners.map((p: any) => ({
+            ...p,
+            country_code: p.country?.match(/\(([A-Z]{2})\)/)?.[1] || "",
+            country_name: p.country?.replace(/\s*\([A-Z]{2}\)/, "") || "",
+            services: svcMap[p.id] || [],
+            certifications: certMap[p.id] || [],
+          }));
+        }
       }
 
       allMessages.push(assistantMessage);
       allMessages.push(...toolResults);
 
+      // For the final AI call after tools, we need non-streaming to check for more tool calls
+      // But if this is the last iteration or AI doesn't call more tools, we stream
       response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools, stream: true }),
+        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools }),
       });
 
       if (!response.ok) {
@@ -719,27 +751,40 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Errore durante l'elaborazione" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("text/event-stream")) {
-        return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-      }
-
       result = await response.json();
       assistantMessage = result.choices?.[0]?.message;
     }
 
-    if (assistantMessage?.content) {
-      return new Response(JSON.stringify({ content: assistantMessage.content }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Build final content with optional structured data block
+    let finalContent = assistantMessage?.content || "";
+    
+    if (lastPartnerResult && lastPartnerResult.length > 0) {
+      finalContent += `\n\n---STRUCTURED_DATA---\n${JSON.stringify({ type: "partners", data: lastPartnerResult })}`;
+    }
+
+    if (finalContent) {
+      return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     allMessages.push(assistantMessage);
     const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, stream: true }),
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages }),
     });
 
-    return new Response(finalResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    if (!finalResponse.ok) {
+      return new Response(JSON.stringify({ error: "Errore finale" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const finalResult = await finalResponse.json();
+    let finalText = finalResult.choices?.[0]?.message?.content || "Nessuna risposta";
+    
+    if (lastPartnerResult && lastPartnerResult.length > 0) {
+      finalText += `\n\n---STRUCTURED_DATA---\n${JSON.stringify({ type: "partners", data: lastPartnerResult })}`;
+    }
+
+    return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-assistant error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
