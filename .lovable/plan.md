@@ -1,69 +1,107 @@
 
+# Regola globale: MAI piu' di una chiamata per volta
 
-# Riorganizzazione del pannello destro: Job Attivo vs Coda
+## Problema
 
-## Problema attuale
+Quando clicchi "Scarica", il sistema lancia piu' chiamate in parallelo:
+1. `triggerCheck()` internamente fa 3 chiamate (syncCookie, verifySession, updateStatusInDb)
+2. Subito dopo, un'altra chiamata al DB per controllare `wca_session_status`
+3. Poi `executeDownload` controlla i job attivi E crea job in un loop
 
-Quando lanci il download per molti paesi, il JobMonitor mostra TUTTI i job (running + pending + paused) nella stessa lista. Con 390 job pending, il pannello diventa illeggibile. Non si capisce cosa sta succedendo adesso e il terminal si perde nel mare di card.
+Inoltre `useCreateDownloadJob` non ha nessun controllo anti-duplicato: se clicchi per 5 paesi, crea 5 insert quasi simultanei.
 
-## Nuova struttura del pannello destro (nessun paese selezionato)
+## Soluzione
 
-Il pannello destro viene diviso in 3 sezioni verticali chiare e fisse:
+### 1. Serializzare il flusso pre-download in ActionPanel
 
-```text
-+------------------------------------------+
-|  [1] JOB ATTIVO (running)                |
-|  Card grande con progresso, stats,        |
-|  ultimo partner, contatti trovati         |
-+------------------------------------------+
-|  [2] TERMINAL                            |
-|  Log in tempo reale del job attivo        |
-|  (altezza fissa ~200px)                   |
-+------------------------------------------+
-|  [3] CODA (collassabile)                 |
-|  "198 job in coda" con chevron            |
-|  Espandibile: lista compatta dei pending  |
-|  + Sezione "Completati recenti" (max 5)   |
-+------------------------------------------+
-```
+File: `src/components/download/ActionPanel.tsx`
+
+Il metodo `handleStartDownload` viene riscritto con un flusso strettamente sequenziale:
+- Passo 1: `triggerCheck()` (gia' sequenziale internamente)
+- Passo 2: SE autenticato, procedere. SE no, mostrare dialog. STOP.
+- Passo 3: Controllare job attivi nel DB
+- Passo 4: Creare i job UNO ALLA VOLTA con `await` tra ogni insert
+
+Rimuovere il secondo controllo ridondante su `app_settings` dopo `triggerCheck` (faceva una chiamata doppia inutile).
+
+### 2. Guard anti-duplicato nella creazione job
+
+File: `src/hooks/useDownloadJobs.ts` - `useCreateDownloadJob`
+
+Prima dell'insert, verificare se esiste gia' un job `pending` o `running` per lo stesso `country_code` + `network_name`. Se esiste, saltare silenziosamente senza errore.
+
+### 3. Deduplicazione nel "Riavvia Tutti"
+
+File: `src/hooks/useDownloadJobs.ts` - `useResumeAllJobs`
+
+Per ogni combinazione `country_code` + `network_name`, tenere solo il job con `current_index` piu' alto. Cancellare definitivamente i duplicati.
+
+### 4. Fermare il loop del processore sulla sessione scaduta
+
+File: `src/hooks/useDownloadProcessor.ts`
+
+Quando `verifySessionBeforeJob` fallisce (sessione scaduta), il processore attualmente pausa il job e poi va al prossimo, pausando ANCHE quello. Questo genera N chiamate inutili per N job in coda.
+
+Correzione: quando la sessione e' scaduta, fermare il loop completamente (`state.stopped = true`). Non ciclare sugli altri job.
 
 ## Dettagli tecnici
 
-### File: `src/components/download/JobMonitor.tsx`
-
-Ristrutturare il componente per separare visivamente:
-
-1. **Sezione "Job Attivo"**: mostra SOLO il job con status `running`. Se nessun job e' running, mostra il primo `pending` con label "Prossimo in coda". Card grande con tutti i dettagli (progresso, ETA, contatti, ultimo partner, pulsanti pausa/stop).
-
-2. **Sezione "Coda"**: collassabile con click. Header mostra il conteggio ("198 in coda"). Quando espansa, lista compatta (una riga per job: bandiera, nome paese, progresso X/Y). Niente card elaborate, solo righe minimali.
-
-3. **Sezione "Completati"**: come oggi, max 5, collassabile.
-
-### File: `src/pages/Operations.tsx`
-
-Nessun cambiamento alla struttura del layout (gia' corretto nell'ultimo edit). L'ordine resta: ActiveJobBar, DownloadTerminal, JobMonitor.
-
-### Logica di separazione nel JobMonitor
+### ActionPanel - flusso sequenziale
 
 ```text
-const runningJob = jobs.find(j => j.status === "running");
-const nextPending = !runningJob ? jobs.find(j => j.status === "pending") : null;
-const featuredJob = runningJob || nextPending;
-
-const queuedJobs = jobs.filter(j => 
-  j.status === "pending" && j.id !== featuredJob?.id
-);
-const pausedJobs = jobs.filter(j => j.status === "paused");
-const recentCompleted = jobs.filter(j => 
-  j.status === "completed" || j.status === "cancelled"
-).slice(0, 5);
+handleStartDownload:
+  1. const result = await triggerCheck()
+  2. if (!result?.authenticated) -> mostra dialog, RETURN
+  3. const activeJobs = await checkActiveJobs()
+  4. if (activeJobs > 0) -> toast errore, RETURN
+  5. for (country of selectedCountries) {
+       await createJob(country)  // uno alla volta, con await
+     }
 ```
 
-- `featuredJob` viene mostrato come card grande (come oggi)
-- `queuedJobs` + `pausedJobs` vengono mostrati in una sezione collassabile con righe compatte
-- `recentCompleted` resta in fondo, collassabile
+Rimuovere completamente il fallback che rilegge `app_settings` dopo `triggerCheck` (righe 186-191 attuali).
 
-### File modificati
+### useCreateDownloadJob - guard
 
-1. `src/components/download/JobMonitor.tsx` -- ristrutturazione in 3 sezioni (attivo / coda / completati)
+```text
+// Prima dell'insert:
+const { data: existing } = await supabase
+  .from("download_jobs")
+  .select("id")
+  .eq("country_code", params.country_code)
+  .eq("network_name", params.network_name)
+  .in("status", ["pending", "running"])
+  .limit(1);
 
+if (existing && existing.length > 0) return existing[0].id; // skip silenzioso
+```
+
+### useDownloadProcessor - stop su sessione scaduta
+
+```text
+// In processJob, dopo verifySessionBeforeJob fallisce:
+if (!sessionOk) {
+  await supabase.from("download_jobs").update({
+    status: "paused",
+    error_message: "Sessione WCA non attiva",
+  }).eq("id", jobId);
+  state.stopped = true;  // FERMA IL LOOP, non passare al prossimo job
+  return;
+}
+```
+
+### useResumeAllJobs - dedup
+
+```text
+// Dopo aver trovato i job cancellati incompleti:
+// Raggruppare per country_code+network_name
+// Per ogni gruppo, tenere solo quello con current_index piu' alto
+// Cancellare definitivamente gli altri dal DB
+// Rimettere in pending solo quelli sopravvissuti
+```
+
+## File modificati
+
+1. `src/components/download/ActionPanel.tsx` -- rimuovere chiamate ridondanti, serializzare il flusso
+2. `src/hooks/useDownloadJobs.ts` -- guard anti-duplicato in creazione + dedup in riavvia tutti
+3. `src/hooks/useDownloadProcessor.ts` -- stop loop su sessione scaduta (una sola riga: `state.stopped = true`)
