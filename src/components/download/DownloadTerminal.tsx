@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useContext } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
 
@@ -28,70 +27,34 @@ export function DownloadTerminal() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
-  // Find active job
-  const { data: activeJob } = useQuery({
-    queryKey: ["terminal-active-job"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("download_jobs")
-        .select("id, status")
-        .in("status", ["running", "pending"])
-        .order("created_at", { ascending: true })
-        .limit(1);
-      return data?.[0] || null;
-    },
-    refetchInterval: 8000,
-  });
+  // Use the SHARED download jobs query — NO independent queries
+  const { data: jobs } = useDownloadJobs();
 
-  // If no active job, show the most recent completed/cancelled
-  const { data: fallbackJob } = useQuery({
-    queryKey: ["terminal-fallback-job"],
-    queryFn: async () => {
-      if (activeJob) return null;
-      const { data } = await supabase
-        .from("download_jobs")
-        .select("id, status")
-        .in("status", ["completed", "cancelled", "paused"])
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      return data?.[0] || null;
-    },
-    refetchInterval: 15000,
-    enabled: !activeJob,
-  });
+  // Find active or most recent job from shared data
+  const activeJob = (jobs || []).find(j => j.status === "running" || j.status === "pending");
+  const fallbackJob = !activeJob
+    ? (jobs || []).find(j => j.status === "completed" || j.status === "cancelled" || j.status === "paused")
+    : null;
 
-  const jobId = activeJob?.id || fallbackJob?.id;
+  const targetJob = activeJob || fallbackJob;
 
-  // Poll terminal_log from job
-  const { data: logs } = useQuery({
-    queryKey: ["terminal-log", jobId],
-    queryFn: async () => {
-      if (!jobId) return [];
-      const { data } = await supabase
-        .from("download_jobs")
-        .select("terminal_log")
-        .eq("id", jobId)
-        .single();
-      return (data?.terminal_log as unknown as LogEntry[] | null) || [];
-    },
-    refetchInterval: activeJob ? 3000 : false,
-    enabled: !!jobId,
-  });
+  // Extract terminal_log directly from the job data (already in the shared query)
+  const entries: LogEntry[] = targetJob
+    ? ((targetJob as any).terminal_log as LogEntry[] || [])
+    : [];
 
   // Auto-scroll
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs, autoScroll]);
+  }, [entries, autoScroll]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 40);
   };
-
-  const entries = logs || [];
 
   return (
     <div className={`rounded-xl border overflow-hidden ${isDark ? "bg-slate-950/80 border-white/[0.08]" : "bg-slate-900/95 border-slate-700/50"}`}>

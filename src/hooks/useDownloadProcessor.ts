@@ -10,16 +10,17 @@ import { useQueryClient } from "@tanstack/react-query";
  * 
  * Anti-duplication: uses an incremental activeLoopId on window.__dlProcessorState__.
  * Each loop instance knows its own ID; if it doesn't match, it exits.
- * Since window persists across HMR module reloads, old loops are always killed.
+ * 
+ * MUTEX: `processing` flag prevents concurrent processJob execution.
  */
 
-// ── WINDOW-LEVEL singleton state (survives HMR + component remounts) ──
 const DL_STATE_KEY = '__dlProcessorState__';
 
 interface DlProcessorState {
   cancel: boolean;
   stopped: boolean;
   activeLoopId: number;
+  processing: boolean; // MUTEX: true while a job is being processed
 }
 
 function getDlState(): DlProcessorState {
@@ -28,6 +29,7 @@ function getDlState(): DlProcessorState {
       cancel: false,
       stopped: false,
       activeLoopId: 0,
+      processing: false,
     };
   }
   return (window as any)[DL_STATE_KEY];
@@ -48,7 +50,7 @@ export function useDownloadProcessor() {
   const extractContactsRef = useRef(extractContacts);
   useEffect(() => { extractContactsRef.current = extractContacts; }, [extractContacts]);
 
-  // ── Terminal log helper ──
+  // ── Terminal log helper — batched write, no read-then-write race ──
   const appendLog = async (jobId: string, type: string, msg: string) => {
     const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     const entry = { ts, type, msg };
@@ -62,9 +64,7 @@ export function useDownloadProcessor() {
     }
   };
 
-  // processJob receives loopId to verify ownership before critical operations
-  // Pre-job session check: DB-only, NO extension calls (no extra tabs!)
-  // The auto-check in useWcaSessionStatus already handles verification via extension.
+  // Pre-job session check: DB-only, NO extension calls
   const verifySessionBeforeJob = useCallback(async (jobId: string): Promise<boolean> => {
     try {
       const { data } = await supabase
@@ -79,7 +79,6 @@ export function useDownloadProcessor() {
         return true;
       }
 
-      // If "unknown", wait for auto-check to complete, then re-read
       if (status === "unknown") {
         await new Promise(r => setTimeout(r, 5000));
         const { data: recheck } = await supabase
@@ -103,6 +102,14 @@ export function useDownloadProcessor() {
 
   const processJob = useCallback(async (job: any, loopId: number) => {
     const state = getDlState();
+    
+    // MUTEX: prevent concurrent processing
+    if (state.processing) {
+      console.warn("[DownloadProcessor] Already processing a job, skipping");
+      return;
+    }
+    state.processing = true;
+
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
     const startIndex = job.current_index || 0;
@@ -110,7 +117,10 @@ export function useDownloadProcessor() {
     const s = settingsRef.current;
 
     // Verify loop ownership before starting
-    if (loopId !== state.activeLoopId || state.stopped) return;
+    if (loopId !== state.activeLoopId || state.stopped) {
+      state.processing = false;
+      return;
+    }
 
     // Pre-job: verify WCA session is active
     const sessionOk = await verifySessionBeforeJob(jobId);
@@ -119,8 +129,8 @@ export function useDownloadProcessor() {
         status: "paused",
         error_message: "⚠️ Sessione WCA non attiva. Effettua il login su wcaworld.com e riprova.",
       }).eq("id", jobId);
-      // STOP TOTALE: non ciclare sugli altri job in coda
       state.stopped = true;
+      state.processing = false;
       return;
     }
 
@@ -139,6 +149,7 @@ export function useDownloadProcessor() {
       await supabase.from("download_jobs")
         .update({ status: "pending", error_message: "In attesa: altro job in esecuzione" })
         .eq("id", jobId);
+      state.processing = false;
       return;
     }
 
@@ -164,7 +175,6 @@ export function useDownloadProcessor() {
 
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
-        // Check ALL stop conditions including loopId ownership
         if (state.cancel || state.stopped || loopId !== state.activeLoopId) break;
 
         // Check job status from DB (pause/cancel from UI)
@@ -186,7 +196,6 @@ export function useDownloadProcessor() {
 
         await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
-        // Verify loop ownership before opening extension tab
         if (loopId !== state.activeLoopId) break;
 
         // Check extension availability
@@ -444,7 +453,7 @@ export function useDownloadProcessor() {
         }
       }
 
-      // Complete job (only if this loop instance is still the active one)
+      // Complete job
       if (!state.cancel && !state.stopped && loopId === state.activeLoopId) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
         try {
@@ -460,6 +469,7 @@ export function useDownloadProcessor() {
       }
     } finally {
       clearInterval(keepAlive);
+      state.processing = false; // RELEASE MUTEX
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["ops-global-stats"] });
       queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
@@ -468,18 +478,21 @@ export function useDownloadProcessor() {
     }
   }, [queryClient]);
 
-  // Ref to always access latest processJob without useEffect dependency
   const processJobRef = useRef(processJob);
   useEffect(() => { processJobRef.current = processJob; }, [processJob]);
 
-  // Main polling loop: mount-only, uses window-level activeLoopId for anti-duplication
-  useEffect(() => {
+  // Shared polling loop function
+  const startLoop = useCallback((loopId: number) => {
     const state = getDlState();
-    const myId = ++state.activeLoopId; // New session — invalidates any previous loop
-    state.cancel = false; // Reset cancel on fresh mount
-
+    
     const loop = async () => {
-      while (myId === state.activeLoopId && !state.stopped && !state.cancel) {
+      while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
+        // Skip if already processing (mutex)
+        if (state.processing) {
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+
         try {
           const { data: jobs } = await supabase
             .from("download_jobs")
@@ -489,7 +502,7 @@ export function useDownloadProcessor() {
             .order("created_at", { ascending: true })
             .limit(1);
 
-          if (jobs && jobs.length > 0 && myId === state.activeLoopId && !state.stopped && !state.cancel) {
+          if (jobs && jobs.length > 0 && loopId === state.activeLoopId && !state.stopped && !state.cancel) {
             const { data: fresh } = await supabase
               .from("download_jobs")
               .select("status")
@@ -497,10 +510,10 @@ export function useDownloadProcessor() {
               .single();
 
             if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-              await processJobRef.current(jobs[0], myId);
+              await processJobRef.current(jobs[0], loopId);
 
               // Cooldown inter-job (30s)
-              if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
+              if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
                 await new Promise(r => setTimeout(r, 30000));
               }
               continue;
@@ -510,18 +523,28 @@ export function useDownloadProcessor() {
           console.error("[DownloadProcessor] Error:", err);
         }
 
-        // No job found or error: wait 5s and retry
-        if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
-          await new Promise(r => setTimeout(r, 5000));
+        // No job found or error: wait 15s (was 5s) and retry
+        if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
+          await new Promise(r => setTimeout(r, 15000));
         }
       }
     };
 
     loop();
+  }, []);
+
+  // Main polling loop: mount-only
+  useEffect(() => {
+    const state = getDlState();
+    const myId = ++state.activeLoopId;
+    state.cancel = false;
+
+    startLoop(myId);
+
     return () => {
       state.cancel = true;
     };
-  }, []); // Mount-only — no dependencies
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emergencyStop = useCallback(() => {
     const state = getDlState();
@@ -533,44 +556,10 @@ export function useDownloadProcessor() {
     const state = getDlState();
     state.stopped = false;
     state.cancel = false;
+    state.processing = false; // Reset mutex
     const myId = ++state.activeLoopId;
-
-    const loopFn = async () => {
-      while (myId === state.activeLoopId && !state.stopped && !state.cancel) {
-        try {
-          const { data: jobs } = await supabase
-            .from("download_jobs")
-            .select("*")
-            .in("status", ["pending", "running"])
-            .eq("job_type", "download")
-            .order("created_at", { ascending: true })
-            .limit(1);
-
-          if (jobs && jobs.length > 0 && myId === state.activeLoopId && !state.stopped && !state.cancel) {
-            const { data: fresh } = await supabase
-              .from("download_jobs")
-              .select("status")
-              .eq("id", jobs[0].id)
-              .single();
-
-            if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-              await processJobRef.current(jobs[0], myId);
-              if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
-                await new Promise(r => setTimeout(r, 30000));
-              }
-              continue;
-            }
-          }
-        } catch (err) {
-          console.error("[DownloadProcessor] Error:", err);
-        }
-        if (myId === state.activeLoopId && !state.stopped && !state.cancel) {
-          await new Promise(r => setTimeout(r, 5000));
-        }
-      }
-    };
-    loopFn();
-  }, []);
+    startLoop(myId);
+  }, [startLoop]);
 
   return { emergencyStop, resetStop };
 }
