@@ -5,11 +5,11 @@ import { Slider } from "@/components/ui/slider";
 import {
   Play, Pause, Square, Loader2, Timer, Zap, Activity,
   ArrowRight, Settings2, CheckCircle, List, Mail, Phone, XCircle,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Trash2,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
-  useDownloadJobs, usePauseResumeJob, useUpdateJobSpeed,
+  useDownloadJobs, usePauseResumeJob, useUpdateJobSpeed, useDeleteQueuedJobs,
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";
@@ -22,6 +22,7 @@ export function JobMonitor() {
   const { data: jobs } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
   const updateSpeed = useUpdateJobSpeed();
+  const deleteQueued = useDeleteQueuedJobs();
 
   const runningJob = (jobs || []).find(j => j.status === "running");
   const nextPending = !runningJob ? (jobs || []).find(j => j.status === "pending") : null;
@@ -54,13 +55,25 @@ export function JobMonitor() {
       {/* SEZIONE 2: Coda (collassabile) */}
       {totalQueued > 0 && (
         <div>
-          <button
-            onClick={() => setQueueOpen(!queueOpen)}
-            className={`flex items-center gap-1.5 text-sm font-medium w-full text-left py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
-          >
-            {queueOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            In coda ({totalQueued})
-          </button>
+          <div className="flex items-center justify-between w-full">
+            <button
+              onClick={() => setQueueOpen(!queueOpen)}
+              className={`flex items-center gap-1.5 text-sm font-medium py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
+            >
+              {queueOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              In coda ({totalQueued})
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => deleteQueued.mutate()}
+              disabled={deleteQueued.isPending}
+              className={`h-6 text-[11px] px-2 ${th.btnStop}`}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              {deleteQueued.isPending ? "Eliminando..." : "Elimina tutti"}
+            </Button>
+          </div>
           {queueOpen && (
             <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-2 space-y-0.5 max-h-60 overflow-y-auto`}>
               {pausedJobs.map(job => (

@@ -140,6 +140,38 @@ export function useUpdateJobSpeed() {
   });
 }
 
+export function useDeleteQueuedJobs() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: jobs } = await supabase
+        .from("download_jobs")
+        .select("id")
+        .in("status", ["paused", "pending"]);
+
+      if (!jobs || jobs.length === 0) return 0;
+
+      const { error } = await supabase
+        .from("download_jobs")
+        .delete()
+        .in("status", ["paused", "pending"]);
+
+      if (error) throw error;
+      return jobs.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      if (count && count > 0) {
+        toast({ title: "🗑️ Eliminati", description: `${count} job rimossi dalla coda` });
+      }
+    },
+    onError: (err) => {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
 export function useResumeAllJobs() {
   const queryClient = useQueryClient();
 
