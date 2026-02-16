@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.generate-aliases]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false
