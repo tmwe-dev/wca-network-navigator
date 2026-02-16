@@ -1,90 +1,84 @@
 
-# Fix: Processi Fantasma e Chiamate Duplicate
+# Fix: Processi Automatici Attivi che Non Si Fermano Mai
 
-## Problemi Identificati
+## Problemi Trovati
 
-### 1. DUE chiamate identiche a `get_directory_counts`
-Il problema delle "due chiamate con lo stesso nome" e reale e documentato: la stessa RPC `get_directory_counts` viene chiamata da DUE posti diversi nello stesso momento:
-- **Operations.tsx** (riga 28): hook `useDirectoryTotal()` con query key `["ops-directory-total"]`
-- **CountryGrid.tsx** (riga 44): query con key `["cache-data-by-country"]`
+Ci sono **3 fonti di processi attivi** che continuano a girare in background senza che tu li abbia avviati:
 
-Poiche hanno query key diverse, React Query le tratta come query separate e spara DUE richieste identiche al database simultaneamente.
+### 1. Loop di polling del processore download (OGNI 15 secondi)
+Il processore in `useDownloadProcessor.ts` ha un loop infinito che interroga il database (`download_jobs?status=eq.pending`) ogni 15 secondi, anche quando NON ci sono job da eseguire. Questo genera chiamate di rete continue e permanenti.
 
-### 2. Job cancellato rimasto nel database
-Il job Albania (`e6d4b363...`) con status `cancelled` e ancora nel DB. Non e stato eliminato dalla pulizia precedente.
+### 2. Auto-check WCA da 5 componenti diversi (il problema principale!)
+L'hook `useWcaSessionStatus` viene usato in **5 componenti**:
+- AppSidebar
+- ActionPanel
+- WcaSessionIndicator
+- WcaSessionCard
+- Settings
 
-### 3. Il loop di polling non si ferma MAI
-Il processore di download esegue un loop infinito che interroga il database ogni 15 secondi cercando job `pending`, anche quando non ce ne sono. Questo genera traffico inutile e confonde l'utente che vede "processi attivi" nel network inspector.
+Ogni componente crea la propria istanza dell'hook, e ognuna ha il proprio `autoCheckDone = useRef(false)`. Quando lo stato WCA e "expired" (com'e adesso), TUTTE le istanze attivano `triggerCheck()` indipendentemente, generando chiamate multiple a `check-wca-session`.
 
-### 4. Il mount guard e insufficiente
-Il guard alla riga 609 controlla `state.processing`, ma durante la pausa di 15 secondi `processing` e `false`. Di conseguenza, su ogni HMR o remount del componente, il guard passa e crea un SECONDO loop. Il vecchio loop esce alla prossima iterazione (controlla `loopId`), ma nel frattempo i due loop si sovrappongono brevemente, causando query duplicate.
+### 3. AppSidebar chiama `triggerCheck()` incondizionatamente al mount
+In `AppSidebar.tsx` riga 44-46 c'e:
+```text
+useEffect(() => {
+    triggerCheck();
+}, []);
+```
+Questo lancia una verifica WCA OGNI VOLTA che la sidebar viene montata, senza alcuna condizione.
 
 ---
 
 ## Piano di Intervento
 
-### A. Eliminare la chiamata duplicata a `get_directory_counts`
-**File**: `src/pages/Operations.tsx`
+### A. Rendere l'auto-check globale (non per-istanza)
+**File**: `src/hooks/useWcaSessionStatus.ts`
 
-Rimuovere completamente l'hook `useDirectoryTotal()` e il suo utilizzo. I dati di directory totale (paesi scansionati e totale membri) verranno calcolati dalla stessa query `cache-data-by-country` che usa gia CountryGrid.tsx, passandoli come prop o leggendo dalla stessa query key di React Query.
+Spostare il flag `autoCheckDone` su `window` (singleton globale) invece di usare `useRef`. Cosi, indipendentemente da quante istanze dell'hook esistono, l'auto-check parte UNA SOLA VOLTA:
 
-In pratica:
-- Eliminare la funzione `useDirectoryTotal()` (righe 24-37)
-- Recuperare `scannedCountries` e `totalDirectory` dalla query `["cache-data-by-country"]` che gia esiste in CountryGrid
-- Usare `useQuery` con la stessa key `["cache-data-by-country"]` in Operations.tsx per leggere i dati gia in cache (zero chiamate extra)
+```text
+const AUTO_CHECK_KEY = '__wcaAutoCheckDone__';
+// Usare (window as any)[AUTO_CHECK_KEY] invece di useRef(false)
+```
 
-### B. Aggiungere un flag `loopRunning` al singleton
+### B. Rimuovere il triggerCheck() incondizionato da AppSidebar
+**File**: `src/components/layout/AppSidebar.tsx`
+
+Eliminare completamente il `useEffect` alle righe 43-46. L'auto-check nell'hook stesso e gia sufficiente e gestito in modo centralizzato.
+
+### C. Fermare il polling loop quando non ci sono job
 **File**: `src/hooks/useDownloadProcessor.ts`
 
-Aggiungere un campo `loopRunning: boolean` allo stato globale, separato da `processing`. Questo flag e `true` per tutta la durata del loop (incluse le pause di 15s) e `false` solo quando il loop esce davvero.
-
-Il mount guard usera `loopRunning` invece di `processing`:
+Implementare un contatore di cicli vuoti. Dopo 3 cicli consecutivi senza trovare job pending, il loop esce completamente (`loopRunning = false`). Il loop verra riavviato solo quando l'utente avvia effettivamente nuovi download (tramite `resetStop()`).
 
 ```text
-interface DlProcessorState {
-  cancel: boolean;
-  stopped: boolean;
-  activeLoopId: number;
-  processing: boolean;
-  loopRunning: boolean;  // NUOVO: true finche il loop esiste
-  abortController: AbortController | null;
+let emptyRounds = 0;
+// Nel loop:
+if (no pending jobs) {
+    emptyRounds++;
+    if (emptyRounds >= 3) {
+        console.log("[DownloadProcessor] No jobs for 3 rounds, stopping loop");
+        break; // Esce dal while, loopRunning diventa false nel finally
+    }
 }
+// Se trova un job: emptyRounds = 0;
 ```
-
-Il guard diventa:
-```text
-if (state.loopRunning && !state.stopped && !state.cancel) {
-  return; // Loop gia attivo, non crearne un altro
-}
-```
-
-E nel corpo del loop:
-```text
-state.loopRunning = true;
-// ... while loop ...
-state.loopRunning = false; // Solo quando il while esce
-```
-
-### C. Pulizia del job cancellato
-Eliminare il job Albania cancellato rimasto nel database.
-
-### D. (Opzionale) Ridurre polling quando non ci sono job
-Quando il loop non trova job pending per 3 cicli consecutivi, aumentare l'intervallo di polling da 15s a 60s. Tornare a 15s appena arriva un nuovo job (tramite realtime notification da useDownloadJobs).
 
 ---
 
-## Dettagli Tecnici
+## Risultato Atteso
 
-### File modificati
+| Prima | Dopo |
+|-------|------|
+| Polling DB ogni 15s per sempre | Loop si ferma dopo 45s senza job |
+| 5 auto-check WCA simultanei | 1 solo auto-check globale |
+| triggerCheck() extra da AppSidebar | Nessun check extra |
+| Chiamate di rete continue in background | Silenzio totale quando non ci sono operazioni |
+
+## File Modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Operations.tsx` | Rimuovere `useDirectoryTotal()`, usare `["cache-data-by-country"]` condiviso |
-| `src/hooks/useDownloadProcessor.ts` | Aggiungere `loopRunning` al singleton, fix mount guard |
-| Database | Eliminare job Albania cancellato |
-
-### Risultato atteso
-- UNA sola chiamata a `get_directory_counts` invece di due
-- Nessun loop duplicato su remount/HMR
-- Nessun job fantasma nel database
-- Il processore continua a funzionare correttamente per i job reali
+| `src/hooks/useWcaSessionStatus.ts` | Auto-check con flag globale su window |
+| `src/components/layout/AppSidebar.tsx` | Rimuovere triggerCheck() al mount |
+| `src/hooks/useDownloadProcessor.ts` | Stop loop dopo 3 cicli vuoti |
