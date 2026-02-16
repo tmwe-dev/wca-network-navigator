@@ -1,94 +1,109 @@
 
 
-# Fix: Pulsanti di Controllo Download e Affidabilita del Sistema
+# Refactoring: Sistema di Gestione Job Download
 
-## Problemi Identificati
+## Problema Centrale
 
-### 1. Il pulsante STOP non ferma immediatamente il processo
-Il pulsante STOP nella barra superiore chiama `emergencyStop()` che imposta solo dei flag (`cancel=true`, `stopped=true`). Ma se il processore e nel mezzo di un'estrazione tramite Chrome Extension (che puo durare 5-15 secondi), il flag viene controllato solo DOPO che l'estrazione finisce. Risultato: sembra che il pulsante non funzioni.
+Nel database ci sono **193 job cancellati** (192 incompleti). L'interfaccia mostra "RIAVVIA (46)" perche la query carica solo gli ultimi 50 job. Non esiste alcun modo per eliminare i job cancellati -- il pulsante "Elimina tutti" cancella solo quelli in coda (`pending`/`paused`).
 
-### 2. "Elimina tutti" non cancella il job in evidenza
-Il pulsante "Elimina tutti" nella sezione Coda cancella solo i job con stato `paused` o `pending`. Ma il job "featured" (mostrato in alto come "Prossimo in coda") e anch'esso `pending` e viene filtrato fuori dalla lista coda. Dopo l'eliminazione, il job featured rimane visibile perche non viene incluso nella cancellazione.
-
-### 3. I pulsanti rimangono visibili dopo l'azione
-Dopo aver cliccato "Elimina tutti", la sezione coda resta visibile finche React Query non invalida e ricarica i dati. Serve un aggiornamento piu reattivo.
-
-### 4. Garanzia chiamata singola
-L'architettura attuale e solida con 5 livelli di protezione (mutex globale, loop ID, atomic claim SQL, esecuzione sequenziale, keep-alive). Non ci sono falle nella garanzia di singola chiamata.
+Risultato: i 46 job fantasma restano li per sempre, il pulsante RIAVVIA li rimette tutti in coda creando caos.
 
 ---
 
 ## Piano di Intervento
 
-### A. STOP immediato e reattivo
-**File**: `src/hooks/useDownloadProcessor.ts`
+### 1. Pulizia immediata del database
+Eliminare tutti i 193 job cancellati dal database. Sono job obsoleti che non hanno piu valore operativo.
 
-- Aggiungere un `AbortController` al singleton globale
-- Quando `emergencyStop()` viene chiamato, oltre ai flag, fare abort del controller corrente
-- Nel loop di estrazione, controllare il flag `cancel` PRIMA e DOPO ogni operazione asincrona (DB query, extension call, delay)
-- Aggiungere check intermedi nel blocco di salvataggio contatti (il piu lungo)
-- Dopo emergency stop, aggiornare IMMEDIATAMENTE il job nel DB a "cancelled" dal client (senza aspettare che il loop arrivi al check)
-
-### B. "Elimina tutti" include il job in evidenza
+### 2. Aggiungere "Pulisci completati/cancellati" al JobMonitor
 **File**: `src/hooks/useDownloadJobs.ts`
 
-- Modificare `useDeleteQueuedJobs` per eliminare TUTTI i job `pending` e `paused`, senza esclusioni
-- Il featured job pending verra eliminato insieme alla coda
-- Se c'e un job `running`, NON eliminarlo (solo i pending/paused)
+Creare un nuovo hook `usePurgeOldJobs` che elimina in blocco i job con stato `cancelled` e `completed`. Questo sostituisce la logica attuale dove i job cancellati si accumulano senza fine.
 
-### C. Feedback immediato dopo eliminazione
+### 3. Rifattorizzare il pulsante RIAVVIA nella barra superiore
+**File**: `src/pages/Operations.tsx`
+
+Il pulsante "RIAVVIA (46)" nella top bar e pericoloso: rimette in coda decine di job alla cieca.
+
+Soluzione:
+- Rimuovere il pulsante RIAVVIA dalla barra superiore
+- Spostare la possibilita di ripresa nel JobMonitor, dove ogni singolo job cancellato puo essere riavviato individualmente (gia presente come pulsante "Riavvia" nella FeaturedJobCard)
+- Aggiungere un pulsante "Pulisci tutto" nella sezione Completati del JobMonitor che elimina cancellati + completati
+
+### 4. Rifattorizzare "Elimina tutti" per coprire TUTTI gli stati non-running
+**File**: `src/hooks/useDownloadJobs.ts`
+
+Modificare `useDeleteQueuedJobs` per eliminare job con stato `pending`, `paused`, `cancelled` e `completed`. L'unico stato protetto e `running` (job in esecuzione).
+
+### 5. Migliorare la sezione Completati nel JobMonitor
 **File**: `src/components/download/JobMonitor.tsx`
 
-- Dopo la mutazione `deleteQueued`, forzare `queryClient.invalidateQueries` inline
-- Disabilitare i pulsanti durante il pending della mutazione (gia fatto parzialmente)
-- Aggiungere `onSuccess` callback per aggiornamento immediato
+- Raggruppare i job cancellati nella sezione "Completati" (rinominata "Cronologia")
+- Aggiungere un contatore chiaro: "5 completati, 46 cancellati"
+- Aggiungere pulsante "Pulisci cronologia" che elimina tutti i non-attivi
 
-### D. Pulsante STOP: feedback visivo istantaneo
-**File**: `src/components/download/SpeedGauge.tsx`
+### 6. Rimuovere il codice di resume massivo
+**File**: `src/hooks/useDownloadJobs.ts`
 
-- Dopo il click su STOP, cambiare immediatamente lo stato visivo del pulsante (es. "FERMANDO..." con spinner)
-- Disabilitare il pulsante per evitare click multipli
+La funzione `useResumeAllJobs` viene semplificata o rimossa. La ripresa avviene solo job-per-job dal pannello JobMonitor, evitando di creare decine di job pending simultaneamente.
 
 ---
 
 ## Dettagli Tecnici
 
-### Modifica al singleton (useDownloadProcessor.ts)
+### Nuovo hook: usePurgeOldJobs
 
 ```text
-interface DlProcessorState {
-  cancel: boolean;
-  stopped: boolean;
-  activeLoopId: number;
-  processing: boolean;
-  abortController: AbortController | null;  // NUOVO
+export function usePurgeOldJobs() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await supabase
+        .from("download_jobs")
+        .select("id")
+        .in("status", ["cancelled", "completed"]);
+      if (!data || data.length === 0) return 0;
+      const { error } = await supabase
+        .from("download_jobs")
+        .delete()
+        .in("status", ["cancelled", "completed"]);
+      if (error) throw error;
+      return data.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      toast({ title: "Cronologia pulita", description: `${count} job rimossi` });
+    },
+  });
 }
 ```
 
-La funzione `emergencyStop()` diventa:
+### Modifica Operations.tsx (barra superiore)
 
-```text
-const emergencyStop = () => {
-  const state = getDlState();
-  state.cancel = true;
-  state.stopped = true;
-  state.abortController?.abort();  // Interrompe delay in corso
-  // Aggiorna DB immediatamente
-  supabase
-    .from("download_jobs")
-    .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
-    .in("status", ["running", "pending"])
-    .then(() => queryClient.invalidateQueries({ queryKey: ["download-jobs"] }));
-};
-```
+Rimuovere il blocco del pulsante "RIAVVIA ({cancelledIncompleteJobs.length})" e la logica correlata (`cancelledIncompleteJobs`, `resumeAllMutation`, `resetStop` nel click handler).
 
-I `setTimeout` nel loop verranno sostituiti con una funzione `abortableDelay` che si interrompe subito quando l'AbortController viene abortito.
+### Modifica useDeleteQueuedJobs
 
-### Modifica a deleteQueuedJobs (useDownloadJobs.ts)
+Il filtro `.in("status", ["paused", "pending"])` diventa `.in("status", ["paused", "pending", "cancelled", "completed"])` per pulire tutto tranne i job attivi.
 
-La mutazione eliminera tutti i job `pending` e `paused` senza distinzioni, incluso quello mostrato come "featured/prossimo".
+### Modifica JobMonitor
 
-### Modifica al JobMonitor (JobMonitor.tsx)
+- Rinominare "Completati" in "Cronologia"
+- Mostrare sia completati che cancellati nella stessa sezione
+- Aggiungere pulsante "Pulisci" con icona Trash2
+- Per i job cancellati incompleti, mantenere il pulsante "Riavvia" individuale nella QueueRow
 
-Aggiungere `queryClient.invalidateQueries` nel callback `onSuccess` della mutazione `deleteQueued` per garantire che l'UI si aggiorni immediatamente dopo l'eliminazione.
+### Pulizia DB una tantum
+
+Verra eseguita una migrazione SQL per eliminare i 193 job cancellati attualmente nel database, dando subito un'interfaccia pulita.
+
+---
+
+## Risultato Atteso
+
+- Nessun job fantasma nell'interfaccia
+- Pulsante "Pulisci cronologia" per rimuovere vecchi job in qualsiasi momento
+- Ripresa singola dei job cancellati (non massiva)
+- Pulsante "Elimina tutti" che pulisce veramente tutto
+- STOP immediato confermato funzionante (gia implementato con AbortController)
 
