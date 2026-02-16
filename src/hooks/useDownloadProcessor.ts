@@ -63,66 +63,38 @@ export function useDownloadProcessor() {
   };
 
   // processJob receives loopId to verify ownership before critical operations
-  // Pre-job session verification via extension
+  // Pre-job session check: DB-only, NO extension calls (no extra tabs!)
+  // The auto-check in useWcaSessionStatus already handles verification via extension.
   const verifySessionBeforeJob = useCallback(async (jobId: string): Promise<boolean> => {
     try {
-      // Check current DB status
       const { data } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "wca_session_status")
         .maybeSingle();
 
-      if (data?.value === "ok") return true; // Already verified
-
-      // Try extension verification
-      const extAvailable = availableRef.current || (await checkAvailableRef.current());
-      if (!extAvailable) {
-        console.warn("[DownloadProcessor] Extension not available for session check");
-        return data?.value === "ok"; // Fall back to DB status
+      const status = data?.value;
+      if (status === "ok") {
+        await appendLog(jobId, "INFO", "✅ Sessione WCA attiva — procedo");
+        return true;
       }
 
-      // Import verifySession from extension bridge
-      const { verifySession } = useExtensionBridge as any;
-      // Use sendMessage directly via the bridge
-      const result = await new Promise<any>((resolve) => {
-        const requestId = `verify_pre_job_${Date.now()}`;
-        const timer = setTimeout(() => resolve({ success: false }), 30000);
-        
-        const handler = (event: MessageEvent) => {
-          if (event.source !== window) return;
-          const d = event.data;
-          if (d?.direction === "from-extension" && d?.requestId === requestId) {
-            window.removeEventListener("message", handler);
-            clearTimeout(timer);
-            resolve(d.response || { success: false });
-          }
-        };
-        window.addEventListener("message", handler);
-        window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
-      });
-
-      const authenticated = result.success && result.authenticated === true;
-      const newStatus = authenticated ? "ok" : "expired";
-
-      // Update DB with result
-      const now = new Date().toISOString();
-      await supabase.from("app_settings").upsert(
-        { key: "wca_session_status", value: newStatus, updated_at: now },
-        { onConflict: "key" }
-      );
-      await supabase.from("app_settings").upsert(
-        { key: "wca_session_checked_at", value: now, updated_at: now },
-        { onConflict: "key" }
-      );
-
-      if (authenticated) {
-        await appendLog(jobId, "INFO", "✅ Sessione WCA verificata — procedo");
-      } else {
-        await appendLog(jobId, "WARN", "❌ Sessione WCA non autenticata — job in pausa");
+      // If "unknown", wait for auto-check to complete, then re-read
+      if (status === "unknown") {
+        await new Promise(r => setTimeout(r, 5000));
+        const { data: recheck } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "wca_session_status")
+          .maybeSingle();
+        if (recheck?.value === "ok") {
+          await appendLog(jobId, "INFO", "✅ Sessione WCA confermata — procedo");
+          return true;
+        }
       }
 
-      return authenticated;
+      await appendLog(jobId, "WARN", `❌ Sessione WCA: ${status || "no_cookie"} — job in pausa`);
+      return false;
     } catch (err) {
       console.error("[DownloadProcessor] Pre-job session check failed:", err);
       return false;
