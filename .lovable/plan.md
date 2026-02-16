@@ -1,125 +1,86 @@
 
 
-# Assistente AI Integrato nell'Operations Center
+# Risultati Strutturati dall'Assistente AI
 
-## Panoramica
+## Problema attuale
 
-Hai gia' tutto il necessario per costruire un assistente AI potente e operativo. Il progetto ha Lovable AI configurato (usato gia' per `analyze-partner` e `parse-profile-ai`), e tutte le tabelle del database sono accessibili dalle backend functions. L'assistente potra' leggere dati, rispondere a domande sul contenuto e eseguire azioni concrete.
+L'AI puo' gia' filtrare partner per paese, servizio, certificazione, rating e altro. Tuttavia, i risultati vengono presentati come tabelle markdown nel fumetto della chat — non sono cliccabili, non mostrano dettagli e non permettono azioni.
 
-## Architettura
+Quando chiedi "Mostrami i partner IATA in Germania senza email", l'AI ti restituisce una tabella di testo. Quello che vorresti e' una lista strutturata, navigabile, con le stesse card e dettagli che vedi nel PartnerListPanel.
 
-L'assistente sara' composto da tre parti:
+## Soluzione
 
-1. **Backend function** (`supabase/functions/ai-assistant/index.ts`) -- riceve i messaggi dell'utente, interroga il database in autonomia tramite tool calling, e risponde con dati reali
-2. **Componente UI** (`src/components/operations/AiAssistantDialog.tsx`) -- popup/dialog con chat streaming, richiamabile da un pulsante nell'Operations Center
-3. **Pulsante di attivazione** nell'header di Operations.tsx
+Estendere il protocollo di comunicazione tra backend e frontend per supportare **blocchi strutturati** nelle risposte dell'AI. Quando l'AI trova dei partner, oltre al testo esplicativo, il backend invia un blocco JSON con i dati strutturati. Il frontend lo intercetta e lo presenta in un pannello dedicato sotto la chat, con card partner cliccabili.
 
-## Capacita' dell'Assistente
+## Come funziona
 
-| Domanda esempio | Cosa fa il backend |
-|---|---|
-| "Quanti partner ha il Brasile?" | Query `partners WHERE country_code = 'BR'` |
-| "Quali paesi non hanno profili?" | Query `get_country_stats()` + filtra `without_profile > 0` |
-| "Trova partner con rating > 4 in Germania" | Query `partners WHERE country_code = 'DE' AND rating > 4` |
-| "Quali job sono attivi?" | Query `download_jobs WHERE status = 'running'` |
-| "Riassumi il partner XYZ" | Legge `raw_profile_markdown` e genera riassunto |
-| "Avvia download per la Francia" | Crea record in `download_jobs` (azione attiva) |
-| "Mostra le email mancanti in Italia" | Query partner IT senza email |
+1. L'AI riceve la domanda, usa i tool per interrogare il database
+2. Nella risposta testuale, il backend inserisce un marcatore speciale con i dati strutturati (es. lista partner con id, nome, citta', email, rating)
+3. Il frontend del `AiAssistantDialog` intercetta il marcatore e renderizza i risultati in un pannello separato sotto il messaggio
+4. Ogni partner nella lista e' cliccabile e mostra un mini-dettaglio (email, telefono, rating, servizi)
 
-## Implementazione Tecnica
+## Cosa cambia nella UI
 
-### 1. Edge Function: `supabase/functions/ai-assistant/index.ts`
+Il dialog `AiAssistantDialog` viene arricchito con:
 
-Usa il pattern **tool calling** di Lovable AI (Gemini) per dare all'AI accesso strutturato al database:
+- Un componente `AiResultCard` che renderizza singoli partner come card compatte (nome, citta', paese, email, rating con stelline, badge servizi)
+- Un componente `AiResultsPanel` che contiene la lista scrollabile di card, mostrata sotto il messaggio dell'AI che ha prodotto i risultati
+- Un contatore in alto ("12 partner trovati") con possibilita' di espandere/collassare la lista
+- Click su una card apre il dettaglio completo (riusa la logica gia' presente in PartnerListPanel)
 
-**Tools disponibili per l'AI:**
-- `query_partners` -- cerca partner per paese, rating, tipo, presenza email/profilo
-- `get_country_stats` -- statistiche aggregate per paese
-- `query_jobs` -- stato dei download jobs
-- `get_partner_detail` -- dettaglio completo di un partner specifico
-- `count_records` -- conteggi veloci per qualsiasi tabella/filtro
+## Dettaglio tecnico
 
-L'AI riceve la domanda dell'utente, decide quale tool usare, il backend esegue la query Supabase corrispondente, e l'AI formula la risposta con i dati reali.
+### Protocollo backend
 
-**System prompt** descrive il contesto del sistema: tabelle disponibili, significato dei campi, network WCA, tipi di partner, e le azioni possibili.
+Nella edge function `ai-assistant`, dopo che l'AI formula la risposta con tool calling, il backend controlla se l'ultimo tool chiamato ha restituito una lista di partner. In quel caso, aggiunge alla risposta un blocco con un delimitatore riconoscibile:
 
-**Modello**: `google/gemini-3-flash-preview` (veloce, buon reasoning, costo contenuto).
+Il formato e' un marcatore di tipo `---STRUCTURED_DATA---` seguito da JSON, che il frontend separa dal testo markdown.
 
-### 2. Componente UI: `src/components/operations/AiAssistantDialog.tsx`
+### Modifiche alla edge function
 
-- Dialog/Sheet che si apre dal pulsante nell'header di Operations
-- Chat con streaming token-by-token (SSE) come da pattern Lovable AI
-- Cronologia messaggi nella sessione (non persistita nel DB per semplicita' iniziale)
-- Indicatore "sta pensando..." durante le tool calls
-- Supporto markdown nelle risposte (tabelle, liste, grassetto)
-- Rispetta il tema chiaro/scuro di Operations
+Il file `supabase/functions/ai-assistant/index.ts` viene modificato per:
 
-### 3. Integrazione in Operations.tsx
+- Tracciare l'ultimo risultato dei tool call (se contiene una lista `partners`)
+- Appendere il blocco strutturato alla risposta finale dell'AI
+- Includere nel JSON: id, company_name, city, country_code, country_name, email, phone, rating, has_profile, is_favorite, office_type, wca_id, services (array), certifications (array)
 
-- Pulsante con icona `MessageSquare` o `Bot` nell'header, accanto al toggle tema
-- Il dialog riceve il contesto corrente (paesi selezionati, filtro attivo) come contesto iniziale per l'AI
+### Modifiche al componente frontend
 
-## Flusso Dati
+Il file `src/components/operations/AiAssistantDialog.tsx` viene modificato per:
 
-```text
-Utente digita domanda
-  --> Frontend invia POST a /ai-assistant (streaming)
-    --> Edge function costruisce messaggi con system prompt
-    --> Chiama Lovable AI Gateway con tools definiti
-    --> AI decide: usa tool "query_partners" con parametri
-    --> Edge function esegue query Supabase
-    --> Ritorna risultato all'AI
-    --> AI formula risposta naturale
-    --> Streaming SSE al frontend
-  --> Frontend renderizza token per token
-```
+- Parsare i messaggi dell'assistente cercando il delimitatore strutturato
+- Separare il testo dal JSON
+- Renderizzare il testo con ReactMarkdown come prima
+- Sotto il testo, mostrare un `AiResultsPanel` con le card dei partner trovati
+- Ogni card mostra: bandiera paese, nome azienda, citta', email (se presente), rating (stelline), badge per servizi principali, icona se e' preferito
+- Click su una card espande un mini-dettaglio inline con tutti i contatti, telefoni, sito web
+- Pulsante "Vedi nel Partner Hub" che naviga al partner nella vista principale
 
-## File da Creare/Modificare
+### Nuovo componente: AiResultsPanel
+
+Creato in `src/components/operations/AiResultsPanel.tsx`:
+
+- Riceve un array di partner strutturati
+- Li renderizza come card compatte in una griglia scrollabile
+- Supporta il tema chiaro/scuro tramite ThemeCtx
+- Ogni card ha hover state e click per espandere
+- Header con conteggio e toggle espandi/comprimi
+
+### File coinvolti
 
 | File | Azione |
 |---|---|
-| `supabase/functions/ai-assistant/index.ts` | NUOVO -- edge function con tool calling |
-| `src/components/operations/AiAssistantDialog.tsx` | NUOVO -- UI chat popup |
-| `src/pages/Operations.tsx` | Aggiungere pulsante + import dialog |
-| `supabase/config.toml` | Aggiungere entry per `ai-assistant` |
+| `supabase/functions/ai-assistant/index.ts` | Modificato: aggiunge blocco strutturato alla risposta |
+| `src/components/operations/AiAssistantDialog.tsx` | Modificato: parsing strutturato e rendering pannello risultati |
+| `src/components/operations/AiResultsPanel.tsx` | Nuovo: componente per visualizzare lista partner strutturata |
 
-## Dettagli Implementativi
+## Esempio di utilizzo
 
-### Tools dell'AI (definiti nella edge function)
+L'utente chiede: "Filtra i partner di Argentina, Australia e Canada che hanno certificazione IATA"
 
-```text
-1. search_partners(country_code?, has_email?, has_profile?, min_rating?, limit?)
-   -> SELECT da partners con filtri, ritorna nome/citta/email/rating
+L'AI risponde con:
+- Testo: "Ho trovato 8 partner con certificazione IATA nei 3 paesi selezionati. Ecco il dettaglio..."
+- Sotto: pannello con 8 card partner, ognuna con nome, citta', rating, email, cliccabili per espandere i dettagli
 
-2. get_country_overview(country_code?)
-   -> Chiama get_country_stats() RPC, ritorna totali per paese
-
-3. list_active_jobs()
-   -> SELECT da download_jobs WHERE status IN ('running','pending')
-
-4. get_partner_by_name(name)
-   -> SELECT da partners WHERE company_name ILIKE '%name%'
-
-5. count_by_filter(table, filter_description)
-   -> Query dinamica sicura con conteggio
-```
-
-### Sicurezza
-
-- La edge function usa `SUPABASE_SERVICE_ROLE_KEY` per accedere ai dati (stessa cosa che fanno le altre funzioni esistenti)
-- Le query sono parametrizzate e costruite dal codice, non dall'AI direttamente (l'AI sceglie solo quale tool chiamare e con quali parametri tipizzati)
-- Nessuna possibilita' di SQL injection: i tool hanno parametri strutturati
-
-### Costi
-
-- Usa Lovable AI gia' incluso nel progetto
-- Modello `gemini-3-flash-preview`: basso costo per messaggio
-- Le tool calls aggiungono 1-2 round-trip extra ma restano sotto i 3 secondi totali
-
-## Espansioni Future
-
-- Persistenza conversazioni nel database
-- Azioni attive (avvia download, crea reminder, segna preferito) oltre alla sola lettura
-- Contesto automatico: "stai guardando l'Italia con 31 partner senza profilo"
-- Suggerimenti rapidi pre-compilati ("Paesi con piu' gap", "Partner top rated")
+L'utente puo' poi chiedere: "Di questi, quali non hanno email?" e l'AI raffina la ricerca mostrando un nuovo pannello aggiornato.
 
