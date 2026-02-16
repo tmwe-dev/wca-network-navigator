@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext } from "react";
-import { OctagonX } from "lucide-react";
+import { useState, useEffect, useContext, useCallback } from "react";
+import { OctagonX, Loader2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 
 interface SpeedGaugeProps {
@@ -93,19 +93,40 @@ export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
       </div>
 
       {/* STOP button */}
-      <button
-        onClick={onStop}
-        disabled={idle}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-          idle
-            ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
-            : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/30 animate-pulse"
-        }`}
-        style={idle ? undefined : { animationDuration: "2s" }}
-      >
-        <OctagonX className="w-4 h-4" />
-        STOP
-      </button>
+      <StopButton onStop={onStop} idle={idle} />
     </div>
+  );
+}
+
+function StopButton({ onStop, idle }: { onStop: () => void; idle?: boolean }) {
+  const [stopping, setStopping] = useState(false);
+
+  // Reset stopping state when idle changes (job actually stopped)
+  useEffect(() => {
+    if (idle) setStopping(false);
+  }, [idle]);
+
+  const handleClick = useCallback(() => {
+    if (stopping || idle) return;
+    setStopping(true);
+    onStop();
+  }, [onStop, stopping, idle]);
+
+  const isDisabled = idle || stopping;
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isDisabled}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+        isDisabled
+          ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
+          : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/30 animate-pulse"
+      }`}
+      style={isDisabled ? undefined : { animationDuration: "2s" }}
+    >
+      {stopping ? <Loader2 className="w-4 h-4 animate-spin" /> : <OctagonX className="w-4 h-4" />}
+      {stopping ? "FERMANDO..." : "STOP"}
+    </button>
   );
 }
