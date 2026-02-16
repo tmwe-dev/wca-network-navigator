@@ -157,8 +157,8 @@ export default function Operations() {
               )}
             </div>
 
-            {/* ── COL 2: Country Grid (fills remaining left space) ── */}
-            <div className="w-[280px] flex-shrink-0 min-h-0 flex flex-col">
+            {/* ── COL 2: Country Grid (responsive) ── */}
+            <div className="min-w-[280px] w-[35%] max-w-[400px] flex-shrink-0 min-h-0 flex flex-col">
               <CountryGrid
                 selected={selectedCountries}
                 onToggle={toggleCountry}
