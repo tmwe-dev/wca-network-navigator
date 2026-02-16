@@ -58,6 +58,19 @@ const SERVICE_ICONS: Record<string, any> = {
 };
 function getServiceIcon(cat: string) { return SERVICE_ICONS[cat] || Box; }
 
+function MiniProgress({ label, value, total, isDark, color }: { label: string; value: number; total: number; isDark: boolean; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="flex-1 flex items-center gap-1.5 min-w-0">
+      <span className={`text-[9px] w-8 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>
+      <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+        <div className={`h-full rounded-full bg-gradient-to-r ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={`text-[9px] font-bold w-7 text-right ${isDark ? "text-slate-400" : "text-slate-500"}`}>{pct}%</span>
+    </div>
+  );
+}
+
 const TRANSPORT_SERVICES = ["air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight", "project_cargo"];
 
 function MiniStars({ rating }: { rating: number }) {
@@ -173,20 +186,27 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
         {/* Country Summary Stats */}
         {aggregatedStats && aggregatedStats.total > 0 && (
           <div className={`px-3 pt-3 pb-1 flex-shrink-0`}>
-            <div className={`flex items-center gap-3 flex-wrap text-[11px] font-mono rounded-lg border px-3 py-2 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/60"}`}>
-              <span className={`flex items-center gap-1 font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>
-                <Users className="w-3.5 h-3.5" />{aggregatedStats.total}
-              </span>
-              <span className={`flex items-center gap-1 ${aggregatedStats.withoutProfile > 0 ? (isDark ? "text-orange-400" : "text-orange-600") : (isDark ? "text-emerald-400" : "text-emerald-600")}`}>
-                <FileText className="w-3.5 h-3.5" />{aggregatedStats.withProfile}
-                {aggregatedStats.withoutProfile > 0 && <span className="text-[9px]">({aggregatedStats.withoutProfile} ✗)</span>}
-              </span>
-              <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withEmail, aggregatedStats.total, isDark)}`}>
-                <Mail className="w-3.5 h-3.5" />{aggregatedStats.withEmail}
-              </span>
-              <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withPhone, aggregatedStats.total, isDark)}`}>
-                <Phone className="w-3.5 h-3.5" />{aggregatedStats.withPhone}
-              </span>
+            <div className={`text-[11px] font-mono rounded-lg border px-3 py-2 space-y-1.5 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/60"}`}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className={`flex items-center gap-1 font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+                  <Users className="w-3.5 h-3.5" />{aggregatedStats.total}
+                </span>
+                <span className={`flex items-center gap-1 ${aggregatedStats.withoutProfile > 0 ? (isDark ? "text-orange-400" : "text-orange-600") : (isDark ? "text-emerald-400" : "text-emerald-600")}`}>
+                  <FileText className="w-3.5 h-3.5" />{aggregatedStats.withProfile}
+                  {aggregatedStats.withoutProfile > 0 && <span className="text-[9px]">({aggregatedStats.withoutProfile} ✗)</span>}
+                </span>
+                <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withEmail, aggregatedStats.total, isDark)}`}>
+                  <Mail className="w-3.5 h-3.5" />{aggregatedStats.withEmail}
+                </span>
+                <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withPhone, aggregatedStats.total, isDark)}`}>
+                  <Phone className="w-3.5 h-3.5" />{aggregatedStats.withPhone}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MiniProgress label="Profili" value={aggregatedStats.withProfile} total={aggregatedStats.total} isDark={isDark} color="from-violet-500 to-purple-500" />
+                <MiniProgress label="Email" value={aggregatedStats.withEmail} total={aggregatedStats.total} isDark={isDark} color="from-sky-400 to-blue-500" />
+                <MiniProgress label="Tel" value={aggregatedStats.withPhone} total={aggregatedStats.total} isDark={isDark} color="from-teal-400 to-emerald-500" />
+              </div>
             </div>
           </div>
         )}
