@@ -1,86 +1,78 @@
 
+# Fix: Processi Multipli che Partono Contemporaneamente
 
-# Risultati Strutturati dall'Assistente AI
+## Problema Identificato
 
-## Problema attuale
+Il processore di download ha due vulnerabilita' che permettono a piu' job di partire simultaneamente, violando il vincolo di esecuzione sequenziale.
 
-L'AI puo' gia' filtrare partner per paese, servizio, certificazione, rating e altro. Tuttavia, i risultati vengono presentati come tabelle markdown nel fumetto della chat — non sono cliccabili, non mostrano dettagli e non permettono azioni.
+### Causa 1 — Ordine errato nel lock del database
 
-Quando chiedi "Mostrami i partner IATA in Germania senza email", l'AI ti restituisce una tabella di testo. Quello che vorresti e' una lista strutturata, navigabile, con le stesse card e dettagli che vedi nel PartnerListPanel.
+Nel metodo `processJob` (riga 137), il job viene impostato come `running` **prima** di verificare se ci sono altri job gia' in esecuzione (riga 141). Questo crea una finestra temporale in cui:
 
-## Soluzione
+1. Loop A trova un job pending, lo mette in "running"
+2. Loop B (o un secondo polling) controlla i running, non ne trova (il commit di A non e' ancora visibile), prende un altro job pending
+3. Risultato: 2 job running contemporaneamente
 
-Estendere il protocollo di comunicazione tra backend e frontend per supportare **blocchi strutturati** nelle risposte dell'AI. Quando l'AI trova dei partner, oltre al testo esplicativo, il backend invia un blocco JSON con i dati strutturati. Il frontend lo intercetta e lo presenta in un pannello dedicato sotto la chat, con card partner cliccabili.
+La correzione e': invertire l'ordine. Prima si verifica che non ci siano altri running, poi si imposta lo stato.
 
-## Come funziona
+### Causa 2 — Loop duplicati da `resetStop`
 
-1. L'AI riceve la domanda, usa i tool per interrogare il database
-2. Nella risposta testuale, il backend inserisce un marcatore speciale con i dati strutturati (es. lista partner con id, nome, citta', email, rating)
-3. Il frontend del `AiAssistantDialog` intercetta il marcatore e renderizza i risultati in un pannello separato sotto il messaggio
-4. Ogni partner nella lista e' cliccabile e mostra un mini-dettaglio (email, telefono, rating, servizi)
+La funzione `resetStop` (riga 555) fa tre cose:
+- Resetta `processing = false`
+- Incrementa `activeLoopId`
+- Chiama `startLoop(myId)` creando un NUOVO loop
 
-## Cosa cambia nella UI
+Ma se il componente Operations viene anche rimontato (es. HMR o navigazione), il `useEffect` al mount (riga 537) crea un ALTRO loop. Cosi' si ritrovano 2+ loop attivi. Il meccanismo `activeLoopId` dovrebbe invalidare quelli vecchi, ma il reset simultaneo di `cancel` e `processing` permette ai loop orfani di sopravvivere per un ciclo.
 
-Il dialog `AiAssistantDialog` viene arricchito con:
+### Causa 3 — Mutex non-atomico nel polling
 
-- Un componente `AiResultCard` che renderizza singoli partner come card compatte (nome, citta', paese, email, rating con stelline, badge servizi)
-- Un componente `AiResultsPanel` che contiene la lista scrollabile di card, mostrata sotto il messaggio dell'AI che ha prodotto i risultati
-- Un contatore in alto ("12 partner trovati") con possibilita' di espandere/collassare la lista
-- Click su una card apre il dettaglio completo (riusa la logica gia' presente in PartnerListPanel)
+Nel loop di polling (riga 488-493), il controllo `if (state.processing)` avviene PRIMA della query DB (che e' asincrona). Due loop possono entrambi vedere `processing = false`, entrambi eseguire la query, e entrambi chiamare `processJob`. Il mutex in `processJob` (riga 107) e' sincrono e dovrebbe catturare il secondo, ma solo se entrano nella funzione in sequenza — con i tempi stretti del "RIAVVIA TUTTI" questo non e' garantito.
 
-## Dettaglio tecnico
+## Correzioni
 
-### Protocollo backend
+### 1. Invertire ordine: prima verifica, poi claim
 
-Nella edge function `ai-assistant`, dopo che l'AI formula la risposta con tool calling, il backend controlla se l'ultimo tool chiamato ha restituito una lista di partner. In quel caso, aggiunge alla risposta un blocco con un delimitatore riconoscibile:
+Spostare il controllo DB "altri job running?" PRIMA di impostare il job corrente come "running". Solo dopo aver confermato che il campo e' libero, fare l'update a "running".
 
-Il formato e' un marcatore di tipo `---STRUCTURED_DATA---` seguito da JSON, che il frontend separa dal testo markdown.
+### 2. Claim atomico con WHERE condizionale
 
-### Modifiche alla edge function
+Sostituire il semplice `update({ status: "running" })` con un update condizionale che riesce solo se il job e' ancora "pending":
 
-Il file `supabase/functions/ai-assistant/index.ts` viene modificato per:
+```text
+UPDATE download_jobs 
+SET status = 'running' 
+WHERE id = jobId AND status = 'pending'
+RETURNING id
+```
 
-- Tracciare l'ultimo risultato dei tool call (se contiene una lista `partners`)
-- Appendere il blocco strutturato alla risposta finale dell'AI
-- Includere nel JSON: id, company_name, city, country_code, country_name, email, phone, rating, has_profile, is_favorite, office_type, wca_id, services (array), certifications (array)
+Se l'update non restituisce righe, significa che un altro loop ha gia' preso il job — si esce senza processare.
 
-### Modifiche al componente frontend
+### 3. Lock globale prima di processare
 
-Il file `src/components/operations/AiAssistantDialog.tsx` viene modificato per:
+Aggiungere un controllo a livello di database prima di ogni `processJob`: contare i job con status "running". Se ce n'e' gia' uno, non procedere. Questo va fatto PRIMA di qualsiasi update di stato.
 
-- Parsare i messaggi dell'assistente cercando il delimitatore strutturato
-- Separare il testo dal JSON
-- Renderizzare il testo con ReactMarkdown come prima
-- Sotto il testo, mostrare un `AiResultsPanel` con le card dei partner trovati
-- Ogni card mostra: bandiera paese, nome azienda, citta', email (se presente), rating (stelline), badge per servizi principali, icona se e' preferito
-- Click su una card espande un mini-dettaglio inline con tutti i contatti, telefoni, sito web
-- Pulsante "Vedi nel Partner Hub" che naviga al partner nella vista principale
+### 4. Eliminare loop duplicati da `resetStop`
 
-### Nuovo componente: AiResultsPanel
+Modificare `resetStop` per NON chiamare `startLoop` direttamente. Invece, deve solo resettare i flag (`stopped`, `cancel`) e lasciare che il `useEffect` del mount rilanci il loop automaticamente tramite un re-render forzato. Questo garantisce un solo loop attivo alla volta.
 
-Creato in `src/components/operations/AiResultsPanel.tsx`:
+In pratica:
+- `resetStop` resetta i flag e incrementa `activeLoopId`
+- Un `useEffect` con dipendenza su un contatore di reset rileva il cambio e avvia UN solo loop
 
-- Riceve un array di partner strutturati
-- Li renderizza come card compatte in una griglia scrollabile
-- Supporta il tema chiaro/scuro tramite ThemeCtx
-- Ogni card ha hover state e click per espandere
-- Header con conteggio e toggle espandi/comprimi
+### 5. Aggiungere guardia anti-rientro nel polling
 
-### File coinvolti
+Nel loop di polling, prima di chiamare `processJob`, acquisire il mutex `state.processing = true` gia' nel loop (non dentro processJob). Cosi' il check e il set sono nello stesso tick sincrono, senza await in mezzo.
 
-| File | Azione |
+## File da Modificare
+
+| File | Modifica |
 |---|---|
-| `supabase/functions/ai-assistant/index.ts` | Modificato: aggiunge blocco strutturato alla risposta |
-| `src/components/operations/AiAssistantDialog.tsx` | Modificato: parsing strutturato e rendering pannello risultati |
-| `src/components/operations/AiResultsPanel.tsx` | Nuovo: componente per visualizzare lista partner strutturata |
+| `src/hooks/useDownloadProcessor.ts` | Riscrittura ordine lock, claim atomico, eliminazione loop duplicati |
 
-## Esempio di utilizzo
+## Comportamento Atteso Dopo il Fix
 
-L'utente chiede: "Filtra i partner di Argentina, Australia e Canada che hanno certificazione IATA"
-
-L'AI risponde con:
-- Testo: "Ho trovato 8 partner con certificazione IATA nei 3 paesi selezionati. Ecco il dettaglio..."
-- Sotto: pannello con 8 card partner, ognuna con nome, citta', rating, email, cliccabili per espandere i dettagli
-
-L'utente puo' poi chiedere: "Di questi, quali non hanno email?" e l'AI raffina la ricerca mostrando un nuovo pannello aggiornato.
-
+- Un solo loop di polling attivo in qualsiasi momento
+- Un solo job in stato "running" in qualsiasi momento
+- Il "RIAVVIA TUTTI" resetta i flag ma non crea loop extra
+- Se due loop tentano di prendere lo stesso job, il secondo fallisce silenziosamente
+- Il cruscotto (SpeedGauge) mostra un solo processo alla volta
