@@ -40,7 +40,7 @@ export function DownloadTerminal() {
         .limit(1);
       return data?.[0] || null;
     },
-    refetchInterval: 3000,
+    refetchInterval: 8000,
   });
 
   // If no active job, show the most recent completed/cancelled
@@ -56,7 +56,7 @@ export function DownloadTerminal() {
         .limit(1);
       return data?.[0] || null;
     },
-    refetchInterval: 5000,
+    refetchInterval: 15000,
     enabled: !activeJob,
   });
 
@@ -74,7 +74,7 @@ export function DownloadTerminal() {
         .single();
       return (data?.terminal_log as unknown as LogEntry[] | null) || [];
     },
-    refetchInterval: activeJob ? 2000 : 10000,
+    refetchInterval: activeJob ? 3000 : false,
     enabled: !!jobId,
   });
 
