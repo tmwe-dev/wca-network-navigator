@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
     )
 
     // Determine status ONLY from cookie content — NO HTTP requests to WCA
-    const status = hasAspxAuth ? 'ok' : 'expired'
+    // If .ASPXAUTH is missing (likely HttpOnly), mark as "unknown" — real verification via extension will confirm
+    const status = hasAspxAuth ? 'ok' : 'unknown'
 
     await supabase.from('app_settings').upsert(
       { key: 'wca_session_status', value: status, updated_at: now },
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
 
     const message = hasAspxAuth
       ? '✅ Cookie salvato! Sessione .ASPXAUTH attiva.'
-      : '❌ Cookie salvato ma MANCA .ASPXAUTH — i dati privati non saranno accessibili. Rilogga su wcaworld.com e riprova.'
+      : '⏳ Cookie salvato. .ASPXAUTH non visibile (probabilmente HttpOnly). Verifica sessione reale necessaria.'
 
     console.log(`save-wca-cookie: status=${status}, message=${message}`)
 
