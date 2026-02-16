@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -26,8 +26,29 @@ export interface DownloadJob {
   last_contact_result: string | null;
 }
 
+/**
+ * Singleton realtime subscription manager.
+ * Ensures only ONE channel exists globally, regardless of how many
+ * components call useDownloadJobs().
+ */
+const RT_KEY = '__dlJobsRealtimeState__';
+
+interface RtState {
+  refCount: number;
+  channel: ReturnType<typeof supabase.channel> | null;
+  queryClient: ReturnType<typeof useQueryClient> | null;
+}
+
+function getRtState(): RtState {
+  if (!(window as any)[RT_KEY]) {
+    (window as any)[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
+  }
+  return (window as any)[RT_KEY];
+}
+
 export function useDownloadJobs() {
   const queryClient = useQueryClient();
+  const mountedRef = useRef(false);
 
   const query = useQuery({
     queryKey: ["download-jobs"],
@@ -42,20 +63,38 @@ export function useDownloadJobs() {
     },
   });
 
-  // Realtime subscription for live updates
+  // Singleton realtime subscription with ref-counting
   useEffect(() => {
-    const channel = supabase
-      .channel("download-jobs-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "download_jobs" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
-        }
-      )
-      .subscribe();
+    if (mountedRef.current) return; // strict-mode double-mount guard
+    mountedRef.current = true;
 
-    return () => { supabase.removeChannel(channel); };
+    const rt = getRtState();
+    rt.refCount++;
+    rt.queryClient = queryClient;
+
+    if (rt.refCount === 1 && !rt.channel) {
+      // First subscriber: create the channel
+      rt.channel = supabase
+        .channel("download-jobs-realtime-singleton")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "download_jobs" },
+          () => {
+            rt.queryClient?.invalidateQueries({ queryKey: ["download-jobs"] });
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      mountedRef.current = false;
+      const rtCleanup = getRtState();
+      rtCleanup.refCount = Math.max(0, rtCleanup.refCount - 1);
+      if (rtCleanup.refCount === 0 && rtCleanup.channel) {
+        supabase.removeChannel(rtCleanup.channel);
+        rtCleanup.channel = null;
+      }
+    };
   }, [queryClient]);
 
   return query;
