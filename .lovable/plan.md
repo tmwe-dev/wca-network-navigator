@@ -1,108 +1,116 @@
 
-# Integrazione Resend per Invio Email Diretto
+# Welcome Wizard & Autenticazione Multi-Tenant
 
-## Cosa faremo
+## Panoramica
 
-Sostituiremo il pulsante `mailto:` con un invio email diretto tramite Resend API, usando una Edge Function come backend. L'email partira' dal vostro dominio personalizzato, senza passare dal client di posta locale.
+Trasformazione del sistema da single-tenant a multi-tenant con:
+- Autenticazione (Email+Password + Google)
+- Onboarding wizard in 3 step
+- Sistema crediti a consumo
+- API keys BYOK (Bring Your Own Key) per AI
 
-## Prerequisiti
+## Step 1: Database & Autenticazione
 
-Prima di procedere, servira':
-1. **Creare un account Resend** su [resend.com](https://resend.com) (gratuito, 100 email/giorno)
-2. **Verificare il dominio** dal pannello Resend (aggiungere i record DNS indicati da Resend)
-3. **Generare una API Key** dal pannello Resend
-4. La API Key verra' salvata in modo sicuro nel backend di Lovable Cloud
+### Tabelle da creare
 
-## Componenti da creare/modificare
+1. **`profiles`** - Profilo utente
+   - `id` UUID PK
+   - `user_id` UUID → auth.users (ON DELETE CASCADE, UNIQUE)
+   - `display_name` TEXT
+   - `language` TEXT DEFAULT 'it' (it, en, es, fr, de, pt, zh)
+   - `onboarding_completed` BOOLEAN DEFAULT false
+   - `created_at`, `updated_at`
 
-### 1. Salvare la API Key di Resend
+2. **`user_api_keys`** - Chiavi API per provider AI
+   - `id` UUID PK
+   - `user_id` UUID → auth.users
+   - `provider` TEXT (openai, google, anthropic)
+   - `api_key` TEXT (cifrata lato server)
+   - `is_active` BOOLEAN DEFAULT true
+   - `created_at`, `updated_at`
+   - UNIQUE(user_id, provider)
 
-Useremo lo strumento di gestione segreti per richiedere la chiave `RESEND_API_KEY`.
+3. **`user_wca_credentials`** - Credenziali WCA per utente
+   - `id` UUID PK
+   - `user_id` UUID → auth.users (UNIQUE)
+   - `wca_username` TEXT
+   - `wca_password` TEXT (cifrata lato server)
+   - `created_at`, `updated_at`
 
-### 2. Creare Edge Function `send-email`
+4. **`user_credits`** - Saldo crediti
+   - `id` UUID PK
+   - `user_id` UUID → auth.users (UNIQUE)
+   - `balance` INTEGER DEFAULT 0
+   - `total_consumed` INTEGER DEFAULT 0
+   - `updated_at`
 
-File: `supabase/functions/send-email/index.ts`
+5. **`credit_transactions`** - Log operazioni crediti
+   - `id` UUID PK
+   - `user_id` UUID → auth.users
+   - `amount` INTEGER (positivo = ricarica, negativo = consumo)
+   - `operation` TEXT (ai_call, enrichment, scraping, topup)
+   - `description` TEXT
+   - `created_at`
 
-La funzione:
-- Riceve `to`, `subject`, `html`, `from` (opzionale), `partner_id` (opzionale)
-- Chiama l'API Resend (`https://api.resend.com/emails`)
-- Logga l'interazione nella tabella `interactions` (tipo `email`, con subject e destinatario)
-- Restituisce successo/errore con CORS headers
+### RLS Policies
+- Ogni tabella: utente vede/modifica solo i propri dati
+- `user_id = auth.uid()`
 
-Configurazione in `supabase/config.toml`:
-```toml
-[functions.send-email]
-verify_jwt = false
-```
+### Trigger
+- Auto-creazione profilo + crediti iniziali (es. 100 crediti gratis) su signup
 
-### 3. Aggiornare il pulsante in `PartnerListPanel.tsx`
+## Step 2: Pagine Auth
 
-Il pulsante "Invia email":
-- Apre un piccolo dialog/popover inline con:
-  - Destinatario (pre-compilato, read-only)
-  - Oggetto (pre-compilato, editabile)
-  - Corpo messaggio (textarea)
-  - Pulsante "Invia"
-- Al click su "Invia", chiama la Edge Function `send-email`
-- Mostra toast di successo/errore
-- L'interazione viene salvata automaticamente nel database
+- `/auth` - Login/Signup con Email+Password
+- Google OAuth via Lovable Cloud
+- Redirect a `/onboarding` se `onboarding_completed = false`
+- Redirect a `/` (dashboard) se completato
 
-### 4. Creare componente `SendEmailDialog.tsx`
+## Step 3: Onboarding Wizard (3 step)
 
-File: `src/components/operations/SendEmailDialog.tsx`
+### Step 1: Profilo & Lingua
+- Nome visualizzato
+- Lingua preferita (select con bandiere)
+- Breve benvenuto/spiegazione del sistema
 
-Dialog modale compatto con:
-- Campo "A" (read-only, email del contatto)
-- Campo "Oggetto" (pre-compilato con "Contatto da {company_name}")
-- Textarea "Messaggio"
-- Select opzionale per template (futuro)
-- Pulsanti "Annulla" e "Invia"
-- Stato di caricamento durante l'invio
-- Supporto tema chiaro/scuro (`isDark`)
+### Step 2: Credenziali WCA
+- Username WCA
+- Password WCA
+- Spiegazione: "Queste credenziali servono per accedere alla directory WCA e scaricare i contatti dei tuoi network"
+- Link diretto a WCA per registrarsi se non hanno account
+- Pulsante "Salta" (opzionale, può configurare dopo)
 
-## Flusso Utente
+### Step 3: Configurazione AI
+- Spiegazione modello BYOK: "Porta le tue chiavi API per usare l'AI al massimo. Oppure usa i crediti inclusi."
+- 3 sezioni espandibili:
+  - **OpenAI**: campo API key + link a platform.openai.com/api-keys
+  - **Google AI (Gemini)**: campo API key + link a aistudio.google.com/apikey
+  - **Anthropic (Claude)**: campo API key + link a console.anthropic.com
+- Indicatore crediti gratuiti disponibili
+- Pulsante "Salta" (userà solo crediti)
 
-```text
-1. Hover su partner nella lista Operations
-2. Click sull'icona busta (Send)
-3. Si apre dialog con destinatario pre-compilato
-4. Utente scrive oggetto e messaggio
-5. Click "Invia"
-6. Edge Function invia via Resend + salva in DB
-7. Toast "Email inviata con successo"
-8. Dialog si chiude
-```
+## Step 4: Protezione Route
 
-## Dettagli Tecnici
-
-### Edge Function `send-email`
-
-```text
-POST /send-email
-Body: { to, subject, html, from?, partner_id? }
-
-1. Legge RESEND_API_KEY da env
-2. POST https://api.resend.com/emails con { from, to, subject, html }
-3. Se partner_id presente, INSERT in interactions (tipo email)
-4. Ritorna { success, messageId } o { error }
-```
-
-### Mittente predefinito
-
-Il campo `from` usera' un indirizzo predefinito configurabile (es. `noreply@vostrodominio.com`). Potra' essere personalizzato nella tabella `app_settings` con chiave `default_sender_email`.
+- `ProtectedRoute` wrapper che verifica autenticazione
+- Redirect non autenticati a `/auth`
+- Redirect utenti senza onboarding a `/onboarding`
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/send-email/index.ts` | Nuovo |
-| `supabase/config.toml` | Aggiungere sezione send-email |
-| `src/components/operations/SendEmailDialog.tsx` | Nuovo |
-| `src/components/operations/PartnerListPanel.tsx` | Modificare pulsante Send |
+| Migration SQL | Nuovo - tabelle profiles, user_api_keys, etc. |
+| `src/pages/Auth.tsx` | Nuovo |
+| `src/pages/Onboarding.tsx` | Nuovo |
+| `src/components/onboarding/StepProfile.tsx` | Nuovo |
+| `src/components/onboarding/StepWCA.tsx` | Nuovo |
+| `src/components/onboarding/StepAI.tsx` | Nuovo |
+| `src/components/auth/ProtectedRoute.tsx` | Nuovo |
+| `src/hooks/useProfile.ts` | Nuovo |
+| `src/App.tsx` | Modificare - aggiungere route protette |
 
-## Ordine di esecuzione
+## Note importanti
 
-1. Richiedere la `RESEND_API_KEY` all'utente
-2. Creare la Edge Function `send-email`
-3. Creare il componente `SendEmailDialog`
-4. Aggiornare `PartnerListPanel` per usare il dialog invece del `mailto:`
+- Le RLS policies esistenti (tutte `true`) restano invariate per ora → in futuro si potranno scoped per utente
+- Il wizard è skippable in ogni step tranne il profilo/lingua
+- I crediti iniziali gratuiti incentivano l'esplorazione
