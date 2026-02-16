@@ -3,9 +3,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search, Users, Mail, Phone, CheckCircle, X, FolderDown, Trophy,
-  CheckSquare, ArrowDownAZ, BarChart3, Percent, FileWarning,
-  AlertTriangle, Download, Globe, Filter, ArrowUpDown, HelpCircle,
-  ArrowDown,
+  CheckSquare, ArrowDownAZ, Percent, FileWarning,
+  AlertTriangle, Globe, Filter, ArrowUpDown, HelpCircle,
+  ArrowDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [showEmpty, setShowEmpty] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   const { data: statsData } = useCountryStats();
   const stats = statsData?.byCountry || {};
@@ -68,7 +69,6 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     return { pCount, cCount, hasDir, withProfile, noProfile, allDownloaded, allProfiles, isDone, isTodo };
   };
 
-  // Count per filter
   let doneCount = 0, todoCount = 0, noProfileCount = 0, missingCount = 0;
   WCA_COUNTRIES.forEach(c => {
     const st = getStatus(c.code);
@@ -107,20 +107,19 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     });
   };
 
-  // Filter definitions with semantic colors
   const filterDefs: { key: FilterKey; label: string; count: number; icon: any; color: string; activeBg: string }[] = [
     { key: "all", label: "Tutti", count: filtered.length, icon: Globe, color: isDark ? "text-slate-300" : "text-slate-700", activeBg: isDark ? "bg-slate-600/30 border-slate-500/40" : "bg-slate-200 border-slate-400" },
     { key: "todo", label: "Da fare", count: todoCount, icon: AlertTriangle, color: isDark ? "text-blue-300" : "text-blue-700", activeBg: isDark ? "bg-blue-500/20 border-blue-400/40" : "bg-blue-100 border-blue-400" },
-    { key: "no_profile", label: "Senza Profilo", count: noProfileCount, icon: FileWarning, color: isDark ? "text-orange-300" : "text-orange-700", activeBg: isDark ? "bg-orange-500/20 border-orange-400/40" : "bg-orange-100 border-orange-400" },
-    { key: "done", label: "Completati", count: doneCount, icon: Trophy, color: isDark ? "text-emerald-300" : "text-emerald-700", activeBg: isDark ? "bg-emerald-500/20 border-emerald-400/40" : "bg-emerald-100 border-emerald-400" },
-    { key: "missing", label: "Mai esplorati", count: missingCount, icon: HelpCircle, color: isDark ? "text-slate-400" : "text-slate-500", activeBg: isDark ? "bg-slate-700/40 border-slate-500/40" : "bg-slate-200 border-slate-400" },
+    { key: "no_profile", label: "No Profilo", count: noProfileCount, icon: FileWarning, color: isDark ? "text-orange-300" : "text-orange-700", activeBg: isDark ? "bg-orange-500/20 border-orange-400/40" : "bg-orange-100 border-orange-400" },
+    { key: "done", label: "OK", count: doneCount, icon: Trophy, color: isDark ? "text-emerald-300" : "text-emerald-700", activeBg: isDark ? "bg-emerald-500/20 border-emerald-400/40" : "bg-emerald-100 border-emerald-400" },
+    { key: "missing", label: "Nuovi", count: missingCount, icon: HelpCircle, color: isDark ? "text-slate-400" : "text-slate-500", activeBg: isDark ? "bg-slate-700/40 border-slate-500/40" : "bg-slate-200 border-slate-400" },
   ];
 
   const sortDefs: { key: SortKey; label: string; icon: any }[] = [
-    { key: "name", label: "Nome", icon: ArrowDownAZ },
-    { key: "partners", label: "Partner", icon: Users },
-    { key: "directory", label: "Directory", icon: FolderDown },
-    { key: "completion", label: "Complet.", icon: Percent },
+    { key: "name", label: "A-Z", icon: ArrowDownAZ },
+    { key: "partners", label: "N°", icon: Users },
+    { key: "directory", label: "Dir", icon: FolderDown },
+    { key: "completion", label: "%", icon: Percent },
   ];
 
   const sectionBorder = isDark ? "border-white/[0.08]" : "border-slate-200";
@@ -129,57 +128,79 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     ? "bg-white/[0.03] border-white/[0.08] text-slate-400 hover:bg-white/[0.06]"
     : "bg-white/60 border-slate-200 text-slate-500 hover:bg-white";
 
+  // Active filter label for collapsed view
+  const activeFilter = filterDefs.find(f => f.key === filterMode);
+
   return (
-    <div className="flex flex-col gap-2 h-full min-h-0">
-      {/* ═══ SEARCH ═══ */}
-      <div className="relative flex-shrink-0">
-        <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
-        <Input
-          placeholder="Cerca paese..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className={`pl-10 h-10 rounded-xl text-sm ${th.input}`}
-        />
-      </div>
+    <div className="flex flex-col gap-1.5 h-full min-h-0">
+      {/* ═══ COMPACT TOOLBAR: Search + Filters toggle + Sort ═══ */}
+      <div className="flex-shrink-0 space-y-1.5">
+        {/* Search row */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${th.dim}`} />
+            <Input
+              placeholder="Cerca..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className={`pl-9 h-8 rounded-lg text-xs ${th.input}`}
+            />
+          </div>
+          {/* Collapse filters button */}
+          <button
+            onClick={() => setFiltersCollapsed(p => !p)}
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+              isDark ? "bg-white/[0.04] border-white/[0.08] text-sky-400 hover:bg-white/[0.08]" : "bg-white/70 border-slate-200 text-sky-600 hover:bg-white"
+            }`}
+            title={filtersCollapsed ? "Mostra filtri" : "Nascondi filtri"}
+          >
+            <Filter className="w-3 h-3" />
+            {filtersCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+          </button>
+        </div>
 
-      {/* ═══ SEZIONE FILTRI ═══ */}
-      <div className={`flex-shrink-0 rounded-xl border p-2.5 ${sectionBg} ${sectionBorder}`}>
-        <div className="flex items-center gap-1.5 mb-2">
-          <Filter className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-            Filtra per stato
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {filterDefs.map(f => {
-            const Icon = f.icon;
-            const isActive = filterMode === f.key;
-            return (
-              <button
-                key={f.key}
-                onClick={() => setFilterMode(f.key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                  isActive ? `${f.activeBg} ${f.color}` : inactiveChip
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {f.label}
-                <span className="font-mono text-[10px] opacity-60">{f.count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        {/* ═══ FILTERS (collapsible) ═══ */}
+        {!filtersCollapsed ? (
+          <div className={`rounded-lg border p-2 ${sectionBg} ${sectionBorder}`}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Filter className={`w-3 h-3 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
+              <span className={`text-[9px] font-bold uppercase tracking-widest ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+                Filtra per stato
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {filterDefs.map(f => {
+                const Icon = f.icon;
+                const isActive = filterMode === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilterMode(f.key)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all ${
+                      isActive ? `${f.activeBg} ${f.color}` : inactiveChip
+                    }`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {f.label}
+                    <span className="font-mono text-[9px] opacity-60">{f.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* Collapsed: show active filter as tiny pill */
+          activeFilter && filterMode !== "all" && (
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold ${activeFilter.color} opacity-70`}>
+              <activeFilter.icon className="w-3 h-3" />
+              {activeFilter.label}: {activeFilter.count}
+            </div>
+          )
+        )}
 
-      {/* ═══ SEZIONE ORDINAMENTO ═══ */}
-      <div className={`flex-shrink-0 rounded-xl border p-2.5 ${sectionBg} ${sectionBorder}`}>
-        <div className="flex items-center gap-1.5 mb-2">
-          <ArrowUpDown className={`w-3.5 h-3.5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? "text-amber-400" : "text-amber-600"}`}>
-            Ordina per
-          </span>
-        </div>
-        <div className="flex gap-1">
+        {/* ═══ SORT + CONTROLS (always visible, compact) ═══ */}
+        <div className="flex items-center gap-1">
+          <ArrowUpDown className={`w-3 h-3 flex-shrink-0 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
           {sortDefs.map(s => {
             const Icon = s.icon;
             const isActive = sortBy === s.key;
@@ -187,54 +208,49 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
               <button
                 key={s.key}
                 onClick={() => setSortBy(s.key)}
-                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                className={`flex items-center gap-0.5 px-1.5 py-1 rounded-md text-[10px] font-semibold border transition-all ${
                   isActive
                     ? isDark ? "bg-amber-500/20 border-amber-400/40 text-amber-300" : "bg-amber-100 border-amber-400 text-amber-700"
                     : inactiveChip
                 }`}
               >
-                <Icon className="w-3 h-3" />
+                <Icon className="w-2.5 h-2.5" />
                 {s.label}
               </button>
             );
           })}
-        </div>
-      </div>
-
-      {/* ═══ SELEZIONE + CONTROLLI ═══ */}
-      <div className={`flex-shrink-0 rounded-xl border p-2.5 ${sectionBg} ${sectionBorder}`}>
-        <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex-1" />
           <button
             onClick={handleSelectAll}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-0.5 px-1.5 py-1 rounded-md text-[10px] font-semibold border transition-all ${
               allFilteredSelected
                 ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
                 : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-600 hover:bg-white"
             }`}
           >
-            <CheckSquare className="w-3.5 h-3.5" />
-            {allFilteredSelected ? "Deseleziona" : "Seleziona"} ({filtered.length})
+            <CheckSquare className="w-2.5 h-2.5" />
+            {filtered.length}
           </button>
-          <div className="flex-1" />
           {onDirectoryOnlyChange && (
-            <label className={`flex items-center gap-1 text-[10px] cursor-pointer ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-              <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-75" />
-              <FolderDown className="w-3 h-3" /> Dir
+            <label className={`flex items-center gap-0.5 text-[9px] cursor-pointer ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+              <Switch checked={!!directoryOnly} onCheckedChange={onDirectoryOnlyChange} className="scale-[0.6]" />
+              Dir
             </label>
           )}
-          <label className={`flex items-center gap-1 text-[10px] cursor-pointer ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            <Switch checked={showEmpty} onCheckedChange={setShowEmpty} className="scale-75" />
-            <Globe className="w-3 h-3" /> Tutti
+          <label className={`flex items-center gap-0.5 text-[9px] cursor-pointer ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <Switch checked={showEmpty} onCheckedChange={setShowEmpty} className="scale-[0.6]" />
+            All
           </label>
         </div>
-        {/* Selected country flags */}
+
+        {/* Selected flags */}
         {selected.length > 0 && (
-          <div className={`flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t ${isDark ? "border-white/[0.06]" : "border-slate-200/60"}`}>
+          <div className={`flex flex-wrap gap-1 px-1`}>
             {selected.map(c => (
               <button
                 key={c.code}
                 onClick={() => onRemove(c.code)}
-                className="group relative text-xl leading-none hover:scale-110 transition-transform"
+                className="group relative text-lg leading-none hover:scale-110 transition-transform"
                 title={c.name}
               >
                 {getCountryFlag(c.code)}
@@ -251,7 +267,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
 
       {/* ═══ COUNTRY LIST ═══ */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-2 pr-2">
+        <div className="flex flex-col gap-1.5 pr-2">
           {filtered.map(c => <CountryCard key={c.code} country={c} stats={stats} cacheData={cacheData} getStatus={getStatus} isSelected={selectedCodes.has(c.code)} onToggle={onToggle} isDark={isDark} />)}
           {filtered.length === 0 && (
             <div className={`text-center py-8 text-sm ${th.dim}`}>Nessun paese trovato</div>
@@ -274,26 +290,24 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
 }) {
   const st = getStatus(country.code);
   const s = stats[country.code];
-  const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
   const emailPct = st.pCount > 0 ? Math.round(((s?.with_email || 0) / st.pCount) * 100) : 0;
 
-  // Status badge config
   let statusIcon: any, statusColor: string, statusBg: string, statusLabel: string;
   if (st.isDone) {
     statusIcon = CheckCircle;
     statusColor = isDark ? "text-emerald-400" : "text-emerald-600";
     statusBg = isDark ? "bg-emerald-500/20 border-emerald-500/30" : "bg-emerald-100 border-emerald-300";
-    statusLabel = "Completo";
+    statusLabel = "✓";
   } else if (st.allDownloaded && !st.allProfiles) {
     statusIcon = FileWarning;
     statusColor = isDark ? "text-orange-400" : "text-orange-600";
     statusBg = isDark ? "bg-orange-500/20 border-orange-500/30" : "bg-orange-100 border-orange-300";
-    statusLabel = `${st.noProfile} no profilo`;
+    statusLabel = `${st.noProfile}`;
   } else if (st.pCount > 0 && st.hasDir) {
     statusIcon = ArrowDown;
     statusColor = isDark ? "text-blue-400" : "text-blue-600";
     statusBg = isDark ? "bg-blue-500/20 border-blue-500/30" : "bg-blue-100 border-blue-300";
-    statusLabel = `${dlPct}%`;
+    statusLabel = `${Math.round((st.pCount / st.cCount) * 100)}%`;
   } else if (st.pCount > 0) {
     statusIcon = Users;
     statusColor = isDark ? "text-slate-300" : "text-slate-600";
@@ -307,7 +321,6 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   }
 
   const StatusIcon = statusIcon;
-
   const cardBorder = isSelected
     ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/50"
     : isDark ? "border-white/[0.08]" : "border-slate-200";
@@ -318,65 +331,46 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   return (
     <button
       onClick={() => onToggle(country.code, country.name)}
-      className={`group relative rounded-xl border text-left transition-all duration-200 ${cardBg} ${cardBorder}`}
+      className={`group relative rounded-lg border text-left transition-all duration-200 ${cardBg} ${cardBorder}`}
     >
-      <div className="flex items-center gap-3 p-3">
-        {/* LEFT: Flag + Name */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <span className="text-2xl leading-none flex-shrink-0">{getCountryFlag(country.code)}</span>
-          <div className="min-w-0 flex-1">
-            <p className={`text-sm font-bold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
-            {/* Mini stats row */}
-            {st.pCount > 0 && (
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className={`flex items-center gap-1 text-[11px] font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  <Users className="w-3 h-3" />{st.pCount}{st.cCount > 0 && `/${st.cCount}`}
-                </span>
-                <span className={`flex items-center gap-1 text-[11px] font-mono ${(s?.with_email || 0) > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400/60" : "text-rose-400")}`}>
-                  <Mail className="w-3 h-3" />{s?.with_email || 0}
-                </span>
-                <span className={`flex items-center gap-1 text-[11px] font-mono ${(s?.with_phone || 0) > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400/60" : "text-rose-400")}`}>
-                  <Phone className="w-3 h-3" />{s?.with_phone || 0}
-                </span>
-              </div>
-            )}
-          </div>
+      <div className="flex items-center gap-2 px-2.5 py-2">
+        <span className="text-xl leading-none flex-shrink-0">{getCountryFlag(country.code)}</span>
+        <div className="min-w-0 flex-1">
+          <p className={`text-xs font-bold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
+          {st.pCount > 0 && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`flex items-center gap-0.5 text-[10px] font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                <Users className="w-2.5 h-2.5" />{st.pCount}{st.cCount > 0 && `/${st.cCount}`}
+              </span>
+              <span className={`flex items-center gap-0.5 text-[10px] font-mono ${(s?.with_email || 0) > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400/60" : "text-rose-400")}`}>
+                <Mail className="w-2.5 h-2.5" />{s?.with_email || 0}
+              </span>
+            </div>
+          )}
         </div>
-
-        {/* RIGHT: Status badge */}
-        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border flex-shrink-0 ${statusBg}`}>
-          <StatusIcon className={`w-4 h-4 ${statusColor}`} />
-          <span className={`text-xs font-bold ${statusColor}`}>{statusLabel}</span>
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-md border flex-shrink-0 ${statusBg}`}>
+          <StatusIcon className={`w-3.5 h-3.5 ${statusColor}`} />
+          <span className={`text-[10px] font-bold ${statusColor}`}>{statusLabel}</span>
         </div>
-
-        {/* Selection indicator */}
         {isSelected && (
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/30" : "bg-sky-200"}`}>
-            <CheckCircle className={`w-3.5 h-3.5 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
+          <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-sky-500/30" : "bg-sky-200"}`}>
+            <CheckCircle className={`w-3 h-3 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
           </div>
         )}
       </div>
-
-      {/* Progress bar */}
       {st.pCount > 0 && (
-        <div className={`mx-3 mb-2.5 flex items-center gap-2`}>
-          <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+        <div className="mx-2.5 mb-2 flex items-center gap-1.5">
+          <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 emailPct >= 80 ? "bg-gradient-to-r from-emerald-400 to-teal-500"
                   : emailPct >= 40 ? "bg-gradient-to-r from-amber-400 to-orange-500"
                   : "bg-gradient-to-r from-rose-400 to-red-500"
               }`}
-              style={{ width: `${emailPct}%` }}
+              style={{ width: `${Math.min(emailPct, 100)}%` }}
             />
           </div>
-          <span className={`text-[10px] font-mono w-8 text-right ${
-            emailPct >= 80 ? (isDark ? "text-emerald-400" : "text-emerald-600")
-              : emailPct >= 40 ? (isDark ? "text-amber-400" : "text-amber-600")
-              : (isDark ? "text-rose-400" : "text-rose-500")
-          }`}>
-            {emailPct}%
-          </span>
+          <span className={`text-[9px] font-mono font-bold ${isDark ? "text-slate-500" : "text-slate-400"}`}>{emailPct}%</span>
         </div>
       )}
     </button>
