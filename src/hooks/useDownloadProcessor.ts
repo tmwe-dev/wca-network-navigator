@@ -23,6 +23,7 @@ interface DlProcessorState {
   stopped: boolean;
   activeLoopId: number;
   processing: boolean; // MUTEX: true while a job is being processed
+  loopRunning: boolean; // true for entire loop lifetime (including delays)
   abortController: AbortController | null; // For immediate delay interruption
 }
 
@@ -33,6 +34,7 @@ function getDlState(): DlProcessorState {
       stopped: false,
       activeLoopId: 0,
       processing: false,
+      loopRunning: false,
       abortController: null,
     };
   }
@@ -540,6 +542,8 @@ export function useDownloadProcessor() {
     const state = getDlState();
     
     const loop = async () => {
+      state.loopRunning = true;
+      try {
       while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
         // ── FIX 5: Acquire mutex synchronously BEFORE any async work ──
         if (state.processing) {
@@ -597,6 +601,10 @@ export function useDownloadProcessor() {
           try { await abortableDelay(15000, state.abortController?.signal ?? undefined); } catch { break; }
         }
       }
+      } finally {
+        state.loopRunning = false;
+        console.log(`[DownloadProcessor] Loop ${loopId} exited, loopRunning=false`);
+      }
     };
 
     loop();
@@ -605,9 +613,9 @@ export function useDownloadProcessor() {
   // Main polling loop: mount-only — guard against duplicate loops (HMR/remount)
   useEffect(() => {
     const state = getDlState();
-    // If a loop is already active and not stopped, don't start another
-    if (state.processing && !state.stopped && !state.cancel) {
-      console.log("[DownloadProcessor] Mount: loop already active, skipping");
+    // If a loop is already running (including during delays), don't start another
+    if (state.loopRunning && !state.stopped && !state.cancel) {
+      console.log("[DownloadProcessor] Mount: loop already running (loopRunning=true), skipping");
       return () => { state.cancel = true; };
     }
     state.cancel = false;
