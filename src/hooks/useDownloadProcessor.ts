@@ -543,6 +543,7 @@ export function useDownloadProcessor() {
     
     const loop = async () => {
       state.loopRunning = true;
+      let emptyRounds = 0;
       try {
       while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
         // ── FIX 5: Acquire mutex synchronously BEFORE any async work ──
@@ -566,6 +567,7 @@ export function useDownloadProcessor() {
           if (runningNow && runningNow.length > 0) {
             // A job is already running, release mutex and wait
             state.processing = false;
+            emptyRounds = 0; // There IS a running job, reset counter
             try { await abortableDelay(10000, state.abortController?.signal ?? undefined); } catch { break; }
             continue;
           }
@@ -579,6 +581,7 @@ export function useDownloadProcessor() {
             .limit(1);
 
           if (jobs && jobs.length > 0 && loopId === state.activeLoopId && !state.stopped && !state.cancel) {
+            emptyRounds = 0; // Found a job, reset counter
             // processJob expects mutex already acquired (state.processing = true)
             await processJobRef.current(jobs[0], loopId);
 
@@ -590,6 +593,11 @@ export function useDownloadProcessor() {
           } else {
             // No pending jobs found, release mutex
             state.processing = false;
+            emptyRounds++;
+            if (emptyRounds >= 3) {
+              console.log("[DownloadProcessor] No jobs for 3 rounds (~45s), stopping loop");
+              break;
+            }
           }
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);

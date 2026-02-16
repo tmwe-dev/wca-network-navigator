@@ -131,16 +131,17 @@ export function useWcaSessionStatus() {
   }, [extensionAvailable, checkAvailable, syncCookie, verifySession, updateStatusInDb, queryClient]);
 
   // Auto-check on mount: if status is not "ok", automatically verify via extension
-  const autoCheckDone = useRef(false);
+  // Uses GLOBAL flag on window to ensure only ONE check across ALL hook instances
+  const WCA_AUTO_CHECK_KEY = '__wcaAutoCheckDone__';
   const triggerCheckRef = useRef(triggerCheck);
   triggerCheckRef.current = triggerCheck;
 
   useEffect(() => {
-    if (autoCheckDone.current) return;
+    if ((window as any)[WCA_AUTO_CHECK_KEY]) return;
     if (statusQuery.isLoading) return;
     const currentStatus = statusQuery.data?.status;
     if (currentStatus && currentStatus !== "ok" && currentStatus !== "checking") {
-      autoCheckDone.current = true;
+      (window as any)[WCA_AUTO_CHECK_KEY] = true;
       const timer = setTimeout(() => {
         triggerCheckRef.current();
       }, 2000);
