@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, Play, FileText } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, Play, FileText, Bot } from "lucide-react";
+import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
@@ -48,6 +49,7 @@ export default function Operations() {
   const [activeTab, setActiveTab] = useState("partner");
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
+  const [aiOpen, setAiOpen] = useState(false);
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
   const globalStats = countryStatsData ? {
@@ -127,6 +129,9 @@ export default function Operations() {
                   RIAVVIA ({cancelledIncompleteJobs.length})
                 </button>
               )}
+              <button onClick={() => setAiOpen(true)} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"}`} title="Assistente AI">
+                <Bot className="w-4 h-4" />
+              </button>
               <button onClick={toggleTheme} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
@@ -226,6 +231,11 @@ export default function Operations() {
           </div>
         </div>
       </div>
+      <AiAssistantDialog
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        context={{ selectedCountries, filterMode }}
+      />
     </ThemeCtx.Provider>
   );
 }
