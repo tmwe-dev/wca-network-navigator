@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
@@ -19,6 +19,7 @@ import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "
 import { useTheme, t } from "./theme";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { WcaSessionDialog } from "./WcaSessionIndicator";
+import { useCountryStats } from "@/hooks/useCountryStats";
 
 interface ActionPanelProps {
   selectedCountries: { code: string; name: string }[];
@@ -36,6 +37,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const [showSessionDialog, setShowSessionDialog] = useState(false);
 
   const { settings: scrapingSettings } = useScrapingSettings();
+  const { data: countryStatsData } = useCountryStats();
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
@@ -46,7 +48,8 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
 
   // Speed — simple slider around baseDelay
   const [delay, setDelay] = useState(scrapingSettings.baseDelay);
-  const [includeExisting, setIncludeExisting] = useState(false);
+  type DownloadMode = "new" | "no_profile" | "all";
+  const [downloadMode, setDownloadMode] = useState<DownloadMode>("new");
   const directoryOnly = directoryOnlyProp ?? false;
   const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
 
@@ -119,7 +122,24 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const missingIds = uniqueIds.filter(id => !dbWcaSet.has(id));
   const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
   const totalCount = uniqueIds.length;
-  const idsToDownload = includeExisting ? uniqueIds : missingIds;
+
+  // Aggregate without_profile from country stats
+  const noProfileCount = useMemo(() => {
+    if (!countryStatsData) return 0;
+    return countryCodes.reduce((sum, cc) => sum + (countryStatsData.byCountry[cc]?.without_profile || 0), 0);
+  }, [countryStatsData, countryCodes]);
+
+  // IDs to download based on mode
+  const idsToDownload = useMemo(() => {
+    if (downloadMode === "all") return uniqueIds;
+    if (downloadMode === "no_profile") {
+      // Download existing partners that are missing profiles + new ones
+      const existingIds = uniqueIds.filter(id => dbWcaSet.has(id));
+      // We include all existing since we can't filter by profile here; the processor will check
+      return [...missingIds, ...existingIds.filter(() => noProfileCount > 0)];
+    }
+    return missingIds; // "new" mode
+  }, [downloadMode, uniqueIds, missingIds, dbWcaSet, noProfileCount]);
 
   // Time estimate
   const totalTime = idsToDownload.length * (delay + 5);
@@ -390,6 +410,12 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
               <span className={`text-sm font-medium ${th.acEm}`}>✓ Già scaricati</span>
               <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
             </div>
+            {noProfileCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${isDark ? "text-orange-400" : "text-orange-600"}`}>⚠ Senza profilo</span>
+                <span className={`font-mono font-bold ${isDark ? "text-orange-400" : "text-orange-600"}`}>{noProfileCount}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
               <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
@@ -423,15 +449,24 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         /* ── Full download mode ── */
         <>
           {downloadedCount > 0 && (
-            <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
-              <Checkbox checked={includeExisting} onCheckedChange={v => setIncludeExisting(!!v)} />
-              Ri-scarica anche i {downloadedCount} esistenti
-            </label>
+            <div>
+              <label className={`text-xs mb-1.5 block ${th.label}`}>Modalità download</label>
+              <Select value={downloadMode} onValueChange={v => setDownloadMode(v as DownloadMode)}>
+                <SelectTrigger className={`${th.selTrigger}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={th.selContent}>
+                  <SelectItem value="new">Solo nuovi ({missingIds.length})</SelectItem>
+                  <SelectItem value="no_profile">Profili mancanti ({noProfileCount})</SelectItem>
+                  <SelectItem value="all">Aggiorna tutti ({downloadedCount})</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
-          {missingIds.length === 0 && !includeExisting && (
+          {missingIds.length === 0 && downloadMode === "new" && (
             <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
-              ✅ Tutti scaricati! Spunta sopra per aggiornare.
+              ✅ Tutti scaricati! Cambia modalità per aggiornare.
             </div>
           )}
 

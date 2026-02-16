@@ -5,7 +5,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, Users, Mail, CheckCircle, X, FolderDown, Trophy,
+  Search, Users, Mail, Phone, CheckCircle, X, FolderDown, Trophy,
   CheckSquare, FileWarning, HelpCircle, ArrowDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -223,6 +223,15 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
   );
 }
 
+/* ═══ Coverage color helper ═══ */
+function coverageColor(count: number, total: number, isDark: boolean) {
+  if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
+  const pct = count / total;
+  if (pct >= 0.8) return isDark ? "text-emerald-400" : "text-emerald-600";
+  if (pct >= 0.5) return isDark ? "text-amber-400" : "text-amber-600";
+  return isDark ? "text-rose-400" : "text-rose-500";
+}
+
 /* ═══ COUNTRY CARD ═══ */
 function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
@@ -288,8 +297,11 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
               <span className={`flex items-center gap-0.5 text-[9px] font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                 <Users className="w-2.5 h-2.5" />{st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""}
               </span>
-              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${(s?.with_email || 0) > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400/60" : "text-rose-400")}`}>
+              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${coverageColor(s?.with_email || 0, st.pCount, isDark)}`}>
                 <Mail className="w-2.5 h-2.5" />{s?.with_email || 0}
+              </span>
+              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${coverageColor(s?.with_phone || 0, st.pCount, isDark)}`}>
+                <Phone className="w-2.5 h-2.5" />{s?.with_phone || 0}
               </span>
               {st.noProfile > 0 && (
                 <span className={`text-[9px] font-mono ${isDark ? "text-orange-400/70" : "text-orange-500"}`}>
