@@ -10,44 +10,58 @@ import {
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 /* ── Parse XLS/CSV file ── */
-function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: "binary" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]> {
+  const buffer = await file.arrayBuffer();
+  const workbook = new ExcelJS.Workbook();
 
-        const entries = rows.map((row) => {
-          const no = parseInt(String(row["No."] || row["No"] || "0"));
-          const totalStr = String(row["TotalOwedAmount"] || row["Total Owed Amount"] || "0").replace(/[^0-9.-]/g, "");
+  if (file.name.endsWith(".csv")) {
+    const text = new TextDecoder().decode(buffer);
+    const blob = new Blob([text], { type: "text/csv" });
+    const stream = blob.stream() as any;
+    await workbook.csv.read(stream);
+  } else {
+    await workbook.xlsx.load(buffer);
+  }
 
-          return {
-            blacklist_no: isNaN(no) ? null : no,
-            company_name: String(row["CompanyName"] || row["Company Name"] || "").trim(),
-            city: String(row["City"] || "").trim() || null,
-            country: String(row["Country"] || "").trim() || null,
-            status: String(row["Status"] || "").trim() || null,
-            claims: String(row["Claims"] || "").trim() || null,
-            total_owed_amount: parseFloat(totalStr) || null,
-            matched_partner_id: null,
-            source: "manual" as const,
-          };
-        }).filter((e) => e.company_name.length > 0);
+  const sheet = workbook.worksheets[0];
+  if (!sheet) throw new Error("No worksheet found");
 
-        resolve(entries);
-      } catch (err) {
-        reject(err);
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsBinaryString(file);
+  const headers: string[] = [];
+  sheet.getRow(1).eachCell((cell, colNumber) => {
+    headers[colNumber] = String(cell.value || "").trim();
   });
+
+  const entries: Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[] = [];
+
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header
+    const obj: Record<string, string> = {};
+    row.eachCell((cell, colNumber) => {
+      obj[headers[colNumber] || `col${colNumber}`] = String(cell.value ?? "");
+    });
+
+    const no = parseInt(String(obj["No."] || obj["No"] || "0"));
+    const totalStr = String(obj["TotalOwedAmount"] || obj["Total Owed Amount"] || "0").replace(/[^0-9.-]/g, "");
+
+    const entry = {
+      blacklist_no: isNaN(no) ? null : no,
+      company_name: String(obj["CompanyName"] || obj["Company Name"] || "").trim(),
+      city: String(obj["City"] || "").trim() || null,
+      country: String(obj["Country"] || "").trim() || null,
+      status: String(obj["Status"] || "").trim() || null,
+      claims: String(obj["Claims"] || "").trim() || null,
+      total_owed_amount: parseFloat(totalStr) || null,
+      matched_partner_id: null,
+      source: "manual" as const,
+    };
+
+    if (entry.company_name.length > 0) entries.push(entry);
+  });
+
+  return entries;
 }
 
 export default function BlacklistManager() {
