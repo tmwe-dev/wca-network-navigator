@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, Activity, ExternalLink, FolderDown, Play } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, ExternalLink, FolderDown, Play, FileText, UserCheck } from "lucide-react";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
@@ -17,24 +17,21 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDownloadJobs, useEmergencyStop, useResumeAllJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
+import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
-function useGlobalStats() {
+function useDirectoryTotal() {
   return useQuery({
-    queryKey: ["ops-global-stats"],
+    queryKey: ["ops-directory-total"],
     queryFn: async () => {
-      const [{ count: totalPartners }, { count: withEmail }, { count: withPhone }, { data: dirCounts }] = await Promise.all([
-        supabase.from("partners").select("*", { count: "exact", head: true }),
-        supabase.from("partner_contacts").select("*", { count: "exact", head: true }).not("email", "is", null),
-        supabase.from("partner_contacts").select("*", { count: "exact", head: true }).or("direct_phone.not.is.null,mobile.not.is.null"),
-        supabase.rpc("get_directory_counts"),
-      ]);
-      const rows = (dirCounts || []) as any[];
-      const scannedCountries = rows.length;
-      const totalDirectory = rows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0);
-      return { totalPartners: totalPartners || 0, withEmail: withEmail || 0, withPhone: withPhone || 0, scannedCountries, totalDirectory };
+      const { data } = await supabase.rpc("get_directory_counts");
+      const rows = (data || []) as any[];
+      return {
+        scannedCountries: rows.length,
+        totalDirectory: rows.reduce((sum: number, r: any) => sum + (Number(r.member_count) || 0), 0),
+      };
     },
     staleTime: 60_000,
   });
@@ -50,7 +47,17 @@ export default function Operations() {
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [activeTab, setActiveTab] = useState("partner");
   const [directoryOnly, setDirectoryOnly] = useState(false);
-  const { data: globalStats } = useGlobalStats();
+  const { data: countryStatsData } = useCountryStats();
+  const { data: dirData } = useDirectoryTotal();
+  const globalStats = countryStatsData ? {
+    totalPartners: countryStatsData.global.total,
+    withEmail: countryStatsData.global.withEmail,
+    withPhone: countryStatsData.global.withPhone,
+    withProfile: countryStatsData.global.withProfile,
+    withoutProfile: countryStatsData.global.withoutProfile,
+    scannedCountries: dirData?.scannedCountries || 0,
+    totalDirectory: dirData?.totalDirectory || 0,
+  } : null;
   const { data: jobs } = useDownloadJobs();
   const emergencyStopMutation = useEmergencyStop();
   const resumeAllMutation = useResumeAllJobs();
@@ -125,30 +132,30 @@ export default function Operations() {
             </div>
           </div>
 
-          {/* ═══ GLOBAL STATS BAR ═══ */}
+          {/* ═══ DASHBOARD 6 CARDS ═══ */}
           <div className="flex-shrink-0 mx-6 mb-3">
-            <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-              {globalStats ? (
-                <>
-                  <StatItem icon={Globe} label="Paesi scansionati" value={globalStats.scannedCountries} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} color={isDark ? "text-emerald-400" : "text-emerald-500"} isDark={isDark} />
-                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                  <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} color={isDark ? "text-sky-400" : "text-sky-500"} isDark={isDark} />
-                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                  <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} color={isDark ? "text-teal-400" : "text-teal-500"} isDark={isDark} />
-                  <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
-                  <StatItem icon={FolderDown} label="In directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} color={isDark ? "text-violet-400" : "text-violet-500"} isDark={isDark} />
-                </>
-              ) : (
-                <>
-                  <Skeleton className={`h-5 w-32 ${isDark ? "bg-white/[0.06]" : ""}`} />
-                  <Skeleton className={`h-5 w-28 ${isDark ? "bg-white/[0.06]" : ""}`} />
-                  <Skeleton className={`h-5 w-24 ${isDark ? "bg-white/[0.06]" : ""}`} />
-                  <Skeleton className={`h-5 w-28 ${isDark ? "bg-white/[0.06]" : ""}`} />
-                </>
-              )}
-            </div>
+            {globalStats ? (
+              <div className="grid grid-cols-6 gap-2.5">
+                <DashCard icon={Globe} label="Paesi scansionati" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} />
+                <DashCard icon={Users} label="Partner nel DB" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} />
+                <DashCard icon={FileText} label="Con profilo" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
+                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
+                  progressColor="from-violet-400 to-purple-500" />
+                <DashCard icon={Mail} label="Email trovate" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
+                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
+                  progressColor="from-sky-400 to-blue-500" />
+                <DashCard icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
+                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
+                  progressColor="from-teal-400 to-emerald-500" />
+                <DashCard icon={FolderDown} label="In directory WCA" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-6 gap-2.5">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className={`h-20 rounded-xl ${isDark ? "bg-white/[0.06]" : ""}`} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ═══ MAIN SPLIT ═══ */}
@@ -238,12 +245,25 @@ export default function Operations() {
   );
 }
 
-function StatItem({ icon: Icon, label, value, color, isDark }: { icon: any; label: string; value: string | number; color: string; isDark: boolean }) {
+function DashCard({ icon: Icon, label, value, color, isDark, progress, progressColor }: {
+  icon: any; label: string; value: string | number; color: string; isDark: boolean;
+  progress?: number; progressColor?: string;
+}) {
   return (
-    <div className="flex items-center gap-2">
-      <Icon className={`w-4 h-4 ${color}`} />
-      <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
-      <span className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+    <div className={`rounded-xl border p-3 ${isDark ? "bg-white/[0.04] backdrop-blur-xl border-white/[0.08]" : "bg-white/60 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`w-5 h-5 ${color}`} />
+        <span className={`text-[10px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
+      </div>
+      <span className={`text-xl font-mono font-extrabold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+      {progress !== undefined && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+            <div className={`h-full rounded-full bg-gradient-to-r ${progressColor || "from-sky-400 to-blue-500"}`} style={{ width: `${progress}%` }} />
+          </div>
+          <span className={`text-[10px] font-mono font-bold ${color}`}>{progress}%</span>
+        </div>
+      )}
     </div>
   );
 }
