@@ -7,30 +7,9 @@ import { ActionPanel } from "@/components/download/ActionPanel";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { AdvancedTools } from "@/components/download/AdvancedTools";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
+import { useCountryStats } from "@/hooks/useCountryStats";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-function useGlobalStats() {
-  return useQuery({
-    queryKey: ["download-global-stats"],
-    queryFn: async () => {
-      const [{ count: totalPartners }, { count: withEmail }, { count: withPhone }, { data: cacheData }] = await Promise.all([
-        supabase.from("partners").select("*", { count: "exact", head: true }),
-        supabase.from("partner_contacts").select("*", { count: "exact", head: true }).not("email", "is", null),
-        supabase.from("partner_contacts").select("*", { count: "exact", head: true }).or("direct_phone.not.is.null,mobile.not.is.null"),
-        supabase.from("directory_cache").select("country_code"),
-      ]);
-      const scannedCountries = new Set((cacheData || []).map((c: any) => c.country_code)).size;
-      return {
-        totalPartners: totalPartners || 0,
-        withEmail: withEmail || 0,
-        withPhone: withPhone || 0,
-        scannedCountries,
-      };
-    },
-    staleTime: 60_000,
-  });
-}
 
 export default function DownloadManagement() {
   const [isDark, setIsDark] = useState(() => {
@@ -41,7 +20,21 @@ export default function DownloadManagement() {
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [showResync, setShowResync] = useState(false);
-  const { data: globalStats } = useGlobalStats();
+  const { data: statsData } = useCountryStats();
+  const { data: cacheCountries } = useQuery({
+    queryKey: ["cache-country-count"],
+    queryFn: async () => {
+      const { data } = await supabase.from("directory_cache").select("country_code");
+      return new Set((data || []).map((c: any) => c.country_code)).size;
+    },
+    staleTime: 60_000,
+  });
+  const globalStats = statsData ? {
+    totalPartners: statsData.global.total,
+    withEmail: statsData.global.withEmail,
+    withPhone: statsData.global.withPhone,
+    scannedCountries: cacheCountries || 0,
+  } : null;
 
   const toggleCountry = useCallback((code: string, name: string) => {
     setSelectedCountries(prev =>

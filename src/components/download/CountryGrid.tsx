@@ -4,12 +4,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
   X, FolderDown, Trophy, CheckSquare, ArrowDownAZ, BarChart3, Percent,
-  FileWarning,
+  FileWarning, AlertTriangle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useContactCompleteness } from "@/hooks/useContactCompleteness";
+import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
@@ -26,31 +26,15 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial" | "no_profile">("all");
+  const [filterMode, setFilterMode] = useState<"all" | "todo" | "done" | "no_profile" | "missing">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "directory" | "completion">("name");
   const [showEmpty, setShowEmpty] = useState(false);
 
-  const { data: partnerData = {} } = useQuery({
-    queryKey: ["partner-counts-by-country-with-type"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("country_code, office_type")
-        .not("country_code", "is", null);
-      const counts: Record<string, { total: number; hq: number; branch: number }> = {};
-      (data || []).forEach(r => {
-        if (!counts[r.country_code]) counts[r.country_code] = { total: 0, hq: 0, branch: 0 };
-        counts[r.country_code].total++;
-        if (r.office_type === "branch") counts[r.country_code].branch++;
-        else counts[r.country_code].hq++;
-      });
-      return counts;
-    },
-    staleTime: 60_000,
-  });
-  const partnerCounts: Record<string, number> = {};
-  Object.entries(partnerData).forEach(([k, v]) => { partnerCounts[k] = v.total; });
+  // Single server-side aggregation — accurate counts, no 1000-row limit
+  const { data: statsData } = useCountryStats();
+  const stats = statsData?.byCountry || {};
 
+  // Directory cache counts
   const { data: cacheData = {} } = useQuery({
     queryKey: ["cache-data-by-country"],
     queryFn: async () => {
@@ -66,61 +50,64 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     },
     staleTime: 60_000,
   });
-  const cacheCounts: Record<string, number> = {};
-  Object.entries(cacheData).forEach(([k, v]) => { cacheCounts[k] = v.count; });
 
-  const { data: completeness } = useContactCompleteness();
-
-  // Profile coverage: how many partners per country have raw_profile_html
-  const { data: profileCoverage = {} } = useQuery({
-    queryKey: ["profile-coverage-by-country"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("country_code, raw_profile_html")
-        .not("country_code", "is", null);
-      const counts: Record<string, { total: number; withProfile: number; withoutProfile: number }> = {};
-      (data || []).forEach(r => {
-        if (!counts[r.country_code]) counts[r.country_code] = { total: 0, withProfile: 0, withoutProfile: 0 };
-        counts[r.country_code].total++;
-        if (r.raw_profile_html) counts[r.country_code].withProfile++;
-        else counts[r.country_code].withoutProfile++;
-      });
-      return counts;
-    },
-    staleTime: 60_000,
-  });
-
-  const countriesWithoutProfile = new Set(
-    Object.entries(profileCoverage).filter(([, v]) => v.withoutProfile > 0).map(([k]) => k)
-  );
-  const noProfileCount = WCA_COUNTRIES.filter(c => countriesWithoutProfile.has(c.code)).length;
-
-  const exploredSet = new Set(Object.keys(cacheCounts));
-  const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k]));
   const selectedCodes = new Set(selected.map(c => c.code));
+  const exploredSet = new Set(Object.keys(cacheData));
+
+  // Derive status per country
+  const getStatus = (code: string) => {
+    const s = stats[code];
+    const c = cacheData[code];
+    const pCount = s?.total_partners || 0;
+    const cCount = c?.count || 0;
+    const hasDir = exploredSet.has(code);
+    const hasProfile = s?.with_profile || 0;
+    const noProfile = s?.without_profile || 0;
+
+    // "done" = downloaded all from directory AND all have profiles
+    const allDownloaded = hasDir && cCount > 0 && pCount >= cCount;
+    const allProfiles = pCount > 0 && noProfile === 0;
+    const isDone = allDownloaded && allProfiles;
+
+    // "todo" = anything that still needs work (missing downloads OR missing profiles)
+    const isTodo = pCount === 0 || !allDownloaded || !allProfiles;
+
+    return { pCount, cCount, hasDir, hasProfile, noProfile, allDownloaded, allProfiles, isDone, isTodo };
+  };
+
+  // Count filters
+  let doneCount = 0, todoCount = 0, noProfileCount = 0, missingCount = 0;
+  WCA_COUNTRIES.forEach(c => {
+    const st = getStatus(c.code);
+    if (st.isDone) doneCount++;
+    if (st.isTodo && (st.pCount > 0 || exploredSet.has(c.code))) todoCount++;
+    if (st.noProfile > 0) noProfileCount++;
+    if (!exploredSet.has(c.code) && st.pCount === 0) missingCount++;
+  });
 
   const filtered = WCA_COUNTRIES.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
-    if (!showEmpty && !cacheCounts[c.code] && !selectedCodes.has(c.code)) return false;
-    if (filterMode === "missing") return !exploredSet.has(c.code) && !partialSet.has(c.code);
-    if (filterMode === "explored") return exploredSet.has(c.code);
-    if (filterMode === "partial") return partialSet.has(c.code);
-    if (filterMode === "no_profile") return countriesWithoutProfile.has(c.code);
+
+    const st = getStatus(c.code);
+    if (!showEmpty && !cacheData[c.code] && st.pCount === 0 && !selectedCodes.has(c.code)) return false;
+
+    if (filterMode === "done") return st.isDone;
+    if (filterMode === "todo") return st.isTodo && (st.pCount > 0 || exploredSet.has(c.code));
+    if (filterMode === "no_profile") return st.noProfile > 0;
+    if (filterMode === "missing") return !exploredSet.has(c.code) && st.pCount === 0;
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
-    if (sortBy === "partners") return (partnerCounts[b.code] || 0) - (partnerCounts[a.code] || 0);
-    if (sortBy === "directory") return (cacheCounts[b.code] || 0) - (cacheCounts[a.code] || 0);
-    const compA = cacheCounts[a.code] ? (partnerCounts[a.code] || 0) / cacheCounts[a.code] : exploredSet.has(a.code) ? 1 : -1;
-    const compB = cacheCounts[b.code] ? (partnerCounts[b.code] || 0) / cacheCounts[b.code] : exploredSet.has(b.code) ? 1 : -1;
-    return compA - compB;
+    const sA = stats[a.code], sB = stats[b.code];
+    if (sortBy === "partners") return (sB?.total_partners || 0) - (sA?.total_partners || 0);
+    if (sortBy === "directory") return (cacheData[b.code]?.count || 0) - (cacheData[a.code]?.count || 0);
+    // completion: sort by % downloaded ascending (show least complete first)
+    const cA = cacheData[a.code]?.count || 0, cB = cacheData[b.code]?.count || 0;
+    const pctA = cA > 0 ? (sA?.total_partners || 0) / cA : -1;
+    const pctB = cB > 0 ? (sB?.total_partners || 0) / cB : -1;
+    return pctA - pctB;
   });
-
-  const missingCount = WCA_COUNTRIES.filter(c => !exploredSet.has(c.code) && !partialSet.has(c.code)).length;
-  const exploredCount = WCA_COUNTRIES.filter(c => exploredSet.has(c.code)).length;
-  const partialCount = WCA_COUNTRIES.filter(c => partialSet.has(c.code)).length;
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCodes.has(c.code));
 
@@ -135,10 +122,10 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   };
 
   const filters = [
-    { key: "all" as const, label: "Tutti", count: WCA_COUNTRIES.length, icon: Globe },
+    { key: "all" as const, label: "Tutti", count: filtered.length, icon: Globe },
+    { key: "todo" as const, label: "Da fare", count: todoCount, icon: AlertTriangle },
     { key: "no_profile" as const, label: "Senza Profilo", count: noProfileCount, icon: FileWarning },
-    { key: "explored" as const, label: "Scansionati", count: exploredCount, icon: CheckCircle },
-    { key: "partial" as const, label: "Parziali", count: partialCount, icon: Activity },
+    { key: "done" as const, label: "Completati", count: doneCount, icon: Trophy },
     { key: "missing" as const, label: "Mai esplorati", count: missingCount, icon: Download },
   ];
 
@@ -206,7 +193,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
         })}
       </div>
 
-      {/* === CONTROLS: Select All + Solo Dir + Flags === */}
+      {/* === CONTROLS: Select All + Flags === */}
       <div className="flex items-center gap-2">
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-1 items-center flex-1 min-w-0">
@@ -259,47 +246,38 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
       <ScrollArea className="flex-1 min-h-0">
         <div className="flex flex-col gap-2.5 pr-2">
           {filtered.map(c => {
+            const st = getStatus(c.code);
             const isSelected = selectedCodes.has(c.code);
-            const pCount = partnerCounts[c.code] || 0;
-            const cCount = cacheCounts[c.code] || 0;
-            const hasDirectoryScan = exploredSet.has(c.code);
-            const hasDbOnly = !hasDirectoryScan && pCount > 0;
-            const isComplete = hasDirectoryScan && cCount > 0 && pCount >= cCount;
-            const cs = completeness?.byCountry?.[c.code];
-            const contactsTotal = cs?.total_partners || 0;
-            const withEmail = cs?.with_personal_email || 0;
-            const withPhone = cs?.with_personal_phone || 0;
-            const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
-            const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
-            const pc = profileCoverage[c.code];
-            const noProfileNum = pc?.withoutProfile || 0;
-            const hasProfileGap = noProfileNum > 0;
+            const s = stats[c.code];
+            const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
+            const emailPct = st.pCount > 0 ? Math.round(((s?.with_email || 0) / st.pCount) * 100) : 0;
 
+            // Card color based on status
             const cardTint = isSelected
               ? isDark
                 ? "bg-sky-950/60 border-sky-400/30 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10"
                 : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/50 shadow-lg shadow-sky-200/40"
-              : isComplete
+              : st.isDone
                 ? isDark
-                  ? "bg-emerald-950/40 border-emerald-500/20 hover:bg-emerald-950/60 hover:border-emerald-400/30"
-                  : "bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
-                : hasDirectoryScan
+                  ? "bg-emerald-950/40 border-emerald-500/20 hover:bg-emerald-950/60"
+                  : "bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50"
+                : st.allDownloaded && !st.allProfiles
                   ? isDark
-                    ? "bg-slate-800/50 border-slate-600/30 hover:bg-slate-800/70 hover:border-slate-500/40"
-                    : "bg-white/70 border-slate-200 hover:bg-white hover:border-slate-300"
-                  : hasDbOnly
+                    ? "bg-amber-950/30 border-amber-500/20 hover:bg-amber-950/50"
+                    : "bg-amber-50/50 border-amber-200 hover:bg-amber-50"
+                  : st.pCount > 0
                     ? isDark
-                      ? "bg-amber-950/30 border-amber-500/15 hover:bg-amber-950/50 hover:border-amber-400/25"
-                      : "bg-amber-50/50 border-amber-200/60 hover:bg-amber-50 hover:border-amber-300"
+                      ? "bg-slate-800/50 border-slate-600/30 hover:bg-slate-800/70"
+                      : "bg-white/70 border-slate-200 hover:bg-white"
                     : isDark
-                      ? "bg-slate-900/40 border-slate-700/20 hover:bg-slate-800/40 hover:border-slate-600/30"
-                      : "bg-slate-50/50 border-slate-200/60 hover:bg-slate-50 hover:border-slate-300";
+                      ? "bg-slate-900/40 border-slate-700/20 hover:bg-slate-800/40"
+                      : "bg-slate-50/50 border-slate-200/60 hover:bg-slate-50";
 
-            const stripeColor = isComplete
+            const stripeColor = st.isDone
               ? "from-emerald-400 to-teal-500"
-              : pCount > 0
-                ? pctEmail >= 60 ? "from-emerald-400 to-teal-500" : pctEmail >= 30 ? "from-amber-400 to-orange-500" : "from-rose-400 to-red-500"
-                : hasDirectoryScan
+              : st.allDownloaded
+                ? "from-amber-400 to-orange-500"
+                : st.pCount > 0
                   ? "from-sky-400 to-blue-500"
                   : "from-slate-400 to-slate-500";
 
@@ -315,44 +293,39 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                 }`} />
 
                 <div className="relative p-4 pl-6">
-                  {/* Header: flag + name + status */}
+                  {/* Header */}
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span className="text-3xl leading-none flex-shrink-0">{getCountryFlag(c.code)}</span>
                       <div className="min-w-0 flex-1">
                         <p className={`text-base font-bold truncate ${th.h2}`}>{c.name}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {isComplete && !hasProfileGap && (
+                          {/* Status badge */}
+                          {st.isDone && (
                             <span className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
                               <Trophy className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
                               Completo
                             </span>
                           )}
-                          {isComplete && hasProfileGap && (
-                            <span className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                              <Trophy className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-                              DL OK
-                            </span>
-                          )}
-                          {hasProfileGap && (
-                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold animate-pulse ${
+                          {st.allDownloaded && !st.allProfiles && (
+                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
                               isDark ? "bg-orange-500/20 border border-orange-400/40 text-orange-300" : "bg-orange-100 border border-orange-300 text-orange-700"
                             }`}>
                               <FileWarning className="w-3.5 h-3.5" />
-                              {noProfileNum} senza profilo
+                              {st.noProfile} senza profilo
                             </span>
                           )}
-                          {!isComplete && hasDirectoryScan && (
+                          {!st.allDownloaded && st.hasDir && (
                             <span className={`text-xs font-mono ${th.dim}`}>
-                              {pCount}/{cCount} · {dlPct}%
+                              {st.pCount}/{st.cCount} scaricati · {dlPct}%
                             </span>
                           )}
-                          {hasDbOnly && (
+                          {!st.hasDir && st.pCount > 0 && (
                             <span className={`text-xs font-mono ${isDark ? "text-amber-400/70" : "text-amber-600/70"}`}>
-                              {pCount} partner
+                              {st.pCount} partner (no directory)
                             </span>
                           )}
-                          {!hasDirectoryScan && pCount === 0 && (
+                          {!st.hasDir && st.pCount === 0 && (
                             <span className={`text-xs ${th.dim}`}>Non esplorato</span>
                           )}
                         </div>
@@ -361,33 +334,27 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
 
                     {/* Right side stats */}
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      {hasDirectoryScan && cCount > 0 && (
+                      {st.hasDir && st.cCount > 0 && (
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${
                           isDark ? "bg-sky-500/15 border border-sky-500/25" : "bg-sky-50 border border-sky-200"
                         }`}>
                           <FolderDown className={`w-5 h-5 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
-                          <span className={`text-lg font-mono font-extrabold ${isDark ? "text-sky-300" : "text-sky-700"}`}>{cCount}</span>
+                          <span className={`text-lg font-mono font-extrabold ${isDark ? "text-sky-300" : "text-sky-700"}`}>{st.cCount}</span>
                         </div>
                       )}
-                      {pCount > 0 && (
+                      {st.pCount > 0 && (
                         <div className="flex items-center gap-3">
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
-                          }`}>
-                            <Mail className={`w-4 h-4 ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
-                            <span className={`text-sm font-mono font-bold ${withEmail > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withEmail}</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+                            <Mail className={`w-4 h-4 ${(s?.with_email || 0) > 0 ? (isDark ? "text-sky-400" : "text-sky-500") : th.dim}`} />
+                            <span className={`text-sm font-mono font-bold ${(s?.with_email || 0) > 0 ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{s?.with_email || 0}</span>
                           </div>
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
-                          }`}>
-                            <Phone className={`w-4 h-4 ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
-                            <span className={`text-sm font-mono font-bold ${withPhone > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{withPhone}</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+                            <Phone className={`w-4 h-4 ${(s?.with_phone || 0) > 0 ? (isDark ? "text-teal-400" : "text-teal-500") : th.dim}`} />
+                            <span className={`text-sm font-mono font-bold ${(s?.with_phone || 0) > 0 ? (isDark ? "text-teal-400" : "text-teal-600") : (isDark ? "text-rose-400" : "text-rose-500")}`}>{s?.with_phone || 0}</span>
                           </div>
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-                            isDark ? "bg-white/[0.04]" : "bg-slate-50"
-                          }`}>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
                             <Users className={`w-4 h-4 ${th.dim}`} />
-                            <span className={`text-sm font-mono font-bold ${th.mono}`}>{pCount}</span>
+                            <span className={`text-sm font-mono font-bold ${th.mono}`}>{st.pCount}</span>
                           </div>
                         </div>
                       )}
@@ -400,25 +367,25 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                     )}
                   </div>
 
-                  {/* Progress bar */}
-                  {pCount > 0 && (
+                  {/* Progress bar — email coverage */}
+                  {st.pCount > 0 && (
                     <div className="flex items-center gap-2 mt-2.5">
                       <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            pctEmail >= 60
+                            emailPct >= 60
                               ? "bg-gradient-to-r from-emerald-400 to-teal-500"
-                              : pctEmail >= 30
+                              : emailPct >= 30
                                 ? "bg-gradient-to-r from-amber-400 to-orange-500"
                                 : "bg-gradient-to-r from-rose-400 to-red-500"
                           }`}
-                          style={{ width: `${pctEmail}%` }}
+                          style={{ width: `${emailPct}%` }}
                         />
                       </div>
                       <span className={`text-xs font-mono tabular-nums w-10 text-right ${
-                        pctEmail >= 60 ? (isDark ? "text-emerald-400" : "text-emerald-600") : pctEmail >= 30 ? (isDark ? "text-amber-400" : "text-amber-600") : (isDark ? "text-rose-400" : "text-rose-500")
+                        emailPct >= 60 ? (isDark ? "text-emerald-400" : "text-emerald-600") : emailPct >= 30 ? (isDark ? "text-amber-400" : "text-amber-600") : (isDark ? "text-rose-400" : "text-rose-500")
                       }`}>
-                        {pctEmail}%
+                        {emailPct}%
                       </span>
                     </div>
                   )}

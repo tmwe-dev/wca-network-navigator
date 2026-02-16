@@ -1099,6 +1099,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_country_stats: {
+        Args: never
+        Returns: {
+          branch_count: number
+          country_code: string
+          hq_count: number
+          total_partners: number
+          with_both: number
+          with_email: number
+          with_phone: number
+          with_profile: number
+          without_profile: number
+        }[]
+      }
       get_directory_counts: {
         Args: never
         Returns: {
