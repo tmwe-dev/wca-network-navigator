@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   Play, Pause, Square, Loader2, Timer, Zap, Activity,
   ArrowRight, Settings2, CheckCircle, List, Mail, Phone, XCircle,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
@@ -14,7 +15,6 @@ import {
 import { JobDataViewer } from "./JobDataViewer";
 import { JobTerminalViewer } from "./JobTerminalViewer";
 import { useTheme, t } from "./theme";
-import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 
 export function JobMonitor() {
   const isDark = useTheme();
@@ -23,35 +23,119 @@ export function JobMonitor() {
   const pauseResume = usePauseResumeJob();
   const updateSpeed = useUpdateJobSpeed();
 
-  const activeJobs = (jobs || []).filter(j => j.status === "running" || j.status === "pending" || j.status === "paused");
+  const runningJob = (jobs || []).find(j => j.status === "running");
+  const nextPending = !runningJob ? (jobs || []).find(j => j.status === "pending") : null;
+  const featuredJob = runningJob || nextPending;
+
+  const queuedJobs = (jobs || []).filter(j => j.status === "pending" && j.id !== featuredJob?.id);
+  const pausedJobs = (jobs || []).filter(j => j.status === "paused");
   const recentCompleted = (jobs || []).filter(j => j.status === "completed" || j.status === "cancelled").slice(0, 5);
 
-  if (activeJobs.length === 0 && recentCompleted.length === 0) return null;
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [completedOpen, setCompletedOpen] = useState(false);
+
+  if (!featuredJob && queuedJobs.length === 0 && pausedJobs.length === 0 && recentCompleted.length === 0) return null;
+
+  const totalQueued = queuedJobs.length + pausedJobs.length;
 
   return (
     <div className="space-y-3">
-      {activeJobs.length > 0 && (
-        <p className={`text-sm font-medium ${th.h2}`}>
-          <Activity className="w-4 h-4 inline mr-1" />
-          Job Attivi ({activeJobs.length})
-        </p>
+      {/* SEZIONE 1: Job Attivo */}
+      {featuredJob && (
+        <div>
+          <p className={`text-sm font-medium mb-2 ${th.h2}`}>
+            <Activity className="w-4 h-4 inline mr-1" />
+            {featuredJob.status === "running" ? "Job Attivo" : "Prossimo in coda"}
+          </p>
+          <FeaturedJobCard job={featuredJob} pauseResume={pauseResume} updateSpeed={updateSpeed} />
+        </div>
       )}
-      {activeJobs.map(job => (
-        <JobCard key={job.id} job={job} pauseResume={pauseResume} updateSpeed={updateSpeed} />
-      ))}
+
+      {/* SEZIONE 2: Coda (collassabile) */}
+      {totalQueued > 0 && (
+        <div>
+          <button
+            onClick={() => setQueueOpen(!queueOpen)}
+            className={`flex items-center gap-1.5 text-sm font-medium w-full text-left py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
+          >
+            {queueOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            In coda ({totalQueued})
+          </button>
+          {queueOpen && (
+            <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-2 space-y-0.5 max-h-60 overflow-y-auto`}>
+              {pausedJobs.map(job => (
+                <QueueRow key={job.id} job={job} isPaused isDark={isDark} th={th} pauseResume={pauseResume} />
+              ))}
+              {queuedJobs.map(job => (
+                <QueueRow key={job.id} job={job} isDark={isDark} th={th} pauseResume={pauseResume} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SEZIONE 3: Completati recenti (collassabile) */}
       {recentCompleted.length > 0 && (
-        <>
-          <p className={`text-sm font-medium mt-2 ${th.dim}`}>Completati</p>
-          {recentCompleted.map(job => (
-            <JobCard key={job.id} job={job} pauseResume={pauseResume} updateSpeed={updateSpeed} />
-          ))}
-        </>
+        <div>
+          <button
+            onClick={() => setCompletedOpen(!completedOpen)}
+            className={`flex items-center gap-1.5 text-sm font-medium w-full text-left py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
+          >
+            {completedOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            Completati ({recentCompleted.length})
+          </button>
+          {completedOpen && (
+            <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-2 space-y-0.5`}>
+              {recentCompleted.map(job => (
+                <QueueRow key={job.id} job={job} isDark={isDark} th={th} pauseResume={pauseResume} isCompleted />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function JobCard({ job, pauseResume, updateSpeed }: {
+/* ── Riga compatta per coda e completati ── */
+function QueueRow({ job, isDark, th, pauseResume, isPaused, isCompleted }: {
+  job: DownloadJob;
+  isDark: boolean;
+  th: ReturnType<typeof t>;
+  pauseResume: ReturnType<typeof usePauseResumeJob>;
+  isPaused?: boolean;
+  isCompleted?: boolean;
+}) {
+  const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
+
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${isDark ? "hover:bg-white/5" : "hover:bg-black/5"} transition-colors`}>
+      <span className="text-base leading-none">{getCountryFlag(job.country_code)}</span>
+      <span className={`flex-1 truncate ${th.body}`}>
+        {job.country_name}
+        <span className={`ml-1.5 ${th.dim}`}>{job.network_name}</span>
+      </span>
+      <span className={`font-mono tabular-nums ${th.dim}`}>{job.current_index}/{job.total_count}</span>
+      {isPaused && (
+        <Button size="sm" variant="ghost" className={`h-5 px-1.5 text-[10px] ${th.btnResume}`}
+          onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })}>
+          <Play className="w-2.5 h-2.5" />
+        </Button>
+      )}
+      {isCompleted && (
+        <Badge className={`text-[10px] px-1.5 py-0 border-0 ${job.status === "completed" ? "bg-emerald-600 text-white" : "bg-slate-500 text-white"}`}>
+          {job.status === "completed" ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+        </Badge>
+      )}
+      {!isPaused && !isCompleted && (
+        <span className={`font-mono tabular-nums ${th.dim}`}>{progress}%</span>
+      )}
+    </div>
+  );
+}
+
+/* ── Card grande per il job in evidenza ── */
+function FeaturedJobCard({ job, pauseResume, updateSpeed }: {
   job: DownloadJob;
   pauseResume: ReturnType<typeof usePauseResumeJob>;
   updateSpeed: ReturnType<typeof useUpdateJobSpeed>;
