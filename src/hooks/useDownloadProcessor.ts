@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useScrapingSettings, calcDelay } from "./useScrapingSettings";
@@ -53,7 +53,7 @@ export function useDownloadProcessor() {
   useEffect(() => { extractContactsRef.current = extractContacts; }, [extractContacts]);
 
   // Reset counter: used to trigger loop restart from resetStop via useEffect
-  const [resetCount, setResetCount] = useState(0);
+  const resetCountRef = useRef(0);
 
   // ── Terminal log helper — batched write, no read-then-write race ──
   const appendLog = async (jobId: string, type: string, msg: string) => {
@@ -562,7 +562,7 @@ export function useDownloadProcessor() {
     loop();
   }, []);
 
-  // ── FIX 4: Single loop via useEffect, triggered by mount AND resetCount ──
+  // Main polling loop: mount-only
   useEffect(() => {
     const state = getDlState();
     const myId = ++state.activeLoopId;
@@ -573,7 +573,7 @@ export function useDownloadProcessor() {
     return () => {
       state.cancel = true;
     };
-  }, [resetCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emergencyStop = useCallback(() => {
     const state = getDlState();
@@ -581,19 +581,16 @@ export function useDownloadProcessor() {
     state.stopped = true;
   }, []);
 
-  // ── FIX 4: resetStop does NOT call startLoop directly ──
-  // It only resets flags and triggers a re-render via setResetCount,
-  // which causes the useEffect above to create exactly ONE new loop.
+  // resetStop: resets flags, invalidates old loops via activeLoopId, starts ONE new loop.
+  // Safe because the old loop will exit on next iteration when it sees mismatched loopId.
   const resetStop = useCallback(() => {
     const state = getDlState();
     state.stopped = false;
-    state.cancel = true; // Cancel old loop first
-    state.processing = false; // Reset mutex
-    // Increment activeLoopId to invalidate any orphan loops
-    ++state.activeLoopId;
-    // Trigger useEffect to start a single new loop
-    setResetCount(c => c + 1);
-  }, []);
+    state.cancel = false;
+    state.processing = false;
+    const myId = ++state.activeLoopId;
+    startLoop(myId);
+  }, [startLoop]);
 
   return { emergencyStop, resetStop };
 }
