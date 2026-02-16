@@ -1,107 +1,115 @@
 
-# Regola globale: MAI piu' di una chiamata per volta
 
-## Problema
+# Redesign Completo Operations Center
 
-Quando clicchi "Scarica", il sistema lancia piu' chiamate in parallelo:
-1. `triggerCheck()` internamente fa 3 chiamate (syncCookie, verifySession, updateStatusInDb)
-2. Subito dopo, un'altra chiamata al DB per controllare `wca_session_status`
-3. Poi `executeDownload` controlla i job attivi E crea job in un loop
+## Problema Attuale
+L'interfaccia attuale mescola filtri e ordinamenti nella stessa area con chip identici, rendendo impossibile distinguerli. Lo stato dei paesi (scaricato, senza profilo, parziale) non e' immediatamente comprensibile. L'utente deve "interpretare" i dati invece di agire.
 
-Inoltre `useCreateDownloadJob` non ha nessun controllo anti-duplicato: se clicchi per 5 paesi, crea 5 insert quasi simultanei.
+## Nuova Architettura UI
 
-## Soluzione
-
-### 1. Serializzare il flusso pre-download in ActionPanel
-
-File: `src/components/download/ActionPanel.tsx`
-
-Il metodo `handleStartDownload` viene riscritto con un flusso strettamente sequenziale:
-- Passo 1: `triggerCheck()` (gia' sequenziale internamente)
-- Passo 2: SE autenticato, procedere. SE no, mostrare dialog. STOP.
-- Passo 3: Controllare job attivi nel DB
-- Passo 4: Creare i job UNO ALLA VOLTA con `await` tra ogni insert
-
-Rimuovere il secondo controllo ridondante su `app_settings` dopo `triggerCheck` (faceva una chiamata doppia inutile).
-
-### 2. Guard anti-duplicato nella creazione job
-
-File: `src/hooks/useDownloadJobs.ts` - `useCreateDownloadJob`
-
-Prima dell'insert, verificare se esiste gia' un job `pending` o `running` per lo stesso `country_code` + `network_name`. Se esiste, saltare silenziosamente senza errore.
-
-### 3. Deduplicazione nel "Riavvia Tutti"
-
-File: `src/hooks/useDownloadJobs.ts` - `useResumeAllJobs`
-
-Per ogni combinazione `country_code` + `network_name`, tenere solo il job con `current_index` piu' alto. Cancellare definitivamente i duplicati.
-
-### 4. Fermare il loop del processore sulla sessione scaduta
-
-File: `src/hooks/useDownloadProcessor.ts`
-
-Quando `verifySessionBeforeJob` fallisce (sessione scaduta), il processore attualmente pausa il job e poi va al prossimo, pausando ANCHE quello. Questo genera N chiamate inutili per N job in coda.
-
-Correzione: quando la sessione e' scaduta, fermare il loop completamente (`state.stopped = true`). Non ciclare sugli altri job.
-
-## Dettagli tecnici
-
-### ActionPanel - flusso sequenziale
+### Layout Generale (invariato: 35/65)
 
 ```text
-handleStartDownload:
-  1. const result = await triggerCheck()
-  2. if (!result?.authenticated) -> mostra dialog, RETURN
-  3. const activeJobs = await checkActiveJobs()
-  4. if (activeJobs > 0) -> toast errore, RETURN
-  5. for (country of selectedCountries) {
-       await createJob(country)  // uno alla volta, con await
-     }
++---------------------------------------------------------------+
+|  TOP BAR: titolo, job attivi, SpeedGauge, sessione, tema       |
++---------------------------------------------------------------+
+|  DASHBOARD: 6 card statistiche grandi con icone e progressi    |
++---------------------------------------------------------------+
+|                    |                                            |
+|  PANNELLO PAESI    |  PANNELLO CONTESTUALE                     |
+|  35%               |  65%                                      |
+|                    |                                            |
+|  [Barra ricerca]   |  (Tab: Partner / Scarica / Acquisisci)    |
+|                    |                                            |
+|  ┌──────────────┐  |                                            |
+|  │ SEZIONE      │  |                                            |
+|  │ FILTRI       │  |                                            |
+|  │ (etichetta)  │  |                                            |
+|  └──────────────┘  |                                            |
+|  ┌──────────────┐  |                                            |
+|  │ SEZIONE      │  |                                            |
+|  │ ORDINAMENTO  │  |                                            |
+|  │ (etichetta)  │  |                                            |
+|  └──────────────┘  |                                            |
+|  ┌──────────────┐  |                                            |
+|  │ SELEZIONE    │  |                                            |
+|  │ (bandiere)   │  |                                            |
+|  └──────────────┘  |                                            |
+|                    |                                            |
+|  [Lista paesi      |                                            |
+|   scrollabile]     |                                            |
+|                    |                                            |
++---------------------------------------------------------------+
 ```
 
-Rimuovere completamente il fallback che rilegge `app_settings` dopo `triggerCheck` (righe 186-191 attuali).
+### 1. Dashboard Globale Potenziata
+Sostituire la barra piatta con **6 mini-card** in griglia (3x2) piu' leggibili:
+- Paesi scansionati / Totale paesi
+- Partner nel DB
+- Con profilo / Senza profilo (con barra progresso)
+- Email trovate (con %)
+- Telefoni trovati (con %)
+- Totale in directory WCA
 
-### useCreateDownloadJob - guard
+Ogni card ha icona grande, valore in grassetto e una piccola barra di progresso dove applicabile.
 
-```text
-// Prima dell'insert:
-const { data: existing } = await supabase
-  .from("download_jobs")
-  .select("id")
-  .eq("country_code", params.country_code)
-  .eq("network_name", params.network_name)
-  .in("status", ["pending", "running"])
-  .limit(1);
+### 2. Country Grid -- Filtri e Ordinamenti Separati
 
-if (existing && existing.length > 0) return existing[0].id; // skip silenzioso
-```
+**Sezione FILTRA** (con etichetta "FILTRA PER STATO" ben visibile):
+- Titolo sezione esplicito con icona Filter
+- Chip colorati per stato, ognuno con colore semantico fisso:
+  - Verde: "Completati" (tutto scaricato + profili ok)
+  - Arancione: "Senza Profilo" (scaricati ma manca raw_profile_html)
+  - Blu: "Download Parziale" (non tutti i partner dalla directory)
+  - Grigio: "Mai Esplorati" (nessun dato)
+  - Bianco: "Tutti"
 
-### useDownloadProcessor - stop su sessione scaduta
+**Sezione ORDINA** (con etichetta "ORDINA PER" ben visibile):
+- Titolo sezione esplicito con icona ArrowUpDown
+- Bottoni segmentati (non chip) con freccia su/giu':
+  - Nome A-Z
+  - N. Partner
+  - Directory
+  - % Completamento
 
-```text
-// In processJob, dopo verifySessionBeforeJob fallisce:
-if (!sessionOk) {
-  await supabase.from("download_jobs").update({
-    status: "paused",
-    error_message: "Sessione WCA non attiva",
-  }).eq("id", jobId);
-  state.stopped = true;  // FERMA IL LOOP, non passare al prossimo job
-  return;
-}
-```
+Le due sezioni sono visualmente separate con bordi, sfondi diversi e titoli in maiuscolo.
 
-### useResumeAllJobs - dedup
+### 3. Card Paese Ridisegnate
+Ogni card paese mostra in modo ultra-chiaro:
+- **Lato sinistro**: Bandiera grande + nome paese
+- **Centro**: 3 indicatori mini con icone:
+  - Partner scaricati vs directory (es. "45/120")
+  - Profili presenti (es. "30/45")  
+  - Email trovate (es. "25/45")
+- **Lato destro**: Grande badge colorato di stato:
+  - Cerchio verde con checkmark = Completo
+  - Cerchio arancione con "!" = Senza profilo
+  - Cerchio blu con freccia giu' = Parziale
+  - Cerchio grigio con "?" = Mai esplorato
+- **Barra progresso** in basso che mostra visivamente la completezza totale
 
-```text
-// Dopo aver trovato i job cancellati incompleti:
-// Raggruppare per country_code+network_name
-// Per ogni gruppo, tenere solo quello con current_index piu' alto
-// Cancellare definitivamente gli altri dal DB
-// Rimettere in pending solo quelli sopravvissuti
-```
+### 4. Selezione e Azioni
+- Bandiere selezionate spostate sopra la lista in un'area dedicata con bordo tratteggiato
+- Pulsante "Seleziona tutti i visibili" posizionato chiaramente
+- Toggle "Solo Directory" e "Mostra tutti" raggruppati in una riga separata
 
-## File modificati
+## Dettagli Tecnici
 
-1. `src/components/download/ActionPanel.tsx` -- rimuovere chiamate ridondanti, serializzare il flusso
-2. `src/hooks/useDownloadJobs.ts` -- guard anti-duplicato in creazione + dedup in riavvia tutti
-3. `src/hooks/useDownloadProcessor.ts` -- stop loop su sessione scaduta (una sola riga: `state.stopped = true`)
+### File modificati:
+
+**`src/components/download/CountryGrid.tsx`** -- Riscrittura completa:
+- Separare filtri e ordinamenti in due sezioni con titoli espliciti e stili diversi
+- Aggiungere icone semantiche per ogni stato (CheckCircle verde, AlertTriangle arancione, ArrowDown blu, HelpCircle grigio)
+- Ridisegnare le card paese con layout a 3 colonne (flag+nome | stats | status badge)
+- Aggiungere barra di progresso composita (download + profili + email)
+
+**`src/pages/Operations.tsx`** -- Aggiornamento dashboard:
+- Sostituire la barra statistiche con una griglia di 6 mini-card
+- Aggiungere stat "Con profilo" e "Senza profilo" dalla `useCountryStats`
+- Usare `useCountryStats` al posto di `useGlobalStats` per eliminare query ridondanti
+- Aggiungere barre di progresso nelle card statistiche
+
+### Dati:
+- Nessuna modifica al database o alle RPC -- si usa `get_country_stats()` gia' esistente
+- Eliminare la query `useGlobalStats` duplicata a favore di `useCountryStats` che ha gia' tutti i dati necessari
+
