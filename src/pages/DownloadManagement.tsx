@@ -128,6 +128,7 @@ export default function DownloadManagement() {
                     selected={selectedCountries}
                     onToggle={toggleCountry}
                     onRemove={removeCountry}
+                    filterMode="all"
                   />
                 </div>
                 <div className="flex-[2] min-h-0 overflow-auto space-y-4">

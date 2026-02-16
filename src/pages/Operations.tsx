@@ -3,7 +3,7 @@ import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, Play, FileT
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
-import { CountryGrid } from "@/components/download/CountryGrid";
+import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { ActionPanel } from "@/components/download/ActionPanel";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { DownloadTerminal } from "@/components/download/DownloadTerminal";
@@ -35,6 +35,8 @@ function useDirectoryTotal() {
   });
 }
 
+
+
 export default function Operations() {
   const [isDark, setIsDark] = useState(() => {
     const s = localStorage.getItem("dl_theme");
@@ -45,6 +47,7 @@ export default function Operations() {
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [activeTab, setActiveTab] = useState("partner");
   const [directoryOnly, setDirectoryOnly] = useState(false);
+  const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
   const globalStats = countryStatsData ? {
@@ -136,18 +139,22 @@ export default function Operations() {
             <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
               {globalStats ? (
                 <>
-                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} />
-                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} />
+                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
+                    onClick={() => setFilterMode("all")} active={filterMode === "all"} />
+                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"}
+                    onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
                   <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
                     progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
-                    progressColor="from-violet-400 to-purple-500" />
+                    progressColor="from-violet-400 to-purple-500"
+                    onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
                   <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
                     progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
                     progressColor="from-sky-400 to-blue-500" />
                   <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
                     progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
                     progressColor="from-teal-400 to-emerald-500" />
-                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} />
+                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"}
+                    onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
                 </>
               ) : (
                 Array.from({ length: 6 }).map((_, i) => (
@@ -162,6 +169,7 @@ export default function Operations() {
                 selected={selectedCountries}
                 onToggle={toggleCountry}
                 onRemove={removeCountry}
+                filterMode={filterMode}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
               />
@@ -223,12 +231,24 @@ export default function Operations() {
 }
 
 /* ── Vertical Stat Item ── */
-function StatItem({ icon: Icon, label, value, color, isDark, progress, progressColor }: {
+function StatItem({ icon: Icon, label, value, color, isDark, progress, progressColor, onClick, active }: {
   icon: any; label: string; value: string | number; color: string; isDark: boolean;
   progress?: number; progressColor?: string;
+  onClick?: () => void; active?: boolean;
 }) {
+  const isClickable = !!onClick;
+  const activeBorder = active
+    ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/40"
+    : isDark ? "border-white/[0.06]" : "border-slate-200/60";
+  const activeBg = active
+    ? isDark ? "bg-sky-950/40" : "bg-sky-50/80"
+    : isDark ? "bg-white/[0.03]" : "bg-white/40";
+
   return (
-    <div className={`rounded-lg border p-2 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white/40 border-slate-200/60"}`}>
+    <div
+      onClick={onClick}
+      className={`rounded-lg border p-2 transition-all duration-150 ${activeBg} ${activeBorder} ${isClickable ? "cursor-pointer hover:scale-[1.02]" : ""} ${isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""}`}
+    >
       <div className="flex items-center gap-1.5 mb-0.5">
         <Icon className={`w-3.5 h-3.5 ${color}`} />
         <span className={`text-[9px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>

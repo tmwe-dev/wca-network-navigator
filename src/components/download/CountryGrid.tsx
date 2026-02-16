@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+
 import {
   Search, Users, Mail, Phone, CheckCircle, X, FolderDown, Trophy,
   CheckSquare, FileWarning, HelpCircle, ArrowDown,
@@ -15,22 +16,23 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
 
+export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing";
+
 interface CountryGridProps {
   selected: { code: string; name: string }[];
   onToggle: (code: string, name: string) => void;
   onRemove: (code: string) => void;
+  filterMode: FilterKey;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
-type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing";
 type SortKey = "name" | "partners" | "directory" | "completion";
 
-export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [sortBy, setSortBy] = useState<SortKey>("name");
 
   const { data: statsData } = useCountryStats();
@@ -108,15 +110,6 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
     });
   };
 
-  const filterLabel = (key: FilterKey) => {
-    switch (key) {
-      case "all": return `Tutti (${totalWithData})`;
-      case "todo": return `Da fare (${todoCount})`;
-      case "no_profile": return `Senza profilo (${noProfileCount})`;
-      case "done": return `Completati (${doneCount})`;
-      case "missing": return `Mai esplorati (${missingCount})`;
-    }
-  };
 
   const sortLabel = (key: SortKey) => {
     switch (key) {
@@ -141,18 +134,7 @@ export function CountryGrid({ selected, onToggle, onRemove }: CountryGridProps) 
             className={`pl-8 h-8 rounded-lg text-xs ${th.input}`}
           />
         </div>
-        {/* Row 2: Filter + Sort dropdowns + Select All */}
         <div className="flex items-center gap-1.5">
-          <Select value={filterMode} onValueChange={v => setFilterMode(v as FilterKey)}>
-            <SelectTrigger className={`h-7 text-[11px] flex-1 min-w-0 ${isDark ? "bg-white/[0.04] border-white/[0.1] text-slate-200" : "bg-white/70 border-slate-200 text-slate-700"}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(["all", "todo", "no_profile", "done", "missing"] as FilterKey[]).map(k => (
-                <SelectItem key={k} value={k} className="text-xs">{filterLabel(k)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
             <SelectTrigger className={`h-7 text-[11px] w-[110px] flex-shrink-0 ${isDark ? "bg-white/[0.04] border-white/[0.1] text-slate-200" : "bg-white/70 border-slate-200 text-slate-700"}`}>
               <SelectValue />
