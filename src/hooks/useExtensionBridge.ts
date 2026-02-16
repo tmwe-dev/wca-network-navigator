@@ -1,5 +1,45 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// ── Global serial queue for extractContacts — safety net against concurrent extractions ──
+const EXTRACT_LOCK_KEY = '__extractContactsLock__';
+
+type ExtractLock = {
+  busy: boolean;
+  queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }>;
+};
+
+function getExtractLock(): ExtractLock {
+  if (!(window as any)[EXTRACT_LOCK_KEY]) {
+    (window as any)[EXTRACT_LOCK_KEY] = { busy: false, queue: [] };
+  }
+  return (window as any)[EXTRACT_LOCK_KEY];
+}
+
+async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
+  const lock = getExtractLock();
+  return new Promise<T>((resolve) => {
+    const run = async () => {
+      lock.busy = true;
+      try {
+        const result = await fn();
+        resolve(result);
+      } catch (err) {
+        resolve({ success: false, error: String(err) } as any);
+      } finally {
+        lock.busy = false;
+        const next = lock.queue.shift();
+        if (next) next.fn().then(next.resolve);
+      }
+    };
+    if (!lock.busy) {
+      run();
+    } else {
+      console.warn("[ExtensionBridge] extractContacts queued — another extraction in progress");
+      lock.queue.push({ resolve, fn: run as any });
+    }
+  });
+}
+
 type ExtensionProfile = {
   address?: string;
   phone?: string;
@@ -181,10 +221,10 @@ export function useExtensionBridge() {
     []
   );
 
-  // Extract contacts for a WCA ID
+  // Extract contacts for a WCA ID — serialized via global queue
   const extractContacts = useCallback(
     async (wcaId: number): Promise<ExtensionResponse> => {
-      return sendMessage("extractContacts", { wcaId }, 60000);
+      return enqueueExtraction(() => sendMessage("extractContacts", { wcaId }, 60000));
     },
     [sendMessage]
   );

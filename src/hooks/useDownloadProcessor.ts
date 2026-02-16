@@ -543,6 +543,7 @@ export function useDownloadProcessor() {
       while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
         // ── FIX 5: Acquire mutex synchronously BEFORE any async work ──
         if (state.processing) {
+          console.warn("[DownloadProcessor] RACE DETECTED: mutex already held! Waiting...");
           try { await abortableDelay(5000, state.abortController?.signal ?? undefined); } catch { break; }
           continue;
         }
@@ -601,12 +602,17 @@ export function useDownloadProcessor() {
     loop();
   }, []);
 
-  // Main polling loop: mount-only
+  // Main polling loop: mount-only — guard against duplicate loops (HMR/remount)
   useEffect(() => {
     const state = getDlState();
-    const myId = ++state.activeLoopId;
+    // If a loop is already active and not stopped, don't start another
+    if (state.processing && !state.stopped && !state.cancel) {
+      console.log("[DownloadProcessor] Mount: loop already active, skipping");
+      return () => { state.cancel = true; };
+    }
     state.cancel = false;
-
+    state.stopped = false;
+    const myId = ++state.activeLoopId;
     startLoop(myId);
 
     return () => {
@@ -629,15 +635,33 @@ export function useDownloadProcessor() {
       });
   }, [queryClient]);
 
-  // resetStop: resets flags, invalidates old loops via activeLoopId, starts ONE new loop.
-  // Safe because the old loop will exit on next iteration when it sees mismatched loopId.
+  // resetStop: signals old loop to exit, waits for mutex release, then starts new loop.
+  // NEVER force-releases the mutex — waits for the old loop to release it naturally.
   const resetStop = useCallback(() => {
     const state = getDlState();
-    state.stopped = false;
-    state.cancel = false;
-    state.processing = false;
-    const myId = ++state.activeLoopId;
-    startLoop(myId);
+    // 1. Signal old loop to exit
+    state.cancel = true;
+    state.stopped = true;
+    state.abortController?.abort();
+
+    // 2. Wait for mutex to be released naturally, then start new loop
+    const waitAndStart = async () => {
+      let attempts = 0;
+      while (state.processing && attempts < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+      if (state.processing) {
+        console.warn("[DownloadProcessor] resetStop: mutex still held after 5s, forcing release");
+        state.processing = false;
+      }
+      // 3. Reset flags and start new loop
+      state.stopped = false;
+      state.cancel = false;
+      const myId = ++state.activeLoopId;
+      startLoop(myId);
+    };
+    waitAndStart();
   }, [startLoop]);
 
   return { emergencyStop, resetStop };
