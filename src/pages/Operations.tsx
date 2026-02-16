@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, Zap, ExternalLink, FolderDown, Play, FileText, UserCheck } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, Play, FileText } from "lucide-react";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
@@ -18,7 +18,6 @@ import { useDownloadJobs, useEmergencyStop, useResumeAllJobs } from "@/hooks/use
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
-import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function useDirectoryTotal() {
@@ -195,9 +194,6 @@ export default function Operations() {
                       <TabsTrigger value="download" className="gap-1.5 text-xs">
                         <Download className="w-3.5 h-3.5" />Scarica
                       </TabsTrigger>
-                      <TabsTrigger value="acquire" className="gap-1.5 text-xs">
-                        <Zap className="w-3.5 h-3.5" />Acquisisci
-                      </TabsTrigger>
                     </TabsList>
                   </div>
                   <ActiveJobBar />
@@ -214,9 +210,6 @@ export default function Operations() {
                       <DownloadTerminal />
                       <JobMonitor />
                       <AdvancedTools isDark={isDark} />
-                    </TabsContent>
-                    <TabsContent value="acquire" className="h-full m-0 data-[state=inactive]:hidden">
-                      <AcquisitionLink isDark={isDark} />
                     </TabsContent>
                   </div>
                 </Tabs>
@@ -253,25 +246,3 @@ function StatItem({ icon: Icon, label, value, color, isDark, progress, progressC
   );
 }
 
-/* ── Acquisition Link ── */
-function AcquisitionLink({ isDark }: { isDark: boolean }) {
-  const th = t(isDark);
-  return (
-    <div className="h-full flex items-center justify-center p-6">
-      <div className="text-center space-y-4 max-w-md">
-        <Zap className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-        <h3 className={`text-lg font-semibold ${th.h2}`}>Pipeline di Acquisizione</h3>
-        <p className={`text-sm ${th.sub}`}>
-          L'acquisizione utilizza l'estensione Chrome per estrarre i contatti direttamente dal browser WCA.
-        </p>
-        <Link
-          to="/acquisizione"
-          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${th.btnPri}`}
-        >
-          <ExternalLink className="w-4 h-4" />
-          Apri Acquisizione Partner
-        </Link>
-      </div>
-    </div>
-  );
-}

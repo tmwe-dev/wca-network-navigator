@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, Suspense, lazy } from "react";
+import { useCountryStats } from "@/hooks/useCountryStats";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,14 @@ import {
   ArrowLeft, ExternalLink, MessageSquare, Clock, ArrowUpRight,
   Wand2,
 } from "lucide-react";
+
+function coverageColor(count: number, total: number, isDark: boolean) {
+  if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
+  const pct = count / total;
+  if (pct >= 0.8) return isDark ? "text-emerald-400" : "text-emerald-600";
+  if (pct >= 0.5) return isDark ? "text-amber-400" : "text-amber-600";
+  return isDark ? "text-rose-400" : "text-rose-500";
+}
 import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
@@ -140,9 +149,48 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
     );
   }
 
+  const { data: countryStatsData } = useCountryStats();
+
+  // Aggregate stats for selected countries
+  const aggregatedStats = useMemo(() => {
+    if (!countryStatsData) return null;
+    let total = 0, withProfile = 0, withoutProfile = 0, withEmail = 0, withPhone = 0;
+    countryCodes.forEach(cc => {
+      const s = countryStatsData.byCountry[cc];
+      if (s) {
+        total += s.total_partners;
+        withProfile += s.with_profile;
+        withoutProfile += s.without_profile;
+        withEmail += s.with_email;
+        withPhone += s.with_phone;
+      }
+    });
+    return { total, withProfile, withoutProfile, withEmail, withPhone };
+  }, [countryStatsData, countryCodes]);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col">
+        {/* Country Summary Stats */}
+        {aggregatedStats && aggregatedStats.total > 0 && (
+          <div className={`px-3 pt-3 pb-1 flex-shrink-0`}>
+            <div className={`flex items-center gap-3 flex-wrap text-[11px] font-mono rounded-lg border px-3 py-2 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/60"}`}>
+              <span className={`flex items-center gap-1 font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+                <Users className="w-3.5 h-3.5" />{aggregatedStats.total}
+              </span>
+              <span className={`flex items-center gap-1 ${aggregatedStats.withoutProfile > 0 ? (isDark ? "text-orange-400" : "text-orange-600") : (isDark ? "text-emerald-400" : "text-emerald-600")}`}>
+                <FileText className="w-3.5 h-3.5" />{aggregatedStats.withProfile}
+                {aggregatedStats.withoutProfile > 0 && <span className="text-[9px]">({aggregatedStats.withoutProfile} ✗)</span>}
+              </span>
+              <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withEmail, aggregatedStats.total, isDark)}`}>
+                <Mail className="w-3.5 h-3.5" />{aggregatedStats.withEmail}
+              </span>
+              <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withPhone, aggregatedStats.total, isDark)}`}>
+                <Phone className="w-3.5 h-3.5" />{aggregatedStats.withPhone}
+              </span>
+            </div>
+          </div>
+        )}
         {/* Search + Sort */}
         <div className="p-3 space-y-2 flex-shrink-0">
           <div className="flex items-center gap-2">
