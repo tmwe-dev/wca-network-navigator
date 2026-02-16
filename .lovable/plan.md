@@ -1,103 +1,125 @@
 
 
-# Refactoring Completo Operations Center
+# Assistente AI Integrato nell'Operations Center
 
-## Analisi dello Stato Attuale
+## Panoramica
 
-Dall'immagine e dal codice emergono questi problemi:
+Hai gia' tutto il necessario per costruire un assistente AI potente e operativo. Il progetto ha Lovable AI configurato (usato gia' per `analyze-partner` e `parse-profile-ai`), e tutte le tabelle del database sono accessibili dalle backend functions. L'assistente potra' leggere dati, rispondere a domande sul contenuto e eseguire azioni concrete.
 
-### Problemi di Performance
-1. **CountryGrid: `getStatus()` non memoizzato** -- viene ricalcolato per ogni paese ad ogni render, incluse le fasi di filtraggio e ordinamento. Con 197 paesi, sono centinaia di calcoli ripetuti inutilmente.
-2. **Query duplicate** -- `useCountryStats()` e' chiamato sia in CountryGrid che in PartnerListPanel. React Query deduplica, ma il codice e' ridondante.
-3. **`coverageColor()` duplicata** -- la stessa funzione identica esiste in CountryGrid.tsx e PartnerListPanel.tsx.
-4. **ActionPanel: 3 query separate** per lo stesso set di paesi (`directory-cache`, `db-partners-for-countries`, `no-profile-wca-ids`). Potrebbero essere ridotte.
+## Architettura
 
-### Problemi di Struttura
-1. **PartnerListPanel.tsx: 541 righe** -- contiene sia la lista partner che il dettaglio completo inline. Il `PartnerDetail` (190 righe) dovrebbe essere un componente separato.
-2. **ActionPanel.tsx: 557 righe** -- la logica di scanning della directory (80+ righe di callback) e' mescolata con la UI del pannello download.
-3. **StatItem definito inline** in Operations.tsx -- dovrebbe essere un componente riutilizzabile.
+L'assistente sara' composto da tre parti:
 
-### Problemi di Layout (dalla screenshot)
-1. **La sidebar sinistra (140px)** funziona bene ma le progress bar sono piccole e difficili da leggere su schermi piu' piccoli.
-2. **Il pannello destro** quando nessun paese e' selezionato mostra Terminal + Completati + spazio vuoto -- lo spazio potrebbe essere usato meglio.
-3. **Le country card** sono compatte ma il badge di stato a destra (es. "31!", "92%") potrebbe avere tooltip per spiegare il significato.
+1. **Backend function** (`supabase/functions/ai-assistant/index.ts`) -- riceve i messaggi dell'utente, interroga il database in autonomia tramite tool calling, e risponde con dati reali
+2. **Componente UI** (`src/components/operations/AiAssistantDialog.tsx`) -- popup/dialog con chat streaming, richiamabile da un pulsante nell'Operations Center
+3. **Pulsante di attivazione** nell'header di Operations.tsx
 
-## Piano di Refactoring
+## Capacita' dell'Assistente
 
-### Fase 1: Estrazione componenti (pulizia strutturale)
+| Domanda esempio | Cosa fa il backend |
+|---|---|
+| "Quanti partner ha il Brasile?" | Query `partners WHERE country_code = 'BR'` |
+| "Quali paesi non hanno profili?" | Query `get_country_stats()` + filtra `without_profile > 0` |
+| "Trova partner con rating > 4 in Germania" | Query `partners WHERE country_code = 'DE' AND rating > 4` |
+| "Quali job sono attivi?" | Query `download_jobs WHERE status = 'running'` |
+| "Riassumi il partner XYZ" | Legge `raw_profile_markdown` e genera riassunto |
+| "Avvia download per la Francia" | Crea record in `download_jobs` (azione attiva) |
+| "Mostra le email mancanti in Italia" | Query partner IT senza email |
 
-**File: `src/components/operations/PartnerDetail.tsx`** (NUOVO)
-- Estrarre la funzione `PartnerDetail` da PartnerListPanel.tsx (righe 348-531) in un file dedicato
-- Estrarre anche `getBranchCountries` (righe 533-541)
-- Importare nel PartnerListPanel originale
+## Implementazione Tecnica
 
-**File: `src/components/download/StatItem.tsx`** (NUOVO)
-- Estrarre il componente `StatItem` da Operations.tsx (righe 234-267)
-- Esportarlo per uso in Operations.tsx e potenzialmente altre pagine
+### 1. Edge Function: `supabase/functions/ai-assistant/index.ts`
 
-**File: `src/lib/coverageColor.ts`** (NUOVO)
-- Estrarre la funzione `coverageColor` duplicata
-- Importare in CountryGrid.tsx e PartnerListPanel.tsx eliminando le copie locali
+Usa il pattern **tool calling** di Lovable AI (Gemini) per dare all'AI accesso strutturato al database:
 
-### Fase 2: Ottimizzazione performance CountryGrid
+**Tools disponibili per l'AI:**
+- `query_partners` -- cerca partner per paese, rating, tipo, presenza email/profilo
+- `get_country_stats` -- statistiche aggregate per paese
+- `query_jobs` -- stato dei download jobs
+- `get_partner_detail` -- dettaglio completo di un partner specifico
+- `count_records` -- conteggi veloci per qualsiasi tabella/filtro
 
-**File: `src/components/download/CountryGrid.tsx`**
-- Memoizzare il calcolo degli status con `useMemo` -- calcolare una mappa `statusMap: Record<string, Status>` una sola volta quando cambiano `stats` o `cacheData`
-- Usare la mappa pre-calcolata nel filtraggio e rendering invece di chiamare `getStatus()` ripetutamente
-- Memoizzare `filtered` con `useMemo` (gia' fatto implicitamente ma dipende da `getStatus` non memoizzato)
+L'AI riceve la domanda dell'utente, decide quale tool usare, il backend esegue la query Supabase corrispondente, e l'AI formula la risposta con i dati reali.
 
-Esempio della memoizzazione:
+**System prompt** descrive il contesto del sistema: tabelle disponibili, significato dei campi, network WCA, tipi di partner, e le azioni possibili.
+
+**Modello**: `google/gemini-3-flash-preview` (veloce, buon reasoning, costo contenuto).
+
+### 2. Componente UI: `src/components/operations/AiAssistantDialog.tsx`
+
+- Dialog/Sheet che si apre dal pulsante nell'header di Operations
+- Chat con streaming token-by-token (SSE) come da pattern Lovable AI
+- Cronologia messaggi nella sessione (non persistita nel DB per semplicita' iniziale)
+- Indicatore "sta pensando..." durante le tool calls
+- Supporto markdown nelle risposte (tabelle, liste, grassetto)
+- Rispetta il tema chiaro/scuro di Operations
+
+### 3. Integrazione in Operations.tsx
+
+- Pulsante con icona `MessageSquare` o `Bot` nell'header, accanto al toggle tema
+- Il dialog riceve il contesto corrente (paesi selezionati, filtro attivo) come contesto iniziale per l'AI
+
+## Flusso Dati
+
 ```text
-const statusMap = useMemo(() => {
-  const map: Record<string, ReturnType<typeof getStatus>> = {};
-  WCA_COUNTRIES.forEach(c => { map[c.code] = getStatus(c.code); });
-  return map;
-}, [stats, cacheData, exploredSet]);
+Utente digita domanda
+  --> Frontend invia POST a /ai-assistant (streaming)
+    --> Edge function costruisce messaggi con system prompt
+    --> Chiama Lovable AI Gateway con tools definiti
+    --> AI decide: usa tool "query_partners" con parametri
+    --> Edge function esegue query Supabase
+    --> Ritorna risultato all'AI
+    --> AI formula risposta naturale
+    --> Streaming SSE al frontend
+  --> Frontend renderizza token per token
 ```
 
-### Fase 3: Semplificazione PartnerListPanel
+## File da Creare/Modificare
 
-**File: `src/components/operations/PartnerListPanel.tsx`**
-- Rimuovere `PartnerDetail` e `getBranchCountries` (spostati in file dedicato)
-- Rimuovere `coverageColor` locale (importare da lib)
-- Rimuovere import inutilizzati (Suspense, lazy, e molte icone usate solo nel dettaglio)
-- Il file passera' da 541 righe a circa 260 righe
+| File | Azione |
+|---|---|
+| `supabase/functions/ai-assistant/index.ts` | NUOVO -- edge function con tool calling |
+| `src/components/operations/AiAssistantDialog.tsx` | NUOVO -- UI chat popup |
+| `src/pages/Operations.tsx` | Aggiungere pulsante + import dialog |
+| `supabase/config.toml` | Aggiungere entry per `ai-assistant` |
 
-### Fase 4: Semplificazione ActionPanel
+## Dettagli Implementativi
 
-**File: `src/components/download/ActionPanel.tsx`**
-- Estrarre la logica di scansione directory in un hook dedicato `useDirectoryScan`
-- Il hook incapsula: stati di scanning, `handleStartScan`, `saveScanToCache`, abort logic
-- ActionPanel mantiene solo la UI e le query per i dati
-- Il file passera' da 557 righe a circa 350 righe
+### Tools dell'AI (definiti nella edge function)
 
-**File: `src/hooks/useDirectoryScan.ts`** (NUOVO)
-- Contiene tutta la logica: `isScanning`, `scanComplete`, `scannedMembers`, `currentPage`, `currentCountryIdx`, `scanError`, `skippedCountries`
-- Espone: `handleStartScan()`, `handleAbort()`, `resetScan()`
-- Accetta: `selectedCountries`, `networkKeys`, `cachedEntries`, `skipCachedDirs`
+```text
+1. search_partners(country_code?, has_email?, has_profile?, min_rating?, limit?)
+   -> SELECT da partners con filtri, ritorna nome/citta/email/rating
 
-### Fase 5: Micro-miglioramenti UI
+2. get_country_overview(country_code?)
+   -> Chiama get_country_stats() RPC, ritorna totali per paese
 
-**File: `src/components/download/CountryGrid.tsx`**
-- Aggiungere tooltip al badge di stato delle country card per spiegare il significato (es. "31 profili mancanti", "92% scaricato")
-- Queste tooltip danno contesto immediato senza occupare spazio
+3. list_active_jobs()
+   -> SELECT da download_jobs WHERE status IN ('running','pending')
 
-**File: `src/pages/Operations.tsx`**
-- Nella vista "nessun paese selezionato", riorganizzare per dare piu' prominenza al Terminal quando c'e' un job attivo
-- Mostrare le statistiche globali di completamento come mini-dashboard invece dello spazio vuoto
+4. get_partner_by_name(name)
+   -> SELECT da partners WHERE company_name ILIKE '%name%'
 
-## Riepilogo File
+5. count_by_filter(table, filter_description)
+   -> Query dinamica sicura con conteggio
+```
 
-| File | Azione | Righe prima | Righe dopo (stima) |
-|---|---|---|---|
-| `src/components/operations/PartnerDetail.tsx` | NUOVO | - | ~200 |
-| `src/components/download/StatItem.tsx` | NUOVO | - | ~40 |
-| `src/lib/coverageColor.ts` | NUOVO | - | ~10 |
-| `src/hooks/useDirectoryScan.ts` | NUOVO | - | ~120 |
-| `src/components/operations/PartnerListPanel.tsx` | Semplificato | 541 | ~260 |
-| `src/components/download/ActionPanel.tsx` | Semplificato | 557 | ~350 |
-| `src/components/download/CountryGrid.tsx` | Ottimizzato | 306 | ~310 |
-| `src/pages/Operations.tsx` | Pulito | 268 | ~240 |
+### Sicurezza
 
-Nessuna modifica al database. Nessuna modifica funzionale -- solo refactoring strutturale e ottimizzazioni.
+- La edge function usa `SUPABASE_SERVICE_ROLE_KEY` per accedere ai dati (stessa cosa che fanno le altre funzioni esistenti)
+- Le query sono parametrizzate e costruite dal codice, non dall'AI direttamente (l'AI sceglie solo quale tool chiamare e con quali parametri tipizzati)
+- Nessuna possibilita' di SQL injection: i tool hanno parametri strutturati
+
+### Costi
+
+- Usa Lovable AI gia' incluso nel progetto
+- Modello `gemini-3-flash-preview`: basso costo per messaggio
+- Le tool calls aggiungono 1-2 round-trip extra ma restano sotto i 3 secondi totali
+
+## Espansioni Future
+
+- Persistenza conversazioni nel database
+- Azioni attive (avvia download, crea reminder, segna preferito) oltre alla sola lettura
+- Contesto automatico: "stai guardando l'Italia con 31 partner senza profilo"
+- Suggerimenti rapidi pre-compilati ("Paesi con piu' gap", "Partner top rated")
 
