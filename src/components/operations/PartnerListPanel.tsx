@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search, Phone, Mail, ChevronRight, Users, Loader2, Filter,
-  FileText, Trophy, Wand2,
+  FileText, Trophy, Wand2, Send,
 } from "lucide-react";
 import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -289,7 +289,34 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                             )}
                           </div>
                         </div>
-                        <ChevronRight className={`w-4 h-4 shrink-0 mt-1 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                        <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+                          {primaryContact?.email && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const subject = encodeURIComponent(`Contatto da ${partner.company_name}`);
+                                    const mailto = `mailto:${primaryContact.email}?subject=${subject}`;
+                                    window.open(mailto, "_blank");
+                                  }}
+                                  className={cn(
+                                    "p-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100",
+                                    isDark
+                                      ? "bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20"
+                                      : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
+                                  )}
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                Invia email a {primaryContact.email}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          <ChevronRight className={`w-4 h-4 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                        </div>
                       </div>
                     </div>
                   );
