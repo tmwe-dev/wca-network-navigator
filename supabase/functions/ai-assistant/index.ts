@@ -647,10 +647,101 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
 // MAIN HANDLER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// Credit consumption helper
+async function consumeCredits(userId: string, usage: { prompt_tokens?: number; completion_tokens?: number }) {
+  const inputTokens = usage.prompt_tokens || 0;
+  const outputTokens = usage.completion_tokens || 0;
+  if (inputTokens === 0 && outputTokens === 0) return;
+
+  const provider = "google"; // gemini models
+  const CREDITS_PER_1K: Record<string, { input: number; output: number }> = {
+    google: { input: 1, output: 2 },
+  };
+  const rates = CREDITS_PER_1K[provider];
+  const inputCost = Math.ceil(inputTokens / 1000 * rates.input);
+  const outputCost = Math.ceil(outputTokens / 1000 * rates.output);
+  const totalCredits = inputCost + outputCost;
+  if (totalCredits <= 0) return;
+
+  // Check if user has BYOK
+  const { data: apiKey } = await supabase
+    .from("user_api_keys")
+    .select("api_key, is_active")
+    .eq("user_id", userId)
+    .eq("provider", provider)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (apiKey?.api_key) return; // BYOK — no deduction
+
+  // Deduct credits
+  const { data: credits } = await supabase
+    .from("user_credits")
+    .select("balance, total_consumed")
+    .eq("user_id", userId)
+    .single();
+
+  if (!credits) return;
+
+  const newBalance = Math.max(0, credits.balance - totalCredits);
+  const newConsumed = credits.total_consumed + totalCredits;
+
+  await supabase
+    .from("user_credits")
+    .update({ balance: newBalance, total_consumed: newConsumed })
+    .eq("user_id", userId);
+
+  await supabase
+    .from("credit_transactions")
+    .insert({
+      user_id: userId,
+      amount: -totalCredits,
+      operation: "ai_call",
+      description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
+    });
+
+  console.log(`[CREDITS] User ${userId}: -${totalCredits} credits (balance: ${newBalance})`);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Extract user ID from auth header
+    const authHeader = req.headers.get("Authorization");
+    let userId: string | null = null;
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data } = await supabase.auth.getUser(token);
+      userId = data?.user?.id || null;
+    }
+
+    // Check credits before proceeding (skip for BYOK users)
+    if (userId) {
+      const { data: apiKey } = await supabase
+        .from("user_api_keys")
+        .select("api_key")
+        .eq("user_id", userId)
+        .eq("provider", "google")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!apiKey?.api_key) {
+        const { data: credits } = await supabase
+          .from("user_credits")
+          .select("balance")
+          .eq("user_id", userId)
+          .single();
+
+        if (credits && credits.balance <= 0) {
+          return new Response(JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     const { messages, context } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -690,6 +781,13 @@ serve(async (req) => {
 
     let result = await response.json();
     let assistantMessage = result.choices?.[0]?.message;
+
+    // Track total token usage across all AI calls
+    let totalUsage = { prompt_tokens: 0, completion_tokens: 0 };
+    if (result.usage) {
+      totalUsage.prompt_tokens += result.usage.prompt_tokens || 0;
+      totalUsage.completion_tokens += result.usage.completion_tokens || 0;
+    }
 
     // Tool calling loop — track last partner list result for structured data
     let iterations = 0;
@@ -753,6 +851,10 @@ serve(async (req) => {
 
       result = await response.json();
       assistantMessage = result.choices?.[0]?.message;
+      if (result.usage) {
+        totalUsage.prompt_tokens += result.usage.prompt_tokens || 0;
+        totalUsage.completion_tokens += result.usage.completion_tokens || 0;
+      }
     }
 
     // Build final content with optional structured data block
@@ -763,6 +865,8 @@ serve(async (req) => {
     }
 
     if (finalContent) {
+      // Consume credits before returning
+      if (userId) await consumeCredits(userId, totalUsage);
       return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -778,12 +882,19 @@ serve(async (req) => {
     }
 
     const finalResult = await finalResponse.json();
+    if (finalResult.usage) {
+      totalUsage.prompt_tokens += finalResult.usage.prompt_tokens || 0;
+      totalUsage.completion_tokens += finalResult.usage.completion_tokens || 0;
+    }
+
     let finalText = finalResult.choices?.[0]?.message?.content || "Nessuna risposta";
     
     if (lastPartnerResult && lastPartnerResult.length > 0) {
       finalText += `\n\n---STRUCTURED_DATA---\n${JSON.stringify({ type: "partners", data: lastPartnerResult })}`;
     }
 
+    // Consume credits before returning
+    if (userId) await consumeCredits(userId, totalUsage);
     return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-assistant error:", e);
