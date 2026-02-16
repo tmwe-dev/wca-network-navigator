@@ -168,6 +168,13 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     ? `~${(totalTime / 3600).toFixed(1)} ore`
     : totalTime >= 60 ? `~${Math.ceil(totalTime / 60)} min` : `~${totalTime}s`;
 
+  // Auto-select no_profile mode when no new partners but profiles are missing
+  useEffect(() => {
+    if (missingIds.length === 0 && noProfileInDirectoryCount > 0 && downloadMode === "new") {
+      setDownloadMode("no_profile");
+    }
+  }, [missingIds.length, noProfileInDirectoryCount, downloadMode]);
+
   // Auto-scan if no cache
   useEffect(() => {
     if (countryCodes.length > 0 && !loadingCache && !loadingDb && !hasCache && !isScanning && !scanComplete) {
@@ -419,28 +426,52 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         </Select>
       </div>
 
-      <div className={`p-3 rounded-xl border space-y-2 ${th.infoBox}`}>
-        <div className="flex items-center justify-between">
+      <div className={`p-3 rounded-xl border space-y-1 ${th.infoBox}`}>
+        <div
+          onClick={() => !directoryOnly && setDownloadMode("all")}
+          className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-all ${
+            !directoryOnly ? "cursor-pointer hover:opacity-80" : ""
+          } ${!directoryOnly && downloadMode === "all"
+            ? (isDark ? "bg-amber-500/15 border-l-2 border-amber-400" : "bg-amber-50 border-l-2 border-amber-500")
+            : ""
+          }`}
+        >
           <span className={`text-sm ${th.body}`}>Nella directory</span>
           <span className={`font-mono font-bold ${th.hi}`}>{totalCount}</span>
         </div>
         {!directoryOnly && (
           <>
             <div className={`h-px ${isDark ? "bg-slate-700" : "bg-slate-200"}`} />
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${th.acEm}`}>✓ Già scaricati</span>
-              <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount}</span>
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <span className={`text-sm font-medium ${th.acEm}`}>✓ Con profilo</span>
+              <span className={`font-mono font-bold ${th.acEm}`}>{downloadedCount - noProfileInDirectoryCount}</span>
             </div>
             {noProfileInDirectoryCount > 0 && (
-              <div className="flex items-center justify-between">
+              <div
+                onClick={() => setDownloadMode("no_profile")}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
+                  downloadMode === "no_profile"
+                    ? (isDark ? "bg-orange-500/15 border-l-2 border-orange-400" : "bg-orange-50 border-l-2 border-orange-500")
+                    : ""
+                }`}
+              >
                 <span className={`text-sm font-medium ${isDark ? "text-orange-400" : "text-orange-600"}`}>⚠ Senza profilo</span>
                 <span className={`font-mono font-bold ${isDark ? "text-orange-400" : "text-orange-600"}`}>{noProfileInDirectoryCount}</span>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${th.hi}`}>↓ Da scaricare</span>
-              <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
-            </div>
+            {missingIds.length > 0 && (
+              <div
+                onClick={() => setDownloadMode("new")}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-80 ${
+                  downloadMode === "new"
+                    ? (isDark ? "bg-sky-500/15 border-l-2 border-sky-400" : "bg-sky-50 border-l-2 border-sky-500")
+                    : ""
+                }`}
+              >
+                <span className={`text-sm font-medium ${th.hi}`}>↓ Mai scaricati</span>
+                <span className={`font-mono font-bold ${th.hi}`}>{missingIds.length}</span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -469,21 +500,19 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       ) : (
         /* ── Full download mode ── */
         <>
-          {downloadedCount > 0 && (
-            <div>
-              <label className={`text-xs mb-1.5 block ${th.label}`}>Modalità download</label>
-              <Select value={downloadMode} onValueChange={v => setDownloadMode(v as DownloadMode)}>
-                <SelectTrigger className={`${th.selTrigger}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className={th.selContent}>
-                  <SelectItem value="new">Solo nuovi ({missingIds.length})</SelectItem>
-                  <SelectItem value="no_profile">Profili mancanti ({noProfileTotalCount})</SelectItem>
-                  <SelectItem value="all">Aggiorna tutti ({downloadedCount})</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div>
+            <label className={`text-xs mb-1.5 block ${th.label}`}>Modalità download</label>
+            <Select value={downloadMode} onValueChange={v => setDownloadMode(v as DownloadMode)}>
+              <SelectTrigger className={`${th.selTrigger}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={th.selContent}>
+                <SelectItem value="new">Mai scaricati ({missingIds.length})</SelectItem>
+                <SelectItem value="no_profile">Senza profilo ({noProfileInDirectoryCount})</SelectItem>
+                <SelectItem value="all">Riscansiona tutti ({totalCount})</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {missingIds.length === 0 && downloadMode === "new" && (
             <div className={`p-3 rounded-lg border text-sm ${isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
@@ -519,7 +548,11 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
             {createJob.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</>
             ) : (
-              <><Zap className="w-4 h-4 mr-2" /> Scarica {idsToDownload.length} partner</>
+              <><Zap className="w-4 h-4 mr-2" />
+                {downloadMode === "new" && `Scarica ${idsToDownload.length} partner (nuovi)`}
+                {downloadMode === "no_profile" && `Scarica ${idsToDownload.length} partner (profili)`}
+                {downloadMode === "all" && `Riscansiona ${idsToDownload.length} partner`}
+              </>
             )}
           </Button>
         </>
