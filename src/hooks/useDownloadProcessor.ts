@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useScrapingSettings, calcDelay } from "./useScrapingSettings";
@@ -12,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
  * Each loop instance knows its own ID; if it doesn't match, it exits.
  * 
  * MUTEX: `processing` flag prevents concurrent processJob execution.
+ * 
+ * FIX v2: Atomic claim, global running check BEFORE claim, single-loop guarantee.
  */
 
 const DL_STATE_KEY = '__dlProcessorState__';
@@ -49,6 +51,9 @@ export function useDownloadProcessor() {
   useEffect(() => { checkAvailableRef.current = checkAvailable; }, [checkAvailable]);
   const extractContactsRef = useRef(extractContacts);
   useEffect(() => { extractContactsRef.current = extractContacts; }, [extractContacts]);
+
+  // Reset counter: used to trigger loop restart from resetStop via useEffect
+  const [resetCount, setResetCount] = useState(0);
 
   // ── Terminal log helper — batched write, no read-then-write race ──
   const appendLog = async (jobId: string, type: string, msg: string) => {
@@ -103,12 +108,12 @@ export function useDownloadProcessor() {
   const processJob = useCallback(async (job: any, loopId: number) => {
     const state = getDlState();
     
-    // MUTEX: prevent concurrent processing
-    if (state.processing) {
-      console.warn("[DownloadProcessor] Already processing a job, skipping");
-      return;
+    // MUTEX: prevent concurrent processing (set by the polling loop BEFORE calling this)
+    // Double-check here as a safety net
+    if (!state.processing) {
+      console.warn("[DownloadProcessor] processJob called without mutex, acquiring now");
+      state.processing = true;
     }
-    state.processing = true;
 
     const jobId = job.id;
     const wcaIds: number[] = (job.wca_ids as number[]) || [];
@@ -118,6 +123,19 @@ export function useDownloadProcessor() {
 
     // Verify loop ownership before starting
     if (loopId !== state.activeLoopId || state.stopped) {
+      state.processing = false;
+      return;
+    }
+
+    // ── FIX 3: Global running check BEFORE claiming the job ──
+    const { data: alreadyRunning } = await supabase
+      .from("download_jobs")
+      .select("id")
+      .eq("status", "running")
+      .limit(1);
+
+    if (alreadyRunning && alreadyRunning.length > 0) {
+      console.log("[DownloadProcessor] Another job already running, backing off");
       state.processing = false;
       return;
     }
@@ -134,24 +152,21 @@ export function useDownloadProcessor() {
       return;
     }
 
-    await supabase.from("download_jobs").update({ status: "running", error_message: null, terminal_log: [] as any }).eq("id", jobId);
-    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${s.baseDelay}s ±${s.variation}s`);
-
-    // DB lock: verify no other job is already running
-    const { data: runningJobs } = await supabase
+    // ── FIX 2: Atomic claim — only succeeds if job is still pending ──
+    const { data: claimed, error: claimErr } = await supabase
       .from("download_jobs")
-      .select("id")
-      .eq("status", "running")
-      .neq("id", jobId)
-      .limit(1);
+      .update({ status: "running", error_message: null, terminal_log: [] as any })
+      .eq("id", jobId)
+      .eq("status", "pending")
+      .select("id");
 
-    if (runningJobs && runningJobs.length > 0) {
-      await supabase.from("download_jobs")
-        .update({ status: "pending", error_message: "In attesa: altro job in esecuzione" })
-        .eq("id", jobId);
+    if (claimErr || !claimed || claimed.length === 0) {
+      console.log("[DownloadProcessor] Atomic claim failed — job already taken or not pending");
       state.processing = false;
       return;
     }
+
+    await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${s.baseDelay}s ±${s.variation}s`);
 
     // Pre-load directory cache map
     const cacheMap = new Map<number, { name: string; city: string }>();
@@ -487,43 +502,57 @@ export function useDownloadProcessor() {
     
     const loop = async () => {
       while (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
-        // Skip if already processing (mutex)
+        // ── FIX 5: Acquire mutex synchronously BEFORE any async work ──
         if (state.processing) {
           await new Promise(r => setTimeout(r, 5000));
           continue;
         }
 
+        // Acquire mutex NOW (same tick, no await in between)
+        state.processing = true;
+
         try {
+          // ── FIX 3 (polling level): Check no running jobs exist ──
+          const { data: runningNow } = await supabase
+            .from("download_jobs")
+            .select("id")
+            .eq("status", "running")
+            .limit(1);
+
+          if (runningNow && runningNow.length > 0) {
+            // A job is already running, release mutex and wait
+            state.processing = false;
+            await new Promise(r => setTimeout(r, 10000));
+            continue;
+          }
+
           const { data: jobs } = await supabase
             .from("download_jobs")
             .select("*")
-            .in("status", ["pending", "running"])
+            .eq("status", "pending")
             .eq("job_type", "download")
             .order("created_at", { ascending: true })
             .limit(1);
 
           if (jobs && jobs.length > 0 && loopId === state.activeLoopId && !state.stopped && !state.cancel) {
-            const { data: fresh } = await supabase
-              .from("download_jobs")
-              .select("status")
-              .eq("id", jobs[0].id)
-              .single();
+            // processJob expects mutex already acquired (state.processing = true)
+            await processJobRef.current(jobs[0], loopId);
 
-            if (fresh && fresh.status !== "cancelled" && fresh.status !== "completed") {
-              await processJobRef.current(jobs[0], loopId);
-
-              // Cooldown inter-job (30s)
-              if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
-                await new Promise(r => setTimeout(r, 30000));
-              }
-              continue;
+            // Cooldown inter-job (30s)
+            if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
+              await new Promise(r => setTimeout(r, 30000));
             }
+            continue;
+          } else {
+            // No pending jobs found, release mutex
+            state.processing = false;
           }
         } catch (err) {
           console.error("[DownloadProcessor] Error:", err);
+          state.processing = false;
         }
 
-        // No job found or error: wait 15s (was 5s) and retry
+        // No job found or error: wait 15s and retry
         if (loopId === state.activeLoopId && !state.stopped && !state.cancel) {
           await new Promise(r => setTimeout(r, 15000));
         }
@@ -533,7 +562,7 @@ export function useDownloadProcessor() {
     loop();
   }, []);
 
-  // Main polling loop: mount-only
+  // ── FIX 4: Single loop via useEffect, triggered by mount AND resetCount ──
   useEffect(() => {
     const state = getDlState();
     const myId = ++state.activeLoopId;
@@ -544,7 +573,7 @@ export function useDownloadProcessor() {
     return () => {
       state.cancel = true;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resetCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emergencyStop = useCallback(() => {
     const state = getDlState();
@@ -552,14 +581,19 @@ export function useDownloadProcessor() {
     state.stopped = true;
   }, []);
 
+  // ── FIX 4: resetStop does NOT call startLoop directly ──
+  // It only resets flags and triggers a re-render via setResetCount,
+  // which causes the useEffect above to create exactly ONE new loop.
   const resetStop = useCallback(() => {
     const state = getDlState();
     state.stopped = false;
-    state.cancel = false;
+    state.cancel = true; // Cancel old loop first
     state.processing = false; // Reset mutex
-    const myId = ++state.activeLoopId;
-    startLoop(myId);
-  }, [startLoop]);
+    // Increment activeLoopId to invalidate any orphan loops
+    ++state.activeLoopId;
+    // Trigger useEffect to start a single new loop
+    setResetCount(c => c + 1);
+  }, []);
 
   return { emergencyStop, resetStop };
 }
