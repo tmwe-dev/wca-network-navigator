@@ -1,42 +1,103 @@
 
 
-# Fix Modalita' "Profili Mancanti" nel Download
+# Refactoring Completo Operations Center
 
-## Problema
+## Analisi dello Stato Attuale
 
-Quando selezioni 31 paesi e vai al download, la modalita' "Profili mancanti" non funziona correttamente. Il codice attuale ha due difetti:
+Dall'immagine e dal codice emergono questi problemi:
 
-1. **Nessuna query per sapere QUALI partner non hanno profilo** -- la query `dbPartners` non scarica il campo `raw_profile_html`, quindi il sistema non sa quali partner specifici mancano di profilo
-2. **Logica filtro rotta** -- il codice `existingIds.filter(() => noProfileCount > 0)` e' un booleano costante: se c'e' anche un solo partner senza profilo tra tutti i paesi, include TUTTI i partner esistenti nel download
+### Problemi di Performance
+1. **CountryGrid: `getStatus()` non memoizzato** -- viene ricalcolato per ogni paese ad ogni render, incluse le fasi di filtraggio e ordinamento. Con 197 paesi, sono centinaia di calcoli ripetuti inutilmente.
+2. **Query duplicate** -- `useCountryStats()` e' chiamato sia in CountryGrid che in PartnerListPanel. React Query deduplica, ma il codice e' ridondante.
+3. **`coverageColor()` duplicata** -- la stessa funzione identica esiste in CountryGrid.tsx e PartnerListPanel.tsx.
+4. **ActionPanel: 3 query separate** per lo stesso set di paesi (`directory-cache`, `db-partners-for-countries`, `no-profile-wca-ids`). Potrebbero essere ridotte.
 
-## Soluzione
+### Problemi di Struttura
+1. **PartnerListPanel.tsx: 541 righe** -- contiene sia la lista partner che il dettaglio completo inline. Il `PartnerDetail` (190 righe) dovrebbe essere un componente separato.
+2. **ActionPanel.tsx: 557 righe** -- la logica di scanning della directory (80+ righe di callback) e' mescolata con la UI del pannello download.
+3. **StatItem definito inline** in Operations.tsx -- dovrebbe essere un componente riutilizzabile.
 
-### File: `src/components/download/ActionPanel.tsx`
+### Problemi di Layout (dalla screenshot)
+1. **La sidebar sinistra (140px)** funziona bene ma le progress bar sono piccole e difficili da leggere su schermi piu' piccoli.
+2. **Il pannello destro** quando nessun paese e' selezionato mostra Terminal + Completati + spazio vuoto -- lo spazio potrebbe essere usato meglio.
+3. **Le country card** sono compatte ma il badge di stato a destra (es. "31!", "92%") potrebbe avere tooltip per spiegare il significato.
 
-**1. Aggiungere query leggera per i wca_id senza profilo**
+## Piano di Refactoring
 
-Una nuova query React Query che scarica SOLO i `wca_id` (numeri interi, pochi KB) dei partner che non hanno `raw_profile_html`:
+### Fase 1: Estrazione componenti (pulizia strutturale)
 
+**File: `src/components/operations/PartnerDetail.tsx`** (NUOVO)
+- Estrarre la funzione `PartnerDetail` da PartnerListPanel.tsx (righe 348-531) in un file dedicato
+- Estrarre anche `getBranchCountries` (righe 533-541)
+- Importare nel PartnerListPanel originale
+
+**File: `src/components/download/StatItem.tsx`** (NUOVO)
+- Estrarre il componente `StatItem` da Operations.tsx (righe 234-267)
+- Esportarlo per uso in Operations.tsx e potenzialmente altre pagine
+
+**File: `src/lib/coverageColor.ts`** (NUOVO)
+- Estrarre la funzione `coverageColor` duplicata
+- Importare in CountryGrid.tsx e PartnerListPanel.tsx eliminando le copie locali
+
+### Fase 2: Ottimizzazione performance CountryGrid
+
+**File: `src/components/download/CountryGrid.tsx`**
+- Memoizzare il calcolo degli status con `useMemo` -- calcolare una mappa `statusMap: Record<string, Status>` una sola volta quando cambiano `stats` o `cacheData`
+- Usare la mappa pre-calcolata nel filtraggio e rendering invece di chiamare `getStatus()` ripetutamente
+- Memoizzare `filtered` con `useMemo` (gia' fatto implicitamente ma dipende da `getStatus` non memoizzato)
+
+Esempio della memoizzazione:
+```text
+const statusMap = useMemo(() => {
+  const map: Record<string, ReturnType<typeof getStatus>> = {};
+  WCA_COUNTRIES.forEach(c => { map[c.code] = getStatus(c.code); });
+  return map;
+}, [stats, cacheData, exploredSet]);
 ```
-SELECT wca_id FROM partners 
-WHERE country_code IN (...) 
-AND wca_id IS NOT NULL 
-AND raw_profile_html IS NULL
-```
 
-Questo evita di scaricare l'intero HTML (che puo' pesare 10-50KB per partner).
+### Fase 3: Semplificazione PartnerListPanel
 
-**2. Correggere la logica `idsToDownload`**
+**File: `src/components/operations/PartnerListPanel.tsx`**
+- Rimuovere `PartnerDetail` e `getBranchCountries` (spostati in file dedicato)
+- Rimuovere `coverageColor` locale (importare da lib)
+- Rimuovere import inutilizzati (Suspense, lazy, e molte icone usate solo nel dettaglio)
+- Il file passera' da 541 righe a circa 260 righe
 
-Creare un Set `noProfileWcaSet` dalla query sopra e usarlo per filtrare:
-- Modalita' "no_profile": include solo i partner nella directory che sono nel Set (senza profilo) PIU' quelli completamente nuovi (non ancora nel DB)
-- Le altre modalita' restano invariate
+### Fase 4: Semplificazione ActionPanel
 
-**3. Aggiornare il conteggio nel Select dropdown**
+**File: `src/components/download/ActionPanel.tsx`**
+- Estrarre la logica di scansione directory in un hook dedicato `useDirectoryScan`
+- Il hook incapsula: stati di scanning, `handleStartScan`, `saveScanToCache`, abort logic
+- ActionPanel mantiene solo la UI e le query per i dati
+- Il file passera' da 557 righe a circa 350 righe
 
-Il conteggio mostrato accanto a "Profili mancanti" sara' calcolato dall'intersezione tra la directory e il Set reale, non piu' dal valore aggregato dell'RPC (che conta tutti i partner nel DB, anche quelli fuori dalla directory selezionata).
+**File: `src/hooks/useDirectoryScan.ts`** (NUOVO)
+- Contiene tutta la logica: `isScanning`, `scanComplete`, `scannedMembers`, `currentPage`, `currentCountryIdx`, `scanError`, `skippedCountries`
+- Espone: `handleStartScan()`, `handleAbort()`, `resetScan()`
+- Accetta: `selectedCountries`, `networkKeys`, `cachedEntries`, `skipCachedDirs`
 
-### Risultato
+### Fase 5: Micro-miglioramenti UI
 
-Selezionando "Profili mancanti" dal dropdown, il sistema scarichera' SOLO i partner che effettivamente non hanno il profilo HTML, saltando quelli gia' completi. Il conteggio mostrera' il numero esatto di partner da ri-scaricare.
+**File: `src/components/download/CountryGrid.tsx`**
+- Aggiungere tooltip al badge di stato delle country card per spiegare il significato (es. "31 profili mancanti", "92% scaricato")
+- Queste tooltip danno contesto immediato senza occupare spazio
+
+**File: `src/pages/Operations.tsx`**
+- Nella vista "nessun paese selezionato", riorganizzare per dare piu' prominenza al Terminal quando c'e' un job attivo
+- Mostrare le statistiche globali di completamento come mini-dashboard invece dello spazio vuoto
+
+## Riepilogo File
+
+| File | Azione | Righe prima | Righe dopo (stima) |
+|---|---|---|---|
+| `src/components/operations/PartnerDetail.tsx` | NUOVO | - | ~200 |
+| `src/components/download/StatItem.tsx` | NUOVO | - | ~40 |
+| `src/lib/coverageColor.ts` | NUOVO | - | ~10 |
+| `src/hooks/useDirectoryScan.ts` | NUOVO | - | ~120 |
+| `src/components/operations/PartnerListPanel.tsx` | Semplificato | 541 | ~260 |
+| `src/components/download/ActionPanel.tsx` | Semplificato | 557 | ~350 |
+| `src/components/download/CountryGrid.tsx` | Ottimizzato | 306 | ~310 |
+| `src/pages/Operations.tsx` | Pulito | 268 | ~240 |
+
+Nessuna modifica al database. Nessuna modifica funzionale -- solo refactoring strutturale e ottimizzazioni.
 
