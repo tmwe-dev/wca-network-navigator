@@ -166,18 +166,24 @@ export default function Operations() {
 
             {/* RIGHT: Contextual Panel (65%) */}
             <div className="flex-1 min-h-0 flex flex-col">
-              {selectedCountries.length === 0 ? (
-                /* ── No country: Global Overview ── */
-                <div className="flex-1 flex flex-col gap-4 overflow-auto">
-                  <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                    <div className="text-center space-y-3">
-                      <Globe className={`w-20 h-20 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                      <p className={`text-lg ${th.h2}`}>Seleziona un paese</p>
-                      <p className={`text-sm ${th.sub}`}>Clicca su uno o più paesi per visualizzare partner, scaricare dati o avviare acquisizioni</p>
-                    </div>
-                  </div>
-                  {/* Show active jobs globally */}
+          {selectedCountries.length === 0 ? (
+                /* ── No country: Global Overview with always-visible monitoring ── */
+                <div className="flex-1 flex flex-col gap-3 overflow-auto">
+                  {/* Active Job Bar always visible */}
+                  <ActiveJobBar />
+                  {/* Terminal always visible */}
+                  <DownloadTerminal />
+                  {/* Job Monitor always visible */}
                   <JobMonitor />
+                  {/* Empty state hint if no jobs */}
+                  {!jobs?.some(j => j.status === "running" || j.status === "pending" || j.status === "paused") && (
+                    <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                      <div className="text-center space-y-3">
+                        <Globe className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+                        <p className={`text-sm ${th.sub}`}>Seleziona un paese per visualizzare partner o avviare download</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* ── Country selected: Tabbed Panel ── */
