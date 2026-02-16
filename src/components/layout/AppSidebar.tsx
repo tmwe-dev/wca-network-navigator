@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Calendar,
@@ -38,12 +38,7 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
-  const { status: wcaStatus, triggerCheck, checkedAt } = useWcaSessionStatus();
-
-  // Trigger a check on mount
-  useEffect(() => {
-    triggerCheck();
-  }, []);
+  const { status: wcaStatus, checkedAt } = useWcaSessionStatus();
 
   const toggleTheme = () => {
     setIsDark(!isDark);
