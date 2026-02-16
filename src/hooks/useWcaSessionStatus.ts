@@ -132,19 +132,21 @@ export function useWcaSessionStatus() {
 
   // Auto-check on mount: if status is not "ok", automatically verify via extension
   const autoCheckDone = useRef(false);
+  const triggerCheckRef = useRef(triggerCheck);
+  triggerCheckRef.current = triggerCheck;
+
   useEffect(() => {
     if (autoCheckDone.current) return;
     if (statusQuery.isLoading) return;
     const currentStatus = statusQuery.data?.status;
     if (currentStatus && currentStatus !== "ok" && currentStatus !== "checking") {
       autoCheckDone.current = true;
-      // Small delay to let extension polling detect availability
       const timer = setTimeout(() => {
-        triggerCheck();
+        triggerCheckRef.current();
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [statusQuery.isLoading, statusQuery.data?.status, triggerCheck]);
+  }, [statusQuery.isLoading, statusQuery.data?.status]);
 
   return {
     status: statusQuery.data?.status ?? "checking",
