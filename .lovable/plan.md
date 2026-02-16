@@ -1,72 +1,70 @@
 
-
-# Fix rilevamento sessione WCA: fidarsi della verifica reale, non del cookie
+# Eliminare i job duplicati e prevenire duplicazioni future
 
 ## Problema
 
-Sei loggato su WCA World, ma il sistema dice "Sessione Scaduta" perche':
-1. Il cookie `.ASPXAUTH` e' probabilmente HttpOnly -- il browser non lo espone all'estensione Chrome tramite `chrome.cookies.getAll()`
-2. La funzione `save-wca-cookie` controlla se `.ASPXAUTH` e' presente nel testo del cookie. Se manca, segna "expired"
-3. Ma la sessione FUNZIONA -- il browser ha il cookie, solo che l'estensione non riesce a leggerlo
+Ci sono 421 job in stato "pending" per soli 198 paesi. Molti paesi hanno job multipli (USA: 15, India: 6, Argentina: 5, ecc.). Questo accade perche':
+- La creazione di nuovi job non controlla se ne esiste gia' uno per lo stesso paese/network
+- "Riavvia Tutti" rimette in pending job che erano gia' stati ricreati
+- Il processore poi tenta di eseguirli tutti in sequenza, rallentando enormemente il sistema
 
-Il sistema ha gia' un metodo affidabile (`verifySession`) che apre un profilo reale e controlla se i contatti sono visibili. Ma questo metodo viene usato solo quando clicchi "Verifica ora" manualmente.
+## Soluzione in 3 passi
 
-## Soluzione
+### 1. Pulizia immediata: eliminare i duplicati dal database
 
-### 1. `save-wca-cookie` (Edge Function): NON marcare "expired" se manca `.ASPXAUTH`
+Eseguire una query SQL che per ogni combinazione paese/network mantiene solo il job piu' recente e cancella tutti gli altri duplicati in stato "pending".
 
-Attualmente: se `.ASPXAUTH` manca dal cookie, segna status = "expired".
-Nuovo comportamento: se `.ASPXAUTH` manca, segna status = "unknown" (non "expired"). Solo la verifica reale tramite estensione puo' confermare "ok" o "expired".
+### 2. Prevenzione duplicati nella creazione job
 
-File: `supabase/functions/save-wca-cookie/index.ts`
-- Cambiare la logica: `const status = hasAspxAuth ? 'ok' : 'unknown'`
-- Il messaggio diventa: "Cookie salvato. Verifica sessione in corso..." invece di marcare subito come expired
+File: `src/hooks/useDownloadJobs.ts` - funzione `useCreateDownloadJob`
 
-### 2. `useWcaSessionStatus`: verifica automatica dopo sync cookie
+Prima di inserire un nuovo job, controllare se esiste gia' un job "pending" o "running" per lo stesso `country_code` e `network_name`. Se esiste, non crearne uno nuovo e mostrare un avviso.
 
-File: `src/hooks/useWcaSessionStatus.ts`
-- Nel `triggerCheck`, dopo il sync cookie, il `verifySession` gia' avviene e aggiorna il DB -- questo e' corretto
-- Aggiungere: se lo status dal DB e' "unknown" o "expired", e l'estensione e' disponibile, eseguire automaticamente una verifica reale (senza aspettare il click manuale)
+### 3. Prevenzione duplicati nel "Riavvia Tutti"
 
-### 3. `useDownloadProcessor`: verifica sessione prima di partire
+File: `src/hooks/useDownloadJobs.ts` - funzione `useResumeAllJobs`
 
-File: `src/hooks/useDownloadProcessor.ts`
-- Prima di avviare un job, se lo status DB e' diverso da "ok", fare una verifica rapida tramite estensione
-- Se la verifica conferma "ok", aggiornare il DB e procedere
-- Se la verifica fallisce, mettere il job in pausa e mostrare il dialogo di sessione
-
-### 4. `useWcaSessionStatus`: auto-check all'avvio
-
-File: `src/hooks/useWcaSessionStatus.ts`
-- Quando il hook si monta per la prima volta e lo status DB e' "expired" o "unknown", lanciare automaticamente un `triggerCheck` se l'estensione e' disponibile
-- Questo elimina la necessita' di cliccare "Verifica ora" ogni volta
+Quando rimette in pending i job cancellati, per ogni combinazione paese/network selezionare solo il job con il progresso maggiore (`current_index` piu' alto) e scartare i duplicati, cancellandoli definitivamente.
 
 ## Dettagli tecnici
 
-### `save-wca-cookie/index.ts`
+### Pulizia SQL (una tantum)
 ```text
-// Prima:
-const status = hasAspxAuth ? 'ok' : 'expired'
-
-// Dopo:
-const status = hasAspxAuth ? 'ok' : 'unknown'
+-- Per ogni country_code + network_name, tieni solo il job pending piu' recente
+DELETE FROM download_jobs
+WHERE id NOT IN (
+  SELECT DISTINCT ON (country_code, network_name) id
+  FROM download_jobs
+  WHERE status = 'pending'
+  ORDER BY country_code, network_name, current_index DESC, created_at DESC
+)
+AND status = 'pending';
 ```
 
-### `useWcaSessionStatus.ts`
-- Aggiungere un `useEffect` che, al mount, se `status !== "ok"` e l'estensione e' disponibile, esegue `triggerCheck()` automaticamente (con un flag per evitare loop)
+### useCreateDownloadJob
+```text
+// Prima dell'insert, check:
+const { data: existing } = await supabase
+  .from("download_jobs")
+  .select("id")
+  .eq("country_code", params.country_code)
+  .eq("network_name", params.network_name)
+  .in("status", ["pending", "running"])
+  .limit(1);
 
-### `useDownloadProcessor.ts`
-- Nel `processJob`, prima di tutto, fare un check veloce: se `app_settings.wca_session_status !== 'ok'`, chiamare `verifySession` dall'estensione. Se confermato, aggiornare e procedere. Se no, pausa.
+if (existing && existing.length > 0) {
+  throw new Error("Job gia' in coda per questo paese/network");
+}
+```
 
-## Risultato
-
-- NON serve piu' cliccare "Verifica ora" manualmente
-- Il sistema si auto-verifica all'avvio e prima di ogni job
-- Il cookie `.ASPXAUTH` HttpOnly non blocca piu' il rilevamento
-- La verifica reale (apertura profilo test) resta il metodo definitivo
+### useResumeAllJobs
+```text
+// Dopo aver trovato i job cancellati incompleti, deduplicare:
+// Per ogni country_code+network_name, tieni solo quello con current_index piu' alto
+// Gli altri vengono marcati come "cancelled" definitivamente
+```
 
 ## File modificati
 
-1. `supabase/functions/save-wca-cookie/index.ts` -- status "unknown" invece di "expired"
-2. `src/hooks/useWcaSessionStatus.ts` -- auto-check al mount
-3. `src/hooks/useDownloadProcessor.ts` -- verifica pre-job
+1. **Migrazione SQL** -- pulizia duplicati esistenti
+2. `src/hooks/useDownloadJobs.ts` -- guard in creazione + dedup in riavvia tutti
