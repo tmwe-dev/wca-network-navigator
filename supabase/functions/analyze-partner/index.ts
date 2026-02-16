@@ -15,6 +15,49 @@ const VALID_PARTNER_TYPES = [
   'freight_forwarder', 'customs_broker', 'carrier', 'nvocc', '3pl', 'courier'
 ]
 
+// ── Credit helpers ──
+async function getUserId(req: Request, supabase: any): Promise<string | null> {
+  const auth = req.headers.get('Authorization')
+  if (!auth) return null
+  const token = auth.replace('Bearer ', '')
+  const { data } = await supabase.auth.getUser(token)
+  return data?.user?.id || null
+}
+
+async function isByok(userId: string, supabase: any): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_api_keys')
+    .select('api_key')
+    .eq('user_id', userId)
+    .eq('provider', 'google')
+    .eq('is_active', true)
+    .maybeSingle()
+  return !!data?.api_key
+}
+
+async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
+  const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1)
+  const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2)
+  const total = inputCost + outputCost
+  if (total <= 0) return
+
+  const { data: credits } = await supabase.from('user_credits').select('balance, total_consumed').eq('user_id', userId).single()
+  if (!credits) return
+
+  await supabase.from('user_credits').update({
+    balance: Math.max(0, credits.balance - total),
+    total_consumed: credits.total_consumed + total,
+  }).eq('user_id', userId)
+
+  await supabase.from('credit_transactions').insert({
+    user_id: userId,
+    amount: -total,
+    operation: 'ai_call',
+    description: `analyze-partner: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
+  })
+  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -32,6 +75,21 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // ── Auth & BYOK check ──
+    const userId = await getUserId(req, supabase)
+    const byok = userId ? await isByok(userId, supabase) : false
+
+    // ── Pre-check credits ──
+    if (userId && !byok) {
+      const { data: credits } = await supabase.from('user_credits').select('balance').eq('user_id', userId).single()
+      if (!credits || credits.balance < 5) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
 
     const { partnerId, profileData } = await req.json()
 
@@ -148,6 +206,15 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     }
 
     const aiData = await response.json()
+
+    // ── Consume credits ──
+    if (userId && !byok && aiData.usage) {
+      await consumeCredits(userId, {
+        prompt_tokens: aiData.usage.prompt_tokens || 0,
+        completion_tokens: aiData.usage.completion_tokens || 0,
+      }, supabase)
+    }
+
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0]
     
     if (!toolCall?.function?.arguments) {
@@ -174,7 +241,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
 
     // Save services
     if (classification.services?.length > 0) {
-      // Remove existing services first
       await supabase.from('partner_services').delete().eq('partner_id', partnerId)
       
       const validServices = classification.services.filter((s: string) => VALID_SERVICES.includes(s))

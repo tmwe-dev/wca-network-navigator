@@ -5,6 +5,49 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+// ── Credit helpers ──
+async function getUserId(req: Request, supabase: any): Promise<string | null> {
+  const auth = req.headers.get('Authorization')
+  if (!auth) return null
+  const token = auth.replace('Bearer ', '')
+  const { data } = await supabase.auth.getUser(token)
+  return data?.user?.id || null
+}
+
+async function isByok(userId: string, supabase: any): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_api_keys')
+    .select('api_key')
+    .eq('user_id', userId)
+    .eq('provider', 'google')
+    .eq('is_active', true)
+    .maybeSingle()
+  return !!data?.api_key
+}
+
+async function consumeCredits(userId: string, totalTokens: { prompt: number; completion: number }, supabase: any) {
+  const inputCost = Math.ceil(totalTokens.prompt / 1000 * 1)
+  const outputCost = Math.ceil(totalTokens.completion / 1000 * 2)
+  const total = inputCost + outputCost
+  if (total <= 0) return
+
+  const { data: credits } = await supabase.from('user_credits').select('balance, total_consumed').eq('user_id', userId).single()
+  if (!credits) return
+
+  await supabase.from('user_credits').update({
+    balance: Math.max(0, credits.balance - total),
+    total_consumed: credits.total_consumed + total,
+  }).eq('user_id', userId)
+
+  await supabase.from('credit_transactions').insert({
+    user_id: userId,
+    amount: -total,
+    operation: 'ai_call',
+    description: `deep-search-partner: ${totalTokens.prompt} in + ${totalTokens.completion} out`,
+  })
+  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`)
+}
+
 // Helper: Firecrawl search
 async function firecrawlSearch(query: string, firecrawlKey: string, limit = 5): Promise<any[]> {
   const resp = await fetch('https://api.firecrawl.dev/v1/search', {
@@ -17,10 +60,11 @@ async function firecrawlSearch(query: string, firecrawlKey: string, limit = 5): 
   return data?.data || data?.results || []
 }
 
-// Helper: AI pick best URL from results
+// Helper: AI pick best URL from results (tracks tokens)
 async function aiPickUrl(
   prompt: string,
-  lovableKey: string
+  lovableKey: string,
+  tokenAccumulator: { prompt: number; completion: number }
 ): Promise<string | null> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -35,13 +79,18 @@ async function aiPickUrl(
     return null
   }
   const data = await resp.json()
+  if (data.usage) {
+    tokenAccumulator.prompt += data.usage.prompt_tokens || 0
+    tokenAccumulator.completion += data.usage.completion_tokens || 0
+  }
   return data?.choices?.[0]?.message?.content?.trim() || null
 }
 
-// Helper: AI generate profile
+// Helper: AI generate profile (tracks tokens)
 async function aiGenerateProfile(
   prompt: string,
-  lovableKey: string
+  lovableKey: string,
+  tokenAccumulator: { prompt: number; completion: number }
 ): Promise<string | null> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -53,6 +102,10 @@ async function aiGenerateProfile(
   })
   if (!resp.ok) return null
   const data = await resp.json()
+  if (data.usage) {
+    tokenAccumulator.prompt += data.usage.prompt_tokens || 0
+    tokenAccumulator.completion += data.usage.completion_tokens || 0
+  }
   return data?.choices?.[0]?.message?.content?.trim() || null
 }
 
@@ -81,12 +134,30 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // ── Auth & BYOK check ──
+    const userId = await getUserId(req, supabase)
+    const byok = userId ? await isByok(userId, supabase) : false
+
+    if (userId && !byok) {
+      const { data: credits } = await supabase.from('user_credits').select('balance').eq('user_id', userId).single()
+      if (!credits || credits.balance < 10) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     const { partnerId } = await req.json()
 
     if (!partnerId) {
       return new Response(JSON.stringify({ success: false, error: 'partnerId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+
+    // Token accumulator for all AI calls
+    const totalTokens = { prompt: 0, completion: 0 }
 
     // Get partner data
     const { data: partner, error: partnerError } = await supabase
@@ -139,7 +210,7 @@ Deno.serve(async (req) => {
               `Find the PERSONAL LinkedIn profile (linkedin.com/in/) of "${contact.name}" at "${partner.company_name}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ''}
 Results:\n${results.map((r: any, i: number) => `${i + 1}. ${r.url} - ${r.title || ''}`).join('\n')}
 If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-              lovableKey
+              lovableKey, totalTokens
             )
             if (answer && answer !== 'NONE' && answer.includes('linkedin.com/in/')) {
               const urlMatch = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/)
@@ -171,7 +242,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
               `Find the PERSONAL Facebook profile of "${contact.name}" at "${partner.company_name}" in ${location}.
 Results:\n${results.map((r: any, i: number) => `${i + 1}. ${r.url} - ${r.title || ''}`).join('\n')}
 If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-              lovableKey
+              lovableKey, totalTokens
             )
             if (answer && answer !== 'NONE' && answer.includes('facebook.com')) {
               const urlMatch = answer.match(/(https?:\/\/[^\s"<>]+facebook\.com[^\s"<>]*)/)
@@ -203,7 +274,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
               `Find the Instagram profile of "${contact.name}" at "${partner.company_name}" in ${location}.
 Results:\n${results.map((r: any, i: number) => `${i + 1}. ${r.url} - ${r.title || ''}`).join('\n')}
 If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-              lovableKey
+              lovableKey, totalTokens
             )
             if (answer && answer !== 'NONE' && answer.includes('instagram.com')) {
               const urlMatch = answer.match(/(https?:\/\/[^\s"<>]+instagram\.com[^\s"<>]*)/)
@@ -258,7 +329,7 @@ Generate a JSON object (no markdown, just raw JSON) with these fields:
 - "notes": any other relevant info (1 sentence, or empty string)
 
 If you can't find meaningful info, return: {"background":"","interests":[],"languages":[],"other_companies":[],"notes":""}`,
-              lovableKey
+              lovableKey, totalTokens
             )
 
             if (profile) {
@@ -333,7 +404,7 @@ Return JSON (no markdown):
 - "employee_count_estimate": estimated employee count if mentioned (null if not)
 
 If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"recent_news":"","specialties":[],"founded_year":null,"employee_count_estimate":null}`,
-            lovableKey
+            lovableKey, totalTokens
           )
 
           if (profile) {
@@ -378,6 +449,11 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
       } catch (e) {
         console.error('Logo error:', e)
       }
+    }
+
+    // ═══ CONSUME CREDITS (all AI calls combined) ═══
+    if (userId && !byok && (totalTokens.prompt > 0 || totalTokens.completion > 0)) {
+      await consumeCredits(userId, totalTokens, supabase)
     }
 
     // ═══ SAVE ENRICHMENT DATA ═══
