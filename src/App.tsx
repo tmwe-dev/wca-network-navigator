@@ -4,6 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import PartnerHub from "./pages/PartnerHub";
 import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
@@ -25,17 +28,24 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Operations />} />
-            <Route path="/operations" element={<Operations />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/acquisizione" element={<AcquisizionePartner />} />
-            <Route path="/download-management" element={<DownloadManagement />} />
-            <Route path="/reminders" element={<Reminders />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/prospects" element={<ProspectCenter />} />
-            <Route path="/guida" element={<Guida />} />
-            <Route path="/campaign-jobs" element={<CampaignJobs />} />
+          {/* Public routes */}
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Operations />} />
+              <Route path="/operations" element={<Operations />} />
+              <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/acquisizione" element={<AcquisizionePartner />} />
+              <Route path="/download-management" element={<DownloadManagement />} />
+              <Route path="/reminders" element={<Reminders />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/prospects" element={<ProspectCenter />} />
+              <Route path="/guida" element={<Guida />} />
+              <Route path="/campaign-jobs" element={<CampaignJobs />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
