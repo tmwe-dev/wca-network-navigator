@@ -1,116 +1,94 @@
 
-# Welcome Wizard & Autenticazione Multi-Tenant
 
-## Panoramica
+# Fix: Pulsanti di Controllo Download e Affidabilita del Sistema
 
-Trasformazione del sistema da single-tenant a multi-tenant con:
-- Autenticazione (Email+Password + Google)
-- Onboarding wizard in 3 step
-- Sistema crediti a consumo
-- API keys BYOK (Bring Your Own Key) per AI
+## Problemi Identificati
 
-## Step 1: Database & Autenticazione
+### 1. Il pulsante STOP non ferma immediatamente il processo
+Il pulsante STOP nella barra superiore chiama `emergencyStop()` che imposta solo dei flag (`cancel=true`, `stopped=true`). Ma se il processore e nel mezzo di un'estrazione tramite Chrome Extension (che puo durare 5-15 secondi), il flag viene controllato solo DOPO che l'estrazione finisce. Risultato: sembra che il pulsante non funzioni.
 
-### Tabelle da creare
+### 2. "Elimina tutti" non cancella il job in evidenza
+Il pulsante "Elimina tutti" nella sezione Coda cancella solo i job con stato `paused` o `pending`. Ma il job "featured" (mostrato in alto come "Prossimo in coda") e anch'esso `pending` e viene filtrato fuori dalla lista coda. Dopo l'eliminazione, il job featured rimane visibile perche non viene incluso nella cancellazione.
 
-1. **`profiles`** - Profilo utente
-   - `id` UUID PK
-   - `user_id` UUID → auth.users (ON DELETE CASCADE, UNIQUE)
-   - `display_name` TEXT
-   - `language` TEXT DEFAULT 'it' (it, en, es, fr, de, pt, zh)
-   - `onboarding_completed` BOOLEAN DEFAULT false
-   - `created_at`, `updated_at`
+### 3. I pulsanti rimangono visibili dopo l'azione
+Dopo aver cliccato "Elimina tutti", la sezione coda resta visibile finche React Query non invalida e ricarica i dati. Serve un aggiornamento piu reattivo.
 
-2. **`user_api_keys`** - Chiavi API per provider AI
-   - `id` UUID PK
-   - `user_id` UUID → auth.users
-   - `provider` TEXT (openai, google, anthropic)
-   - `api_key` TEXT (cifrata lato server)
-   - `is_active` BOOLEAN DEFAULT true
-   - `created_at`, `updated_at`
-   - UNIQUE(user_id, provider)
+### 4. Garanzia chiamata singola
+L'architettura attuale e solida con 5 livelli di protezione (mutex globale, loop ID, atomic claim SQL, esecuzione sequenziale, keep-alive). Non ci sono falle nella garanzia di singola chiamata.
 
-3. **`user_wca_credentials`** - Credenziali WCA per utente
-   - `id` UUID PK
-   - `user_id` UUID → auth.users (UNIQUE)
-   - `wca_username` TEXT
-   - `wca_password` TEXT (cifrata lato server)
-   - `created_at`, `updated_at`
+---
 
-4. **`user_credits`** - Saldo crediti
-   - `id` UUID PK
-   - `user_id` UUID → auth.users (UNIQUE)
-   - `balance` INTEGER DEFAULT 0
-   - `total_consumed` INTEGER DEFAULT 0
-   - `updated_at`
+## Piano di Intervento
 
-5. **`credit_transactions`** - Log operazioni crediti
-   - `id` UUID PK
-   - `user_id` UUID → auth.users
-   - `amount` INTEGER (positivo = ricarica, negativo = consumo)
-   - `operation` TEXT (ai_call, enrichment, scraping, topup)
-   - `description` TEXT
-   - `created_at`
+### A. STOP immediato e reattivo
+**File**: `src/hooks/useDownloadProcessor.ts`
 
-### RLS Policies
-- Ogni tabella: utente vede/modifica solo i propri dati
-- `user_id = auth.uid()`
+- Aggiungere un `AbortController` al singleton globale
+- Quando `emergencyStop()` viene chiamato, oltre ai flag, fare abort del controller corrente
+- Nel loop di estrazione, controllare il flag `cancel` PRIMA e DOPO ogni operazione asincrona (DB query, extension call, delay)
+- Aggiungere check intermedi nel blocco di salvataggio contatti (il piu lungo)
+- Dopo emergency stop, aggiornare IMMEDIATAMENTE il job nel DB a "cancelled" dal client (senza aspettare che il loop arrivi al check)
 
-### Trigger
-- Auto-creazione profilo + crediti iniziali (es. 100 crediti gratis) su signup
+### B. "Elimina tutti" include il job in evidenza
+**File**: `src/hooks/useDownloadJobs.ts`
 
-## Step 2: Pagine Auth
+- Modificare `useDeleteQueuedJobs` per eliminare TUTTI i job `pending` e `paused`, senza esclusioni
+- Il featured job pending verra eliminato insieme alla coda
+- Se c'e un job `running`, NON eliminarlo (solo i pending/paused)
 
-- `/auth` - Login/Signup con Email+Password
-- Google OAuth via Lovable Cloud
-- Redirect a `/onboarding` se `onboarding_completed = false`
-- Redirect a `/` (dashboard) se completato
+### C. Feedback immediato dopo eliminazione
+**File**: `src/components/download/JobMonitor.tsx`
 
-## Step 3: Onboarding Wizard (3 step)
+- Dopo la mutazione `deleteQueued`, forzare `queryClient.invalidateQueries` inline
+- Disabilitare i pulsanti durante il pending della mutazione (gia fatto parzialmente)
+- Aggiungere `onSuccess` callback per aggiornamento immediato
 
-### Step 1: Profilo & Lingua
-- Nome visualizzato
-- Lingua preferita (select con bandiere)
-- Breve benvenuto/spiegazione del sistema
+### D. Pulsante STOP: feedback visivo istantaneo
+**File**: `src/components/download/SpeedGauge.tsx`
 
-### Step 2: Credenziali WCA
-- Username WCA
-- Password WCA
-- Spiegazione: "Queste credenziali servono per accedere alla directory WCA e scaricare i contatti dei tuoi network"
-- Link diretto a WCA per registrarsi se non hanno account
-- Pulsante "Salta" (opzionale, può configurare dopo)
+- Dopo il click su STOP, cambiare immediatamente lo stato visivo del pulsante (es. "FERMANDO..." con spinner)
+- Disabilitare il pulsante per evitare click multipli
 
-### Step 3: Configurazione AI
-- Spiegazione modello BYOK: "Porta le tue chiavi API per usare l'AI al massimo. Oppure usa i crediti inclusi."
-- 3 sezioni espandibili:
-  - **OpenAI**: campo API key + link a platform.openai.com/api-keys
-  - **Google AI (Gemini)**: campo API key + link a aistudio.google.com/apikey
-  - **Anthropic (Claude)**: campo API key + link a console.anthropic.com
-- Indicatore crediti gratuiti disponibili
-- Pulsante "Salta" (userà solo crediti)
+---
 
-## Step 4: Protezione Route
+## Dettagli Tecnici
 
-- `ProtectedRoute` wrapper che verifica autenticazione
-- Redirect non autenticati a `/auth`
-- Redirect utenti senza onboarding a `/onboarding`
+### Modifica al singleton (useDownloadProcessor.ts)
 
-## File coinvolti
+```text
+interface DlProcessorState {
+  cancel: boolean;
+  stopped: boolean;
+  activeLoopId: number;
+  processing: boolean;
+  abortController: AbortController | null;  // NUOVO
+}
+```
 
-| File | Azione |
-|------|--------|
-| Migration SQL | Nuovo - tabelle profiles, user_api_keys, etc. |
-| `src/pages/Auth.tsx` | Nuovo |
-| `src/pages/Onboarding.tsx` | Nuovo |
-| `src/components/onboarding/StepProfile.tsx` | Nuovo |
-| `src/components/onboarding/StepWCA.tsx` | Nuovo |
-| `src/components/onboarding/StepAI.tsx` | Nuovo |
-| `src/components/auth/ProtectedRoute.tsx` | Nuovo |
-| `src/hooks/useProfile.ts` | Nuovo |
-| `src/App.tsx` | Modificare - aggiungere route protette |
+La funzione `emergencyStop()` diventa:
 
-## Note importanti
+```text
+const emergencyStop = () => {
+  const state = getDlState();
+  state.cancel = true;
+  state.stopped = true;
+  state.abortController?.abort();  // Interrompe delay in corso
+  // Aggiorna DB immediatamente
+  supabase
+    .from("download_jobs")
+    .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
+    .in("status", ["running", "pending"])
+    .then(() => queryClient.invalidateQueries({ queryKey: ["download-jobs"] }));
+};
+```
 
-- Le RLS policies esistenti (tutte `true`) restano invariate per ora → in futuro si potranno scoped per utente
-- Il wizard è skippable in ogni step tranne il profilo/lingua
-- I crediti iniziali gratuiti incentivano l'esplorazione
+I `setTimeout` nel loop verranno sostituiti con una funzione `abortableDelay` che si interrompe subito quando l'AbortController viene abortito.
+
+### Modifica a deleteQueuedJobs (useDownloadJobs.ts)
+
+La mutazione eliminera tutti i job `pending` e `paused` senza distinzioni, incluso quello mostrato come "featured/prossimo".
+
+### Modifica al JobMonitor (JobMonitor.tsx)
+
+Aggiungere `queryClient.invalidateQueries` nel callback `onSuccess` della mutazione `deleteQueued` per garantire che l'UI si aggiorni immediatamente dopo l'eliminazione.
+
