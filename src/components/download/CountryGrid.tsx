@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Download, Globe, Search, Users, Mail, Phone, CheckCircle, Activity,
   X, FolderDown, Trophy, CheckSquare, ArrowDownAZ, BarChart3, Percent,
+  FileWarning,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +26,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial">("all");
+  const [filterMode, setFilterMode] = useState<"all" | "missing" | "explored" | "partial" | "no_profile">("all");
   const [sortBy, setSortBy] = useState<"name" | "partners" | "directory" | "completion">("name");
   const [showEmpty, setShowEmpty] = useState(false);
 
@@ -70,6 +71,31 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
 
   const { data: completeness } = useContactCompleteness();
 
+  // Profile coverage: how many partners per country have raw_profile_html
+  const { data: profileCoverage = {} } = useQuery({
+    queryKey: ["profile-coverage-by-country"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("country_code, raw_profile_html")
+        .not("country_code", "is", null);
+      const counts: Record<string, { total: number; withProfile: number; withoutProfile: number }> = {};
+      (data || []).forEach(r => {
+        if (!counts[r.country_code]) counts[r.country_code] = { total: 0, withProfile: 0, withoutProfile: 0 };
+        counts[r.country_code].total++;
+        if (r.raw_profile_html) counts[r.country_code].withProfile++;
+        else counts[r.country_code].withoutProfile++;
+      });
+      return counts;
+    },
+    staleTime: 60_000,
+  });
+
+  const countriesWithoutProfile = new Set(
+    Object.entries(profileCoverage).filter(([, v]) => v.withoutProfile > 0).map(([k]) => k)
+  );
+  const noProfileCount = WCA_COUNTRIES.filter(c => countriesWithoutProfile.has(c.code)).length;
+
   const exploredSet = new Set(Object.keys(cacheCounts));
   const partialSet = new Set(Object.keys(partnerCounts).filter(k => !cacheCounts[k]));
   const selectedCodes = new Set(selected.map(c => c.code));
@@ -81,6 +107,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
     if (filterMode === "missing") return !exploredSet.has(c.code) && !partialSet.has(c.code);
     if (filterMode === "explored") return exploredSet.has(c.code);
     if (filterMode === "partial") return partialSet.has(c.code);
+    if (filterMode === "no_profile") return countriesWithoutProfile.has(c.code);
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -109,6 +136,7 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
 
   const filters = [
     { key: "all" as const, label: "Tutti", count: WCA_COUNTRIES.length, icon: Globe },
+    { key: "no_profile" as const, label: "Senza Profilo", count: noProfileCount, icon: FileWarning },
     { key: "explored" as const, label: "Scansionati", count: exploredCount, icon: CheckCircle },
     { key: "partial" as const, label: "Parziali", count: partialCount, icon: Activity },
     { key: "missing" as const, label: "Mai esplorati", count: missingCount, icon: Download },
@@ -243,6 +271,9 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
             const withPhone = cs?.with_personal_phone || 0;
             const pctEmail = contactsTotal > 0 ? Math.round((withEmail / contactsTotal) * 100) : 0;
             const dlPct = cCount > 0 ? Math.round((pCount / cCount) * 100) : 0;
+            const pc = profileCoverage[c.code];
+            const noProfileNum = pc?.withoutProfile || 0;
+            const hasProfileGap = noProfileNum > 0;
 
             const cardTint = isSelected
               ? isDark
@@ -291,10 +322,24 @@ export function CountryGrid({ selected, onToggle, onRemove, directoryOnly, onDir
                       <div className="min-w-0 flex-1">
                         <p className={`text-base font-bold truncate ${th.h2}`}>{c.name}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {isComplete && (
+                          {isComplete && !hasProfileGap && (
                             <span className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
                               <Trophy className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
                               Completo
+                            </span>
+                          )}
+                          {isComplete && hasProfileGap && (
+                            <span className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                              <Trophy className={`w-4 h-4 ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                              DL OK
+                            </span>
+                          )}
+                          {hasProfileGap && (
+                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold animate-pulse ${
+                              isDark ? "bg-orange-500/20 border border-orange-400/40 text-orange-300" : "bg-orange-100 border border-orange-300 text-orange-700"
+                            }`}>
+                              <FileWarning className="w-3.5 h-3.5" />
+                              {noProfileNum} senza profilo
                             </span>
                           )}
                           {!isComplete && hasDirectoryScan && (
