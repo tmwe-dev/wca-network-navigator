@@ -59,3 +59,12 @@ verify_jwt = false
 
 [functions.customer-portal]
 verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.consume-credits]
+verify_jwt = false
+
+[functions.buy-credits]
+verify_jwt = false

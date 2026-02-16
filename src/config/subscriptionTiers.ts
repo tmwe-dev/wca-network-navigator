@@ -87,3 +87,13 @@ export const TOKEN_PRICING = {
   // Approximate tokens per credit (for display)
   tokens_per_credit: 1000,
 } as const;
+
+// Credit packs for extra purchases
+export const CREDIT_PACKS = {
+  pack_500: {
+    credits: 500,
+    price: 10,
+    price_id: "price_1T1OUpRwUJ1hMnnPL9UTEoB2",
+    product_id: "prod_TzNFL7HutpyhKK",
+  },
+} as const;
