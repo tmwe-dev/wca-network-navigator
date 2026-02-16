@@ -1,16 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
-import { SUBSCRIPTION_TIERS, type SubscriptionTier, TOKEN_PRICING } from "@/config/subscriptionTiers";
-import { Check, Crown, Loader2, ExternalLink, Zap, Calculator } from "lucide-react";
+import { SUBSCRIPTION_TIERS, type SubscriptionTier, TOKEN_PRICING, CREDIT_PACKS } from "@/config/subscriptionTiers";
+import { Check, Crown, Loader2, ExternalLink, Zap, Calculator, Coins, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SubscriptionPanel() {
   const { tier, subscribed, subscriptionEnd, loading, startCheckout, openPortal, checkSubscription } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [buyingCredits, setBuyingCredits] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [totalConsumed, setTotalConsumed] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase
+        .from("user_credits")
+        .select("balance, total_consumed")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data) {
+        setCreditBalance(data.balance);
+        setTotalConsumed(data.total_consumed);
+      }
+    };
+    fetchCredits();
+  }, []);
 
   const handleCheckout = async (priceId: string, tierKey: string) => {
     setCheckoutLoading(tierKey);
@@ -31,6 +52,21 @@ export function SubscriptionPanel() {
       toast.error(e?.message || "Errore nell'apertura del portale");
     } finally {
       setPortalLoading(false);
+    }
+  };
+
+  const handleBuyCredits = async () => {
+    setBuyingCredits(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("buy-credits", {
+        body: { quantity: 1 },
+      });
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (e: any) {
+      toast.error(e?.message || "Errore nell'acquisto crediti");
+    } finally {
+      setBuyingCredits(false);
     }
   };
 
@@ -132,7 +168,36 @@ export function SubscriptionPanel() {
         </Button>
       </div>
 
-      {/* Token calculator */}
+      {/* Credits balance & buy */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-primary" />
+              <CardTitle className="text-base">Crediti AI</CardTitle>
+            </div>
+            <Badge variant="outline" className="text-lg font-bold px-3 py-1">
+              {creditBalance !== null ? creditBalance : "..."} crediti
+            </Badge>
+          </div>
+          <CardDescription>
+            Totale consumati: {totalConsumed} crediti • BYOK = consumo illimitato senza crediti
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="font-medium text-sm">Pacchetto Extra</p>
+              <p className="text-xs text-muted-foreground">{CREDIT_PACKS.pack_500.credits} crediti — €{CREDIT_PACKS.pack_500.price}</p>
+            </div>
+            <Button size="sm" onClick={handleBuyCredits} disabled={buyingCredits}>
+              {buyingCredits ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
+              Acquista
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
