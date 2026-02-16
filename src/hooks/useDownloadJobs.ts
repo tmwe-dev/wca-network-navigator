@@ -198,28 +198,26 @@ export function useDeleteQueuedJobs() {
 
   return useMutation({
     mutationFn: async () => {
-      // Count first for feedback
+      // Delete ALL non-running jobs (pending, paused, cancelled, completed)
       const { data: jobs } = await supabase
         .from("download_jobs")
         .select("id")
-        .in("status", ["paused", "pending"]);
+        .in("status", ["paused", "pending", "cancelled", "completed"]);
 
       if (!jobs || jobs.length === 0) return 0;
 
-      // Delete ALL pending + paused (including "featured" pending job)
       const { error } = await supabase
         .from("download_jobs")
         .delete()
-        .in("status", ["paused", "pending"]);
+        .in("status", ["paused", "pending", "cancelled", "completed"]);
 
       if (error) throw error;
       return jobs.length;
     },
     onSuccess: (count) => {
-      // Force immediate UI refresh
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       if (count && count > 0) {
-        toast({ title: "🗑️ Eliminati", description: `${count} job rimossi dalla coda` });
+        toast({ title: "🗑️ Eliminati", description: `${count} job rimossi` });
       }
     },
     onError: (err) => {
@@ -228,58 +226,27 @@ export function useDeleteQueuedJobs() {
   });
 }
 
-export function useResumeAllJobs() {
+export function usePurgeOldJobs() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      const { data: jobs } = await supabase
+      const { data } = await supabase
         .from("download_jobs")
-        .select("id, current_index, total_count, country_code, network_name")
-        .eq("status", "cancelled");
-
-      const incomplete = (jobs || []).filter(j => j.current_index < j.total_count);
-      if (incomplete.length === 0) return 0;
-
-      // Deduplicazione: per ogni country_code+network_name, tieni solo il job con current_index più alto
-      const bestByKey = new Map<string, typeof incomplete[0]>();
-      const duplicateIds: string[] = [];
-      for (const j of incomplete) {
-        const key = `${j.country_code}__${j.network_name}`;
-        const existing = bestByKey.get(key);
-        if (existing) {
-          if (j.current_index > existing.current_index) {
-            duplicateIds.push(existing.id);
-            bestByKey.set(key, j);
-          } else {
-            duplicateIds.push(j.id);
-          }
-        } else {
-          bestByKey.set(key, j);
-        }
-      }
-
-      // Cancella definitivamente i duplicati
-      if (duplicateIds.length > 0) {
-        await supabase.from("download_jobs").delete().in("id", duplicateIds);
-      }
-
-      // Rimetti in pending solo i sopravvissuti
-      const survivorIds = [...bestByKey.values()].map(j => j.id);
-      if (survivorIds.length === 0) return 0;
-
+        .select("id")
+        .in("status", ["cancelled", "completed"]);
+      if (!data || data.length === 0) return 0;
       const { error } = await supabase
         .from("download_jobs")
-        .update({ status: "pending", error_message: null })
-        .in("id", survivorIds);
-
+        .delete()
+        .in("status", ["cancelled", "completed"]);
       if (error) throw error;
-      return survivorIds.length;
+      return data.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       if (count && count > 0) {
-        toast({ title: "▶️ Riavviati", description: `${count} job rimessi in esecuzione` });
+        toast({ title: "🧹 Cronologia pulita", description: `${count} job rimossi` });
       }
     },
     onError: (err) => {
