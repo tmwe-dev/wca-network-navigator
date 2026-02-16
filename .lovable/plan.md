@@ -1,70 +1,69 @@
 
-# Eliminare i job duplicati e prevenire duplicazioni future
 
-## Problema
+# Riorganizzazione del pannello destro: Job Attivo vs Coda
 
-Ci sono 421 job in stato "pending" per soli 198 paesi. Molti paesi hanno job multipli (USA: 15, India: 6, Argentina: 5, ecc.). Questo accade perche':
-- La creazione di nuovi job non controlla se ne esiste gia' uno per lo stesso paese/network
-- "Riavvia Tutti" rimette in pending job che erano gia' stati ricreati
-- Il processore poi tenta di eseguirli tutti in sequenza, rallentando enormemente il sistema
+## Problema attuale
 
-## Soluzione in 3 passi
+Quando lanci il download per molti paesi, il JobMonitor mostra TUTTI i job (running + pending + paused) nella stessa lista. Con 390 job pending, il pannello diventa illeggibile. Non si capisce cosa sta succedendo adesso e il terminal si perde nel mare di card.
 
-### 1. Pulizia immediata: eliminare i duplicati dal database
+## Nuova struttura del pannello destro (nessun paese selezionato)
 
-Eseguire una query SQL che per ogni combinazione paese/network mantiene solo il job piu' recente e cancella tutti gli altri duplicati in stato "pending".
+Il pannello destro viene diviso in 3 sezioni verticali chiare e fisse:
 
-### 2. Prevenzione duplicati nella creazione job
-
-File: `src/hooks/useDownloadJobs.ts` - funzione `useCreateDownloadJob`
-
-Prima di inserire un nuovo job, controllare se esiste gia' un job "pending" o "running" per lo stesso `country_code` e `network_name`. Se esiste, non crearne uno nuovo e mostrare un avviso.
-
-### 3. Prevenzione duplicati nel "Riavvia Tutti"
-
-File: `src/hooks/useDownloadJobs.ts` - funzione `useResumeAllJobs`
-
-Quando rimette in pending i job cancellati, per ogni combinazione paese/network selezionare solo il job con il progresso maggiore (`current_index` piu' alto) e scartare i duplicati, cancellandoli definitivamente.
+```text
++------------------------------------------+
+|  [1] JOB ATTIVO (running)                |
+|  Card grande con progresso, stats,        |
+|  ultimo partner, contatti trovati         |
++------------------------------------------+
+|  [2] TERMINAL                            |
+|  Log in tempo reale del job attivo        |
+|  (altezza fissa ~200px)                   |
++------------------------------------------+
+|  [3] CODA (collassabile)                 |
+|  "198 job in coda" con chevron            |
+|  Espandibile: lista compatta dei pending  |
+|  + Sezione "Completati recenti" (max 5)   |
++------------------------------------------+
+```
 
 ## Dettagli tecnici
 
-### Pulizia SQL (una tantum)
+### File: `src/components/download/JobMonitor.tsx`
+
+Ristrutturare il componente per separare visivamente:
+
+1. **Sezione "Job Attivo"**: mostra SOLO il job con status `running`. Se nessun job e' running, mostra il primo `pending` con label "Prossimo in coda". Card grande con tutti i dettagli (progresso, ETA, contatti, ultimo partner, pulsanti pausa/stop).
+
+2. **Sezione "Coda"**: collassabile con click. Header mostra il conteggio ("198 in coda"). Quando espansa, lista compatta (una riga per job: bandiera, nome paese, progresso X/Y). Niente card elaborate, solo righe minimali.
+
+3. **Sezione "Completati"**: come oggi, max 5, collassabile.
+
+### File: `src/pages/Operations.tsx`
+
+Nessun cambiamento alla struttura del layout (gia' corretto nell'ultimo edit). L'ordine resta: ActiveJobBar, DownloadTerminal, JobMonitor.
+
+### Logica di separazione nel JobMonitor
+
 ```text
--- Per ogni country_code + network_name, tieni solo il job pending piu' recente
-DELETE FROM download_jobs
-WHERE id NOT IN (
-  SELECT DISTINCT ON (country_code, network_name) id
-  FROM download_jobs
-  WHERE status = 'pending'
-  ORDER BY country_code, network_name, current_index DESC, created_at DESC
-)
-AND status = 'pending';
+const runningJob = jobs.find(j => j.status === "running");
+const nextPending = !runningJob ? jobs.find(j => j.status === "pending") : null;
+const featuredJob = runningJob || nextPending;
+
+const queuedJobs = jobs.filter(j => 
+  j.status === "pending" && j.id !== featuredJob?.id
+);
+const pausedJobs = jobs.filter(j => j.status === "paused");
+const recentCompleted = jobs.filter(j => 
+  j.status === "completed" || j.status === "cancelled"
+).slice(0, 5);
 ```
 
-### useCreateDownloadJob
-```text
-// Prima dell'insert, check:
-const { data: existing } = await supabase
-  .from("download_jobs")
-  .select("id")
-  .eq("country_code", params.country_code)
-  .eq("network_name", params.network_name)
-  .in("status", ["pending", "running"])
-  .limit(1);
+- `featuredJob` viene mostrato come card grande (come oggi)
+- `queuedJobs` + `pausedJobs` vengono mostrati in una sezione collassabile con righe compatte
+- `recentCompleted` resta in fondo, collassabile
 
-if (existing && existing.length > 0) {
-  throw new Error("Job gia' in coda per questo paese/network");
-}
-```
+### File modificati
 
-### useResumeAllJobs
-```text
-// Dopo aver trovato i job cancellati incompleti, deduplicare:
-// Per ogni country_code+network_name, tieni solo quello con current_index piu' alto
-// Gli altri vengono marcati come "cancelled" definitivamente
-```
+1. `src/components/download/JobMonitor.tsx` -- ristrutturazione in 3 sezioni (attivo / coda / completati)
 
-## File modificati
-
-1. **Migrazione SQL** -- pulizia duplicati esistenti
-2. `src/hooks/useDownloadJobs.ts` -- guard in creazione + dedup in riavvia tutti
