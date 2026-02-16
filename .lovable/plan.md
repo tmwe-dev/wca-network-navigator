@@ -1,72 +1,122 @@
 
 
-# Miglioramento Pannello Download: Chiarezza e Azioni Mirate
+# Rifattorizzazione Partner Hub
 
-## Problemi Identificati dallo Screenshot
+## Obiettivo
 
-1. **"Solo nuovi" e' ambiguo**: l'utente non capisce che significa "partner presenti in directory WCA ma non ancora nel database". Il conteggio (1) non e' chiaro nel contesto di 2 paesi selezionati.
+Spezzare il monolite `PartnerHub.tsx` (1337 righe) e eliminare la duplicazione con `PartnerListPanel.tsx` (541 righe) estraendo componenti e utilita' condivise.
 
-2. **"Scarica 1 partner" e' fuorviante**: con Afghanistan e Albania selezionati (15 nella directory, 14 scaricati, 4 senza profilo), il pulsante dice "Scarica 1 partner" perche' la modalita' e' "Solo nuovi" (1 mancante dal DB). Ma l'utente si aspetterebbe di poter agire sui 4 senza profilo, che sono il problema piu' urgente.
+## Struttura Finale dei File
 
-3. **I 4 "Senza profilo" sono visibili nel riepilogo ma non azionabili**: l'utente vede il dato arancione "Senza profilo: 4" ma non c'e' un modo diretto per scaricare SOLO quelli. Deve sapere di cambiare la modalita' nel dropdown, cosa non intuitiva.
+```text
+src/
+  lib/
+    partnerUtils.ts              (NUOVO - utilita' condivise)
+  components/
+    partners/
+      shared/
+        ServiceIcons.ts          (NUOVO - SERVICE_ICONS, getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES)
+        NetworkLogos.ts          (NUOVO - NETWORK_LOGOS, getNetworkLogo)
+        MiniStars.tsx            (NUOVO - componente stelle)
+        TrophyRow.tsx            (NUOVO - componente trofeo anni)
+        CardSocialIcons.tsx      (NUOVO - icone social inline)
+        PartnerSorting.ts        (NUOVO - sortPartners, SortOption, getBranchCountries)
+      PartnerDetailFull.tsx      (NUOVO - dettaglio dal PartnerHub, layout a 2 colonne)
+      PartnerDetailCompact.tsx   (NUOVO - dettaglio dal PartnerListPanel, layout compatto con isDark)
+      PartnerListItem.tsx        (NUOVO - singola riga partner nella lista)
+      ...file esistenti invariati
+  pages/
+    PartnerHub.tsx               (RIDOTTO - solo layout + stato + composizione)
+  components/
+    operations/
+      PartnerListPanel.tsx       (RIDOTTO - importa da shared, usa PartnerDetailCompact)
+```
 
-## Soluzione
+## Dettaglio Cambiamenti
 
-Ridisegnare il pannello download per rendere ogni riga del riepilogo direttamente azionabile e le etichette piu' chiare.
+### 1. Creare `src/components/partners/shared/ServiceIcons.ts`
 
-### Cambiamento 1 — Etichette modalita' piu' descrittive
+Estrarre da entrambi i file:
+- `SERVICE_ICONS` (mappa categoria -> componente Lucide)
+- `PARTNER_TYPE_ICONS` (solo da Hub)
+- `getServiceIcon(category)` 
+- `TRANSPORT_SERVICES` e `SPECIALTY_SERVICES` (costanti array)
 
-| Prima | Dopo |
-|---|---|
-| Solo nuovi (1) | Mai scaricati (1) — partner non ancora nel database |
-| Profili mancanti (5) | Senza profilo (4) — ri-scarica per acquisire descrizione e HTML |
-| Aggiorna tutti (14) | Riscansiona tutti (15) — visita ogni profilo nella directory |
+### 2. Creare `src/components/partners/shared/NetworkLogos.ts`
 
-### Cambiamento 2 — Righe del riepilogo cliccabili
+Estrarre da PartnerHub:
+- `NETWORK_LOGOS` (mappa nome -> path logo)
+- `getNetworkLogo(name)` (funzione di lookup fuzzy)
 
-Ogni riga nel box informativo (Nella directory / Gia' scaricati / Senza profilo / Da scaricare) diventa un pulsante che imposta automaticamente la modalita' di download corrispondente:
+### 3. Creare `src/components/partners/shared/MiniStars.tsx`
 
-- Click su "Senza profilo: 4" → imposta modalita' "no_profile" e il pulsante cambia in "Scarica 4 partner (profili)"
-- Click su "Da scaricare: 1" → imposta modalita' "new" e il pulsante cambia in "Scarica 1 partner (nuovo)"
-- Click su "Nella directory: 15" → imposta modalita' "all"
+Componente con prop `rating` e `size` opzionale (default `"w-3 h-3"`). Unifica le due versioni: quella di Hub (con prop `size`) e quella di PartnerListPanel (size fisso).
 
-La riga attiva viene evidenziata con un bordo colorato per mostrare cosa verra' scaricato.
+### 4. Creare `src/components/partners/shared/TrophyRow.tsx`
 
-### Cambiamento 3 — Pulsante download con contesto
+Componente semplice `TrophyRow({ years })` — esiste solo in Hub ma serve tenerlo separato per riusabilita'.
 
-Il pulsante principale mostra il contesto della modalita' selezionata:
+### 5. Creare `src/components/partners/shared/CardSocialIcons.tsx`
 
-- "Scarica 1 partner (nuovi)" quando modalita' = new
-- "Scarica 4 partner (profili)" quando modalita' = no_profile  
-- "Riscansiona 15 partner" quando modalita' = all
+Spostare `CardSocialIcons` da PartnerHub. Questo componente fa una query DB per ogni partner visibile (problema N+1 noto, verra' marcato con un TODO per ottimizzazione futura).
 
-### Cambiamento 4 — Selezione modalita' sempre visibile
+### 6. Creare `src/lib/partnerUtils.ts`
 
-Il dropdown "Modalita' download" viene mostrato SEMPRE (non solo quando downloadedCount > 0), cosi' l'utente vede subito le opzioni disponibili anche al primo accesso.
+Funzioni pure condivise:
+- `getBranchCountries(partner)` — duplicata identica in entrambi i file
+- `sortPartners(partners, sortBy)` — attualmente solo in Hub, ma utile ovunque
+- Type `SortOption`
 
-## Dettaglio Tecnico
+### 7. Creare `src/components/partners/PartnerDetailFull.tsx`
 
-### File da modificare
+Estrarre la funzione `PartnerDetail` da PartnerHub (righe 739-1337, ~600 righe). Questo e' il dettaglio ricco con:
+- Layout a 2 colonne
+- Network logos
+- KPI grid
+- Timeline e Reminders
+- Mini Globe
+- Mercati e routing con bandiere
 
-**`src/components/download/ActionPanel.tsx`**
+Props: `{ partner, onToggleFavorite }`
 
-1. Rinominare le label nel SelectItem delle modalita':
-   - "new" → "Mai scaricati ({missingIds.length})"
-   - "no_profile" → "Senza profilo ({noProfileInDirectoryCount})" (nota: solo quelli nel directory, non il totale)
-   - "all" → "Riscansiona tutti ({totalCount})"
+### 8. Creare `src/components/partners/PartnerDetailCompact.tsx`
 
-2. Rendere le righe del riepilogo (righe 422-446) cliccabili con `onClick` che chiama `setDownloadMode()`:
-   - Riga "Senza profilo" → `setDownloadMode("no_profile")`
-   - Riga "Da scaricare" → `setDownloadMode("new")`
-   - Riga "Nella directory" → `setDownloadMode("all")`
-   - La riga attiva riceve uno stile con bordo laterale colorato e sfondo leggero
+Estrarre la funzione `PartnerDetail` da PartnerListPanel (righe 348-531, ~180 righe). Questo e' il dettaglio compatto per Operations con:
+- Pulsante "back"
+- Supporto `isDark` / tema
+- Layout a singola colonna
 
-3. Mostrare il dropdown modalita' sempre (rimuovere il condizionale `downloadedCount > 0` a riga 472)
+Props: `{ partner, onBack, onToggleFavorite, isDark }`
 
-4. Aggiornare il testo del pulsante di download (riga 522) per includere il contesto:
-   - `downloadMode === "new"` → "Scarica {n} partner (nuovi)"
-   - `downloadMode === "no_profile"` → "Scarica {n} partner (profili)"
-   - `downloadMode === "all"` → "Riscansiona {n} partner"
+### 9. Ridurre `PartnerHub.tsx`
 
-5. Se `noProfileInDirectoryCount > 0` e `missingIds.length === 0`, impostare automaticamente `downloadMode` su "no_profile" (il problema piu' urgente)
+Il file rimane con:
+- Stato del componente (search, filters, selectedId, viewMode, etc.)
+- Logica filtri client-side
+- Layout `ResizablePanelGroup`
+- Lista partner (potrebbe diventare un componente separato in futuro, ma per ora resta inline per non frammentare troppo)
+- Importa `PartnerDetailFull` per il pannello destro
+
+Stima: da 1337 righe a circa 500-600 righe.
+
+### 10. Ridurre `PartnerListPanel.tsx`
+
+Rimuovere:
+- `SERVICE_ICONS`, `getServiceIcon`, `MiniStars`, `TRANSPORT_SERVICES`, `getBranchCountries` — sostituiti con import da shared
+- `PartnerDetail` inline — sostituito con import di `PartnerDetailCompact`
+
+Stima: da 541 righe a circa 250-300 righe.
+
+## Ordine di Esecuzione
+
+1. Creare tutti i file shared (ServiceIcons, NetworkLogos, MiniStars, TrophyRow, CardSocialIcons, partnerUtils) — nessuna dipendenza tra loro
+2. Creare PartnerDetailFull e PartnerDetailCompact — dipendono dai file shared
+3. Aggiornare PartnerHub.tsx — rimuovere codice estratto, aggiungere import
+4. Aggiornare PartnerListPanel.tsx — rimuovere codice estratto, aggiungere import
+
+## Rischi e Mitigazioni
+
+- **Nessuna modifica funzionale**: il refactoring e' puramente strutturale, non cambia comportamenti o stili
+- **PartnerDetailFull vs Compact divergono intenzionalmente**: non vengono unificati perche' servono contesti diversi (Hub ha layout ricco, Operations ha layout compatto con tema scuro)
+- **CardSocialIcons N+1**: viene marcato con `// TODO: batch fetch` ma non risolto in questo refactoring per limitare lo scope
 
