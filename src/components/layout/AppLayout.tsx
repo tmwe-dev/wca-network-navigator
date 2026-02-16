@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
+import { CreditCounter } from "./CreditCounter";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Globe, Users, Bell, Mail, Download, Database, BookOpen, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,9 @@ export function AppLayout() {
 
             {/* Campaign controls slot - will be filled by portal */}
             <div id="campaign-header-controls" className="flex items-center gap-4 flex-1" />
+
+            {/* Credit counter */}
+            <CreditCounter />
 
             {/* Search - hide on campaigns page */}
             {!isCampaignsPage && (
