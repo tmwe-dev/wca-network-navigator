@@ -2,6 +2,23 @@ import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import { Bot, Send, X, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
+import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
+
+const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
+
+function parseStructuredMessage(content: string): { text: string; partners: StructuredPartner[] } {
+  const idx = content.indexOf(STRUCTURED_DELIMITER);
+  if (idx === -1) return { text: content, partners: [] };
+  const text = content.substring(0, idx).trim();
+  const jsonStr = content.substring(idx + STRUCTURED_DELIMITER.length).trim();
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed?.type === "partners" && Array.isArray(parsed.data)) {
+      return { text, partners: parsed.data };
+    }
+  } catch { /* ignore */ }
+  return { text: content, partners: [] };
+}
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -266,9 +283,17 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                 }`}
               >
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
+                  (() => {
+                    const { text, partners } = parseStructuredMessage(msg.content);
+                    return (
+                      <>
+                        <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
+                          <ReactMarkdown>{text}</ReactMarkdown>
+                        </div>
+                        {partners.length > 0 && <AiResultsPanel partners={partners} />}
+                      </>
+                    );
+                  })()
                 ) : (
                   msg.content
                 )}
