@@ -1,78 +1,72 @@
 
-# Fix: Processi Multipli che Partono Contemporaneamente
 
-## Problema Identificato
+# Miglioramento Pannello Download: Chiarezza e Azioni Mirate
 
-Il processore di download ha due vulnerabilita' che permettono a piu' job di partire simultaneamente, violando il vincolo di esecuzione sequenziale.
+## Problemi Identificati dallo Screenshot
 
-### Causa 1 — Ordine errato nel lock del database
+1. **"Solo nuovi" e' ambiguo**: l'utente non capisce che significa "partner presenti in directory WCA ma non ancora nel database". Il conteggio (1) non e' chiaro nel contesto di 2 paesi selezionati.
 
-Nel metodo `processJob` (riga 137), il job viene impostato come `running` **prima** di verificare se ci sono altri job gia' in esecuzione (riga 141). Questo crea una finestra temporale in cui:
+2. **"Scarica 1 partner" e' fuorviante**: con Afghanistan e Albania selezionati (15 nella directory, 14 scaricati, 4 senza profilo), il pulsante dice "Scarica 1 partner" perche' la modalita' e' "Solo nuovi" (1 mancante dal DB). Ma l'utente si aspetterebbe di poter agire sui 4 senza profilo, che sono il problema piu' urgente.
 
-1. Loop A trova un job pending, lo mette in "running"
-2. Loop B (o un secondo polling) controlla i running, non ne trova (il commit di A non e' ancora visibile), prende un altro job pending
-3. Risultato: 2 job running contemporaneamente
+3. **I 4 "Senza profilo" sono visibili nel riepilogo ma non azionabili**: l'utente vede il dato arancione "Senza profilo: 4" ma non c'e' un modo diretto per scaricare SOLO quelli. Deve sapere di cambiare la modalita' nel dropdown, cosa non intuitiva.
 
-La correzione e': invertire l'ordine. Prima si verifica che non ci siano altri running, poi si imposta lo stato.
+## Soluzione
 
-### Causa 2 — Loop duplicati da `resetStop`
+Ridisegnare il pannello download per rendere ogni riga del riepilogo direttamente azionabile e le etichette piu' chiare.
 
-La funzione `resetStop` (riga 555) fa tre cose:
-- Resetta `processing = false`
-- Incrementa `activeLoopId`
-- Chiama `startLoop(myId)` creando un NUOVO loop
+### Cambiamento 1 — Etichette modalita' piu' descrittive
 
-Ma se il componente Operations viene anche rimontato (es. HMR o navigazione), il `useEffect` al mount (riga 537) crea un ALTRO loop. Cosi' si ritrovano 2+ loop attivi. Il meccanismo `activeLoopId` dovrebbe invalidare quelli vecchi, ma il reset simultaneo di `cancel` e `processing` permette ai loop orfani di sopravvivere per un ciclo.
-
-### Causa 3 — Mutex non-atomico nel polling
-
-Nel loop di polling (riga 488-493), il controllo `if (state.processing)` avviene PRIMA della query DB (che e' asincrona). Due loop possono entrambi vedere `processing = false`, entrambi eseguire la query, e entrambi chiamare `processJob`. Il mutex in `processJob` (riga 107) e' sincrono e dovrebbe catturare il secondo, ma solo se entrano nella funzione in sequenza — con i tempi stretti del "RIAVVIA TUTTI" questo non e' garantito.
-
-## Correzioni
-
-### 1. Invertire ordine: prima verifica, poi claim
-
-Spostare il controllo DB "altri job running?" PRIMA di impostare il job corrente come "running". Solo dopo aver confermato che il campo e' libero, fare l'update a "running".
-
-### 2. Claim atomico con WHERE condizionale
-
-Sostituire il semplice `update({ status: "running" })` con un update condizionale che riesce solo se il job e' ancora "pending":
-
-```text
-UPDATE download_jobs 
-SET status = 'running' 
-WHERE id = jobId AND status = 'pending'
-RETURNING id
-```
-
-Se l'update non restituisce righe, significa che un altro loop ha gia' preso il job — si esce senza processare.
-
-### 3. Lock globale prima di processare
-
-Aggiungere un controllo a livello di database prima di ogni `processJob`: contare i job con status "running". Se ce n'e' gia' uno, non procedere. Questo va fatto PRIMA di qualsiasi update di stato.
-
-### 4. Eliminare loop duplicati da `resetStop`
-
-Modificare `resetStop` per NON chiamare `startLoop` direttamente. Invece, deve solo resettare i flag (`stopped`, `cancel`) e lasciare che il `useEffect` del mount rilanci il loop automaticamente tramite un re-render forzato. Questo garantisce un solo loop attivo alla volta.
-
-In pratica:
-- `resetStop` resetta i flag e incrementa `activeLoopId`
-- Un `useEffect` con dipendenza su un contatore di reset rileva il cambio e avvia UN solo loop
-
-### 5. Aggiungere guardia anti-rientro nel polling
-
-Nel loop di polling, prima di chiamare `processJob`, acquisire il mutex `state.processing = true` gia' nel loop (non dentro processJob). Cosi' il check e il set sono nello stesso tick sincrono, senza await in mezzo.
-
-## File da Modificare
-
-| File | Modifica |
+| Prima | Dopo |
 |---|---|
-| `src/hooks/useDownloadProcessor.ts` | Riscrittura ordine lock, claim atomico, eliminazione loop duplicati |
+| Solo nuovi (1) | Mai scaricati (1) — partner non ancora nel database |
+| Profili mancanti (5) | Senza profilo (4) — ri-scarica per acquisire descrizione e HTML |
+| Aggiorna tutti (14) | Riscansiona tutti (15) — visita ogni profilo nella directory |
 
-## Comportamento Atteso Dopo il Fix
+### Cambiamento 2 — Righe del riepilogo cliccabili
 
-- Un solo loop di polling attivo in qualsiasi momento
-- Un solo job in stato "running" in qualsiasi momento
-- Il "RIAVVIA TUTTI" resetta i flag ma non crea loop extra
-- Se due loop tentano di prendere lo stesso job, il secondo fallisce silenziosamente
-- Il cruscotto (SpeedGauge) mostra un solo processo alla volta
+Ogni riga nel box informativo (Nella directory / Gia' scaricati / Senza profilo / Da scaricare) diventa un pulsante che imposta automaticamente la modalita' di download corrispondente:
+
+- Click su "Senza profilo: 4" → imposta modalita' "no_profile" e il pulsante cambia in "Scarica 4 partner (profili)"
+- Click su "Da scaricare: 1" → imposta modalita' "new" e il pulsante cambia in "Scarica 1 partner (nuovo)"
+- Click su "Nella directory: 15" → imposta modalita' "all"
+
+La riga attiva viene evidenziata con un bordo colorato per mostrare cosa verra' scaricato.
+
+### Cambiamento 3 — Pulsante download con contesto
+
+Il pulsante principale mostra il contesto della modalita' selezionata:
+
+- "Scarica 1 partner (nuovi)" quando modalita' = new
+- "Scarica 4 partner (profili)" quando modalita' = no_profile  
+- "Riscansiona 15 partner" quando modalita' = all
+
+### Cambiamento 4 — Selezione modalita' sempre visibile
+
+Il dropdown "Modalita' download" viene mostrato SEMPRE (non solo quando downloadedCount > 0), cosi' l'utente vede subito le opzioni disponibili anche al primo accesso.
+
+## Dettaglio Tecnico
+
+### File da modificare
+
+**`src/components/download/ActionPanel.tsx`**
+
+1. Rinominare le label nel SelectItem delle modalita':
+   - "new" → "Mai scaricati ({missingIds.length})"
+   - "no_profile" → "Senza profilo ({noProfileInDirectoryCount})" (nota: solo quelli nel directory, non il totale)
+   - "all" → "Riscansiona tutti ({totalCount})"
+
+2. Rendere le righe del riepilogo (righe 422-446) cliccabili con `onClick` che chiama `setDownloadMode()`:
+   - Riga "Senza profilo" → `setDownloadMode("no_profile")`
+   - Riga "Da scaricare" → `setDownloadMode("new")`
+   - Riga "Nella directory" → `setDownloadMode("all")`
+   - La riga attiva riceve uno stile con bordo laterale colorato e sfondo leggero
+
+3. Mostrare il dropdown modalita' sempre (rimuovere il condizionale `downloadedCount > 0` a riga 472)
+
+4. Aggiornare il testo del pulsante di download (riga 522) per includere il contesto:
+   - `downloadMode === "new"` → "Scarica {n} partner (nuovi)"
+   - `downloadMode === "no_profile"` → "Scarica {n} partner (profili)"
+   - `downloadMode === "all"` → "Riscansiona {n} partner"
+
+5. Se `noProfileInDirectoryCount > 0` e `missingIds.length === 0`, impostare automaticamente `downloadMode` su "no_profile" (il problema piu' urgente)
+
