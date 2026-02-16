@@ -1,102 +1,89 @@
 
-# Refactoring Completo Operations Center
+
+# Miglioramenti Country Cards, Pannello Partner e Tab Acquisisci
 
 ## Problemi Identificati
 
-1. **Bug dati**: I conteggi filtri mostrano tutti 0 perche' la logica di filtro nasconde i paesi con partner ma senza "directory cache" quando `showEmpty` e' disattivato. I dati dal database arrivano correttamente (country_stats: ~40 paesi con partner, directory_counts: ~180 paesi), ma la UI non li mostra.
+### 1. Country Cards: icone poco chiare
+Attualmente le card mostrano `Users 45/120` e `Mail 25` ma manca l'icona Phone per i telefoni. I dati sono compressi e non immediatamente leggibili.
 
-2. **Layout sbilanciato**: La colonna centrale (280px) e' troppo stretta per contenere filtri + ordinamenti + toggles + lista paesi. I controlli escono dai bordi. La colonna destra (65%) e' sovradimensionata rispetto al contenuto.
+### 2. Pannello Partner (destra): informazioni insufficienti
+Quando si seleziona un paese, il tab Partner mostra solo la lista dei singoli partner con i loro contatti individuali. Non c'e' un riepilogo aggregato del paese (quanti partner, quanti con profilo, quanti con email/telefono) che rispecchi le info della card a sinistra.
 
-3. **Controlli confusi**: Ordinamenti (A-Z, N, Dir, %) + toggle (Dir, All) + checkbox (seleziona tutti) sono ammassati nella stessa riga, rendendo impossibile capire cosa fa cosa.
+### 3. Tab Scarica: nessuna menzione dei profili
+L'ActionPanel dice "Ri-scarica anche i 3 esistenti" ma non distingue tra partner con profilo e senza profilo. L'utente non sa se deve ri-scaricare per ottenere i profili mancanti. Serve un selettore per scegliere COSA scaricare (tutto, solo profili mancanti, solo nuovi).
 
-4. **Definizione "completato" errata**: Un paese NON deve essere "completato" se ha solo il download ma manca il profilo (es. USA: 837 partner, solo 137 profili = NON completato).
+### 4. Tab Acquisisci: link inutile a pagina separata
+La tab mostra solo un link a /acquisizione. La pagina AcquisizionePartner.tsx (1234 righe) e' un modulo complesso con pipeline, coda partner, canvas, bridge con estensione Chrome. Non ha senso tenerla separata se l'Operations Center e' il punto unico di lavoro.
 
-## Soluzione
+## Piano di Implementazione
 
-### Fase 1: Fix Bug Dati e Logica Filtri
+### Fase 1: Country Cards con icone chiare
 
-- Correggere la logica di visibilita': mostrare TUTTI i paesi che hanno almeno 1 partner nel DB, indipendentemente dalla directory cache
-- Ricalcolare lo stato "completato": un paese e' completo solo se ha TUTTI i profili scaricati (without_profile === 0) E il download dalla directory e' completo (pCount >= cCount)
-- Rimuovere il toggle "All" confusionario e mostrare di default tutti i paesi con dati
+Aggiungere nella card paese una riga con 3 micro-indicatori con icone esplicite:
+- `Users` icona + numero partner / directory
+- `Mail` icona + numero con email (colorata: verde se >80%, arancione se >50%, rossa altrimenti)  
+- `Phone` icona + numero con telefono (stessa logica colore)
+- Mantenere il badge profilo mancante (`!Xp`) gia' presente
 
-### Fase 2: Ridisegno Layout 3 Colonne
+File: `src/components/download/CountryGrid.tsx` -- aggiornare la sezione stats nella CountryCard per includere Phone con icona dedicata.
 
-```text
-+----------------------------------------------------------------+
-| TOP BAR: Operations | SpeedGauge | Sessione | Tema             |
-+------+-----------------------+---------------------------------+
-| STATS|  PAESI                |  PANNELLO CONTESTUALE           |
-| 140px|  flex (min 320px)     |  flex-1                         |
-|      |                       |                                 |
-| Paesi|  [Cerca] [Filtro v]   |  (Partner / Scarica / Acquisisci)|
-| Part.|  [Ordina: Nome v]     |                                 |
-| Prof.|                       |                                 |
-| Email|  Card AF  3/3  100%   |                                 |
-| Tel. |  Card US 837 !! 16%   |                                 |
-| Dir. |  Card AU 91/144  63%  |                                 |
-|      |  Card IN 63/...  ...  |                                 |
-|      |  ...                  |                                 |
-+------+-----------------------+---------------------------------+
-```
+### Fase 2: Header riepilogativo nel Pannello Partner
 
-Colonne responsive:
-- COL 1 (Stats): 140px fissi, invariata -- funziona bene
-- COL 2 (Paesi): `min-w-[280px] w-[35%]` -- si adatta allo schermo
-- COL 3 (Pannello): `flex-1` -- prende il resto
+Aggiungere un blocco riepilogo in cima al PartnerListPanel che mostri le stesse metriche della card paese, piu' dettagliate:
+- Totale partner nel DB
+- Con profilo / Senza profilo (con barra progresso)
+- Con email / Senza email
+- Con telefono / Senza telefono
+- Qualita' contatti (completi/parziali/mancanti)
 
-### Fase 3: Controlli Compatti e Chiari
+Questi dati sono gia' disponibili tramite `useCountryStats` -- basta passare i `countryCodes` e leggere i dati aggregati.
 
-**Filtri**: Un unico dropdown (Select) con le opzioni:
-- Tutti (conteggio)
-- Da fare (conteggio)
-- Senza Profilo (conteggio) 
-- Completati (conteggio)
-- Mai esplorati (conteggio)
+File: `src/components/operations/PartnerListPanel.tsx` -- aggiungere un header con stats aggregate prima della lista partner.
 
-Posizionato accanto alla barra di ricerca su un'unica riga.
+### Fase 3: ActionPanel con opzioni di download granulari
 
-**Ordinamento**: Un unico dropdown (Select) con le opzioni:
-- Nome A-Z
-- Partner (decrescente)
-- Directory (decrescente)
-- Completamento % (crescente)
+Aggiungere nel pannello Scarica un selettore per il tipo di download:
+- "Nuovi partner" (default): scarica solo gli ID non presenti nel DB
+- "Solo profili mancanti": ri-scarica solo i partner che hanno `without_profile > 0` (cioe' manca `raw_profile_html`)
+- "Aggiorna tutti": ri-scarica tutti i partner esistenti
 
-Posizionato sulla stessa riga del filtro.
+Mostrare chiaramente i conteggi:
+- "X partner nella directory"
+- "Y gia' scaricati (di cui Z senza profilo)"
+- "W da scaricare"
 
-**Toggle "Solo Directory" e "Mostra tutti"**: Spostati nel pannello contestuale (tab Scarica), dove hanno senso operativo, non sopra la lista paesi.
+Il conteggio "senza profilo" viene da `useCountryStats` gia' disponibile.
 
-### Fase 4: Card Paese Ottimizzate
+File: `src/components/download/ActionPanel.tsx` -- sostituire il checkbox "Ri-scarica esistenti" con un Select a 3 opzioni e mostrare il conteggio profili mancanti.
 
-Ogni card mostra:
-- Bandiera + Nome (troncato)
-- Stats compatte: `45/120` partner, icona profilo con colore (verde se completo, arancione se mancante)
-- Badge percentuale grande a destra con colore semantico:
-  - Verde 100% = tutto fatto
-  - Giallo/Ambra 1-99% = parziale  
-  - Rosso 0% = da fare
-  - Badge nascosto se nessuna directory scansionata
-- Stato "DL OK" con badge arancione lampeggiante se download completo ma profili mancanti
+### Fase 4: Rimuovere tab Acquisisci (link a pagina separata)
 
-### Fase 5: Logica "Completamento" Corretta
+La tab "Acquisisci" attualmente mostra solo un link alla pagina /acquisizione. Poiche' l'acquisizione richiede l'estensione Chrome con una pipeline complessa (1200+ righe), non ha senso integrarla inline. Tuttavia il semplice link e' confuso.
 
-Un paese ha 3 livelli di stato:
-1. **Completo** (verde): download >= directory E without_profile === 0
-2. **DL OK ma senza profili** (arancione): download >= directory MA without_profile > 0 -- badge lampeggiante per segnalare necessita' di ri-scaricamento profili
-3. **Download parziale** (blu): partner < directory
-4. **Mai esplorato** (grigio): nessun dato
+Soluzione: rimuovere la tab "Acquisisci" dal pannello contestuale. La pagina /acquisizione resta accessibile dalla sidebar di navigazione. Questo semplifica l'interfaccia Operations e riduce la confusione.
+
+File: `src/pages/Operations.tsx` -- rimuovere la TabsTrigger e TabsContent "acquire", rimuovere il componente AcquisitionLink.
 
 ## Dettagli Tecnici
 
-### File da modificare:
+### CountryGrid.tsx -- Fase 1
+- Nella CountryCard, aggiungere `<Phone>` icona accanto a `<Mail>` nella riga stats
+- Colorare le icone in base alla copertura: verde (>80%), arancione (>50%), rossa (<50%)
+- I dati `with_phone` sono gia' disponibili nel `stats[country.code]`
 
-**`src/components/download/CountryGrid.tsx`** -- Riscrittura completa:
-- Sostituire i bottoni filtro/ordinamento con due `<Select>` compatti di Radix UI
-- Correggere la logica di filtraggio: rimuovere la condizione `!showEmpty` che nasconde paesi con dati
-- Rimuovere i toggle "Dir" e "All" dalla toolbar (spostati nel pannello download)
-- Layout toolbar: una riga con [Cerca | Filtro dropdown | Ordina dropdown]
-- Card responsive con flex-wrap per adattarsi a diverse larghezze
+### PartnerListPanel.tsx -- Fase 2
+- Importare `useCountryStats` hook
+- Aggiungere un blocco `CountrySummary` prima della SearchBar con 4-5 mini indicatori
+- Layout: riga orizzontale con icone + numeri + barre progresso compatte
 
-**`src/pages/Operations.tsx`** -- Aggiornamento layout:
-- Cambiare la colonna paesi da `w-[280px]` a `min-w-[280px] w-[35%] max-w-[400px]` per responsivita'
-- Mantenere la sidebar stats a 140px (funziona bene)
-- La colonna destra resta `flex-1`
+### ActionPanel.tsx -- Fase 3
+- Aggiungere `useCountryStats` per ottenere il conteggio `without_profile`
+- Sostituire il checkbox `includeExisting` con un Select: "Nuovi" | "Profili mancanti" | "Tutti"
+- Filtrare `idsToDownload` in base alla selezione: per "profili mancanti", serve una query ai partner senza `raw_profile_html` per ottenere i `wca_id` corrispondenti
+- Mostrare nel riepilogo: "Y scaricati (Z senza profilo)"
+
+### Operations.tsx -- Fase 4
+- Rimuovere la tab "acquire" e il componente AcquisitionLink
+- Rimangono solo 2 tab: "Partner" e "Scarica"
+
