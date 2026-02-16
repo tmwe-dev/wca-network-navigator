@@ -3,6 +3,7 @@ import { Bot, Send, X, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
+import { supabase } from "@/integrations/supabase/client";
 
 const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
 
@@ -85,11 +86,14 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
           content: m.content,
         }));
 
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
         const resp = await fetch(CHAT_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ messages: allMsgs, context }),
         });
