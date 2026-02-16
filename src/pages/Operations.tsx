@@ -14,7 +14,6 @@ import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDownloadJobs, useEmergencyStop, useResumeAllJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
@@ -99,14 +98,14 @@ export default function Operations() {
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
 
         <div className="relative z-10 h-full flex flex-col">
-          {/* ═══ TOP BAR ═══ */}
-          <div className="flex items-center justify-between px-6 py-2 flex-shrink-0">
+          {/* ═══ TOP BAR (compact) ═══ */}
+          <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className={`text-lg font-semibold ${th.h1}`}>Operations Center</h1>
+              <h1 className={`text-sm font-semibold ${th.h1}`}>Operations</h1>
               {activeJobs.length > 0 && (
-                <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
+                <span className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
-                  {activeJobs.length} job attivi
+                  {activeJobs.length} attivi
                 </span>
               )}
               <SpeedGauge
@@ -115,53 +114,51 @@ export default function Operations() {
                 idle={activeJobs.length === 0}
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <WcaSessionIndicator />
               {cancelledIncompleteJobs.length > 0 && activeJobs.length === 0 && (
                 <button
                   onClick={() => { resetStop(); resumeAllMutation.mutate(); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${isDark ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${isDark ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
                 >
-                  <Play className="w-3.5 h-3.5" />
-                  RIAVVIA TUTTI ({cancelledIncompleteJobs.length})
+                  <Play className="w-3 h-3" />
+                  RIAVVIA ({cancelledIncompleteJobs.length})
                 </button>
               )}
-              <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              <button onClick={toggleTheme} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* ═══ DASHBOARD 6 CARDS ═══ */}
-          <div className="flex-shrink-0 mx-6 mb-3">
-            {globalStats ? (
-              <div className="grid grid-cols-6 gap-2.5">
-                <DashCard icon={Globe} label="Paesi scansionati" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} />
-                <DashCard icon={Users} label="Partner nel DB" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} />
-                <DashCard icon={FileText} label="Con profilo" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
-                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
-                  progressColor="from-violet-400 to-purple-500" />
-                <DashCard icon={Mail} label="Email trovate" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
-                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
-                  progressColor="from-sky-400 to-blue-500" />
-                <DashCard icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
-                  progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
-                  progressColor="from-teal-400 to-emerald-500" />
-                <DashCard icon={FolderDown} label="In directory WCA" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} />
-              </div>
-            ) : (
-              <div className="grid grid-cols-6 gap-2.5">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className={`h-20 rounded-xl ${isDark ? "bg-white/[0.06]" : ""}`} />
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ═══ MAIN 3-COLUMN LAYOUT ═══ */}
+          <div className="flex-1 flex min-h-0 px-4 pb-3 gap-3">
+            {/* ── COL 1: Stats sidebar (narrow vertical) ── */}
+            <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+              {globalStats ? (
+                <>
+                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} />
+                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} />
+                  <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
+                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
+                    progressColor="from-violet-400 to-purple-500" />
+                  <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
+                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
+                    progressColor="from-sky-400 to-blue-500" />
+                  <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
+                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
+                    progressColor="from-teal-400 to-emerald-500" />
+                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} />
+                </>
+              ) : (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
+                ))
+              )}
+            </div>
 
-          {/* ═══ MAIN SPLIT ═══ */}
-          <div className="flex-1 flex min-h-0 px-6 pb-4 gap-4">
-            {/* LEFT: Country Grid (35%) */}
-            <div className="w-[35%] min-h-0 flex flex-col">
+            {/* ── COL 2: Country Grid (fills remaining left space) ── */}
+            <div className="w-[280px] flex-shrink-0 min-h-0 flex flex-col">
               <CountryGrid
                 selected={selectedCountries}
                 onToggle={toggleCountry}
@@ -171,31 +168,24 @@ export default function Operations() {
               />
             </div>
 
-            {/* RIGHT: Contextual Panel (65%) */}
+            {/* ── COL 3: Contextual Panel (rest) ── */}
             <div className="flex-1 min-h-0 flex flex-col">
-          {selectedCountries.length === 0 ? (
-                /* ── No country: Global Overview with always-visible monitoring ── */
+              {selectedCountries.length === 0 ? (
                 <div className="flex-1 flex flex-col gap-3 overflow-auto">
-                  {/* Active Job Bar always visible */}
                   <ActiveJobBar />
-                  {/* Terminal always visible */}
                   <DownloadTerminal />
-                  {/* Job Monitor always visible */}
                   <JobMonitor />
-                  {/* Empty state hint if no jobs */}
                   {!jobs?.some(j => j.status === "running" || j.status === "pending" || j.status === "paused") && (
                     <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                       <div className="text-center space-y-3">
                         <Globe className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                        <p className={`text-sm ${th.sub}`}>Seleziona un paese per visualizzare partner o avviare download</p>
+                        <p className={`text-sm ${th.sub}`}>Seleziona un paese per iniziare</p>
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                /* ── Country selected: Tabbed Panel ── */
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                  {/* Tab header with country info */}
                   <div className={`flex items-center gap-3 px-4 py-2 rounded-t-2xl border border-b-0 ${isDark ? "bg-white/[0.04] backdrop-blur-xl border-white/[0.08]" : "bg-white/60 backdrop-blur-xl border-white/80"}`}>
                     <span className={`text-sm font-semibold ${th.h2}`}>{countryLabel}</span>
                     <TabsList className={`ml-auto ${isDark ? "bg-white/[0.06]" : "bg-slate-100/80"}`}>
@@ -210,11 +200,7 @@ export default function Operations() {
                       </TabsTrigger>
                     </TabsList>
                   </div>
-
-                  {/* Always-visible ActiveJobBar */}
                   <ActiveJobBar />
-
-                  {/* Tab Content */}
                   <div className={`flex-1 min-h-0 rounded-b-2xl border border-t-0 overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
                     <TabsContent value="partner" className="h-full m-0 data-[state=inactive]:hidden">
                       <PartnerListPanel
@@ -223,14 +209,12 @@ export default function Operations() {
                         isDark={isDark}
                       />
                     </TabsContent>
-
                     <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
                       <ActionPanel selectedCountries={selectedCountries} directoryOnly={directoryOnly} onDirectoryOnlyChange={setDirectoryOnly} onJobStarting={resetStop} />
                       <DownloadTerminal />
                       <JobMonitor />
                       <AdvancedTools isDark={isDark} />
                     </TabsContent>
-
                     <TabsContent value="acquire" className="h-full m-0 data-[state=inactive]:hidden">
                       <AcquisitionLink isDark={isDark} />
                     </TabsContent>
@@ -245,30 +229,31 @@ export default function Operations() {
   );
 }
 
-function DashCard({ icon: Icon, label, value, color, isDark, progress, progressColor }: {
+/* ── Vertical Stat Item ── */
+function StatItem({ icon: Icon, label, value, color, isDark, progress, progressColor }: {
   icon: any; label: string; value: string | number; color: string; isDark: boolean;
   progress?: number; progressColor?: string;
 }) {
   return (
-    <div className={`rounded-xl border p-3 ${isDark ? "bg-white/[0.04] backdrop-blur-xl border-white/[0.08]" : "bg-white/60 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className={`w-5 h-5 ${color}`} />
-        <span className={`text-[10px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
+    <div className={`rounded-lg border p-2 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white/40 border-slate-200/60"}`}>
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <Icon className={`w-3.5 h-3.5 ${color}`} />
+        <span className={`text-[9px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>
       </div>
-      <span className={`text-xl font-mono font-extrabold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+      <span className={`text-lg font-mono font-extrabold leading-tight ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
       {progress !== undefined && (
-        <div className="mt-1.5 flex items-center gap-1.5">
-          <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+        <div className="mt-1 flex items-center gap-1">
+          <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
             <div className={`h-full rounded-full bg-gradient-to-r ${progressColor || "from-sky-400 to-blue-500"}`} style={{ width: `${progress}%` }} />
           </div>
-          <span className={`text-[10px] font-mono font-bold ${color}`}>{progress}%</span>
+          <span className={`text-[9px] font-mono font-bold ${color}`}>{progress}%</span>
         </div>
       )}
     </div>
   );
 }
 
-/* ── Acquisition Link (replaces old iframe embed) ── */
+/* ── Acquisition Link ── */
 function AcquisitionLink({ isDark }: { isDark: boolean }) {
   const th = t(isDark);
   return (
@@ -277,11 +262,8 @@ function AcquisitionLink({ isDark }: { isDark: boolean }) {
         <Zap className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
         <h3 className={`text-lg font-semibold ${th.h2}`}>Pipeline di Acquisizione</h3>
         <p className={`text-sm ${th.sub}`}>
-          L'acquisizione utilizza l'estensione Chrome per estrarre i contatti direttamente dal browser WCA. Assicurati che sia installata e la sessione WCA attiva.
+          L'acquisizione utilizza l'estensione Chrome per estrarre i contatti direttamente dal browser WCA.
         </p>
-        <div className={`p-3 rounded-xl border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-sky-50/80 border-sky-200/60 text-sky-700"}`}>
-          💡 Per avviare l'acquisizione, usa la pagina dedicata con tutti i controlli avanzati.
-        </div>
         <Link
           to="/acquisizione"
           className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${th.btnPri}`}
