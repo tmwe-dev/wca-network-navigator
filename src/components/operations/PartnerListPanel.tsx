@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,6 +60,7 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [generatingAliases, setGeneratingAliases] = useState(false);
+  const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -296,9 +298,12 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const subject = encodeURIComponent(`Contatto da ${partner.company_name}`);
-                                    const mailto = `mailto:${primaryContact.email}?subject=${subject}`;
-                                    window.open(mailto, "_blank");
+                                    setEmailTarget({
+                                      email: primaryContact.email,
+                                      name: primaryContact.name,
+                                      company: partner.company_name,
+                                      partnerId: partner.id,
+                                    });
                                   }}
                                   className={cn(
                                     "p-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100",
@@ -324,6 +329,17 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
           </div>
         </ScrollArea>
       </div>
+      {emailTarget && (
+        <SendEmailDialog
+          open={!!emailTarget}
+          onOpenChange={(open) => { if (!open) setEmailTarget(null); }}
+          recipientEmail={emailTarget.email}
+          recipientName={emailTarget.name}
+          companyName={emailTarget.company}
+          partnerId={emailTarget.partnerId}
+          isDark={isDark}
+        />
+      )}
     </TooltipProvider>
   );
 }
