@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, Play, FileText, Bot } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, FileText, Bot } from "lucide-react";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
@@ -15,7 +15,7 @@ import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useDownloadJobs, useEmergencyStop, useResumeAllJobs } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs, useEmergencyStop } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
@@ -63,11 +63,9 @@ export default function Operations() {
   } : null;
   const { data: jobs } = useDownloadJobs();
   const emergencyStopMutation = useEmergencyStop();
-  const resumeAllMutation = useResumeAllJobs();
   const { emergencyStop: stopProcessor, resetStop } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
-  const cancelledIncompleteJobs = useMemo(() => (jobs || []).filter(j => j.status === "cancelled" && j.current_index < j.total_count), [jobs]);
   const countryJobs = useMemo(() => {
     if (selectedCountries.length === 0) return jobs || [];
     const codes = new Set(selectedCountries.map(c => c.code));
@@ -120,15 +118,6 @@ export default function Operations() {
             </div>
             <div className="flex items-center gap-2">
               <WcaSessionIndicator />
-              {cancelledIncompleteJobs.length > 0 && activeJobs.length === 0 && (
-                <button
-                  onClick={() => { resetStop(); resumeAllMutation.mutate(); }}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${isDark ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
-                >
-                  <Play className="w-3 h-3" />
-                  RIAVVIA ({cancelledIncompleteJobs.length})
-                </button>
-              )}
               <button onClick={() => setAiOpen(true)} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"}`} title="Assistente AI">
                 <Bot className="w-4 h-4" />
               </button>

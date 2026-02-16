@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
-  useDownloadJobs, usePauseResumeJob, useUpdateJobSpeed, useDeleteQueuedJobs,
+  useDownloadJobs, usePauseResumeJob, useUpdateJobSpeed, useDeleteQueuedJobs, usePurgeOldJobs,
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { JobDataViewer } from "./JobDataViewer";
@@ -23,6 +23,7 @@ export function JobMonitor() {
   const pauseResume = usePauseResumeJob();
   const updateSpeed = useUpdateJobSpeed();
   const deleteQueued = useDeleteQueuedJobs();
+  const purgeOld = usePurgeOldJobs();
 
   const runningJob = (jobs || []).find(j => j.status === "running");
   const nextPending = !runningJob ? (jobs || []).find(j => j.status === "pending") : null;
@@ -30,12 +31,14 @@ export function JobMonitor() {
 
   const queuedJobs = (jobs || []).filter(j => j.status === "pending" && j.id !== featuredJob?.id);
   const pausedJobs = (jobs || []).filter(j => j.status === "paused");
-  const recentCompleted = (jobs || []).filter(j => j.status === "completed" || j.status === "cancelled").slice(0, 5);
+  const completedJobs = (jobs || []).filter(j => j.status === "completed");
+  const cancelledJobs = (jobs || []).filter(j => j.status === "cancelled");
+  const historyJobs = [...completedJobs, ...cancelledJobs].slice(0, 10);
 
   const [queueOpen, setQueueOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
 
-  if (!featuredJob && queuedJobs.length === 0 && pausedJobs.length === 0 && recentCompleted.length === 0) return null;
+  if (!featuredJob && queuedJobs.length === 0 && pausedJobs.length === 0 && historyJobs.length === 0) return null;
 
   const totalQueued = queuedJobs.length + pausedJobs.length;
 
@@ -87,19 +90,31 @@ export function JobMonitor() {
         </div>
       )}
 
-      {/* SEZIONE 3: Completati recenti (collassabile) */}
-      {recentCompleted.length > 0 && (
+      {/* SEZIONE 3: Cronologia (collassabile) */}
+      {historyJobs.length > 0 && (
         <div>
-          <button
-            onClick={() => setCompletedOpen(!completedOpen)}
-            className={`flex items-center gap-1.5 text-sm font-medium w-full text-left py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
-          >
-            {completedOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            Completati ({recentCompleted.length})
-          </button>
+          <div className="flex items-center justify-between w-full">
+            <button
+              onClick={() => setCompletedOpen(!completedOpen)}
+              className={`flex items-center gap-1.5 text-sm font-medium py-1.5 ${th.dim} hover:opacity-80 transition-opacity`}
+            >
+              {completedOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              Cronologia ({completedJobs.length > 0 ? `${completedJobs.length} completati` : ""}{completedJobs.length > 0 && cancelledJobs.length > 0 ? ", " : ""}{cancelledJobs.length > 0 ? `${cancelledJobs.length} cancellati` : ""})
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => purgeOld.mutate()}
+              disabled={purgeOld.isPending}
+              className={`h-6 text-[11px] px-2 ${th.btnStop}`}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              {purgeOld.isPending ? "Pulendo..." : "Pulisci"}
+            </Button>
+          </div>
           {completedOpen && (
             <div className={`${th.panel} border ${th.panelSlate} rounded-xl p-2 space-y-0.5`}>
-              {recentCompleted.map(job => (
+              {historyJobs.map(job => (
                 <QueueRow key={job.id} job={job} isDark={isDark} th={th} pauseResume={pauseResume} isCompleted />
               ))}
             </div>
