@@ -211,6 +211,9 @@ export function useDownloadProcessor() {
 
         await appendLog(jobId, "START", `Profilo #${wcaId} (${i + 1}/${wcaIds.length})`);
 
+        // ── Adaptive timing: measure extraction duration ──
+        const extractionStartMs = Date.now();
+
         if (loopId !== state.activeLoopId) break;
 
         // Check extension availability
@@ -246,7 +249,9 @@ export function useDownloadProcessor() {
         let hasEmail = false;
         let hasPhone = false;
         let companyName = existing?.company_name || `WCA ${wcaId}`;
-
+        let extractedEmailCount = 0;
+        let extractedPhoneCount = 0;
+        let profileSaved = false;
         try {
           const result = await extractContactsRef.current(wcaId);
 
@@ -263,9 +268,11 @@ export function useDownloadProcessor() {
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
             if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
-              const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
-              await appendLog(jobId, "WAIT", `${actualDelay}s`);
-              await new Promise(r => setTimeout(r, actualDelay * 1000));
+              const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
+              const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
+              const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
+              await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
+              await new Promise(r => setTimeout(r, adaptiveDelay * 1000));
             }
             continue;
           }
@@ -398,9 +405,17 @@ export function useDownloadProcessor() {
               }
               if (Object.keys(profileUpdate).length > 0) {
                 await supabase.from("partners").update(profileUpdate).eq("id", partnerId);
+                profileSaved = true;
               }
             }
           }
+
+          // Track extracted counts for indicators
+          if (result.contacts) {
+            extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
+            extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+          }
+          if (result.profileHtml || result.profile?.description) profileSaved = true;
 
           // Post-extraction fallback: if name is still a placeholder, use pre-loaded cacheMap
           if (companyName.startsWith("WCA ") && partnerId) {
@@ -437,11 +452,14 @@ export function useDownloadProcessor() {
 
         processedSet.add(wcaId);
 
-        const contactLabel = hasEmail && hasPhone ? "email+tel"
-          : hasEmail ? "solo email"
-          : hasPhone ? "solo tel"
-          : "nessun contatto";
-        await appendLog(jobId, hasAny ? "OK" : "INFO", `${companyName} (#${wcaId}) — ${contactLabel}`);
+        // ── Clear per-field OK indicators ──
+        const indicators = [
+          profileSaved ? "📋 Profilo ✓" : "📋 Profilo ✗",
+          hasEmail ? `📧 Email ✓ (${extractedEmailCount})` : "📧 Email ✗",
+          hasPhone ? `📱 Tel ✓ (${extractedPhoneCount})` : "📱 Tel ✗",
+        ].join("  ");
+
+        await appendLog(jobId, hasAny ? "OK" : "WARN", `${companyName} (#${wcaId}) — ${indicators}`);
 
         await supabase.from("download_jobs").update({
           current_index: processedSet.size,
@@ -460,11 +478,13 @@ export function useDownloadProcessor() {
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
         }
 
-        // Delay between profiles
+        // ── Adaptive delay: subtract extraction time from target ──
         if (i < wcaIds.length - 1 && !state.cancel && !state.stopped && loopId === state.activeLoopId) {
-          const actualDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
-          await appendLog(jobId, "WAIT", `${actualDelay}s`);
-          await new Promise(r => setTimeout(r, actualDelay * 1000));
+          const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
+          const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
+          const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
+          await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
+          await new Promise(r => setTimeout(r, adaptiveDelay * 1000));
         }
       }
 
