@@ -1,122 +1,108 @@
 
+# Integrazione Resend per Invio Email Diretto
 
-# Rifattorizzazione Partner Hub
+## Cosa faremo
 
-## Obiettivo
+Sostituiremo il pulsante `mailto:` con un invio email diretto tramite Resend API, usando una Edge Function come backend. L'email partira' dal vostro dominio personalizzato, senza passare dal client di posta locale.
 
-Spezzare il monolite `PartnerHub.tsx` (1337 righe) e eliminare la duplicazione con `PartnerListPanel.tsx` (541 righe) estraendo componenti e utilita' condivise.
+## Prerequisiti
 
-## Struttura Finale dei File
+Prima di procedere, servira':
+1. **Creare un account Resend** su [resend.com](https://resend.com) (gratuito, 100 email/giorno)
+2. **Verificare il dominio** dal pannello Resend (aggiungere i record DNS indicati da Resend)
+3. **Generare una API Key** dal pannello Resend
+4. La API Key verra' salvata in modo sicuro nel backend di Lovable Cloud
 
-```text
-src/
-  lib/
-    partnerUtils.ts              (NUOVO - utilita' condivise)
-  components/
-    partners/
-      shared/
-        ServiceIcons.ts          (NUOVO - SERVICE_ICONS, getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES)
-        NetworkLogos.ts          (NUOVO - NETWORK_LOGOS, getNetworkLogo)
-        MiniStars.tsx            (NUOVO - componente stelle)
-        TrophyRow.tsx            (NUOVO - componente trofeo anni)
-        CardSocialIcons.tsx      (NUOVO - icone social inline)
-        PartnerSorting.ts        (NUOVO - sortPartners, SortOption, getBranchCountries)
-      PartnerDetailFull.tsx      (NUOVO - dettaglio dal PartnerHub, layout a 2 colonne)
-      PartnerDetailCompact.tsx   (NUOVO - dettaglio dal PartnerListPanel, layout compatto con isDark)
-      PartnerListItem.tsx        (NUOVO - singola riga partner nella lista)
-      ...file esistenti invariati
-  pages/
-    PartnerHub.tsx               (RIDOTTO - solo layout + stato + composizione)
-  components/
-    operations/
-      PartnerListPanel.tsx       (RIDOTTO - importa da shared, usa PartnerDetailCompact)
+## Componenti da creare/modificare
+
+### 1. Salvare la API Key di Resend
+
+Useremo lo strumento di gestione segreti per richiedere la chiave `RESEND_API_KEY`.
+
+### 2. Creare Edge Function `send-email`
+
+File: `supabase/functions/send-email/index.ts`
+
+La funzione:
+- Riceve `to`, `subject`, `html`, `from` (opzionale), `partner_id` (opzionale)
+- Chiama l'API Resend (`https://api.resend.com/emails`)
+- Logga l'interazione nella tabella `interactions` (tipo `email`, con subject e destinatario)
+- Restituisce successo/errore con CORS headers
+
+Configurazione in `supabase/config.toml`:
+```toml
+[functions.send-email]
+verify_jwt = false
 ```
 
-## Dettaglio Cambiamenti
+### 3. Aggiornare il pulsante in `PartnerListPanel.tsx`
 
-### 1. Creare `src/components/partners/shared/ServiceIcons.ts`
+Il pulsante "Invia email":
+- Apre un piccolo dialog/popover inline con:
+  - Destinatario (pre-compilato, read-only)
+  - Oggetto (pre-compilato, editabile)
+  - Corpo messaggio (textarea)
+  - Pulsante "Invia"
+- Al click su "Invia", chiama la Edge Function `send-email`
+- Mostra toast di successo/errore
+- L'interazione viene salvata automaticamente nel database
 
-Estrarre da entrambi i file:
-- `SERVICE_ICONS` (mappa categoria -> componente Lucide)
-- `PARTNER_TYPE_ICONS` (solo da Hub)
-- `getServiceIcon(category)` 
-- `TRANSPORT_SERVICES` e `SPECIALTY_SERVICES` (costanti array)
+### 4. Creare componente `SendEmailDialog.tsx`
 
-### 2. Creare `src/components/partners/shared/NetworkLogos.ts`
+File: `src/components/operations/SendEmailDialog.tsx`
 
-Estrarre da PartnerHub:
-- `NETWORK_LOGOS` (mappa nome -> path logo)
-- `getNetworkLogo(name)` (funzione di lookup fuzzy)
+Dialog modale compatto con:
+- Campo "A" (read-only, email del contatto)
+- Campo "Oggetto" (pre-compilato con "Contatto da {company_name}")
+- Textarea "Messaggio"
+- Select opzionale per template (futuro)
+- Pulsanti "Annulla" e "Invia"
+- Stato di caricamento durante l'invio
+- Supporto tema chiaro/scuro (`isDark`)
 
-### 3. Creare `src/components/partners/shared/MiniStars.tsx`
+## Flusso Utente
 
-Componente con prop `rating` e `size` opzionale (default `"w-3 h-3"`). Unifica le due versioni: quella di Hub (con prop `size`) e quella di PartnerListPanel (size fisso).
+```text
+1. Hover su partner nella lista Operations
+2. Click sull'icona busta (Send)
+3. Si apre dialog con destinatario pre-compilato
+4. Utente scrive oggetto e messaggio
+5. Click "Invia"
+6. Edge Function invia via Resend + salva in DB
+7. Toast "Email inviata con successo"
+8. Dialog si chiude
+```
 
-### 4. Creare `src/components/partners/shared/TrophyRow.tsx`
+## Dettagli Tecnici
 
-Componente semplice `TrophyRow({ years })` — esiste solo in Hub ma serve tenerlo separato per riusabilita'.
+### Edge Function `send-email`
 
-### 5. Creare `src/components/partners/shared/CardSocialIcons.tsx`
+```text
+POST /send-email
+Body: { to, subject, html, from?, partner_id? }
 
-Spostare `CardSocialIcons` da PartnerHub. Questo componente fa una query DB per ogni partner visibile (problema N+1 noto, verra' marcato con un TODO per ottimizzazione futura).
+1. Legge RESEND_API_KEY da env
+2. POST https://api.resend.com/emails con { from, to, subject, html }
+3. Se partner_id presente, INSERT in interactions (tipo email)
+4. Ritorna { success, messageId } o { error }
+```
 
-### 6. Creare `src/lib/partnerUtils.ts`
+### Mittente predefinito
 
-Funzioni pure condivise:
-- `getBranchCountries(partner)` — duplicata identica in entrambi i file
-- `sortPartners(partners, sortBy)` — attualmente solo in Hub, ma utile ovunque
-- Type `SortOption`
+Il campo `from` usera' un indirizzo predefinito configurabile (es. `noreply@vostrodominio.com`). Potra' essere personalizzato nella tabella `app_settings` con chiave `default_sender_email`.
 
-### 7. Creare `src/components/partners/PartnerDetailFull.tsx`
+## File coinvolti
 
-Estrarre la funzione `PartnerDetail` da PartnerHub (righe 739-1337, ~600 righe). Questo e' il dettaglio ricco con:
-- Layout a 2 colonne
-- Network logos
-- KPI grid
-- Timeline e Reminders
-- Mini Globe
-- Mercati e routing con bandiere
+| File | Azione |
+|------|--------|
+| `supabase/functions/send-email/index.ts` | Nuovo |
+| `supabase/config.toml` | Aggiungere sezione send-email |
+| `src/components/operations/SendEmailDialog.tsx` | Nuovo |
+| `src/components/operations/PartnerListPanel.tsx` | Modificare pulsante Send |
 
-Props: `{ partner, onToggleFavorite }`
+## Ordine di esecuzione
 
-### 8. Creare `src/components/partners/PartnerDetailCompact.tsx`
-
-Estrarre la funzione `PartnerDetail` da PartnerListPanel (righe 348-531, ~180 righe). Questo e' il dettaglio compatto per Operations con:
-- Pulsante "back"
-- Supporto `isDark` / tema
-- Layout a singola colonna
-
-Props: `{ partner, onBack, onToggleFavorite, isDark }`
-
-### 9. Ridurre `PartnerHub.tsx`
-
-Il file rimane con:
-- Stato del componente (search, filters, selectedId, viewMode, etc.)
-- Logica filtri client-side
-- Layout `ResizablePanelGroup`
-- Lista partner (potrebbe diventare un componente separato in futuro, ma per ora resta inline per non frammentare troppo)
-- Importa `PartnerDetailFull` per il pannello destro
-
-Stima: da 1337 righe a circa 500-600 righe.
-
-### 10. Ridurre `PartnerListPanel.tsx`
-
-Rimuovere:
-- `SERVICE_ICONS`, `getServiceIcon`, `MiniStars`, `TRANSPORT_SERVICES`, `getBranchCountries` — sostituiti con import da shared
-- `PartnerDetail` inline — sostituito con import di `PartnerDetailCompact`
-
-Stima: da 541 righe a circa 250-300 righe.
-
-## Ordine di Esecuzione
-
-1. Creare tutti i file shared (ServiceIcons, NetworkLogos, MiniStars, TrophyRow, CardSocialIcons, partnerUtils) — nessuna dipendenza tra loro
-2. Creare PartnerDetailFull e PartnerDetailCompact — dipendono dai file shared
-3. Aggiornare PartnerHub.tsx — rimuovere codice estratto, aggiungere import
-4. Aggiornare PartnerListPanel.tsx — rimuovere codice estratto, aggiungere import
-
-## Rischi e Mitigazioni
-
-- **Nessuna modifica funzionale**: il refactoring e' puramente strutturale, non cambia comportamenti o stili
-- **PartnerDetailFull vs Compact divergono intenzionalmente**: non vengono unificati perche' servono contesti diversi (Hub ha layout ricco, Operations ha layout compatto con tema scuro)
-- **CardSocialIcons N+1**: viene marcato con `// TODO: batch fetch` ma non risolto in questo refactoring per limitare lo scope
-
+1. Richiedere la `RESEND_API_KEY` all'utente
+2. Creare la Edge Function `send-email`
+3. Creare il componente `SendEmailDialog`
+4. Aggiornare `PartnerListPanel` per usare il dialog invece del `mailto:`
