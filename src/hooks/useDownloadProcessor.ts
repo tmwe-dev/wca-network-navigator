@@ -119,6 +119,8 @@ export function useDownloadProcessor() {
         status: "paused",
         error_message: "⚠️ Sessione WCA non attiva. Effettua il login su wcaworld.com e riprova.",
       }).eq("id", jobId);
+      // STOP TOTALE: non ciclare sugli altri job in coda
+      state.stopped = true;
       return;
     }
 
