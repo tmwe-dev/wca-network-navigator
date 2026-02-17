@@ -1,94 +1,68 @@
 
 
-# Piano: Fix definitivo del processore di download
+# Analisi: Profili "non trovati" durante il download
 
-## Problema identificato
+## Causa radice identificata
 
-Il processore ha una race condition critica:
+Nel file `src/hooks/useDownloadProcessor.ts` (riga 177-179) c'e un **timeout di 4 secondi** che compete con l'estrazione del profilo:
 
-1. `startJob` controlla `isProcessing` (stato React) per evitare esecuzioni concorrenti
-2. `setIsProcessing(true)` e asincrono -- non si aggiorna immediatamente
-3. L'intervallo di auto-start (ogni 10s) trova lo stesso job `pending` e chiama `startJob` di nuovo
-4. La seconda chiamata passa il guard perche `isProcessing` e ancora `false` nel closure
-5. La seconda chiamata fallisce l'atomic claim (il job e gia `running`) e fa `setIsProcessing(false)` nel finally
-6. Il ciclo si ripete all'infinito: il job resta "running" ma nessuno lo processa realmente
+```text
+const timeout4s = new Promise(r => setTimeout(() => r({
+  success: false, error: "Timeout 4s", pageLoaded: false
+}), 4000));
 
-I log confermano: `[Processor] Auto-starting pending job: 287eab81...` appare 3 volte in 4 minuti.
+const result = await Promise.race([extractContacts(wcaId), timeout4s]);
+```
 
-## Soluzione
+Ma l'estensione Chrome (background.js) per completare l'estrazione deve:
 
-Sostituire il guard basato su `useState` con un **ref sincrono** (`useRef<boolean>`) che si aggiorna istantaneamente, eliminando la race condition.
+1. Aprire un nuovo tab (0.5-2s)
+2. Caricare la pagina WCA con `waitForTabLoad` (fino a 30s)
+3. Verificare che la pagina sia caricata (`checkPageLoaded`)
+4. Eseguire lo script di estrazione (`extractFullProfileFromPage`)
+5. Salvare i contatti sul server (`sendContactsToServer`)
+6. Chiudere il tab e rispondere
+
+Tempo reale tipico: **5-15 secondi**. Massimo: **35 secondi**.
+
+Il timeout di 4 secondi scade PRIMA che l'estensione finisca, quindi:
+- Il processore riceve `pageLoaded: false` dal timeout
+- Il profilo viene marcato come "skipped" / "non caricato"
+- Il contatore `contacts_missing` aumenta
+- Il profilo viene saltato definitivamente (politica Zero Retry)
+
+## Effetto collaterale nascosto
+
+L'estensione continua a lavorare in background anche dopo il timeout del processore. Se trova contatti, li salva comunque sul server tramite `sendContactsToServer`. Quindi i dati ESISTONO nel database, ma il processore non li vede e li conta come "mancanti".
+
+## Soluzione proposta
 
 ### File: `src/hooks/useDownloadProcessor.ts`
 
-Riscrittura completa (~200 righe) con queste correzioni:
+Aumentare il timeout da **4 secondi a 40 secondi**, allineandolo al timeout dell'estensione (30s per il caricamento della pagina + margine per estrazione e salvataggio).
 
 ```text
-PRIMA (rotto):
-  const [isProcessing, setIsProcessing] = useState(false);
-  // ...
-  const startJob = useCallback(async (jobId) => {
-    if (isProcessing) return;      // <-- closure stale!
-    setIsProcessing(true);          // <-- asincrono!
+PRIMA:
+  const timeout4s = new Promise(r =>
+    setTimeout(() => r({ success: false, error: "Timeout 4s", pageLoaded: false }), 4000)
+  );
 
-DOPO (corretto):
-  const processingRef = useRef(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  // ...
-  const startJob = useCallback(async (jobId) => {
-    if (processingRef.current) return;   // <-- sincrono, immediato
-    processingRef.current = true;         // <-- sincrono, immediato
-    setIsProcessing(true);                // <-- solo per UI
+DOPO:
+  const timeout40s = new Promise(r =>
+    setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
+  );
 ```
 
-Altre correzioni incluse:
+Questa e l'unica modifica necessaria. Nessun altro file coinvolto.
 
-1. **Rimuovere `isProcessing` dalle dipendenze di `useCallback`** -- attualmente causa la ricreazione del callback ad ogni cambio di stato, rompendo il pattern ref
-2. **Semplificare l'auto-start** -- controllare `processingRef.current` invece di `isProcessingRef.current` (un ref in meno)
-3. **Aggiungere log di debug** all'ingresso e uscita di `startJob` per diagnostica futura
-4. **Garantire che `processingRef.current = false`** sia sempre eseguito nel `finally`, anche in caso di errore
+### Perche 40 secondi
 
-### Struttura del nuovo processore
+- L'estensione ha un timeout di caricamento tab di 30 secondi
+- Dopo il caricamento, servono 1-3 secondi per l'estrazione
+- Dopo l'estrazione, servono 1-3 secondi per il salvataggio server-side
+- 40 secondi copre tutti questi scenari con margine
 
-Nessun cambio architetturale -- stessa logica, stessi file, stessa interfaccia. Solo il fix del guard:
+### Rischi
 
-```text
-useDownloadProcessor()
-  |
-  |-- processingRef (useRef<boolean>)     // NUOVO: guard sincrono
-  |-- isProcessing (useState<boolean>)    // solo per UI rendering
-  |-- abortRef (useRef<AbortController>)  // invariato
-  |
-  |-- startJob(jobId)
-  |     1. if (processingRef.current) return   // guard sincrono
-  |     2. processingRef.current = true
-  |     3. setIsProcessing(true)               // aggiorna UI
-  |     4. fetch job dal DB
-  |     5. verifySession
-  |     6. atomic claim (WHERE status = pending)
-  |     7. for loop: waitForGreenLight -> extract -> markRequestSent
-  |     8. finally: processingRef.current = false; setIsProcessing(false)
-  |
-  |-- emergencyStop()                     // invariato
-  |
-  |-- auto-start useEffect (10s interval)
-  |     - if (processingRef.current) return   // usa il ref diretto
-  |     - query pending jobs
-  |     - call startJob
-```
-
-### File modificati
-
-Solo **1 file**: `src/hooks/useDownloadProcessor.ts`
-
-Nessun altro file tocco. Il resto (ActionPanel, JobMonitor, Operations, useDownloadJobs, wcaCheckpoint, SpeedGauge) resta identico.
-
-## Dettaglio tecnico delle modifiche
-
-1. Aggiungere `const processingRef = useRef(false)` accanto a `useState`
-2. Nel `startJob`: prima riga `if (processingRef.current) return`, seconda riga `processingRef.current = true`
-3. Nel `finally`: `processingRef.current = false` prima di `setIsProcessing(false)`
-4. Rimuovere `isProcessing` dall'array di dipendenze di `useCallback` (usare `[]` o `[queryClient]`)
-5. Rimuovere `isProcessingRef` (ridondante con `processingRef`)
-6. Nell'auto-start `useEffect`: sostituire `isProcessingRef.current` con `processingRef.current`
+Nessuno. Il checkpoint `waitForGreenLight` (15 secondi tra le richieste) resta invariato. Il tempo totale per profilo diventa al massimo ~55 secondi nel caso peggiore (15s attesa + 40s estrazione), ma nella pratica resta ~20-25 secondi (15s attesa + 5-10s estrazione). I profili che oggi vengono erroneamente saltati verranno invece processati correttamente.
 
