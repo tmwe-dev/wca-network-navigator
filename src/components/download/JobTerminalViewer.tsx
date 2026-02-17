@@ -65,7 +65,7 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 40);
   };
 
-  const entries = logs || [];
+  const entries = (logs || []).filter(e => e.type !== "GATE");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

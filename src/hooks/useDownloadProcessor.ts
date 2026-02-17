@@ -83,39 +83,88 @@ export function useDownloadProcessor() {
     }
   };
 
-  // Pre-job session check: uses extension to verify real WCA access
+  // Pre-job session check: uses extension to verify real WCA access + auto-login
   const verifySessionBeforeJob = useCallback(async (jobId: string): Promise<boolean> => {
     try {
-      // Use extension to open a test profile and check if session works
       const extOk = availableRef.current || await checkAvailableRef.current();
       if (!extOk) {
         await appendLog(jobId, "WARN", "❌ Estensione Chrome non disponibile");
         return false;
       }
 
-      // Import verifySession dynamically from the bridge refs
-      const result = await new Promise<any>((resolve) => {
-        const requestId = `verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        const timer = setTimeout(() => resolve({ success: false }), 30000);
-        const handler = (event: MessageEvent) => {
-          if (event.source !== window) return;
-          if (event.data?.direction !== "from-extension") return;
-          if (event.data?.requestId !== requestId) return;
-          clearTimeout(timer);
-          window.removeEventListener("message", handler);
-          resolve(event.data?.response || { success: false });
-        };
-        window.addEventListener("message", handler);
-        window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
-      });
+      // Step 1: verify session via extension
+      const verify = async () => {
+        return new Promise<any>((resolve) => {
+          const requestId = `verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          const timer = setTimeout(() => resolve({ success: false }), 30000);
+          const handler = (event: MessageEvent) => {
+            if (event.source !== window) return;
+            if (event.data?.direction !== "from-extension") return;
+            if (event.data?.requestId !== requestId) return;
+            clearTimeout(timer);
+            window.removeEventListener("message", handler);
+            resolve(event.data?.response || { success: false });
+          };
+          window.addEventListener("message", handler);
+          window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
+        });
+      };
 
+      const result = await verify();
       if (result.success && result.authenticated) {
-        await appendLog(jobId, "INFO", "✅ Sessione WCA attiva — procedo");
+        await appendLog(jobId, "INFO", "✅ Sessione WCA attiva");
         return true;
       }
 
-      await appendLog(jobId, "WARN", "❌ Sessione WCA non attiva — job in pausa");
-      return false;
+      // Step 2: auto-login with saved credentials
+      await appendLog(jobId, "INFO", "🔑 Tentativo auto-login...");
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
+        const res = await fetch(url, {
+          headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        });
+        const creds = await res.json();
+        if (!creds.username || !creds.password) {
+          await appendLog(jobId, "WARN", "❌ Credenziali WCA non configurate");
+          return false;
+        }
+
+        const loginOk = await new Promise<boolean>((resolve) => {
+          const requestId = `autoLogin_${Date.now()}`;
+          const timer = setTimeout(() => resolve(false), 45000);
+          const handler = (event: MessageEvent) => {
+            if (event.source !== window) return;
+            if (event.data?.direction !== "from-extension") return;
+            if (event.data?.requestId !== requestId) return;
+            clearTimeout(timer);
+            window.removeEventListener("message", handler);
+            resolve(event.data?.response?.success === true);
+          };
+          window.addEventListener("message", handler);
+          window.postMessage({
+            direction: "from-webapp", action: "autoLogin", requestId,
+            username: creds.username, password: creds.password,
+          }, "*");
+        });
+
+        if (!loginOk) {
+          await appendLog(jobId, "WARN", "❌ Auto-login fallito");
+          return false;
+        }
+
+        // Step 3: re-verify after login
+        const retry = await verify();
+        if (retry.success && retry.authenticated) {
+          await appendLog(jobId, "INFO", "✅ Sessione WCA attiva dopo auto-login");
+          return true;
+        }
+        await appendLog(jobId, "WARN", "❌ Sessione ancora non attiva dopo login");
+        return false;
+      } catch (err) {
+        console.error("[DownloadProcessor] Auto-login error:", err);
+        await appendLog(jobId, "WARN", "❌ Errore durante auto-login");
+        return false;
+      }
     } catch (err) {
       console.error("[DownloadProcessor] Pre-job session check failed:", err);
       return false;
@@ -272,10 +321,7 @@ export function useDownloadProcessor() {
         // ══════════════════════════════════════════════════════
         // CHECKPOINT GATE — wait for green zone before any WCA call
         // ══════════════════════════════════════════════════════
-        const greenOk = await waitForGreenLight(
-          ac.signal,
-          (secsLeft) => appendLog(jobId, "GATE", `⏳ Checkpoint: ${secsLeft}s alla zona verde`)
-        );
+        const greenOk = await waitForGreenLight(ac.signal);
         if (!greenOk || shouldStop()) break;
 
         // Extract contacts via Chrome Extension

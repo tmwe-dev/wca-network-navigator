@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from "react";
-import { OctagonX, Loader2 } from "lucide-react";
+import { OctagonX, Loader2, Hourglass, CheckCircle2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { getLastRequestTimestamp } from "@/lib/wcaCheckpoint";
 
@@ -61,9 +61,37 @@ export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
   const nx = cx + needleLen * Math.cos(needleRad);
   const ny = cy + needleLen * Math.sin(needleRad);
 
+  const GREEN_ZONE = 15;
+  const isWaiting = elapsed < GREEN_ZONE && elapsed > 0;
+  const countdown = Math.max(0, GREEN_ZONE - elapsed);
+  const [showGo, setShowGo] = useState(false);
+  const prevWaitingRef = useState({ current: false })[0];
+
+  useEffect(() => {
+    if (prevWaitingRef.current && !isWaiting && elapsed > 0) {
+      setShowGo(true);
+      const t = setTimeout(() => setShowGo(false), 2000);
+      return () => clearTimeout(t);
+    }
+    prevWaitingRef.current = isWaiting;
+  }, [isWaiting, elapsed]);
+
   return (
     <div className="flex items-center gap-2">
       <div className="relative" style={{ width: 80, height: 52 }}>
+        {/* Hourglass overlay */}
+        {isWaiting && (
+          <div className="absolute -top-5 left-0 right-0 flex items-center justify-center gap-1 z-10">
+            <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-spin" style={{ animationDuration: "2s" }} />
+            <span className="text-[10px] font-mono font-bold text-amber-400">{countdown}s</span>
+          </div>
+        )}
+        {showGo && !isWaiting && (
+          <div className="absolute -top-5 left-0 right-0 flex items-center justify-center gap-1 z-10 animate-pulse">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[10px] font-mono font-bold text-emerald-400">VIA</span>
+          </div>
+        )}
         <svg viewBox="0 0 80 52" width={80} height={52}>
           {/* Red zone: 0-10s → -90° to -30° */}
           <path d={makeArc(-90, -30)} fill="none" stroke="#ef4444" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
