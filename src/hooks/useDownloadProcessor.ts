@@ -186,6 +186,21 @@ export function useDownloadProcessor() {
           // 4. MARK REQUEST SENT — immediately after extraction
           markRequestSent();
 
+          // Detect WCA "Member not found" response — profile no longer exists on WCA
+          const isMemberNotFound = (result as any).companyName?.toLowerCase().includes("member not found") ||
+            (result as any).error?.toLowerCase().includes("member not found");
+
+          if (isMemberNotFound) {
+            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} non esiste più su WCA — saltato`);
+            contactsMissing++;
+            processedSet.add(wcaId);
+            await supabase.from("download_jobs").update({
+              current_index: processedSet.size, processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId, last_contact_result: "not_found", contacts_missing_count: contactsMissing,
+            }).eq("id", jobId);
+            continue;
+          }
+
           // Zero Retry: skip if page didn't load
           if (result.pageLoaded === false) {
             await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
@@ -225,7 +240,7 @@ export function useDownloadProcessor() {
           }
 
           // Save company name
-          if (result.companyName && !result.companyName.startsWith("WCA ") && partnerId) {
+          if (result.companyName && !result.companyName.startsWith("WCA ") && !result.companyName.toLowerCase().includes("member not found") && partnerId) {
             companyName = result.companyName;
             await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
           }
