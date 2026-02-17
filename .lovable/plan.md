@@ -1,35 +1,21 @@
 
-# Piano: ActiveJobBar piu chiara e visibile
 
-## Problema
-La barra del job attivo in alto e troppo compatta e confusa. Troppe informazioni su una riga sola rendono difficile capire a colpo d'occhio se c'e un job in esecuzione, in pausa, o se non ce n'e nessuno.
+# Piano: Pulsante "Riprendi" nella Cronologia per job cancellati incompleti
 
-## Soluzione
-Ridisegnare la `ActiveJobBar` per renderla immediatamente leggibile. Layout su due righe:
+## Modifica
 
-- **Riga 1**: Stato chiaro a sinistra (pallino animato + etichetta "ATTIVO" / "IN PAUSA"), percentuale grande al centro, pulsanti azione a destra
-- **Riga 2**: Barra di progresso full-width con dettagli sotto (paese, contatore, ultimo partner)
+Un solo file da toccare: `src/components/download/JobMonitor.tsx`, componente `QueueRow`.
 
-Quando non ci sono job attivi, il componente resta nascosto (come ora).
+Nella sezione "isCompleted" (riga 153-157), quando il job e `cancelled` e `current_index < total_count` (cioe non e stato completato), aggiungere un pulsante "Riprendi" accanto al badge rosso. Cosi l'utente puo riprendere direttamente dalla cronologia senza dover ricreare il job.
 
-## Dettagli tecnici
+### Cosa cambia nella QueueRow (righe 153-157)
 
-### File modificato: `src/components/download/ActiveJobBar.tsx`
+Logica attuale:
+- Se `isCompleted`: mostra solo un badge verde (completato) o grigio (cancellato)
 
-Modifiche:
-- **Etichetta di stato prominente**: badge colorato "ATTIVO" (verde pulsante) o "IN PAUSA" (giallo) accanto al pallino, font piu grande
-- **Percentuale ancora piu grande**: da `text-lg` a `text-2xl`, centrata e ben visibile
-- **Barra di progresso full-width**: spostata su una riga dedicata sotto, larga tutto il pannello invece che `w-32`
-- **Dettagli secondari sotto la barra**: paese + contatore + ultimo partner + stats contatti, tutti su una riga separata con testo piu piccolo
-- **Rimozione del clutter**: i badge contatto (email/phone) dell'ultimo risultato vengono semplificati, niente piu badge multipli sovrapposti
-- **Bordo piu visibile**: quando un job e attivo, il bordo diventa piu marcato (amber-500/40 in dark, sky-300 in light) per attirare l'attenzione
+Nuova logica:
+- Se `isCompleted` e `job.status === "cancelled"` e `job.current_index < job.total_count`: mostra badge rosso + pulsante "Riprendi" (Play icon) che chiama `pauseResume.mutate({ jobId: job.id, action: "resume" })`
+- Altrimenti: comportamento invariato (badge verde per completati, badge grigio per cancellati al 100%)
 
-Layout risultante:
+Nessun altro file da modificare -- la logica `resume` nel hook `usePauseResumeJob` gia gestisce il passaggio da `cancelled` a `running`.
 
-```text
-+--------------------------------------------------+
-| [*] ATTIVO          42%        [⏸] [■] [v]       |
-| ████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
-| 🇮🇹 Italy · 42/100 · Ultimo: ABC Logistics  ✓12 ✗3 |
-+--------------------------------------------------+
-```
