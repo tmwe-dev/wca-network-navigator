@@ -59,6 +59,10 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
   const abortRef = useRef(false);
 
+  // Directory + Download mode
+  const [dirThenDownload, setDirThenDownload] = useState(false);
+  const [autoDownloadPending, setAutoDownloadPending] = useState(false);
+
   // Load cached directory scan
   const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
     queryKey: ["directory-cache", countryCodes, networkKeys],
@@ -184,7 +188,24 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     setScannedMembers([]);
     setScanError(null);
     setSkippedCountries([]);
+    setAutoDownloadPending(false);
   }, [countryCodes.join(",")]);
+
+  // Auto-download after scan completes in "Directory + Download" mode
+  useEffect(() => {
+    if (autoDownloadPending && scanComplete && !isScanning) {
+      setAutoDownloadPending(false);
+      // Small delay to let queries refresh
+      const timer = setTimeout(async () => {
+        toast({
+          title: "📊 Scansione completata",
+          description: `Trovati ${scannedMembers.length} partner. Avvio download automatico...`,
+        });
+        await handleStartDownload();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoDownloadPending, scanComplete, isScanning]);
 
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
@@ -479,13 +500,33 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
             <Switch checked={skipCachedDirs} onCheckedChange={setSkipCachedDirs} />
             Salta directory già scaricate
           </label>
+          <label className={`flex items-center gap-2 text-sm cursor-pointer ${th.body}`}>
+            <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} />
+            <span className="flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5" />
+              Scarica dopo scansione
+            </span>
+          </label>
+          {dirThenDownload && (
+            <div className={`p-2 rounded-lg border text-xs ${isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+              ⚡ Dopo la scansione, partirà automaticamente il download dei profili mancanti
+            </div>
+          )}
           <Button
-            onClick={handleStartScan}
+            onClick={() => {
+              if (dirThenDownload) {
+                setAutoDownloadPending(true);
+              }
+              handleStartScan();
+            }}
             disabled={isScanning}
             className={`w-full ${th.btnPri}`}
           >
             <FolderDown className="w-4 h-4 mr-2" />
-            {hasCache ? "Aggiorna Directory" : "Scarica Directory"}
+            {dirThenDownload
+              ? (hasCache ? "Aggiorna e Scarica" : "Scansiona e Scarica")
+              : (hasCache ? "Aggiorna Directory" : "Scarica Directory")
+            }
           </Button>
         </>
       ) : (
