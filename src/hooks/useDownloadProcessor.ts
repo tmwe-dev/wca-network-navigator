@@ -261,6 +261,10 @@ export function useDownloadProcessor() {
     /** Quick bail check */
     const shouldStop = () => state.cancel || state.stopped || loopId !== state.activeLoopId || ac.signal.aborted;
 
+    // Random pause anti-detection state
+    let randomPauseCounter = 0;
+    let nextPauseAt = Math.floor(Math.random() * 6) + 3; // 3-8
+
     try {
       for (let i = startIndex; i < wcaIds.length; i++) {
         if (shouldStop()) break;
@@ -555,6 +559,18 @@ export function useDownloadProcessor() {
         }
 
         // Timing now handled by checkpoint gate at top of loop
+
+        // ── Random pause anti-detection ──
+        if (s.randomPause) {
+          randomPauseCounter++;
+          if (randomPauseCounter >= nextPauseAt) {
+            const extraDelay = Math.floor(Math.random() * 11) + 5; // 5-15s
+            await appendLog(jobId, "INFO", `⏸ Pausa anti-rilevamento (${extraDelay}s)`);
+            try { await abortableDelay(extraDelay * 1000, ac.signal); } catch { break; }
+            randomPauseCounter = 0;
+            nextPauseAt = Math.floor(Math.random() * 6) + 3; // 3-8
+          }
+        }
       }
 
       // Complete job
