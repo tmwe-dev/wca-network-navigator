@@ -89,6 +89,7 @@ export function useDownloadProcessor() {
 
       let contactsFound = job.contacts_found_count || 0;
       let contactsMissing = job.contacts_missing_count || 0;
+      let consecutiveEmpty = 0;
 
       // ═══════════════════════════════════════
       // MAIN LOOP — one profile at a time
@@ -177,6 +178,28 @@ export function useDownloadProcessor() {
         } catch (err) {
           markRequestSent();
           await appendLog(jobId, "ERROR", `Errore #${wcaId}: ${(err as Error).message || err}`);
+        }
+
+        // ── Consecutive empty detection (session expiry) ──
+        const isCompletelyEmpty = !profileSaved && !hasEmail && !hasPhone;
+        if (isCompletelyEmpty) {
+          consecutiveEmpty++;
+          if (consecutiveEmpty >= 3) {
+            await appendLog(jobId, "WARN", "⚠️ 3 profili vuoti consecutivi — verifica sessione...");
+            const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+            if (recheck) {
+              await appendLog(jobId, "INFO", "✅ Sessione ancora attiva — continuo");
+              consecutiveEmpty = 0;
+            } else {
+              await appendLog(jobId, "WARN", "❌ Sessione WCA scaduta — job in pausa");
+              await supabase.from("download_jobs")
+                .update({ status: "paused", error_message: "⚠️ Sessione WCA scaduta durante il job." })
+                .eq("id", jobId);
+              return;
+            }
+          }
+        } else {
+          consecutiveEmpty = 0;
         }
 
         // Update counters and log
