@@ -1,66 +1,59 @@
 
-# Modalita "Directory + Download" automatica
 
-## Cosa cambia
+# Pulizia DB + Download Profili Mancanti
 
-Aggiungere una nuova modalita nell'ActionPanel: **"Directory + Download"**. Quando attivata, il sistema:
+## Il problema
 
-1. Scarica la directory fresca del paese selezionato (come fa gia la modalita "Solo Directory")
-2. Confronta gli ID trovati con quelli gia nel database (con profilo completo)
-3. Crea automaticamente un job di download SOLO per gli ID mancanti/incompleti
-4. Il tutto con un singolo click
+- 837 partner US nel database
+- Solo 137 hanno il profilo scaricato (`raw_profile_html`)
+- 700 sono senza profilo
+- Alcuni di questi 837 non esistono piu su WCA (generano errori "Member not found")
 
-## Comportamento attuale vs nuovo
+## Cosa faremo
 
-```text
-OGGI (2 click manuali):
-  Click 1: "Solo Directory ON" --> scansiona directory --> STOP
-  Click 2: "Solo Directory OFF" --> seleziona modalita --> avvia download
+### Passo 1: Aggiungere la pulizia automatica dopo la scansione directory
 
-NUOVO (1 click):
-  Click: "Directory + Download" --> scansiona directory --> confronta DB --> avvia download automatico
-```
+Quando la scansione directory fresca si completa (in modalita "Scarica dopo scansione"), il sistema:
+
+1. Prende gli ID freschi trovati nella directory
+2. Li confronta con i partner nel DB per quel paese
+3. **Elimina dal DB** i partner che NON sono piu nella directory (ID stale/obsoleti)
+4. Mostra un riepilogo: "Rimossi X partner obsoleti, da scaricare: Y profili mancanti"
+5. Avvia il download solo dei profili mancanti (`raw_profile_html IS NULL`)
+
+### Passo 2: Forzare modalita "Senza profilo" nel download automatico
+
+Quando il download parte automaticamente dopo la pulizia, usa sempre la modalita `no_profile` (scarica solo chi non ha `raw_profile_html`), ignorando la selezione manuale.
 
 ## Dettaglio tecnico
 
 ### File: `src/components/download/ActionPanel.tsx`
 
-1. Aggiungere un terzo stato al toggle "Solo Directory":
-   - OFF = download normale (usa cache esistente)
-   - Solo Directory = solo scansione (come oggi)
-   - **Directory + Download** = scansione fresca + download automatico dei mancanti
+Modificare il `useEffect` che gestisce l'auto-download (righe 194-208):
 
-2. Implementazione: quando l'utente clicca "Avvia" in modalita "Directory + Download":
-   - Esegue `handleStartScan()` normalmente (scarica tutte le pagine della directory)
-   - Al completamento della scansione, invece di fermarsi, calcola automaticamente gli `idsToDownload` dai risultati freschi
-   - Verifica la sessione WCA
-   - Crea i job di download solo con gli ID effettivamente mancanti
+1. Dopo che `scanComplete = true` e `autoDownloadPending = true`:
+   - Raccogliere i WCA ID freschi dalla scansione (`scannedMembers`)
+   - Query al DB: tutti i partner del paese con `wca_id`
+   - Calcolare gli ID stale: `dbIds - freshDirectoryIds`
+   - Se ci sono ID stale, eliminarli da `partners` (e tabelle correlate: `partner_contacts`, `partner_networks`, `partner_services`, `partner_certifications`)
+   - Invalidare le query per aggiornare i contatori
+   - Forzare `downloadMode = "no_profile"`
+   - Avviare il download
 
-3. Questo viene implementato aggiungendo un flag `autoDownloadAfterScan` che, quando la scansione termina (`scanComplete = true`), triggera automaticamente `executeDownload()` con i nuovi dati.
+2. La pulizia delle tabelle correlate avviene tramite cascade o query separate (partner_contacts, partner_networks, ecc. referenziano `partner_id`).
 
-### Flusso nel codice
+### Flusso risultante
 
-- Nuovo state: `const [dirThenDownload, setDirThenDownload] = useState(false)`
-- Il toggle attuale "Solo Directory" diventa un selettore a 3 opzioni (o un secondo toggle "Auto-download dopo directory")
-- Quando `dirThenDownload` e attivo e la scansione si completa, un `useEffect` chiama `handleStartDownload()` automaticamente
-- Il confronto con il DB avviene come gia fa il codice attuale (usa `dbWcaSet` e `noProfileWcaSet` per filtrare)
-
-### UI
-
-Il toggle "Solo Directory" resta, e sotto appare un nuovo toggle:
-- **"Scarica dopo scansione"** — visibile solo quando "Solo Directory" e ON
-- Quando attivo, il pulsante cambia testo da "Avvia scansione" a "Scansiona e scarica"
-- Dopo la scansione, mostra un breve riepilogo ("Trovati 1092, da scaricare: 255") e poi parte automaticamente
-
-### Migrazione SQL: pulizia duplicati US
-
-Eseguire una query per unificare i `country_name` duplicati:
 ```text
-UPDATE partners 
-SET country_name = 'United States of America' 
-WHERE country_code = 'US' AND country_name = 'US';
+Click "Scansiona e Scarica"
+  --> Scansione directory pagina per pagina
+  --> Completata: trovati 980 partner reali
+  --> Confronto DB: 837 nel DB, di cui 50 non piu in directory
+  --> Eliminati 50 partner obsoleti dal DB
+  --> Rimasti 787 nel DB, di cui ~650 senza profilo
+  --> Avvio download automatico di ~650 profili
 ```
 
-### Nessuna modifica al processore
+### Nessuna migrazione SQL necessaria
 
-Il processore (`useDownloadProcessor.ts`) non cambia. Il fix agisce a monte nell'ActionPanel, assicurando che i job partano con dati freschi e filtrati.
+La pulizia avviene via client Supabase (`DELETE FROM partners WHERE id IN (...)`). Le tabelle correlate (contacts, networks, services, certifications) dovranno essere pulite prima del partner principale poiche non hanno foreign key con CASCADE.
