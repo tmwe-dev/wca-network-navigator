@@ -1,45 +1,68 @@
 
+# Piano: Fix terminale scroll + Job attivo in evidenza + Pausa casuale anti-detection
 
-# Piano: Clessidra visuale + Fix download non funzionante
+## 3 interventi richiesti
 
-## Due problemi identificati
+### 1. Fix scroll del DownloadTerminal
 
-### Problema 1: Log GATE troppo verbosi nel terminale
-Ogni secondo il checkpoint scrive una riga `GATE: ⏳ Checkpoint: Xs alla zona verde` nel terminale del job. L'utente vuole invece una clessidra animata visuale sopra il cruscotto SpeedGauge, senza righe di testo nel terminale.
+**Problema**: Il terminale non scorre verso il basso automaticamente per mostrare le ultime righe. L'auto-scroll non funziona correttamente perche il `useEffect` dipende da `entries` (array reference che non cambia stabilmente) e l'altezza fissa `h-[220px]` puo risultare limitata nel contesto.
 
-### Problema 2: Download non funziona
-Il `verifySessionBeforeJob` nel processor (righe 87-123) fa un `postMessage("verifySession")` "grezzo" senza auto-login. Se la verifica fallisce, mette il job in pausa con "Sessione WCA non attiva" anche se l'utente e effettivamente loggato. Questo check e DUPLICATO rispetto all'`ensureSession()` che ActionPanel chiama prima di creare il job, ma il processor non usa la stessa logica con auto-login.
+**Soluzione** in `src/components/download/DownloadTerminal.tsx`:
+- Cambiare la dipendenza dell'auto-scroll da `entries` a `entries.length` per garantire il trigger ad ogni nuovo log
+- Aumentare l'altezza a `h-[280px]` per dare piu spazio
+- Aggiungere `flex flex-col` al container e `flex-1` all'area log per adattarsi allo spazio disponibile
+- Usare `scrollIntoView` su un div sentinella alla fine della lista (piu affidabile di `scrollTop`)
 
-## Modifiche tecniche
+### 2. Job attivo ben evidenziato in alto
 
-### 1. `src/hooks/useDownloadProcessor.ts` -- Fix session + rimozione log GATE
+**Problema**: La barra `ActiveJobBar` non mostra chiaramente la percentuale del job attivo. E troppo compatta e difficile da leggere.
 
-**Fix session**: Sostituire `verifySessionBeforeJob` (righe 87-123) con una versione che usa la stessa logica di `useWcaSession.ensureSession()`:
-- Verificare via estensione con `verifySession`
-- Se fallisce, tentare auto-login con credenziali dal DB
-- Se anche il login fallisce, ALLORA mettere in pausa
+**Soluzione** in `src/components/download/ActiveJobBar.tsx`:
+- Aggiungere un valore percentuale grande e visibile (es. `42%`) accanto al nome del paese
+- Rendere la progress bar piu alta (da `h-1.5` a `h-2.5`) e con la percentuale scritta accanto
+- Mostrare stato ("Scaricando... 42%") in modo chiaro con testo piu grande
+- Se non ci sono job attivi, il componente resta nascosto (gia cosi)
 
-**Rimozione log GATE**: Nella chiamata `waitForGreenLight` (riga 275-278), rimuovere il callback `onWaiting` che scrive i log GATE nel terminale. Il countdown sara visivo, non testuale.
+### 3. Toggle "Pausa occasionale" + logica anti-detection
 
-### 2. `src/components/download/SpeedGauge.tsx` -- Aggiunta clessidra animata
+**Problema**: Il timing dei download e troppo regolare e prevedibile. Il server potrebbe riconoscere il pattern come automatizzato.
 
-Aggiungere sopra il cruscotto semicircolare una clessidra animata (icona `Hourglass` di lucide-react) che:
-- Si mostra SOLO quando elapsed < 15s (zona non verde)
-- Ruota/pulsa come animazione CSS
-- Mostra il countdown numerico accanto (es. "8s")
-- Quando elapsed >= 15s, la clessidra scompare e appare un segno di spunta verde con "VIA" per 2 secondi
-- Nessun testo verbose, solo icona + numero
+**Soluzione**:
 
-Layout: la clessidra sta SOPRA il gauge semicircolare, centrata.
+**A) Nuovo setting in `src/hooks/useScrapingSettings.ts`**:
+- Aggiungere `randomPause: boolean` (default `true`) con chiave `scraping_random_pause`
+- Quando attivo, ogni 3-8 profili (random) il sistema inserisce una pausa extra di 5-15 secondi (random)
 
-### 3. `src/components/download/JobTerminalViewer.tsx` -- Filtrare tipo GATE
+**B) Toggle nel pannello download `src/components/download/ActionPanel.tsx`**:
+- Aggiungere in alto un toggle Switch con label "Pausa anti-rilevamento" che salva il setting `scraping_random_pause` nel DB via `useUpdateSetting`
 
-Aggiungere "GATE" alla lista dei tipi da NON visualizzare nel terminale (oppure non servira piu dato che non scriviamo piu log GATE). Come sicurezza, il tipo GATE viene filtrato dalla visualizzazione.
+**C) Logica nel processor `src/hooks/useDownloadProcessor.ts`**:
+- Dopo il checkpoint gate (riga 324), se `randomPause` e attivo: generare un contatore casuale (ogni 3-8 profili) e quando scatta, aggiungere un delay extra di 5-15 secondi
+- Scrivere un log `INFO` nel terminale: "Pausa anti-rilevamento (Xs)"
+- Il contatore si resetta dopo ogni pausa
 
-## Risultato
+## Dettagli tecnici
 
-- Nessuna riga GATE nel terminale: solo i log utili (START, OK, WARN, DONE)
-- Clessidra animata sopra il cruscotto mostra il countdown visivamente
-- Il download funziona di nuovo: session check con auto-login integrato nel processor
-- L'utente vede solo la clessidra che gira e poi il cruscotto che parte
+### File modificati
 
+1. **`src/components/download/DownloadTerminal.tsx`** -- Fix auto-scroll + altezza
+2. **`src/components/download/ActiveJobBar.tsx`** -- Percentuale grande visibile
+3. **`src/hooks/useScrapingSettings.ts`** -- Nuovo campo `randomPause`
+4. **`src/components/download/ActionPanel.tsx`** -- Toggle pausa anti-rilevamento
+5. **`src/hooks/useDownloadProcessor.ts`** -- Logica pausa casuale nel loop di estrazione
+
+### Logica pausa casuale (pseudo-codice)
+
+```text
+nextPauseAt = random(3, 8)  // dopo quanti profili fare pausa
+profileCounter = 0
+
+per ogni profilo:
+  profileCounter++
+  if randomPause attivo AND profileCounter >= nextPauseAt:
+    extraDelay = random(5, 15) secondi
+    log "INFO: Pausa anti-rilevamento (Xs)"
+    attendi extraDelay secondi
+    profileCounter = 0
+    nextPauseAt = random(3, 8)
+```
