@@ -185,15 +185,26 @@ export function useDownloadProcessor() {
         if (isCompletelyEmpty) {
           consecutiveEmpty++;
           if (consecutiveEmpty >= 3) {
-            await appendLog(jobId, "WARN", "⚠️ 3 profili vuoti consecutivi — verifica sessione...");
-            const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
-            if (recheck) {
-              await appendLog(jobId, "INFO", "✅ Sessione ancora attiva — continuo");
-              consecutiveEmpty = 0;
-            } else {
-              await appendLog(jobId, "WARN", "❌ Sessione WCA scaduta — job in pausa");
+            await appendLog(jobId, "WARN", "⚠️ 3 profili vuoti consecutivi — tentativo auto-login...");
+            // Try re-login up to 2 times before giving up
+            let recovered = false;
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+              if (recheck) {
+                await appendLog(jobId, "INFO", `✅ Sessione ripristinata (tentativo ${attempt}) — continuo`);
+                consecutiveEmpty = 0;
+                recovered = true;
+                break;
+              }
+              if (attempt < 2) {
+                await appendLog(jobId, "WARN", `⚠️ Tentativo ${attempt} fallito — riprovo tra 10s...`);
+                await new Promise(r => setTimeout(r, 10000));
+              }
+            }
+            if (!recovered) {
+              await appendLog(jobId, "WARN", "❌ Sessione WCA irrecuperabile — job in pausa");
               await supabase.from("download_jobs")
-                .update({ status: "paused", error_message: "⚠️ Sessione WCA scaduta durante il job." })
+                .update({ status: "paused", error_message: "⚠️ Sessione WCA scaduta — auto-login fallito 2 volte." })
                 .eq("id", jobId);
               return;
             }
