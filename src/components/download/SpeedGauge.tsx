@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useCallback } from "react";
 import { OctagonX, Loader2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
+import { getLastRequestTimestamp } from "@/lib/wcaCheckpoint";
 
 interface SpeedGaugeProps {
   lastUpdatedAt: string | null;
@@ -13,9 +14,13 @@ export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    if (!lastUpdatedAt) { setElapsed(0); return; }
-
-    const calc = () => Math.max(0, Math.floor((Date.now() - new Date(lastUpdatedAt).getTime()) / 1000));
+    // Use checkpoint timestamp as single source of truth; fall back to prop
+    const calc = () => {
+      const cpTs = getLastRequestTimestamp();
+      const ts = cpTs > 0 ? cpTs : (lastUpdatedAt ? new Date(lastUpdatedAt).getTime() : 0);
+      if (ts === 0) return 0;
+      return Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    };
     setElapsed(calc());
 
     const id = setInterval(() => setElapsed(calc()), 1000);
