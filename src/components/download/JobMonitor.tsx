@@ -151,9 +151,17 @@ function QueueRow({ job, isDark, th, pauseResume, isPaused, isCompleted }: {
         </Button>
       )}
       {isCompleted && (
-        <Badge className={`text-[10px] px-1.5 py-0 border-0 ${job.status === "completed" ? "bg-emerald-600 text-white" : "bg-slate-500 text-white"}`}>
-          {job.status === "completed" ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
-        </Badge>
+        <>
+          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${job.status === "completed" ? "bg-emerald-600 text-white" : "bg-slate-500 text-white"}`}>
+            {job.status === "completed" ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+          </Badge>
+          {job.status === "cancelled" && job.current_index < job.total_count && (
+            <Button size="sm" variant="ghost" className={`h-5 px-1.5 text-[10px] ${th.btnResume}`}
+              onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })}>
+              <Play className="w-2.5 h-2.5" />
+            </Button>
+          )}
+        </>
       )}
       {!isPaused && !isCompleted && (
         <span className={`font-mono tabular-nums ${th.dim}`}>{progress}%</span>
