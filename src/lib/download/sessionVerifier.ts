@@ -1,4 +1,5 @@
 import { appendLog } from "./terminalLog";
+import { markRequestSent } from "@/lib/wcaCheckpoint";
 
 /**
  * Verifies the WCA session via the Chrome extension.
@@ -36,6 +37,7 @@ export async function verifyWcaSession(
     });
 
   const result = await verify();
+  markRequestSent(); // Register checkpoint after WCA interaction
   if (result.success && result.authenticated) {
     await appendLog(jobId, "INFO", "✅ Sessione WCA attiva");
     return true;
@@ -74,6 +76,7 @@ export async function verifyWcaSession(
         "*"
       );
     });
+    markRequestSent(); // Register checkpoint after auto-login WCA interaction
 
     if (!loginOk) {
       await appendLog(jobId, "WARN", "❌ Auto-login fallito");
@@ -81,6 +84,7 @@ export async function verifyWcaSession(
     }
 
     const retry = await verify();
+    markRequestSent(); // Register checkpoint after retry verification
     if (retry.success && retry.authenticated) {
       await appendLog(jobId, "INFO", "✅ Sessione attiva dopo auto-login");
       return true;
