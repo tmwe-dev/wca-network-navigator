@@ -28,8 +28,6 @@ export interface DownloadJob {
 
 /**
  * Singleton realtime subscription manager.
- * Ensures only ONE channel exists globally, regardless of how many
- * components call useDownloadJobs().
  */
 const RT_KEY = '__dlJobsRealtimeState__';
 
@@ -63,9 +61,8 @@ export function useDownloadJobs() {
     },
   });
 
-  // Singleton realtime subscription with ref-counting
   useEffect(() => {
-    if (mountedRef.current) return; // strict-mode double-mount guard
+    if (mountedRef.current) return;
     mountedRef.current = true;
 
     const rt = getRtState();
@@ -73,7 +70,6 @@ export function useDownloadJobs() {
     rt.queryClient = queryClient;
 
     if (rt.refCount === 1 && !rt.channel) {
-      // First subscriber: create the channel
       rt.channel = supabase
         .channel("download-jobs-realtime-singleton")
         .on(
@@ -100,11 +96,6 @@ export function useDownloadJobs() {
   return query;
 }
 
-export function useActiveJobCount() {
-  const { data: jobs } = useDownloadJobs();
-  return (jobs || []).filter(j => j.status === "running" || j.status === "pending").length;
-}
-
 export function useCreateDownloadJob() {
   const queryClient = useQueryClient();
 
@@ -116,7 +107,7 @@ export function useCreateDownloadJob() {
       wca_ids: number[];
       delay_seconds: number;
     }) => {
-      // Guard anti-duplicato: skip se esiste già un job pending/running per stesso paese+network
+      // Guard anti-duplicato
       const { data: existing } = await supabase
         .from("download_jobs")
         .select("id")
@@ -198,7 +189,6 @@ export function useDeleteQueuedJobs() {
 
   return useMutation({
     mutationFn: async () => {
-      // Delete ALL non-running jobs (pending, paused, cancelled, completed)
       const { data: jobs } = await supabase
         .from("download_jobs")
         .select("id")
@@ -251,48 +241,6 @@ export function usePurgeOldJobs() {
     },
     onError: (err) => {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
-    },
-  });
-}
-
-export function useEmergencyStop() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      // Get all active jobs
-      const { data: activeJobs } = await supabase
-        .from("download_jobs")
-        .select("id, terminal_log")
-        .in("status", ["running", "pending"]);
-
-      if (!activeJobs || activeJobs.length === 0) return 0;
-
-      // Update all to cancelled with EMERGENCY STOP message
-      const { error } = await supabase
-        .from("download_jobs")
-        .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
-        .in("status", ["running", "pending"]);
-
-      if (error) throw error;
-
-      // Append emergency stop to terminal logs
-      const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      for (const job of activeJobs) {
-        const log = [...((job.terminal_log as any[]) || []), { ts, type: "STOP", msg: "🛑 EMERGENCY STOP attivato dall'utente" }].slice(-100);
-        await supabase.from("download_jobs").update({ terminal_log: log as any }).eq("id", job.id);
-      }
-
-      return activeJobs.length;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
-      if (count && count > 0) {
-        toast({ title: "🛑 EMERGENCY STOP", description: `${count} job bloccati immediatamente`, variant: "destructive" });
-      }
-    },
-    onError: (err) => {
-      toast({ title: "Errore Emergency Stop", description: err.message, variant: "destructive" });
     },
   });
 }

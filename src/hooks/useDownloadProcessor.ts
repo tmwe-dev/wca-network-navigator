@@ -66,8 +66,8 @@ export function useDownloadProcessor() {
   const extractContactsRef = useRef(extractContacts);
   useEffect(() => { extractContactsRef.current = extractContacts; }, [extractContacts]);
 
-  // Reset counter: used to trigger loop restart from resetStop via useEffect
-  const resetCountRef = useRef(0);
+
+
 
   // ── Terminal log helper — batched write, no read-then-write race ──
   const appendLog = async (jobId: string, type: string, msg: string) => {
@@ -736,13 +736,23 @@ export function useDownloadProcessor() {
     const state = getDlState();
     state.cancel = true;
     state.stopped = true;
-    state.abortController?.abort(); // Interrupt any in-progress delay immediately
-    // Immediately update DB — don't wait for the loop to reach its check
+    state.abortController?.abort();
+    // Update DB + append terminal logs
     supabase
       .from("download_jobs")
-      .update({ status: "cancelled", error_message: "EMERGENCY STOP" })
+      .select("id, terminal_log")
       .in("status", ["running", "pending"])
-      .then(() => {
+      .then(async ({ data: activeJobs }) => {
+        if (!activeJobs || activeJobs.length === 0) return;
+        const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        for (const job of activeJobs) {
+          const log = [...((job.terminal_log as any[]) || []), { ts, type: "STOP", msg: "🛑 EMERGENCY STOP attivato dall'utente" }].slice(-100);
+          await supabase.from("download_jobs").update({
+            status: "cancelled",
+            error_message: "EMERGENCY STOP",
+            terminal_log: log as any,
+          }).eq("id", job.id);
+        }
         queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       });
   }, [queryClient]);

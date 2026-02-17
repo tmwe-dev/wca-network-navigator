@@ -15,7 +15,7 @@ import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useDownloadJobs, useEmergencyStop } from "@/hooks/useDownloadJobs";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
@@ -67,8 +67,7 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
-  const emergencyStopMutation = useEmergencyStop();
-  const { emergencyStop: stopProcessor, resetStop } = useDownloadProcessor();
+  const { emergencyStop, resetStop } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
   const countryJobs = useMemo(() => {
@@ -117,7 +116,7 @@ export default function Operations() {
               )}
               <SpeedGauge
                 lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
-                onStop={() => { stopProcessor(); emergencyStopMutation.mutate(); }}
+                onStop={() => emergencyStop()}
                 idle={activeJobs.length === 0}
               />
             </div>
