@@ -1,68 +1,35 @@
 
-# Piano: Fix terminale scroll + Job attivo in evidenza + Pausa casuale anti-detection
+# Piano: ActiveJobBar piu chiara e visibile
 
-## 3 interventi richiesti
+## Problema
+La barra del job attivo in alto e troppo compatta e confusa. Troppe informazioni su una riga sola rendono difficile capire a colpo d'occhio se c'e un job in esecuzione, in pausa, o se non ce n'e nessuno.
 
-### 1. Fix scroll del DownloadTerminal
+## Soluzione
+Ridisegnare la `ActiveJobBar` per renderla immediatamente leggibile. Layout su due righe:
 
-**Problema**: Il terminale non scorre verso il basso automaticamente per mostrare le ultime righe. L'auto-scroll non funziona correttamente perche il `useEffect` dipende da `entries` (array reference che non cambia stabilmente) e l'altezza fissa `h-[220px]` puo risultare limitata nel contesto.
+- **Riga 1**: Stato chiaro a sinistra (pallino animato + etichetta "ATTIVO" / "IN PAUSA"), percentuale grande al centro, pulsanti azione a destra
+- **Riga 2**: Barra di progresso full-width con dettagli sotto (paese, contatore, ultimo partner)
 
-**Soluzione** in `src/components/download/DownloadTerminal.tsx`:
-- Cambiare la dipendenza dell'auto-scroll da `entries` a `entries.length` per garantire il trigger ad ogni nuovo log
-- Aumentare l'altezza a `h-[280px]` per dare piu spazio
-- Aggiungere `flex flex-col` al container e `flex-1` all'area log per adattarsi allo spazio disponibile
-- Usare `scrollIntoView` su un div sentinella alla fine della lista (piu affidabile di `scrollTop`)
-
-### 2. Job attivo ben evidenziato in alto
-
-**Problema**: La barra `ActiveJobBar` non mostra chiaramente la percentuale del job attivo. E troppo compatta e difficile da leggere.
-
-**Soluzione** in `src/components/download/ActiveJobBar.tsx`:
-- Aggiungere un valore percentuale grande e visibile (es. `42%`) accanto al nome del paese
-- Rendere la progress bar piu alta (da `h-1.5` a `h-2.5`) e con la percentuale scritta accanto
-- Mostrare stato ("Scaricando... 42%") in modo chiaro con testo piu grande
-- Se non ci sono job attivi, il componente resta nascosto (gia cosi)
-
-### 3. Toggle "Pausa occasionale" + logica anti-detection
-
-**Problema**: Il timing dei download e troppo regolare e prevedibile. Il server potrebbe riconoscere il pattern come automatizzato.
-
-**Soluzione**:
-
-**A) Nuovo setting in `src/hooks/useScrapingSettings.ts`**:
-- Aggiungere `randomPause: boolean` (default `true`) con chiave `scraping_random_pause`
-- Quando attivo, ogni 3-8 profili (random) il sistema inserisce una pausa extra di 5-15 secondi (random)
-
-**B) Toggle nel pannello download `src/components/download/ActionPanel.tsx`**:
-- Aggiungere in alto un toggle Switch con label "Pausa anti-rilevamento" che salva il setting `scraping_random_pause` nel DB via `useUpdateSetting`
-
-**C) Logica nel processor `src/hooks/useDownloadProcessor.ts`**:
-- Dopo il checkpoint gate (riga 324), se `randomPause` e attivo: generare un contatore casuale (ogni 3-8 profili) e quando scatta, aggiungere un delay extra di 5-15 secondi
-- Scrivere un log `INFO` nel terminale: "Pausa anti-rilevamento (Xs)"
-- Il contatore si resetta dopo ogni pausa
+Quando non ci sono job attivi, il componente resta nascosto (come ora).
 
 ## Dettagli tecnici
 
-### File modificati
+### File modificato: `src/components/download/ActiveJobBar.tsx`
 
-1. **`src/components/download/DownloadTerminal.tsx`** -- Fix auto-scroll + altezza
-2. **`src/components/download/ActiveJobBar.tsx`** -- Percentuale grande visibile
-3. **`src/hooks/useScrapingSettings.ts`** -- Nuovo campo `randomPause`
-4. **`src/components/download/ActionPanel.tsx`** -- Toggle pausa anti-rilevamento
-5. **`src/hooks/useDownloadProcessor.ts`** -- Logica pausa casuale nel loop di estrazione
+Modifiche:
+- **Etichetta di stato prominente**: badge colorato "ATTIVO" (verde pulsante) o "IN PAUSA" (giallo) accanto al pallino, font piu grande
+- **Percentuale ancora piu grande**: da `text-lg` a `text-2xl`, centrata e ben visibile
+- **Barra di progresso full-width**: spostata su una riga dedicata sotto, larga tutto il pannello invece che `w-32`
+- **Dettagli secondari sotto la barra**: paese + contatore + ultimo partner + stats contatti, tutti su una riga separata con testo piu piccolo
+- **Rimozione del clutter**: i badge contatto (email/phone) dell'ultimo risultato vengono semplificati, niente piu badge multipli sovrapposti
+- **Bordo piu visibile**: quando un job e attivo, il bordo diventa piu marcato (amber-500/40 in dark, sky-300 in light) per attirare l'attenzione
 
-### Logica pausa casuale (pseudo-codice)
+Layout risultante:
 
 ```text
-nextPauseAt = random(3, 8)  // dopo quanti profili fare pausa
-profileCounter = 0
-
-per ogni profilo:
-  profileCounter++
-  if randomPause attivo AND profileCounter >= nextPauseAt:
-    extraDelay = random(5, 15) secondi
-    log "INFO: Pausa anti-rilevamento (Xs)"
-    attendi extraDelay secondi
-    profileCounter = 0
-    nextPauseAt = random(3, 8)
++--------------------------------------------------+
+| [*] ATTIVO          42%        [⏸] [■] [v]       |
+| ████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
+| 🇮🇹 Italy · 42/100 · Ultimo: ABC Logistics  ✓12 ✗3 |
++--------------------------------------------------+
 ```
