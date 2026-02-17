@@ -10,7 +10,6 @@ import Onboarding from "./pages/Onboarding";
 import PartnerHub from "./pages/PartnerHub";
 import Campaigns from "./pages/Campaigns";
 import Reminders from "./pages/Reminders";
-import DownloadManagement from "./pages/DownloadManagement";
 import AcquisizionePartner from "./pages/AcquisizionePartner";
 import Operations from "./pages/Operations";
 import Settings from "./pages/Settings";
@@ -39,7 +38,6 @@ const App = () => (
               <Route path="/operations" element={<Operations />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/acquisizione" element={<AcquisizionePartner />} />
-              <Route path="/download-management" element={<DownloadManagement />} />
               <Route path="/reminders" element={<Reminders />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/prospects" element={<ProspectCenter />} />
