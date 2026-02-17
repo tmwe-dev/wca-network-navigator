@@ -178,10 +178,10 @@ export function useDownloadProcessor() {
         let extractedEmailCount = 0, extractedPhoneCount = 0;
 
         try {
-          const timeout4s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
-            setTimeout(() => r({ success: false, error: "Timeout 4s", pageLoaded: false }), 4000)
+          const timeout40s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
+            setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
           );
-          const result = await Promise.race([extractContactsRef.current(wcaId), timeout4s]);
+          const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
 
           // 4. MARK REQUEST SENT — immediately after extraction
           markRequestSent();
