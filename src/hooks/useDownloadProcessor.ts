@@ -19,6 +19,7 @@ export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const queryClient = useQueryClient();
   const abortRef = useRef<AbortController | null>(null);
+  const processingRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const availableRef = useRef(isAvailable);
@@ -90,8 +91,13 @@ export function useDownloadProcessor() {
   // THE CORE: startJob — simple for loop
   // ══════════════════════════════════════════════
   const startJob = useCallback(async (jobId: string) => {
-    if (isProcessing) return;
+    if (processingRef.current) {
+      console.log("[Processor] Already processing, skipping startJob for:", jobId);
+      return;
+    }
+    processingRef.current = true;
     setIsProcessing(true);
+    console.log("[Processor] startJob BEGIN:", jobId);
 
     const ac = new AbortController();
     abortRef.current = ac;
@@ -290,6 +296,8 @@ export function useDownloadProcessor() {
         }
       }
     } finally {
+      console.log("[Processor] startJob END:", jobId);
+      processingRef.current = false;
       setIsProcessing(false);
       abortRef.current = null;
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
@@ -297,7 +305,7 @@ export function useDownloadProcessor() {
       queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
       queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     }
-  }, [isProcessing, queryClient]);
+  }, [queryClient]);
 
   // ── Emergency stop ──
   const emergencyStop = useCallback(() => {
@@ -315,14 +323,12 @@ export function useDownloadProcessor() {
   // ── Auto-start: watch for pending jobs when idle (supports "Riprendi" from JobMonitor) ──
   const startJobRef = useRef(startJob);
   startJobRef.current = startJob;
-  const isProcessingRef = useRef(isProcessing);
-  isProcessingRef.current = isProcessing;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isProcessingRef.current) return;
+      if (processingRef.current) return;
       supabase.from("download_jobs").select("id").eq("status", "pending").limit(1).then(({ data }) => {
-        if (data && data.length > 0 && !isProcessingRef.current) {
+        if (data && data.length > 0 && !processingRef.current) {
           console.log("[Processor] Auto-starting pending job:", data[0].id);
           startJobRef.current(data[0].id);
         }
