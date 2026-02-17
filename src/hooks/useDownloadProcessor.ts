@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
-import { useScrapingSettings, calcDelay } from "./useScrapingSettings";
+import { useScrapingSettings } from "./useScrapingSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
 
@@ -300,13 +300,7 @@ export function useDownloadProcessor() {
               last_contact_result: "skipped",
               contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
-            if (i < wcaIds.length - 1 && !shouldStop()) {
-              const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
-              const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
-              const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
-              await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
-              try { await abortableDelay(adaptiveDelay * 1000, ac.signal); } catch { break; }
-            }
+            // Timing now handled by checkpoint gate at top of loop
             continue;
           }
 
@@ -511,14 +505,7 @@ export function useDownloadProcessor() {
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
         }
 
-        // ── Adaptive delay: subtract extraction time from target ──
-        if (i < wcaIds.length - 1 && !shouldStop()) {
-          const extractionElapsedSec = Math.floor((Date.now() - extractionStartMs) / 1000);
-          const desiredDelay = calcDelay(settingsRef.current.baseDelay, settingsRef.current.variation);
-          const adaptiveDelay = Math.max(3, desiredDelay - extractionElapsedSec);
-          await appendLog(jobId, "WAIT", `${adaptiveDelay}s (estrazione: ${extractionElapsedSec}s, target: ${desiredDelay}s)`);
-          try { await abortableDelay(adaptiveDelay * 1000, ac.signal); } catch { break; }
-        }
+        // Timing now handled by checkpoint gate at top of loop
       }
 
       // Complete job
