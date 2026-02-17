@@ -14,11 +14,10 @@ import { toast } from "@/hooks/use-toast";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
 import { getCountryFlag } from "@/lib/countries";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useWcaSession } from "@/hooks/useWcaSession";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { useTheme, t } from "./theme";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
-import { WcaSessionDialog } from "./WcaSessionIndicator";
 
 
 interface ActionPanelProps {
@@ -33,8 +32,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const th = t(isDark);
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { status: wcaStatus, triggerCheck } = useWcaSessionStatus();
-  const [showSessionDialog, setShowSessionDialog] = useState(false);
+  const { ensureSession } = useWcaSession();
 
   const { settings: scrapingSettings } = useScrapingSettings();
   
@@ -284,16 +282,12 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
   const handleStartDownload = async () => {
-    // Step 1: check session (single call)
-    const result = await triggerCheck();
-
-    // Step 2: if not authenticated, show dialog and STOP
-    if (!result?.authenticated) {
-      setShowSessionDialog(true);
+    // Silent session check + auto-login
+    const sessionOk = await ensureSession();
+    if (!sessionOk) {
+      toast({ title: "Sessione WCA non attiva", description: "Effettua il login su wcaworld.com o verifica le credenziali nelle impostazioni.", variant: "destructive" });
       return;
     }
-
-    // Step 3: proceed to download
     await executeDownload();
   };
 
@@ -338,10 +332,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     }
   };
 
-  const handleSessionRetry = async () => {
-    const { data: statusData } = await supabase.from("app_settings").select("value").eq("key", "wca_session_status").maybeSingle();
-    if (statusData?.value === "ok") { setShowSessionDialog(false); toast({ title: "Sessione attiva!" }); }
-  };
 
   const isLoading = loadingCache || loadingDb;
 
@@ -580,11 +570,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         </div>
       )}
 
-      <WcaSessionDialog
-        open={showSessionDialog}
-        onOpenChange={setShowSessionDialog}
-        onRetry={handleSessionRetry}
-      />
     </div>
   );
 }

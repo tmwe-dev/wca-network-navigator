@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useWcaSession } from "@/hooks/useWcaSession";
 
 const navItems = [
   { title: "Operations", url: "/", icon: Globe },
@@ -38,7 +38,8 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
-  const { status: wcaStatus, checkedAt } = useWcaSessionStatus();
+  const { isSessionActive } = useWcaSession();
+  const wcaStatus = isSessionActive === true ? "ok" : isSessionActive === false ? "expired" : "checking";
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -108,7 +109,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       {/* WCA Session Status */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            {wcaStatus === "expired" || wcaStatus === "no_cookie" ? (
+          {wcaStatus === "expired" ? (
               <Link
                 to="/settings"
                 className={cn(
@@ -145,8 +146,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           </TooltipTrigger>
           <TooltipContent side="right">
             {wcaStatus === "ok" ? "Sessione WCA attiva" :
-             wcaStatus === "expired" ? "Cookie WCA scaduto - clicca per aggiornare" :
-             wcaStatus === "no_cookie" ? "Nessun cookie WCA - clicca per configurare" :
+             wcaStatus === "expired" ? "Sessione WCA non attiva — clicca per configurare" :
              "Verifica sessione in corso..."}
           </TooltipContent>
         </Tooltip>

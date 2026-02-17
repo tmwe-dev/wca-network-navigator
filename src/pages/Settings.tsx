@@ -16,7 +16,7 @@ import {
 import { ScrapingSettingsPanel } from "@/components/settings/ScrapingSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { useWcaSessionStatus } from "@/hooks/useWcaSessionStatus";
+import { useWcaSession } from "@/hooks/useWcaSession";
 import { usePartners } from "@/hooks/usePartners";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -124,7 +124,9 @@ const EXPORT_FIELDS = [
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateSetting();
-  const { status: wcaStatus, checkedAt, triggerCheck } = useWcaSessionStatus();
+  const { isSessionActive, ensureSession } = useWcaSession();
+  const wcaStatus = isSessionActive === true ? "ok" : "expired";
+  const isWcaOkDerived = isSessionActive === true;
 
   /* ── Generale state ── */
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -134,7 +136,7 @@ export default function Settings() {
   const [verifying, setVerifying] = useState(false);
   const [cookieInput, setCookieInput] = useState("");
   const [savingCookie, setSavingCookie] = useState(false);
-  const isWcaOk = wcaStatus === "ok";
+  const isWcaOk = isWcaOkDerived;
 
   /* ── Export state ── */
   const [selectedFields, setSelectedFields] = useState<string[]>(EXPORT_FIELDS.map((f) => f.id));
@@ -147,8 +149,10 @@ export default function Settings() {
   /* ── WCA handlers ── */
   const handleVerify = async () => {
     setVerifying(true);
-    try { await triggerCheck(); toast.success("Verifica completata!"); }
-    catch { toast.error("Errore durante la verifica"); }
+    try {
+      const ok = await ensureSession();
+      toast.success(ok ? "Sessione attiva!" : "Sessione non attiva");
+    } catch { toast.error("Errore durante la verifica"); }
     finally { setVerifying(false); }
   };
 
@@ -161,7 +165,7 @@ export default function Settings() {
       if (error) throw error;
       if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
       else toast.warning("Cookie salvato ma la verifica è fallita.");
-      triggerCheck();
+      ensureSession();
     } catch (err: any) { toast.error("Errore: " + (err.message || "Sconosciuto")); }
     finally { setSavingCookie(false); }
   };
@@ -332,11 +336,6 @@ export default function Settings() {
                   {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                   {verifying ? "Verifica..." : "Verifica Sessione"}
                 </Button>
-                {checkedAt && (
-                  <p className="text-xs text-center text-muted-foreground">
-                    Ultimo controllo: {new Date(checkedAt).toLocaleString("it-IT")}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
