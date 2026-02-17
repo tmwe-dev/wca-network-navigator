@@ -336,7 +336,13 @@ export function useDownloadProcessor() {
         let extractedPhoneCount = 0;
         let profileSaved = false;
         try {
-          const result = await extractContactsRef.current(wcaId);
+          const extractionTimeout = new Promise<{ success: false; error: string; pageLoaded: false }>((resolve) =>
+            setTimeout(() => resolve({ success: false, error: "Timeout 90s", pageLoaded: false }), 90000)
+          );
+          const result = await Promise.race([
+            extractContactsRef.current(wcaId),
+            extractionTimeout,
+          ]);
 
           // ── Mark request sent IMMEDIATELY after extraction ──
           markRequestSent();
