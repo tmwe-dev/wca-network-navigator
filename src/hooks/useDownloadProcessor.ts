@@ -707,6 +707,31 @@ export function useDownloadProcessor() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-restart loop when pending jobs exist but loop is idle
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const state = getDlState();
+      if (!state.loopRunning && !state.stopped) {
+        supabase
+          .from("download_jobs")
+          .select("id")
+          .eq("status", "pending")
+          .limit(1)
+          .then(({ data }) => {
+            if (data && data.length > 0 && !getDlState().loopRunning) {
+              console.log("[DownloadProcessor] Pending job found, restarting loop");
+              const s = getDlState();
+              s.cancel = false;
+              const myId = ++s.activeLoopId;
+              startLoop(myId);
+            }
+          });
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [startLoop]);
+
   const emergencyStop = useCallback(() => {
     const state = getDlState();
     state.cancel = true;
