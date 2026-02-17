@@ -13,7 +13,7 @@ import {
   Zap, Crown,
   Paperclip,
 } from "lucide-react";
-import { ScrapingSettingsPanel } from "@/components/settings/ScrapingSettings";
+// ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useWcaSession } from "@/hooks/useWcaSession";
@@ -224,9 +224,7 @@ export default function Settings() {
           <TabsTrigger value="blacklist" className="flex items-center gap-2">
             <Shield className="w-4 h-4" /> Blacklist
           </TabsTrigger>
-          <TabsTrigger value="scraping" className="flex items-center gap-2">
-            <Zap className="w-4 h-4" /> Scraping
-          </TabsTrigger>
+          {/* Scraping tab removed */}
           <TabsTrigger value="reportaziende" className="flex items-center gap-2">
             <FileText className="w-4 h-4" /> Report Aziende
           </TabsTrigger>
@@ -438,10 +436,7 @@ export default function Settings() {
           <BlacklistManager />
         </TabsContent>
 
-        {/* ════════════════ SCRAPING ════════════════ */}
-        <TabsContent value="scraping">
-          <ScrapingSettingsPanel />
-        </TabsContent>
+        {/* Scraping tab removed */}
 
         {/* ════════════════ REPORT AZIENDE ════════════════ */}
         <TabsContent value="reportaziende">

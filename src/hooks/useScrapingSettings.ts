@@ -1,5 +1,8 @@
-import { useMemo } from "react";
-import { useAppSettings } from "./useAppSettings";
+/**
+ * SIMPLIFIED shim — scraping settings are no longer stored in DB.
+ * Returns hardcoded defaults. Kept for backward compatibility with
+ * AcquisitionToolbar, ProspectImporter, ResyncConfigure, etc.
+ */
 
 export interface ScrapingSettings {
   baseDelay: number;
@@ -15,11 +18,11 @@ const DEFAULTS: ScrapingSettings = {
   variation: 3,
   keepAliveMs: 30000,
   excludeThreshold: 3,
-  maxRetries: 2,
-  randomPause: true,
+  maxRetries: 0,
+  randomPause: false,
 };
 
-const KEY_MAP: Record<keyof ScrapingSettings, string> = {
+export const SCRAPING_KEY_MAP: Record<keyof ScrapingSettings, string> = {
   baseDelay: "scraping_base_delay",
   variation: "scraping_variation",
   keepAliveMs: "scraping_keepalive_ms",
@@ -28,31 +31,10 @@ const KEY_MAP: Record<keyof ScrapingSettings, string> = {
   randomPause: "scraping_random_pause",
 };
 
-export const SCRAPING_KEY_MAP = KEY_MAP;
 export const SCRAPING_DEFAULTS = DEFAULTS;
 
-function parseNum(val: string | undefined, fallback: number): number {
-  if (!val) return fallback;
-  const n = Number(val);
-  return isNaN(n) ? fallback : n;
-}
-
 export function useScrapingSettings(): { settings: ScrapingSettings; isLoading: boolean } {
-  const { data: raw, isLoading } = useAppSettings();
-
-  const settings = useMemo<ScrapingSettings>(() => {
-    if (!raw) return DEFAULTS;
-    return {
-      baseDelay: parseNum(raw[KEY_MAP.baseDelay], DEFAULTS.baseDelay),
-      variation: parseNum(raw[KEY_MAP.variation], DEFAULTS.variation),
-      keepAliveMs: parseNum(raw[KEY_MAP.keepAliveMs], DEFAULTS.keepAliveMs),
-      excludeThreshold: parseNum(raw[KEY_MAP.excludeThreshold], DEFAULTS.excludeThreshold),
-      maxRetries: parseNum(raw[KEY_MAP.maxRetries], DEFAULTS.maxRetries),
-      randomPause: raw[KEY_MAP.randomPause] === "false" ? false : DEFAULTS.randomPause,
-    };
-  }, [raw]);
-
-  return { settings, isLoading };
+  return { settings: DEFAULTS, isLoading: false };
 }
 
 /** Calculate a random delay: baseDelay +/- variation, with hard floor of 10s */

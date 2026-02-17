@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown, Shield,
+  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -17,26 +17,22 @@ import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { useWcaSession } from "@/hooks/useWcaSession";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { useTheme, t } from "./theme";
-import { useScrapingSettings, SCRAPING_KEY_MAP } from "@/hooks/useScrapingSettings";
-import { useUpdateSetting } from "@/hooks/useAppSettings";
+// useScrapingSettings and useUpdateSetting removed — deprecated
 
 
 interface ActionPanelProps {
   selectedCountries: { code: string; name: string }[];
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
-  onJobStarting?: () => void;
+  onJobCreated?: (jobId: string) => void;
 }
 
-export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange, onJobStarting }: ActionPanelProps) {
+export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange, onJobCreated }: ActionPanelProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
   const { ensureSession } = useWcaSession();
-
-  const { settings: scrapingSettings } = useScrapingSettings();
-  const updateSetting = useUpdateSetting();
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
@@ -46,7 +42,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const countryCodes = selectedCountries.map(c => c.code);
 
   // Speed — simple slider around baseDelay
-  const [delay, setDelay] = useState(scrapingSettings.baseDelay);
+  const [delay, setDelay] = useState(15);
   type DownloadMode = "new" | "no_profile" | "all";
   const [downloadMode, setDownloadMode] = useState<DownloadMode>("new");
   const directoryOnly = directoryOnlyProp ?? false;
@@ -293,7 +289,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   };
 
   const executeDownload = async () => {
-    onJobStarting?.();
     if (idsToDownload.length === 0) {
       toast({ title: "Nessun partner da scaricare", description: "Tutti i partner sono già nel database." });
       return;
@@ -325,11 +320,12 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     for (const country of selectedCountries) {
       const countryIds = idsByCountry.get(country.code) || [];
       if (countryIds.length === 0) continue;
-      await createJob.mutateAsync({
+      const jobId = await createJob.mutateAsync({
         country_code: country.code, country_name: country.name,
         network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
         wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
       });
+      if (jobId && onJobCreated) onJobCreated(jobId);
     }
   };
 
@@ -386,16 +382,8 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   return (
     <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-5 space-y-4`}>
       {/* Anti-detection toggle */}
-      <div className={`flex items-center justify-between p-2.5 rounded-xl border ${isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200"}`}>
-        <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? "text-violet-300" : "text-violet-700"}`}>
-          <Shield className="w-3.5 h-3.5" />
-          Pausa anti-rilevamento
-        </label>
-        <Switch
-          checked={scrapingSettings.randomPause}
-          onCheckedChange={(v) => updateSetting.mutate({ key: SCRAPING_KEY_MAP.randomPause, value: String(v) })}
-        />
-      </div>
+
+
 
       <div>
         <div className="flex items-center justify-between">
