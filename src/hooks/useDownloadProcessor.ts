@@ -337,7 +337,7 @@ export function useDownloadProcessor() {
         let profileSaved = false;
         try {
           const extractionTimeout = new Promise<{ success: false; error: string; pageLoaded: false }>((resolve) =>
-            setTimeout(() => resolve({ success: false, error: "Timeout 90s", pageLoaded: false }), 90000)
+            setTimeout(() => resolve({ success: false, error: "Timeout 4s", pageLoaded: false }), 4000)
           );
           const result = await Promise.race([
             extractContactsRef.current(wcaId),
