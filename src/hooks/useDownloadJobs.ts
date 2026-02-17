@@ -167,7 +167,7 @@ export function usePauseResumeJob() {
       } else if (action === "cancel") {
         await supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", jobId);
       } else if (action === "resume") {
-        await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
+        await supabase.from("download_jobs").update({ status: "pending", error_message: null }).eq("id", jobId);
       }
     },
     onSuccess: () => {
