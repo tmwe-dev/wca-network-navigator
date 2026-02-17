@@ -1,48 +1,57 @@
 
 
-# Fix: Job bloccato dopo refresh della pagina
+# Fix: Rilevamento automatico sessione scaduta durante il job
 
 ## Problema
 
-Quando la pagina viene ricaricata durante un job attivo:
-1. Il loop JavaScript in memoria viene distrutto
-2. Il job resta con stato "running" nel database
-3. L'auto-start (intervallo 10s) cerca solo job "pending" -- ignora i "running"
-4. Il job resta bloccato indefinitamente
+Quando la sessione WCA scade **durante** un job in esecuzione, il sistema continua a scaricare profili vuoti senza accorgerseni. Non c'e nessun controllo che verifichi se i dati estratti indicano una sessione non autenticata.
+
+Il segnale e chiaro: se il sistema non trova ne contatti, ne profilo, ne "Members only" per diversi profili consecutivi, la sessione e scaduta.
 
 ## Soluzione
 
-### File: `src/hooks/useDownloadProcessor.ts`
+### 1. Contatore di fallimenti consecutivi nel loop principale
 
-Modificare l'intervallo di auto-start per gestire anche i job "running" orfani:
+**File: `src/hooks/useDownloadProcessor.ts`**
 
-1. **Rilevamento job orfani**: oltre a cercare job "pending", cercare anche job "running" che non hanno ricevuto aggiornamenti da oltre 60 secondi (segno che nessun tab li sta processando)
-2. **Reset automatico**: resettare il job orfano a "pending", cosi il normale flusso di auto-start lo riprende dal `current_index` salvato
-3. **Log di recovery**: aggiungere un messaggio nel terminal log per tracciare la ripresa automatica
+Aggiungere un contatore `consecutiveEmpty` nel loop principale. Dopo ogni estrazione, verificare se il risultato e "completamente vuoto" (nessun contatto, nessun profilo, nessun HTML). Se lo e, incrementare il contatore. Se si raggiungono **3 profili consecutivi vuoti**, il job viene messo in pausa con un messaggio chiaro di sessione scaduta e si tenta un auto-login.
 
-### Dettaglio tecnico
-
-Nell'`useEffect` dell'auto-start (riga 251-262), aggiungere una query aggiuntiva:
+Logica:
 
 ```text
--- Cerca job "running" non aggiornati da piu di 60 secondi
-SELECT id FROM download_jobs
-WHERE status = 'running'
-AND updated_at < NOW() - INTERVAL '60 seconds'
-LIMIT 1
+Per ogni profilo estratto:
+  SE result.contacts vuoto E result.profile vuoto E result.profileHtml vuoto:
+    consecutiveEmpty++
+    SE consecutiveEmpty >= 3:
+      --> Log "Sessione scaduta rilevata"
+      --> Tentativo auto-login via verifyWcaSession()
+      --> SE auto-login OK: reset contatore, continua
+      --> SE auto-login FALLITO: pausa job con errore "Sessione WCA scaduta"
+  ALTRIMENTI:
+    consecutiveEmpty = 0  (reset: dati trovati, sessione OK)
 ```
 
-Se trovato, il sistema:
-1. Lo resetta a "pending" con un log "Ripresa automatica dopo refresh"
-2. Al ciclo successivo (10s), l'auto-start lo raccoglie normalmente
-3. Il processore riprende dal `current_index` salvato senza perdere progressi
+La soglia di 3 (e non 1) evita falsi positivi per profili legittimamente vuoti.
 
-### Sicurezza
+### 2. Fix checkpoint doppia chiamata (gia discusso)
 
-- Il timeout di 60 secondi evita falsi positivi (un job attivo aggiorna `updated_at` ogni ~20s durante l'elaborazione normale)
-- Il claim atomico `WHERE status = pending` nel `startJob` impedisce doppie esecuzioni
-- Il `processingRef` sincrono impedisce avvii concorrenti nello stesso tab
+**File: `src/lib/download/sessionVerifier.ts`**
 
-### Nessuna modifica ad altri file
+Aggiungere `markRequestSent()` dopo ogni interazione WCA nel verificatore di sessione, per evitare che il loop principale parta immediatamente dopo la verifica senza aspettare i 15 secondi.
 
-Il fix e contenuto interamente nell'`useEffect` dell'auto-start in `useDownloadProcessor.ts`.
+### Dettaglio tecnico delle modifiche
+
+**`src/hooks/useDownloadProcessor.ts`** -- Aggiungere nel loop principale:
+- Variabile `let consecutiveEmpty = 0` prima del loop `for`
+- Dopo il salvataggio dei dati (riga ~176), controllare se il risultato e completamente vuoto
+- Se `consecutiveEmpty >= 3`: tentare re-verifica sessione, e se fallisce, mettere il job in pausa
+- Se l'estrazione ha dati: resettare `consecutiveEmpty = 0`
+
+**`src/lib/download/sessionVerifier.ts`** -- Aggiungere:
+- Import di `markRequestSent` da `@/lib/wcaCheckpoint`
+- Chiamata `markRequestSent()` dopo ogni `verify()` e dopo `autoLogin`
+
+### Nessuna modifica al database
+
+Il fix e interamente lato frontend/processore. Non servono modifiche allo schema.
+
