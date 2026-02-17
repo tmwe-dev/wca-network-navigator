@@ -7,6 +7,7 @@ export interface ScrapingSettings {
   keepAliveMs: number;
   excludeThreshold: number;
   maxRetries: number;
+  randomPause: boolean;
 }
 
 const DEFAULTS: ScrapingSettings = {
@@ -15,6 +16,7 @@ const DEFAULTS: ScrapingSettings = {
   keepAliveMs: 30000,
   excludeThreshold: 3,
   maxRetries: 2,
+  randomPause: true,
 };
 
 const KEY_MAP: Record<keyof ScrapingSettings, string> = {
@@ -23,6 +25,7 @@ const KEY_MAP: Record<keyof ScrapingSettings, string> = {
   keepAliveMs: "scraping_keepalive_ms",
   excludeThreshold: "scraping_exclude_threshold",
   maxRetries: "scraping_max_retries",
+  randomPause: "scraping_random_pause",
 };
 
 export const SCRAPING_KEY_MAP = KEY_MAP;
@@ -45,6 +48,7 @@ export function useScrapingSettings(): { settings: ScrapingSettings; isLoading: 
       keepAliveMs: parseNum(raw[KEY_MAP.keepAliveMs], DEFAULTS.keepAliveMs),
       excludeThreshold: parseNum(raw[KEY_MAP.excludeThreshold], DEFAULTS.excludeThreshold),
       maxRetries: parseNum(raw[KEY_MAP.maxRetries], DEFAULTS.maxRetries),
+      randomPause: raw[KEY_MAP.randomPause] === "false" ? false : DEFAULTS.randomPause,
     };
   }, [raw]);
 

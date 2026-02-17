@@ -49,7 +49,7 @@ export function ActiveJobBar() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                 isRunning
                   ? `animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`
                   : isPaused
@@ -57,9 +57,12 @@ export function ActiveJobBar() {
                   : "bg-slate-400"
               }`}
             />
-            <Activity className={`w-3.5 h-3.5 flex-shrink-0 ${th.hi}`} />
-            <span className={`text-xs font-medium truncate ${th.h2}`}>
-              {activeJobs.length} job attiv{activeJobs.length === 1 ? "o" : "i"}
+            {/* Big percentage */}
+            <span className={`text-lg font-bold font-mono flex-shrink-0 ${isDark ? "text-amber-400" : "text-sky-600"}`}>
+              {Math.round(progress)}%
+            </span>
+            <span className={`text-sm font-medium truncate ${th.h2}`}>
+              {getCountryFlag(mainJob.country_code)} {mainJob.country_name}
             </span>
             {/* Extension warning */}
             {!extensionAvailable && (
@@ -68,10 +71,15 @@ export function ActiveJobBar() {
               </span>
             )}
             {/* Status indicator */}
-            {mainJob.status === "running" && mainJob.last_processed_company && (
-              <span className={`flex items-center gap-1 text-[10px] ${isDark ? "text-amber-300" : "text-sky-600"}`}>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Scaricando...
+            {isRunning && (
+              <span className={`flex items-center gap-1 text-xs ${isDark ? "text-amber-300" : "text-sky-600"}`}>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Scaricando... {mainJob.current_index}/{mainJob.total_count}
+              </span>
+            )}
+            {isPaused && (
+              <span className={`text-xs font-medium ${isDark ? "text-yellow-400" : "text-yellow-600"}`}>
+                In pausa
               </span>
             )}
             {mainJob.error_message && (
@@ -79,11 +87,6 @@ export function ActiveJobBar() {
                 {mainJob.error_message}
               </span>
             )}
-            <span className={`text-xs truncate ${th.dim}`}>
-              {getCountryFlag(mainJob.country_code)} {mainJob.country_name}
-              {" · "}
-              {mainJob.current_index}/{mainJob.total_count}
-            </span>
             {/* Contact stats */}
             {(mainJob.contacts_found_count > 0 || mainJob.contacts_missing_count > 0) && (
               <span className={`text-[10px] font-mono ${th.dim}`}>
@@ -96,9 +99,9 @@ export function ActiveJobBar() {
             )}
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar — taller */}
           <div
-            className={`w-24 h-1.5 rounded-full flex-shrink-0 ${
+            className={`w-32 h-2.5 rounded-full flex-shrink-0 ${
               isDark ? "bg-slate-800" : "bg-slate-200"
             }`}
           >

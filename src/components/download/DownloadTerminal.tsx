@@ -25,6 +25,7 @@ export function DownloadTerminal() {
   const isDark = useContext(ThemeCtx);
   const th = t(isDark);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
   // Use the SHARED download jobs query — NO independent queries
@@ -43,12 +44,12 @@ export function DownloadTerminal() {
     ? ((targetJob as any).terminal_log as LogEntry[] || [])
     : [];
 
-  // Auto-scroll
+  // Auto-scroll using sentinel div (more reliable than scrollTop)
   useEffect(() => {
-    if (autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (autoScroll && sentinelRef.current) {
+      sentinelRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [entries, autoScroll]);
+  }, [entries.length, autoScroll]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -57,7 +58,7 @@ export function DownloadTerminal() {
   };
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${isDark ? "bg-slate-950/80 border-white/[0.08]" : "bg-slate-900/95 border-slate-700/50"}`}>
+    <div className={`rounded-xl border overflow-hidden flex flex-col ${isDark ? "bg-slate-950/80 border-white/[0.08]" : "bg-slate-900/95 border-slate-700/50"}`}>
       {/* Header */}
       <div className={`flex items-center gap-2 px-3 py-1.5 border-b ${isDark ? "bg-slate-900/80 border-white/[0.06]" : "bg-slate-800 border-slate-700/50"}`}>
         <Terminal className="w-3.5 h-3.5 text-emerald-400" />
@@ -77,24 +78,27 @@ export function DownloadTerminal() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="h-[220px] overflow-y-auto p-2 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        className="h-[280px] flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
       >
         {entries.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-600 text-xs text-center px-4">
             {activeJob ? "In attesa di log..." : "Nessun job attivo. Seleziona un paese e avvia un download."}
           </div>
         ) : (
-          entries.map((entry, idx) => {
-            const colors = typeColors[entry.type] || typeColors.INFO;
-            const color = isDark ? colors.dark : colors.light;
-            return (
-              <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
-                <span className="text-slate-600 select-none shrink-0">{entry.ts}</span>
-                <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
-                <span className="text-slate-300">{entry.msg}</span>
-              </div>
-            );
-          })
+          <>
+            {entries.map((entry, idx) => {
+              const colors = typeColors[entry.type] || typeColors.INFO;
+              const color = isDark ? colors.dark : colors.light;
+              return (
+                <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
+                  <span className="text-slate-600 select-none shrink-0">{entry.ts}</span>
+                  <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
+                  <span className="text-slate-300">{entry.msg}</span>
+                </div>
+              );
+            })}
+            <div ref={sentinelRef} />
+          </>
         )}
       </div>
     </div>

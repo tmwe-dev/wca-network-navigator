@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown,
+  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown, Shield,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -17,7 +17,8 @@ import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
 import { useWcaSession } from "@/hooks/useWcaSession";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { useTheme, t } from "./theme";
-import { useScrapingSettings } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings, SCRAPING_KEY_MAP } from "@/hooks/useScrapingSettings";
+import { useUpdateSetting } from "@/hooks/useAppSettings";
 
 
 interface ActionPanelProps {
@@ -35,7 +36,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const { ensureSession } = useWcaSession();
 
   const { settings: scrapingSettings } = useScrapingSettings();
-  
+  const updateSetting = useUpdateSetting();
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
@@ -384,6 +385,18 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
 
   return (
     <div className={`${th.panel} border ${th.panelAmber} rounded-2xl p-5 space-y-4`}>
+      {/* Anti-detection toggle */}
+      <div className={`flex items-center justify-between p-2.5 rounded-xl border ${isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200"}`}>
+        <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? "text-violet-300" : "text-violet-700"}`}>
+          <Shield className="w-3.5 h-3.5" />
+          Pausa anti-rilevamento
+        </label>
+        <Switch
+          checked={scrapingSettings.randomPause}
+          onCheckedChange={(v) => updateSetting.mutate({ key: SCRAPING_KEY_MAP.randomPause, value: String(v) })}
+        />
+      </div>
+
       <div>
         <div className="flex items-center justify-between">
           <h3 className={`text-lg font-semibold ${th.h2}`}>Scarica Partner</h3>
