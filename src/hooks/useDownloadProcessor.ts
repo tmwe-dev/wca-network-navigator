@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useScrapingSettings, calcDelay } from "./useScrapingSettings";
 import { useQueryClient } from "@tanstack/react-query";
+import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
 
 /**
  * Background download processor for Operations Center.
@@ -265,6 +266,15 @@ export function useDownloadProcessor() {
           if (newP) partnerId = newP.id;
         }
 
+        // ══════════════════════════════════════════════════════
+        // CHECKPOINT GATE — wait for green zone before any WCA call
+        // ══════════════════════════════════════════════════════
+        const greenOk = await waitForGreenLight(
+          ac.signal,
+          (secsLeft) => appendLog(jobId, "GATE", `⏳ Checkpoint: ${secsLeft}s alla zona verde`)
+        );
+        if (!greenOk || shouldStop()) break;
+
         // Extract contacts via Chrome Extension
         let hasEmail = false;
         let hasPhone = false;
@@ -274,6 +284,9 @@ export function useDownloadProcessor() {
         let profileSaved = false;
         try {
           const result = await extractContactsRef.current(wcaId);
+
+          // ── Mark request sent IMMEDIATELY after extraction ──
+          markRequestSent();
 
           // ZERO RETRY: if page didn't load, mark as skipped
           if (result.pageLoaded === false) {
