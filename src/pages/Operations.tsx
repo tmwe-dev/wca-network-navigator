@@ -67,7 +67,7 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
-  const { emergencyStop, resetStop } = useDownloadProcessor();
+  const { emergencyStop, startJob } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
   const countryJobs = useMemo(() => {
@@ -212,7 +212,7 @@ export default function Operations() {
                       />
                     </TabsContent>
                     <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
-                      <ActionPanel selectedCountries={selectedCountries} directoryOnly={directoryOnly} onDirectoryOnlyChange={setDirectoryOnly} onJobStarting={resetStop} />
+                      <ActionPanel selectedCountries={selectedCountries} directoryOnly={directoryOnly} onDirectoryOnlyChange={setDirectoryOnly} onJobCreated={startJob} />
                       <DownloadTerminal />
                       <JobMonitor />
                       <AdvancedTools isDark={isDark} />
