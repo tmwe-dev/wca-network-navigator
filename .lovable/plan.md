@@ -1,25 +1,65 @@
 
 
-# Piano: Ridurre il timeout di sicurezza da 90s a 4s
+# Piano: Fix ripresa job — due problemi da risolvere
 
-## Problema
-90 secondi di attesa per un profilo che non risponde sono troppi. Se l'estensione non risponde in 3-4 secondi, il profilo e chiaramente problematico e va saltato subito.
+## Problema 1: Stato sbagliato
+Il pulsante "Riprendi" chiama `usePauseResumeJob` con action `"resume"`, che imposta lo stato a `"running"`. Ma il loop del processore (riga 649 di `useDownloadProcessor.ts`) cerca SOLO job con stato `"pending"`. Il job rimane in stato `"running"` ma nessuno lo processa.
 
-## Modifica
+## Problema 2: Loop spento
+Il loop di polling si auto-spegne dopo 3 cicli vuoti (~45 secondi senza job). Quando l'utente clicca "Riprendi" minuti dopo, il loop non e piu attivo.
 
-### File: `src/hooks/useDownloadProcessor.ts`
+## Soluzione
 
-Cambiare il timeout da 90000ms a 4000ms (4 secondi):
+### File 1: `src/hooks/useDownloadJobs.ts` — Funzione `usePauseResumeJob`
+
+Cambiare l'azione `"resume"` per impostare lo stato a `"pending"` invece di `"running"`:
 
 ```typescript
 // Prima:
-setTimeout(() => resolve({ success: false, error: "Timeout 90s", pageLoaded: false }), 90000)
+} else if (action === "resume") {
+  await supabase.from("download_jobs").update({ status: "running", error_message: null }).eq("id", jobId);
+}
 
 // Dopo:
-setTimeout(() => resolve({ success: false, error: "Timeout 4s", pageLoaded: false }), 4000)
+} else if (action === "resume") {
+  await supabase.from("download_jobs").update({ status: "pending", error_message: null }).eq("id", jobId);
+}
 ```
 
-Il profilo verra marcato come "skipped" e potra essere recuperato in un passaggio successivo. Il job prosegue immediatamente col profilo seguente senza perdere tempo.
+Cosi il loop lo trovera nella sua query normale per job `pending`.
+
+### File 2: `src/hooks/useDownloadProcessor.ts` — Riavvio loop
+
+Dopo il mount iniziale (riga 692-708), aggiungere un listener sulla query `download-jobs` che riavvia il loop se trova job `pending` e il loop e spento:
+
+```typescript
+// Nuovo useEffect: riavvia il loop se ci sono job pending e il loop e fermo
+useEffect(() => {
+  const interval = setInterval(() => {
+    const state = getDlState();
+    if (!state.loopRunning && !state.stopped) {
+      // Check if pending jobs exist
+      supabase
+        .from("download_jobs")
+        .select("id")
+        .eq("status", "pending")
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0 && !state.loopRunning) {
+            console.log("[DownloadProcessor] Pending job found, restarting loop");
+            state.cancel = false;
+            const myId = ++state.activeLoopId;
+            startLoop(myId);
+          }
+        });
+    }
+  }, 10000); // Check every 10s
+
+  return () => clearInterval(interval);
+}, [startLoop]);
+```
+
+Questo garantisce che quando un job viene rimesso in `pending` tramite "Riprendi", il loop si riattiva entro 10 secondi al massimo.
 
 Nessun altro file da modificare.
 
