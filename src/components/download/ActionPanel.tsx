@@ -192,19 +192,80 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   }, [countryCodes.join(",")]);
 
   // Auto-download after scan completes in "Directory + Download" mode
+  // Step: cleanup stale partners from DB, then force no_profile download
   useEffect(() => {
-    if (autoDownloadPending && scanComplete && !isScanning) {
-      setAutoDownloadPending(false);
-      // Small delay to let queries refresh
-      const timer = setTimeout(async () => {
-        toast({
-          title: "📊 Scansione completata",
-          description: `Trovati ${scannedMembers.length} partner. Avvio download automatico...`,
-        });
-        await handleStartDownload();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
+    if (!autoDownloadPending || !scanComplete || isScanning) return;
+    setAutoDownloadPending(false);
+
+    const runCleanupAndDownload = async () => {
+      // 1. Collect fresh WCA IDs from scan
+      const freshWcaIds = new Set(
+        scannedMembers.filter(m => m.wca_id).map(m => m.wca_id!)
+      );
+
+      if (freshWcaIds.size === 0) {
+        toast({ title: "⚠️ Nessun partner trovato nella directory", variant: "destructive" });
+        return;
+      }
+
+      // 2. Get all DB partners for the selected countries
+      const { data: dbPartnersForCleanup } = await supabase
+        .from("partners")
+        .select("id, wca_id")
+        .in("country_code", countryCodes)
+        .not("wca_id", "is", null);
+
+      const dbList = dbPartnersForCleanup || [];
+      
+      // 3. Find stale partners (in DB but NOT in fresh directory)
+      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id));
+      
+      let removedCount = 0;
+      if (stalePartners.length > 0) {
+        const staleIds = stalePartners.map(p => p.id);
+        
+        // Delete child tables first (no CASCADE)
+        // Process in batches of 50 to avoid URL length limits
+        for (let i = 0; i < staleIds.length; i += 50) {
+          const batch = staleIds.slice(i, i + 50);
+          await supabase.from("partner_contacts").delete().in("partner_id", batch);
+          await supabase.from("partner_networks").delete().in("partner_id", batch);
+          await supabase.from("partner_services").delete().in("partner_id", batch);
+          await supabase.from("partner_certifications").delete().in("partner_id", batch);
+          await supabase.from("partner_social_links").delete().in("partner_id", batch);
+          await supabase.from("interactions").delete().in("partner_id", batch);
+          await supabase.from("reminders").delete().in("partner_id", batch);
+          await supabase.from("activities").delete().in("partner_id", batch);
+          // Now delete the partner itself
+          await supabase.from("partners").delete().in("id", batch);
+        }
+        removedCount = stalePartners.length;
+      }
+
+      // 4. Invalidate queries to refresh counts
+      await queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+      await queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
+      await queryClient.invalidateQueries({ queryKey: ["partners"] });
+      await queryClient.invalidateQueries({ queryKey: ["partner-stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+
+      // 5. Force no_profile mode for the download
+      setDownloadMode("no_profile");
+
+      // 6. Show summary
+      const remaining = dbList.length - removedCount;
+      toast({
+        title: "🧹 Pulizia completata",
+        description: `Directory: ${freshWcaIds.size} partner reali. ${removedCount > 0 ? `Rimossi ${removedCount} obsoleti. ` : ""}Avvio download profili mancanti...`,
+      });
+
+      // 7. Wait for queries to refresh, then start download
+      await new Promise(r => setTimeout(r, 2000));
+      await handleStartDownload();
+    };
+
+    const timer = setTimeout(runCleanupAndDownload, 1000);
+    return () => clearTimeout(timer);
   }, [autoDownloadPending, scanComplete, isScanning]);
 
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
