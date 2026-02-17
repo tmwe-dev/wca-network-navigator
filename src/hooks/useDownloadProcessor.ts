@@ -83,35 +83,38 @@ export function useDownloadProcessor() {
     }
   };
 
-  // Pre-job session check: DB-only, NO extension calls
+  // Pre-job session check: uses extension to verify real WCA access
   const verifySessionBeforeJob = useCallback(async (jobId: string): Promise<boolean> => {
     try {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "wca_session_status")
-        .maybeSingle();
+      // Use extension to open a test profile and check if session works
+      const extOk = availableRef.current || await checkAvailableRef.current();
+      if (!extOk) {
+        await appendLog(jobId, "WARN", "❌ Estensione Chrome non disponibile");
+        return false;
+      }
 
-      const status = data?.value;
-      if (status === "ok") {
+      // Import verifySession dynamically from the bridge refs
+      const result = await new Promise<any>((resolve) => {
+        const requestId = `verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const timer = setTimeout(() => resolve({ success: false }), 30000);
+        const handler = (event: MessageEvent) => {
+          if (event.source !== window) return;
+          if (event.data?.direction !== "from-extension") return;
+          if (event.data?.requestId !== requestId) return;
+          clearTimeout(timer);
+          window.removeEventListener("message", handler);
+          resolve(event.data?.response || { success: false });
+        };
+        window.addEventListener("message", handler);
+        window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
+      });
+
+      if (result.success && result.authenticated) {
         await appendLog(jobId, "INFO", "✅ Sessione WCA attiva — procedo");
         return true;
       }
 
-      if (status === "unknown") {
-        await abortableDelay(5000, getDlState().abortController?.signal ?? undefined);
-        const { data: recheck } = await supabase
-          .from("app_settings")
-          .select("value")
-          .eq("key", "wca_session_status")
-          .maybeSingle();
-        if (recheck?.value === "ok") {
-          await appendLog(jobId, "INFO", "✅ Sessione WCA confermata — procedo");
-          return true;
-        }
-      }
-
-      await appendLog(jobId, "WARN", `❌ Sessione WCA: ${status || "no_cookie"} — job in pausa`);
+      await appendLog(jobId, "WARN", "❌ Sessione WCA non attiva — job in pausa");
       return false;
     } catch (err) {
       console.error("[DownloadProcessor] Pre-job session check failed:", err);
