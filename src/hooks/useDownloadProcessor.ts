@@ -249,14 +249,36 @@ export function useDownloadProcessor() {
   startJobRef.current = startJob;
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (processingRef.current) return;
-      supabase.from("download_jobs").select("id").eq("status", "pending").limit(1).then(({ data }) => {
-        if (data?.length && !processingRef.current) {
-          console.log("[Processor] Auto-starting pending job:", data[0].id);
-          startJobRef.current(data[0].id);
-        }
-      });
+
+      // 1. Check for pending jobs first
+      const { data: pending } = await supabase
+        .from("download_jobs").select("id").eq("status", "pending").limit(1);
+      if (pending?.length && !processingRef.current) {
+        console.log("[Processor] Auto-starting pending job:", pending[0].id);
+        startJobRef.current(pending[0].id);
+        return;
+      }
+
+      // 2. Recover orphaned "running" jobs (no update for 60s = no active tab)
+      const cutoff = new Date(Date.now() - 60_000).toISOString();
+      const { data: orphaned } = await supabase
+        .from("download_jobs")
+        .select("id, terminal_log")
+        .eq("status", "running")
+        .lt("updated_at", cutoff)
+        .limit(1);
+
+      if (orphaned?.length && !processingRef.current) {
+        const job = orphaned[0];
+        console.log("[Processor] Recovering orphaned job:", job.id);
+        const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const log = [...((job.terminal_log as any[]) || []), { ts, type: "INFO", msg: "🔄 Ripresa automatica dopo refresh" }].slice(-150);
+        await supabase.from("download_jobs").update({
+          status: "pending", error_message: null, terminal_log: log as any,
+        }).eq("id", job.id).eq("status", "running");
+      }
     }, 10000);
     return () => clearInterval(interval);
   }, []);
