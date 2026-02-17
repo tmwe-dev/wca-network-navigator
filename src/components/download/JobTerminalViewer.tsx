@@ -4,26 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Terminal } from "lucide-react";
+import {
+  Terminal, Building2, Mail, Phone, FileText,
+  CheckCircle, XCircle, AlertTriangle, SkipForward, Zap, Clock,
+} from "lucide-react";
 
 interface LogEntry {
   ts: string;
   type: string;
   msg: string;
 }
-
-const typeColors: Record<string, string> = {
-  START: "text-sky-400",
-  OK: "text-emerald-400",
-  WAIT: "text-amber-400",
-  PAUSE: "text-orange-400",
-  RECOVERY: "text-violet-400",
-  NIGHT: "text-indigo-400",
-  DONE: "text-emerald-300",
-  ERROR: "text-red-400",
-  INFO: "text-slate-400",
-  STOP: "text-red-500",
-};
 
 interface Props {
   open: boolean;
@@ -34,6 +24,183 @@ interface Props {
   isDark: boolean;
 }
 
+/* ── Parse structured info from log message ── */
+function parseLogEntry(entry: LogEntry) {
+  const { type, msg } = entry;
+
+  // Extract company name and WCA ID from OK/WARN lines
+  const companyMatch = msg.match(/^(.+?)\s+\(#(\d+)\)\s*—\s*(.+)$/);
+  if (companyMatch) {
+    const companyName = companyMatch[1];
+    const wcaId = companyMatch[2];
+    const indicators = companyMatch[3];
+
+    const hasProfile = indicators.includes("Profilo ✓");
+    const hasEmail = indicators.includes("Email ✓");
+    const hasPhone = indicators.includes("Tel ✓");
+    const emailCount = indicators.match(/Email ✓ \((\d+)\)/)?.[1] || "0";
+    const phoneCount = indicators.match(/Tel ✓ \((\d+)\)/)?.[1] || "0";
+
+    return {
+      kind: "result" as const,
+      companyName,
+      wcaId,
+      hasProfile,
+      hasEmail,
+      hasPhone,
+      emailCount,
+      phoneCount,
+      success: hasEmail || hasPhone,
+    };
+  }
+
+  // START line
+  const startMatch = msg.match(/Profilo #(\d+) \((\d+)\/(\d+)\)/);
+  if (startMatch && type === "START") {
+    return {
+      kind: "start" as const,
+      wcaId: startMatch[1],
+      current: startMatch[2],
+      total: startMatch[3],
+    };
+  }
+
+  // SKIP line (member not found or page not loaded)
+  if (type === "SKIP") {
+    const skipMatch = msg.match(/#(\d+)/);
+    return { kind: "skip" as const, wcaId: skipMatch?.[1] || "", message: msg };
+  }
+
+  return { kind: "generic" as const };
+}
+
+/* ── Company initial avatar ── */
+function CompanyAvatar({ name, success }: { name: string; success: boolean }) {
+  const initials = name
+    .split(/[\s&]+/)
+    .filter(w => w.length > 1)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join("");
+
+  return (
+    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+      success
+        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+        : "bg-red-500/15 text-red-400 border border-red-500/20"
+    }`}>
+      {initials || <Building2 className="w-3.5 h-3.5" />}
+    </div>
+  );
+}
+
+/* ── Result card for a processed company ── */
+function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "result" } }) {
+  return (
+    <div className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+      parsed.success
+        ? "bg-emerald-500/[0.06] border border-emerald-500/10"
+        : "bg-red-500/[0.04] border border-red-500/10"
+    }`}>
+      <CompanyAvatar name={parsed.companyName} success={parsed.success} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-200 truncate">{parsed.companyName}</span>
+          <span className="text-[10px] text-slate-600 font-mono shrink-0">#{parsed.wcaId}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5">
+          {parsed.hasProfile && (
+            <span className="flex items-center gap-1 text-[10px] text-blue-400">
+              <FileText className="w-3 h-3" /> Profilo
+            </span>
+          )}
+          {parsed.hasEmail ? (
+            <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+              <Mail className="w-3 h-3" /> {parsed.emailCount}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-slate-600">
+              <Mail className="w-3 h-3" /> 0
+            </span>
+          )}
+          {parsed.hasPhone ? (
+            <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+              <Phone className="w-3 h-3" /> {parsed.phoneCount}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-slate-600">
+              <Phone className="w-3 h-3" /> 0
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0">
+        {parsed.success ? (
+          <CheckCircle className="w-4 h-4 text-emerald-400" />
+        ) : (
+          <XCircle className="w-4 h-4 text-red-400/60" />
+        )}
+      </div>
+      <span className="text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+    </div>
+  );
+}
+
+/* ── Processing indicator (START) ── */
+function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "start" } }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500/10 border border-sky-500/20 shrink-0">
+        <Zap className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+      </div>
+      <span className="text-xs text-slate-500">
+        Estrazione <span className="font-mono text-sky-400">#{parsed.wcaId}</span>
+        <span className="ml-2 text-slate-600">{parsed.current}/{parsed.total}</span>
+      </span>
+      <span className="ml-auto text-[10px] text-slate-600 font-mono">{entry.ts}</span>
+    </div>
+  );
+}
+
+/* ── Skip row ── */
+function SkipRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "skip" } }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/20 shrink-0">
+        <SkipForward className="w-3.5 h-3.5 text-amber-400" />
+      </div>
+      <span className="text-xs text-amber-400/80 truncate flex-1">{parsed.message}</span>
+      <span className="text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+    </div>
+  );
+}
+
+/* ── Generic log line ── */
+function GenericRow({ entry }: { entry: LogEntry }) {
+  const typeStyles: Record<string, { icon: typeof Terminal; color: string }> = {
+    INFO: { icon: Terminal, color: "text-slate-400" },
+    DONE: { icon: CheckCircle, color: "text-emerald-400" },
+    ERROR: { icon: AlertTriangle, color: "text-red-400" },
+    STOP: { icon: XCircle, color: "text-red-500" },
+    WARN: { icon: AlertTriangle, color: "text-amber-400" },
+  };
+  const style = typeStyles[entry.type] || typeStyles.INFO;
+  const Icon = style.icon;
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg">
+      <div className="w-8 flex items-center justify-center shrink-0">
+        <Icon className={`w-3.5 h-3.5 ${style.color}`} />
+      </div>
+      <span className={`text-xs ${style.color}`}>{entry.msg}</span>
+      <span className="ml-auto text-[10px] text-slate-600 font-mono shrink-0">{entry.ts}</span>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   MAIN COMPONENT
+   ══════════════════════════════════════════════════ */
 export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countryName, isDark }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -55,59 +222,114 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [logs, autoScroll]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    setAutoScroll(scrollHeight - scrollTop - clientHeight < 40);
+    setAutoScroll(scrollHeight - scrollTop - clientHeight < 60);
   };
 
   const entries = (logs || []).filter(e => e.type !== "GATE");
 
+  // Stats
+  const results = entries.filter(e => {
+    const p = parseLogEntry(e);
+    return p.kind === "result";
+  });
+  const successCount = results.filter(e => {
+    const p = parseLogEntry(e);
+    return p.kind === "result" && p.success;
+  }).length;
+  const failCount = results.length - successCount;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] p-0 overflow-hidden bg-slate-950 border-white/10">
-        <DialogHeader className="px-4 pt-4 pb-2 border-b border-white/[0.06]">
-          <DialogTitle className="flex items-center gap-2 text-emerald-400 font-mono text-sm">
-            <Terminal className="w-4 h-4" />
-            Terminal — {countryName}
-            {isActive && (
-              <span className="ml-auto flex items-center gap-1.5 text-[10px] text-emerald-400/70">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                LIVE
-              </span>
-            )}
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden bg-slate-950 border-white/10">
+        {/* Header */}
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-white/[0.06]">
+          <DialogTitle className="flex items-center gap-3 text-sm">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Terminal className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <span className="text-slate-200 font-semibold">{countryName}</span>
+              {isActive && (
+                <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-emerald-400/70 font-normal">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE
+                </span>
+              )}
+            </div>
           </DialogTitle>
-          <DialogDescription className="text-slate-500 text-xs">
-            Log di esecuzione del job
-          </DialogDescription>
+          <DialogDescription className="sr-only">Log di esecuzione del job</DialogDescription>
+
+          {/* Mini stats */}
+          {results.length > 0 && (
+            <div className="flex items-center gap-4 mt-2 text-[11px]">
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <CheckCircle className="w-3 h-3" /> {successCount} con contatti
+              </span>
+              <span className="flex items-center gap-1.5 text-red-400/70">
+                <XCircle className="w-3 h-3" /> {failCount} senza contatti
+              </span>
+              <span className="flex items-center gap-1.5 text-slate-500">
+                <Clock className="w-3 h-3" /> {results.length} processati
+              </span>
+            </div>
+          )}
         </DialogHeader>
 
+        {/* Log entries */}
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-[400px] overflow-y-auto p-3 font-mono text-[11px] leading-[1.7] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          style={{ maxHeight: "calc(85vh - 120px)" }}
         >
           {entries.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-slate-600 text-xs">
-              Nessun log disponibile per questo job.
+            <div className="h-[300px] flex items-center justify-center text-slate-600 text-sm">
+              <div className="text-center space-y-2">
+                <Terminal className="w-8 h-8 mx-auto text-slate-700" />
+                <p>In attesa dei log...</p>
+              </div>
             </div>
           ) : (
             entries.map((entry, idx) => {
-              const color = typeColors[entry.type] || typeColors.INFO;
-              return (
-                <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
-                  <span className="text-slate-600 select-none shrink-0">{entry.ts}</span>
-                  <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
-                  <span className="text-slate-300">{entry.msg}</span>
-                </div>
-              );
+              const parsed = parseLogEntry(entry);
+
+              if (parsed.kind === "result") {
+                return <ResultRow key={idx} entry={entry} parsed={parsed} />;
+              }
+              if (parsed.kind === "start") {
+                return <StartRow key={idx} entry={entry} parsed={parsed} />;
+              }
+              if (parsed.kind === "skip") {
+                return <SkipRow key={idx} entry={entry} parsed={parsed} />;
+              }
+              return <GenericRow key={idx} entry={entry} />;
             })
           )}
         </div>
+
+        {/* Auto-scroll indicator */}
+        {!autoScroll && isActive && (
+          <button
+            onClick={() => {
+              setAutoScroll(true);
+              if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }}
+            className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+          >
+            ↓ Torna in fondo
+          </button>
+        )}
       </DialogContent>
     </Dialog>
   );
