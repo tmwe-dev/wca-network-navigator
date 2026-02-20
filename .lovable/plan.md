@@ -1,124 +1,111 @@
 
-# Wizard Guidato Multi-Step per l'Importazione Prospect
+# Fix Layout Wizard Step 1 — Sezioni ATECO che escono dallo schermo
 
-## Obiettivo
+## Problema identificato
 
-Creare un componente **wizard** (procedura guidata) a 4 step che guidi l'utente passo-passo fino all'avvio del download, sostituendo la schermata "idle" del tab Importa con un'interfaccia molto più chiara e intuitiva.
+Nel wizard (Step 1 — Settore ATECO), il layout attuale usa `h-full flex flex-col gap-3 p-4 overflow-y-auto` come wrapper esterno, ma il div interno con le sezioni ATECO ha `flex-1 space-y-2 overflow-y-auto`. Il problema è che `flex-1` richiede che il parent abbia un'altezza definita e vincolata, ma la catena di contenitori in `ProspectCenter` ha `overflow-hidden` a vari livelli che non propaga correttamente l'altezza disponibile al wizard.
 
----
+Il risultato visivo: le card delle sezioni ATECO si espandono oltre i bordi del pannello, non scrollano, e il pulsante "Avanti" non è raggiungibile.
 
-## I 4 Step del Wizard
-
-```text
-Step 1 → Step 2 → Step 3 → Step 4
-SETTORE   ZONA    PROFILO  AVVIA
-ATECO    GEO     AZIENDA  DOWNLOAD
-```
-
-### Step 1 — Settore ATECO
-- Mostra le **Sezioni ATECO** (A, B, C, D…) come grandi card cliccabili con nome e icona
-- Sotto ogni sezione, quando cliccata, si espandono i **Gruppi** (es. 13.10, 13.20…)
-- Badge con il numero di prospect già nel DB per ogni gruppo
-- Multi-selezione: si possono scegliere più codici
-- Pulsante "Avanti →" abilitato appena si seleziona almeno 1 codice (o si salta)
-
-### Step 2 — Zona Geografica
-- **Regioni italiane** come chip selezionabili (multi-select)
-- Se si seleziona una regione, appaiono le **Province** relative da affinare
-- Oppure: "Tutta Italia" per non filtrare geograficamente
-- Pulsante "← Indietro" e "Avanti →"
-
-### Step 3 — Profilo Aziendale (opzionale)
-- **Fatturato min/max** con un semplice slider visivo (0 → 50M, 50M → 500M, 500M+)
-- **Dipendenti min/max** con range preimpostati (Micro <10, Piccola 10-50, Media 50-250, Grande 250+)
-- Toggle **"Ha telefono"** / **"Ha email"** / **"Entrambi"**
-- Pulsante "Salta questo step" per passare direttamente all'avvio
-- Pulsante "← Indietro" e "Avanti →"
-
-### Step 4 — Riepilogo e Avvio
-- Mostra un **riepilogo** di tutte le scelte fatte (ATECO selezionati, zona, filtri)
-- Mostra lo **stato dell'estensione RA** (connessa/non connessa)
-- Pulsante grande "🚀 Cerca Aziende" per avviare la ricerca
-- Torna al flusso normale (`phase = "searching"`) dopo il click
-
----
-
-## Architettura Tecnica
-
-### Nuovo componente: `src/components/prospects/ImportWizard.tsx`
-
-Il wizard è un componente autonomo che:
-- Gestisce internamente il proprio `step` (1-4) con navigazione avanti/indietro
-- Raccoglie le scelte in uno stato locale `wizardState`
-- Al completamento (Step 4 → Avvia), chiama la funzione `onStart(atecoCodes, regions, provinces, filters)` passata come prop dal `ProspectImporter`
-
-```typescript
-interface WizardState {
-  atecoCodes: string[];
-  regions: string[];
-  provinces: string[];
-  filters: Partial<ProspectFilters>;
-}
-
-interface ImportWizardProps {
-  isDark: boolean;
-  onStart: (state: WizardState) => void;
-  initialAtecoCodes?: string[];   // pre-popolati dall'albero ATECO a sinistra
-  initialRegions?: string[];
-  initialProvinces?: string[];
-}
-```
-
-### Modifica: `ProspectImporter.tsx`
-
-- Quando `phase === "idle"`, invece dello schermo attuale, renderizza `<ImportWizard>` 
-- Quando il wizard chiama `onStart(...)`, il `ProspectImporter` fa partire la ricerca con i parametri ricevuti
-- I parametri dall'albero ATECO (già selezionati) vengono passati come valori iniziali pre-compilati al wizard
-
-### Barra di progresso visiva
-
-In cima al wizard, una barra con i 4 step e indicatori di stato:
+## Causa tecnica
 
 ```
-[●──────────────────────]  Step 1 di 4
-  Settore  Zona  Profilo  Avvia
+ProspectCenter → TabsContent (flex-1 min-h-0) 
+  → div border overflow-hidden  ← qui il contenuto è clippato
+    → ProspectImporter → ImportWizard
+      → div h-full flex flex-col  ← h-full funziona
+        → flex-1 space-y-2 overflow-y-auto  ← flex-1 NON funziona senza min-h-0 sul parent
 ```
 
----
+Il `div.flex-1` che contiene le sezioni ATECO manca di `min-h-0` (necessario in flexbox per consentire lo scroll interno quando il contenuto è più alto del container).
 
-## UX e Visual Design
+## Fix da applicare — solo `ImportWizard.tsx`
 
-### Step 1 — Selezione Settore
-- Griglia di card 2×N con le sezioni ATECO (Sezione A: Agricoltura, Sezione B: Estrazione, …)
-- Colore di sfondo diverso per le sezioni già selezionate
-- Badge azzurro "X nel DB" se ci sono prospect già importati per quel settore
+### Step 1 (linea ~209): aggiungere `min-h-0` al div delle sezioni
 
-### Step 2 — Zona Geografica
-- Chip grandi per le 20 regioni italiane
-- Quando una regione è selezionata, appaiono le province sotto (chip più piccoli)
-- Chip speciale "🇮🇹 Tutta Italia" che deseleziona tutto
+```tsx
+// PRIMA (riga ~209)
+<div className="flex-1 space-y-2 overflow-y-auto">
 
-### Step 3 — Profilo Aziendale
-- 3 range preimpostati per fatturato: **Micro** (< 500K), **Piccola** (500K–5M), **Media** (5M–50M), **Grande** (> 50M) — cliccabili come chip
-- 4 range preimpostati per dipendenti: **Micro** (< 10), **Piccola** (10–50), **Media** (50–250), **Grande** (250+)
-- 3 toggle: telefono, email, entrambi
+// DOPO
+<div className="flex-1 min-h-0 space-y-2 overflow-y-auto pb-2">
+```
 
-### Step 4 — Avvio
-- Card di riepilogo con le scelte fatte in formato leggibile
-- Indicatore estensione RA (verde/rosso)
-- Pulsante "Cerca Aziende" grande e prominente
+### Step 2 (linea ~303): stesso fix
+```tsx
+// PRIMA
+<div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
 
----
+// DOPO  
+<div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">  // OK già corretto
+```
 
-## File da creare/modificare
+### Step 3 e Step 4 (linee ~401, ~500): stesso controllo
+
+### Wrapper principale di tutti gli step
+
+Tutti i return di ogni step hanno il wrapper:
+```tsx
+<div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
+```
+
+Questo in realtà dovrebbe funzionare perché `h-full` + `overflow-y-auto` è il pattern giusto — MA solo se il parent ha un'altezza definita. 
+
+Il vero problema è che il container padre in `ProspectCenter.tsx` ha `overflow-hidden` ma NON ha `min-h-0` nella catena di flex:
+
+```tsx
+// ProspectCenter.tsx riga ~207
+<div className={`h-full rounded-2xl border overflow-hidden ...`}>
+  <ProspectImporter ... />
+</div>
+```
+
+Questo `div` ha `h-full` ma il `TabsContent` che lo contiene usa `flex-1 min-h-0` — questo è corretto. Il problema è all'interno di `ImportWizard`: il `div` con `flex-1 space-y-2 overflow-y-auto` che lista le sezioni ATECO manca di `min-h-0`.
+
+## Modifiche da fare
+
+### File: `src/components/prospects/ImportWizard.tsx`
+
+**Modifica 1** (Step 1, riga ~209): aggiungere `min-h-0` al div scrollabile delle sezioni
+```tsx
+// DA
+<div className="flex-1 space-y-2 overflow-y-auto">
+// A
+<div className="flex-1 min-h-0 space-y-2 overflow-y-auto">
+```
+
+**Modifica 2** (Step 2, riga ~309): il wrapper dello step 2 ha già `overflow-y-auto` su `h-full` — verificare che il `flex-wrap gap-2` delle regioni non esploda. Aggiungere `overflow-y-auto` al div delle province se manca.
+
+**Modifica 3** (Tutti gli step): cambiare il wrapper da `h-full flex flex-col gap-3 p-4 overflow-y-auto` in modo che l'area del contenuto centrale scroll correttamente senza che i pulsanti "Avanti/Indietro" escano dallo schermo. Invece di far scrollare tutto il componente, meglio usare:
+- Header fisso (StepBar + titolo card)
+- Area centrale `flex-1 min-h-0 overflow-y-auto` 
+- Footer fisso (pulsanti navigazione)
+
+Questa struttura garantisce che i pulsanti siano sempre visibili in basso e che solo il contenuto medio scrolli.
+
+## Struttura corretta per ogni step
+
+```tsx
+<div className="h-full flex flex-col">          // wrapper non scroll
+  <div className="flex-shrink-0 p-4 pb-2">      // header fisso
+    <StepBar />
+    <TitoloCard />
+  </div>
+  
+  <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-2">
+    {/* contenuto scrollabile */}
+  </div>
+  
+  <div className="flex-shrink-0 p-4 pt-2 border-t ...">
+    {/* pulsanti Indietro / Avanti — sempre visibili */}
+  </div>
+</div>
+```
+
+## File da modificare
 
 | File | Operazione |
-|---|---|
-| `src/components/prospects/ImportWizard.tsx` | **Crea** — wizard a 4 step |
-| `src/components/prospects/ProspectImporter.tsx` | **Modifica** — usa `ImportWizard` quando `phase === "idle"` |
+|------|-----------|
+| `src/components/prospects/ImportWizard.tsx` | Refactor layout di tutti e 4 gli step per separare header/scroll/footer |
 
----
-
-## Nessuna modifica al DB o backend necessaria
-
-Il wizard è puramente client-side: raccoglie i parametri e li passa al flusso di importazione già esistente.
+Nessuna modifica al database o a file backend necessaria.
