@@ -36,13 +36,17 @@ Deno.serve(async (req) => {
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const { data: setting } = await supabase
+      const { data: emailSetting } = await supabase
         .from("app_settings")
-        .select("value")
-        .eq("key", "default_sender_email")
-        .maybeSingle();
+        .select("key, value")
+        .in("key", ["default_sender_email", "default_sender_name"]);
 
-      senderEmail = setting?.value || "onboarding@resend.dev";
+      const settingsMap: Record<string, string> = {};
+      emailSetting?.forEach((row: any) => { settingsMap[row.key] = row.value; });
+
+      const senderEmailVal = settingsMap["default_sender_email"] || "onboarding@resend.dev";
+      const senderName = settingsMap["default_sender_name"];
+      senderEmail = senderName ? `${senderName} <${senderEmailVal}>` : senderEmailVal;
     }
 
     // Send email via Resend
