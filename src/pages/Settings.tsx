@@ -10,7 +10,7 @@ import {
   Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
-  Zap, Crown, Paperclip, KeyRound, Eye, EyeOff,
+  Zap, Crown, Paperclip, KeyRound, Eye, EyeOff, Mail, Send, AlertCircle,
 } from "lucide-react";
 // ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
@@ -131,6 +131,13 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [savingWA, setSavingWA] = useState(false);
 
+  /* ── Email state ── */
+  const [emailSender, setEmailSender] = useState("");
+  const [emailName, setEmailName] = useState("");
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+
   /* ── WCA state ── */
   const [verifying, setVerifying] = useState(false);
   const [cookieInput, setCookieInput] = useState("");
@@ -152,6 +159,9 @@ export default function Settings() {
       setWhatsappNumber(settings["whatsapp_number"] || "");
       setWcaUser(settings["wca_username"] || "");
       setWcaPass(settings["wca_password"] || "");
+      setEmailSender(settings["default_sender_email"] || "");
+      setEmailName(settings["default_sender_name"] || "");
+      setTestEmailTo(settings["default_sender_email"] || "");
     }
   }, [settings]);
 
@@ -164,6 +174,41 @@ export default function Settings() {
       toast.success("Credenziali WCA salvate!");
     } catch { toast.error("Errore nel salvataggio"); }
     finally { setSavingWcaCreds(false); }
+  };
+
+  /* ── Email handlers ── */
+  const handleSaveEmail = async () => {
+    setSavingEmail(true);
+    try {
+      await updateSetting.mutateAsync({ key: "default_sender_email", value: emailSender.trim() });
+      await updateSetting.mutateAsync({ key: "default_sender_name", value: emailName.trim() });
+      toast.success("Impostazioni email salvate!");
+    } catch { toast.error("Errore nel salvataggio"); }
+    finally { setSavingEmail(false); }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmailTo.trim()) return;
+    setSendingTest(true);
+    try {
+      const fromField = emailName.trim()
+        ? `${emailName.trim()} <${emailSender.trim()}>`
+        : emailSender.trim();
+      const { error } = await supabase.functions.invoke("send-email", {
+        body: {
+          to: testEmailTo.trim(),
+          subject: "✅ Test Email da WCA Network Navigator",
+          html: `<p>Ciao! Questa è un'email di test inviata da <strong>WCA Network Navigator</strong>.</p><p>Se la ricevi, la configurazione del mittente <strong>${fromField}</strong> è corretta.</p>`,
+          from: fromField,
+        },
+      });
+      if (error) throw error;
+      toast.success("Email di test inviata con successo!");
+    } catch (err: any) {
+      toast.error("Errore invio: " + (err.message || "Sconosciuto"));
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   /* ── WCA handlers ── */
@@ -234,6 +279,9 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="generale" className="flex items-center gap-2">
             <SettingsIcon className="w-4 h-4" /> Generale
+          </TabsTrigger>
+          <TabsTrigger value="email" className="flex items-center gap-2">
+            <Mail className="w-4 h-4" /> Email
           </TabsTrigger>
           <TabsTrigger value="wca" className="flex items-center gap-2">
             <Globe className="w-4 h-4" /> WCA
@@ -311,6 +359,106 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ════════════════ EMAIL ════════════════ */}
+        <TabsContent value="email">
+          <div className="space-y-4">
+            {/* Mittente Email */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Mail className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Mittente Email</CardTitle>
+                      <CardDescription>Email e nome che appariranno come mittente</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant={emailSender ? "default" : "secondary"} className={emailSender ? "bg-primary text-primary-foreground" : ""}>
+                    {emailSender ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Email mittente</Label>
+                  <Input
+                    type="email"
+                    value={emailSender}
+                    onChange={(e) => setEmailSender(e.target.value)}
+                    placeholder="luca@tmwe.it"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome mittente (opzionale)</Label>
+                  <Input
+                    value={emailName}
+                    onChange={(e) => setEmailName(e.target.value)}
+                    placeholder="Luca - TMWE"
+                  />
+                </div>
+                <Button onClick={handleSaveEmail} disabled={savingEmail || !emailSender.trim()}>
+                  {savingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salva Impostazioni Email
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Alert verifica dominio */}
+            <div className="flex gap-3 rounded-lg border border-border bg-muted/50 p-4">
+              <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Verifica dominio richiesta</p>
+                <p className="text-sm text-muted-foreground">
+                  Per inviare email da <strong>{emailSender || "il tuo indirizzo"}</strong>, il dominio deve essere verificato su{" "}
+                  <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                    resend.com → Domains
+                  </a>
+                  . Aggiungi i record DNS (SPF, DKIM) indicati da Resend sul tuo provider DNS.
+                </p>
+              </div>
+            </div>
+
+            {/* Test Invio */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Send className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Test Invio</CardTitle>
+                    <CardDescription>Invia un'email di verifica per controllare la configurazione</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Invia email di test a:</Label>
+                  <Input
+                    type="email"
+                    value={testEmailTo}
+                    onChange={(e) => setTestEmailTo(e.target.value)}
+                    placeholder="luca@tmwe.it"
+                  />
+                </div>
+                <Button
+                  onClick={handleTestEmail}
+                  disabled={sendingTest || !testEmailTo.trim() || !emailSender.trim()}
+                  variant="outline"
+                >
+                  {sendingTest ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                  {sendingTest ? "Invio in corso..." : "Invia Email di Test"}
+                </Button>
+                {!emailSender.trim() && (
+                  <p className="text-xs text-muted-foreground">Salva prima l'email mittente per poter inviare il test.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ════════════════ WCA ════════════════ */}
