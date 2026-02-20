@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Square, Download, Plug, AlertTriangle, Search, ArrowRight, RotateCcw } from "lucide-react";
+import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug, Search } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { t } from "@/components/download/theme";
 import { SearchResultsTable, type SearchResult } from "./SearchResultsTable";
 import type { ProspectFilters } from "./ProspectAdvancedFilters";
+import { ImportWizard } from "./ImportWizard";
 
 interface Props {
   isDark: boolean;
@@ -101,9 +102,23 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
 
+  // ── Wizard params (set when wizard calls onStart) ──
+  const [wizardAteco, setWizardAteco] = useState<string[]>(atecoCodes);
+  const [wizardRegions, setWizardRegions] = useState<string[]>(regions);
+  const [wizardProvinces, setWizardProvinces] = useState<string[]>(provinces);
+  const [wizardFilters, setWizardFilters] = useState<ProspectFilters | null>(null);
+
   // ── Phase 1: Search only ──
-  const handleSearch = async () => {
-    if (atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0) return;
+  const handleSearch = async (
+    overrideAteco?: string[], overrideRegions?: string[],
+    overrideProvinces?: string[], overrideFilters?: ProspectFilters
+  ) => {
+    const ac = overrideAteco ?? wizardAteco;
+    const rg = overrideRegions ?? wizardRegions;
+    const pr = overrideProvinces ?? wizardProvinces;
+    const fl = overrideFilters ?? wizardFilters ?? filters;
+
+    if (ac.length === 0 && rg.length === 0 && pr.length === 0) return;
     const checkRes = await getScrapingStatus();
     if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
 
@@ -113,10 +128,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     setLogs([]);
 
     const res = await searchOnly({
-      atecoCodes,
-      regions: regions.length > 0 ? regions : undefined,
-      provinces: provinces.length > 0 ? provinces : undefined,
-      filters,
+      atecoCodes: ac,
+      regions: rg.length > 0 ? rg : undefined,
+      provinces: pr.length > 0 ? pr : undefined,
+      filters: fl,
       delaySeconds: settings.baseDelay,
     });
 
@@ -134,6 +149,14 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       setPhase("results");
       setLogs(res.log || [{ time: new Date().toISOString(), msg: res.error || "Nessun risultato trovato" }]);
     }
+  };
+
+  const handleWizardStart = ({ atecoCodes: ac, regions: rg, provinces: pr, filters: fl }: { atecoCodes: string[]; regions: string[]; provinces: string[]; filters: ProspectFilters }) => {
+    setWizardAteco(ac);
+    setWizardRegions(rg);
+    setWizardProvinces(pr);
+    setWizardFilters(fl);
+    handleSearch(ac, rg, pr, fl);
   };
 
   // ── Dedup: check P.IVA against prospects table ──
@@ -201,6 +224,31 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
   const progress = status && status.total > 0 ? Math.round((status.processed / status.total) * 100) : 0;
 
+  // When idle, render the wizard directly (it handles ext status internally)
+  if (phase === "idle") {
+    return (
+      <div className="h-full">
+        {jobBlocked && (
+          <div className={`flex items-center gap-2 text-xs px-3 py-2 mx-4 mt-4 rounded-xl ${isDark
+            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+            : "bg-amber-50 text-amber-600 border border-amber-200"
+          }`}>
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Un job è già in esecuzione. Attendi il completamento.
+          </div>
+        )}
+        <ImportWizard
+          isDark={isDark}
+          isExtAvailable={isAvailable}
+          onStart={handleWizardStart}
+          initialAtecoCodes={atecoCodes}
+          initialRegions={regions}
+          initialProvinces={provinces}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Extension status */}
@@ -219,60 +267,6 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
         }`}>
           <AlertTriangle className="w-3.5 h-3.5" />
           Un job è già in esecuzione. Attendi il completamento.
-        </div>
-      )}
-
-      {/* ═══ PHASE: IDLE ═══ */}
-      {phase === "idle" && (
-        <div className={`rounded-xl border p-4 space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/60 border-white/80"}`}>
-          <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
-            Fase 1: Ricerca Aziende
-          </h3>
-          <p className={`text-xs ${th.sub}`}>
-            Cerca le aziende su Report Aziende con i filtri selezionati. Poi potrai scegliere quali scaricare.
-          </p>
-
-          {atecoCodes.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {atecoCodes.map(c => (
-                <span key={c} className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
-                  {c}
-                </span>
-              ))}
-              {regions.length > 0 && regions.map(r => (
-                <span key={r} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
-                  {r}
-                </span>
-              ))}
-              {provinces.length > 0 && provinces.map(p => (
-                <span key={p} className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-teal-500/15 text-teal-300 border border-teal-500/25" : "bg-teal-50 text-teal-700 border border-teal-200"}`}>
-                  📍 {p}
-                </span>
-              ))}
-              {(filters.fatturato_min || filters.fatturato_max) && (
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-amber-500/15 text-amber-300 border border-amber-500/25" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                  💰 {filters.fatturato_min || "0"} — {filters.fatturato_max || "∞"}
-                </span>
-              )}
-              {(filters.dipendenti_min || filters.dipendenti_max) && (
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${isDark ? "bg-violet-500/15 text-violet-300 border border-violet-500/25" : "bg-violet-50 text-violet-700 border border-violet-200"}`}>
-                  👥 {filters.dipendenti_min || "0"} — {filters.dipendenti_max || "∞"}
-                </span>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={handleSearch}
-            disabled={!isAvailable || (atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0) || jobBlocked}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 ${isDark
-              ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30"
-              : "bg-sky-500 text-white hover:bg-sky-600"
-            }`}
-          >
-            <Search className="w-4 h-4" />
-            Cerca Aziende
-          </button>
         </div>
       )}
 
@@ -424,25 +418,6 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
         </div>
       )}
 
-      {/* Empty state */}
-      {phase === "idle" && !status && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className={`text-center space-y-2 max-w-md ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            <Download className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-       {atecoCodes.length === 0 && regions.length === 0 && provinces.length === 0 ? (
-              <>
-                <p className="text-sm">Seleziona codici ATECO o filtri geografici dal pannello a sinistra.</p>
-                <p className="text-xs">Puoi anche configurare filtri avanzati (fatturato, dipendenti, ecc.).</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm">Premi "Cerca Aziende" per trovare i prospect su Report Aziende.</p>
-                <p className="text-xs">Potrai poi selezionare quali scaricare. Le aziende già nel DB saranno evidenziate.</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
