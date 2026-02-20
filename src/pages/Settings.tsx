@@ -10,8 +10,7 @@ import {
   Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
-  Zap, Crown,
-  Paperclip,
+  Zap, Crown, Paperclip, KeyRound, Eye, EyeOff,
 } from "lucide-react";
 // ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
@@ -138,13 +137,34 @@ export default function Settings() {
   const [savingCookie, setSavingCookie] = useState(false);
   const isWcaOk = isWcaOkDerived;
 
+  /* ── WCA Credentials state ── */
+  const [wcaUser, setWcaUser] = useState("");
+  const [wcaPass, setWcaPass] = useState("");
+  const [showWcaPass, setShowWcaPass] = useState(false);
+  const [savingWcaCreds, setSavingWcaCreds] = useState(false);
+
   /* ── Export state ── */
   const [selectedFields, setSelectedFields] = useState<string[]>(EXPORT_FIELDS.map((f) => f.id));
   const { data: partners, isLoading: loadingPartners } = usePartners();
 
   useEffect(() => {
-    if (settings) setWhatsappNumber(settings["whatsapp_number"] || "");
+    if (settings) {
+      setWhatsappNumber(settings["whatsapp_number"] || "");
+      setWcaUser(settings["wca_username"] || "");
+      setWcaPass(settings["wca_password"] || "");
+    }
   }, [settings]);
+
+  /* ── WCA Credentials handler ── */
+  const handleSaveWcaCreds = async () => {
+    setSavingWcaCreds(true);
+    try {
+      await updateSetting.mutateAsync({ key: "wca_username", value: wcaUser.trim() });
+      await updateSetting.mutateAsync({ key: "wca_password", value: wcaPass.trim() });
+      toast.success("Credenziali WCA salvate!");
+    } catch { toast.error("Errore nel salvataggio"); }
+    finally { setSavingWcaCreds(false); }
+  };
 
   /* ── WCA handlers ── */
   const handleVerify = async () => {
@@ -306,6 +326,55 @@ export default function Settings() {
                 {isWcaOk ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</> : <><XCircle className="w-3 h-3 mr-1" /> Non connesso</>}
               </Badge>
             </div>
+
+            {/* WCA Credentials */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <KeyRound className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Credenziali Auto-Login</CardTitle>
+                      <CardDescription>Username e password per il login automatico WCA</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant={wcaUser && wcaPass ? "default" : "secondary"} className={wcaUser && wcaPass ? "bg-primary text-primary-foreground" : ""}>
+                    {wcaUser && wcaPass ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Username WCA</Label>
+                  <Input value={wcaUser} onChange={(e) => setWcaUser(e.target.value)} placeholder="email@example.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password WCA</Label>
+                  <div className="relative">
+                    <Input
+                      type={showWcaPass ? "text" : "password"}
+                      value={wcaPass}
+                      onChange={(e) => setWcaPass(e.target.value)}
+                      placeholder="••••••••"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowWcaPass((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showWcaPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button onClick={handleSaveWcaCreds} disabled={savingWcaCreds || !wcaUser.trim() || !wcaPass.trim()}>
+                  {savingWcaCreds ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salva Credenziali
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Main action: Scarica estensione */}
             <Card>
