@@ -1,71 +1,94 @@
 
-# Fix: Il download salta troppi profili quando la sessione WCA scade
+# Sezione Email nelle Impostazioni + Test Invio
 
-## Causa radice
+## Situazione attuale
 
-Il sistema di recovery della sessione ha un punto cieco:
+Il sistema usa già **Resend** (API key già configurata) per inviare email tramite la funzione backend `send-email`. Attualmente il mittente è fisso su `onboarding@resend.dev` (fallback di default), oppure viene passato manualmente ad ogni richiesta.
 
-- Il counter `consecutiveEmpty` si incrementa solo per profili **caricati ma vuoti** (nessun contatto, nessun profilo)
-- I profili che danno `pageLoaded: false` (saltati con Zero Retry) **non contano** per il recovery
-- Risultato: se la sessione scade e l'estensione non riesce a caricare le pagine WCA, i profili vengono saltati uno dopo l'altro senza che il sistema tenti il re-login
+Manca completamente una sezione nelle Impostazioni per configurare le credenziali email (indirizzo mittente + nome mittente) e testare l'invio.
 
-In `useDownloadProcessor.ts` (righe 156-166):
-```ts
-// Page didn't load — skip (Zero Retry policy)
-if (result.pageLoaded === false) {
-  await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
-  contactsMissing++;
-  processedSet.add(wcaId);
-  // ... aggiorna DB
-  continue;  // ← va avanti SENZA incrementare consecutiveEmpty
-}
+## Vincolo importante: Resend e domini personalizzati
+
+Resend non permette di inviare email da un dominio arbitrario senza prima verificarlo. Esistono due scenari:
+
+1. **Dominio verificato su Resend** (es. `tmwe.it`) — permette di inviare da `luca@tmwe.it`
+2. **Dominio non verificato** — Resend blocca l'invio con errore 422
+
+Per `luca@tmwe.it`, il dominio `tmwe.it` deve essere aggiunto e verificato nel pannello Resend con record DNS (SPF, DKIM). Questo è un passaggio che l'utente deve fare direttamente su resend.com.
+
+Nel frattempo, la sezione email mostrerà:
+- Campo "Email mittente" (es. `luca@tmwe.it`)
+- Campo "Nome mittente" (es. `Luca - TMWE`)
+- Badge stato (Configurato / Non configurato)
+- Pulsante **Salva**
+- Card separata con pulsante **Invia Email di Test** a `luca@tmwe.it`
+- Avviso informativo sul requisito di verifica dominio Resend
+
+## Modifiche da apportare
+
+### 1. `src/pages/Settings.tsx`
+Aggiungere una nuova tab **Email** (con icona `Mail`) tra Generale e WCA contenente:
+- Card "Mittente Email" con:
+  - `Input` email mittente (si salva in `app_settings` con chiave `default_sender_email`)
+  - `Input` nome mittente (si salva in `app_settings` con chiave `default_sender_name`)
+  - Badge stato configurazione
+  - Pulsante **Salva Impostazioni Email**
+- Card "Test Invio" con:
+  - `Input` pre-compilato con l'email mittente
+  - Pulsante **Invia Email di Test** che chiama la funzione backend `send-email`
+- Alert informativo su Resend e verifica dominio
+
+### 2. `supabase/functions/send-email/index.ts`
+Aggiornare la funzione per leggere anche `default_sender_name` e costruire il campo `from` nel formato corretto Resend: `"Nome <email@dominio.it>"`.
+
+## Layout nuova tab Email
+
+```text
+┌─────────────────────────────────────────────────────┐
+│  ✉️  Mittente Email                [✓ Configurato]  │
+│  Email e nome che appariranno come mittente          │
+├─────────────────────────────────────────────────────┤
+│  Email mittente                                      │
+│  [luca@tmwe.it_____________________]                │
+│                                                      │
+│  Nome mittente (opzionale)                           │
+│  [Luca - TMWE______________________]                │
+│                                                      │
+│  [Salva Impostazioni Email]                          │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  ⚠️  Verifica dominio Resend                         │
+│  Per inviare da luca@tmwe.it devi verificare         │
+│  il dominio tmwe.it su resend.com → Domains          │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  🧪 Test Invio                                      │
+├─────────────────────────────────────────────────────┤
+│  Invia un'email di test a:                           │
+│  [luca@tmwe.it_____________________]                │
+│                                                      │
+│  [Invia Email di Test]                               │
+└─────────────────────────────────────────────────────┘
 ```
-
-E il recovery (righe 184-214) viene DOPO il salvataggio, quindi non viene mai raggiunto dai profili saltati con `pageLoaded: false`.
-
-## Fix da applicare
-
-Aggiungere un secondo counter `consecutiveSkipped` che traccia i profili con `pageLoaded === false` consecutivi. Se supera la soglia (es. 3), tenta il re-login prima di procedere, esattamente come fa già per i profili vuoti.
-
-### Logica nuova nel blocco `pageLoaded === false`:
-
-```ts
-if (result.pageLoaded === false) {
-  await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
-  contactsMissing++;
-  consecutiveSkipped++;  // ← NUOVO
-
-  // Se troppi salti consecutivi → probabile sessione scaduta
-  if (consecutiveSkipped >= 3) {
-    await appendLog(jobId, "WARN", "⚠️ 3 profili non caricati consecutivi — verifica sessione WCA...");
-    const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
-    if (!recheck) {
-      await supabase.from("download_jobs").update({
-        status: "paused",
-        error_message: "⚠️ Sessione WCA scaduta — troppi profili non caricati."
-      }).eq("id", jobId);
-      return;
-    }
-    consecutiveSkipped = 0;  // reset dopo re-login riuscito
-  }
-
-  processedSet.add(wcaId);
-  await supabase.from("download_jobs").update({ ... }).eq("id", jobId);
-  continue;
-}
-```
-
-Quando un profilo viene caricato correttamente (anche vuoto), il `consecutiveSkipped` si resetta.
 
 ## File da modificare
 
 | File | Modifica |
 |------|---------|
-| `src/hooks/useDownloadProcessor.ts` | Aggiungere counter `consecutiveSkipped`, logica di verifica sessione nel blocco `pageLoaded === false` |
+| `src/pages/Settings.tsx` | Aggiungere tab "Email" con card configurazione mittente e test invio |
+| `supabase/functions/send-email/index.ts` | Leggere `default_sender_name` e costruire `from` come `"Nome <email>"` |
 
 ## Dettagli tecnici
 
-- Aggiungere `let consecutiveSkipped = 0;` subito dove c'è `let consecutiveEmpty = 0;`
-- Nel blocco `pageLoaded === false`: incrementare `consecutiveSkipped` e, se >= 3, chiamare `verifyWcaSession` e mettere in pausa il job se fallisce, altrimenti resetterlo
-- Nei casi di successo (fine del blocco extraction, dopo il salvataggio): aggiungere `consecutiveSkipped = 0;`
-- Zero impatto sulla Zero Retry Policy: un profilo saltato resta saltato — la verifica sessione serve solo per capire se riprendere con sessione valida, non per riprovare il profilo
+**Settings.tsx:**
+- Aggiungere `emailSender`, `emailName`, `testEmailTo`, `savingEmail`, `sendingTest` come nuovi state
+- `useEffect` esistente: aggiungere lettura di `default_sender_email` e `default_sender_name`
+- Handler `handleSaveEmail`: salva entrambe le chiavi in `app_settings`
+- Handler `handleTestEmail`: chiama `supabase.functions.invoke("send-email", { body: { to: testEmailTo, subject: "Test Email", html: "...", from: emailName ? "${emailName} <${emailSender}>" : emailSender } })`
+- Importare `Mail`, `Send`, `AlertCircle` da lucide-react
+
+**send-email/index.ts:**
+- Se `default_sender_name` è presente in `app_settings`, costruire `from` come `"Nome <email>"` (formato corretto Resend)
+- Nessun impatto sulle chiamate esistenti — backward compatible
