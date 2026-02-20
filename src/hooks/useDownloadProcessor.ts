@@ -90,6 +90,7 @@ export function useDownloadProcessor() {
       let contactsFound = job.contacts_found_count || 0;
       let contactsMissing = job.contacts_missing_count || 0;
       let consecutiveEmpty = 0;
+      let consecutiveSkipped = 0;
 
       // ═══════════════════════════════════════
       // MAIN LOOP — one profile at a time
@@ -157,6 +158,23 @@ export function useDownloadProcessor() {
           if (result.pageLoaded === false) {
             await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
             contactsMissing++;
+            consecutiveSkipped++;
+
+            // Se troppi salti consecutivi → probabile sessione scaduta
+            if (consecutiveSkipped >= 3) {
+              await appendLog(jobId, "WARN", "⚠️ 3 profili non caricati consecutivi — verifica sessione WCA...");
+              const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+              if (!recheck) {
+                await appendLog(jobId, "WARN", "❌ Sessione WCA irrecuperabile — job in pausa");
+                await supabase.from("download_jobs").update({
+                  status: "paused",
+                  error_message: "⚠️ Sessione WCA scaduta — troppi profili non caricati.",
+                }).eq("id", jobId);
+                return;
+              }
+              consecutiveSkipped = 0;
+            }
+
             processedSet.add(wcaId);
             await supabase.from("download_jobs").update({
               current_index: processedSet.size, processed_ids: [...processedSet] as any,
@@ -212,6 +230,7 @@ export function useDownloadProcessor() {
         } else {
           consecutiveEmpty = 0;
         }
+        consecutiveSkipped = 0; // reset quando un profilo carica correttamente
 
         // Update counters and log
         const hasAny = hasEmail || hasPhone;
