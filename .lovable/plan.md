@@ -1,108 +1,124 @@
 
-# Filtro "Solo nel DB" + Evidenziazione Priorità nell'Albero ATECO
+# Wizard Guidato Multi-Step per l'Importazione Prospect
 
 ## Obiettivo
 
-Due miglioramenti all'albero ATECO nel Prospect Center:
-
-1. **Filtro "Solo nel DB"** — Un toggle che nasconde tutti i codici ATECO per cui non esiste ancora nessun prospect importato nel database. Utile per lavorare solo su dati già disponibili.
-
-2. **Evidenziazione azzurra per le priorità** — I codici ad alta priorità (score elevato secondo `atecoRanking.ts`) vengono evidenziati in azzurro/cyan all'interno dei raggruppamenti dell'albero, anche senza filtri di ranking attivi. Così si vedono a colpo d'occhio i settori su cui puntare.
+Creare un componente **wizard** (procedura guidata) a 4 step che guidi l'utente passo-passo fino all'avvio del download, sostituendo la schermata "idle" del tab Importa con un'interfaccia molto più chiara e intuitiva.
 
 ---
 
-## Analisi dello stato attuale
+## I 4 Step del Wizard
 
-### File coinvolto: `src/components/prospects/AtecoGrid.tsx`
-
-- L'albero ha già `nodeCount` / `countMap` che mappa codice ATECO → numero di prospect nel DB.
-- Ha già il sistema di score `calcScore(rank)` e colori `scoreBg` / `scoreColor` tramite `atecoRanking.ts`.
-- I badge score (numero) compaiono già accanto ad ogni nodo.
-- **Manca**: un toggle per filtrare solo i nodi con `count > 0` nel DB.
-- **Manca**: l'evidenziazione visiva azzurra per i nodi ad alta priorità (score alto) a livello di riga (non solo il badge).
-
-### Soglia priorità
-
-Dalla formula `calcScore`: `(volume + valore) * 2 * moltiplicatore_intl`
-- Score massimo teorico = `(5+5) * 2 * 1.0 = 20`
-- Soglia "alta priorità" = **score >= 12** (volume + valore alti con internazionale ALTO o MOLTO ALTO)
-- Soglia "media priorità" = **score >= 7**
-
----
-
-## Modifiche tecniche
-
-### Solo file: `src/components/prospects/AtecoGrid.tsx`
-
-#### 1. Aggiungere stato toggle `onlyInDb`
-
-```typescript
-const [onlyInDb, setOnlyInDb] = useState(false);
+```text
+Step 1 → Step 2 → Step 3 → Step 4
+SETTORE   ZONA    PROFILO  AVVIA
+ATECO    GEO     AZIENDA  DOWNLOAD
 ```
 
-#### 2. Toggle UI — sopra la barra di ricerca ATECO
+### Step 1 — Settore ATECO
+- Mostra le **Sezioni ATECO** (A, B, C, D…) come grandi card cliccabili con nome e icona
+- Sotto ogni sezione, quando cliccata, si espandono i **Gruppi** (es. 13.10, 13.20…)
+- Badge con il numero di prospect già nel DB per ogni gruppo
+- Multi-selezione: si possono scegliere più codici
+- Pulsante "Avanti →" abilitato appena si seleziona almeno 1 codice (o si salta)
 
-Un piccolo switch con etichetta "Solo nel DB (X prospect)", dove X è il totale dei prospect nel DB. Visivamente integrato nello stile dark/light esistente.
+### Step 2 — Zona Geografica
+- **Regioni italiane** come chip selezionabili (multi-select)
+- Se si seleziona una regione, appaiono le **Province** relative da affinare
+- Oppure: "Tutta Italia" per non filtrare geograficamente
+- Pulsante "← Indietro" e "Avanti →"
 
-#### 3. Logica di filtro — `filteredSections`
+### Step 3 — Profilo Aziendale (opzionale)
+- **Fatturato min/max** con un semplice slider visivo (0 → 50M, 50M → 500M, 500M+)
+- **Dipendenti min/max** con range preimpostati (Micro <10, Piccola 10-50, Media 50-250, Grande 250+)
+- Toggle **"Ha telefono"** / **"Ha email"** / **"Entrambi"**
+- Pulsante "Salta questo step" per passare direttamente all'avvio
+- Pulsante "← Indietro" e "Avanti →"
 
-Nel `useMemo` che calcola `filteredSections`, aggiungere il controllo:
+### Step 4 — Riepilogo e Avvio
+- Mostra un **riepilogo** di tutte le scelte fatte (ATECO selezionati, zona, filtri)
+- Mostra lo **stato dell'estensione RA** (connessa/non connessa)
+- Pulsante grande "🚀 Cerca Aziende" per avviare la ricerca
+- Torna al flusso normale (`phase = "searching"`) dopo il click
+
+---
+
+## Architettura Tecnica
+
+### Nuovo componente: `src/components/prospects/ImportWizard.tsx`
+
+Il wizard è un componente autonomo che:
+- Gestisce internamente il proprio `step` (1-4) con navigazione avanti/indietro
+- Raccoglie le scelte in uno stato locale `wizardState`
+- Al completamento (Step 4 → Avvia), chiama la funzione `onStart(atecoCodes, regions, provinces, filters)` passata come prop dal `ProspectImporter`
 
 ```typescript
-// Se onlyInDb, una section è visibile solo se ha almeno un leaf con count > 0
-const sectionHasDbData = (secCode: string) =>
-  childDivisions(secCode).some(d =>
-    childGroups(d.codice).some(g => (nodeCount.get(g.codice) || 0) > 0)
-  );
+interface WizardState {
+  atecoCodes: string[];
+  regions: string[];
+  provinces: string[];
+  filters: Partial<ProspectFilters>;
+}
 
-if (onlyInDb) {
-  result = result.filter(s => sectionHasDbData(s.codice));
+interface ImportWizardProps {
+  isDark: boolean;
+  onStart: (state: WizardState) => void;
+  initialAtecoCodes?: string[];   // pre-popolati dall'albero ATECO a sinistra
+  initialRegions?: string[];
+  initialProvinces?: string[];
 }
 ```
 
-Stesso controllo a livello di division e group: filtrare divisioni e gruppi senza dati nel DB quando il toggle è attivo.
+### Modifica: `ProspectImporter.tsx`
 
-#### 4. Evidenziazione azzurra righe ad alta priorità
+- Quando `phase === "idle"`, invece dello schermo attuale, renderizza `<ImportWizard>` 
+- Quando il wizard chiama `onStart(...)`, il `ProspectImporter` fa partire la ricerca con i parametri ricevuti
+- I parametri dall'albero ATECO (già selezionati) vengono passati come valori iniziali pre-compilati al wizard
 
-Per **ogni riga** (section, division, group), se lo score è >= 12 (alta priorità), aggiungere un sottile bordo/sfondo azzurro alla riga stessa, non solo al badge:
+### Barra di progresso visiva
 
-```typescript
-// Classe aggiuntiva per righe ad alta priorità
-const isHighPriority = gScore >= 12;
-const priorityClass = isHighPriority
-  ? isDark
-    ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40"
-    : "bg-sky-50/80 border-l-2 border-sky-400/50"
-  : "";
+In cima al wizard, una barra con i 4 step e indicatori di stato:
+
 ```
-
-Questo crea un bordo azzurro sinistro + sfondo molto leggero sulle righe prioritarie, senza interferire con i colori di selezione.
-
----
-
-## Flusso risultante
-
-```text
-[Toggle OFF - default]
-→ Albero mostra tutti i codici ATECO
-→ I codici con score >= 12 hanno bordo azzurro a sinistra + sfondo leggero
-→ Tutti i badge score rimangono visibili come prima
-
-[Toggle ON - "Solo nel DB"]
-→ Albero mostra SOLO i codici che hanno almeno 1 prospect importato
-→ Section/Division vengono nascoste se tutti i loro figli hanno count = 0
-→ Il badge con il conteggio (es. "247") rimane visibile per indicare quanti prospect ci sono
-→ L'evidenziazione azzurra per le priorità rimane attiva
+[●──────────────────────]  Step 1 di 4
+  Settore  Zona  Profilo  Avvia
 ```
 
 ---
 
-## Nessuna modifica al DB o all'API necessaria
+## UX e Visual Design
 
-I dati dei conteggi sono già caricati da `useAtecoGroups()` che fetcha dal DB. Il toggle è puramente client-side.
+### Step 1 — Selezione Settore
+- Griglia di card 2×N con le sezioni ATECO (Sezione A: Agricoltura, Sezione B: Estrazione, …)
+- Colore di sfondo diverso per le sezioni già selezionate
+- Badge azzurro "X nel DB" se ci sono prospect già importati per quel settore
+
+### Step 2 — Zona Geografica
+- Chip grandi per le 20 regioni italiane
+- Quando una regione è selezionata, appaiono le province sotto (chip più piccoli)
+- Chip speciale "🇮🇹 Tutta Italia" che deseleziona tutto
+
+### Step 3 — Profilo Aziendale
+- 3 range preimpostati per fatturato: **Micro** (< 500K), **Piccola** (500K–5M), **Media** (5M–50M), **Grande** (> 50M) — cliccabili come chip
+- 4 range preimpostati per dipendenti: **Micro** (< 10), **Piccola** (10–50), **Media** (50–250), **Grande** (250+)
+- 3 toggle: telefono, email, entrambi
+
+### Step 4 — Avvio
+- Card di riepilogo con le scelte fatte in formato leggibile
+- Indicatore estensione RA (verde/rosso)
+- Pulsante "Cerca Aziende" grande e prominente
 
 ---
 
-## File da modificare
+## File da creare/modificare
 
-- **`src/components/prospects/AtecoGrid.tsx`** — Unico file da modificare: aggiunta toggle UI, logica filtro, evidenziazione righe prioritarie.
+| File | Operazione |
+|---|---|
+| `src/components/prospects/ImportWizard.tsx` | **Crea** — wizard a 4 step |
+| `src/components/prospects/ProspectImporter.tsx` | **Modifica** — usa `ImportWizard` quando `phase === "idle"` |
+
+---
+
+## Nessuna modifica al DB o backend necessaria
+
+Il wizard è puramente client-side: raccoglie i parametri e li passa al flusso di importazione già esistente.
