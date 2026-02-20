@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -157,6 +158,7 @@ export function AtecoGrid({
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [onlyInDb, setOnlyInDb] = useState(false);
 
   const { data: atecoGroups = [] } = useAtecoGroups();
 
@@ -208,16 +210,27 @@ export function AtecoGrid({
     }
   };
 
-  // Filter by search + ranking
+  // Total prospects in DB
+  const totalInDb = useMemo(() => {
+    let total = 0;
+    for (const s of sections) total += nodeCount.get(s.codice) || 0;
+    return total;
+  }, [nodeCount]);
+
+  // Filter by search + ranking + onlyInDb
   const filteredSections = useMemo(() => {
     const matchesSearch = (entry: AtecoEntry, q: string) =>
       entry.descrizione.toLowerCase().includes(q) || entry.codice.toLowerCase().includes(q);
 
     // Check if a group passes ranking
     const groupPassesRanking = (code: string) => passesRankingFilter(getAtecoRank(code), rankingFilters);
+    // Check if a group has db data
+    const groupHasDbData = (code: string) => (nodeCount.get(code) || 0) > 0;
     // Check if a division has any visible group
     const divHasVisibleGroup = (divCode: string) =>
-      childGroups(divCode).some(g => groupPassesRanking(g.codice));
+      childGroups(divCode).some(g =>
+        groupPassesRanking(g.codice) && (!onlyInDb || groupHasDbData(g.codice))
+      );
     // Check if a section has any visible division
     const sectionHasVisibleDiv = (secCode: string) =>
       childDivisions(secCode).some(d => divHasVisibleGroup(d.codice));
@@ -236,11 +249,11 @@ export function AtecoGrid({
       });
     }
 
-    // Apply ranking filter (hide sections with no visible children)
+    // Apply ranking filter + onlyInDb filter
     result = result.filter(s => sectionHasVisibleDiv(s.codice));
 
     return result;
-  }, [search, rankingFilters]);
+  }, [search, rankingFilters, onlyInDb, nodeCount]);
 
   // Auto-expand sections matching search
   useMemo(() => {
@@ -312,6 +325,29 @@ export function AtecoGrid({
         />
       </div>
 
+      {/* Only in DB toggle */}
+      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all ${
+        onlyInDb
+          ? isDark ? "bg-sky-500/10 border-sky-500/25" : "bg-sky-50 border-sky-200"
+          : isDark ? "bg-white/[0.03] border-white/[0.07]" : "bg-white/60 border-slate-200"
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className={`text-[11px] font-medium ${onlyInDb ? (isDark ? "text-sky-300" : "text-sky-700") : (isDark ? "text-slate-400" : "text-slate-500")}`}>
+            Solo nel DB
+          </span>
+          {totalInDb > 0 && (
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isDark ? "bg-white/[0.06] text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+              {totalInDb.toLocaleString()}
+            </span>
+          )}
+        </div>
+        <Switch
+          checked={onlyInDb}
+          onCheckedChange={setOnlyInDb}
+          className="scale-75 origin-right"
+        />
+      </div>
+
       {/* Selected chips */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1 items-center">
@@ -372,9 +408,14 @@ export function AtecoGrid({
               const sRanks = childDivisions(section.codice).map(d => getAtecoRank(d.codice)).filter(Boolean);
               const sAvgScore = sRanks.length > 0 ? Math.round(sRanks.reduce((s, r) => s + calcScore(r!), 0) / sRanks.length * 10) / 10 : 0;
 
+              const sHighPriority = sAvgScore >= 12;
+              const sPriorityClass = sHighPriority
+                ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                : "";
+
               return (
                 <Collapsible key={section.codice} open={isOpen} onOpenChange={() => toggleExpand(section.codice)}>
-                  <div className={`flex items-center gap-1 rounded-xl px-2 py-1.5 transition-all ${
+                  <div className={`flex items-center gap-1 rounded-xl px-2 py-1.5 transition-all ${sPriorityClass} ${
                     isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
                   }`}>
                     <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
@@ -404,7 +445,7 @@ export function AtecoGrid({
                   <CollapsibleContent>
                     <div className="ml-4 border-l border-dashed pl-2 space-y-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)" }}>
                       {childDivisions(section.codice)
-                        .filter(div => childGroups(div.codice).some(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)))
+                        .filter(div => childGroups(div.codice).some(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters) && (!onlyInDb || (nodeCount.get(g.codice) || 0) > 0)))
                         .map(div => {
                         const dCount = nodeCount.get(div.codice) || 0;
                         const isDivOpen = expanded.has(div.codice);
@@ -413,10 +454,14 @@ export function AtecoGrid({
                         const someDSel = dLeaves.some(c => selectedSet.has(c));
                         const dRank = getAtecoRank(div.codice);
                         const dScore = dRank ? calcScore(dRank) : 0;
+                        const dHighPriority = dScore >= 12;
+                        const dPriorityClass = dHighPriority
+                          ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                          : "";
 
                         return (
                           <Collapsible key={div.codice} open={isDivOpen} onOpenChange={() => toggleExpand(div.codice)}>
-                            <div className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${
+                            <div className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${dPriorityClass} ${
                               isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
                             }`}>
                               <CollapsibleTrigger className="flex items-center gap-2 flex-1 min-w-0 text-left">
@@ -445,17 +490,21 @@ export function AtecoGrid({
 
                             <CollapsibleContent>
                               <div className="ml-5 space-y-0.5">
-                                {childGroups(div.codice).filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters)).map(grp => {
+                                {childGroups(div.codice).filter(g => passesRankingFilter(getAtecoRank(g.codice), rankingFilters) && (!onlyInDb || (nodeCount.get(g.codice) || 0) > 0)).map(grp => {
                                   const gCount = nodeCount.get(grp.codice) || 0;
                                   const isSel = selectedSet.has(grp.codice);
                                   const gRank = getAtecoRank(grp.codice);
                                   const gScore = gRank ? calcScore(gRank) : 0;
+                                  const gHighPriority = gScore >= 12;
+                                  const gPriorityClass = gHighPriority && !isSel
+                                    ? isDark ? "bg-sky-500/[0.06] border-l-2 border-sky-500/40" : "bg-sky-50/80 border-l-2 border-sky-400/50"
+                                    : "";
 
                                   return (
                                     <button
                                       key={grp.codice}
                                       onClick={() => onToggle(grp.codice)}
-                                      className={`w-full flex items-center gap-1.5 rounded-lg px-2 py-1 text-left transition-all ${
+                                      className={`w-full flex items-center gap-1.5 rounded-lg px-2 py-1 text-left transition-all ${gPriorityClass} ${
                                         isSel
                                           ? isDark ? "bg-sky-500/10 border border-sky-500/20" : "bg-sky-50 border border-sky-200"
                                           : isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
