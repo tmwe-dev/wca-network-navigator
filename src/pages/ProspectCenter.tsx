@@ -168,6 +168,7 @@ export default function ProspectCenter() {
                         regionFilter={regionFilterStr}
                         provinceFilter={provinceFilterStr}
                         quickSearch={quickSearch}
+                        advFilters={advFilters}
                       />
                     </div>
                   ) : selectedAteco.length === 0 ? (
@@ -196,6 +197,7 @@ export default function ProspectCenter() {
                         isDark={isDark}
                         regionFilter={regionFilterStr}
                         provinceFilter={provinceFilterStr}
+                        advFilters={advFilters}
                       />
                     </div>
                   )}

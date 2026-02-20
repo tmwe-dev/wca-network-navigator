@@ -211,6 +211,22 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
               </span>
             )}
           </div>
+          <div className="flex items-center gap-2">
+            {activeCount > 0 && (
+              <button
+                onClick={() => { onChange({ ...EMPTY_FILTERS }); }}
+                className={`text-[11px] px-2 py-1 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/[0.06]" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"}`}
+              >
+                Reset
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isDark ? "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30" : "bg-sky-500 text-white hover:bg-sky-600"}`}
+            >
+              Applica filtri
+            </button>
+          </div>
         </div>
 
         {/* Body */}
