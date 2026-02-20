@@ -187,26 +187,28 @@ export function ImportWizard({
   // ════════════════════════════════════════════
   if (step === 1) {
     return (
-      <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
-        <StepBar />
-
-        <div className={`${card} p-4 space-y-2`}>
-          <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
-            Seleziona il settore ATECO
-          </h2>
-          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            Scegli uno o più settori. Puoi espandere ogni sezione per selezionare gruppi specifici.
-          </p>
+      <div className="h-full flex flex-col">
+        {/* Header fisso */}
+        <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
+          <StepBar />
+          <div className={`${card} p-3 space-y-1`}>
+            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+              Seleziona il settore ATECO
+            </h2>
+            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Scegli uno o più settori. Puoi espandere ogni sezione per selezionare gruppi specifici.
+            </p>
+          </div>
+          {atecoCodes.length > 0 && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-sky-500/10 border border-sky-500/20 text-sky-300" : "bg-sky-50 border border-sky-200 text-sky-700"}`}>
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>{atecoCodes.length} codici selezionati: {atecoCodes.slice(0, 5).join(", ")}{atecoCodes.length > 5 ? `...+${atecoCodes.length - 5}` : ""}</span>
+            </div>
+          )}
         </div>
 
-        {atecoCodes.length > 0 && (
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-sky-500/10 border border-sky-500/20 text-sky-300" : "bg-sky-50 border border-sky-200 text-sky-700"}`}>
-            <Check className="w-3.5 h-3.5 shrink-0" />
-            <span>{atecoCodes.length} codici selezionati: {atecoCodes.slice(0, 5).join(", ")}{atecoCodes.length > 5 ? `...+${atecoCodes.length - 5}` : ""}</span>
-          </div>
-        )}
-
-        <div className="flex-1 space-y-2 overflow-y-auto">
+        {/* Contenuto scrollabile */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-2">
           {ATECO_SECTIONS.map(section => {
             const groups = ATECO_GROUPS.filter(g => g.padre === section.codice);
             const selectedInSection = groups.filter(g => atecoCodes.includes(g.codice)).length;
@@ -277,7 +279,8 @@ export function ImportWizard({
           })}
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        {/* Footer fisso */}
+        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
           <span className={`text-xs ${isDark ? "text-slate-600" : "text-slate-400"}`}>
             {atecoCodes.length === 0 ? "Nessun settore selezionato" : ""}
           </span>
@@ -285,10 +288,7 @@ export function ImportWizard({
             <button onClick={() => setStep(2)} className={btn("ghost")}>
               Salta <SkipForward className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setStep(2)}
-              className={btn("primary")}
-            >
+            <button onClick={() => setStep(2)} className={btn("primary")}>
               Avanti <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -306,69 +306,75 @@ export function ImportWizard({
       : [];
 
     return (
-      <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
-        <StepBar />
-
-        <div className={`${card} p-4 space-y-2`}>
-          <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
-            Zona geografica
-          </h2>
-          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            Seleziona le regioni di interesse. Poi puoi affinare per provincia.
-          </p>
-        </div>
-
-        {/* Tutta Italia chip */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => toggleRegion("__ALL__")}
-            className={chip(regions.length === 0)}
-          >
-            🇮🇹 Tutta Italia
-          </button>
-          {REGIONI_ITALIANE.map(r => (
-            <button key={r} onClick={() => toggleRegion(r)} className={chip(regions.includes(r))}>
-              {regions.includes(r) && <Check className="w-3 h-3 inline mr-1" />}
-              {r}
-            </button>
-          ))}
-        </div>
-
-        {/* Province */}
-        {visibleProvinces.length > 0 && (
-          <div className={`${card} p-3 space-y-2`}>
-            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-              Province ({regions.join(", ")})
+      <div className="h-full flex flex-col">
+        {/* Header fisso */}
+        <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
+          <StepBar />
+          <div className={`${card} p-3 space-y-1`}>
+            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+              Zona geografica
+            </h2>
+            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Seleziona le regioni di interesse. Poi puoi affinare per provincia.
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {visibleProvinces.map(p => (
-                <button
-                  key={p.sigla}
-                  onClick={() => toggleProvince(p.sigla)}
-                  className={`px-2 py-1 rounded-lg text-[11px] border transition-all ${
-                    provinces.includes(p.sigla)
-                      ? isDark ? "bg-teal-500/20 text-teal-300 border-teal-500/30" : "bg-teal-50 text-teal-700 border-teal-300"
-                      : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:border-white/15" : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <span className="font-mono font-bold">{p.sigla}</span> {p.nome}
-                </button>
-              ))}
+          </div>
+        </div>
+
+        {/* Contenuto scrollabile */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-3">
+          {/* Tutta Italia chip */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => toggleRegion("__ALL__")}
+              className={chip(regions.length === 0)}
+            >
+              🇮🇹 Tutta Italia
+            </button>
+            {REGIONI_ITALIANE.map(r => (
+              <button key={r} onClick={() => toggleRegion(r)} className={chip(regions.includes(r))}>
+                {regions.includes(r) && <Check className="w-3 h-3 inline mr-1" />}
+                {r}
+              </button>
+            ))}
+          </div>
+
+          {/* Province */}
+          {visibleProvinces.length > 0 && (
+            <div className={`${card} p-3 space-y-2`}>
+              <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                Province ({regions.join(", ")})
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {visibleProvinces.map(p => (
+                  <button
+                    key={p.sigla}
+                    onClick={() => toggleProvince(p.sigla)}
+                    className={`px-2 py-1 rounded-lg text-[11px] border transition-all ${
+                      provinces.includes(p.sigla)
+                        ? isDark ? "bg-teal-500/20 text-teal-300 border-teal-500/30" : "bg-teal-50 text-teal-700 border-teal-300"
+                        : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:border-white/15" : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="font-mono font-bold">{p.sigla}</span> {p.nome}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {(regions.length > 0 || provinces.length > 0) && (
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-teal-500/10 border border-teal-500/20 text-teal-300" : "bg-teal-50 border border-teal-200 text-teal-700"}`}>
-            <MapPin className="w-3.5 h-3.5 shrink-0" />
-            <span>
-              {regions.length > 0 ? `${regions.join(", ")}` : ""}
-              {provinces.length > 0 ? ` · Province: ${provinces.join(", ")}` : ""}
-            </span>
-          </div>
-        )}
+          {(regions.length > 0 || provinces.length > 0) && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? "bg-teal-500/10 border border-teal-500/20 text-teal-300" : "bg-teal-50 border border-teal-200 text-teal-700"}`}>
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                {regions.length > 0 ? `${regions.join(", ")}` : ""}
+                {provinces.length > 0 ? ` · Province: ${provinces.join(", ")}` : ""}
+              </span>
+            </div>
+          )}
+        </div>
 
-        <div className="flex items-center justify-between pt-2">
+        {/* Footer fisso */}
+        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
           <button onClick={() => setStep(1)} className={btn("secondary")}>
             <ChevronLeft className="w-4 h-4" /> Indietro
           </button>
@@ -399,82 +405,88 @@ export function ImportWizard({
     );
 
     return (
-      <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
-        <StepBar />
-
-        <div className={`${card} p-4 space-y-2`}>
-          <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
-            Profilo aziendale <span className={`text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>(opzionale)</span>
-          </h2>
-          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            Filtra per dimensione aziendale e disponibilità di contatti.
-          </p>
-        </div>
-
-        {/* Fatturato */}
-        <div className={`${card} p-3 space-y-2`}>
-          <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-amber-400/80" : "text-amber-600"}`}>
-            💰 Fatturato
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {FATTURATO_PRESETS.map((p, i) => presetChip(
-              fatturatoPreset === i, p.label, p.desc, () => applyFatturatoPreset(i)
-            ))}
+      <div className="h-full flex flex-col">
+        {/* Header fisso */}
+        <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
+          <StepBar />
+          <div className={`${card} p-3 space-y-1`}>
+            <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+              Profilo aziendale <span className={`text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>(opzionale)</span>
+            </h2>
+            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Filtra per dimensione aziendale e disponibilità di contatti.
+            </p>
           </div>
         </div>
 
-        {/* Dipendenti */}
-        <div className={`${card} p-3 space-y-2`}>
-          <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-violet-400/80" : "text-violet-600"}`}>
-            👥 Dipendenti
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {DIPENDENTI_PRESETS.map((p, i) => presetChip(
-              dipendentiPreset === i, p.label, p.desc, () => applyDipendentiPreset(i)
-            ))}
+        {/* Contenuto scrollabile */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-3">
+          {/* Fatturato */}
+          <div className={`${card} p-3 space-y-2`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-amber-400/80" : "text-amber-600"}`}>
+              💰 Fatturato
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {FATTURATO_PRESETS.map((p, i) => presetChip(
+                fatturatoPreset === i, p.label, p.desc, () => applyFatturatoPreset(i)
+              ))}
+            </div>
+          </div>
+
+          {/* Dipendenti */}
+          <div className={`${card} p-3 space-y-2`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-violet-400/80" : "text-violet-600"}`}>
+              👥 Dipendenti
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {DIPENDENTI_PRESETS.map((p, i) => presetChip(
+                dipendentiPreset === i, p.label, p.desc, () => applyDipendentiPreset(i)
+              ))}
+            </div>
+          </div>
+
+          {/* Contatti */}
+          <div className={`${card} p-3 space-y-2`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-emerald-400/80" : "text-emerald-600"}`}>
+              📞 Contatti disponibili
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilters(f => ({ ...f, has_phone: !f.has_phone, has_phone_and_email: false }))}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                  filters.has_phone
+                    ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
+                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" /> Ha telefono
+              </button>
+              <button
+                onClick={() => setFilters(f => ({ ...f, has_email: !f.has_email, has_phone_and_email: false }))}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                  filters.has_email
+                    ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
+                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" /> Ha email
+              </button>
+              <button
+                onClick={() => setFilters(f => ({ ...f, has_phone_and_email: !f.has_phone_and_email, has_phone: false, has_email: false }))}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                  filters.has_phone_and_email
+                    ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-50 text-sky-700 border-sky-300"
+                    : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" /> Entrambi
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Contatti */}
-        <div className={`${card} p-3 space-y-2`}>
-          <p className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? "text-emerald-400/80" : "text-emerald-600"}`}>
-            📞 Contatti disponibili
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilters(f => ({ ...f, has_phone: !f.has_phone, has_phone_and_email: false }))}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                filters.has_phone
-                  ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              <Phone className="w-3.5 h-3.5" /> Ha telefono
-            </button>
-            <button
-              onClick={() => setFilters(f => ({ ...f, has_email: !f.has_email, has_phone_and_email: false }))}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                filters.has_email
-                  ? isDark ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              <Mail className="w-3.5 h-3.5" /> Ha email
-            </button>
-            <button
-              onClick={() => setFilters(f => ({ ...f, has_phone_and_email: !f.has_phone_and_email, has_phone: false, has_email: false }))}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                filters.has_phone_and_email
-                  ? isDark ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-sky-50 text-sky-700 border-sky-300"
-                  : isDark ? "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:border-white/20" : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" /> Entrambi
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
+        {/* Footer fisso */}
+        <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
           <button onClick={() => setStep(2)} className={btn("secondary")}>
             <ChevronLeft className="w-4 h-4" /> Indietro
           </button>
@@ -497,20 +509,22 @@ export function ImportWizard({
   const hasFilters = fatturatoPreset !== null || dipendentiPreset !== null || filters.has_phone || filters.has_email || filters.has_phone_and_email;
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
-      <StepBar />
-
-      <div className={`${card} p-4 space-y-2`}>
-        <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
-          Riepilogo e avvio
-        </h2>
-        <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-          Controlla i parametri e avvia la ricerca su Report Aziende.
-        </p>
+    <div className="h-full flex flex-col">
+      {/* Header fisso */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-2 space-y-2">
+        <StepBar />
+        <div className={`${card} p-3 space-y-1`}>
+          <h2 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+            Riepilogo e avvio
+          </h2>
+          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            Controlla i parametri e avvia la ricerca su Report Aziende.
+          </p>
+        </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="space-y-2">
+      {/* Contenuto scrollabile */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 space-y-2">
         {/* ATECO */}
         <div className={`${card} p-3 flex items-start gap-3`}>
           <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? "text-sky-400" : "text-sky-500"}`} />
@@ -574,21 +588,22 @@ export function ImportWizard({
           </div>
           <button onClick={() => setStep(3)} className={`text-[10px] shrink-0 px-2 py-1 rounded-lg ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/[0.05]" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}>Modifica</button>
         </div>
+
+        {/* Extension status */}
+        <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs ${isExtAvailable
+          ? isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+          : isDark ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-red-50 text-red-600 border border-red-200"
+        }`}>
+          <span className={`w-2 h-2 rounded-full shrink-0 ${isExtAvailable ? "bg-emerald-400" : "bg-red-400"} animate-pulse`} />
+          {isExtAvailable
+            ? "✅ Estensione RA connessa — pronto per la ricerca"
+            : "❌ Estensione RA non rilevata — installala e ricarica la pagina prima di procedere"
+          }
+        </div>
       </div>
 
-      {/* Extension status */}
-      <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs ${isExtAvailable
-        ? isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-        : isDark ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-red-50 text-red-600 border border-red-200"
-      }`}>
-        <span className={`w-2 h-2 rounded-full shrink-0 ${isExtAvailable ? "bg-emerald-400" : "bg-red-400"} animate-pulse`} />
-        {isExtAvailable
-          ? "✅ Estensione RA connessa — pronto per la ricerca"
-          : "❌ Estensione RA non rilevata — installala e ricarica la pagina prima di procedere"
-        }
-      </div>
-
-      <div className="flex items-center justify-between pt-1">
+      {/* Footer fisso */}
+      <div className={`flex-shrink-0 flex items-center justify-between px-4 py-3 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
         <button onClick={() => setStep(3)} className={btn("secondary")}>
           <ChevronLeft className="w-4 h-4" /> Indietro
         </button>
