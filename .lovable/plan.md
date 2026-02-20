@@ -1,58 +1,71 @@
 
-# Aggiunta Campi Credenziali WCA nella Pagina Impostazioni
+# Fix: Il download salta troppi profili quando la sessione WCA scade
 
-## Problema
+## Causa radice
 
-La tab WCA in Impostazioni mostra solo:
-- Pulsante scarica estensione Chrome
-- Pulsante verifica sessione
-- Campo cookie manuale (nascosto nelle opzioni avanzate)
+Il sistema di recovery della sessione ha un punto cieco:
 
-Mancano completamente i **campi username e password WCA**, che sono necessari per il sistema di auto-login automatico. Senza di questi, l'app non sa con quali credenziali autenticarsi e il flusso di download si blocca.
+- Il counter `consecutiveEmpty` si incrementa solo per profili **caricati ma vuoti** (nessun contatto, nessun profilo)
+- I profili che danno `pageLoaded: false` (saltati con Zero Retry) **non contano** per il recovery
+- Risultato: se la sessione scade e l'estensione non riesce a caricare le pagine WCA, i profili vengono saltati uno dopo l'altro senza che il sistema tenti il re-login
 
-I campi esistono nel database (`app_settings` con chiavi `wca_username` e `wca_password`) e vengono già letti dalla edge function `get-wca-credentials`, ma non c'è nessun form nell'interfaccia per inserirli.
-
-## Soluzione
-
-Aggiungere una card "Credenziali WCA" nella tab WCA di `Settings.tsx`, **subito sopra** la card dell'estensione Chrome.
-
-La card conterrà:
-- Campo **Username WCA**
-- Campo **Password WCA** (con toggle mostra/nascondi)
-- Badge stato (Configurato / Non configurato)
-- Pulsante **Salva Credenziali**
-
-I valori vengono letti da `app_settings` (già disponibili tramite `useAppSettings`) e salvati con `useUpdateSetting`.
-
-## Struttura della nuova card
-
+In `useDownloadProcessor.ts` (righe 156-166):
+```ts
+// Page didn't load — skip (Zero Retry policy)
+if (result.pageLoaded === false) {
+  await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
+  contactsMissing++;
+  processedSet.add(wcaId);
+  // ... aggiorna DB
+  continue;  // ← va avanti SENZA incrementare consecutiveEmpty
+}
 ```
-┌─────────────────────────────────────────────────────┐
-│  🔑 Credenziali Auto-Login          [✓ Configurato] │
-│  Username e password per il login automatico WCA     │
-├─────────────────────────────────────────────────────┤
-│  Username WCA                                        │
-│  [________________________]                          │
-│                                                      │
-│  Password WCA                                   [👁]  │
-│  [________________________]                          │
-│                                                      │
-│  [Salva Credenziali]                                 │
-└─────────────────────────────────────────────────────┘
+
+E il recovery (righe 184-214) viene DOPO il salvataggio, quindi non viene mai raggiunto dai profili saltati con `pageLoaded: false`.
+
+## Fix da applicare
+
+Aggiungere un secondo counter `consecutiveSkipped` che traccia i profili con `pageLoaded === false` consecutivi. Se supera la soglia (es. 3), tenta il re-login prima di procedere, esattamente come fa già per i profili vuoti.
+
+### Logica nuova nel blocco `pageLoaded === false`:
+
+```ts
+if (result.pageLoaded === false) {
+  await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
+  contactsMissing++;
+  consecutiveSkipped++;  // ← NUOVO
+
+  // Se troppi salti consecutivi → probabile sessione scaduta
+  if (consecutiveSkipped >= 3) {
+    await appendLog(jobId, "WARN", "⚠️ 3 profili non caricati consecutivi — verifica sessione WCA...");
+    const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+    if (!recheck) {
+      await supabase.from("download_jobs").update({
+        status: "paused",
+        error_message: "⚠️ Sessione WCA scaduta — troppi profili non caricati."
+      }).eq("id", jobId);
+      return;
+    }
+    consecutiveSkipped = 0;  // reset dopo re-login riuscito
+  }
+
+  processedSet.add(wcaId);
+  await supabase.from("download_jobs").update({ ... }).eq("id", jobId);
+  continue;
+}
 ```
+
+Quando un profilo viene caricato correttamente (anche vuoto), il `consecutiveSkipped` si resetta.
 
 ## File da modificare
 
 | File | Modifica |
 |------|---------|
-| `src/pages/Settings.tsx` | Aggiungere state per `wcaUser`/`wcaPass`, `useEffect` che li legge da `settings`, e la card con i campi form nella tab WCA |
+| `src/hooks/useDownloadProcessor.ts` | Aggiungere counter `consecutiveSkipped`, logica di verifica sessione nel blocco `pageLoaded === false` |
 
 ## Dettagli tecnici
 
-- Aggiungere `useState` per `wcaUser`, `wcaPass`, `showWcaPass`, `savingWcaCreds`
-- Aggiungere `useEffect` che popola i campi quando `settings` è disponibile (chiavi `wca_username` e `wca_password`)
-- Aggiungere handler `handleSaveWcaCreds` che chiama `updateSetting.mutateAsync` per entrambe le chiavi
-- Posizionare la nuova card come **prima card** nella tab WCA, prima del blocco estensione Chrome
-- Importare `KeyRound`, `Eye`, `EyeOff` da `lucide-react` (già installato)
-
-Nessuna modifica al database o alle Edge Functions necessaria — la struttura dei dati è già pronta.
+- Aggiungere `let consecutiveSkipped = 0;` subito dove c'è `let consecutiveEmpty = 0;`
+- Nel blocco `pageLoaded === false`: incrementare `consecutiveSkipped` e, se >= 3, chiamare `verifyWcaSession` e mettere in pausa il job se fallisce, altrimenti resetterlo
+- Nei casi di successo (fine del blocco extraction, dopo il salvataggio): aggiungere `consecutiveSkipped = 0;`
+- Zero impatto sulla Zero Retry Policy: un profilo saltato resta saltato — la verifica sessione serve solo per capire se riprendere con sessione valida, non per riprovare il profilo
