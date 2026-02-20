@@ -227,7 +227,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   // When idle, render the wizard directly (it handles ext status internally)
   if (phase === "idle") {
     return (
-      <div className="h-full">
+      <div className="h-full flex flex-col">
         {jobBlocked && (
           <div className={`flex items-center gap-2 text-xs px-3 py-2 mx-4 mt-4 rounded-xl ${isDark
             ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
@@ -237,14 +237,16 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
             Un job è già in esecuzione. Attendi il completamento.
           </div>
         )}
-        <ImportWizard
-          isDark={isDark}
-          isExtAvailable={isAvailable}
-          onStart={handleWizardStart}
-          initialAtecoCodes={atecoCodes}
-          initialRegions={regions}
-          initialProvinces={provinces}
-        />
+        <div className="flex-1 min-h-0">
+          <ImportWizard
+            isDark={isDark}
+            isExtAvailable={isAvailable}
+            onStart={handleWizardStart}
+            initialAtecoCodes={atecoCodes}
+            initialRegions={regions}
+            initialProvinces={provinces}
+          />
+        </div>
       </div>
     );
   }
