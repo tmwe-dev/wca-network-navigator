@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Guida from "./pages/Guida";
 import ProspectCenter from "./pages/ProspectCenter";
 import CampaignJobs from "./pages/CampaignJobs";
+import EmailComposer from "./pages/EmailComposer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/prospects" element={<ProspectCenter />} />
               <Route path="/guida" element={<Guida />} />
               <Route path="/campaign-jobs" element={<CampaignJobs />} />
+              <Route path="/email-composer" element={<EmailComposer />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

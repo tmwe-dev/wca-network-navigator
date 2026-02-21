@@ -15,6 +15,7 @@ import {
   Database,
   BookOpen,
   Building2,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 const navItems = [
   { title: "Operations", url: "/", icon: Globe },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
+  { title: "Email", url: "/email-composer", icon: Send },
   { title: "Prospect Center", url: "/prospects", icon: Building2 },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
