@@ -1,131 +1,44 @@
 
-# Deep Search Potenziata + Dettaglio Contatti Interattivo
+# Miglioramento Contrasto e Leggibilita - Enrichment Card e Social Links
 
-## Problema attuale
+## Problema
+La scheda di arricchimento AI e i badge social hanno problemi di leggibilita:
+- Il testo nella EnrichmentCard e troppo chiaro/sbiadito
+- I badge (specialties, languages, interests, seniority) hanno scarso contrasto
+- Il badge LinkedIn non e visibile (icona blu su sfondo scuro)
 
-1. **Deep Search limitata**: cerca solo LinkedIn/Facebook/Instagram dei contatti ma non genera link WhatsApp diretti, non verifica i numeri e non mostra i profili trovati nella scheda contatto in modo interattivo
-2. **Nessun link WhatsApp**: i numeri mobile sono mostrati come testo, senza link `wa.me/` per contattare direttamente
-3. **EnrichmentCard quasi vuota**: mostra solo la data di arricchimento, non il contenuto ricco (profilo contatti, profilo azienda, awards, specialties)
-4. **Social links nei contatti poco visibili**: mostrati come badge testuali generici, non come icone cliccabili intuitive
+## Modifiche
 
----
+### 1. EnrichmentCard.tsx - Testo e badge ad alto contrasto
 
-## Cosa faremo
+**Testo principale**: cambiare da `text-muted-foreground` a `text-foreground` per tutto il contenuto informativo (date, awards, news, background contatti).
 
-### 1. Link WhatsApp diretti per ogni contatto con numero mobile
+**Badge specialties**: da `bg-violet-500/10 text-violet-600 dark:text-violet-400` a `bg-violet-100 text-violet-900 dark:bg-violet-500/20 dark:text-violet-200 border-violet-300 dark:border-violet-500/30` -- sfondo chiaro con testo scuro in light mode, testo chiaro in dark mode.
 
-Nella sezione contatti (sia PartnerDetailFull che PartnerDetailCompact), accanto a ogni numero mobile, aggiungere un'icona WhatsApp cliccabile che apre `https://wa.me/{numero_pulito}`.
+**Badge seniority**: aumentare opacita sfondo e scurire testo:
+- senior: `bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/30`
+- mid: `bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-500/20 dark:text-sky-200 dark:border-sky-500/30`
+- junior: `bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30`
 
-Il numero viene normalizzato rimuovendo spazi, trattini e il "+" iniziale.
+**Badge languages/interests**: stessa logica, sfondo pieno chiaro + testo scuro in light, invertito in dark.
 
-### 2. Deep Search potenziata: WhatsApp link automatici
+**Badge outline (Fondata, Dipendenti)**: aggiungere `text-foreground font-medium` per renderli ben leggibili.
 
-Nella edge function `deep-search-partner`, dopo aver trovato i social, per ogni contatto con numero mobile:
-- Generare automaticamente un link WhatsApp (`wa.me/{numero}`) e salvarlo come social link con platform `whatsapp`
-- Non serve verificare se il numero sia effettivamente WhatsApp (non esiste un'API pubblica per farlo), ma il link funzionera comunque se il numero e registrato
+### 2. SocialLinks.tsx - Badge LinkedIn visibile
 
-### 3. Enrichment Card completa con dati ricchi
+Cambiare lo sfondo dei pulsanti social da `bg-secondary/30` a `bg-white dark:bg-white/10 border-gray-200 dark:border-white/15`. In questo modo:
+- **LinkedIn**: icona blu `#0A66C2` su sfondo bianco = perfettamente visibile
+- Tutti gli altri social: icona colorata su sfondo bianco/chiaro
 
-Riprogettare `EnrichmentCard` per mostrare tutti i dati raccolti dalla Deep Search:
-- **Profilo contatti**: background professionale, lingue, interessi (da `enrichment_data.contact_profiles`)
-- **Profilo aziendale**: awards, specialties, news recenti, anno fondazione (da `enrichment_data.company_profile`)
-- **Data deep search** (da `enrichment_data.deep_search_at`)
+### 3. CardSocialIcons.tsx - Stesso fix
 
-### 4. Social links visivi per contatti
-
-Migliorare `SocialLinks` per mostrare icone SVG colorate (LinkedIn blu, Facebook blu, WhatsApp verde, Instagram gradiente) invece di emoji generiche, con tooltip al passaggio del mouse.
-
-### 5. Deep Search: aggiungere ricerca profilo LinkedIn dettagliato
-
-Nella edge function, se viene trovato un LinkedIn personale, fare una ricerca web aggiuntiva tipo `site:linkedin.com/in/{slug}` per estrarre titolo e seniority dal titolo della pagina (senza necessita di login LinkedIn). Salvare il livello di seniority nel profilo contatto (`enrichment_data.contact_profiles[id].seniority`).
-
----
-
-## Modifiche ai file
-
-### Edge Function: `supabase/functions/deep-search-partner/index.ts`
-
-- Dopo il loop contatti social, aggiungere step "WhatsApp auto-link": per ogni contatto con `mobile`, creare un record `partner_social_links` con platform `whatsapp` e url `https://wa.me/{numero_normalizzato}`
-- Dopo aver trovato un LinkedIn personale, estrarre seniority dal titolo della pagina di ricerca (gia disponibile nei risultati Firecrawl, senza chiamata AI aggiuntiva)
-- Salvare seniority in `contact_profiles[id].seniority`
-
-### UI: `src/components/partners/PartnerDetailFull.tsx`
-
-- Nella sezione contatti, accanto a ogni numero mobile, aggiungere icona WhatsApp cliccabile (`wa.me/`)
-- Sotto ogni contatto con dati enrichment, mostrare badges con: seniority, lingue, background (1 riga)
-- Rendere i social links del contatto piu prominenti con icone SVG colorate
-
-### UI: `src/components/partners/PartnerDetailCompact.tsx`
-
-- Stesse modifiche WhatsApp link per i contatti
-- Aggiungere icone social cliccabili per contatto
-
-### UI: `src/components/partners/SocialLinks.tsx`
-
-- Sostituire emoji con icone SVG (LinkedIn, Facebook, Instagram, WhatsApp)
-- Aggiungere colori specifici per piattaforma
-- Per WhatsApp: icona verde con link diretto
-
-### UI: `src/components/partners/EnrichmentCard.tsx`
-
-- Mostrare profilo aziendale arricchito: awards, specialties, news recenti, anno fondazione, stima dipendenti
-- Mostrare profili contatto arricchiti: per ogni contatto con dati, mostrare background, seniority, lingue, interessi
-- Layout organizzato con sezioni collapsibili
-
----
+Assicurare che anche le icone social nelle card partner abbiano contrasto sufficiente (attualmente usano solo il colore fill senza sfondo esplicito).
 
 ## Dettagli tecnici
 
-### Normalizzazione numero per WhatsApp
-```typescript
-function toWhatsAppUrl(phone: string): string {
-  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
-  return `https://wa.me/${cleaned}`;
-}
-```
+File da modificare:
+- `src/components/partners/EnrichmentCard.tsx` -- classi CSS per testo e badge
+- `src/components/partners/SocialLinks.tsx` -- sfondo pulsanti social
+- `src/components/partners/shared/CardSocialIcons.tsx` -- sfondo icone social
 
-### WhatsApp auto-link nella Deep Search
-```typescript
-// After social search loop, for each contact with mobile
-for (const contact of contacts) {
-  if (contact.mobile && !existingSet.has(`${contact.id}_whatsapp`)) {
-    const cleaned = contact.mobile.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
-    await supabase.from('partner_social_links').insert({
-      partner_id: partnerId,
-      contact_id: contact.id,
-      platform: 'whatsapp',
-      url: `https://wa.me/${cleaned}`
-    });
-    socialLinksFound++;
-  }
-}
-```
-
-### Seniority extraction (dal titolo pagina LinkedIn)
-```typescript
-// Already have search result title like "John Doe - CEO at Company | LinkedIn"
-const titleParts = result.title?.split(' - ') || [];
-if (titleParts.length > 1) {
-  const role = titleParts[1].split(' | ')[0]?.trim();
-  // Classify seniority from title keywords
-  const seniorKeywords = ['CEO', 'Director', 'VP', 'President', 'Owner', 'Founder', 'Managing', 'General Manager', 'Head'];
-  const midKeywords = ['Manager', 'Supervisor', 'Lead', 'Senior', 'Coordinator'];
-  let seniority = 'junior';
-  if (seniorKeywords.some(k => role?.includes(k))) seniority = 'senior';
-  else if (midKeywords.some(k => role?.includes(k))) seniority = 'mid';
-  contactProfiles[contact.id].seniority = seniority;
-  contactProfiles[contact.id].linkedin_title = role;
-}
-```
-
-### File da modificare
-
-| File | Modifica |
-|------|---------|
-| `supabase/functions/deep-search-partner/index.ts` | WhatsApp auto-link + seniority extraction |
-| `src/components/partners/PartnerDetailFull.tsx` | WhatsApp icon nei contatti + enrichment badges |
-| `src/components/partners/PartnerDetailCompact.tsx` | WhatsApp icon nei contatti |
-| `src/components/partners/SocialLinks.tsx` | Icone SVG colorate per piattaforma |
-| `src/components/partners/EnrichmentCard.tsx` | Mostrare dati ricchi (profili, awards, company) |
-
-Nessuna modifica al database necessaria -- tutti i dati vengono salvati nelle tabelle esistenti (`partner_social_links`, `partners.enrichment_data`).
+Nessuna modifica alla logica, solo classi Tailwind.
