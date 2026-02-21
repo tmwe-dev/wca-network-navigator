@@ -11,6 +11,7 @@ import {
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
   Zap, Crown, Paperclip, KeyRound, Eye, EyeOff, Mail, Send, AlertCircle,
+  Brain,
 } from "lucide-react";
 // ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
@@ -21,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { toast as toastHook } from "@/hooks/use-toast";
 import { CSVImport } from "@/components/partners/CSVImport";
+import AIProfileSettings from "@/components/settings/AIProfileSettings";
 import { WCAScraper } from "@/components/partners/WCAScraper";
 import BlacklistManager from "@/components/settings/BlacklistManager";
 import TemplateManager from "@/components/settings/TemplateManager";
@@ -311,6 +313,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Paperclip className="w-4 h-4" /> Template
+          </TabsTrigger>
+          <TabsTrigger value="ai-profile" className="flex items-center gap-2">
+            <Brain className="w-4 h-4" /> Profilo AI
           </TabsTrigger>
           <TabsTrigger value="abbonamento" className="flex items-center gap-2">
             <Crown className="w-4 h-4" /> Abbonamento
@@ -702,6 +707,11 @@ export default function Settings() {
         {/* ════════════════ TEMPLATE ════════════════ */}
         <TabsContent value="templates">
           <TemplateManager />
+        </TabsContent>
+
+        {/* ════════════════ PROFILO AI ════════════════ */}
+        <TabsContent value="ai-profile">
+          <AIProfileSettings />
         </TabsContent>
 
         {/* ════════════════ ABBONAMENTO ════════════════ */}
