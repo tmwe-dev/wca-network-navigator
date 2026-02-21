@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,13 +13,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { to, subject, html, from, partner_id } = await req.json();
 
@@ -29,57 +26,66 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get default sender from app_settings if not provided
-    let senderEmail = from;
-    if (!senderEmail) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+    // Read SMTP settings from app_settings
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .in("key", [
+        "smtp_host", "smtp_port", "smtp_user", "smtp_password",
+        "default_sender_email", "default_sender_name",
+      ]);
 
-      const { data: emailSetting } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .in("key", ["default_sender_email", "default_sender_name"]);
+    const s: Record<string, string> = {};
+    settingsRows?.forEach((row: any) => { s[row.key] = row.value; });
 
-      const settingsMap: Record<string, string> = {};
-      emailSetting?.forEach((row: any) => { settingsMap[row.key] = row.value; });
+    const smtpHost = s["smtp_host"];
+    const smtpPort = parseInt(s["smtp_port"] || "465", 10);
+    const smtpUser = s["smtp_user"];
+    const smtpPass = s["smtp_password"];
 
-      const senderEmailVal = settingsMap["default_sender_email"] || "onboarding@resend.dev";
-      const senderName = settingsMap["default_sender_name"];
-      senderEmail = senderName ? `${senderName} <${senderEmailVal}>` : senderEmailVal;
-    }
-
-    // Send email via Resend
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: senderEmail,
-        to: [to],
-        subject,
-        html,
-      }),
-    });
-
-    const resendData = await resendRes.json();
-
-    if (!resendRes.ok) {
-      console.error("Resend error:", resendData);
+    if (!smtpHost || !smtpUser || !smtpPass) {
       return new Response(
-        JSON.stringify({ error: resendData.message || "Failed to send email" }),
-        { status: resendRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "SMTP non configurato. Vai in Impostazioni → Email per configurarlo." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Build sender
+    let senderEmail = from;
+    if (!senderEmail) {
+      const senderEmailVal = s["default_sender_email"] || smtpUser;
+      const senderName = s["default_sender_name"];
+      senderEmail = senderName ? `${senderName} <${senderEmailVal}>` : senderEmailVal;
+    }
+
+    // Determine TLS mode
+    const useTLS = smtpPort === 587;
+
+    // Send via SMTP
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: !useTLS, // port 465 = implicit TLS (tls: true), port 587 = STARTTLS (tls: false)
+        auth: {
+          username: smtpUser,
+          password: smtpPass,
+        },
+      },
+    });
+
+    await client.send({
+      from: senderEmail,
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
+    });
+
+    await client.close();
+
     // Log interaction in DB if partner_id provided
     if (partner_id) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       await supabase.from("interactions").insert({
         partner_id,
         interaction_type: "email",
@@ -89,7 +95,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, messageId: resendData.id }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
