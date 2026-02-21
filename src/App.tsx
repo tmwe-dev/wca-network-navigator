@@ -42,6 +42,7 @@ const App = () => (
               <Route path="/reminders" element={<Reminders />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/prospects" element={<ProspectCenter />} />
+              <Route path="/partner-hub" element={<PartnerHub />} />
               <Route path="/guida" element={<Guida />} />
               <Route path="/campaign-jobs" element={<CampaignJobs />} />
               <Route path="/email-composer" element={<EmailComposer />} />
