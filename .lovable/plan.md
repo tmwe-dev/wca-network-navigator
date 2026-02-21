@@ -1,59 +1,68 @@
 
-# Badge "D" Deep Search + Filtro
 
-## Cosa cambia
+# Aggiunta Sezione LinkedIn nelle Impostazioni
 
-Ogni partner che ha completato la Deep Search mostrerà un badge **"D" azzurro** ben visibile, sia nella lista del Partner Hub (sidebar) che nella Country Workbench. In più, si aggiunge un filtro per isolare i partner senza Deep Search.
+## Approccio
 
-## Come si riconosce la Deep Search
+Anziche username/password (bloccato da LinkedIn), usiamo lo stesso approccio dei cookie di sessione gia funzionante per WCA. L'utente effettua il login manualmente su LinkedIn nel browser, e il sistema cattura il cookie di sessione per poter accedere ai profili.
 
-Il campo `enrichment_data.deep_search_at` viene salvato dalla edge function quando la Deep Search viene completata. Se presente, il partner è stato "deep-searched".
+In aggiunta, salviamo anche le credenziali LinkedIn (email/password) per riferimento e per un eventuale futuro auto-login tramite estensione Chrome, ma il metodo principale resta il cookie `li_at`.
 
-## Modifiche
+## Cosa viene aggiunto
 
-### 1. Partner Hub - Lista partner (sidebar sinistra)
+### Nella tab WCA (o nuova tab dedicata)
 
-**File**: `src/pages/PartnerHub.tsx`
+Una nuova Card "LinkedIn" nella pagina Settings con:
+- **Email LinkedIn** (input text)
+- **Password LinkedIn** (input password con toggle visibilita)
+- **Cookie di sessione `li_at`** (textarea) - il cookie principale che LinkedIn usa per l'autenticazione
+- Istruzioni su come ottenere il cookie: "Accedi a linkedin.com, apri DevTools (F12) > Application > Cookies > linkedin.com > copia il valore di `li_at`"
+- Pulsante "Salva"
+- Badge "Configurato" / "Non configurato"
 
-- Accanto al nome/città del partner, aggiungere un badge **"D"** azzurro (sfondo `bg-sky-500`, testo bianco, piccolo e rotondo) con tooltip "Deep Search completata il [data]"
-- Il badge appare solo se `(partner.enrichment_data as any)?.deep_search_at` esiste
+### Storage
 
-### 2. Country Workbench - Lista partner per paese
+Tutto salvato nella tabella `app_settings` esistente con le chiavi:
+- `linkedin_email`
+- `linkedin_password`
+- `linkedin_session_cookie` (il cookie `li_at`)
 
-**File**: `src/components/partners/CountryWorkbench.tsx`
-
-- Stessa "D" azzurra accanto al nome del partner nella lista
-- Aggiungere ai **filtri positivi** un nuovo chip: **"Deep"** con icona e conteggio dei partner deep-searched
-- Aggiungere ai **filtri negativi** (dropdown "Mancanti..."): **"Senza Deep Search"** con il conteggio
-- Aggiornare il tipo `WorkbenchFilter` con `"deep_search"` e `"no_deep_search"`
-- Aggiornare le statistiche per contare i partner con/senza deep search
-- Aggiornare la logica di filtraggio
-
-### 3. Partner Card (vista a griglia)
-
-**File**: `src/components/partners/PartnerCard.tsx`
-
-- Nella riga dei badge (tipo partner, anni membership, qualità contatti), aggiungere il badge "D" azzurro se il partner ha deep_search_at
+Nessuna migrazione database necessaria.
 
 ## Dettagli Tecnici
 
-### Helper per identificare Deep Search
-```
-const hasDeepSearch = (p: any) => !!(p.enrichment_data as any)?.deep_search_at;
-```
-
-### Badge "D" (componente inline)
-Un piccolo cerchio/badge azzurro con la lettera "D" maiuscola:
-- Dimensione: `w-5 h-5` (o simile)
-- Stile: `bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center`
-- Tooltip: "Deep Search - [data]"
-
-### Filtri aggiornati in CountryWorkbench
-- Tipo `WorkbenchFilter` diventa: `"all" | "with_phone" | "with_email" | "deep_search" | "no_phone" | "no_email" | "no_profile" | "no_deep_search"`
-- Nuovo chip positivo: `{ key: "deep_search", label: "Deep", count: stats.withDeepSearch }`
-- Nuovo item negativo: `{ key: "no_deep_search", label: "Senza Deep Search", count: stats.noDeepSearch }`
-
 ### File da modificare
-1. `src/pages/PartnerHub.tsx` - Badge "D" nella lista sidebar
-2. `src/components/partners/CountryWorkbench.tsx` - Badge "D" nella lista + filtri deep search
-3. `src/components/partners/PartnerCard.tsx` - Badge "D" nella card a griglia
+
+**`src/pages/Settings.tsx`**
+- Aggiungere una nuova Card nella tab "WCA" (dato che sono servizi esterni correlati), oppure rinominare la tab in "Connessioni" per includere WCA + LinkedIn
+- Alternativa: creare una tab dedicata "LinkedIn" con icona dedicata
+
+La scelta migliore e aggiungere la sezione LinkedIn direttamente nella tab WCA, rinominandola "Connessioni" con icona `Globe`, dato che sia WCA che LinkedIn sono servizi esterni per il reperimento dati partner.
+
+### Struttura della Card LinkedIn
+
+```text
+Card: LinkedIn
+  Header: icona LinkedIn + titolo + badge stato
+  Content:
+    - Input: Email LinkedIn
+    - Input: Password LinkedIn (con toggle eye)
+    - Separator
+    - Label: "Cookie di sessione (li_at)"
+    - Textarea: per incollare il cookie
+    - Info: istruzioni per ottenere il cookie
+    - Button: "Salva Credenziali LinkedIn"
+```
+
+### Integrazione futura
+
+Una volta salvato il cookie `li_at`, la edge function `deep-search-partner` potra usarlo per:
+- Accedere direttamente ai profili LinkedIn dei contatti trovati
+- Verificare informazioni come ruolo attuale, esperienza, foto profilo
+- Estrarre dati piu completi rispetto alla sola ricerca Google
+
+Questa integrazione nella edge function sara un passo successivo dopo aver configurato il salvataggio delle credenziali.
+
+## Risultato
+
+L'utente avra un'area dedicata dove inserire le proprie credenziali LinkedIn e il cookie di sessione. Il sistema usera queste informazioni per accedere ai profili LinkedIn in modo piu affidabile durante la Deep Search.
