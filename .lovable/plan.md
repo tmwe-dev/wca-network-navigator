@@ -1,94 +1,152 @@
 
-# Sezione Email nelle Impostazioni + Test Invio
+# Email Composer: Pagina completa per creare e inviare email
 
-## Situazione attuale
+## Cosa faremo
 
-Il sistema usa già **Resend** (API key già configurata) per inviare email tramite la funzione backend `send-email`. Attualmente il mittente è fisso su `onboarding@resend.dev` (fallback di default), oppure viene passato manualmente ad ogni richiesta.
+Creeremo un sistema completo di composizione e invio email con:
 
-Manca completamente una sezione nelle Impostazioni per configurare le credenziali email (indirizzo mittente + nome mittente) e testare l'invio.
+1. **Categorie di template** per organizzare i modelli email
+2. **Nuova pagina "Email Composer"** accessibile dalla sidebar
+3. **Editor email** con oggetto, corpo HTML, allegati e link
+4. **Selezione destinatari** dal database (per paese, per partner, per selezione manuale)
+5. **Invio singolo o massivo** tramite il sistema SMTP gia configurato
 
-## Vincolo importante: Resend e domini personalizzati
+---
 
-Resend non permette di inviare email da un dominio arbitrario senza prima verificarlo. Esistono due scenari:
+## Categorie Template
 
-1. **Dominio verificato su Resend** (es. `tmwe.it`) — permette di inviare da `luca@tmwe.it`
-2. **Dominio non verificato** — Resend blocca l'invio con errore 422
+Riorganizzeremo i template (attualmente tutti sotto "altro") in categorie predefinite:
 
-Per `luca@tmwe.it`, il dominio `tmwe.it` deve essere aggiunto e verificato nel pannello Resend con record DNS (SPF, DKIM). Questo è un passaggio che l'utente deve fare direttamente su resend.com.
+| Categoria | Descrizione |
+|-----------|-------------|
+| offerta_cliente | Offerta nuovo cliente |
+| collaborazione_domestic | Proposta collaborazione nazionale |
+| collaborazione_international | Proposta collaborazione internazionale |
+| saluti_festivita | Mailing di saluto e festivita |
+| comunicazioni_operative | Informazioni operative aziendali |
+| altro | Altro |
 
-Nel frattempo, la sezione email mostrerà:
-- Campo "Email mittente" (es. `luca@tmwe.it`)
-- Campo "Nome mittente" (es. `Luca - TMWE`)
-- Badge stato (Configurato / Non configurato)
-- Pulsante **Salva**
-- Card separata con pulsante **Invia Email di Test** a `luca@tmwe.it`
-- Avviso informativo sul requisito di verifica dominio Resend
+Il campo `category` esiste gia nella tabella `email_templates` -- aggiorneremo solo il TemplateManager per mostrare/selezionare la categoria.
 
-## Modifiche da apportare
+---
 
-### 1. `src/pages/Settings.tsx`
-Aggiungere una nuova tab **Email** (con icona `Mail`) tra Generale e WCA contenente:
-- Card "Mittente Email" con:
-  - `Input` email mittente (si salva in `app_settings` con chiave `default_sender_email`)
-  - `Input` nome mittente (si salva in `app_settings` con chiave `default_sender_name`)
-  - Badge stato configurazione
-  - Pulsante **Salva Impostazioni Email**
-- Card "Test Invio" con:
-  - `Input` pre-compilato con l'email mittente
-  - Pulsante **Invia Email di Test** che chiama la funzione backend `send-email`
-- Alert informativo su Resend e verifica dominio
+## Nuova tabella: `email_drafts`
 
-### 2. `supabase/functions/send-email/index.ts`
-Aggiornare la funzione per leggere anche `default_sender_name` e costruire il campo `from` nel formato corretto Resend: `"Nome <email@dominio.it>"`.
+Per salvare le bozze delle email composte:
 
-## Layout nuova tab Email
+| Colonna | Tipo | Note |
+|---------|------|------|
+| id | uuid | PK |
+| subject | text | Oggetto |
+| html_body | text | Corpo HTML |
+| category | text | Categoria template usata |
+| recipient_type | text | "country", "manual", "campaign_batch" |
+| recipient_filter | jsonb | Filtro destinatari (country_codes, partner_ids, batch_id) |
+| attachment_ids | jsonb | Array di ID email_templates allegati |
+| link_urls | jsonb | Array di {label, url} |
+| status | text | "draft", "sending", "sent" |
+| sent_count | int | Quante email inviate |
+| total_count | int | Quanti destinatari totali |
+| created_at | timestamptz | |
+| sent_at | timestamptz | |
+
+---
+
+## Nuova pagina: Email Composer (`/email-composer`)
+
+Layout a due colonne:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  ✉️  Mittente Email                [✓ Configurato]  │
-│  Email e nome che appariranno come mittente          │
-├─────────────────────────────────────────────────────┤
-│  Email mittente                                      │
-│  [luca@tmwe.it_____________________]                │
-│                                                      │
-│  Nome mittente (opzionale)                           │
-│  [Luca - TMWE______________________]                │
-│                                                      │
-│  [Salva Impostazioni Email]                          │
-└─────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────┐
-│  ⚠️  Verifica dominio Resend                         │
-│  Per inviare da luca@tmwe.it devi verificare         │
-│  il dominio tmwe.it su resend.com → Domains          │
-└─────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────┐
-│  🧪 Test Invio                                      │
-├─────────────────────────────────────────────────────┤
-│  Invia un'email di test a:                           │
-│  [luca@tmwe.it_____________________]                │
-│                                                      │
-│  [Invia Email di Test]                               │
-└─────────────────────────────────────────────────────┘
++--------------------------------------+---------------------------+
+|  EDITOR EMAIL                        |  DESTINATARI              |
+|                                      |                           |
+|  Categoria: [dropdown]               |  Modalita: [tabs]         |
+|  Oggetto:   [________________]       |  - Per Paese              |
+|                                      |  - Per Partner            |
+|  Corpo:                              |  - Da Campagna            |
+|  [                              ]    |                           |
+|  [    textarea / editor         ]    |  [lista selezionabile]    |
+|  [                              ]    |                           |
+|                                      |  Selezionati: 24          |
+|  Allegati: [checkbox lista]          |  Con email: 20            |
+|  Link:     [+ aggiungi link]         |                           |
+|                                      |                           |
+|  [Salva Bozza] [Anteprima] [Invia]   |                           |
++--------------------------------------+---------------------------+
 ```
 
-## File da modificare
+### Pannello sinistro - Editor
+- **Dropdown categoria** con le 6 categorie sopra
+- **Campo oggetto** con variabili dinamiche suggerite: `{{company_name}}`, `{{contact_name}}`, `{{city}}`
+- **Textarea corpo** (HTML semplice, con sostituzione variabili)
+- **Allegati**: checkbox dei file caricati in Template (da `email_templates`), raggruppati per categoria
+- **Link**: lista dinamica di URL con label (aggiungi/rimuovi)
+- **Pulsanti**: Salva Bozza, Anteprima (mostra come apparira con dati reali), Invia
+
+### Pannello destro - Selezione destinatari
+Tre modalita via tabs:
+
+1. **Per Paese**: multi-select dei paesi, mostra conteggio partner per paese, seleziona tutti i partner di quei paesi
+2. **Per Partner**: ricerca e selezione manuale dalla rubrica (tabella `partners` + `partner_contacts`)
+3. **Da Campagna**: seleziona un batch_id esistente dalla tabella `campaign_jobs` per inviare ai partner di quella campagna
+
+In ogni caso, mostra:
+- Numero totale destinatari selezionati
+- Quanti hanno email valida
+- Anteprima lista nomi/email
+
+### Invio
+- Il pulsante "Invia" chiama la edge function `send-email` in sequenza per ogni destinatario
+- Sostituisce le variabili `{{company_name}}`, `{{contact_name}}` etc. per ogni email
+- Aggiorna `email_drafts.status` e `sent_count` in tempo reale
+- Logga ogni invio nella tabella `interactions`
+
+---
+
+## Modifiche ai file esistenti
 
 | File | Modifica |
 |------|---------|
-| `src/pages/Settings.tsx` | Aggiungere tab "Email" con card configurazione mittente e test invio |
-| `supabase/functions/send-email/index.ts` | Leggere `default_sender_name` e costruire `from` come `"Nome <email>"` |
+| `src/components/layout/AppSidebar.tsx` | Aggiungere voce "Email" con icona `Send` che punta a `/email-composer` |
+| `src/App.tsx` | Aggiungere route `/email-composer` |
+| `src/components/settings/TemplateManager.tsx` | Aggiungere dropdown categoria al caricamento file |
+| `supabase/functions/send-email/index.ts` | Supportare allegati (URL file) nell'HTML generato |
+
+## Nuovi file
+
+| File | Descrizione |
+|------|-------------|
+| `src/pages/EmailComposer.tsx` | Pagina principale editor + destinatari |
+| `src/hooks/useEmailDrafts.ts` | Hook CRUD per email_drafts |
+
+## Migrazione database
+
+- Creare tabella `email_drafts` con RLS (auth.uid() IS NOT NULL)
+
+---
 
 ## Dettagli tecnici
 
-**Settings.tsx:**
-- Aggiungere `emailSender`, `emailName`, `testEmailTo`, `savingEmail`, `sendingTest` come nuovi state
-- `useEffect` esistente: aggiungere lettura di `default_sender_email` e `default_sender_name`
-- Handler `handleSaveEmail`: salva entrambe le chiavi in `app_settings`
-- Handler `handleTestEmail`: chiama `supabase.functions.invoke("send-email", { body: { to: testEmailTo, subject: "Test Email", html: "...", from: emailName ? "${emailName} <${emailSender}>" : emailSender } })`
-- Importare `Mail`, `Send`, `AlertCircle` da lucide-react
+### Sostituzione variabili
+Per ogni destinatario, prima dell'invio:
+```
+subject.replace(/\{\{company_name\}\}/g, partner.company_name)
+       .replace(/\{\{contact_name\}\}/g, contact.name)
+       .replace(/\{\{city\}\}/g, partner.city)
+       .replace(/\{\{country\}\}/g, partner.country_name)
+```
+Stessa logica sul body HTML.
 
-**send-email/index.ts:**
-- Se `default_sender_name` è presente in `app_settings`, costruire `from` come `"Nome <email>"` (formato corretto Resend)
-- Nessun impatto sulle chiamate esistenti — backward compatible
+### Gestione link nell'email
+I link vengono appesi in fondo al body HTML come lista `<ul>` con tag `<a>`.
+
+### Allegati
+Gli allegati (file dal bucket `templates`) vengono inseriti come link di download nell'HTML, non come allegati MIME (il sistema SMTP attuale non supporta allegati binari).
+
+### Flusso invio massivo
+1. Utente clicca "Invia"
+2. Si crea un record `email_drafts` con status "sending"
+3. Loop sui destinatari: per ognuno, chiama `send-email` con sostituzione variabili
+4. Aggiorna `sent_count` ogni N invii
+5. Al termine, status diventa "sent"
+6. Toast con riepilogo: "24 email inviate con successo, 2 fallite"
