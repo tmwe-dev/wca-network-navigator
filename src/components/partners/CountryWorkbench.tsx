@@ -23,10 +23,13 @@ import {
   MapPin,
   Star,
   Filter,
-  PhoneOff,
-  MailX,
-  FileX,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format } from "date-fns";
 
 interface CountryWorkbenchProps {
   countryCode: string;
@@ -40,13 +43,14 @@ interface CountryWorkbenchProps {
   onDownloadProfiles?: (countryCode: string) => void;
 }
 
-type WorkbenchFilter = "all" | "with_phone" | "with_email" | "no_phone" | "no_email" | "no_profile";
+type WorkbenchFilter = "all" | "with_phone" | "with_email" | "deep_search" | "no_phone" | "no_email" | "no_profile" | "no_deep_search";
 
 const hasPhone = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone);
 const hasEmail = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.email);
 const hasProfile = (p: any) => !!p.raw_profile_html;
+const hasDeepSearch = (p: any) => !!(p.enrichment_data as any)?.deep_search_at;
 
 export function CountryWorkbench({
   countryCode,
@@ -79,7 +83,9 @@ export function CountryWorkbench({
     const noProfile = total - withProfile;
     const noPhone = total - withPhone;
     const noEmail = total - withEmail;
-    return { total, withProfile, withPhone, withEmail, noProfile, noPhone, noEmail };
+    const withDeepSearch = countryPartners.filter(hasDeepSearch).length;
+    const noDeepSearch = total - withDeepSearch;
+    return { total, withProfile, withPhone, withEmail, noProfile, noPhone, noEmail, withDeepSearch, noDeepSearch };
   }, [countryPartners]);
 
   // Filtered list
@@ -91,6 +97,8 @@ export function CountryWorkbench({
       case "no_phone": list = list.filter((p) => !hasPhone(p)); break;
       case "no_email": list = list.filter((p) => !hasEmail(p)); break;
       case "no_profile": list = list.filter((p) => !hasProfile(p)); break;
+      case "deep_search": list = list.filter(hasDeepSearch); break;
+      case "no_deep_search": list = list.filter((p) => !hasDeepSearch(p)); break;
     }
     return list.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
   }, [countryPartners, filter]);
@@ -105,12 +113,14 @@ export function CountryWorkbench({
     { key: "all", label: "Tutti", count: stats.total },
     { key: "with_phone", label: "Con Tel", count: stats.withPhone },
     { key: "with_email", label: "Con Email", count: stats.withEmail },
+    { key: "deep_search", label: "Deep", count: stats.withDeepSearch },
   ];
 
   const negativeFilters: { key: WorkbenchFilter; label: string; count: number }[] = [
     { key: "no_phone", label: "Senza Telefono", count: stats.noPhone },
     { key: "no_email", label: "Senza Email", count: stats.noEmail },
     { key: "no_profile", label: "Senza Profilo", count: stats.noProfile },
+    { key: "no_deep_search", label: "Senza Deep Search", count: stats.noDeepSearch },
   ];
 
   const activeNegativeFilter = negativeFilters.find(f => f.key === filter);
@@ -255,7 +265,17 @@ export function CountryWorkbench({
                   <Checkbox checked={isSelected} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{partner.company_name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium truncate">{partner.company_name}</p>
+                    {hasDeepSearch(partner) && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm shrink-0">D</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
                     <span className="flex items-center gap-0.5">
                       <MapPin className="w-3 h-3" />
