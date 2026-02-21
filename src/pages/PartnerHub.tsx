@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Phone, Mail, Globe, MapPin, ChevronRight, Users,
-  Filter, Cpu, Box,
+  Filter, Cpu, Box, CheckSquare,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -26,6 +26,10 @@ import {
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import PartnerFiltersSheet from "@/components/partners/PartnerFiltersSheet";
 import { BulkActionBar } from "@/components/partners/BulkActionBar";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
@@ -47,6 +51,11 @@ export default function PartnerHub() {
   const [filters, setFilters] = useState<PartnerFilters>({});
   const [sortBy, setSortBy] = useState<SortOption>("name_asc");
   const [viewMode, setViewMode] = useState<"list" | "country">("list");
+  const [deepSearching, setDeepSearching] = useState(false);
+  const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const mergedFilters: PartnerFilters = {
     ...filters,
@@ -143,6 +152,44 @@ export default function PartnerHub() {
     });
   };
 
+  const handleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredPartners.length && filteredPartners.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPartners.map((p: any) => p.id)));
+    }
+  }, [selectedIds.size, filteredPartners]);
+
+  const handleBulkDeepSearch = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setDeepSearching(true);
+    let success = 0, failed = 0;
+
+    for (let i = 0; i < ids.length; i++) {
+      setDeepSearchProgress({ current: i + 1, total: ids.length });
+      try {
+        const { error } = await supabase.functions.invoke("deep-search-partner", {
+          body: { partnerId: ids[i] },
+        });
+        if (error) throw error;
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    setDeepSearching(false);
+    setDeepSearchProgress(null);
+    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    toast.success(`Deep Search completata: ${success} ok, ${failed} errori`);
+  }, [selectedIds, queryClient]);
+
+  const handleBulkEmail = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    navigate("/email-composer", { state: { partnerIds: ids } });
+  }, [selectedIds, navigate]);
+
   return (
     <TooltipProvider delayDuration={200}>
     <div className="h-[calc(100vh-4rem)] -m-6 relative overflow-hidden">
@@ -222,6 +269,18 @@ export default function PartnerHub() {
               <p className="text-xs text-muted-foreground shrink-0">
                 {isLoading ? "..." : `${filteredPartners.length} partner`}
               </p>
+              <button
+                onClick={handleSelectAll}
+                className={cn(
+                  "flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all shrink-0",
+                  selectedIds.size > 0 && selectedIds.size === filteredPartners.length
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-muted border-border text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <CheckSquare className="w-3 h-3" />
+                {selectedIds.size > 0 && selectedIds.size === filteredPartners.length ? "Deseleziona" : "Sel. tutti"}
+              </button>
               <button
                 onClick={() => setFilterIncomplete(!filterIncomplete)}
                 className={cn(
@@ -441,6 +500,10 @@ export default function PartnerHub() {
         count={selectedIds.size}
         onClear={() => setSelectedIds(new Set())}
         onAssignActivity={() => setAssignDialogOpen(true)}
+        onDeepSearch={handleBulkDeepSearch}
+        onEmail={handleBulkEmail}
+        deepSearching={deepSearching}
+        deepSearchProgress={deepSearchProgress}
         partnerIds={Array.from(selectedIds)}
       />
       <AssignActivityDialog

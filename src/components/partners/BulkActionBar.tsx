@@ -1,26 +1,61 @@
 import { Button } from "@/components/ui/button";
-import { X, ClipboardList } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { X, ClipboardList, Sparkles, Send, Loader2 } from "lucide-react";
 
 interface BulkActionBarProps {
   count: number;
   onClear: () => void;
   onAssignActivity: () => void;
+  onDeepSearch?: () => void;
+  onEmail?: () => void;
+  deepSearching?: boolean;
+  deepSearchProgress?: { current: number; total: number } | null;
   partnerIds: string[];
 }
 
-export function BulkActionBar({ count, onClear, onAssignActivity }: BulkActionBarProps) {
+export function BulkActionBar({
+  count,
+  onClear,
+  onAssignActivity,
+  onDeepSearch,
+  onEmail,
+  deepSearching,
+  deepSearchProgress,
+}: BulkActionBarProps) {
   if (count === 0) return null;
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50">
       <div className="flex items-center gap-3 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 shadow-lg">
         <span className="text-sm font-medium">{count} selezionati</span>
-        <Button size="sm" variant="secondary" onClick={onAssignActivity} className="h-7 gap-1.5">
+        <Button size="sm" variant="secondary" onClick={onAssignActivity} className="h-7 gap-1.5" disabled={deepSearching}>
           <ClipboardList className="w-3.5 h-3.5" />
           Assegna Attività
         </Button>
-        <button onClick={onClear} className="ml-1 hover:bg-primary-foreground/20 rounded-full p-1 transition-colors">
+        {onDeepSearch && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onDeepSearch}
+            className="h-7 gap-1.5"
+            disabled={deepSearching}
+          >
+            {deepSearching ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            {deepSearching && deepSearchProgress
+              ? `Deep Search ${deepSearchProgress.current}/${deepSearchProgress.total}...`
+              : "Deep Search"}
+          </Button>
+        )}
+        {onEmail && (
+          <Button size="sm" variant="secondary" onClick={onEmail} className="h-7 gap-1.5" disabled={deepSearching}>
+            <Send className="w-3.5 h-3.5" />
+            Email
+          </Button>
+        )}
+        <button onClick={onClear} className="ml-1 hover:bg-primary-foreground/20 rounded-full p-1 transition-colors" disabled={deepSearching}>
           <X className="w-4 h-4" />
         </button>
       </div>
