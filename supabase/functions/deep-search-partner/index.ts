@@ -113,6 +113,26 @@ async function delay(ms: number) {
   return new Promise(r => setTimeout(r, ms))
 }
 
+// Helper: normalize phone for WhatsApp
+function toWhatsAppNumber(phone: string): string {
+  return phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '')
+}
+
+// Helper: extract seniority from LinkedIn title
+function extractSeniority(title: string | undefined): { seniority: string; linkedin_title: string } | null {
+  if (!title) return null
+  const titleParts = title.split(' - ')
+  if (titleParts.length < 2) return null
+  const role = titleParts[1].split(' | ')[0]?.trim()
+  if (!role) return null
+  const seniorKeywords = ['CEO', 'Director', 'VP', 'President', 'Owner', 'Founder', 'Managing', 'General Manager', 'Head', 'Chief', 'Partner', 'Principal']
+  const midKeywords = ['Manager', 'Supervisor', 'Lead', 'Senior', 'Coordinator', 'Team Lead']
+  let seniority = 'junior'
+  if (seniorKeywords.some(k => role.includes(k))) seniority = 'senior'
+  else if (midKeywords.some(k => role.includes(k))) seniority = 'mid'
+  return { seniority, linkedin_title: role }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -171,10 +191,10 @@ Deno.serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Get contacts
+    // Get contacts (include mobile for WhatsApp)
     const { data: contacts = [] } = await supabase
       .from('partner_contacts')
-      .select('id, name, title, email')
+      .select('id, name, title, email, mobile, direct_phone')
       .eq('partner_id', partnerId)
 
     // Get existing social links to avoid duplicates
@@ -219,6 +239,18 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
                   partner_id: partnerId, contact_id: contact.id, platform: 'linkedin', url: urlMatch[1].replace(/\/$/, '')
                 })
                 if (!error) socialLinksFound++
+
+                // ── Extract seniority from LinkedIn search result title ──
+                const matchingResult = results.find((r: any) => r.url === urlMatch[1].replace(/\/$/, '') || urlMatch[1].includes(r.url?.replace(/\/$/, '')))
+                const seniorityData = extractSeniority(matchingResult?.title || results[0]?.title)
+                if (seniorityData) {
+                  if (!contactProfiles[contact.id]) {
+                    contactProfiles[contact.id] = { name: contact.name, title: contact.title }
+                  }
+                  contactProfiles[contact.id].seniority = seniorityData.seniority
+                  contactProfiles[contact.id].linkedin_title = seniorityData.linkedin_title
+                  console.log(`Seniority for ${contact.name}: ${seniorityData.seniority} (${seniorityData.linkedin_title})`)
+                }
               }
             }
           }
@@ -293,6 +325,24 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
         }
       }
 
+      // --- WhatsApp auto-link from mobile number ---
+      if (contact.mobile && !existingSet.has(`${contact.id}_whatsapp`)) {
+        try {
+          const cleaned = toWhatsAppNumber(contact.mobile)
+          if (cleaned.length >= 8) {
+            const { error } = await supabase.from('partner_social_links').insert({
+              partner_id: partnerId, contact_id: contact.id, platform: 'whatsapp', url: `https://wa.me/${cleaned}`
+            })
+            if (!error) {
+              socialLinksFound++
+              console.log(`WhatsApp link created for ${contact.name}: wa.me/${cleaned}`)
+            }
+          }
+        } catch (e) {
+          console.error(`WhatsApp link error for ${contact.name}:`, e)
+        }
+      }
+
       // --- Personal web search (2-3 queries for identikit) ---
       if (!rateLimited) {
         try {
@@ -336,7 +386,13 @@ If you can't find meaningful info, return: {"background":"","interests":[],"lang
               try {
                 const cleaned = profile.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
                 const parsed = JSON.parse(cleaned)
-                contactProfiles[contact.id] = { name: contact.name, title: contact.title, ...parsed }
+                // Merge with existing seniority data if already extracted
+                contactProfiles[contact.id] = { 
+                  ...contactProfiles[contact.id],
+                  name: contact.name, 
+                  title: contact.title, 
+                  ...parsed 
+                }
               } catch {
                 console.log(`Could not parse profile JSON for ${contact.name}`)
               }
