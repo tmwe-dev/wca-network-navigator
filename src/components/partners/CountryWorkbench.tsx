@@ -6,13 +6,6 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowLeft,
   Phone,
   Mail,
@@ -43,7 +36,7 @@ interface CountryWorkbenchProps {
   onDownloadProfiles?: (countryCode: string) => void;
 }
 
-type WorkbenchFilter = "all" | "with_phone" | "with_email" | "deep_search" | "no_phone" | "no_email" | "no_profile" | "no_deep_search";
+type FilterTag = "with_phone" | "with_email" | "deep_search" | "no_phone" | "no_email" | "no_profile" | "no_deep_search";
 
 const hasPhone = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone);
@@ -51,6 +44,16 @@ const hasEmail = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.email);
 const hasProfile = (p: any) => !!p.raw_profile_html;
 const hasDeepSearch = (p: any) => !!(p.enrichment_data as any)?.deep_search_at;
+
+const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
+  with_phone: hasPhone,
+  with_email: hasEmail,
+  deep_search: hasDeepSearch,
+  no_phone: (p) => !hasPhone(p),
+  no_email: (p) => !hasEmail(p),
+  no_profile: (p) => !hasProfile(p),
+  no_deep_search: (p) => !hasDeepSearch(p),
+};
 
 export function CountryWorkbench({
   countryCode,
@@ -63,18 +66,28 @@ export function CountryWorkbench({
   onSelectAllFiltered,
   onDownloadProfiles,
 }: CountryWorkbenchProps) {
-  const [filter, setFilter] = useState<WorkbenchFilter>("all");
+  const [activeFilters, setActiveFilters] = useState<Set<FilterTag>>(new Set());
+
+  const toggleFilter = useCallback((tag: FilterTag) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) {
+        next.delete(tag);
+      } else {
+        next.add(tag);
+      }
+      return next;
+    });
+  }, []);
 
   const countryName = WCA_COUNTRIES.find((c) => c.code === countryCode)?.name || countryCode;
   const flag = getCountryFlag(countryCode);
 
-  // Country partners
   const countryPartners = useMemo(
     () => (partners || []).filter((p: any) => p.country_code === countryCode),
     [partners, countryCode]
   );
 
-  // Stats
   const stats = useMemo(() => {
     const total = countryPartners.length;
     const withProfile = countryPartners.filter(hasProfile).length;
@@ -88,20 +101,13 @@ export function CountryWorkbench({
     return { total, withProfile, withPhone, withEmail, noProfile, noPhone, noEmail, withDeepSearch, noDeepSearch };
   }, [countryPartners]);
 
-  // Filtered list
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
-    switch (filter) {
-      case "with_phone": list = list.filter(hasPhone); break;
-      case "with_email": list = list.filter(hasEmail); break;
-      case "no_phone": list = list.filter((p) => !hasPhone(p)); break;
-      case "no_email": list = list.filter((p) => !hasEmail(p)); break;
-      case "no_profile": list = list.filter((p) => !hasProfile(p)); break;
-      case "deep_search": list = list.filter(hasDeepSearch); break;
-      case "no_deep_search": list = list.filter((p) => !hasDeepSearch(p)); break;
+    for (const tag of activeFilters) {
+      list = list.filter(FILTER_FNS[tag]);
     }
     return list.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
-  }, [countryPartners, filter]);
+  }, [countryPartners, activeFilters]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -109,21 +115,18 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const positiveFilters: { key: WorkbenchFilter; label: string; count: number }[] = [
-    { key: "all", label: "Tutti", count: stats.total },
+  const positiveFilters: { key: FilterTag; label: string; count: number }[] = [
     { key: "with_phone", label: "Con Tel", count: stats.withPhone },
     { key: "with_email", label: "Con Email", count: stats.withEmail },
     { key: "deep_search", label: "Deep", count: stats.withDeepSearch },
   ];
 
-  const negativeFilters: { key: WorkbenchFilter; label: string; count: number }[] = [
-    { key: "no_phone", label: "Senza Telefono", count: stats.noPhone },
-    { key: "no_email", label: "Senza Email", count: stats.noEmail },
-    { key: "no_profile", label: "Senza Profilo", count: stats.noProfile },
-    { key: "no_deep_search", label: "Senza Deep Search", count: stats.noDeepSearch },
+  const negativeFilters: { key: FilterTag; label: string; count: number }[] = [
+    { key: "no_phone", label: "No Tel", count: stats.noPhone },
+    { key: "no_email", label: "No Email", count: stats.noEmail },
+    { key: "no_profile", label: "No Profilo", count: stats.noProfile },
+    { key: "no_deep_search", label: "No Deep", count: stats.noDeepSearch },
   ];
-
-  const activeNegativeFilter = negativeFilters.find(f => f.key === filter);
 
   return (
     <div className="flex flex-col h-full">
@@ -174,44 +177,47 @@ export function CountryWorkbench({
         )}
       </div>
 
-      {/* Filters: positive chips + negative dropdown */}
-      <div className="px-3 py-1.5 border-b border-border/50 flex items-center gap-1.5">
-        {positiveFilters.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={cn(
-              "text-xs px-2 py-1 rounded-md border transition-all",
-              filter === f.key
-                ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                : "bg-muted border-border text-muted-foreground hover:bg-accent"
-            )}
-          >
-            {f.label} <span className="font-semibold ml-0.5">{f.count}</span>
-          </button>
-        ))}
-        <Select
-          value={activeNegativeFilter ? filter : "__none__"}
-          onValueChange={(v) => setFilter(v === "__none__" ? "all" : v as WorkbenchFilter)}
-        >
-          <SelectTrigger className={cn(
-            "h-7 w-auto min-w-[120px] text-xs gap-1 border",
-            activeNegativeFilter
-              ? "bg-destructive/10 border-destructive/30 text-destructive font-medium"
-              : "bg-muted border-border text-muted-foreground"
-          )}>
-            <Filter className="w-3 h-3 shrink-0" />
-            <SelectValue placeholder="Mancanti..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__" className="text-xs">Nessun filtro mancanti</SelectItem>
-            {negativeFilters.map((f) => (
-              <SelectItem key={f.key} value={f.key} className="text-xs">
-                {f.label} <span className="text-destructive font-semibold ml-1">{f.count}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters: multi-select chips */}
+      <div className="px-3 py-1.5 border-b border-border/50">
+        <div className="flex flex-wrap items-center gap-1">
+          {positiveFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => toggleFilter(f.key)}
+              className={cn(
+                "text-xs px-2 py-1 rounded-md border transition-all",
+                activeFilters.has(f.key)
+                  ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                  : "bg-muted border-border text-muted-foreground hover:bg-accent"
+              )}
+            >
+              {f.label} <span className="font-semibold ml-0.5">{f.count}</span>
+            </button>
+          ))}
+          <span className="w-px h-4 bg-border mx-0.5" />
+          {negativeFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => toggleFilter(f.key)}
+              className={cn(
+                "text-xs px-2 py-1 rounded-md border transition-all",
+                activeFilters.has(f.key)
+                  ? "bg-destructive/10 border-destructive/30 text-destructive font-medium"
+                  : "bg-muted border-border text-muted-foreground hover:bg-accent"
+              )}
+            >
+              {f.label} <span className="font-semibold ml-0.5">{f.count}</span>
+            </button>
+          ))}
+          {activeFilters.size > 0 && (
+            <button
+              onClick={() => setActiveFilters(new Set())}
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:bg-accent"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List header */}
