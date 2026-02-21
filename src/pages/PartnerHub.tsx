@@ -447,6 +447,14 @@ export default function PartnerHub() {
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
+                            {!!(partner.enrichment_data as any)?.deep_search_at && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
+                                </TooltipTrigger>
+                                <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                           {/* Inline contacts status */}
                           <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
