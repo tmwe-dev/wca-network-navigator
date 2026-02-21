@@ -77,7 +77,7 @@ export function SocialLinks({ partnerId, contactId, compact }: SocialLinksProps)
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "inline-flex items-center justify-center rounded-lg border bg-secondary/30 transition-colors",
+                  "inline-flex items-center justify-center rounded-lg border bg-white dark:bg-white/10 border-gray-200 dark:border-white/15 transition-colors",
                   compact ? "w-7 h-7" : "gap-1.5 px-2.5 py-1.5",
                   config?.color || "text-muted-foreground hover:bg-secondary"
                 )}

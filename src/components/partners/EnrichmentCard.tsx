@@ -15,9 +15,9 @@ interface EnrichmentCardProps {
 }
 
 const seniorityColors: Record<string, string> = {
-  senior: "bg-amber-500/15 text-amber-600 border-amber-500/20",
-  mid: "bg-sky-500/15 text-sky-600 border-sky-500/20",
-  junior: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20",
+  senior: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/30",
+  mid: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-500/20 dark:text-sky-200 dark:border-sky-500/30",
+  junior: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
 };
 
 export function EnrichmentCard({ partner }: EnrichmentCardProps) {
@@ -51,7 +51,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       </div>
 
       {/* Dates */}
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-xs text-foreground">
         {partner.enriched_at && (
           <span>🌐 Website: {format(new Date(partner.enriched_at), "dd MMM yyyy", { locale: it })}</span>
         )}
@@ -75,12 +75,12 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {(companyProfile.founded_year || companyProfile.employee_count_estimate) && (
                 <div className="flex flex-wrap gap-2">
                   {companyProfile.founded_year && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-foreground font-medium">
                       Fondata: {companyProfile.founded_year}
                     </Badge>
                   )}
                   {companyProfile.employee_count_estimate && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-foreground font-medium">
                       <Users className="w-2.5 h-2.5 mr-0.5" /> ~{companyProfile.employee_count_estimate}
                     </Badge>
                   )}
@@ -89,7 +89,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {companyProfile.specialties?.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {companyProfile.specialties.map((s: string, i: number) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/15">
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-900 dark:bg-violet-500/20 dark:text-violet-200 border border-violet-300 dark:border-violet-500/30">
                       {s}
                     </span>
                   ))}
@@ -98,7 +98,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
                   {companyProfile.awards.map((a: string, i: number) => (
-                    <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                       <Award className="w-3 h-3 text-amber-500" />
                       <span>{a}</span>
                     </div>
@@ -106,7 +106,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                 </div>
               )}
               {companyProfile.recent_news && (
-                <p className="text-xs text-muted-foreground leading-relaxed">{companyProfile.recent_news}</p>
+                <p className="text-xs text-foreground leading-relaxed">{companyProfile.recent_news}</p>
               )}
             </div>
           </CollapsibleContent>
@@ -143,17 +143,17 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                       </span>
                     )}
                   </div>
-                  {profile.background && (
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">{profile.background}</p>
+                    {profile.background && (
+                    <p className="text-[11px] text-foreground leading-relaxed">{profile.background}</p>
                   )}
                   <div className="flex flex-wrap gap-1">
                     {profile.languages?.map((l: string, i: number) => (
-                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-sky-100 text-sky-900 dark:bg-sky-500/20 dark:text-sky-200">
                         {l}
                       </span>
                     ))}
                     {profile.interests?.map((int: string, i: number) => (
-                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-200">
                         {int}
                       </span>
                     ))}
