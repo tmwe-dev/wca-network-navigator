@@ -133,6 +133,12 @@ function extractSeniority(title: string | undefined): { seniority: string; linke
   return { seniority, linkedin_title: role }
 }
 
+// Helper: extract last name for retry searches
+function getLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/)
+  return parts[parts.length - 1]
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -182,7 +188,7 @@ Deno.serve(async (req) => {
     // Get partner data
     const { data: partner, error: partnerError } = await supabase
       .from('partners')
-      .select('id, company_name, website, city, country_name, enrichment_data')
+      .select('id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone')
       .eq('id', partnerId)
       .single()
 
@@ -203,6 +209,17 @@ Deno.serve(async (req) => {
       .select('contact_id, platform')
       .eq('partner_id', partnerId)
 
+    // Get networks and certifications for rating
+    const { data: networks = [] } = await supabase
+      .from('partner_networks')
+      .select('network_name')
+      .eq('partner_id', partnerId)
+
+    const { data: certifications = [] } = await supabase
+      .from('partner_certifications')
+      .select('certification')
+      .eq('partner_id', partnerId)
+
     const existingSet = new Set(existingLinks.map(l => `${l.contact_id || 'company'}_${l.platform}`))
 
     let socialLinksFound = 0
@@ -217,13 +234,33 @@ Deno.serve(async (req) => {
 
       const location = `${partner.city || ''} ${partner.country_name || ''}`.trim()
 
-      // --- LinkedIn personal ---
+      // --- LinkedIn personal (with smart retry) ---
       if (!existingSet.has(`${contact.id}_linkedin`)) {
         try {
+          // First attempt: full name + company
           const query = `"${contact.name}" "${partner.company_name}" site:linkedin.com/in`
           console.log(`LinkedIn search: ${query}`)
-          const results = (await firecrawlSearch(query, firecrawlKey, 5))
+          let results = (await firecrawlSearch(query, firecrawlKey, 5))
             .filter((r: any) => r.url?.includes('linkedin.com/in/'))
+
+          // Smart retry: if no results, try with last name only + company + logistics
+          if (results.length === 0) {
+            const lastName = getLastName(contact.name)
+            const retryQuery = `"${lastName}" "${partner.company_name}" logistics site:linkedin.com/in`
+            console.log(`LinkedIn retry: ${retryQuery}`)
+            results = (await firecrawlSearch(retryQuery, firecrawlKey, 5))
+              .filter((r: any) => r.url?.includes('linkedin.com/in/'))
+            await delay(300)
+          }
+
+          // Third attempt: name + city + logistics
+          if (results.length === 0) {
+            const retryQuery2 = `"${contact.name}" ${partner.city || ''} logistics linkedin`
+            console.log(`LinkedIn retry 2: ${retryQuery2}`)
+            results = (await firecrawlSearch(retryQuery2, firecrawlKey, 5))
+              .filter((r: any) => r.url?.includes('linkedin.com/in/'))
+            await delay(300)
+          }
 
           if (results.length > 0) {
             const answer = await aiPickUrl(
@@ -325,17 +362,18 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
         }
       }
 
-      // --- WhatsApp auto-link from mobile number ---
-      if (contact.mobile && !existingSet.has(`${contact.id}_whatsapp`)) {
+      // --- WhatsApp auto-link from mobile OR direct_phone fallback ---
+      const whatsappNumber = contact.mobile || contact.direct_phone
+      if (whatsappNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
         try {
-          const cleaned = toWhatsAppNumber(contact.mobile)
+          const cleaned = toWhatsAppNumber(whatsappNumber)
           if (cleaned.length >= 8) {
             const { error } = await supabase.from('partner_social_links').insert({
               partner_id: partnerId, contact_id: contact.id, platform: 'whatsapp', url: `https://wa.me/${cleaned}`
             })
             if (!error) {
               socialLinksFound++
-              console.log(`WhatsApp link created for ${contact.name}: wa.me/${cleaned}`)
+              console.log(`WhatsApp link created for ${contact.name}: wa.me/${cleaned} (from ${contact.mobile ? 'mobile' : 'direct_phone'})`)
             }
           }
         } catch (e) {
@@ -477,6 +515,41 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
       }
     }
 
+    // ═══ WEBSITE DISCOVERY (from email domain if missing) ═══
+    if (!partner.website) {
+      // Try extracting domain from contact emails
+      const contactWithEmail = contacts?.find(c => c.email && !c.email.includes('gmail.com') && !c.email.includes('yahoo.') && !c.email.includes('hotmail.') && !c.email.includes('outlook.'))
+      if (contactWithEmail?.email) {
+        const emailDomain = contactWithEmail.email.split('@')[1]
+        if (emailDomain) {
+          const websiteUrl = `https://${emailDomain}`
+          console.log(`Website discovered from email domain: ${websiteUrl}`)
+          await supabase.from('partners').update({ website: websiteUrl }).eq('id', partnerId)
+          partner.website = websiteUrl
+        }
+      }
+
+      // If still no website, search via Firecrawl
+      if (!partner.website && !rateLimited) {
+        try {
+          const searchQuery = `"${partner.company_name}" ${partner.city || ''} ${partner.country_name || ''} official website`
+          console.log(`Website search: ${searchQuery}`)
+          const results = await firecrawlSearch(searchQuery, firecrawlKey, 3)
+          const candidate = results.find((r: any) => r.url && !r.url.includes('linkedin.com') && !r.url.includes('facebook.com') && !r.url.includes('wca.org'))
+          if (candidate?.url) {
+            try {
+              const domain = new URL(candidate.url).origin
+              console.log(`Website found via search: ${domain}`)
+              await supabase.from('partners').update({ website: domain }).eq('id', partnerId)
+              partner.website = domain
+            } catch {}
+          }
+        } catch (e) {
+          console.error('Website search error:', e)
+        }
+      }
+    }
+
     // ═══ LOGO FROM WEBSITE ═══
     if (partner.website) {
       try {
@@ -490,17 +563,37 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
         if (scrapeResp.ok) {
           const scrapeData = await scrapeResp.json()
           const metadata = scrapeData?.data?.metadata || scrapeData?.metadata || {}
-          let logoUrl = metadata.ogImage || metadata['og:image'] || metadata.favicon || metadata.icon || null
+          let logoUrl = metadata.ogImage || metadata['og:image'] || null
+          
+          // Validate the logo URL with a HEAD request
+          if (logoUrl) {
+            try {
+              const headResp = await fetch(logoUrl, { method: 'HEAD' })
+              if (!headResp.ok) logoUrl = null
+            } catch { logoUrl = null }
+          }
+
+          // Fallback: Google favicon at 128px
           if (!logoUrl) {
             try {
               const domain = new URL(websiteUrl).hostname
               logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
             } catch {}
           }
+
           if (logoUrl) {
             const { error } = await supabase.from('partners').update({ logo_url: logoUrl }).eq('id', partnerId)
             if (!error) logoFound = true
           }
+        } else {
+          // Scrape failed - use Google favicon as fallback
+          try {
+            const domain = new URL(websiteUrl).hostname
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+            const { error } = await supabase.from('partners').update({ logo_url: faviconUrl }).eq('id', partnerId)
+            if (!error) logoFound = true
+            console.log(`Logo fallback to Google favicon: ${faviconUrl}`)
+          } catch {}
         }
       } catch (e) {
         console.error('Logo error:', e)
@@ -523,7 +616,43 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
 
     await supabase.from('partners').update({ enrichment_data: updatedEnrichment }).eq('id', partnerId)
 
-    console.log(`Deep search complete for ${partner.company_name}: ${socialLinksFound} social links, logo: ${logoFound}, profiles: ${Object.keys(contactProfiles).length}${rateLimited ? ' (rate limited)' : ''}`)
+    // ═══ DETERMINISTIC RATING ═══
+    let score = 0
+    // Website present
+    if (partner.website) score += 1
+    // Company email
+    if (partner.email) score += 0.5
+    // Contacts with email
+    if (contacts?.some(c => c.email)) score += 1
+    // Contacts with phone
+    if (contacts?.some(c => c.mobile || c.direct_phone)) score += 0.5
+    // Profile description
+    if (partner.profile_description) score += 0.5
+    // Networks count
+    if (networks.length >= 3) score += 1
+    else if (networks.length >= 1) score += 0.5
+    // Certifications
+    if (certifications.length >= 2) score += 0.5
+    else if (certifications.length >= 1) score += 0.25
+    // Social links found
+    if (socialLinksFound >= 3) score += 0.5
+    else if (socialLinksFound >= 1) score += 0.25
+    // Years of membership
+    if (partner.member_since) {
+      const memberYears = (Date.now() - new Date(partner.member_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+      if (memberYears >= 10) score += 0.5
+      else if (memberYears >= 5) score += 0.25
+    }
+    // Company profile enrichment
+    if (companyProfile?.specialties?.length > 0) score += 0.25
+    if (companyProfile?.awards?.length > 0) score += 0.25
+
+    // Scale to 1-5
+    const rating = Math.min(5, Math.max(1, Math.round(score * 0.8 + 1)))
+    await supabase.from('partners').update({ rating }).eq('id', partnerId)
+    console.log(`Rating calculated: ${rating}/5 (raw score: ${score})`)
+
+    console.log(`Deep search complete for ${partner.company_name}: ${socialLinksFound} social links, logo: ${logoFound}, profiles: ${Object.keys(contactProfiles).length}, rating: ${rating}${rateLimited ? ' (rate limited)' : ''}`)
 
     return new Response(
       JSON.stringify({
@@ -532,6 +661,7 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
         logoFound,
         contactProfilesFound: Object.keys(contactProfiles).length,
         companyProfileFound: !!companyProfile,
+        rating,
         rateLimited,
         companyName: partner.company_name,
       }),
