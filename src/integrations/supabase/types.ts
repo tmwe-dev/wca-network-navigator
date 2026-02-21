@@ -420,6 +420,54 @@ export type Database = {
         }
         Relationships: []
       }
+      email_drafts: {
+        Row: {
+          attachment_ids: Json | null
+          category: string | null
+          created_at: string
+          html_body: string | null
+          id: string
+          link_urls: Json | null
+          recipient_filter: Json | null
+          recipient_type: string | null
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string | null
+          total_count: number
+        }
+        Insert: {
+          attachment_ids?: Json | null
+          category?: string | null
+          created_at?: string
+          html_body?: string | null
+          id?: string
+          link_urls?: Json | null
+          recipient_filter?: Json | null
+          recipient_type?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          total_count?: number
+        }
+        Update: {
+          attachment_ids?: Json | null
+          category?: string | null
+          created_at?: string
+          html_body?: string | null
+          id?: string
+          link_urls?: Json | null
+          recipient_filter?: Json | null
+          recipient_type?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          total_count?: number
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           category: string | null

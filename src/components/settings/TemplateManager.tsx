@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,6 +19,15 @@ const FILE_ICONS: Record<string, React.ReactNode> = {
   jpg: <Image className="w-8 h-8 text-purple-500" />,
   jpeg: <Image className="w-8 h-8 text-purple-500" />,
 };
+
+const TEMPLATE_CATEGORIES = [
+  { value: "offerta_cliente", label: "Offerta nuovo cliente" },
+  { value: "collaborazione_domestic", label: "Collaborazione nazionale" },
+  { value: "collaborazione_international", label: "Collaborazione internazionale" },
+  { value: "saluti_festivita", label: "Saluti e festività" },
+  { value: "comunicazioni_operative", label: "Comunicazioni operative" },
+  { value: "altro", label: "Altro" },
+];
 
 function getIcon(fileName: string) {
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
@@ -34,6 +44,7 @@ export default function TemplateManager() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState("altro");
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["email-templates"],
@@ -86,7 +97,7 @@ export default function TemplateManager() {
           file_name: file.name,
           file_size: file.size,
           file_type: file.type || "application/octet-stream",
-          category: "altro",
+          category: uploadCategory,
         } as any);
         if (dbError) throw dbError;
       }
@@ -125,6 +136,16 @@ export default function TemplateManager() {
             onChange={handleUpload}
             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif"
           />
+          <div className="flex gap-2 mb-3">
+            <Select value={uploadCategory} onValueChange={setUploadCategory}>
+              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectContent>
+                {TEMPLATE_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -158,7 +179,12 @@ export default function TemplateManager() {
               <CardContent className="py-3 px-4 flex items-center gap-4">
                 {getIcon(t.file_name)}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate text-foreground">{t.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate text-foreground">{t.name}</p>
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {TEMPLATE_CATEGORIES.find(c => c.value === t.category)?.label || t.category}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {t.file_name} · {formatSize(t.file_size)} · {new Date(t.created_at).toLocaleDateString("it-IT")}
                   </p>
