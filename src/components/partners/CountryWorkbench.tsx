@@ -6,8 +6,14 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
-  Users,
   Phone,
   Mail,
   AlertTriangle,
@@ -16,6 +22,10 @@ import {
   CheckSquare,
   MapPin,
   Star,
+  Filter,
+  PhoneOff,
+  MailX,
+  FileX,
 } from "lucide-react";
 
 interface CountryWorkbenchProps {
@@ -91,100 +101,107 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const filters: { key: WorkbenchFilter; label: string; count: number; color?: string }[] = [
+  const positiveFilters: { key: WorkbenchFilter; label: string; count: number }[] = [
     { key: "all", label: "Tutti", count: stats.total },
     { key: "with_phone", label: "Con Tel", count: stats.withPhone },
     { key: "with_email", label: "Con Email", count: stats.withEmail },
-    { key: "no_phone", label: "Senza Tel", count: stats.noPhone, color: "text-amber-600 dark:text-amber-400" },
-    { key: "no_email", label: "Senza Email", count: stats.noEmail, color: "text-amber-600 dark:text-amber-400" },
-    { key: "no_profile", label: "Senza Profilo", count: stats.noProfile, color: "text-destructive" },
   ];
+
+  const negativeFilters: { key: WorkbenchFilter; label: string; count: number }[] = [
+    { key: "no_phone", label: "Senza Telefono", count: stats.noPhone },
+    { key: "no_email", label: "Senza Email", count: stats.noEmail },
+    { key: "no_profile", label: "Senza Profilo", count: stats.noProfile },
+  ];
+
+  const activeNegativeFilter = negativeFilters.find(f => f.key === filter);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Back header */}
-      <div className="p-4 border-b border-border/50">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Torna ai Paesi
-        </button>
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{flag}</span>
-          <div>
-            <h2 className="text-lg font-bold">{countryName}</h2>
-            <p className="text-xs text-muted-foreground">{stats.total} partner totali</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div className="p-4 border-b border-border/50">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="text-center p-2 rounded-lg bg-muted/50">
-            <p className="text-lg font-bold">{stats.withProfile}</p>
-            <p className="text-[10px] text-muted-foreground">Con profilo</p>
-          </div>
-          <div className={cn(
-            "text-center p-2 rounded-lg",
-            stats.noProfile > 0 ? "bg-destructive/10" : "bg-muted/50"
-          )}>
-            <p className={cn("text-lg font-bold", stats.noProfile > 0 && "text-destructive")}>
-              {stats.noProfile}
-            </p>
-            <p className="text-[10px] text-muted-foreground">Senza profilo</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-center gap-2">
-              <div>
-                <p className="text-sm font-bold flex items-center gap-1">
-                  <Phone className="w-3 h-3" /> {stats.withPhone}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-bold flex items-center gap-1">
-                  <Mail className="w-3 h-3" /> {stats.withEmail}
-                </p>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Contatti</p>
-          </div>
-        </div>
-
-        {/* Download missing profiles */}
-        {stats.noProfile > 0 && onDownloadProfiles && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mt-3 gap-2 border-amber-400 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-            onClick={() => onDownloadProfiles(countryCode)}
+      {/* Compact header: back + country + stats inline */}
+      <div className="px-3 py-2 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
-            <Download className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xl">{flag}</span>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
+            <p className="text-[10px] text-muted-foreground">{stats.total} partner</p>
+          </div>
+          {/* Inline stats */}
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            <span className="flex items-center gap-0.5 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              {stats.withProfile}
+            </span>
+            {stats.noProfile > 0 && (
+              <span className="flex items-center gap-0.5 font-medium text-destructive">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {stats.noProfile}
+              </span>
+            )}
+            <span className="flex items-center gap-0.5">
+              <Phone className="w-3 h-3 text-muted-foreground" /> {stats.withPhone}
+            </span>
+            <span className="flex items-center gap-0.5">
+              <Mail className="w-3 h-3 text-muted-foreground" /> {stats.withEmail}
+            </span>
+          </div>
+        </div>
+
+        {/* Download missing profiles - compact */}
+        {stats.noProfile > 0 && onDownloadProfiles && (
+          <button
+            onClick={() => onDownloadProfiles(countryCode)}
+            className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md border border-dashed border-amber-400/60 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
             Scarica {stats.noProfile} profili mancanti
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Filter chips */}
-      <div className="px-4 py-3 border-b border-border/50">
-        <div className="flex flex-wrap gap-1.5">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "text-xs px-2.5 py-1 rounded-lg border transition-all",
-                filter === f.key
-                  ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                  : "bg-muted border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              {f.label} <span className={cn("font-semibold ml-0.5", f.color)}>{f.count}</span>
-            </button>
-          ))}
-        </div>
+      {/* Filters: positive chips + negative dropdown */}
+      <div className="px-3 py-1.5 border-b border-border/50 flex items-center gap-1.5">
+        {positiveFilters.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              "text-xs px-2 py-1 rounded-md border transition-all",
+              filter === f.key
+                ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                : "bg-muted border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            {f.label} <span className="font-semibold ml-0.5">{f.count}</span>
+          </button>
+        ))}
+        <Select
+          value={activeNegativeFilter ? filter : "__none__"}
+          onValueChange={(v) => setFilter(v === "__none__" ? "all" : v as WorkbenchFilter)}
+        >
+          <SelectTrigger className={cn(
+            "h-7 w-auto min-w-[120px] text-xs gap-1 border",
+            activeNegativeFilter
+              ? "bg-destructive/10 border-destructive/30 text-destructive font-medium"
+              : "bg-muted border-border text-muted-foreground"
+          )}>
+            <Filter className="w-3 h-3 shrink-0" />
+            <SelectValue placeholder="Mancanti..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__" className="text-xs">Nessun filtro mancanti</SelectItem>
+            {negativeFilters.map((f) => (
+              <SelectItem key={f.key} value={f.key} className="text-xs">
+                {f.label} <span className="text-destructive font-semibold ml-1">{f.count}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* List header */}
