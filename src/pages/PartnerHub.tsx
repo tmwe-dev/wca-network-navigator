@@ -403,20 +403,21 @@ export default function PartnerHub() {
                         <div className="mt-1" onClick={(e) => toggleSelection(partner.id, e)}>
                           <Checkbox checked={selectedIds.has(partner.id)} />
                         </div>
+                        {/* Company logo/favicon */}
                         <div className="relative shrink-0 mt-0.5">
-                          {partner.logo_url ? (
-                            <>
-                              <img
-                                src={partner.logo_url}
-                                alt=""
-                                className="w-9 h-9 rounded-lg object-contain bg-muted border"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = "none";
-                                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
-                                }}
-                              />
-                              <div className="hidden w-9 h-9 rounded-lg bg-muted border" />
-                            </>
+                          {partner.website ? (
+                            <img
+                              src={`https://www.google.com/s2/favicons?domain=${partner.website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}&sz=64`}
+                              alt=""
+                              className="w-9 h-9 rounded-lg object-contain bg-muted border p-1"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                              }}
+                            />
+                          ) : null}
+                          {partner.website ? (
+                            <div className="hidden w-9 h-9 rounded-lg bg-muted border" />
                           ) : (
                             <div className="w-9 h-9 rounded-lg bg-muted border" />
                           )}
@@ -428,6 +429,14 @@ export default function PartnerHub() {
                               <p className="text-xs text-muted-foreground truncate">{partner.company_name}</p>
                             </div>
                             <div className="flex flex-col items-end gap-0.5 shrink-0 text-right">
+                              {!!(partner.enrichment_data as any)?.deep_search_at && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
+                                </Tooltip>
+                              )}
                               {partner.member_since && (
                                 <span className="text-[10px] text-muted-foreground">
                                   Est. {new Date(partner.member_since).getFullYear()}
@@ -447,14 +456,6 @@ export default function PartnerHub() {
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xl leading-none">{getCountryFlag(partner.country_code)}</span>
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                            {!!(partner.enrichment_data as any)?.deep_search_at && (
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
-                                </TooltipTrigger>
-                                <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
-                              </Tooltip>
-                            )}
                           </div>
                           {/* Inline contacts status */}
                           <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
