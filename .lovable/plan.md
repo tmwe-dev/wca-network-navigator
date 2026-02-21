@@ -1,86 +1,59 @@
 
-# Nuova Tab "Profilo AI" nelle Impostazioni
+# Badge "D" Deep Search + Filtro
 
-## Obiettivo
+## Cosa cambia
 
-Creare una sezione nelle impostazioni dove l'utente inserisce le informazioni che l'AI utilizzera per generare comunicazioni personalizzate: profilo aziendale, stile comunicativo, alias e knowledge base.
+Ogni partner che ha completato la Deep Search mostrerà un badge **"D" azzurro** ben visibile, sia nella lista del Partner Hub (sidebar) che nella Country Workbench. In più, si aggiunge un filtro per isolare i partner senza Deep Search.
 
-## Struttura della Tab
+## Come si riconosce la Deep Search
 
-La nuova tab "Profilo AI" conterra 4 sezioni (card):
+Il campo `enrichment_data.deep_search_at` viene salvato dalla edge function quando la Deep Search viene completata. Se presente, il partner è stato "deep-searched".
 
-### 1. Identita e Alias
-- **Nome azienda** (text input) - il nome completo
-- **Alias aziendale** (text input) - la firma/brand da usare nelle comunicazioni (obbligatorio)
-- **Nome referente** (text input) - chi firma le email
-- **Alias referente** (text input) - come vuole essere chiamato
-- **Ruolo** (text input) - es. "Business Development Manager"
-- **Email firma** e **Telefono firma** - per la signature nelle email
+## Modifiche
 
-### 2. Knowledge Base Aziendale
-Un'area di testo grande dove l'utente descrive liberamente:
-- Cosa fa l'azienda (servizi, specializzazioni)
-- Zone geografiche coperte
-- Punti di forza, certificazioni, flotta
-- Anni di esperienza, numeri chiave
-- Qualsiasi informazione che l'AI deve conoscere per scrivere proposte credibili
+### 1. Partner Hub - Lista partner (sidebar sinistra)
 
-### 3. Stile di Comunicazione
-- **Tono** (select): Formale / Professionale / Amichevole / Diretto
-- **Lingua preferita** (select): Italiano / Inglese / Entrambe
-- **Istruzioni aggiuntive** (textarea): regole specifiche es. "Usa sempre Lei", "Includi sempre riferimento ai network WCA", "Non citare mai i prezzi nella prima email"
+**File**: `src/pages/PartnerHub.tsx`
 
-### 4. Contesto Settoriale
-- **Settore principale** (select): Freight Forwarding / Logistica / Trasporti / Spedizioni / Altro
-- **Network di appartenenza** (multi-input o textarea): WCA, altri network
-- **Note aggiuntive** (textarea): info extra sul mercato, posizionamento
+- Accanto al nome/città del partner, aggiungere un badge **"D"** azzurro (sfondo `bg-sky-500`, testo bianco, piccolo e rotondo) con tooltip "Deep Search completata il [data]"
+- Il badge appare solo se `(partner.enrichment_data as any)?.deep_search_at` esiste
 
-## Implementazione Tecnica
+### 2. Country Workbench - Lista partner per paese
 
-### Storage
-Tutti i dati vengono salvati nella tabella `app_settings` gia esistente, usando chiavi specifiche:
-- `ai_company_name`, `ai_company_alias`, `ai_contact_name`, `ai_contact_alias`, `ai_contact_role`, `ai_email_signature`, `ai_phone_signature`
-- `ai_knowledge_base` (testo lungo)
-- `ai_tone`, `ai_language`, `ai_style_instructions`
-- `ai_sector`, `ai_networks`, `ai_sector_notes`
+**File**: `src/components/partners/CountryWorkbench.tsx`
 
-Non servono nuove tabelle o migrazioni.
+- Stessa "D" azzurra accanto al nome del partner nella lista
+- Aggiungere ai **filtri positivi** un nuovo chip: **"Deep"** con icona e conteggio dei partner deep-searched
+- Aggiungere ai **filtri negativi** (dropdown "Mancanti..."): **"Senza Deep Search"** con il conteggio
+- Aggiornare il tipo `WorkbenchFilter` con `"deep_search"` e `"no_deep_search"`
+- Aggiornare le statistiche per contare i partner con/senza deep search
+- Aggiornare la logica di filtraggio
 
-### File da creare
-**`src/components/settings/AIProfileSettings.tsx`** - Componente dedicato per la tab, con le 4 card. Usa `useAppSettings` e `useUpdateSetting` esistenti. Un singolo pulsante "Salva tutto" in fondo che salva tutte le chiavi in batch.
+### 3. Partner Card (vista a griglia)
 
-### File da modificare
-**`src/pages/Settings.tsx`** - Aggiungere:
-- Import del nuovo componente
-- Una nuova `TabsTrigger` con icona `Brain` (da lucide-react) e label "Profilo AI"
-- Il corrispondente `TabsContent` che renderizza `<AIProfileSettings />`
+**File**: `src/components/partners/PartnerCard.tsx`
 
-### Struttura del componente
+- Nella riga dei badge (tipo partner, anni membership, qualità contatti), aggiungere il badge "D" azzurro se il partner ha deep_search_at
 
-```text
-AIProfileSettings
-  props: settings (from useAppSettings), updateSetting (from useUpdateSetting)
-  
-  state locale per ogni campo (inizializzato da settings)
-  
-  Card 1: Identita e Alias
-    - 6 input fields in grid 2 colonne
-    
-  Card 2: Knowledge Base
-    - Textarea grande (min 200px height)
-    - Hint: "Descrivi la tua azienda..."
-    
-  Card 3: Stile Comunicazione
-    - Select tono (4 opzioni)
-    - Select lingua (3 opzioni)  
-    - Textarea istruzioni
-    
-  Card 4: Contesto Settoriale
-    - Select settore
-    - Input network
-    - Textarea note
-    
-  Button "Salva Profilo AI" → salva tutte le chiavi in sequenza
+## Dettagli Tecnici
+
+### Helper per identificare Deep Search
+```
+const hasDeepSearch = (p: any) => !!(p.enrichment_data as any)?.deep_search_at;
 ```
 
-Questo profilo sara poi utilizzato dall'AI (edge functions come `ai-assistant`, `deep-search-partner`, o future funzioni di generazione email) per personalizzare ogni comunicazione in base al destinatario.
+### Badge "D" (componente inline)
+Un piccolo cerchio/badge azzurro con la lettera "D" maiuscola:
+- Dimensione: `w-5 h-5` (o simile)
+- Stile: `bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center`
+- Tooltip: "Deep Search - [data]"
+
+### Filtri aggiornati in CountryWorkbench
+- Tipo `WorkbenchFilter` diventa: `"all" | "with_phone" | "with_email" | "deep_search" | "no_phone" | "no_email" | "no_profile" | "no_deep_search"`
+- Nuovo chip positivo: `{ key: "deep_search", label: "Deep", count: stats.withDeepSearch }`
+- Nuovo item negativo: `{ key: "no_deep_search", label: "Senza Deep Search", count: stats.noDeepSearch }`
+
+### File da modificare
+1. `src/pages/PartnerHub.tsx` - Badge "D" nella lista sidebar
+2. `src/components/partners/CountryWorkbench.tsx` - Badge "D" nella lista + filtri deep search
+3. `src/components/partners/PartnerCard.tsx` - Badge "D" nella card a griglia
