@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Phone, Mail, Globe, MapPin, ChevronRight, Users,
-  Filter, Cpu, Box, CheckSquare, Loader2, Sparkles,
+  Filter, Cpu, Box, CheckSquare, Loader2, Sparkles, Bot,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -36,7 +36,7 @@ import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import { CountryCards } from "@/components/partners/CountryCards";
 import { CountryWorkbench } from "@/components/partners/CountryWorkbench";
-
+import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
@@ -58,6 +58,7 @@ export default function PartnerHub() {
 
   const [deepSearching, setDeepSearching] = useState(false);
   const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -252,7 +253,21 @@ export default function PartnerHub() {
               <Globe className="w-5 h-5 text-primary" />
               Partner
             </h1>
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-violet-500 hover:bg-violet-500/10"
+                    onClick={() => setAiOpen(true)}
+                  >
+                    <Bot className="w-4.5 h-4.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Assistente AI</TooltipContent>
+              </Tooltip>
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
               <button
                 onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
                 className={cn(
@@ -273,6 +288,7 @@ export default function PartnerHub() {
                 <Users className="w-3.5 h-3.5 inline mr-1" />
                 Lista
               </button>
+            </div>
             </div>
           </div>
           {viewLevel === "list" && (
@@ -615,6 +631,18 @@ export default function PartnerHub() {
       </div>
       </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* AI Assistant */}
+      <AiAssistantDialog
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        context={{
+          selectedCountries: selectedCountry
+            ? [{ code: selectedCountry, name: partners?.find((p: any) => p.country_code === selectedCountry)?.country_name || selectedCountry }]
+            : [],
+          filterMode: viewLevel,
+        }}
+      />
     </div>
     </TooltipProvider>
   );
