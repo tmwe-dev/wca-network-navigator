@@ -1,102 +1,131 @@
 
-# Deep Search di Gruppo dal Partner Hub
+# Deep Search Potenziata + Dettaglio Contatti Interattivo
 
-## Situazione attuale
+## Problema attuale
 
-La Deep Search funziona solo su singoli partner, tramite il pulsante nel dettaglio (PartnerDetailFull / PartnerDetailCompact). Nel Partner Hub esiste gia la selezione multipla con checkbox e una BulkActionBar che mostra solo "Assegna Attivita".
+1. **Deep Search limitata**: cerca solo LinkedIn/Facebook/Instagram dei contatti ma non genera link WhatsApp diretti, non verifica i numeri e non mostra i profili trovati nella scheda contatto in modo interattivo
+2. **Nessun link WhatsApp**: i numeri mobile sono mostrati come testo, senza link `wa.me/` per contattare direttamente
+3. **EnrichmentCard quasi vuota**: mostra solo la data di arricchimento, non il contenuto ricco (profilo contatti, profilo azienda, awards, specialties)
+4. **Social links nei contatti poco visibili**: mostrati come badge testuali generici, non come icone cliccabili intuitive
+
+---
 
 ## Cosa faremo
 
-Aggiungeremo un pulsante **"Deep Search"** nella barra delle azioni di gruppo (BulkActionBar) che lancia la deep search in sequenza su tutti i partner selezionati, mostrando il progresso in tempo reale.
+### 1. Link WhatsApp diretti per ogni contatto con numero mobile
 
-L'utente potra:
-1. Filtrare per paese (o qualsiasi altro filtro)
-2. Selezionare i partner con le checkbox
-3. Cliccare "Deep Search" nella barra in basso
-4. Vedere il progresso (es. "3/12 completati")
+Nella sezione contatti (sia PartnerDetailFull che PartnerDetailCompact), accanto a ogni numero mobile, aggiungere un'icona WhatsApp cliccabile che apre `https://wa.me/{numero_pulito}`.
 
-## Modifiche
+Il numero viene normalizzato rimuovendo spazi, trattini e il "+" iniziale.
 
-### 1. `src/components/partners/BulkActionBar.tsx`
+### 2. Deep Search potenziata: WhatsApp link automatici
 
-- Aggiungere pulsante **"Deep Search"** con icona `Sparkles`
-- Aggiungere prop `onDeepSearch` e `deepSearching` per gestire stato
-- Mostrare progresso durante l'esecuzione (es. "Deep Search 3/12...")
-- Pulsante disabilitato durante l'esecuzione
+Nella edge function `deep-search-partner`, dopo aver trovato i social, per ogni contatto con numero mobile:
+- Generare automaticamente un link WhatsApp (`wa.me/{numero}`) e salvarlo come social link con platform `whatsapp`
+- Non serve verificare se il numero sia effettivamente WhatsApp (non esiste un'API pubblica per farlo), ma il link funzionera comunque se il numero e registrato
 
-### 2. `src/pages/PartnerHub.tsx`
+### 3. Enrichment Card completa con dati ricchi
 
-- Aggiungere stato `deepSearching`, `deepSearchProgress`
-- Implementare handler `handleBulkDeepSearch`:
-  - Loop sequenziale sui partner selezionati
-  - Per ognuno chiama `supabase.functions.invoke("deep-search-partner", { body: { partnerId } })`
-  - Aggiorna il progresso ad ogni step
-  - Toast finale con riepilogo successi/errori
-  - Invalida la query dei partner alla fine per aggiornare i dati
-- Aggiungere pulsante "Seleziona tutti" nella toolbar per selezionare rapidamente tutti i partner filtrati (es. tutti quelli di un paese)
-- Passare le nuove props alla BulkActionBar
+Riprogettare `EnrichmentCard` per mostrare tutti i dati raccolti dalla Deep Search:
+- **Profilo contatti**: background professionale, lingue, interessi (da `enrichment_data.contact_profiles`)
+- **Profilo aziendale**: awards, specialties, news recenti, anno fondazione (da `enrichment_data.company_profile`)
+- **Data deep search** (da `enrichment_data.deep_search_at`)
 
-### 3. Aggiungere "Seleziona tutti visibili"
+### 4. Social links visivi per contatti
 
-Nella barra filtri del Partner Hub, aggiungere un piccolo pulsante/checkbox "Seleziona tutti" che seleziona tutti i partner attualmente visibili nella lista filtrata, cosi da non dover cliccare uno per uno quando si filtra per paese.
+Migliorare `SocialLinks` per mostrare icone SVG colorate (LinkedIn blu, Facebook blu, WhatsApp verde, Instagram gradiente) invece di emoji generiche, con tooltip al passaggio del mouse.
 
-## Layout BulkActionBar aggiornata
+### 5. Deep Search: aggiungere ricerca profilo LinkedIn dettagliato
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  12 selezionati   [Assegna Attivita]  [Deep Search]  [Email]  X │
-└──────────────────────────────────────────────────────────────────┘
+Nella edge function, se viene trovato un LinkedIn personale, fare una ricerca web aggiuntiva tipo `site:linkedin.com/in/{slug}` per estrarre titolo e seniority dal titolo della pagina (senza necessita di login LinkedIn). Salvare il livello di seniority nel profilo contatto (`enrichment_data.contact_profiles[id].seniority`).
 
-Durante l'esecuzione:
-┌──────────────────────────────────────────────────────────────────┐
-│  12 selezionati   [Assegna Attivita]  [Deep Search 3/12...]   X │
-└──────────────────────────────────────────────────────────────────┘
-```
+---
+
+## Modifiche ai file
+
+### Edge Function: `supabase/functions/deep-search-partner/index.ts`
+
+- Dopo il loop contatti social, aggiungere step "WhatsApp auto-link": per ogni contatto con `mobile`, creare un record `partner_social_links` con platform `whatsapp` e url `https://wa.me/{numero_normalizzato}`
+- Dopo aver trovato un LinkedIn personale, estrarre seniority dal titolo della pagina di ricerca (gia disponibile nei risultati Firecrawl, senza chiamata AI aggiuntiva)
+- Salvare seniority in `contact_profiles[id].seniority`
+
+### UI: `src/components/partners/PartnerDetailFull.tsx`
+
+- Nella sezione contatti, accanto a ogni numero mobile, aggiungere icona WhatsApp cliccabile (`wa.me/`)
+- Sotto ogni contatto con dati enrichment, mostrare badges con: seniority, lingue, background (1 riga)
+- Rendere i social links del contatto piu prominenti con icone SVG colorate
+
+### UI: `src/components/partners/PartnerDetailCompact.tsx`
+
+- Stesse modifiche WhatsApp link per i contatti
+- Aggiungere icone social cliccabili per contatto
+
+### UI: `src/components/partners/SocialLinks.tsx`
+
+- Sostituire emoji con icone SVG (LinkedIn, Facebook, Instagram, WhatsApp)
+- Aggiungere colori specifici per piattaforma
+- Per WhatsApp: icona verde con link diretto
+
+### UI: `src/components/partners/EnrichmentCard.tsx`
+
+- Mostrare profilo aziendale arricchito: awards, specialties, news recenti, anno fondazione, stima dipendenti
+- Mostrare profili contatto arricchiti: per ogni contatto con dati, mostrare background, seniority, lingue, interessi
+- Layout organizzato con sezioni collapsibili
+
+---
 
 ## Dettagli tecnici
 
-**Handler Deep Search batch:**
+### Normalizzazione numero per WhatsApp
 ```typescript
-const handleBulkDeepSearch = async () => {
-  const ids = Array.from(selectedIds);
-  setDeepSearching(true);
-  let success = 0, failed = 0;
-
-  for (let i = 0; i < ids.length; i++) {
-    setDeepSearchProgress({ current: i + 1, total: ids.length });
-    try {
-      const { error } = await supabase.functions.invoke("deep-search-partner", {
-        body: { partnerId: ids[i] }
-      });
-      if (error) throw error;
-      success++;
-    } catch {
-      failed++;
-    }
-  }
-
-  setDeepSearching(false);
-  queryClient.invalidateQueries({ queryKey: ["partners"] });
-  toast.success(`Deep Search completata: ${success} ok, ${failed} errori`);
-};
+function toWhatsAppUrl(phone: string): string {
+  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+  return `https://wa.me/${cleaned}`;
+}
 ```
 
-**Seleziona tutti:**
+### WhatsApp auto-link nella Deep Search
 ```typescript
-const handleSelectAll = () => {
-  if (selectedIds.size === filteredPartners.length) {
-    setSelectedIds(new Set());
-  } else {
-    setSelectedIds(new Set(filteredPartners.map((p: any) => p.id)));
+// After social search loop, for each contact with mobile
+for (const contact of contacts) {
+  if (contact.mobile && !existingSet.has(`${contact.id}_whatsapp`)) {
+    const cleaned = contact.mobile.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+    await supabase.from('partner_social_links').insert({
+      partner_id: partnerId,
+      contact_id: contact.id,
+      platform: 'whatsapp',
+      url: `https://wa.me/${cleaned}`
+    });
+    socialLinksFound++;
   }
-};
+}
 ```
 
-## File da modificare
+### Seniority extraction (dal titolo pagina LinkedIn)
+```typescript
+// Already have search result title like "John Doe - CEO at Company | LinkedIn"
+const titleParts = result.title?.split(' - ') || [];
+if (titleParts.length > 1) {
+  const role = titleParts[1].split(' | ')[0]?.trim();
+  // Classify seniority from title keywords
+  const seniorKeywords = ['CEO', 'Director', 'VP', 'President', 'Owner', 'Founder', 'Managing', 'General Manager', 'Head'];
+  const midKeywords = ['Manager', 'Supervisor', 'Lead', 'Senior', 'Coordinator'];
+  let seniority = 'junior';
+  if (seniorKeywords.some(k => role?.includes(k))) seniority = 'senior';
+  else if (midKeywords.some(k => role?.includes(k))) seniority = 'mid';
+  contactProfiles[contact.id].seniority = seniority;
+  contactProfiles[contact.id].linkedin_title = role;
+}
+```
+
+### File da modificare
 
 | File | Modifica |
 |------|---------|
-| `src/components/partners/BulkActionBar.tsx` | Aggiungere pulsante Deep Search con progresso + pulsante Email |
-| `src/pages/PartnerHub.tsx` | Handler bulk deep search, checkbox "Seleziona tutti", stati progresso |
+| `supabase/functions/deep-search-partner/index.ts` | WhatsApp auto-link + seniority extraction |
+| `src/components/partners/PartnerDetailFull.tsx` | WhatsApp icon nei contatti + enrichment badges |
+| `src/components/partners/PartnerDetailCompact.tsx` | WhatsApp icon nei contatti |
+| `src/components/partners/SocialLinks.tsx` | Icone SVG colorate per piattaforma |
+| `src/components/partners/EnrichmentCard.tsx` | Mostrare dati ricchi (profili, awards, company) |
 
-Nessuna modifica al backend: la edge function `deep-search-partner` resta invariata, viene semplicemente chiamata in sequenza per ogni partner.
+Nessuna modifica al database necessaria -- tutti i dati vengono salvati nelle tabelle esistenti (`partner_social_links`, `partners.enrichment_data`).
