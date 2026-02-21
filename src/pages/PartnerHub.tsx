@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -59,6 +59,7 @@ export default function PartnerHub() {
   const [deepSearching, setDeepSearching] = useState(false);
   const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
+  const deepSearchAbortRef = useRef(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -169,10 +170,12 @@ export default function PartnerHub() {
   const handleBulkDeepSearch = useCallback(async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    deepSearchAbortRef.current = false;
     setDeepSearching(true);
     let success = 0, failed = 0;
 
     for (let i = 0; i < ids.length; i++) {
+      if (deepSearchAbortRef.current) break;
       setDeepSearchProgress({ current: i + 1, total: ids.length });
       try {
         const { error } = await supabase.functions.invoke("deep-search-partner", {
@@ -185,11 +188,18 @@ export default function PartnerHub() {
       }
     }
 
+    const stopped = deepSearchAbortRef.current;
+    deepSearchAbortRef.current = false;
     setDeepSearching(false);
     setDeepSearchProgress(null);
     queryClient.invalidateQueries({ queryKey: ["partners"] });
-    toast.success(`Deep Search completata: ${success} ok, ${failed} errori`);
+    toast.success(`Deep Search ${stopped ? "interrotta" : "completata"}: ${success} ok, ${failed} errori`);
   }, [selectedIds, queryClient]);
+
+  const handleStopDeepSearch = useCallback(() => {
+    deepSearchAbortRef.current = true;
+    toast.info("Interruzione Deep Search in corso...");
+  }, []);
 
   const handleBulkEmail = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -589,6 +599,7 @@ export default function PartnerHub() {
         onClear={() => setSelectedIds(new Set())}
         onAssignActivity={() => setAssignDialogOpen(true)}
         onDeepSearch={handleBulkDeepSearch}
+        onStopDeepSearch={handleStopDeepSearch}
         onEmail={handleBulkEmail}
         deepSearching={deepSearching}
         deepSearchProgress={deepSearchProgress}

@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { X, ClipboardList, Sparkles, Send, Loader2 } from "lucide-react";
+import { X, ClipboardList, Sparkles, Send, Loader2, Square } from "lucide-react";
 
 interface BulkActionBarProps {
   count: number;
   onClear: () => void;
   onAssignActivity: () => void;
   onDeepSearch?: () => void;
+  onStopDeepSearch?: () => void;
   onEmail?: () => void;
   deepSearching?: boolean;
   deepSearchProgress?: { current: number; total: number } | null;
@@ -17,6 +18,7 @@ export function BulkActionBar({
   onClear,
   onAssignActivity,
   onDeepSearch,
+  onStopDeepSearch,
   onEmail,
   deepSearching,
   deepSearchProgress,
@@ -31,23 +33,37 @@ export function BulkActionBar({
           <ClipboardList className="w-3.5 h-3.5" />
           Assegna Attività
         </Button>
-        {onDeepSearch && (
+        {onDeepSearch && !deepSearching && (
           <Button
             size="sm"
             variant="secondary"
             onClick={onDeepSearch}
             className="h-7 gap-1.5"
-            disabled={deepSearching}
           >
-            {deepSearching ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
-            )}
-            {deepSearching && deepSearchProgress
-              ? `Deep Search ${deepSearchProgress.current}/${deepSearchProgress.total}...`
-              : "Deep Search"}
+            <Sparkles className="w-3.5 h-3.5" />
+            Deep Search
           </Button>
+        )}
+        {deepSearching && (
+          <>
+            <span className="text-sm flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              {deepSearchProgress
+                ? `Deep Search ${deepSearchProgress.current}/${deepSearchProgress.total}...`
+                : "Deep Search..."}
+            </span>
+            {onStopDeepSearch && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={onStopDeepSearch}
+                className="h-7 gap-1.5"
+              >
+                <Square className="w-3 h-3 fill-current" />
+                Stop
+              </Button>
+            )}
+          </>
         )}
         {onEmail && (
           <Button size="sm" variant="secondary" onClick={onEmail} className="h-7 gap-1.5" disabled={deepSearching}>
