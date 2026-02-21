@@ -131,7 +131,12 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [savingWA, setSavingWA] = useState(false);
 
-  /* ── Email state ── */
+  /* ── Email SMTP state ── */
+  const [smtpHost, setSmtpHost] = useState("");
+  const [smtpPort, setSmtpPort] = useState("465");
+  const [smtpUser, setSmtpUser] = useState("");
+  const [smtpPass, setSmtpPass] = useState("");
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [emailSender, setEmailSender] = useState("");
   const [emailName, setEmailName] = useState("");
   const [testEmailTo, setTestEmailTo] = useState("");
@@ -159,6 +164,10 @@ export default function Settings() {
       setWhatsappNumber(settings["whatsapp_number"] || "");
       setWcaUser(settings["wca_username"] || "");
       setWcaPass(settings["wca_password"] || "");
+      setSmtpHost(settings["smtp_host"] || "");
+      setSmtpPort(settings["smtp_port"] || "465");
+      setSmtpUser(settings["smtp_user"] || "");
+      setSmtpPass(settings["smtp_password"] || "");
       setEmailSender(settings["default_sender_email"] || "");
       setEmailName(settings["default_sender_name"] || "");
       setTestEmailTo(settings["default_sender_email"] || "");
@@ -180,9 +189,13 @@ export default function Settings() {
   const handleSaveEmail = async () => {
     setSavingEmail(true);
     try {
+      await updateSetting.mutateAsync({ key: "smtp_host", value: smtpHost.trim() });
+      await updateSetting.mutateAsync({ key: "smtp_port", value: smtpPort.trim() });
+      await updateSetting.mutateAsync({ key: "smtp_user", value: smtpUser.trim() });
+      await updateSetting.mutateAsync({ key: "smtp_password", value: smtpPass });
       await updateSetting.mutateAsync({ key: "default_sender_email", value: emailSender.trim() });
       await updateSetting.mutateAsync({ key: "default_sender_name", value: emailName.trim() });
-      toast.success("Impostazioni email salvate!");
+      toast.success("Impostazioni email SMTP salvate!");
     } catch { toast.error("Errore nel salvataggio"); }
     finally { setSavingEmail(false); }
   };
@@ -364,7 +377,7 @@ export default function Settings() {
         {/* ════════════════ EMAIL ════════════════ */}
         <TabsContent value="email">
           <div className="space-y-4">
-            {/* Mittente Email */}
+            {/* Server SMTP */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -373,51 +386,77 @@ export default function Settings() {
                       <Mail className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">Mittente Email</CardTitle>
-                      <CardDescription>Email e nome che appariranno come mittente</CardDescription>
+                      <CardTitle className="text-base">Configurazione SMTP</CardTitle>
+                      <CardDescription>Server e credenziali per l'invio email diretto</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={emailSender ? "default" : "secondary"} className={emailSender ? "bg-primary text-primary-foreground" : ""}>
-                    {emailSender ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+                  <Badge variant={smtpHost && smtpUser ? "default" : "secondary"} className={smtpHost && smtpUser ? "bg-primary text-primary-foreground" : ""}>
+                    {smtpHost && smtpUser ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Host SMTP</Label>
+                    <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtps.aruba.it" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Porta</Label>
+                    <Input value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="465" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Username SMTP</Label>
+                  <Input value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="luca@tmwe.it" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password SMTP</Label>
+                  <div className="relative">
+                    <Input
+                      type={showSmtpPass ? "text" : "password"}
+                      value={smtpPass}
+                      onChange={(e) => setSmtpPass(e.target.value)}
+                      placeholder="••••••••"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setShowSmtpPass(!showSmtpPass)}
+                    >
+                      {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <hr className="border-border" />
+
                 <div className="space-y-2">
                   <Label>Email mittente</Label>
-                  <Input
-                    type="email"
-                    value={emailSender}
-                    onChange={(e) => setEmailSender(e.target.value)}
-                    placeholder="luca@tmwe.it"
-                  />
+                  <Input type="email" value={emailSender} onChange={(e) => setEmailSender(e.target.value)} placeholder="luca@tmwe.it" />
                 </div>
                 <div className="space-y-2">
                   <Label>Nome mittente (opzionale)</Label>
-                  <Input
-                    value={emailName}
-                    onChange={(e) => setEmailName(e.target.value)}
-                    placeholder="Luca - TMWE"
-                  />
+                  <Input value={emailName} onChange={(e) => setEmailName(e.target.value)} placeholder="Luca - TMWE" />
                 </div>
-                <Button onClick={handleSaveEmail} disabled={savingEmail || !emailSender.trim()}>
+                <Button onClick={handleSaveEmail} disabled={savingEmail || !smtpHost.trim() || !smtpUser.trim() || !smtpPass.trim() || !emailSender.trim()}>
                   {savingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Salva Impostazioni Email
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Alert verifica dominio */}
+            {/* Info SMTP */}
             <div className="flex gap-3 rounded-lg border border-border bg-muted/50 p-4">
               <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">Verifica dominio richiesta</p>
+                <p className="text-sm font-medium">Server SMTP comuni</p>
                 <p className="text-sm text-muted-foreground">
-                  Per inviare email da <strong>{emailSender || "il tuo indirizzo"}</strong>, il dominio deve essere verificato su{" "}
-                  <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                    resend.com → Domains
-                  </a>
-                  . Aggiungi i record DNS (SPF, DKIM) indicati da Resend sul tuo provider DNS.
+                  <strong>Aruba:</strong> smtps.aruba.it, porta 465 (SSL)<br />
+                  <strong>Gmail:</strong> smtp.gmail.com, porta 587 (TLS) — richiede App Password<br />
+                  <strong>Outlook:</strong> smtp.office365.com, porta 587 (TLS)
                 </p>
               </div>
             </div>
