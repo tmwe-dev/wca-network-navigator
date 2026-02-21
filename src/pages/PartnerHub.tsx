@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CountryOverview } from "@/components/partners/CountryOverview";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Phone, Mail, Globe, MapPin, ChevronRight, Users,
-  Filter, Cpu, Box, CheckSquare,
+  Filter, Cpu, Box, CheckSquare, Loader2, Sparkles,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -35,6 +34,8 @@ import { BulkActionBar } from "@/components/partners/BulkActionBar";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
 import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
+import { CountryCards } from "@/components/partners/CountryCards";
+import { CountryWorkbench } from "@/components/partners/CountryWorkbench";
 
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
@@ -50,7 +51,11 @@ export default function PartnerHub() {
   const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [filters, setFilters] = useState<PartnerFilters>({});
   const [sortBy, setSortBy] = useState<SortOption>("name_asc");
-  const [viewMode, setViewMode] = useState<"list" | "country">("list");
+
+  // Navigation: "countries" (Level 1) | "country" (Level 2) | "list" (flat list)
+  const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
   const [deepSearching, setDeepSearching] = useState(false);
   const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
 
@@ -142,8 +147,8 @@ export default function PartnerHub() {
     (filters.expiresWithinMonths ? 1 : 0) +
     (filters.favorites ? 1 : 0);
 
-  const toggleSelection = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -190,6 +195,43 @@ export default function PartnerHub() {
     navigate("/email-composer", { state: { partnerIds: ids } });
   }, [selectedIds, navigate]);
 
+  const handleCountrySelect = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    setViewLevel("country");
+    setSelectedIds(new Set());
+  };
+
+  const handleBackToCountries = () => {
+    setViewLevel("countries");
+    setSelectedCountry(null);
+    setSelectedIds(new Set());
+  };
+
+  const handleDownloadProfiles = (countryCode: string) => {
+    navigate("/", { state: { preselectedCountry: countryCode } });
+  };
+
+  // Active events bar
+  const renderEventsBar = () => {
+    if (!deepSearching || !deepSearchProgress) return null;
+    return (
+      <div className="px-4 py-2 border-b border-border/50 bg-primary/5">
+        <div className="flex items-center gap-2 text-xs">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+          <span className="font-medium">
+            Deep Search {deepSearchProgress.current}/{deepSearchProgress.total}...
+          </span>
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${(deepSearchProgress.current / deepSearchProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
     <div className="h-[calc(100vh-4rem)] -m-6 relative overflow-hidden">
@@ -201,8 +243,9 @@ export default function PartnerHub() {
 
       <ResizablePanelGroup direction="horizontal" className="relative z-10 h-full">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-      {/* ═══ LEFT PANEL: Partner List ═══ */}
+      {/* ═══ LEFT PANEL ═══ */}
       <div className="h-full flex flex-col bg-white/[0.03] dark:bg-white/[0.03] bg-white/60 backdrop-blur-xl border-r border-white/[0.08] dark:border-white/[0.08] border-slate-200/60">
+        {/* Header */}
         <div className="p-4 border-b border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 space-y-3 bg-gradient-to-br from-sky-500/[0.06] via-transparent to-violet-500/[0.04]">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold flex items-center gap-2">
@@ -211,28 +254,28 @@ export default function PartnerHub() {
             </h1>
             <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
               <button
-                onClick={() => setViewMode("list")}
+                onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
                 className={cn(
                   "px-2 py-1 text-xs rounded-md transition-all",
-                  viewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Users className="w-3.5 h-3.5 inline mr-1" />
-                Lista
-              </button>
-              <button
-                onClick={() => setViewMode("country")}
-                className={cn(
-                  "px-2 py-1 text-xs rounded-md transition-all",
-                  viewMode === "country" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  viewLevel !== "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <MapPin className="w-3.5 h-3.5 inline mr-1" />
                 Paesi
               </button>
+              <button
+                onClick={() => setViewLevel("list")}
+                className={cn(
+                  "px-2 py-1 text-xs rounded-md transition-all",
+                  viewLevel === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Users className="w-3.5 h-3.5 inline mr-1" />
+                Lista
+              </button>
             </div>
           </div>
-          {viewMode === "list" && (
+          {viewLevel === "list" && (
             <>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -298,21 +341,24 @@ export default function PartnerHub() {
           )}
         </div>
 
-        {viewMode === "country" ? (
-          <CountryOverview
+        {/* Active events bar */}
+        {renderEventsBar()}
+
+        {/* Content based on viewLevel */}
+        {viewLevel === "countries" ? (
+          <CountryCards
+            onSelectCountry={handleCountrySelect}
+            onDownloadProfiles={handleDownloadProfiles}
+          />
+        ) : viewLevel === "country" && selectedCountry ? (
+          <CountryWorkbench
+            countryCode={selectedCountry}
             partners={partners || []}
-            isLoading={isLoading}
+            onBack={handleBackToCountries}
             onSelectPartner={setSelectedId}
             selectedId={selectedId}
             selectedIds={selectedIds}
-            onToggleSelection={(id) => {
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              });
-            }}
+            onToggleSelection={(id) => toggleSelection(id)}
             onSelectAllFiltered={(ids) => {
               if (ids.length === 0) {
                 setSelectedIds(new Set());
@@ -320,6 +366,7 @@ export default function PartnerHub() {
                 setSelectedIds(new Set(ids));
               }
             }}
+            onDownloadProfiles={handleDownloadProfiles}
           />
         ) : (
         <ScrollArea className="flex-1">
