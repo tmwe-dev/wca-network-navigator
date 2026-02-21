@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { getCountryFlag, getYearsMember } from "@/lib/countries";
+import { getCountryFlag } from "@/lib/countries";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +18,9 @@ import {
   Star,
   ArrowUpDown,
   Filter,
+  MessageCircle,
+  Mail,
+  CheckSquare,
 } from "lucide-react";
 import {
   Select,
@@ -31,6 +35,9 @@ interface CountryOverviewProps {
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (id: string) => void;
+  onSelectAllFiltered?: (ids: string[]) => void;
 }
 
 interface CountryGroup {
@@ -39,14 +46,32 @@ interface CountryGroup {
   flag: string;
   total: number;
   withContacts: number;
+  withWhatsApp: number;
+  withEmail: number;
   partners: any[];
 }
 
-export function CountryOverview({ partners, isLoading, onSelectPartner, selectedId }: CountryOverviewProps) {
+type ContactFilter = "all" | "whatsapp" | "email";
+
+export function CountryOverview({
+  partners,
+  isLoading,
+  onSelectPartner,
+  selectedId,
+  selectedIds = new Set(),
+  onToggleSelection,
+  onSelectAllFiltered,
+}: CountryOverviewProps) {
   const [search, setSearch] = useState("");
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "total" | "pct">("name");
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
+  const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
+
+  const hasWhatsApp = (p: any) =>
+    (p.partner_contacts || []).some((c: any) => c.mobile);
+  const hasEmail = (p: any) =>
+    (p.partner_contacts || []).some((c: any) => c.email);
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
@@ -58,26 +83,25 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
           flag: getCountryFlag(p.country_code),
           total: 0,
           withContacts: 0,
+          withWhatsApp: 0,
+          withEmail: 0,
           partners: [],
         });
       }
       const group = map.get(p.country_code)!;
       group.total++;
       const q = getPartnerContactQuality(p.partner_contacts);
-      if (q === "complete" || q === "partial") {
-        group.withContacts++;
-      }
+      if (q === "complete" || q === "partial") group.withContacts++;
+      if (hasWhatsApp(p)) group.withWhatsApp++;
+      if (hasEmail(p)) group.withEmail++;
       group.partners.push(p);
     });
-
-    const groups = Array.from(map.values());
-    return groups;
+    return Array.from(map.values());
   }, [partners]);
 
   const filteredGroups = useMemo(() => {
     let result = countryGroups;
 
-    // Text search
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -85,14 +109,19 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
       );
     }
 
-    // Filter by completeness
     if (filterMode === "complete") {
       result = result.filter((g) => g.withContacts === g.total && g.total > 0);
     } else if (filterMode === "incomplete") {
       result = result.filter((g) => g.withContacts < g.total);
     }
 
-    // Sort
+    // Filter groups that have at least one partner matching contactFilter
+    if (contactFilter === "whatsapp") {
+      result = result.filter((g) => g.withWhatsApp > 0);
+    } else if (contactFilter === "email") {
+      result = result.filter((g) => g.withEmail > 0);
+    }
+
     result = [...result].sort((a, b) => {
       if (sortBy === "total") return b.total - a.total;
       if (sortBy === "pct") {
@@ -104,7 +133,22 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
     });
 
     return result;
-  }, [countryGroups, search, sortBy, filterMode]);
+  }, [countryGroups, search, sortBy, filterMode, contactFilter]);
+
+  // Get filtered partner list for "select all" in current view
+  const visiblePartnerIds = useMemo(() => {
+    const ids: string[] = [];
+    filteredGroups.forEach((g) => {
+      g.partners.forEach((p: any) => {
+        if (contactFilter === "whatsapp" && !hasWhatsApp(p)) return;
+        if (contactFilter === "email" && !hasEmail(p)) return;
+        ids.push(p.id);
+      });
+    });
+    return ids;
+  }, [filteredGroups, contactFilter]);
+
+  const allVisibleSelected = visiblePartnerIds.length > 0 && visiblePartnerIds.every((id) => selectedIds.has(id));
 
   const totalPartners = partners?.length || 0;
   const totalWithContacts = useMemo(
@@ -127,7 +171,7 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header stats */}
+      {/* Header */}
       <div className="p-4 border-b space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -136,8 +180,51 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 rounded-xl"
-         />
+          />
         </div>
+
+        {/* Contact filter toggles */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setContactFilter(contactFilter === "whatsapp" ? "all" : "whatsapp")}
+            className={cn(
+              "flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-all",
+              contactFilter === "whatsapp"
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                : "bg-muted border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            <MessageCircle className="w-3 h-3" />
+            WhatsApp
+          </button>
+          <button
+            onClick={() => setContactFilter(contactFilter === "email" ? "all" : "email")}
+            className={cn(
+              "flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-all",
+              contactFilter === "email"
+                ? "bg-sky-500/10 border-sky-500/30 text-sky-600 dark:text-sky-400"
+                : "bg-muted border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            <Mail className="w-3 h-3" />
+            Email
+          </button>
+          {onSelectAllFiltered && (
+            <button
+              onClick={() => onSelectAllFiltered(allVisibleSelected ? [] : visiblePartnerIds)}
+              className={cn(
+                "flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-all ml-auto",
+                allVisibleSelected
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted border-border text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <CheckSquare className="w-3 h-3" />
+              {allVisibleSelected ? "Deseleziona" : "Sel. tutti"}
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
             <SelectTrigger className="h-7 text-xs w-[120px]">
@@ -185,6 +272,13 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
             const isOpen = expandedCountry === group.code;
             const completePct = group.total > 0 ? Math.round((group.withContacts / group.total) * 100) : 0;
 
+            // Filter partners within group by contactFilter
+            const visiblePartners = group.partners.filter((p: any) => {
+              if (contactFilter === "whatsapp") return hasWhatsApp(p);
+              if (contactFilter === "email") return hasEmail(p);
+              return true;
+            });
+
             return (
               <Collapsible
                 key={group.code}
@@ -202,7 +296,6 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{group.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {/* Mini progress bar */}
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
                             className={cn(
@@ -216,6 +309,12 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 text-right">
+                      {contactFilter !== "all" && (
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-primary">{visiblePartners.length}</p>
+                          <p className="text-[10px] text-muted-foreground">filtrati</p>
+                        </div>
+                      )}
                       <div className="text-right">
                         <p className="text-sm font-semibold">{group.total}</p>
                         <p className="text-[10px] text-muted-foreground">totali</p>
@@ -232,26 +331,39 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
 
                 <CollapsibleContent>
                   <div className="bg-muted/30 divide-y divide-border/50">
-                    {group.partners
+                    {visiblePartners
                       .sort((a: any, b: any) => a.company_name.localeCompare(b.company_name))
                       .map((partner: any) => {
                         const q = getPartnerContactQuality(partner.partner_contacts);
                         const contactCount = (partner.partner_contacts || []).length;
-                        const hasEmail = (partner.partner_contacts || []).some((c: any) => c.email);
-                        const hasPhone = (partner.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile);
+                        const pHasWhatsApp = hasWhatsApp(partner);
+                        const pHasEmail = hasEmail(partner);
+                        const isSelected = selectedIds.has(partner.id);
 
                         return (
                           <div
                             key={partner.id}
                             onClick={() => onSelectPartner(partner.id)}
                             className={cn(
-                              "pl-12 pr-3 py-2 hover:bg-accent/50 transition-colors cursor-pointer flex items-center gap-2",
+                              "pl-8 pr-3 py-2 hover:bg-accent/50 transition-colors cursor-pointer flex items-center gap-2",
                               selectedId === partner.id && "bg-accent",
+                              isSelected && "bg-primary/5",
                               q === "missing" && "border-l-4 border-l-destructive",
                               q === "partial" && "border-l-4 border-l-amber-400",
                               q === "complete" && "border-l-4 border-l-primary",
                             )}
                           >
+                            {onToggleSelection && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleSelection(partner.id);
+                                }}
+                                className="shrink-0"
+                              >
+                                <Checkbox checked={isSelected} />
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm truncate">{partner.company_name}</p>
                               <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
@@ -268,6 +380,12 @@ export function CountryOverview({ partners, isLoading, onSelectPartner, selected
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
+                              {pHasWhatsApp && (
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
+                              )}
+                              {pHasEmail && (
+                                <Mail className="w-3.5 h-3.5 text-sky-500" />
+                              )}
                               {q === "complete" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                               {q === "partial" && <AlertTriangle className="w-4 h-4 text-amber-500" />}
                               {q === "missing" && <AlertTriangle className="w-4 h-4 text-destructive" />}

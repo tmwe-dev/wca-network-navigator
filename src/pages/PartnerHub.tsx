@@ -304,6 +304,22 @@ export default function PartnerHub() {
             isLoading={isLoading}
             onSelectPartner={setSelectedId}
             selectedId={selectedId}
+            selectedIds={selectedIds}
+            onToggleSelection={(id) => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
+            onSelectAllFiltered={(ids) => {
+              if (ids.length === 0) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(ids));
+              }
+            }}
           />
         ) : (
         <ScrollArea className="flex-1">
