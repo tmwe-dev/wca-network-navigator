@@ -88,18 +88,36 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  const stats = useMemo(() => {
+  // Base stats (unfiltered) for the header
+  const baseStats = useMemo(() => {
     const total = countryPartners.length;
     const withProfile = countryPartners.filter(hasProfile).length;
+    const noProfile = total - withProfile;
     const withPhone = countryPartners.filter(hasPhone).length;
     const withEmail = countryPartners.filter(hasEmail).length;
-    const noProfile = total - withProfile;
-    const noPhone = total - withPhone;
-    const noEmail = total - withEmail;
-    const withDeepSearch = countryPartners.filter(hasDeepSearch).length;
-    const noDeepSearch = total - withDeepSearch;
-    return { total, withProfile, withPhone, withEmail, noProfile, noPhone, noEmail, withDeepSearch, noDeepSearch };
+    return { total, withProfile, noProfile, withPhone, withEmail };
   }, [countryPartners]);
+
+  // Apply all active filters EXCEPT the one we're counting for
+  const dynamicCounts = useMemo(() => {
+    const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
+      let list = countryPartners;
+      for (const tag of activeFilters) {
+        if (tag === excludeTag) continue;
+        list = list.filter(FILTER_FNS[tag]);
+      }
+      return list.filter(predicate).length;
+    };
+    return {
+      with_phone: countFor("with_phone", hasPhone),
+      with_email: countFor("with_email", hasEmail),
+      deep_search: countFor("deep_search", hasDeepSearch),
+      no_phone: countFor("no_phone", (p) => !hasPhone(p)),
+      no_email: countFor("no_email", (p) => !hasEmail(p)),
+      no_profile: countFor("no_profile", (p) => !hasProfile(p)),
+      no_deep_search: countFor("no_deep_search", (p) => !hasDeepSearch(p)),
+    };
+  }, [countryPartners, activeFilters]);
 
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
@@ -116,16 +134,16 @@ export function CountryWorkbench({
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
   const positiveFilters: { key: FilterTag; label: string; count: number }[] = [
-    { key: "with_phone", label: "Con Tel", count: stats.withPhone },
-    { key: "with_email", label: "Con Email", count: stats.withEmail },
-    { key: "deep_search", label: "Deep", count: stats.withDeepSearch },
+    { key: "with_phone", label: "Con Tel", count: dynamicCounts.with_phone },
+    { key: "with_email", label: "Con Email", count: dynamicCounts.with_email },
+    { key: "deep_search", label: "Deep", count: dynamicCounts.deep_search },
   ];
 
   const negativeFilters: { key: FilterTag; label: string; count: number }[] = [
-    { key: "no_phone", label: "No Tel", count: stats.noPhone },
-    { key: "no_email", label: "No Email", count: stats.noEmail },
-    { key: "no_profile", label: "No Profilo", count: stats.noProfile },
-    { key: "no_deep_search", label: "No Deep", count: stats.noDeepSearch },
+    { key: "no_phone", label: "No Tel", count: dynamicCounts.no_phone },
+    { key: "no_email", label: "No Email", count: dynamicCounts.no_email },
+    { key: "no_profile", label: "No Profilo", count: dynamicCounts.no_profile },
+    { key: "no_deep_search", label: "No Deep", count: dynamicCounts.no_deep_search },
   ];
 
   return (
@@ -142,37 +160,37 @@ export function CountryWorkbench({
           <span className="text-xl">{flag}</span>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
-            <p className="text-[10px] text-muted-foreground">{stats.total} partner</p>
+            <p className="text-[10px] text-muted-foreground">{baseStats.total} partner</p>
           </div>
           {/* Inline stats */}
           <div className="flex items-center gap-2 text-xs shrink-0">
             <span className="flex items-center gap-0.5 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-              {stats.withProfile}
+              {baseStats.withProfile}
             </span>
-            {stats.noProfile > 0 && (
+            {baseStats.noProfile > 0 && (
               <span className="flex items-center gap-0.5 font-medium text-destructive">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                {stats.noProfile}
+                {baseStats.noProfile}
               </span>
             )}
             <span className="flex items-center gap-0.5">
-              <Phone className="w-3 h-3 text-muted-foreground" /> {stats.withPhone}
+              <Phone className="w-3 h-3 text-muted-foreground" /> {baseStats.withPhone}
             </span>
             <span className="flex items-center gap-0.5">
-              <Mail className="w-3 h-3 text-muted-foreground" /> {stats.withEmail}
+              <Mail className="w-3 h-3 text-muted-foreground" /> {baseStats.withEmail}
             </span>
           </div>
         </div>
 
         {/* Download missing profiles - compact */}
-        {stats.noProfile > 0 && onDownloadProfiles && (
+        {baseStats.noProfile > 0 && onDownloadProfiles && (
           <button
             onClick={() => onDownloadProfiles(countryCode)}
             className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md border border-dashed border-amber-400/60 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
-            Scarica {stats.noProfile} profili mancanti
+            Scarica {baseStats.noProfile} profili mancanti
           </button>
         )}
       </div>
