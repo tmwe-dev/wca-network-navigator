@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { X, ClipboardList, Sparkles, Send, Loader2, Square } from "lucide-react";
+import { X, ClipboardList, Sparkles, Send, Loader2, Square, Briefcase } from "lucide-react";
 
 interface BulkActionBarProps {
   count: number;
@@ -8,6 +8,8 @@ interface BulkActionBarProps {
   onDeepSearch?: () => void;
   onStopDeepSearch?: () => void;
   onEmail?: () => void;
+  onSendToWorkspace?: () => void;
+  sendingToWorkspace?: boolean;
   deepSearching?: boolean;
   deepSearchProgress?: { current: number; total: number } | null;
   partnerIds: string[];
@@ -20,6 +22,8 @@ export function BulkActionBar({
   onDeepSearch,
   onStopDeepSearch,
   onEmail,
+  onSendToWorkspace,
+  sendingToWorkspace,
   deepSearching,
   deepSearchProgress,
 }: BulkActionBarProps) {
@@ -64,6 +68,18 @@ export function BulkActionBar({
               </Button>
             )}
           </>
+        )}
+        {onSendToWorkspace && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onSendToWorkspace}
+            className="h-7 gap-1.5"
+            disabled={deepSearching || sendingToWorkspace}
+          >
+            {sendingToWorkspace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Briefcase className="w-3.5 h-3.5" />}
+            Workspace
+          </Button>
         )}
         {onEmail && (
           <Button size="sm" variant="secondary" onClick={onEmail} className="h-7 gap-1.5" disabled={deepSearching}>
