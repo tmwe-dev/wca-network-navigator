@@ -1,68 +1,113 @@
 
 
-# Aggiunta Sezione LinkedIn nelle Impostazioni
+# Piano: Vista Attivita nell'Agenda
 
-## Approccio
+## Obiettivo
 
-Anziche username/password (bloccato da LinkedIn), usiamo lo stesso approccio dei cookie di sessione gia funzionante per WCA. L'utente effettua il login manualmente su LinkedIn nel browser, e il sistema cattura il cookie di sessione per poter accedere ai profili.
+Aggiungere una nuova tab **"Attivita"** nella pagina Agenda (Reminders) che mostri tutte le attivita di tutti i partner in un'unica vista centralizzata, raggruppate per paese, con i contatti visibili e il contatto selezionato evidenziato.
 
-In aggiunta, salviamo anche le credenziali LinkedIn (email/password) per riferimento e per un eventuale futuro auto-login tramite estensione Chrome, ma il metodo principale resta il cookie `li_at`.
+## Situazione attuale
 
-## Cosa viene aggiunto
+- La tabella `activities` esiste gia nel database con i campi: `partner_id`, `activity_type` (send_email, phone_call, meeting, follow_up, etc.), `status`, `priority`, `due_date`, `assigned_to`
+- La tabella `campaign_jobs` gestisce separatamente i job di campagna
+- La pagina Agenda (`Reminders.tsx`) ha solo reminders, nessuna vista attivita
+- Il componente `ActivityList` esiste ma e usato solo nel dettaglio singolo partner
+- **Manca**: un campo `selected_contact_id` nella tabella activities per tracciare quale contatto e stato scelto per l'attivita
 
-### Nella tab WCA (o nuova tab dedicata)
+## Modifiche al Database
 
-Una nuova Card "LinkedIn" nella pagina Settings con:
-- **Email LinkedIn** (input text)
-- **Password LinkedIn** (input password con toggle visibilita)
-- **Cookie di sessione `li_at`** (textarea) - il cookie principale che LinkedIn usa per l'autenticazione
-- Istruzioni su come ottenere il cookie: "Accedi a linkedin.com, apri DevTools (F12) > Application > Cookies > linkedin.com > copia il valore di `li_at`"
-- Pulsante "Salva"
-- Badge "Configurato" / "Non configurato"
+### Migrazione SQL
 
-### Storage
+Aggiungere alla tabella `activities`:
+- `selected_contact_id` (uuid, nullable, FK verso `partner_contacts.id`) -- il contatto scelto per questa attivita
+- `campaign_batch_id` (text, nullable) -- collegamento opzionale al batch della campagna
 
-Tutto salvato nella tabella `app_settings` esistente con le chiavi:
-- `linkedin_email`
-- `linkedin_password`
-- `linkedin_session_cookie` (il cookie `li_at`)
+Questo permette di:
+1. Sapere esattamente quale contatto gestire per ogni attivita
+2. Collegare le attivita create dalle campagne al batch di origine
 
-Nessuna migrazione database necessaria.
+## Modifiche al Codice
 
-## Dettagli Tecnici
+### 1. Hook `useActivities.ts` -- Nuova query globale
 
-### File da modificare
+Aggiungere `useAllActivities()` che carica tutte le attivita con join su:
+- `partners` (company_name, country_code, country_name, city)
+- `partner_contacts` via `selected_contact_id` (name, email, phone, mobile)
+- `team_members` (name dell'assegnatario)
 
-**`src/pages/Settings.tsx`**
-- Aggiungere una nuova Card nella tab "WCA" (dato che sono servizi esterni correlati), oppure rinominare la tab in "Connessioni" per includere WCA + LinkedIn
-- Alternativa: creare una tab dedicata "LinkedIn" con icona dedicata
+Supporta filtri per: stato, tipo attivita, paese, assegnatario.
 
-La scelta migliore e aggiungere la sezione LinkedIn direttamente nella tab WCA, rinominandola "Connessioni" con icona `Globe`, dato che sia WCA che LinkedIn sono servizi esterni per il reperimento dati partner.
+### 2. Componente `ActivitiesTab.tsx` (nuovo)
 
-### Struttura della Card LinkedIn
+Vista a due livelli:
 
+**Livello 1 -- Raggruppamento per Paese**
+- Lista dei paesi con contatore attivita pendenti
+- Bandiera + nome paese + badge con conteggio
+- Click per espandere/collassare
+
+**Livello 2 -- Lista Attivita per Paese**
+Per ogni attivita mostra:
+- Icona tipo (email, telefono, WhatsApp, meeting, follow-up)
+- Nome azienda partner
+- **Contatto selezionato evidenziato** (nome, email/telefono)
+- Se nessun contatto selezionato, mostra i contatti disponibili con possibilita di sceglierne uno
+- Stato (pending/in_progress/completed) con toggle rapido
+- Data scadenza
+- Assegnatario
+
+**Barra filtri in alto:**
+- Filtro per tipo (Email, Telefono, WhatsApp, Meeting, Altro)
+- Filtro per stato (Da fare, In corso, Completate)
+- Filtro per assegnatario (team members)
+
+### 3. Integrazione in `Reminders.tsx`
+
+Aggiungere una quarta tab "Attivita" accanto a Calendar, Pending, Completed:
 ```text
-Card: LinkedIn
-  Header: icona LinkedIn + titolo + badge stato
-  Content:
-    - Input: Email LinkedIn
-    - Input: Password LinkedIn (con toggle eye)
-    - Separator
-    - Label: "Cookie di sessione (li_at)"
-    - Textarea: per incollare il cookie
-    - Info: istruzioni per ottenere il cookie
-    - Button: "Salva Credenziali LinkedIn"
+[Calendar] [Pending] [Completed] [Attivita]
 ```
 
-### Integrazione futura
+La tab Attivita renderizza il nuovo componente `ActivitiesTab`.
 
-Una volta salvato il cookie `li_at`, la edge function `deep-search-partner` potra usarlo per:
-- Accedere direttamente ai profili LinkedIn dei contatti trovati
-- Verificare informazioni come ruolo attuale, esperienza, foto profilo
-- Estrarre dati piu completi rispetto alla sola ricerca Google
+### 4. Collegamento con le Campagne
 
-Questa integrazione nella edge function sara un passo successivo dopo aver configurato il salvataggio delle credenziali.
+Quando dalla pagina Campaigns si creano campaign_jobs, creare anche le corrispondenti `activities` con:
+- `activity_type` = "send_email" o "phone_call" secondo il job_type
+- `campaign_batch_id` = il batch_id della campagna
+- `selected_contact_id` = il contatto scelto (se gia selezionato)
 
-## Risultato
+Questo avviene nel hook `useCreateCampaignJobs` aggiungendo un inserimento parallelo nella tabella activities.
 
-L'utente avra un'area dedicata dove inserire le proprie credenziali LinkedIn e il cookie di sessione. Il sistema usera queste informazioni per accedere ai profili LinkedIn in modo piu affidabile durante la Deep Search.
+### 5. Selezione contatto inline
+
+Nella vista attivita, per ogni partner con piu contatti:
+- Mostra un mini-dropdown con i contatti disponibili
+- Il contatto selezionato viene salvato in `selected_contact_id`
+- Il contatto selezionato appare evidenziato con sfondo colorato e icona check
+
+## Riepilogo File
+
+| File | Azione |
+|------|--------|
+| Migrazione SQL | Aggiunge `selected_contact_id` e `campaign_batch_id` alla tabella activities |
+| `src/hooks/useActivities.ts` | Aggiunge `useAllActivities()` con join e filtri |
+| `src/components/agenda/ActivitiesTab.tsx` | **Nuovo** -- Vista attivita raggruppata per paese |
+| `src/pages/Reminders.tsx` | Aggiunge tab "Attivita" |
+| `src/hooks/useCampaignJobs.ts` | Modifica per creare activities quando si generano campaign jobs |
+
+## Flusso Utente
+
+```text
+Agenda --> Tab "Attivita"
+  |
+  +-- Filtri: [Tipo] [Stato] [Assegnatario]
+  |
+  +-- Italia (5 attivita)
+  |     +-- ABC Logistics -- Email -- Mario Rossi (mario@abc.it) -- [v] Completata
+  |     +-- XYZ Freight -- Telefono -- [Seleziona contatto...] -- [ ] Da fare
+  |
+  +-- Germania (3 attivita)
+        +-- Berlin Cargo -- Follow-up -- Hans Mueller -- [ ] In corso
+```
+
