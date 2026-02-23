@@ -20,6 +20,8 @@ export function useEmailGenerator() {
     goal: string;
     base_proposal: string;
     language?: string;
+    document_ids?: string[];
+    reference_urls?: string[];
   }) => {
     setIsGenerating(true);
     setEmail(null);
