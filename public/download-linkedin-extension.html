@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Download Estensione LinkedIn</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #0f0f1a; color: #e0e0e0; }
+  h1 { font-size: 22px; }
+  p { color: #9ca3af; font-size: 14px; }
+  button { display: block; width: 100%; padding: 14px; margin: 10px 0; border: none; border-radius: 8px; background: #0A66C2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #004182; }
+  .done { color: #6ee7b7; margin-top: 16px; }
+  .step { background: #1e1e2e; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>🔗 Estensione LinkedIn Cookie Sync</h1>
+<p>Clicca il pulsante per scaricare tutti i file. Salvali tutti nella <strong>stessa cartella</strong>.</p>
+<button onclick="downloadAll()">📦 Scarica tutti i file</button>
+<div id="status"></div>
+<h3 style="margin-top:24px;">Istruzioni:</h3>
+<div class="step">1. Crea una cartella (es. <code>linkedin-extension</code>) sul Desktop</div>
+<div class="step">2. Salva tutti i file scaricati in quella cartella</div>
+<div class="step">3. Apri Chrome → <code>chrome://extensions/</code></div>
+<div class="step">4. Attiva <strong>Modalità sviluppatore</strong> (in alto a destra)</div>
+<div class="step">5. Clicca <strong>Carica estensione non pacchettizzata</strong> → seleziona la cartella</div>
+
+<script>
+var FILES = ["manifest.json", "background.js", "content.js", "popup.html", "popup.js", "icon.png"];
+var BASE = "/linkedin-extension/";
+
+async function downloadAll() {
+  var statusEl = document.getElementById("status");
+  statusEl.innerHTML = "";
+  var count = 0;
+
+  for (var i = 0; i < FILES.length; i++) {
+    try {
+      var res = await fetch(BASE + FILES[i]);
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = FILES[i];
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      count++;
+      await new Promise(function(r) { setTimeout(r, 300); });
+    } catch (e) {
+      statusEl.innerHTML += '<div style="color:#fca5a5;">❌ Errore: ' + FILES[i] + '</div>';
+    }
+  }
+
+  if (count === FILES.length) {
+    statusEl.innerHTML = '<div class="done">✅ Tutti i ' + count + ' file scaricati! Ora segui le istruzioni sotto.</div>';
+  }
+}
+</script>
+</body>
+</html>
