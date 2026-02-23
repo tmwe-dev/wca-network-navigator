@@ -26,6 +26,8 @@ export default function GoalBar({
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
 }: GoalBarProps) {
+  const safeDocuments = documents ?? [];
+  const safeLinks = referenceLinks ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [linkInput, setLinkInput] = useState("");
 
@@ -83,7 +85,7 @@ export default function GoalBar({
             Documenti Knowledge Base
           </Label>
           <div className="flex flex-wrap items-center gap-1.5">
-            {documents.map((doc) => (
+            {safeDocuments.map((doc) => (
               <Badge key={doc.id} variant="secondary" className="gap-1 text-xs pr-1">
                 {doc.file_name.length > 20 ? doc.file_name.slice(0, 18) + "…" : doc.file_name}
                 <button onClick={() => onRemoveDocument(doc.id)} className="ml-0.5 hover:text-destructive">
@@ -118,7 +120,7 @@ export default function GoalBar({
             Link di riferimento
           </Label>
           <div className="flex flex-wrap items-center gap-1.5">
-            {referenceLinks.map((link, idx) => (
+            {safeLinks.map((link, idx) => (
               <Badge key={idx} variant="secondary" className="gap-1 text-xs pr-1">
                 {new URL(link).hostname}
                 <button onClick={() => onRemoveLink(idx)} className="ml-0.5 hover:text-destructive">
