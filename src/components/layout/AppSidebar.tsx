@@ -17,6 +17,7 @@ import {
   Building2,
   Send,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 
 const navItems = [
   { title: "Operations", url: "/", icon: Globe },
+  { title: "Partner Hub", url: "/partner-hub", icon: Users },
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Email", url: "/email-composer", icon: Send },
   { title: "Workspace", url: "/workspace", icon: Sparkles },
