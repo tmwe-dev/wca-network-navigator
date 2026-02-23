@@ -8,12 +8,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
 import {
-  Mail, Phone, Users, RotateCcw, MoreHorizontal,
   ChevronDown, ChevronRight, Check, Circle, Clock, User, Trash2, Wand2, Loader2
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllActivities, useUpdateActivity, useContactsForPartners, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useSelection } from "@/hooks/useSelection";
+import { groupByCountry } from "@/lib/groupByCountry";
+import {
+  ACTIVITY_TYPE_ICONS, ACTIVITY_TYPE_LABELS, STATUS_LABELS,
+  STATUS_ICONS, nextStatus,
+} from "@/lib/activityConstants";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -21,31 +26,6 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-
-const ACTIVITY_TYPE_ICONS: Record<string, typeof Mail> = {
-  send_email: Mail,
-  phone_call: Phone,
-  add_to_campaign: Users,
-  meeting: Users,
-  follow_up: RotateCcw,
-  other: MoreHorizontal,
-};
-
-const ACTIVITY_TYPE_LABELS: Record<string, string> = {
-  send_email: "Email",
-  phone_call: "Telefono",
-  add_to_campaign: "Campagna",
-  meeting: "Meeting",
-  follow_up: "Follow-up",
-  other: "Altro",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Da fare",
-  in_progress: "In corso",
-  completed: "Completata",
-  cancelled: "Annullata",
-};
 
 export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilter?: string }) {
   const { data: activities, isLoading } = useAllActivities();
@@ -63,7 +43,6 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
   const [generatingAliases, setGeneratingAliases] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedOpen, setDeleteSelectedOpen] = useState(false);
 
   // Get unique partner IDs for contacts query
@@ -105,18 +84,19 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
     });
   }, [activities, filterType, filterStatus, filterAssignee, filterCampaign, filterBatch, filterContact, contactsMap]);
 
-  // Group by country
-  const grouped = useMemo(() => {
-    const map: Record<string, { countryName: string; countryCode: string; activities: AllActivity[] }> = {};
-    filtered.forEach((a) => {
-      const code = a.partners?.country_code || "??";
-      if (!map[code]) {
-        map[code] = { countryName: a.partners?.country_name || "Sconosciuto", countryCode: code, activities: [] };
-      }
-      map[code].activities.push(a);
-    });
-    return Object.values(map).sort((a, b) => b.activities.length - a.activities.length);
-  }, [filtered]);
+  // Use shared selection hook
+  const selection = useSelection(filtered);
+
+  // Use shared groupByCountry
+  const grouped = useMemo(
+    () =>
+      groupByCountry(
+        filtered,
+        (a) => a.partners?.country_code || "??",
+        (a) => a.partners?.country_name || "Sconosciuto"
+      ),
+    [filtered]
+  );
 
   const toggleCountry = (code: string) => {
     setExpandedCountries((prev) => {
@@ -127,9 +107,7 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
   };
 
   const cycleStatus = (activity: AllActivity) => {
-    const order = ["pending", "in_progress", "completed"] as const;
-    const idx = order.indexOf(activity.status as any);
-    const next = order[(idx + 1) % order.length];
+    const next = nextStatus(activity.status);
     updateActivity.mutate({
       id: activity.id,
       status: next,
@@ -150,36 +128,20 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
     deleteActivities.mutate(ids, {
       onSuccess: () => {
         setBulkDeleteOpen(false);
-        setSelectedIds(new Set());
+        selection.clear();
         toast({ title: `${ids.length} attività cancellate` });
       },
     });
   };
 
   const handleDeleteSelected = () => {
-    const ids = Array.from(selectedIds);
+    const ids = Array.from(selection.selectedIds);
     deleteActivities.mutate(ids, {
       onSuccess: () => {
         setDeleteSelectedOpen(false);
-        setSelectedIds(new Set());
+        selection.clear();
         toast({ title: `${ids.length} attività cancellate` });
       },
-    });
-  };
-
-  const toggleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(new Set(filtered.map((a) => a.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
     });
   };
 
@@ -282,10 +244,10 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Checkbox
-            checked={filtered.length > 0 && selectedIds.size === filtered.length}
-            onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+            checked={selection.isAllSelected}
+            onCheckedChange={(checked) => selection.toggleAll(!!checked)}
           />
-          <span className="text-sm text-muted-foreground cursor-pointer" onClick={() => toggleSelectAll(selectedIds.size !== filtered.length)}>
+          <span className="text-sm text-muted-foreground cursor-pointer" onClick={() => selection.toggleAll(!selection.isAllSelected)}>
             Seleziona tutto ({filtered.length})
           </span>
           <p className="text-sm text-muted-foreground ml-2">
@@ -293,10 +255,10 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
+          {selection.count > 0 && (
             <Button variant="destructive" size="sm" onClick={() => setDeleteSelectedOpen(true)}>
               <Trash2 className="w-4 h-4 mr-1" />
-              Cancella selezionate ({selectedIds.size})
+              Cancella selezionate ({selection.count})
             </Button>
           )}
           {showBulkDelete && filtered.length > 0 && (
@@ -333,7 +295,7 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
           <DialogHeader>
             <DialogTitle>Cancella attività selezionate</DialogTitle>
             <DialogDescription>
-              Stai per cancellare {selectedIds.size} attività selezionate. Questa azione è irreversibile.
+              Stai per cancellare {selection.count} attività selezionate. Questa azione è irreversibile.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -351,7 +313,7 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
         <Card><CardContent className="py-8 text-center text-muted-foreground">Nessuna attività trovata</CardContent></Card>
       ) : (
         <div className="space-y-2">
-          {grouped.map(({ countryCode, countryName, activities: countryActivities }) => {
+          {grouped.map(({ countryCode, countryName, items: countryActivities }) => {
             const isExpanded = expandedCountries.has(countryCode);
             return (
               <Collapsible key={countryCode} open={isExpanded} onOpenChange={() => toggleCountry(countryCode)}>
@@ -372,8 +334,8 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
                         key={activity.id}
                         activity={activity}
                         contacts={contactsMap?.[activity.partner_id] || []}
-                        selected={selectedIds.has(activity.id)}
-                        onToggleSelect={() => toggleSelect(activity.id)}
+                        selected={selection.selectedIds.has(activity.id)}
+                        onToggleSelect={() => selection.toggle(activity.id)}
                         onCycleStatus={() => cycleStatus(activity)}
                         onSelectContact={(contactId) => selectContact(activity.id, contactId)}
                         onDelete={() => handleDeleteSingle(activity.id)}
@@ -400,16 +362,18 @@ function ActivityRow({
   onDelete,
 }: {
   activity: AllActivity;
-  contacts: { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null }[];
+  contacts: { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias?: string | null }[];
   selected: boolean;
   onToggleSelect: () => void;
   onCycleStatus: () => void;
   onSelectContact: (id: string) => void;
   onDelete: () => void;
 }) {
-  const Icon = ACTIVITY_TYPE_ICONS[activity.activity_type] || MoreHorizontal;
+  const Icon = ACTIVITY_TYPE_ICONS[activity.activity_type] || ACTIVITY_TYPE_ICONS.other;
   const selectedContact = activity.selected_contact;
   const isCompleted = activity.status === "completed";
+
+  const StatusIcon = STATUS_ICONS[activity.status as keyof typeof STATUS_ICONS] || STATUS_ICONS.pending;
 
   return (
     <div className={cn(

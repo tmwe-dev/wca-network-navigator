@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCountryFlag } from "@/lib/countries";
-import { useUpdateCampaignJob, useEmailTemplates, type CampaignJob, type PartnerContact } from "@/hooks/useCampaignJobs";
+import { useUpdateCampaignJob, useEmailTemplates, type CampaignJob } from "@/hooks/useCampaignJobs";
+import type { PartnerContactRecord } from "@/hooks/useActivities";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface JobCanvasProps {
   job: CampaignJob | null;
-  contacts?: PartnerContact[];
+  contacts?: PartnerContactRecord[];
   focusedContactId?: string | null;
   selectedContactIds?: Set<string>;
   onBulkSetType?: (type: "email" | "call") => void;

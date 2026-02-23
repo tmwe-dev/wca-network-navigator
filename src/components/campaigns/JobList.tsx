@@ -6,12 +6,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { getCountryFlag } from "@/lib/countries";
-import type { CampaignJob, PartnerContact } from "@/hooks/useCampaignJobs";
+import type { CampaignJob } from "@/hooks/useCampaignJobs";
+import type { PartnerContactRecord } from "@/hooks/useActivities";
 import { cn } from "@/lib/utils";
 
 interface JobListProps {
   jobs: CampaignJob[];
-  contactsByPartner: Record<string, PartnerContact[]>;
+  contactsByPartner: Record<string, PartnerContactRecord[]>;
   focusedContactId: string | null;
   onFocusContact: (id: string) => void;
   selectedContactIds: Set<string>;

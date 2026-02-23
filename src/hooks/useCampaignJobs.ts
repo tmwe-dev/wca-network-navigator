@@ -19,17 +19,11 @@ export interface CampaignJob {
   completed_at: string | null;
 }
 
-export interface PartnerContact {
-  id: string;
-  partner_id: string;
-  name: string;
-  title: string | null;
-  email: string | null;
-  direct_phone: string | null;
-  mobile: string | null;
-  is_primary: boolean | null;
-  contact_alias: string | null;
-}
+// PartnerContact type re-exported from useActivities for backward compat
+export type { PartnerContactRecord as PartnerContact } from "./useActivities";
+
+// useJobContacts is now deprecated — use useContactsForPartners from useActivities instead
+export { useContactsForPartners as useJobContacts } from "./useActivities";
 
 export function useCampaignJobs(batchId?: string | null) {
   return useQuery({
@@ -46,27 +40,6 @@ export function useCampaignJobs(batchId?: string | null) {
     },
     staleTime: 5_000,
     refetchInterval: 8_000,
-  });
-}
-
-export function useJobContacts(partnerIds: string[]) {
-  return useQuery({
-    queryKey: ["job-contacts", partnerIds],
-    queryFn: async () => {
-      if (!partnerIds.length) return {} as Record<string, PartnerContact[]>;
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, partner_id, name, title, email, direct_phone, mobile, is_primary")
-        .in("partner_id", partnerIds);
-      if (error) throw error;
-      const map: Record<string, PartnerContact[]> = {};
-      (data || []).forEach((c) => {
-        if (!map[c.partner_id]) map[c.partner_id] = [];
-        map[c.partner_id].push(c as PartnerContact);
-      });
-      return map;
-    },
-    enabled: partnerIds.length > 0,
   });
 }
 

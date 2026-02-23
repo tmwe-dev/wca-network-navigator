@@ -131,20 +131,36 @@ export function useAllActivities() {
   });
 }
 
+export interface PartnerContactRecord {
+  id: string;
+  partner_id: string;
+  name: string;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  title: string | null;
+  is_primary: boolean | null;
+  contact_alias: string | null;
+}
+
+/**
+ * Shared contact-fetching hook used by ActivitiesTab, CampaignJobs, ContactListPanel.
+ * Single source of truth — replaces the old useJobContacts.
+ */
 export function useContactsForPartners(partnerIds: string[]) {
   return useQuery({
     queryKey: ["partner-contacts-map", partnerIds],
     queryFn: async () => {
-      if (!partnerIds.length) return {} as Record<string, { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null }[]>;
+      if (!partnerIds.length) return {} as Record<string, PartnerContactRecord[]>;
       const { data, error } = await supabase
         .from("partner_contacts")
-        .select("id, partner_id, name, email, direct_phone, mobile, title")
+        .select("id, partner_id, name, email, direct_phone, mobile, title, is_primary, contact_alias")
         .in("partner_id", partnerIds);
       if (error) throw error;
-      const map: Record<string, typeof data> = {};
+      const map: Record<string, PartnerContactRecord[]> = {};
       (data || []).forEach((c) => {
         if (!map[c.partner_id]) map[c.partner_id] = [];
-        map[c.partner_id].push(c);
+        map[c.partner_id].push(c as PartnerContactRecord);
       });
       return map;
     },
