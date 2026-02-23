@@ -11,6 +11,7 @@ import {
   Mail, Phone, Users, RotateCcw, MoreHorizontal,
   ChevronDown, ChevronRight, Check, Circle, Clock, User, Trash2, Wand2, Loader2
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAllActivities, useUpdateActivity, useContactsForPartners, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { getCountryFlag } from "@/lib/countries";
@@ -62,6 +63,8 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
   const [generatingAliases, setGeneratingAliases] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteSelectedOpen, setDeleteSelectedOpen] = useState(false);
 
   // Get unique partner IDs for contacts query
   const partnerIds = useMemo(() => {
@@ -147,8 +150,36 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
     deleteActivities.mutate(ids, {
       onSuccess: () => {
         setBulkDeleteOpen(false);
+        setSelectedIds(new Set());
         toast({ title: `${ids.length} attività cancellate` });
       },
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    const ids = Array.from(selectedIds);
+    deleteActivities.mutate(ids, {
+      onSuccess: () => {
+        setDeleteSelectedOpen(false);
+        setSelectedIds(new Set());
+        toast({ title: `${ids.length} attività cancellate` });
+      },
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filtered.map((a) => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
   };
 
@@ -247,17 +278,34 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
         )}
       </div>
 
-      {/* Results count + bulk delete */}
+      {/* Results count + select all + bulk actions */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {filtered.length} attività in {grouped.length} {grouped.length === 1 ? "paese" : "paesi"}
-        </p>
-        {showBulkDelete && filtered.length > 0 && (
-          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
-            <Trash2 className="w-4 h-4 mr-1" />
-            Cancella filtrate ({filtered.length})
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={filtered.length > 0 && selectedIds.size === filtered.length}
+            onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+          />
+          <span className="text-sm text-muted-foreground cursor-pointer" onClick={() => toggleSelectAll(selectedIds.size !== filtered.length)}>
+            Seleziona tutto ({filtered.length})
+          </span>
+          <p className="text-sm text-muted-foreground ml-2">
+            {filtered.length} attività in {grouped.length} {grouped.length === 1 ? "paese" : "paesi"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button variant="destructive" size="sm" onClick={() => setDeleteSelectedOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-1" />
+              Cancella selezionate ({selectedIds.size})
+            </Button>
+          )}
+          {showBulkDelete && filtered.length > 0 && (
+            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-1" />
+              Cancella filtrate ({filtered.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Bulk delete confirmation */}
@@ -272,6 +320,25 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Annulla</Button>
             <Button variant="destructive" onClick={handleBulkDelete} disabled={deleteActivities.isPending}>
+              {deleteActivities.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Conferma cancellazione
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete selected confirmation */}
+      <Dialog open={deleteSelectedOpen} onOpenChange={setDeleteSelectedOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancella attività selezionate</DialogTitle>
+            <DialogDescription>
+              Stai per cancellare {selectedIds.size} attività selezionate. Questa azione è irreversibile.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteSelectedOpen(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleDeleteSelected} disabled={deleteActivities.isPending}>
               {deleteActivities.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
               Conferma cancellazione
             </Button>
@@ -305,6 +372,8 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
                         key={activity.id}
                         activity={activity}
                         contacts={contactsMap?.[activity.partner_id] || []}
+                        selected={selectedIds.has(activity.id)}
+                        onToggleSelect={() => toggleSelect(activity.id)}
                         onCycleStatus={() => cycleStatus(activity)}
                         onSelectContact={(contactId) => selectContact(activity.id, contactId)}
                         onDelete={() => handleDeleteSingle(activity.id)}
@@ -324,12 +393,16 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
 function ActivityRow({
   activity,
   contacts,
+  selected,
+  onToggleSelect,
   onCycleStatus,
   onSelectContact,
   onDelete,
 }: {
   activity: AllActivity;
   contacts: { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null }[];
+  selected: boolean;
+  onToggleSelect: () => void;
   onCycleStatus: () => void;
   onSelectContact: (id: string) => void;
   onDelete: () => void;
@@ -341,8 +414,12 @@ function ActivityRow({
   return (
     <div className={cn(
       "flex items-center gap-3 p-3 rounded-lg border bg-card",
-      isCompleted && "opacity-50"
+      isCompleted && "opacity-50",
+      selected && "ring-1 ring-primary/40 bg-primary/5"
     )}>
+      {/* Selection checkbox */}
+      <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="shrink-0" />
+
       {/* Status toggle */}
       <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={onCycleStatus}>
         {activity.status === "completed" ? (
