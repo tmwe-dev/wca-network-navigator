@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from "react";
-import { Link } from "react-router-dom";
+import { useState, lazy, Suspense, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Reminders() {
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") === "attivita" ? "activities" : undefined;
+  const batchFromUrl = searchParams.get("batch") || undefined;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { data: reminders, isLoading } = useReminders();
   const completeReminder = useCompleteReminder();
@@ -51,7 +54,7 @@ export default function Reminders() {
         </p>
       </div>
 
-      <Tabs defaultValue="calendar" className="space-y-6">
+      <Tabs defaultValue={tabFromUrl || "calendar"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="calendar">
             <Calendar className="w-4 h-4 mr-2" />
@@ -257,7 +260,7 @@ export default function Reminders() {
         </TabsContent>
         <TabsContent value="activities">
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-            <ActivitiesTab />
+            <ActivitiesTab initialBatchFilter={batchFromUrl} />
           </Suspense>
         </TabsContent>
       </Tabs>

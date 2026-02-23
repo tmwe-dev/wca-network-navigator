@@ -328,17 +328,13 @@ export default function Campaigns() {
             const { supabase } = await import("@/integrations/supabase/client");
             const rows = campaignPartners.map(p => ({
               partner_id: p.id,
-              company_name: p.company_name,
-              country_code: p.country_code,
-              country_name: p.country_name,
-              city: p.city || "",
-              email: p.email,
-              phone: null as string | null,
-              job_type: "email" as const,
-              batch_id: batchId,
+              activity_type: "send_email" as const,
+              title: `Campagna Email - ${p.company_name}`,
+              campaign_batch_id: batchId,
+              priority: "medium",
             }));
-            await supabase.from("campaign_jobs").insert(rows as any);
-            navigate(`/campaign-jobs?batch=${batchId}`);
+            await supabase.from("activities").insert(rows as any);
+            navigate(`/reminders?tab=attivita&batch=${batchId}`);
           }}
         />,
         headerContainer

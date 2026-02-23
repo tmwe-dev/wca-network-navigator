@@ -40,14 +40,16 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Annullata",
 };
 
-export default function ActivitiesTab() {
+export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilter?: string }) {
   const { data: activities, isLoading } = useAllActivities();
   const { data: teamMembers } = useTeamMembers();
   const updateActivity = useUpdateActivity();
 
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("pending");
+  const [filterStatus, setFilterStatus] = useState<string>(initialBatchFilter ? "all" : "pending");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
+  const [filterCampaign, setFilterCampaign] = useState<"all" | "campaign" | "manual">(initialBatchFilter ? "campaign" : "all");
+  const [filterBatch, setFilterBatch] = useState<string | undefined>(initialBatchFilter);
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
 
   // Get unique partner IDs for contacts query
@@ -65,9 +67,12 @@ export default function ActivitiesTab() {
       if (filterType !== "all" && a.activity_type !== filterType) return false;
       if (filterStatus !== "all" && a.status !== filterStatus) return false;
       if (filterAssignee !== "all" && a.assigned_to !== filterAssignee) return false;
+      if (filterCampaign === "campaign" && !a.campaign_batch_id) return false;
+      if (filterCampaign === "manual" && a.campaign_batch_id) return false;
+      if (filterBatch && a.campaign_batch_id !== filterBatch) return false;
       return true;
     });
-  }, [activities, filterType, filterStatus, filterAssignee]);
+  }, [activities, filterType, filterStatus, filterAssignee, filterCampaign, filterBatch]);
 
   // Group by country
   const grouped = useMemo(() => {
@@ -144,6 +149,21 @@ export default function ActivitiesTab() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select value={filterCampaign} onValueChange={(v) => { setFilterCampaign(v as any); if (v !== "campaign") setFilterBatch(undefined); }}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Origine" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="campaign">Campagna</SelectItem>
+            <SelectItem value="manual">Manuali</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {filterBatch && (
+          <Button variant="outline" size="sm" onClick={() => setFilterBatch(undefined)} className="text-xs">
+            Batch filtrato ✕
+          </Button>
+        )}
       </div>
 
       {/* Results count */}
