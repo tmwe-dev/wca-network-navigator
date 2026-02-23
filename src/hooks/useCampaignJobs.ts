@@ -93,9 +93,26 @@ export function useCreateCampaignJobs() {
         .insert(jobs as any)
         .select();
       if (error) throw error;
+
+      // Also create corresponding activities
+      const activities = jobs.map((j) => ({
+        partner_id: j.partner_id,
+        activity_type: j.job_type === "email" ? "send_email" as const : "phone_call" as const,
+        title: `${j.job_type === "email" ? "Email" : "Chiamata"} - ${j.company_name}`,
+        campaign_batch_id: j.batch_id,
+        priority: "medium",
+      }));
+
+      if (activities.length > 0) {
+        await supabase.from("activities").insert(activities as any);
+      }
+
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["campaign-jobs"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
+      qc.invalidateQueries({ queryKey: ["all-activities"] });
+    },
   });
 }
 

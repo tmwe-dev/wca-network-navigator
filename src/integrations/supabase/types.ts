@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"]
           assigned_to: string | null
+          campaign_batch_id: string | null
           completed_at: string | null
           created_at: string
           description: string | null
@@ -25,12 +26,14 @@ export type Database = {
           id: string
           partner_id: string
           priority: string
+          selected_contact_id: string | null
           status: Database["public"]["Enums"]["activity_status"]
           title: string
         }
         Insert: {
           activity_type: Database["public"]["Enums"]["activity_type"]
           assigned_to?: string | null
+          campaign_batch_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
@@ -38,12 +41,14 @@ export type Database = {
           id?: string
           partner_id: string
           priority?: string
+          selected_contact_id?: string | null
           status?: Database["public"]["Enums"]["activity_status"]
           title: string
         }
         Update: {
           activity_type?: Database["public"]["Enums"]["activity_type"]
           assigned_to?: string | null
+          campaign_batch_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
@@ -51,6 +56,7 @@ export type Database = {
           id?: string
           partner_id?: string
           priority?: string
+          selected_contact_id?: string | null
           status?: Database["public"]["Enums"]["activity_status"]
           title?: string
         }
@@ -67,6 +73,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_selected_contact_id_fkey"
+            columns: ["selected_contact_id"]
+            isOneToOne: false
+            referencedRelation: "partner_contacts"
             referencedColumns: ["id"]
           },
         ]
