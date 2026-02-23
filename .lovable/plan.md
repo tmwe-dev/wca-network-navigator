@@ -1,60 +1,55 @@
 
-# Piano: "Genera Jobs" crea Attivita (non campaign_jobs)
+
+# Piano: Alias, Filtri Contatto e Cancella Attivita
 
 ## Obiettivo
 
-Il pulsante **"Genera Jobs"** nella pagina Campaigns deve inserire i record direttamente nella tabella `activities` con `campaign_batch_id` impostato, invece di usare la tabella `campaign_jobs`. In questo modo tutte le attivita -- sia manuali che da campagna -- vivono in un'unica tabella e sono visibili nella tab Attivita dell'Agenda.
+Migliorare la vista Attivita mostrando gli alias (azienda e contatto), aggiungere filtri per partner senza email/contatto, un pulsante "Genera Alias" e la possibilita di cancellare attivita (singole o in bulk).
 
-## Cosa cambia
+## Modifiche
 
-### 1. Modifica `Campaigns.tsx` -- funzione `onGenerateJobs`
+### 1. Query `useAllActivities` -- aggiungere alias
 
-Attualmente inserisce in `campaign_jobs`. Verra modificata per:
-- Inserire in `activities` con:
-  - `partner_id`
-  - `activity_type` = `"send_email"` (default campagna email)
-  - `title` = `"Campagna Email - {company_name}"`
-  - `campaign_batch_id` = UUID generato
-  - `priority` = `"medium"`
-- Dopo l'inserimento, navigare alla pagina Agenda con la tab Attivita aperta (es. `/reminders?tab=attivita&batch={batchId}`)
+Estendere la select per includere:
+- `partners.company_alias` nel join partners
+- `partner_contacts.contact_alias` nel join selected_contact
 
-### 2. Modifica `ActivitiesTab.tsx` -- filtro per campagna
+### 2. Hook `useDeleteActivities` (nuovo in useActivities.ts)
 
-Aggiungere:
-- Un filtro/badge "Campagna" che permetta di vedere solo le attivita con `campaign_batch_id` non null
-- Se si arriva dalla pagina Campaigns con un `batch` specifico nella URL, pre-filtrare su quel batch
+Aggiungere una mutation per cancellare attivita per lista di ID:
+```text
+DELETE FROM activities WHERE id IN (...)
+```
+Invalida le query `all-activities` e `activities` al successo.
 
-### 3. Pagina `CampaignJobs.tsx` -- Deprecazione
+### 3. Componente `ActivitiesTab.tsx` -- nuove funzionalita
 
-La pagina CampaignJobs diventa opzionale/deprecata poiche i dati ora sono gestiti dalla tab Attivita. Per ora la lasciamo ma il flusso principale passa per Agenda > Attivita.
+**a) Mostrare alias nella riga attivita:**
+- Nome azienda: mostra `company_alias` come badge accanto a `company_name`
+- Contatto selezionato: mostra `contact_alias` (cognome) accanto al nome completo
 
-## Dettagli tecnici
+**b) Nuovi filtri:**
+- "Contatto" con opzioni: Tutti / Senza email / Senza contatto / Senza alias
+  - "Senza email": il partner non ha contatti con email (basato su contactsMap)
+  - "Senza contatto": il partner non ha contatti affatto (contactsMap vuoto)
+  - "Senza alias": il partner non ha company_alias o il contatto selezionato non ha contact_alias
 
-### File modificati
+**c) Pulsante "Genera Alias" sopra i filtri:**
+- Chiama la edge function `generate-aliases` passando i country codes dei paesi visibili
+- Mostra spinner durante l'elaborazione
+- Al completamento, invalida le query e mostra toast con risultato
+
+**d) Cancella attivita:**
+- Pulsante cestino su ogni riga attivita per cancellazione singola
+- Quando il filtro "Senza email" o "Senza contatto" e attivo, mostra un pulsante bulk "Cancella filtrate" nella barra sopra i risultati che cancella tutte le attivita visibili
+- Conferma con dialog prima della cancellazione bulk
+
+### 4. Riepilogo file modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Campaigns.tsx` | `onGenerateJobs` inserisce in `activities` invece di `campaign_jobs` |
-| `src/components/agenda/ActivitiesTab.tsx` | Aggiunge filtro "Campagna" e supporto query param `batch` |
-| `src/pages/Reminders.tsx` | Supporta query param `tab=attivita` per aprire la tab giusta |
+| `src/hooks/useActivities.ts` | Aggiunge alias nei tipi e nella query; aggiunge `useDeleteActivities` |
+| `src/components/agenda/ActivitiesTab.tsx` | Aggiunge alias visibili, filtro contatto, pulsante Genera Alias, cancella singola/bulk |
 
-### Logica di inserimento (Campaigns.tsx)
+Nessuna modifica al database necessaria -- i campi `company_alias` e `contact_alias` esistono gia.
 
-```text
-Per ogni partner selezionato:
-  INSERT INTO activities (
-    partner_id,
-    activity_type = 'send_email',
-    title = 'Campagna Email - {company_name}',
-    campaign_batch_id = batchId,
-    priority = 'medium'
-  )
-```
-
-### Filtro campagna (ActivitiesTab.tsx)
-
-- Nuovo chip filtro "Campagna" nella barra filtri
-- Se attivo, mostra solo attivita con `campaign_batch_id IS NOT NULL`
-- Se query param `batch=xyz` presente, filtra per quel batch specifico
-
-Nessuna modifica al database necessaria -- i campi `campaign_batch_id` e `selected_contact_id` sono gia presenti nella tabella `activities`.
