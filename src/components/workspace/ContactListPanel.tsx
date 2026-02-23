@@ -3,8 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin } from "lucide-react";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,27 @@ function matchesFilter(a: AllActivity, f: FilterKey): boolean {
   }
 }
 
+/** Fetch LinkedIn URLs for a set of partner IDs */
+function useLinkedInLinks(partnerIds: string[]) {
+  return useQuery({
+    queryKey: ["linkedin-links-workspace", partnerIds],
+    queryFn: async () => {
+      if (!partnerIds.length) return {} as Record<string, string>;
+      const { data, error } = await supabase
+        .from("partner_social_links")
+        .select("partner_id, url")
+        .eq("platform", "linkedin")
+        .in("partner_id", partnerIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r) => { map[r.partner_id] = r.url; });
+      return map;
+    },
+    enabled: partnerIds.length > 0,
+    staleTime: 30_000,
+  });
+}
+
 interface ContactListPanelProps {
   selectedActivityId: string | null;
   onSelect: (activity: AllActivity) => void;
@@ -59,6 +82,10 @@ export default function ContactListPanel({
       (a) => a.activity_type === "send_email" && a.status !== "completed"
     );
   }, [activities]);
+
+  // Collect unique partner IDs for LinkedIn query
+  const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id))], [emailActivities]);
+  const { data: linkedinMap } = useLinkedInLinks(partnerIds);
 
   const searched = useMemo(() => {
     if (!search.trim()) return emailActivities;
@@ -195,6 +222,7 @@ export default function ContactListPanel({
                 const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name;
                 const isEnriched = !!activity.partners?.enriched_at;
                 const hasWebsite = !!activity.partners?.website;
+                const linkedinUrl = linkedinMap?.[activity.partner_id];
 
                 return (
                   <div
@@ -231,6 +259,17 @@ export default function ContactListPanel({
                             <span className="font-medium text-sm text-stone-700 truncate">{companyDisplay}</span>
                             {hasWebsite && (
                               <Globe className="w-3 h-3 text-blue-400 shrink-0" />
+                            )}
+                            {linkedinUrl && (
+                              <a
+                                href={linkedinUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="LinkedIn"
+                              >
+                                <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
+                              </a>
                             )}
                           </div>
                           {contact ? (

@@ -11,7 +11,7 @@ import {
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
   Zap, Crown, Paperclip, KeyRound, Eye, EyeOff, Mail, Send, AlertCircle,
-  Brain,
+  Brain, Linkedin, Link,
 } from "lucide-react";
 // ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
@@ -157,6 +157,11 @@ export default function Settings() {
   const [showWcaPass, setShowWcaPass] = useState(false);
   const [savingWcaCreds, setSavingWcaCreds] = useState(false);
 
+  /* ── LinkedIn state ── */
+  const [liAtCookie, setLiAtCookie] = useState("");
+  const [showLiAt, setShowLiAt] = useState(false);
+  const [savingLi, setSavingLi] = useState(false);
+
   /* ── Export state ── */
   const [selectedFields, setSelectedFields] = useState<string[]>(EXPORT_FIELDS.map((f) => f.id));
   const { data: partners, isLoading: loadingPartners } = usePartners();
@@ -173,6 +178,7 @@ export default function Settings() {
       setEmailSender(settings["default_sender_email"] || "");
       setEmailName(settings["default_sender_name"] || "");
       setTestEmailTo(settings["default_sender_email"] || "");
+      setLiAtCookie(settings["linkedin_li_at"] || "");
     }
   }, [settings]);
 
@@ -299,7 +305,7 @@ export default function Settings() {
             <Mail className="w-4 h-4" /> Email
           </TabsTrigger>
           <TabsTrigger value="wca" className="flex items-center gap-2">
-            <Globe className="w-4 h-4" /> WCA
+            <Link className="w-4 h-4" /> Connessioni
           </TabsTrigger>
           <TabsTrigger value="import-export" className="flex items-center gap-2">
             <Download className="w-4 h-4" /> Import / Export
@@ -620,6 +626,70 @@ export default function Settings() {
                 </Card>
               </div>
             </details>
+
+            {/* ── LinkedIn ── */}
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center gap-2">
+                <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+                <h2 className="text-lg font-semibold">LinkedIn</h2>
+              </div>
+              <Badge variant={liAtCookie ? "default" : "secondary"} className={liAtCookie ? "bg-primary text-primary-foreground" : ""}>
+                {liAtCookie ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+              </Badge>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#0A66C2]/10">
+                    <KeyRound className="w-5 h-5 text-[#0A66C2]" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Cookie di Sessione (li_at)</CardTitle>
+                    <CardDescription>Necessario per la Deep Search dei profili LinkedIn</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Cookie li_at</Label>
+                  <div className="relative">
+                    <Input
+                      type={showLiAt ? "text" : "password"}
+                      value={liAtCookie}
+                      onChange={(e) => setLiAtCookie(e.target.value)}
+                      placeholder="AQEDAx..."
+                      className="pr-10 font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLiAt((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showLiAt ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Accedi a LinkedIn → F12 → Application → Cookies → linkedin.com → copia il valore di <code className="font-mono bg-muted px-1 rounded">li_at</code>
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!liAtCookie.trim()) return;
+                    setSavingLi(true);
+                    try {
+                      await updateSetting.mutateAsync({ key: "linkedin_li_at", value: liAtCookie.trim() });
+                      toast.success("Cookie LinkedIn salvato!");
+                    } catch { toast.error("Errore nel salvataggio"); }
+                    finally { setSavingLi(false); }
+                  }}
+                  disabled={savingLi || !liAtCookie.trim()}
+                >
+                  {savingLi ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salva Cookie LinkedIn
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
