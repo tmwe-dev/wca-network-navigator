@@ -93,6 +93,7 @@ export interface AllActivity {
   completed_at: string | null;
   partners: {
     company_name: string;
+    company_alias: string | null;
     country_code: string;
     country_name: string;
     city: string;
@@ -105,6 +106,7 @@ export interface AllActivity {
     direct_phone: string | null;
     mobile: string | null;
     title: string | null;
+    contact_alias: string | null;
   } | null;
 }
 
@@ -116,9 +118,9 @@ export function useAllActivities() {
         .from("activities")
         .select(`
           *,
-          partners(company_name, country_code, country_name, city),
+          partners(company_name, company_alias, country_code, country_name, city),
           team_members(name),
-          selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, direct_phone, mobile, title)
+          selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, direct_phone, mobile, title, contact_alias)
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -147,5 +149,22 @@ export function useContactsForPartners(partnerIds: string[]) {
       return map;
     },
     enabled: partnerIds.length > 0,
+  });
+}
+
+export function useDeleteActivities() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("activities")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+    },
   });
 }
