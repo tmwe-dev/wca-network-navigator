@@ -1,92 +1,79 @@
 
-# LinkedIn: Credenziali Email/Password + Estensione Chrome
 
-## 1. Aggiungere Email e Password LinkedIn nelle Impostazioni
+# Pre-flight Check per Deep Search: Verifica Estensione e Configurazione
 
-Attualmente la sezione LinkedIn nelle Impostazioni contiene solo il campo cookie `li_at`. Aggiungeremo i campi **email** e **password** (come per WCA e ReportAziende).
+## Problema attuale
+Quando lanci la Deep Search, non c'e nessun controllo preliminare: non sai se l'estensione LinkedIn e attiva, se le credenziali sono configurate, se la sessione e valida, o se i servizi necessari (Firecrawl, AI) sono pronti. Il processo parte alla cieca.
 
-**File: `src/pages/Settings.tsx`**
-- Aggiungere stati `liEmail` e `liPass` (+ `showLiPass`)
-- Caricare da `app_settings` le chiavi `linkedin_email` e `linkedin_password`
-- Aggiungere i campi input Email e Password SOPRA il campo cookie li_at
-- Il cookie li_at resta come opzione manuale avanzata (collassabile)
-- Pulsante "Salva Credenziali LinkedIn" salva email + password
-- L'estensione usera queste credenziali per l'auto-login
+## Soluzione
+Aggiungere un **pannello di pre-flight check** che verifica tutto PRIMA di avviare la Deep Search, sia nel Workspace che nel Partner Hub.
 
-## 2. Creare l'Estensione Chrome per LinkedIn
+## Modifiche
 
-Creare una nuova estensione in `public/linkedin-extension/` con la stessa architettura dell'estensione WCA:
+### 1. Nuovo componente: `DeepSearchPreflightDialog`
 
-**File da creare:**
+**File: `src/components/workspace/DeepSearchPreflightDialog.tsx`**
 
-| File | Descrizione |
-|------|-------------|
-| `public/linkedin-extension/manifest.json` | Manifest v3 con permessi per linkedin.com |
-| `public/linkedin-extension/background.js` | Service worker: auto-login, sync cookie, scraping profili |
-| `public/linkedin-extension/content.js` | Bridge webapp-estensione (stessa logica di WCA) |
-| `public/linkedin-extension/popup.html` | Popup con stato connessione |
-| `public/linkedin-extension/popup.js` | Logica popup |
+Un dialog modale che appare quando clicchi "Deep Search" e esegue i controlli in sequenza:
 
-**Funzionalita dell'estensione:**
-- **ping**: verifica disponibilita
-- **verifySession**: controlla se LinkedIn e autenticato (verifica presenza di elementi di sessione)
-- **autoLogin**: apre linkedin.com/login, compila email/password, effettua il login
-- **syncCookie**: legge il cookie `li_at` dal browser e lo salva nel database tramite edge function
-- **extractProfile**: apre un profilo LinkedIn per URL, estrae dati visibili (nome, titolo, azienda, bio, foto)
+| Check | Cosa verifica | Come |
+|-------|--------------|------|
+| Credenziali LinkedIn | `linkedin_email` e `linkedin_password` presenti in `app_settings` | Query diretta al DB |
+| Cookie LinkedIn (li_at) | `linkedin_li_at` presente e non vuoto | Query diretta al DB |
+| Estensione LinkedIn | L'estensione Chrome risponde al ping | `useLinkedInExtensionBridge.isAvailable` |
+| Sessione LinkedIn | L'estensione conferma sessione attiva | `verifySession()` via bridge |
+| Crediti sufficienti | L'utente ha almeno 10 crediti per partner | Query `user_credits` |
 
-## 3. Edge Function per salvare il cookie LinkedIn
+Ogni check mostra:
+- Cerchio verde con check: superato
+- Cerchio rosso con X: fallito (con link "Vai alle Impostazioni" o azione correttiva)
+- Spinner: in corso
+- Cerchio giallo con warning: opzionale/non critico
 
-**File: `supabase/functions/save-linkedin-cookie/index.ts`**
-- Riceve il cookie `li_at` dall'estensione
-- Lo salva in `app_settings` con chiave `linkedin_li_at`
-- Aggiorna `linkedin_session_status` e `linkedin_session_checked_at`
+**Comportamento:**
+- I check critici (crediti) bloccano il pulsante "Avvia Deep Search"
+- I check non critici (estensione, sessione LinkedIn) mostrano un warning ma permettono di procedere (la deep search funziona anche senza estensione, usa Firecrawl)
+- Pulsante "Avvia Deep Search" abilitato solo quando i check critici passano
 
-## 4. Edge Function per le credenziali LinkedIn
+### 2. Aggiornamento Workspace
 
-**File: `supabase/functions/get-linkedin-credentials/index.ts`**
-- Restituisce `linkedin_email` e `linkedin_password` da `app_settings`
-- Usata dall'estensione per l'auto-login
+**File: `src/pages/Workspace.tsx`**
+- Importare il nuovo `DeepSearchPreflightDialog`
+- Importare `useLinkedInExtensionBridge`
+- Il pulsante "Deep Search" ora apre il dialog di preflight invece di avviare direttamente
+- Aggiungere stato `showPreflight` per controllare il dialog
+- Una volta confermato nel dialog, esegue `handleDeepSearch` come prima
 
-## 5. Hook useLinkedInExtensionBridge
+### 3. Aggiornamento PartnerHub (BulkActionBar)
 
-**File: `src/hooks/useLinkedInExtensionBridge.ts`**
-- Stessa architettura di `useExtensionBridge.ts` ma con `direction: "from-webapp-li"` / `"from-extension-li"`
-- Metodi: `isAvailable`, `verifySession`, `syncCookie`, `extractProfile`, `autoLogin`
+**File: `src/pages/PartnerHub.tsx`**
+- Stessa logica: il pulsante Deep Search nella BulkActionBar apre il preflight dialog prima di procedere
 
-## 6. Pagina download estensione
+### 4. Hook helper per i check
 
-**File: `public/download-linkedin-extension.html`**
-- Pagina con istruzioni per scaricare e installare l'estensione LinkedIn
+**File: `src/hooks/useDeepSearchPreflight.ts`**
+- Hook riutilizzabile che esegue tutti i check e ritorna lo stato di ciascuno
+- Usa `useAppSettings` per verificare credenziali
+- Usa `useLinkedInExtensionBridge` per ping e sessione
+- Usa `useCredits` per verificare il saldo
+- Ritorna: `{ checks: CheckResult[], allCriticalPassed: boolean, runChecks: () => void }`
 
-## 7. Aggiornamento config.toml
+## Flusso utente
 
-Aggiungere le nuove edge functions con `verify_jwt = false`.
+1. Utente clicca "Deep Search"
+2. Si apre il dialog con lista di check
+3. I check partono automaticamente in sequenza
+4. L'utente vede in tempo reale lo stato di ogni check
+5. Se tutto OK: pulsante "Avvia Deep Search" verde
+6. Se manca qualcosa: link diretto a Impostazioni -> Connessioni per configurare
+7. Click su "Avvia" chiude il dialog e lancia la deep search come prima
 
-## Dettagli tecnici
+## Riepilogo file
 
-### Manifest LinkedIn Extension
-```json
-{
-  "manifest_version": 3,
-  "name": "LinkedIn Cookie Sync",
-  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
-  "host_permissions": ["https://*.linkedin.com/*"],
-  "content_scripts": [{
-    "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"],
-    "js": ["content.js"]
-  }]
-}
-```
+| File | Modifica |
+|------|----------|
+| `src/components/workspace/DeepSearchPreflightDialog.tsx` | Nuovo componente dialog con check visivi |
+| `src/hooks/useDeepSearchPreflight.ts` | Nuovo hook con logica dei check |
+| `src/pages/Workspace.tsx` | Integrazione dialog prima della deep search |
+| `src/pages/PartnerHub.tsx` | Integrazione dialog prima della deep search (bulk) |
 
-### Auto-login flow
-1. Estensione apre tab `https://www.linkedin.com/login`
-2. Attende caricamento pagina
-3. Compila `#username` (email) e `#password` (password)
-4. Clicca il pulsante di login
-5. Attende redirect alla home
-6. Legge cookie `li_at` e lo sincronizza al server
-
-### Sicurezza
-- Le credenziali sono salvate in `app_settings` (protetto da RLS)
-- Il cookie li_at e condiviso tra l'inserimento manuale e la sincronizzazione automatica dell'estensione
-- L'estensione non invia mai credenziali a terzi
