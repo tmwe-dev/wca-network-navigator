@@ -1,52 +1,92 @@
 
+# LinkedIn: Credenziali Email/Password + Estensione Chrome
 
-# Potenziamento Email Workspace: Elimina, Deep Search e Info Avanzate
+## 1. Aggiungere Email e Password LinkedIn nelle Impostazioni
 
-## 1. Pulsante Elimina Attivita
+Attualmente la sezione LinkedIn nelle Impostazioni contiene solo il campo cookie `li_at`. Aggiungeremo i campi **email** e **password** (come per WCA e ReportAziende).
 
-Aggiungere nell'header del Workspace (accanto a "Genera Tutte") un pulsante **"Elimina"** visibile solo quando ci sono elementi selezionati. Usa il hook `useDeleteActivities` gia esistente con dialog di conferma.
+**File: `src/pages/Settings.tsx`**
+- Aggiungere stati `liEmail` e `liPass` (+ `showLiPass`)
+- Caricare da `app_settings` le chiavi `linkedin_email` e `linkedin_password`
+- Aggiungere i campi input Email e Password SOPRA il campo cookie li_at
+- Il cookie li_at resta come opzione manuale avanzata (collassabile)
+- Pulsante "Salva Credenziali LinkedIn" salva email + password
+- L'estensione usera queste credenziali per l'auto-login
 
-**File: `src/pages/Workspace.tsx`**
-- Importare `useDeleteActivities` e `Trash2`
-- Aggiungere un pulsante rosso "Elimina (N)" che appare quando `selectedIds.size > 0`
-- Dialog di conferma prima dell'eliminazione
-- Dopo l'eliminazione: pulisce la selezione e deseleziona l'attivita corrente se era tra quelle eliminate
+## 2. Creare l'Estensione Chrome per LinkedIn
 
-## 2. Deep Search dal Workspace
+Creare una nuova estensione in `public/linkedin-extension/` con la stessa architettura dell'estensione WCA:
 
-Aggiungere un pulsante **"Deep Search"** nell'header, accanto a Elimina. Funziona come nel Partner Hub: loop sequenziale sulle attivita selezionate (o tutte se nessuna selezionata), invocando `deep-search-partner` per ogni partner. Include progresso visivo e pulsante Stop.
+**File da creare:**
 
-**File: `src/pages/Workspace.tsx`**
-- Aggiungere stato per `deepSearching`, `deepSearchProgress`, `deepSearchAbortRef`
-- Pulsante "Deep Search" con icona `Sparkles` che lancia il loop
-- Pulsante "Stop" durante l'esecuzione
-- Feedback progresso inline "Deep Search 3/12..."
+| File | Descrizione |
+|------|-------------|
+| `public/linkedin-extension/manifest.json` | Manifest v3 con permessi per linkedin.com |
+| `public/linkedin-extension/background.js` | Service worker: auto-login, sync cookie, scraping profili |
+| `public/linkedin-extension/content.js` | Bridge webapp-estensione (stessa logica di WCA) |
+| `public/linkedin-extension/popup.html` | Popup con stato connessione |
+| `public/linkedin-extension/popup.js` | Logica popup |
 
-## 3. Informazioni Arricchite nella Lista Contatti
+**Funzionalita dell'estensione:**
+- **ping**: verifica disponibilita
+- **verifySession**: controlla se LinkedIn e autenticato (verifica presenza di elementi di sessione)
+- **autoLogin**: apre linkedin.com/login, compila email/password, effettua il login
+- **syncCookie**: legge il cookie `li_at` dal browser e lo salva nel database tramite edge function
+- **extractProfile**: apre un profilo LinkedIn per URL, estrae dati visibili (nome, titolo, azienda, bio, foto)
 
-Aggiungere indicatori visivi su ogni card nella ContactListPanel per mostrare a colpo d'occhio lo stato di arricchimento e i link utili.
+## 3. Edge Function per salvare il cookie LinkedIn
 
-**File: `src/components/workspace/ContactListPanel.tsx`**
-- Icona LinkedIn (se presente) accanto al nome del contatto
-- Indicatore "enriched" (pallino verde) se il partner ha `enriched_at` valorizzato
-- Icona globo/website se il partner ha un sito web
+**File: `supabase/functions/save-linkedin-cookie/index.ts`**
+- Riceve il cookie `li_at` dall'estensione
+- Lo salva in `app_settings` con chiave `linkedin_li_at`
+- Aggiorna `linkedin_session_status` e `linkedin_session_checked_at`
 
-Per ottenere questi dati, la query `useAllActivities` gia include i dati partner (`company_name`, `country_code`, ecc.). Serve aggiungere i campi `enriched_at`, `website` e `logo_url` alla select dei partner nella query.
+## 4. Edge Function per le credenziali LinkedIn
 
-**File: `src/hooks/useActivities.ts`**
-- Nella funzione `useAllActivities`, espandere la select dei partner per includere `enriched_at, website, logo_url`
-- Aggiornare il tipo `AllActivity` per includere questi campi
+**File: `supabase/functions/get-linkedin-credentials/index.ts`**
+- Restituisce `linkedin_email` e `linkedin_password` da `app_settings`
+- Usata dall'estensione per l'auto-login
 
-## 4. Filtro aggiuntivo "Enriched / Non Enriched"
+## 5. Hook useLinkedInExtensionBridge
 
-**File: `src/components/workspace/ContactListPanel.tsx`**
-- Aggiungere due nuovi filtri combinabili: "Arricchito" (`enriched_at` presente) e "Non arricchito"
+**File: `src/hooks/useLinkedInExtensionBridge.ts`**
+- Stessa architettura di `useExtensionBridge.ts` ma con `direction: "from-webapp-li"` / `"from-extension-li"`
+- Metodi: `isAvailable`, `verifySession`, `syncCookie`, `extractProfile`, `autoLogin`
 
-## Riepilogo modifiche
+## 6. Pagina download estensione
 
-| File | Modifica |
-|------|----------|
-| `src/pages/Workspace.tsx` | Pulsanti Elimina + Deep Search + Stop nell'header |
-| `src/hooks/useActivities.ts` | Aggiungere `enriched_at, website, logo_url` alla query partner e al tipo `AllActivity` |
-| `src/components/workspace/ContactListPanel.tsx` | Icone LinkedIn/website/enrichment su ogni card + filtri "Arricchito"/"Non arricchito" |
+**File: `public/download-linkedin-extension.html`**
+- Pagina con istruzioni per scaricare e installare l'estensione LinkedIn
 
+## 7. Aggiornamento config.toml
+
+Aggiungere le nuove edge functions con `verify_jwt = false`.
+
+## Dettagli tecnici
+
+### Manifest LinkedIn Extension
+```json
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Cookie Sync",
+  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
+  "host_permissions": ["https://*.linkedin.com/*"],
+  "content_scripts": [{
+    "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"],
+    "js": ["content.js"]
+  }]
+}
+```
+
+### Auto-login flow
+1. Estensione apre tab `https://www.linkedin.com/login`
+2. Attende caricamento pagina
+3. Compila `#username` (email) e `#password` (password)
+4. Clicca il pulsante di login
+5. Attende redirect alla home
+6. Legge cookie `li_at` e lo sincronizza al server
+
+### Sicurezza
+- Le credenziali sono salvate in `app_settings` (protetto da RLS)
+- Il cookie li_at e condiviso tra l'inserimento manuale e la sincronizzazione automatica dell'estensione
+- L'estensione non invia mai credenziali a terzi
