@@ -69,3 +69,9 @@ verify_jwt = false
 
 [functions.generate-email]
 verify_jwt = false
+
+[functions.save-linkedin-cookie]
+verify_jwt = false
+
+[functions.get-linkedin-credentials]
+verify_jwt = false
