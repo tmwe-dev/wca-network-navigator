@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Search, Mail, Phone, User, Building2, ChevronRight, Check, Globe2
+  Search, Mail, Phone, User, Building2, ChevronRight
 } from "lucide-react";
-import { useAllActivities, useContactsForPartners, type AllActivity } from "@/hooks/useActivities";
+import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
+import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
@@ -38,16 +39,16 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
     );
   }, [emailActivities, search]);
 
-  // Group by country
-  const grouped = useMemo(() => {
-    const map: Record<string, { code: string; name: string; items: AllActivity[] }> = {};
-    filtered.forEach((a) => {
-      const code = a.partners?.country_code || "??";
-      if (!map[code]) map[code] = { code, name: a.partners?.country_name || "?", items: [] };
-      map[code].items.push(a);
-    });
-    return Object.values(map).sort((a, b) => b.items.length - a.items.length);
-  }, [filtered]);
+  // Use shared groupByCountry
+  const grouped = useMemo(
+    () =>
+      groupByCountry(
+        filtered,
+        (a) => a.partners?.country_code || "??",
+        (a) => a.partners?.country_name || "?"
+      ),
+    [filtered]
+  );
 
   if (isLoading) {
     return (
@@ -80,11 +81,11 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
       {/* List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {grouped.map(({ code, name, items }) => (
-            <div key={code} className="mb-2">
+          {grouped.map(({ countryCode, countryName, items }) => (
+            <div key={countryCode} className="mb-2">
               <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                <span>{getCountryFlag(code)}</span>
-                <span>{name}</span>
+                <span>{getCountryFlag(countryCode)}</span>
+                <span>{countryName}</span>
                 <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{items.length}</Badge>
               </div>
               {items.map((activity) => {

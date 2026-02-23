@@ -4,7 +4,8 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JobList } from "@/components/campaigns/JobList";
 import { JobCanvas } from "@/components/campaigns/JobCanvas";
-import { useCampaignJobs, useJobContacts, useUpdateCampaignJob } from "@/hooks/useCampaignJobs";
+import { useCampaignJobs, useUpdateCampaignJob } from "@/hooks/useCampaignJobs";
+import { useContactsForPartners } from "@/hooks/useActivities";
 import { toast } from "sonner";
 
 export default function CampaignJobs() {
@@ -20,7 +21,7 @@ export default function CampaignJobs() {
 
   // Collect unique partner IDs for contacts query
   const partnerIds = useMemo(() => [...new Set(jobs.map(j => j.partner_id))], [jobs]);
-  const { data: contactsByPartner = {} } = useJobContacts(partnerIds);
+  const { data: contactsByPartner = {} } = useContactsForPartners(partnerIds);
 
   // All contacts flat
   const allContacts = useMemo(() => Object.values(contactsByPartner).flat(), [contactsByPartner]);
