@@ -1,14 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
-import { type AllActivity, useAllActivities } from "@/hooks/useActivities";
+import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks/useActivities";
 import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
-import { Sparkles, Search, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, Search, Zap, Trash2, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface StoredEmail {
   subject: string;
@@ -36,8 +43,14 @@ export default function Workspace() {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
+  // Deep search state
+  const [deepSearching, setDeepSearching] = useState(false);
+  const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
+  const deepSearchAbortRef = useRef(false);
+
   const { data: activities } = useAllActivities();
   const { generate } = useEmailGenerator();
+  const deleteActivities = useDeleteActivities();
 
   const emailActivities = useMemo(() =>
     (activities || []).filter(
@@ -69,8 +82,61 @@ export default function Workspace() {
     });
   }, []);
 
+  // ── Delete ──
+  const handleDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    try {
+      await deleteActivities.mutateAsync(ids);
+      if (selectedActivity && selectedIds.has(selectedActivity.id)) {
+        setSelectedActivity(null);
+      }
+      setSelectedIds(new Set());
+      toast({ title: `${ids.length} attività eliminate` });
+    } catch {
+      toast({ title: "Errore durante l'eliminazione", variant: "destructive" });
+    }
+  };
+
+  // ── Deep Search ──
+  const handleDeepSearch = async () => {
+    const targets = selectedIds.size > 0
+      ? emailActivities.filter((a) => selectedIds.has(a.id))
+      : emailActivities;
+    const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id))];
+    if (!uniquePartnerIds.length) return;
+
+    deepSearchAbortRef.current = false;
+    setDeepSearching(true);
+    setDeepSearchProgress({ current: 0, total: uniquePartnerIds.length });
+
+    let done = 0;
+    for (const partnerId of uniquePartnerIds) {
+      if (deepSearchAbortRef.current) break;
+      setDeepSearchProgress({ current: done + 1, total: uniquePartnerIds.length });
+      try {
+        await supabase.functions.invoke("deep-search-partner", {
+          body: { partner_id: partnerId },
+        });
+      } catch {
+        // continue
+      }
+      done++;
+      if (done < uniquePartnerIds.length && !deepSearchAbortRef.current) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    setDeepSearching(false);
+    setDeepSearchProgress(null);
+    if (deepSearchAbortRef.current) {
+      toast({ title: `Deep Search interrotta (${done}/${uniquePartnerIds.length})` });
+    } else {
+      toast({ title: `Deep Search completata su ${done} partner` });
+    }
+  };
+
   const handleGenerateAll = async () => {
-    // Generate only for selected items (or all if none selected)
     const targets = selectedIds.size > 0
       ? emailActivities.filter((a) => selectedIds.has(a.id))
       : emailActivities;
@@ -146,6 +212,18 @@ export default function Workspace() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Deep Search progress */}
+          {deepSearching && deepSearchProgress && (
+            <div className="flex items-center gap-2 mr-1">
+              <span className="text-[11px] text-violet-600 font-medium whitespace-nowrap">
+                Deep Search {deepSearchProgress.current}/{deepSearchProgress.total}
+              </span>
+              <Progress
+                value={(deepSearchProgress.current / deepSearchProgress.total) * 100}
+                className="w-20 h-1.5"
+              />
+            </div>
+          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
             <Input
@@ -155,9 +233,65 @@ export default function Workspace() {
               className="pl-8 h-8 w-52 text-xs bg-white/80 border-stone-200 text-stone-600 placeholder:text-stone-400 focus:ring-violet-300/50"
             />
           </div>
+
+          {/* Deep Search / Stop */}
+          {deepSearching ? (
+            <Button
+              onClick={() => { deepSearchAbortRef.current = true; }}
+              size="sm"
+              variant="destructive"
+              className="h-8 gap-1.5 text-xs shadow-sm"
+            >
+              <Square className="w-3.5 h-3.5" />
+              Stop
+            </Button>
+          ) : (
+            <Button
+              onClick={handleDeepSearch}
+              disabled={batchGenerating || emailActivities.length === 0}
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs border-violet-200 text-violet-600 hover:bg-violet-50 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {selectedCount > 0 ? `Deep Search (${selectedCount})` : "Deep Search"}
+            </Button>
+          )}
+
+          {/* Delete */}
+          {selectedCount > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-8 gap-1.5 text-xs shadow-sm"
+                  disabled={deleteActivities.isPending}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Elimina ({selectedCount})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Eliminare {selectedCount} attività?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Le attività selezionate verranno eliminate definitivamente.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Elimina
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
           <Button
             onClick={handleGenerateAll}
-            disabled={batchGenerating || emailActivities.length === 0}
+            disabled={batchGenerating || deepSearching || emailActivities.length === 0}
             size="sm"
             className="h-8 gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs shadow-sm"
           >

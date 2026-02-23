@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle } from "lucide-react";
+import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, CheckCircle2 } from "lucide-react";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
-type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias";
+type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
 
 const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
   { key: "with_email", label: "Con email" },
@@ -18,6 +18,8 @@ const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
   { key: "no_contact", label: "Senza contatto" },
   { key: "with_alias", label: "Con alias" },
   { key: "no_alias", label: "Senza alias" },
+  { key: "enriched", label: "Arricchito" },
+  { key: "not_enriched", label: "Non arricchito" },
 ];
 
 function matchesFilter(a: AllActivity, f: FilterKey): boolean {
@@ -29,6 +31,8 @@ function matchesFilter(a: AllActivity, f: FilterKey): boolean {
     case "no_contact": return !contact;
     case "with_alias": return !!(contact?.contact_alias || a.partners?.company_alias);
     case "no_alias": return !contact?.contact_alias && !a.partners?.company_alias;
+    case "enriched": return !!a.partners?.enriched_at;
+    case "not_enriched": return !a.partners?.enriched_at;
   }
 }
 
@@ -189,6 +193,8 @@ export default function ContactListPanel({
                 const hasEmail = !!contact?.email;
                 const displayName = contact?.contact_alias || contact?.name;
                 const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name;
+                const isEnriched = !!activity.partners?.enriched_at;
+                const hasWebsite = !!activity.partners?.website;
 
                 return (
                   <div
@@ -212,14 +218,20 @@ export default function ContactListPanel({
                     >
                       <div className="flex items-start gap-2">
                         <div className={cn(
-                          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors relative",
                           isSelected ? "bg-violet-100 text-violet-600" : "bg-stone-100 text-stone-400"
                         )}>
                           <Building2 className="w-3.5 h-3.5" />
+                          {isEnriched && (
+                            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-white" title="Arricchito" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-stone-700 truncate">{companyDisplay}</span>
+                            {hasWebsite && (
+                              <Globe className="w-3 h-3 text-blue-400 shrink-0" />
+                            )}
                           </div>
                           {contact ? (
                             <div className="flex items-center gap-1 mt-0.5">

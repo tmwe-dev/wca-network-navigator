@@ -97,6 +97,9 @@ export interface AllActivity {
     country_code: string;
     country_name: string;
     city: string;
+    enriched_at: string | null;
+    website: string | null;
+    logo_url: string | null;
   } | null;
   team_members: { name: string } | null;
   selected_contact: {
@@ -118,7 +121,7 @@ export function useAllActivities() {
         .from("activities")
         .select(`
           *,
-          partners(company_name, company_alias, country_code, country_name, city),
+          partners(company_name, company_alias, country_code, country_name, city, enriched_at, website, logo_url),
           team_members(name),
           selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, direct_phone, mobile, title, contact_alias)
         `)
