@@ -1,46 +1,56 @@
 
 
-# Flusso diretto: Partner Hub → Workspace in 2 click
+# Filtri combinabili nel Workspace ContactListPanel
 
 ## Problema attuale
 
-Il flusso attuale per generare email AI dal Partner Hub richiede 4-5 passaggi:
-1. Selezionare i partner nel Hub (checkbox)
-2. Cliccare "Assegna Attivita" nella barra azioni
-3. Compilare il dialog (tipo: "Invia Email", titolo, ecc.)
-4. Navigare manualmente al Workspace
-5. Generare le email
+I filtri nel ContactListPanel del Workspace sono **mutuamente esclusivi** (radio): puoi selezionare solo "Con email" OPPURE "Senza alias", ma non entrambi contemporaneamente. Inoltre manca il filtro "Senza alias".
+
+Nell'Agenda (ActivitiesTab), i filtri sono invece **indipendenti e combinabili** con logica AND.
 
 ## Soluzione
 
-Aggiungere un pulsante **"Workspace"** nella `BulkActionBar` che in un solo click:
-- Crea automaticamente le attivita `send_email` per ogni partner selezionato (con titolo auto-generato)
-- Naviga direttamente a `/workspace`
+Trasformare i filtri da chip esclusivi a **toggle indipendenti** (multi-select), permettendo combinazioni come "Con email + Senza alias". Aggiungere anche i filtri mancanti.
 
-Il flusso diventa:
-1. Selezionare i partner (checkbox) -- click 1
-2. Cliccare "Workspace" nella barra -- click 2 (crea attivita + naviga)
+## Filtri disponibili (tutti combinabili)
 
-## File modificati
+| Filtro | Logica |
+|--------|--------|
+| Con email | `contact?.email` presente |
+| Senza email | `contact?.email` assente |
+| Con contatto | `selected_contact` presente |
+| Senza contatto | `selected_contact` assente |
+| Con alias | `contact_alias` O `company_alias` presente |
+| Senza alias | `contact_alias` E `company_alias` assenti |
 
-| File | Modifica |
-|------|----------|
-| `src/components/partners/BulkActionBar.tsx` | Aggiungere pulsante "Workspace" con icona `Sparkles` |
-| `src/pages/PartnerHub.tsx` | Implementare `handleSendToWorkspace`: crea attivita send_email in batch e naviga a `/workspace` |
+## Dettagli tecnici
 
-### Dettagli tecnici
+**File: `src/components/workspace/ContactListPanel.tsx`**
 
-**BulkActionBar.tsx**: Nuova prop `onSendToWorkspace` e pulsante corrispondente posizionato dopo "Deep Search":
+1. Sostituire `FilterType` (stringa singola) con un `Set<string>` per i filtri attivi
+2. Click su un chip lo attiva/disattiva (toggle), piu chip possono essere attivi contemporaneamente
+3. Il chip "Tutti" resetta tutti i filtri
+4. Logica di filtraggio AND: ogni filtro attivo deve essere soddisfatto
+5. I contatori dinamici su ogni chip mostrano quanti record corrispondono a quel criterio nel set corrente (come nel Partner Hub Workbench)
+6. Aggiungere i filtri mancanti: "Con contatto" e "Senza alias"
 
+Il tipo diventa:
+```typescript
+type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias";
+const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
 ```
-onSendToWorkspace?: () => void;
-sendingToWorkspace?: boolean;
+
+La logica di filtraggio applica tutti i filtri attivi in AND:
+```typescript
+const filtered = searched.filter((a) => {
+  for (const f of activeFilters) {
+    if (f === "with_email" && !a.selected_contact?.email) return false;
+    if (f === "no_email" && a.selected_contact?.email) return false;
+    // ... etc
+  }
+  return true;
+});
 ```
 
-**PartnerHub.tsx**: Nuova funzione `handleSendToWorkspace`:
-1. Prende gli ID selezionati
-2. Chiama `useCreateActivities` con attivita di tipo `send_email` per ogni partner (titolo: "Outreach email")
-3. Mostra toast di conferma
-4. Naviga a `/workspace`
+Filtri mutuamente contraddittori (es. "con email" + "senza email") sono gestiti automaticamente: il risultato sara semplicemente vuoto, senza errori.
 
-Nessuna modifica al Workspace: questo gia mostra tutte le attivita `send_email` non completate, quindi le nuove appariranno automaticamente.
