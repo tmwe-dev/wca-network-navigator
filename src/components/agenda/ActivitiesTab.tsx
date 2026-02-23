@@ -5,15 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Mail, Phone, MessageCircle, Users, RotateCcw, MoreHorizontal,
-  ChevronDown, ChevronRight, Check, Circle, Clock, User
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from "@/components/ui/dialog";
+import {
+  Mail, Phone, Users, RotateCcw, MoreHorizontal,
+  ChevronDown, ChevronRight, Check, Circle, Clock, User, Trash2, Wand2, Loader2
 } from "lucide-react";
-import { useAllActivities, useUpdateActivity, useContactsForPartners, type AllActivity } from "@/hooks/useActivities";
+import { useAllActivities, useUpdateActivity, useContactsForPartners, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ACTIVITY_TYPE_ICONS: Record<string, typeof Mail> = {
   send_email: Mail,
@@ -44,13 +50,18 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
   const { data: activities, isLoading } = useAllActivities();
   const { data: teamMembers } = useTeamMembers();
   const updateActivity = useUpdateActivity();
+  const deleteActivities = useDeleteActivities();
+  const queryClient = useQueryClient();
 
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>(initialBatchFilter ? "all" : "pending");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [filterCampaign, setFilterCampaign] = useState<"all" | "campaign" | "manual">(initialBatchFilter ? "campaign" : "all");
   const [filterBatch, setFilterBatch] = useState<string | undefined>(initialBatchFilter);
+  const [filterContact, setFilterContact] = useState<string>("all");
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
+  const [generatingAliases, setGeneratingAliases] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Get unique partner IDs for contacts query
   const partnerIds = useMemo(() => {
@@ -70,9 +81,26 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
       if (filterCampaign === "campaign" && !a.campaign_batch_id) return false;
       if (filterCampaign === "manual" && a.campaign_batch_id) return false;
       if (filterBatch && a.campaign_batch_id !== filterBatch) return false;
+
+      // Contact filters
+      if (filterContact === "no_email") {
+        const contacts = contactsMap?.[a.partner_id] || [];
+        const hasEmail = contacts.some((c) => c.email);
+        if (hasEmail) return false;
+      }
+      if (filterContact === "no_contact") {
+        const contacts = contactsMap?.[a.partner_id] || [];
+        if (contacts.length > 0) return false;
+      }
+      if (filterContact === "no_alias") {
+        const hasCompanyAlias = !!a.partners?.company_alias;
+        const hasContactAlias = !!a.selected_contact?.contact_alias;
+        if (hasCompanyAlias && (hasContactAlias || !a.selected_contact)) return false;
+      }
+
       return true;
     });
-  }, [activities, filterType, filterStatus, filterAssignee, filterCampaign, filterBatch]);
+  }, [activities, filterType, filterStatus, filterAssignee, filterCampaign, filterBatch, filterContact, contactsMap]);
 
   // Group by country
   const grouped = useMemo(() => {
@@ -110,12 +138,55 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
     updateActivity.mutate({ id: activityId, selected_contact_id: contactId });
   };
 
+  const handleDeleteSingle = (id: string) => {
+    deleteActivities.mutate([id]);
+  };
+
+  const handleBulkDelete = () => {
+    const ids = filtered.map((a) => a.id);
+    deleteActivities.mutate(ids, {
+      onSuccess: () => {
+        setBulkDeleteOpen(false);
+        toast({ title: `${ids.length} attività cancellate` });
+      },
+    });
+  };
+
+  const handleGenerateAliases = async () => {
+    const countryCodes = [...new Set(grouped.map((g) => g.countryCode))];
+    if (!countryCodes.length) return;
+    setGeneratingAliases(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-aliases", {
+        body: { country_codes: countryCodes },
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["all-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["partner-contacts-map"] });
+      toast({ title: "Alias generati", description: data?.message || "Completato" });
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingAliases(false);
+    }
+  };
+
+  const showBulkDelete = filterContact === "no_email" || filterContact === "no_contact";
+
   if (isLoading) {
     return <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>;
   }
 
   return (
     <div className="space-y-4">
+      {/* Top bar: Genera Alias */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="sm" onClick={handleGenerateAliases} disabled={generatingAliases}>
+          {generatingAliases ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1" />}
+          Genera Alias
+        </Button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <Select value={filterType} onValueChange={setFilterType}>
@@ -159,6 +230,16 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
           </SelectContent>
         </Select>
 
+        <Select value={filterContact} onValueChange={setFilterContact}>
+          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Contatto" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti</SelectItem>
+            <SelectItem value="no_email">Senza email</SelectItem>
+            <SelectItem value="no_contact">Senza contatto</SelectItem>
+            <SelectItem value="no_alias">Senza alias</SelectItem>
+          </SelectContent>
+        </Select>
+
         {filterBatch && (
           <Button variant="outline" size="sm" onClick={() => setFilterBatch(undefined)} className="text-xs">
             Batch filtrato ✕
@@ -166,10 +247,37 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
         )}
       </div>
 
-      {/* Results count */}
-      <p className="text-sm text-muted-foreground">
-        {filtered.length} attività in {grouped.length} {grouped.length === 1 ? "paese" : "paesi"}
-      </p>
+      {/* Results count + bulk delete */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {filtered.length} attività in {grouped.length} {grouped.length === 1 ? "paese" : "paesi"}
+        </p>
+        {showBulkDelete && filtered.length > 0 && (
+          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+            <Trash2 className="w-4 h-4 mr-1" />
+            Cancella filtrate ({filtered.length})
+          </Button>
+        )}
+      </div>
+
+      {/* Bulk delete confirmation */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancella attività filtrate</DialogTitle>
+            <DialogDescription>
+              Stai per cancellare {filtered.length} attività. Questa azione è irreversibile.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deleteActivities.isPending}>
+              {deleteActivities.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Conferma cancellazione
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Grouped by country */}
       {grouped.length === 0 ? (
@@ -199,6 +307,7 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
                         contacts={contactsMap?.[activity.partner_id] || []}
                         onCycleStatus={() => cycleStatus(activity)}
                         onSelectContact={(contactId) => selectContact(activity.id, contactId)}
+                        onDelete={() => handleDeleteSingle(activity.id)}
                       />
                     ))}
                   </div>
@@ -217,11 +326,13 @@ function ActivityRow({
   contacts,
   onCycleStatus,
   onSelectContact,
+  onDelete,
 }: {
   activity: AllActivity;
   contacts: { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null }[];
   onCycleStatus: () => void;
   onSelectContact: (id: string) => void;
+  onDelete: () => void;
 }) {
   const Icon = ACTIVITY_TYPE_ICONS[activity.activity_type] || MoreHorizontal;
   const selectedContact = activity.selected_contact;
@@ -234,7 +345,7 @@ function ActivityRow({
     )}>
       {/* Status toggle */}
       <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={onCycleStatus}>
-      {activity.status === "completed" ? (
+        {activity.status === "completed" ? (
           <Check className="w-4 h-4 text-primary" />
         ) : activity.status === "in_progress" ? (
           <Clock className="w-4 h-4 text-warning" />
@@ -246,21 +357,31 @@ function ActivityRow({
       {/* Type icon */}
       <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
 
-      {/* Company & title */}
+      {/* Company & title with alias */}
       <div className="flex-1 min-w-0">
-        <p className={cn("font-medium text-sm truncate", isCompleted && "line-through")}>
-          {activity.partners?.company_name}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn("font-medium text-sm truncate", isCompleted && "line-through")}>
+            {activity.partners?.company_name}
+          </p>
+          {activity.partners?.company_alias && (
+            <Badge variant="outline" className="text-[10px] shrink-0 bg-accent/50">
+              {activity.partners.company_alias}
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground truncate">{activity.title}</p>
       </div>
 
       {/* Selected contact or selector */}
-      <div className="shrink-0 max-w-[200px]">
+      <div className="shrink-0 max-w-[220px]">
         {selectedContact ? (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 border border-primary/20">
-            <Check className="w-3 h-3 text-primary" />
+            <Check className="w-3 h-3 text-primary shrink-0" />
             <div className="text-xs truncate">
               <span className="font-medium">{selectedContact.name}</span>
+              {selectedContact.contact_alias && (
+                <span className="text-primary ml-1">({selectedContact.contact_alias})</span>
+              )}
               {selectedContact.email && (
                 <span className="text-muted-foreground ml-1">{selectedContact.email}</span>
               )}
@@ -304,6 +425,11 @@ function ActivityRow({
       <Badge variant="outline" className="text-[10px] shrink-0">
         {ACTIVITY_TYPE_LABELS[activity.activity_type] || activity.activity_type}
       </Badge>
+
+      {/* Delete */}
+      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onDelete}>
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
     </div>
   );
 }
