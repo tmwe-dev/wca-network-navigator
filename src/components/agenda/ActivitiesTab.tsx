@@ -151,7 +151,7 @@ export default function ActivitiesTab({ initialBatchFilter }: { initialBatchFilt
     setGeneratingAliases(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-aliases", {
-        body: { country_codes: countryCodes },
+        body: { countryCodes },
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["all-activities"] });
