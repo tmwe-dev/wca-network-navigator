@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +9,28 @@ import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
-type FilterType = "all" | "with_email" | "no_email" | "no_contact" | "with_alias";
+type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias";
+
+const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
+  { key: "with_email", label: "Con email" },
+  { key: "no_email", label: "Senza email" },
+  { key: "with_contact", label: "Con contatto" },
+  { key: "no_contact", label: "Senza contatto" },
+  { key: "with_alias", label: "Con alias" },
+  { key: "no_alias", label: "Senza alias" },
+];
+
+function matchesFilter(a: AllActivity, f: FilterKey): boolean {
+  const contact = a.selected_contact;
+  switch (f) {
+    case "with_email": return !!contact?.email;
+    case "no_email": return !contact?.email;
+    case "with_contact": return !!contact;
+    case "no_contact": return !contact;
+    case "with_alias": return !!(contact?.contact_alias || a.partners?.company_alias);
+    case "no_alias": return !contact?.contact_alias && !a.partners?.company_alias;
+  }
+}
 
 interface ContactListPanelProps {
   selectedActivityId: string | null;
@@ -26,7 +47,7 @@ export default function ContactListPanel({
   selectedIds, onToggleSelect, onSelectAll, onDeselectAll,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
 
   const emailActivities = useMemo(() => {
     if (!activities) return [];
@@ -49,19 +70,22 @@ export default function ContactListPanel({
   }, [emailActivities, search]);
 
   const filtered = useMemo(() => {
-    switch (filter) {
-      case "with_email":
-        return searched.filter((a) => !!a.selected_contact?.email);
-      case "no_email":
-        return searched.filter((a) => !a.selected_contact?.email);
-      case "no_contact":
-        return searched.filter((a) => !a.selected_contact);
-      case "with_alias":
-        return searched.filter((a) => !!a.selected_contact?.contact_alias);
-      default:
-        return searched;
+    if (activeFilters.size === 0) return searched;
+    return searched.filter((a) => {
+      for (const f of activeFilters) {
+        if (!matchesFilter(a, f)) return false;
+      }
+      return true;
+    });
+  }, [searched, activeFilters]);
+
+  const filterCounts = useMemo(() => {
+    const counts = {} as Record<FilterKey, number>;
+    for (const chip of FILTER_CHIPS) {
+      counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length;
     }
-  }, [searched, filter]);
+    return counts;
+  }, [searched]);
 
   const grouped = useMemo(
     () =>
@@ -73,15 +97,18 @@ export default function ContactListPanel({
     [filtered]
   );
 
-  const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
+  const toggleFilter = useCallback((key: FilterKey) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
-  const filters: { key: FilterType; label: string }[] = [
-    { key: "all", label: "Tutti" },
-    { key: "with_email", label: "Con email" },
-    { key: "no_email", label: "Senza email" },
-    { key: "no_contact", label: "Senza contatto" },
-    { key: "with_alias", label: "Con alias" },
-  ];
+  const clearFilters = useCallback(() => setActiveFilters(new Set()), []);
+
+  const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
 
   if (isLoading) {
     return (
@@ -113,20 +140,32 @@ export default function ContactListPanel({
             </p>
           </div>
         </div>
-        {/* Filter chips */}
+        {/* Filter chips — combinable toggles */}
         <div className="flex flex-wrap gap-1">
-          {filters.map((f) => (
+          <button
+            onClick={clearFilters}
+            className={cn(
+              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
+              activeFilters.size === 0
+                ? "bg-violet-100 text-violet-700"
+                : "bg-stone-100 text-stone-400 hover:bg-stone-200 hover:text-stone-500"
+            )}
+          >
+            Tutti
+          </button>
+          {FILTER_CHIPS.map((chip) => (
             <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
+              key={chip.key}
+              onClick={() => toggleFilter(chip.key)}
               className={cn(
                 "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
-                filter === f.key
+                activeFilters.has(chip.key)
                   ? "bg-violet-100 text-violet-700"
                   : "bg-stone-100 text-stone-400 hover:bg-stone-200 hover:text-stone-500"
               )}
             >
-              {f.label}
+              {chip.label}
+              <span className="ml-1 opacity-60">{filterCounts[chip.key]}</span>
             </button>
           ))}
         </div>
