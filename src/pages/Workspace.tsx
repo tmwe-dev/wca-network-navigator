@@ -3,12 +3,15 @@ import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
 import { type AllActivity } from "@/hooks/useActivities";
+import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
 import { Sparkles } from "lucide-react";
 
 export default function Workspace() {
   const [selectedActivity, setSelectedActivity] = useState<AllActivity | null>(null);
   const [goal, setGoal] = useState("");
   const [baseProposal, setBaseProposal] = useState("");
+  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
+  const { documents, uploading, upload, remove } = useWorkspaceDocuments();
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
@@ -30,6 +33,13 @@ export default function Workspace() {
           baseProposal={baseProposal}
           onGoalChange={setGoal}
           onBaseProposalChange={setBaseProposal}
+          documents={documents}
+          onUploadDocument={upload}
+          onRemoveDocument={remove}
+          uploading={uploading}
+          referenceLinks={referenceLinks}
+          onAddLink={(url) => setReferenceLinks((prev) => [...prev, url])}
+          onRemoveLink={(idx) => setReferenceLinks((prev) => prev.filter((_, i) => i !== idx))}
         />
       </div>
 
@@ -49,6 +59,8 @@ export default function Workspace() {
             activity={selectedActivity}
             goal={goal}
             baseProposal={baseProposal}
+            documentIds={documents.map((d) => d.id)}
+            referenceUrls={referenceLinks}
           />
         </div>
       </div>

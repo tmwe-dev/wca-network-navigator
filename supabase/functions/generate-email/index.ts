@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { activity_id, goal, base_proposal, language } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls } = await req.json();
     if (!activity_id) throw new Error("activity_id is required");
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -44,26 +44,86 @@ serve(async (req) => {
     const partner = activity.partners;
     const contact = activity.selected_contact;
 
-    // Fetch partner networks
-    const { data: networks } = await supabase
-      .from("partner_networks")
-      .select("network_name")
-      .eq("partner_id", partner.id);
+    // Fetch partner networks, services, social links in parallel
+    const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
+      supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
+      supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+      supabase.from("app_settings").select("key, value").like("key", "ai_%"),
+      supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id),
+    ]);
 
-    // Fetch partner services
-    const { data: services } = await supabase
-      .from("partner_services")
-      .select("service_category")
-      .eq("partner_id", partner.id);
-
-    // Fetch AI profile settings
-    const { data: settingsRows } = await supabase
-      .from("app_settings")
-      .select("key, value")
-      .like("key", "ai_%");
+    const networks = networksRes.data || [];
+    const services = servicesRes.data || [];
+    const socialLinks = socialRes.data || [];
 
     const settings: Record<string, string> = {};
-    (settingsRows || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
+    (settingsRes.data || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
+
+    // Fetch workspace documents text if document_ids provided
+    let documentsContext = "";
+    if (document_ids && document_ids.length > 0) {
+      const { data: docs } = await supabase
+        .from("workspace_documents")
+        .select("file_name, extracted_text")
+        .in("id", document_ids);
+      if (docs && docs.length > 0) {
+        const docTexts = docs
+          .filter((d: any) => d.extracted_text)
+          .map((d: any) => `--- ${d.file_name} ---\n${d.extracted_text.substring(0, 3000)}`)
+          .join("\n\n");
+        if (docTexts) {
+          documentsContext = `\nDOCUMENTI DI RIFERIMENTO:\n${docTexts}\n`;
+        }
+      }
+    }
+
+    // Scrape reference URLs via Firecrawl if provided
+    let linksContext = "";
+    if (reference_urls && reference_urls.length > 0) {
+      const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+      if (FIRECRAWL_API_KEY) {
+        const urlsToScrape = reference_urls.slice(0, 3);
+        const scrapeResults = await Promise.allSettled(
+          urlsToScrape.map(async (url: string) => {
+            try {
+              const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+              });
+              if (!resp.ok) return null;
+              const data = await resp.json();
+              const md = data?.data?.markdown || data?.markdown || "";
+              return md ? `--- ${url} ---\n${md.substring(0, 2000)}` : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        const scraped = scrapeResults
+          .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled" && !!r.value)
+          .map((r) => r.value)
+          .join("\n\n");
+        if (scraped) {
+          linksContext = `\nINFORMAZIONI DA LINK DI RIFERIMENTO:\n${scraped}\n`;
+        }
+      }
+    }
+
+    // LinkedIn context
+    const companyLinkedIn = socialLinks.find((l: any) => l.platform === "linkedin" && !l.contact_id);
+    const contactLinkedIn = contact
+      ? socialLinks.find((l: any) => l.platform === "linkedin" && l.contact_id === contact.id)
+      : null;
+    let linkedinContext = "";
+    if (companyLinkedIn || contactLinkedIn) {
+      linkedinContext = "\nLINKEDIN:\n";
+      if (companyLinkedIn) linkedinContext += `- Azienda: ${companyLinkedIn.url}\n`;
+      if (contactLinkedIn) linkedinContext += `- Contatto: ${contactLinkedIn.url}\n`;
+    }
 
     // Build context
     const partnerContext = `
@@ -73,11 +133,11 @@ AZIENDA DESTINATARIA:
 - Sito web: ${partner.website || "N/A"}
 - Email generale: ${partner.email || "N/A"}
 - Rating: ${partner.rating ? `${partner.rating}/5` : "N/A"}
-- Network: ${(networks || []).map((n: any) => n.network_name).join(", ") || "N/A"}
-- Servizi: ${(services || []).map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}
+- Network: ${networks.map((n: any) => n.network_name).join(", ") || "N/A"}
+- Servizi: ${services.map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}
 ${partner.profile_description ? `- Descrizione: ${partner.profile_description.substring(0, 800)}` : ""}
 ${partner.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner.raw_profile_markdown.substring(0, 1500)}` : ""}
-`;
+${linkedinContext}`;
 
     const contactContext = contact ? `
 CONTATTO DESTINATARIO:
@@ -121,14 +181,17 @@ REGOLE:
 7. Usa i network condivisi come punto di connessione se esistono
 8. Rispondi SOLO con il testo dell'email (no markdown, no commenti esterni)
 9. Includi un oggetto email nella prima riga nel formato "Subject: ..."
-10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email`;
+10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email
+11. Se sono forniti documenti di riferimento o informazioni da link, usali per arricchire il contenuto dell'email
+12. Se sono disponibili profili LinkedIn, puoi menzionare la connessione professionale`;
 
     const userPrompt = `${senderContext}
 
 ${partnerContext}
 
 ${contactContext}
-
+${documentsContext}
+${linksContext}
 GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
@@ -174,7 +237,6 @@ Genera l'email completa con oggetto e corpo.`;
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content || "";
 
-    // Parse subject and body
     let subject = "";
     let body = content;
     const subjectMatch = content.match(/^Subject:\s*(.+)/i);

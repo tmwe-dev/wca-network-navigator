@@ -11,6 +11,12 @@ import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
+const LinkedInIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={cn("w-3 h-3 fill-current", className)}>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
 interface ContactListPanelProps {
   selectedActivityId: string | null;
   onSelect: (activity: AllActivity) => void;
@@ -20,7 +26,6 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
   const { data: activities, isLoading } = useAllActivities();
   const [search, setSearch] = useState("");
 
-  // Only show pending send_email activities
   const emailActivities = useMemo(() => {
     if (!activities) return [];
     return activities.filter(
@@ -33,13 +38,14 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
     const q = search.toLowerCase();
     return emailActivities.filter((a) =>
       a.partners?.company_name?.toLowerCase().includes(q) ||
+      a.partners?.company_alias?.toLowerCase().includes(q) ||
       a.partners?.country_name?.toLowerCase().includes(q) ||
       a.partners?.city?.toLowerCase().includes(q) ||
-      a.selected_contact?.name?.toLowerCase().includes(q)
+      a.selected_contact?.name?.toLowerCase().includes(q) ||
+      a.selected_contact?.contact_alias?.toLowerCase().includes(q)
     );
   }, [emailActivities, search]);
 
-  // Use shared groupByCountry
   const grouped = useMemo(
     () =>
       groupByCountry(
@@ -62,7 +68,6 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
       <div className="p-3 border-b border-border/30">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -78,7 +83,6 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
         </p>
       </div>
 
-      {/* List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {grouped.map(({ countryCode, countryName, items }) => (
@@ -92,6 +96,8 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
                 const isSelected = activity.id === selectedActivityId;
                 const contact = activity.selected_contact;
                 const hasEmail = !!contact?.email;
+                const displayName = contact?.contact_alias || contact?.name;
+                const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name;
 
                 return (
                   <button
@@ -114,27 +120,23 @@ export default function ContactListPanel({ selectedActivityId, onSelect }: Conta
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-sm truncate">
-                            {activity.partners?.company_name}
-                          </span>
-                          {activity.partners?.company_alias && (
-                            <Badge variant="outline" className="text-[9px] h-4 shrink-0">
-                              {activity.partners.company_alias}
-                            </Badge>
+                          <span className="font-medium text-sm truncate">{companyDisplay}</span>
+                          {activity.partners?.company_alias && activity.partners?.company_alias !== activity.partners?.company_name && (
+                            <Badge variant="outline" className="text-[9px] h-4 shrink-0">alias</Badge>
                           )}
                         </div>
                         {contact ? (
                           <div className="flex items-center gap-1 mt-0.5">
                             <User className="w-3 h-3 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground truncate">
-                              {contact.name}
+                              {displayName}
                               {contact.title && ` · ${contact.title}`}
                             </span>
                           </div>
                         ) : (
                           <span className="text-[11px] text-warning">Nessun contatto selezionato</span>
                         )}
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 mt-1">
                           {hasEmail && <Mail className="w-3 h-3 text-primary/60" />}
                           {(contact?.direct_phone || contact?.mobile) && (
                             <Phone className="w-3 h-3 text-primary/60" />

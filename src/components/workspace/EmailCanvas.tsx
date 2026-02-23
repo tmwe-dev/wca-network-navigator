@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw,
-  Mail, User, Building2, Globe2, CheckCircle2
+  Mail, User, Building2, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { type AllActivity } from "@/hooks/useActivities";
 import { type GeneratedEmail, useEmailGenerator } from "@/hooks/useEmailGenerator";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -19,14 +20,31 @@ interface EmailCanvasProps {
   activity: AllActivity | null;
   goal: string;
   baseProposal: string;
+  documentIds?: string[];
+  referenceUrls?: string[];
 }
 
-export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanvasProps) {
+const LinkedInIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
+export default function EmailCanvas({ activity, goal, baseProposal, documentIds, referenceUrls }: EmailCanvasProps) {
   const { generate, isGenerating, email, setEmail, reset } = useEmailGenerator();
   const [editMode, setEditMode] = useState(false);
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [sending, setSending] = useState(false);
+
+  const partnerId = activity?.partner_id || null;
+  const { data: socialLinks = [] } = useSocialLinks(partnerId);
+
+  const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
+  const contactLinkedIn = socialLinks.find(
+    (l) => l.platform === "linkedin" && l.contact_id === activity?.selected_contact_id
+  );
+  const hasAnyLinkedIn = !!companyLinkedIn || !!contactLinkedIn;
 
   const handleGenerate = async () => {
     if (!activity) return;
@@ -34,6 +52,8 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
       activity_id: activity.id,
       goal,
       base_proposal: baseProposal,
+      document_ids: documentIds,
+      reference_urls: referenceUrls,
     });
     if (result) {
       setEditSubject(result.subject);
@@ -77,7 +97,6 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
   const partner = activity?.partners;
   const contact = activity?.selected_contact;
 
-  // Empty state
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -103,18 +122,22 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold">
-                  {partner?.company_name}
-                </span>
+                <span className="font-semibold">{partner?.company_name}</span>
                 {partner?.company_alias && (
                   <Badge variant="outline" className="text-[10px]">{partner.company_alias}</Badge>
                 )}
                 <span className="text-sm">{getCountryFlag(partner?.country_code || "")}</span>
+                {/* LinkedIn icons */}
+                {companyLinkedIn && (
+                  <a href={companyLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-600/10 hover:bg-blue-600/20 transition-colors" title="LinkedIn Azienda">
+                    <LinkedInIcon className="w-3 h-3 text-blue-600" />
+                  </a>
+                )}
               </div>
               {contact ? (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <User className="w-3 h-3" />
-                  <span>{contact.name}</span>
+                  <span>{contact.contact_alias || contact.name}</span>
                   {contact.title && <span className="text-primary/60">· {contact.title}</span>}
                   {contact.email && (
                     <>
@@ -122,19 +145,25 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
                       <span>{contact.email}</span>
                     </>
                   )}
+                  {contactLinkedIn && (
+                    <a href={contactLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-600/10 hover:bg-blue-600/20 transition-colors ml-1" title="LinkedIn Contatto">
+                      <LinkedInIcon className="w-2.5 h-2.5 text-blue-600" />
+                    </a>
+                  )}
                 </div>
               ) : (
                 <span className="text-xs text-warning">Nessun contatto selezionato</span>
               )}
+              {!hasAnyLinkedIn && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <AlertCircle className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">LinkedIn non disponibile — eseguire Deep Search</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="gap-2"
-              size="sm"
-            >
+            <Button onClick={handleGenerate} disabled={isGenerating} className="gap-2" size="sm">
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : email ? (
@@ -159,62 +188,32 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
               <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
             </div>
             <p className="text-sm text-muted-foreground">Generazione in corso...</p>
-            <p className="text-xs text-muted-foreground/60">
-              Analisi profilo {partner?.company_name}
-            </p>
+            <p className="text-xs text-muted-foreground/60">Analisi profilo {partner?.company_name}</p>
           </div>
         ) : email ? (
           <div className="p-5 space-y-4">
-            {/* Subject */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Oggetto
-              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Oggetto</label>
               {editMode ? (
-                <Input
-                  value={editSubject}
-                  onChange={(e) => setEditSubject(e.target.value)}
-                  className="text-sm font-medium"
-                />
+                <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} className="text-sm font-medium" />
               ) : (
-                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/30 text-sm font-medium">
-                  {editSubject}
-                </div>
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/30 text-sm font-medium">{editSubject}</div>
               )}
             </div>
-
-            {/* Recipient */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Mail className="w-3.5 h-3.5" />
               <span>A: {email.contact_email || "Nessun indirizzo"}</span>
             </div>
-
-            {/* Body */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Corpo
-              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Corpo</label>
               {editMode ? (
-                <Textarea
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  className="min-h-[300px] text-sm leading-relaxed"
-                />
+                <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} className="min-h-[300px] text-sm leading-relaxed" />
               ) : (
-                <div className="p-4 rounded-xl bg-background/80 border border-border/30 text-sm leading-relaxed whitespace-pre-wrap">
-                  {editBody}
-                </div>
+                <div className="p-4 rounded-xl bg-background/80 border border-border/30 text-sm leading-relaxed whitespace-pre-wrap">{editBody}</div>
               )}
             </div>
-
-            {/* Actions */}
             <div className="flex items-center gap-2 pt-2 border-t border-border/20">
-              <Button
-                variant={editMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setEditMode(!editMode)}
-                className="gap-1.5"
-              >
+              <Button variant={editMode ? "default" : "outline"} size="sm" onClick={() => setEditMode(!editMode)} className="gap-1.5">
                 {editMode ? <Eye className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
                 {editMode ? "Anteprima" : "Modifica"}
               </Button>
@@ -223,17 +222,8 @@ export default function EmailCanvas({ activity, goal, baseProposal }: EmailCanva
                 Copia
               </Button>
               <div className="flex-1" />
-              <Button
-                size="sm"
-                onClick={handleSend}
-                disabled={sending || !email.contact_email}
-                className="gap-1.5"
-              >
-                {sending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Send className="w-3.5 h-3.5" />
-                )}
+              <Button size="sm" onClick={handleSend} disabled={sending || !email.contact_email} className="gap-1.5">
+                {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 Invia
               </Button>
             </div>
