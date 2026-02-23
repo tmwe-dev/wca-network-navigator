@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useCreateActivities } from "@/hooks/useActivities";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -59,6 +60,7 @@ export default function PartnerHub() {
   const [deepSearching, setDeepSearching] = useState(false);
   const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
+  const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const deepSearchAbortRef = useRef(false);
 
   const queryClient = useQueryClient();
@@ -71,6 +73,7 @@ export default function PartnerHub() {
 
   const { data: partners, isLoading } = usePartners(mergedFilters);
   const toggleFavorite = useToggleFavorite();
+  const createActivities = useCreateActivities();
 
   const partnerIds = useMemo(() => (partners || []).map((p: any) => p.id), [partners]);
   const { data: blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
@@ -205,6 +208,29 @@ export default function PartnerHub() {
     const ids = Array.from(selectedIds);
     navigate("/email-composer", { state: { partnerIds: ids } });
   }, [selectedIds, navigate]);
+
+  const handleSendToWorkspace = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setSendingToWorkspace(true);
+    try {
+      await createActivities.mutateAsync(
+        ids.map((partnerId) => ({
+          partner_id: partnerId,
+          activity_type: "send_email" as const,
+          title: "Outreach email",
+          priority: "medium",
+        }))
+      );
+      toast.success(`${ids.length} attività create — apertura Workspace...`);
+      setSelectedIds(new Set());
+      navigate("/workspace");
+    } catch (e) {
+      toast.error("Errore nella creazione delle attività");
+    } finally {
+      setSendingToWorkspace(false);
+    }
+  }, [selectedIds, createActivities, navigate]);
 
   const handleCountrySelect = (countryCode: string) => {
     setSelectedCountry(countryCode);
@@ -601,6 +627,8 @@ export default function PartnerHub() {
         onDeepSearch={handleBulkDeepSearch}
         onStopDeepSearch={handleStopDeepSearch}
         onEmail={handleBulkEmail}
+        onSendToWorkspace={handleSendToWorkspace}
+        sendingToWorkspace={sendingToWorkspace}
         deepSearching={deepSearching}
         deepSearchProgress={deepSearchProgress}
         partnerIds={Array.from(selectedIds)}
