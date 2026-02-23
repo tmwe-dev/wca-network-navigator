@@ -1,82 +1,118 @@
 
-# Piano: Documenti Knowledge Base, Link di riferimento e LinkedIn nel Workspace
+# Piano: Redesign completo della pagina Workspace
 
-## Cosa cambia per l'utente
+## Panoramica
 
-1. **Documenti Knowledge Base allegabili**: nella GoalBar compare una sezione per caricare documenti (PDF, DOCX, TXT) che l'AI legge per arricchire la generazione email. I file vengono salvati in un bucket storage dedicato e il loro contenuto testuale viene estratto ed incluso nel prompt.
-
-2. **Link di riferimento**: possibilita di aggiungere URL a siti web da cui l'AI puo estrarre informazioni tramite Firecrawl (gia configurato). I link vengono scrappati al momento della generazione e il contenuto viene iniettato nel contesto.
-
-3. **LinkedIn visibile nel Workspace**: nella barra info del partner (EmailCanvas) e nella lista contatti (ContactListPanel), vengono mostrati i link LinkedIn del contatto e dell'azienda se presenti in `partner_social_links`. Cliccabili con icona LinkedIn.
-
-4. **Avviso LinkedIn non configurato**: se non esistono link LinkedIn per il contatto selezionato, viene mostrato un badge "LinkedIn non disponibile" con suggerimento di eseguire il Deep Search. Il sistema attuale gia cerca e salva i profili LinkedIn tramite la Edge Function `deep-search-partner` usando Firecrawl. Non esiste un "cookie LinkedIn" da configurare nel profilo -- la ricerca avviene tramite web search, non scraping autenticato.
+Ricostruzione totale del layout e della grafica della pagina Email Workspace con un design moderno, morbido e dinamico. La GoalBar attuale viene smontata e trasformata in tab orizzontali con icone. Il canvas email diventa navigabile con frecce avanti/dietro per scorrere le email generate per gruppo. Viene aggiunto un pulsante "Genera Tutte" per creare email in batch.
 
 ---
 
+## Nuovo Layout (dall'alto in basso)
+
+```text
++---------------------------------------------------------------+
+| [Sparkles] Email Workspace    [Cerca partner...] (in alto dx) |
++---------------------------------------------------------------+
+| TAB ICONS:  [Target] Goal  |  [FileText] Proposta  |         |
+|             [Paperclip] Documenti  |  [Link2] Link           |
++---------------------------------------------------------------+
+| Contenuto della tab attiva (collassabile, 1 riga alla volta)  |
++---------------------------------------------------------------+
+|  PARTNER LIST (sx, 320px)  |  EMAIL CANVAS (dx, flex-1)      |
+|                            |  +----------------------------+  |
+|                            |  | Partner info + LinkedIn    |  |
+|                            |  | Subject / Body (3D canvas) |  |
+|                            |  | [< Prev] 1/5 [Next >]     |  |
+|                            |  | [Modifica][Copia][Invia]   |  |
+|                            |  +----------------------------+  |
+|                            |                                  |
+|                            |  [Genera Tutte] button in basso  |
++---------------------------------------------------------------+
+```
+
+## Palette colori
+
+- Sfondo principale: grigio caldo molto tenue (stone-50/stone-100)
+- Pannelli: bianco con ombre morbidissime, bordi stone-200/stone-300
+- Accenti: lilla chiaro (violet-300/violet-400), marrone chiaro (amber-200/stone-400)
+- Testo: stone-700/stone-800, muted: stone-400
+- Tab attiva: sfondo violet-50, bordo-bottom violet-400
+- Badge e chip: violet-100/violet-200 con testo violet-700
+- Bottoni primari: gradiente violet-400 -> violet-500
+- Canvas email: sfondo bianco puro con bordo sottilissimo stone-200, ombra soft
+
 ## Dettagli tecnici
 
-### 1. Nuovo bucket storage `workspace-docs`
+### 1. `Workspace.tsx` - Ristrutturazione completa
 
-Bucket pubblico per i documenti di knowledge base caricati dall'utente nel workspace.
+- Header compattato: titolo a sinistra, campo cerca partner a destra (spostato da ContactListPanel)
+- Sotto: barra tab orizzontale con 4 icone-tab (Goal, Proposta, Documenti, Link)
+- Ogni tab mostra solo il suo contenuto quando attiva (non tutto insieme)
+- Stato aggiuntivo: `generatedEmails: Map<string, {subject, body, contactEmail}>` per salvare le email generate per ogni attivita
+- Stato `currentEmailIndex` per navigare tra le email generate
+- Funzione `handleGenerateAll` che cicla su tutte le attivita filtrate e genera email in sequenza
+- Passa `search` e `onSearchChange` a ContactListPanel (il campo cerca si sposta in alto)
 
-### 2. Nuova tabella `workspace_documents`
+### 2. `GoalBar.tsx` -> Rinominato in `WorkspaceTabs.tsx`
 
-| Colonna | Tipo | Note |
-|---------|------|------|
-| id | uuid | PK |
-| file_name | text | Nome originale del file |
-| file_url | text | URL nel bucket |
-| file_size | integer | Dimensione in bytes |
-| extracted_text | text | Testo estratto dal documento (nullable) |
-| created_at | timestamptz | default now() |
+- Componente con `Tabs` di Radix (4 tab orizzontali)
+- Ogni tab ha icona + label breve
+- Tab "Goal": textarea singola
+- Tab "Proposta": textarea singola
+- Tab "Documenti": area upload con chip
+- Tab "Link": area input URL con chip
+- Altezza compatta: max 120px per il contenuto della tab
+- Stile: sfondo trasparente, tab pills arrotondate con sfondo violet-50 quando attive
 
-RLS: `auth.uid() IS NOT NULL` per tutte le operazioni.
+### 3. `ContactListPanel.tsx` - Semplificazione
 
-### 3. Modifiche alla GoalBar
+- Rimuovere il campo cerca interno (spostato nel header globale)
+- Ricevere `search` come prop
+- Palette: card con sfondo bianco, hover stone-50, selected con bordo violet-300 e sfondo violet-50/30
+- Badge paese: testo stone-500, sfondo stone-100
 
-Aggiungere sotto i due campi attuali una riga con:
-- **Area documenti**: pulsante "Allega documenti" che apre un file picker. I file caricati compaiono come chip rimovibili. Upload nel bucket `workspace-docs`, insert in `workspace_documents`.
-- **Area link di riferimento**: campo input per aggiungere URL. I link aggiunti compaiono come chip rimovibili. Salvati in stato locale (non persistiti, sono per la sessione corrente).
+### 4. `EmailCanvas.tsx` - Redesign con navigazione e batch
 
-Props aggiuntive: `documents`, `onDocumentsChange`, `referenceLinks`, `onReferenceLinksChange`.
+**Navigazione email:**
+- Nuovo stato: `emails: GeneratedEmail[]` (array di tutte le email generate per il gruppo)
+- Nuovo stato: `currentIndex: number`
+- Frecce `ChevronLeft` / `ChevronRight` per navigare tra le email
+- Indicatore "2 / 5" tra le frecce
+- Ogni email mostra il partner/contatto a cui e destinata
 
-### 4. Modifiche a Workspace.tsx
+**Canvas 3D-style:**
+- Il body dell'email viene renderizzato in un "canvas" con sfondo bianco puro, bordo stone-200 sottilissimo (1px), ombra `shadow-sm`, bordi arrotondati `rounded-2xl`
+- Transizione animata tra le email (slide orizzontale con `transition-transform`)
 
-Gestire stato per `documents: {id, file_name, file_url}[]` e `referenceLinks: string[]`. Passarli a GoalBar e a EmailCanvas (che li inoltra al generator).
+**Pulsante "Genera Tutte":**
+- Posizionato nella toolbar in basso
+- Genera email per tutte le attivita nella lista (max 20 alla volta)
+- Progress bar durante la generazione batch
+- Le email generate vengono salvate nello stato del Workspace e navigabili con le frecce
 
-### 5. Modifiche a useEmailGenerator.ts
+**LinkedIn:** mantiene le icone LinkedIn gia implementate nella barra partner
 
-Il hook accetta nuovi parametri opzionali: `document_ids: string[]` e `reference_urls: string[]` da passare alla Edge Function.
+### 5. Stile globale
 
-### 6. Modifiche alla Edge Function `generate-email`
+- Nessuna modifica a `index.css` (i colori si applicano con classi Tailwind dirette)
+- Tutto usa classi Tailwind: `bg-stone-50`, `border-stone-200`, `text-violet-500`, ecc.
+- Effetto glassmorphism leggero sui pannelli: `backdrop-blur-sm bg-white/80`
 
-- Accetta `document_ids` e `reference_urls` nel body
-- Per i documenti: query `workspace_documents` per recuperare `extracted_text` e includerlo nel prompt sotto una sezione "DOCUMENTI DI RIFERIMENTO"
-- Per i link: chiama Firecrawl (`https://api.firecrawl.dev/v1/scrape`) con `FIRECRAWL_API_KEY` per estrarre il markdown da ogni URL e includerlo nel prompt sotto "INFORMAZIONI DA LINK DI RIFERIMENTO" (max 2000 chars per link, max 3 link)
-- Fetch `partner_social_links` per il partner corrente e includerli nel contesto (LinkedIn del contatto e dell'azienda)
-
-### 7. Modifiche a ContactListPanel
-
-Per ogni attivita nella lista, fetch dei social links del partner. Mostrare icona LinkedIn cliccabile se presente.
-
-### 8. Modifiche a EmailCanvas
-
-- Nella barra info del partner, mostrare link LinkedIn del contatto e dell'azienda (icone cliccabili)
-- Se non ci sono link LinkedIn, mostrare badge grigio "LinkedIn: eseguire Deep Search"
-- I link LinkedIn vengono caricati tramite query `partner_social_links` filtrata per `partner_id`
-
-### 9. File modificati
+### 6. File modificati
 
 | File | Azione |
 |------|--------|
-| Migrazione DB | Crea tabella `workspace_documents` + RLS + bucket `workspace-docs` |
-| `src/components/workspace/GoalBar.tsx` | Aggiunge area documenti e link di riferimento |
-| `src/pages/Workspace.tsx` | Gestisce stato documenti e link |
-| `src/hooks/useEmailGenerator.ts` | Accetta document_ids e reference_urls |
-| `supabase/functions/generate-email/index.ts` | Fetch documenti, scrape link, fetch social links LinkedIn |
-| `src/components/workspace/EmailCanvas.tsx` | Mostra LinkedIn nella barra partner, passa docs/links al generator |
-| `src/components/workspace/ContactListPanel.tsx` | Mostra icona LinkedIn se disponibile |
+| `src/pages/Workspace.tsx` | Ristrutturazione completa layout, aggiunta batch generate, navigazione email |
+| `src/components/workspace/GoalBar.tsx` | Rinominato logicamente, trasformato in tab orizzontali con icone |
+| `src/components/workspace/ContactListPanel.tsx` | Riceve search come prop, palette aggiornata |
+| `src/components/workspace/EmailCanvas.tsx` | Canvas con bordi sottili, navigazione avanti/dietro, batch support |
 
-### 10. Nota su LinkedIn
+### 7. Flusso "Genera Tutte"
 
-Il sistema attuale NON usa un cookie di sessione LinkedIn (`li_at`) per lo scraping. La Deep Search trova i profili LinkedIn tramite ricerca web con Firecrawl e li salva in `partner_social_links`. Questo approccio non richiede configurazione aggiuntiva nel profilo utente. I link LinkedIn trovati vengono gia salvati e saranno ora visibili direttamente nel Workspace.
+1. Utente clicca "Genera Tutte"
+2. Il sistema prende tutte le attivita email filtrate nella lista
+3. Per ognuna, chiama `generate-email` in sequenza (con delay di 500ms tra una e l'altra per non sovraccaricare)
+4. Ogni email generata viene salvata in una mappa `activityId -> GeneratedEmail`
+5. Il canvas mostra la prima email e l'utente naviga con le frecce
+6. Una progress bar mostra "Generazione 3/12..."
+7. Al termine, toast "12 email generate con successo"
