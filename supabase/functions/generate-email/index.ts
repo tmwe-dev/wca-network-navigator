@@ -44,7 +44,21 @@ serve(async (req) => {
     const partner = activity.partners;
     const contact = activity.selected_contact;
 
-    // Fetch partner networks, services, social links in parallel
+    // --- VALIDATION: check contact has email ---
+    const contactEmail = contact?.email || partner.email || null;
+    if (!contactEmail) {
+      return new Response(
+        JSON.stringify({
+          error: "no_email",
+          message: "Nessun indirizzo email disponibile per questo contatto/partner",
+          partner_name: partner.company_name,
+          contact_name: contact?.name || null,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch partner networks, services, social links, settings in parallel
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
       supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
@@ -125,13 +139,21 @@ serve(async (req) => {
       if (contactLinkedIn) linkedinContext += `- Contatto: ${contactLinkedIn.url}\n`;
     }
 
+    // --- USE ALIASES as primary names ---
+    const recipientName = contact
+      ? (contact.contact_alias || contact.name)
+      : (partner.company_alias || partner.company_name);
+    const recipientCompany = partner.company_alias || partner.company_name;
+    const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
+    const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
+
     // Build context
     const partnerContext = `
 AZIENDA DESTINATARIA:
-- Nome: ${partner.company_name}${partner.company_alias ? ` (alias: ${partner.company_alias})` : ""}
+- Nome: ${recipientCompany}${partner.company_name !== recipientCompany ? ` (ragione sociale: ${partner.company_name})` : ""}
 - Città: ${partner.city}, ${partner.country_name} (${partner.country_code})
 - Sito web: ${partner.website || "N/A"}
-- Email generale: ${partner.email || "N/A"}
+- Email: ${contactEmail}
 - Rating: ${partner.rating ? `${partner.rating}/5` : "N/A"}
 - Network: ${networks.map((n: any) => n.network_name).join(", ") || "N/A"}
 - Servizi: ${services.map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}
@@ -141,16 +163,31 @@ ${linkedinContext}`;
 
     const contactContext = contact ? `
 CONTATTO DESTINATARIO:
-- Nome: ${contact.name}${contact.contact_alias ? ` (alias: ${contact.contact_alias})` : ""}
+- Nome da usare nel saluto: ${recipientName} (IMPORTANTE: usa SOLO questo nome, mai il nome completo con cognome)
 - Ruolo: ${contact.title || "N/A"}
-- Email: ${contact.email || "N/A"}
+- Email: ${contact.email || contactEmail}
 - Telefono: ${contact.direct_phone || contact.mobile || "N/A"}
-` : "Nessun contatto specifico selezionato — indirizzare all'azienda genericamente.";
+` : `Nessun contatto specifico selezionato — indirizzare all'azienda usando il nome "${recipientCompany}".`;
+
+    // --- SIGNATURE BLOCK ---
+    let signatureBlock = settings.ai_email_signature_block || "";
+    if (!signatureBlock.trim()) {
+      // Build automatic signature from profile fields
+      const sigParts: string[] = [];
+      if (senderAlias) sigParts.push(senderAlias);
+      if (settings.ai_contact_role) sigParts.push(settings.ai_contact_role);
+      if (senderCompanyAlias) sigParts.push(senderCompanyAlias);
+      if (settings.ai_phone_signature) sigParts.push(`Tel: ${settings.ai_phone_signature}`);
+      if (settings.ai_email_signature) sigParts.push(`Email: ${settings.ai_email_signature}`);
+      if (sigParts.length > 0) {
+        signatureBlock = sigParts.join("\n");
+      }
+    }
 
     const senderContext = `
 MITTENTE (TU):
-- Azienda: ${settings.ai_company_name || "N/A"}${settings.ai_company_alias ? ` (${settings.ai_company_alias})` : ""}
-- Referente: ${settings.ai_contact_name || "N/A"}${settings.ai_contact_alias ? ` (${settings.ai_contact_alias})` : ""}
+- Nome da usare: ${senderAlias}
+- Azienda: ${senderCompanyAlias}
 - Ruolo: ${settings.ai_contact_role || "N/A"}
 - Email: ${settings.ai_email_signature || "N/A"}
 - Telefono: ${settings.ai_phone_signature || "N/A"}
@@ -171,19 +208,22 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
 
     const systemPrompt = `Sei un esperto copywriter di email B2B nel settore della logistica e del freight forwarding internazionale. Scrivi email professionali, personalizzate e convincenti.
 
-REGOLE:
+REGOLE CRITICHE:
 1. Scrivi in ${effectiveLanguage === "entrambe" ? "inglese (adatta al paese del destinatario)" : effectiveLanguage}
 2. L'email deve essere specifica per il destinatario — usa i dati del profilo per personalizzare
 3. Mantieni il tono indicato dal profilo del mittente
-4. Includi una firma professionale con i dati del mittente
+4. NON INCLUDERE una firma — la firma viene aggiunta automaticamente dal sistema
 5. Non inventare informazioni — usa solo i dati forniti
 6. L'email deve essere pronta per l'invio, non un template generico
 7. Usa i network condivisi come punto di connessione se esistono
 8. Rispondi SOLO con il testo dell'email (no markdown, no commenti esterni)
 9. Includi un oggetto email nella prima riga nel formato "Subject: ..."
 10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email
-11. Se sono forniti documenti di riferimento o informazioni da link, usali per arricchire il contenuto dell'email
-12. Se sono disponibili profili LinkedIn, puoi menzionare la connessione professionale`;
+11. Se sono forniti documenti di riferimento o informazioni da link, usali per arricchire il contenuto
+12. Se sono disponibili profili LinkedIn, puoi menzionare la connessione professionale
+13. IMPORTANTE: Usa SEMPRE l'alias/nome breve del destinatario nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Mai usare nome e cognome completi.
+14. IMPORTANTE: Usa SEMPRE l'alias/nome breve del mittente, mai il nome completo con cognome.
+15. Il corpo dell'email deve terminare con un saluto di chiusura (es. "Best regards," o "Cordiali saluti,") seguito dal nome del mittente. NON aggiungere dettagli come ruolo, azienda, telefono, email — quelli sono nella firma automatica.`;
 
     const userPrompt = `${senderContext}
 
@@ -245,14 +285,21 @@ Genera l'email completa con oggetto e corpo.`;
       body = content.substring(subjectMatch[0].length).trim();
     }
 
+    // Append signature block to body
+    if (signatureBlock.trim()) {
+      body = body + "\n\n" + signatureBlock;
+    }
+
     return new Response(
       JSON.stringify({
         subject,
         body,
         full_content: content,
         partner_name: partner.company_name,
-        contact_name: contact?.name || null,
-        contact_email: contact?.email || partner.email || null,
+        contact_name: contact?.contact_alias || contact?.name || null,
+        contact_email: contactEmail,
+        has_contact: !!contact,
+        used_partner_email: !contact?.email && !!partner.email,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

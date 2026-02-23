@@ -17,6 +17,7 @@ import { toast } from "sonner";
 const AI_KEYS = [
   "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_alias",
   "ai_contact_role", "ai_email_signature", "ai_phone_signature",
+  "ai_email_signature_block",
   "ai_knowledge_base",
   "ai_tone", "ai_language", "ai_style_instructions",
   "ai_sector", "ai_networks", "ai_sector_notes",
@@ -119,6 +120,19 @@ export default function AIProfileSettings() {
               <Label className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Telefono firma</Label>
               <Input value={fields.ai_phone_signature} onChange={e => set("ai_phone_signature", e.target.value)} placeholder="+39 02 1234567" />
             </div>
+          </div>
+          {/* Signature block */}
+          <div className="space-y-1.5 pt-2 border-t border-border/50">
+            <Label className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Firma Email (Signature)</Label>
+            <Textarea
+              value={fields.ai_email_signature_block}
+              onChange={e => set("ai_email_signature_block", e.target.value)}
+              placeholder={`Best regards,\nMarco Rossi\nBusiness Development Manager\nGlobal Freight Solutions Srl\nTel: +39 02 1234567\nEmail: marco@gfs.it`}
+              className="min-h-[120px] text-sm font-mono"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Se lasciato vuoto, la firma viene generata automaticamente dai campi sopra (alias, ruolo, azienda, telefono, email).
+            </p>
           </div>
         </CardContent>
       </Card>

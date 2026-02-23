@@ -2,17 +2,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import {
   Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw,
   Mail, User, Building2, CheckCircle2, AlertCircle,
-  ChevronLeft, ChevronRight, Zap
+  ChevronLeft, ChevronRight, Zap, AtSign
 } from "lucide-react";
 import { type AllActivity } from "@/hooks/useActivities";
 import { type GeneratedEmail, useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useSocialLinks } from "@/hooks/useSocialLinks";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -54,6 +54,7 @@ export default function EmailCanvas({
   totalEmails, batchGenerating, batchProgress
 }: EmailCanvasProps) {
   const { generate, isGenerating } = useEmailGenerator();
+  const { data: settings } = useAppSettings();
   const [editMode, setEditMode] = useState(false);
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
@@ -65,7 +66,11 @@ export default function EmailCanvas({
   const contactLinkedIn = socialLinks.find(
     (l) => l.platform === "linkedin" && l.contact_id === activity?.selected_contact_id
   );
-  const hasAnyLinkedIn = !!companyLinkedIn || !!contactLinkedIn;
+
+  // Sender info from settings
+  const senderName = settings?.ai_contact_alias || settings?.ai_contact_name || "";
+  const senderCompany = settings?.ai_company_alias || settings?.ai_company_name || "";
+  const senderEmail = settings?.ai_email_signature || "";
 
   // Current email from the map
   const currentStoredEmail = activity ? generatedEmails.get(activity.id) : null;
@@ -95,7 +100,6 @@ export default function EmailCanvas({
     }
   };
 
-  // Sync edit fields when navigating or when stored email changes
   const displayEmail = currentStoredEmail;
   const displaySubject = editMode ? editSubject : (displayEmail?.subject || "");
   const displayBody = editMode ? editBody : (displayEmail?.body || "");
@@ -158,72 +162,6 @@ export default function EmailCanvas({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Partner info bar */}
-      <div className="p-3 border-b border-stone-200/60 bg-white/60">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-violet-500" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-stone-700">{partner?.company_name}</span>
-                {partner?.company_alias && (
-                  <Badge className="text-[9px] bg-stone-100 text-stone-500 hover:bg-stone-100 border-0">{partner.company_alias}</Badge>
-                )}
-                <span className="text-sm">{getCountryFlag(partner?.country_code || "")}</span>
-                {companyLinkedIn && (
-                  <a href={companyLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-50 hover:bg-blue-100 transition-colors">
-                    <LinkedInIcon className="w-3 h-3 text-blue-600" />
-                  </a>
-                )}
-              </div>
-              {contact ? (
-                <div className="flex items-center gap-1.5 text-xs text-stone-500">
-                  <User className="w-3 h-3" />
-                  <span>{contact.contact_alias || contact.name}</span>
-                  {contact.title && <span className="text-violet-400">· {contact.title}</span>}
-                  {contact.email && (
-                    <>
-                      <Mail className="w-3 h-3 ml-1 text-stone-400" />
-                      <span className="text-stone-400">{contact.email}</span>
-                    </>
-                  )}
-                  {contactLinkedIn && (
-                    <a href={contactLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-50 hover:bg-blue-100 transition-colors ml-0.5">
-                      <LinkedInIcon className="w-2.5 h-2.5 text-blue-600" />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <span className="text-xs text-amber-500">Nessun contatto selezionato</span>
-              )}
-              {!hasAnyLinkedIn && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <AlertCircle className="w-3 h-3 text-stone-400" />
-                  <span className="text-[10px] text-stone-400">LinkedIn non disponibile — eseguire Deep Search</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || batchGenerating}
-            size="sm"
-            className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white shadow-sm"
-          >
-            {isGenerating ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : displayEmail ? (
-              <RotateCcw className="w-3.5 h-3.5" />
-            ) : (
-              <Wand2 className="w-3.5 h-3.5" />
-            )}
-            {displayEmail ? "Rigenera" : "Genera"}
-          </Button>
-        </div>
-      </div>
-
       {/* Batch progress */}
       {batchGenerating && batchProgress && (
         <div className="px-4 py-2 border-b border-stone-200/60 bg-violet-50/50">
@@ -235,35 +173,50 @@ export default function EmailCanvas({
         </div>
       )}
 
-      {/* Email navigation */}
+      {/* Email navigation bar */}
       {totalEmails > 0 && (
-        <div className="px-4 py-2 border-b border-stone-200/60 flex items-center justify-center gap-3">
+        <div className="px-4 py-1.5 border-b border-stone-200/60 flex items-center justify-between bg-stone-50/50">
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost" size="sm"
+              className="h-6 w-6 p-0 text-stone-400 hover:text-violet-500"
+              disabled={currentEmailIndex <= 0}
+              onClick={() => onIndexChange(currentEmailIndex - 1)}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-xs font-medium text-stone-500 min-w-[50px] text-center">
+              {currentEmailIndex + 1} / {totalEmails}
+            </span>
+            <Button
+              variant="ghost" size="sm"
+              className="h-6 w-6 p-0 text-stone-400 hover:text-violet-500"
+              disabled={currentEmailIndex >= totalEmails - 1}
+              onClick={() => onIndexChange(currentEmailIndex + 1)}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
           <Button
-            variant="ghost"
+            onClick={handleGenerate}
+            disabled={isGenerating || batchGenerating}
             size="sm"
-            className="h-7 w-7 p-0 text-stone-400 hover:text-violet-500"
-            disabled={currentEmailIndex <= 0}
-            onClick={() => onIndexChange(currentEmailIndex - 1)}
+            className="h-7 gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs shadow-sm"
           >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-xs font-medium text-stone-500 min-w-[60px] text-center">
-            {currentEmailIndex + 1} / {totalEmails}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-stone-400 hover:text-violet-500"
-            disabled={currentEmailIndex >= totalEmails - 1}
-            onClick={() => onIndexChange(currentEmailIndex + 1)}
-          >
-            <ChevronRight className="w-4 h-4" />
+            {isGenerating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : displayEmail ? (
+              <RotateCcw className="w-3.5 h-3.5" />
+            ) : (
+              <Wand2 className="w-3.5 h-3.5" />
+            )}
+            {displayEmail ? "Rigenera" : "Genera"}
           </Button>
         </div>
       )}
 
-      {/* Email content - 3D Canvas style */}
-      <ScrollArea className="flex-1 bg-stone-50/50">
+      {/* Email content */}
+      <ScrollArea className="flex-1">
         {isGenerating ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="relative">
@@ -273,47 +226,101 @@ export default function EmailCanvas({
               <div className="absolute inset-0 rounded-full border-2 border-violet-300/30 animate-ping" />
             </div>
             <p className="text-sm text-stone-500">Generazione in corso...</p>
-            <p className="text-xs text-stone-400">Analisi profilo {partner?.company_name}</p>
+            <p className="text-xs text-stone-400">Analisi profilo {partner?.company_alias || partner?.company_name}</p>
           </div>
         ) : displayEmail ? (
-          <div className="p-5">
-            {/* 3D Canvas Card */}
-            <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-4 transition-all">
-              {/* Subject */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Oggetto</label>
-                {editMode ? (
-                  <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} className="text-sm font-medium border-stone-200 focus:ring-violet-300/50" />
-                ) : (
-                  <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-100 text-sm font-medium text-stone-700">{displaySubject}</div>
-                )}
+          <div className="p-4">
+            {/* Email card - mail client style */}
+            <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+              {/* Email header - Da / A / Oggetto */}
+              <div className="border-b border-stone-100 px-5 pt-4 pb-3 space-y-2 bg-stone-50/30">
+                {/* Da */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-stone-400 w-10 shrink-0 font-medium">Da:</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
+                      <User className="w-3 h-3 text-violet-500" />
+                    </div>
+                    <span className="font-medium text-stone-700">{senderName}</span>
+                    {senderCompany && <span className="text-stone-400">({senderCompany})</span>}
+                    {senderEmail && <span className="text-stone-400">&lt;{senderEmail}&gt;</span>}
+                  </div>
+                </div>
+                {/* A */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-stone-400 w-10 shrink-0 font-medium">A:</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center">
+                      <AtSign className="w-3 h-3 text-stone-500" />
+                    </div>
+                    <span className="font-medium text-stone-700">
+                      {contact?.contact_alias || contact?.name || partner?.company_name}
+                    </span>
+                    {displayEmail.contactEmail ? (
+                      <span className="text-stone-400">&lt;{displayEmail.contactEmail}&gt;</span>
+                    ) : (
+                      <span className="text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Nessun indirizzo
+                      </span>
+                    )}
+                    {contactLinkedIn && (
+                      <a href={contactLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-50 hover:bg-blue-100 transition-colors">
+                        <LinkedInIcon className="w-2.5 h-2.5 text-blue-600" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {/* Oggetto */}
+                <div className="flex items-start gap-2 text-xs">
+                  <span className="text-stone-400 w-10 shrink-0 font-medium pt-0.5">Ogg:</span>
+                  {editMode ? (
+                    <Input
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      className="h-7 text-xs font-medium border-stone-200 focus:ring-violet-300/50"
+                    />
+                  ) : (
+                    <span className="font-semibold text-stone-800 leading-snug">{displaySubject}</span>
+                  )}
+                </div>
+                {/* Partner info compact */}
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[10px] text-stone-400">
+                    {getCountryFlag(partner?.country_code || "")} {partner?.city}, {partner?.country_name}
+                  </span>
+                  {companyLinkedIn && (
+                    <a href={companyLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-600">
+                      <LinkedInIcon className="w-3 h-3 text-blue-500" />
+                      LinkedIn
+                    </a>
+                  )}
+                </div>
               </div>
 
-              {/* Recipient */}
-              <div className="flex items-center gap-2 text-xs text-stone-400">
-                <Mail className="w-3.5 h-3.5" />
-                <span>A: {displayEmail.contactEmail || "Nessun indirizzo"}</span>
-              </div>
-
-              {/* Body */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Corpo</label>
+              {/* Email body */}
+              <div className="px-5 py-5">
                 {editMode ? (
-                  <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} className="min-h-[300px] text-sm leading-relaxed border-stone-200 focus:ring-violet-300/50" />
+                  <Textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    className="min-h-[350px] text-sm leading-relaxed border-stone-200 focus:ring-violet-300/50 font-[inherit]"
+                  />
                 ) : (
-                  <div className="p-4 rounded-xl bg-stone-50/80 border border-stone-100 text-sm leading-relaxed text-stone-600 whitespace-pre-wrap">{displayBody}</div>
+                  <div className="text-sm leading-[1.75] text-stone-700 whitespace-pre-wrap">
+                    {displayBody}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 mt-4">
+            {/* Actions bar */}
+            <div className="flex items-center gap-2 mt-3">
               <Button
                 variant={editMode ? "default" : "outline"}
                 size="sm"
                 onClick={() => editMode ? setEditMode(false) : handleStartEdit()}
                 className={cn(
-                  "gap-1.5",
+                  "gap-1.5 h-8 text-xs",
                   editMode
                     ? "bg-violet-500 hover:bg-violet-600 text-white"
                     : "border-stone-200 text-stone-500 hover:bg-violet-50"
@@ -322,7 +329,7 @@ export default function EmailCanvas({
                 {editMode ? <Eye className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
                 {editMode ? "Anteprima" : "Modifica"}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 border-stone-200 text-stone-500 hover:bg-violet-50">
+              <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 h-8 text-xs border-stone-200 text-stone-500 hover:bg-violet-50">
                 <Copy className="w-3.5 h-3.5" />
                 Copia
               </Button>
@@ -331,7 +338,7 @@ export default function EmailCanvas({
                 size="sm"
                 onClick={handleSend}
                 disabled={sending || !displayEmail.contactEmail}
-                className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white"
+                className="gap-1.5 h-8 text-xs bg-violet-500 hover:bg-violet-600 text-white"
               >
                 {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 Invia
@@ -340,10 +347,23 @@ export default function EmailCanvas({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
-            <CheckCircle2 className="w-10 h-10 text-stone-300" />
+            <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center">
+              <Wand2 className="w-7 h-7 text-stone-300" />
+            </div>
             <p className="text-sm text-stone-400">
-              Compila il Goal e la Proposta, poi clicca <strong className="text-violet-500">Genera</strong>
+              Compila Goal e Proposta, poi clicca <strong className="text-violet-500">Genera</strong>
             </p>
+            {!totalEmails && (
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                size="sm"
+                className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white mt-2"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                Genera Email
+              </Button>
+            )}
           </div>
         )}
       </ScrollArea>

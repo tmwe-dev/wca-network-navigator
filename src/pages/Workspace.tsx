@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
@@ -27,6 +27,9 @@ export default function Workspace() {
   const [search, setSearch] = useState("");
   const { documents, uploading, upload, remove } = useWorkspaceDocuments();
 
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // Batch email state
   const [generatedEmails, setGeneratedEmails] = useState<Map<string, StoredEmail>>(new Map());
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
@@ -36,9 +39,27 @@ export default function Workspace() {
   const { data: activities } = useAllActivities();
   const { generate } = useEmailGenerator();
 
-  const emailActivities = (activities || []).filter(
-    (a) => a.activity_type === "send_email" && a.status !== "completed"
-  );
+  const emailActivities = useMemo(() =>
+    (activities || []).filter(
+      (a) => a.activity_type === "send_email" && a.status !== "completed"
+    ), [activities]);
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(emailActivities.map((a) => a.id)));
+  }, [emailActivities]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
   const handleEmailGenerated = useCallback((activityId: string, email: StoredEmail) => {
     setGeneratedEmails((prev) => {
@@ -49,8 +70,13 @@ export default function Workspace() {
   }, []);
 
   const handleGenerateAll = async () => {
-    if (emailActivities.length === 0) return;
-    const toGenerate = emailActivities.slice(0, 20);
+    // Generate only for selected items (or all if none selected)
+    const targets = selectedIds.size > 0
+      ? emailActivities.filter((a) => selectedIds.has(a.id))
+      : emailActivities;
+    const toGenerate = targets.slice(0, 20);
+    if (toGenerate.length === 0) return;
+
     setBatchGenerating(true);
     setBatchProgress({ current: 0, total: toGenerate.length });
 
@@ -102,6 +128,8 @@ export default function Workspace() {
     }
   };
 
+  const selectedCount = selectedIds.size;
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-stone-50/80">
       {/* Header */}
@@ -134,7 +162,7 @@ export default function Workspace() {
             className="h-8 gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs shadow-sm"
           >
             <Zap className="w-3.5 h-3.5" />
-            Genera Tutte
+            {selectedCount > 0 ? `Genera (${selectedCount})` : "Genera Tutte"}
           </Button>
         </div>
       </div>
@@ -164,6 +192,10 @@ export default function Workspace() {
             selectedActivityId={selectedActivity?.id || null}
             onSelect={setSelectedActivity}
             search={search}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={handleDeselectAll}
           />
         </div>
 
