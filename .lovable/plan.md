@@ -1,55 +1,53 @@
 
-
-# Piano: Alias, Filtri Contatto e Cancella Attivita
+# Piano: Seleziona tutto e cancella con un click
 
 ## Obiettivo
 
-Migliorare la vista Attivita mostrando gli alias (azienda e contatto), aggiungere filtri per partner senza email/contatto, un pulsante "Genera Alias" e la possibilita di cancellare attivita (singole o in bulk).
+Aggiungere un checkbox "Seleziona tutto" nella barra dei risultati che seleziona tutte le attivita filtrate, permettendo di cancellarle con un solo click senza dover confermare due volte.
 
-## Modifiche
+## Modifiche in `ActivitiesTab.tsx`
 
-### 1. Query `useAllActivities` -- aggiungere alias
+### 1. Stato selezione
 
-Estendere la select per includere:
-- `partners.company_alias` nel join partners
-- `partner_contacts.contact_alias` nel join selected_contact
+Aggiungere uno stato `selectedIds` (Set di stringhe) per tracciare le attivita selezionate.
 
-### 2. Hook `useDeleteActivities` (nuovo in useActivities.ts)
+### 2. Checkbox "Seleziona tutto" nella barra risultati
 
-Aggiungere una mutation per cancellare attivita per lista di ID:
+Nella riga che mostra il conteggio risultati, aggiungere:
+- Un Checkbox che seleziona/deseleziona tutte le attivita filtrate
+- Label: "Seleziona tutto (N)"
+- Quando attivo, popola `selectedIds` con tutti gli ID filtrati
+- Quando disattivato, svuota `selectedIds`
+
+### 3. Checkbox per riga
+
+Aggiungere un Checkbox a sinistra di ogni `ActivityRow` per selezione individuale.
+
+### 4. Barra azioni bulk
+
+Quando ci sono elementi selezionati, mostrare:
+- Contatore: "N selezionate"
+- Pulsante "Cancella selezionate" (destructive) che apre il dialog di conferma solo per le selezionate
+- Il pulsante "Cancella filtrate" attuale rimane ma opera sulle filtrate (non sulle selezionate)
+
+### 5. Logica cancellazione
+
+- "Cancella selezionate": cancella solo gli ID in `selectedIds`
+- Dopo la cancellazione, svuota `selectedIds`
+
+## Dettagli tecnici
+
+| Elemento | Dettaglio |
+|----------|-----------|
+| File modificato | `src/components/agenda/ActivitiesTab.tsx` |
+| Nuovo import | `Checkbox` da `@/components/ui/checkbox` |
+| Nuovo stato | `selectedIds: Set<string>` |
+| Props ActivityRow | Aggiunge `selected: boolean` e `onToggleSelect: () => void` |
+
+### Flusso
+
 ```text
-DELETE FROM activities WHERE id IN (...)
+Filtri attivi --> [x] Seleziona tutto (47) --> [Cancella selezionate (47)]
+                                                      |
+                                                Dialog conferma --> Cancella
 ```
-Invalida le query `all-activities` e `activities` al successo.
-
-### 3. Componente `ActivitiesTab.tsx` -- nuove funzionalita
-
-**a) Mostrare alias nella riga attivita:**
-- Nome azienda: mostra `company_alias` come badge accanto a `company_name`
-- Contatto selezionato: mostra `contact_alias` (cognome) accanto al nome completo
-
-**b) Nuovi filtri:**
-- "Contatto" con opzioni: Tutti / Senza email / Senza contatto / Senza alias
-  - "Senza email": il partner non ha contatti con email (basato su contactsMap)
-  - "Senza contatto": il partner non ha contatti affatto (contactsMap vuoto)
-  - "Senza alias": il partner non ha company_alias o il contatto selezionato non ha contact_alias
-
-**c) Pulsante "Genera Alias" sopra i filtri:**
-- Chiama la edge function `generate-aliases` passando i country codes dei paesi visibili
-- Mostra spinner durante l'elaborazione
-- Al completamento, invalida le query e mostra toast con risultato
-
-**d) Cancella attivita:**
-- Pulsante cestino su ogni riga attivita per cancellazione singola
-- Quando il filtro "Senza email" o "Senza contatto" e attivo, mostra un pulsante bulk "Cancella filtrate" nella barra sopra i risultati che cancella tutte le attivita visibili
-- Conferma con dialog prima della cancellazione bulk
-
-### 4. Riepilogo file modificati
-
-| File | Modifica |
-|------|----------|
-| `src/hooks/useActivities.ts` | Aggiunge alias nei tipi e nella query; aggiunge `useDeleteActivities` |
-| `src/components/agenda/ActivitiesTab.tsx` | Aggiunge alias visibili, filtro contatto, pulsante Genera Alias, cancella singola/bulk |
-
-Nessuna modifica al database necessaria -- i campi `company_alias` e `contact_alias` esistono gia.
-
