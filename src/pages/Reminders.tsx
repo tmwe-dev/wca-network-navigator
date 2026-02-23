@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Check, ChevronLeft, ChevronRight, ListTodo } from "lucide-react";
 import { useReminders, useCompleteReminder } from "@/hooks/useReminders";
 import { getCountryFlag, getPriorityColor } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
+const ActivitiesTab = lazy(() => import("@/components/agenda/ActivitiesTab"));
 import {
   format,
   startOfMonth,
@@ -61,6 +62,10 @@ export default function Reminders() {
           </TabsTrigger>
           <TabsTrigger value="completed">
             Completed ({completedReminders.length})
+          </TabsTrigger>
+          <TabsTrigger value="activities">
+            <ListTodo className="w-4 h-4 mr-2" />
+            Attività
           </TabsTrigger>
         </TabsList>
 
@@ -249,6 +254,11 @@ export default function Reminders() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="activities">
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+            <ActivitiesTab />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
