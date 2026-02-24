@@ -1003,6 +1003,7 @@ serve(async (req) => {
     // Tool calling loop — track last partner list result for structured data
     let iterations = 0;
     let lastPartnerResult: any = null;
+    let lastJobCreated: any = null;
 
     while (assistantMessage?.tool_calls?.length && iterations < 5) {
       iterations++;
@@ -1042,6 +1043,17 @@ serve(async (req) => {
             certifications: certMap[p.id] || [],
           }));
         }
+
+        // Track job creation for frontend notification
+        if (tc.function.name === "create_download_job" && tr?.success && tr?.job_id) {
+          lastJobCreated = {
+            job_id: tr.job_id,
+            country: tr.country,
+            mode: tr.mode,
+            total_partners: tr.total_partners,
+            estimated_time_minutes: tr.estimated_time_minutes,
+          };
+        }
       }
 
       allMessages.push(assistantMessage);
@@ -1074,6 +1086,9 @@ serve(async (req) => {
     if (lastPartnerResult && lastPartnerResult.length > 0) {
       finalContent += `\n\n---STRUCTURED_DATA---\n${JSON.stringify({ type: "partners", data: lastPartnerResult })}`;
     }
+    if (lastJobCreated) {
+      finalContent += `\n\n---JOB_CREATED---\n${JSON.stringify(lastJobCreated)}`;
+    }
 
     if (finalContent) {
       // Consume credits before returning
@@ -1102,6 +1117,9 @@ serve(async (req) => {
     
     if (lastPartnerResult && lastPartnerResult.length > 0) {
       finalText += `\n\n---STRUCTURED_DATA---\n${JSON.stringify({ type: "partners", data: lastPartnerResult })}`;
+    }
+    if (lastJobCreated) {
+      finalText += `\n\n---JOB_CREATED---\n${JSON.stringify(lastJobCreated)}`;
     }
 
     // Consume credits before returning
