@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import { Bot, Send, X, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
+import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,6 +45,7 @@ interface Props {
 export function AiAssistantDialog({ open, onClose, context }: Props) {
   const isDark = useContext(ThemeCtx);
   const th = t(isDark);
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -292,7 +294,24 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                     return (
                       <>
                         <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
-                          <ReactMarkdown>{text}</ReactMarkdown>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ href, children }) => {
+                                const isInternal = href?.startsWith("/");
+                                if (isInternal) {
+                                  return (
+                                    <button
+                                      className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-medium"
+                                      onClick={() => { navigate(href!); onClose(); }}
+                                    >
+                                      {children}
+                                    </button>
+                                  );
+                                }
+                                return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+                              }
+                            }}
+                          >{text}</ReactMarkdown>
                         </div>
                         {partners.length > 0 && <AiResultsPanel partners={partners} />}
                       </>
