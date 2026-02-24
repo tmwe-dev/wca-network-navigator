@@ -1,25 +1,52 @@
 import { useState, useRef, useEffect, useCallback, useContext } from "react";
-import { Bot, Send, X, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Download } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
+const JOB_CREATED_DELIMITER = "---JOB_CREATED---";
 
-function parseStructuredMessage(content: string): { text: string; partners: StructuredPartner[] } {
-  const idx = content.indexOf(STRUCTURED_DELIMITER);
-  if (idx === -1) return { text: content, partners: [] };
-  const text = content.substring(0, idx).trim();
-  const jsonStr = content.substring(idx + STRUCTURED_DELIMITER.length).trim();
-  try {
-    const parsed = JSON.parse(jsonStr);
-    if (parsed?.type === "partners" && Array.isArray(parsed.data)) {
-      return { text, partners: parsed.data };
-    }
-  } catch { /* ignore */ }
-  return { text: content, partners: [] };
+export interface JobCreatedInfo {
+  job_id: string;
+  country: string;
+  mode: string;
+  total_partners: number;
+  estimated_time_minutes: number;
+}
+
+function parseStructuredMessage(content: string): { text: string; partners: StructuredPartner[]; jobCreated: JobCreatedInfo | null } {
+  let text = content;
+  let partners: StructuredPartner[] = [];
+  let jobCreated: JobCreatedInfo | null = null;
+
+  // Extract job created block
+  const jobIdx = text.indexOf(JOB_CREATED_DELIMITER);
+  if (jobIdx !== -1) {
+    const jsonStr = text.substring(jobIdx + JOB_CREATED_DELIMITER.length).trim();
+    text = text.substring(0, jobIdx).trim();
+    try {
+      jobCreated = JSON.parse(jsonStr.split("\n")[0]);
+    } catch { /* ignore */ }
+  }
+
+  // Extract structured data block
+  const idx = text.indexOf(STRUCTURED_DELIMITER);
+  if (idx !== -1) {
+    const jsonStr = text.substring(idx + STRUCTURED_DELIMITER.length).trim();
+    text = text.substring(0, idx).trim();
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed?.type === "partners" && Array.isArray(parsed.data)) {
+        partners = parsed.data;
+      }
+    } catch { /* ignore */ }
+  }
+
+  return { text, partners, jobCreated };
 }
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -32,6 +59,34 @@ const QUICK_PROMPTS = [
   "Job attivi in questo momento",
   "Partner con rating più alto",
 ];
+
+function JobCreatedBadge({ job, isDark }: { job: JobCreatedInfo; isDark: boolean }) {
+  useEffect(() => {
+    toast({
+      title: "🚀 Download avviato dall'AI",
+      description: `${job.country} — ${job.total_partners} partner (${job.mode}). ~${job.estimated_time_minutes} min`,
+    });
+  }, [job.job_id]);
+
+  return (
+    <div
+      className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium animate-pulse ${
+        isDark
+          ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300"
+          : "bg-emerald-50 border border-emerald-200 text-emerald-700"
+      }`}
+    >
+      <Rocket className="w-3.5 h-3.5 shrink-0" />
+      <span className="flex-1">
+        Job creato per <strong>{job.country}</strong> — {job.total_partners} partner
+      </span>
+      <span className="flex items-center gap-1 opacity-70">
+        <Clock className="w-3 h-3" />
+        ~{job.estimated_time_minutes} min
+      </span>
+    </div>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -290,7 +345,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
               >
                 {msg.role === "assistant" ? (
                   (() => {
-                    const { text, partners } = parseStructuredMessage(msg.content);
+                    const { text, partners, jobCreated } = parseStructuredMessage(msg.content);
                     return (
                       <>
                         <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
@@ -314,6 +369,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                           >{text}</ReactMarkdown>
                         </div>
                         {partners.length > 0 && <AiResultsPanel partners={partners} />}
+                        {jobCreated && <JobCreatedBadge job={jobCreated} isDark={isDark} />}
                       </>
                     );
                   })()
