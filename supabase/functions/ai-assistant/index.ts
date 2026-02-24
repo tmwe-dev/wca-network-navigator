@@ -74,6 +74,15 @@ Quando l'utente chiede di "trovare" partner con caratteristiche specifiche (serv
 
 Se l'utente menziona un partner per nome, cercalo prima con search_partners e poi usa get_partner_detail per il dettaglio completo. Se il nome è ambiguo, mostra le opzioni trovate e chiedi quale intende.
 
+CREAZIONE JOB DI DOWNLOAD
+
+Puoi creare job di download direttamente! Quando l'utente chiede di "scaricare", "avviare il download", "aggiornare i profili" di un paese, usa il tool create_download_job. Prima di creare il job:
+1. Verifica lo stato del paese con get_country_overview e get_directory_status per capire cosa manca.
+2. Controlla se ci sono job già attivi con list_jobs (status: running o pending).
+3. Scegli la modalità appropriata: 'no_profile' per completare profili mancanti, 'new' per partner non ancora nel DB, 'all' per riscaricare tutto.
+4. Se il job viene creato con successo, comunica chiaramente che il download partirà in automatico e che l'utente può monitorarlo dall'Operations Center.
+5. IMPORTANTE: Se la directory cache non esiste per quel paese, spiega che è necessario prima fare una scansione directory dall'Operations Center.
+
 FORMATTAZIONE
 
 Quando presenti liste di partner, usa tabelle markdown con colonne: Nome, Città, Email, Rating. Per le statistiche paese, usa tabelle con: Paese, Partner, Profili, Email, Telefoni, Copertura. Per i job, mostra: Paese, Stato, Progresso, Network.
@@ -226,6 +235,25 @@ const tools = [
           country_code: { type: "string", description: "Optional: filter by country" },
           limit: { type: "number", description: "Max results (default 30)" },
         },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_download_job",
+      description: "Create a download job to scrape partner profiles from the WCA directory. Supports 3 modes: 'new' (only partners not yet in DB), 'no_profile' (partners in DB but missing profile HTML), 'all' (re-download everything). Before calling this, you MUST use search_partners or get_country_overview to verify there are actually partners to download. Always check for active jobs first with list_jobs.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "ISO 2-letter country code (required)" },
+          country_name: { type: "string", description: "Full country name (required)" },
+          mode: { type: "string", enum: ["new", "no_profile", "all"], description: "Download mode: 'new' = only new partners not in DB, 'no_profile' = partners missing profile HTML, 'all' = re-download all. Default: no_profile" },
+          network_name: { type: "string", description: "Network filter (default: 'Tutti' for all networks)" },
+          delay_seconds: { type: "number", description: "Delay between requests in seconds (min 10, default 15)" },
+        },
+        required: ["country_code", "country_name"],
         additionalProperties: false,
       },
     },
@@ -628,6 +656,168 @@ async function executePartnersWithoutContacts(args: Record<string, unknown>) {
   };
 }
 
+async function executeCreateDownloadJob(args: Record<string, unknown>) {
+  const countryCode = String(args.country_code || "").toUpperCase();
+  const countryName = String(args.country_name || "");
+  const mode = String(args.mode || "no_profile");
+  const networkName = String(args.network_name || "Tutti");
+  const delaySec = Math.max(10, Number(args.delay_seconds) || 15);
+
+  if (!countryCode || !countryName) {
+    return { error: "country_code e country_name sono obbligatori" };
+  }
+
+  // Check for active jobs
+  const { data: activeJobs } = await supabase
+    .from("download_jobs")
+    .select("id, country_code, status")
+    .in("status", ["pending", "running"])
+    .limit(5);
+
+  if (activeJobs && activeJobs.length > 0) {
+    const sameCountry = activeJobs.find((j: any) => j.country_code === countryCode);
+    if (sameCountry) {
+      return { error: `Esiste già un job attivo per ${countryName} (${countryCode}). Attendi il completamento.`, active_job_id: sameCountry.id };
+    }
+    if (activeJobs.length >= 3) {
+      return { error: `Ci sono già ${activeJobs.length} job attivi. Attendi il completamento prima di avviarne altri.` };
+    }
+  }
+
+  // Get WCA IDs based on mode
+  let wcaIds: number[] = [];
+
+  if (mode === "new") {
+    const { data: cacheRows } = await supabase
+      .from("directory_cache")
+      .select("members")
+      .eq("country_code", countryCode);
+
+    if (!cacheRows || cacheRows.length === 0) {
+      return { error: `Nessuna directory cache trovata per ${countryName}. È necessario prima eseguire una scansione directory dall'Operations Center.` };
+    }
+
+    const dirIds: number[] = [];
+    for (const row of cacheRows) {
+      const members = row.members as any[];
+      if (Array.isArray(members)) {
+        for (const m of members) {
+          const id = typeof m === "object" ? m.wca_id || m.id : m;
+          if (id) dirIds.push(Number(id));
+        }
+      }
+    }
+
+    const { data: existing } = await supabase
+      .from("partners")
+      .select("wca_id")
+      .eq("country_code", countryCode)
+      .not("wca_id", "is", null);
+
+    const existingSet = new Set((existing || []).map((p: any) => p.wca_id));
+    wcaIds = [...new Set(dirIds)].filter(id => !existingSet.has(id));
+
+  } else if (mode === "no_profile") {
+    const { data: noProfile } = await supabase
+      .from("partners")
+      .select("wca_id")
+      .eq("country_code", countryCode)
+      .not("wca_id", "is", null)
+      .is("raw_profile_html", null);
+
+    wcaIds = (noProfile || []).map((p: any) => p.wca_id).filter(Boolean);
+
+    const { data: cacheRows } = await supabase
+      .from("directory_cache")
+      .select("members")
+      .eq("country_code", countryCode);
+
+    if (cacheRows && cacheRows.length > 0) {
+      const { data: allExisting } = await supabase
+        .from("partners")
+        .select("wca_id")
+        .eq("country_code", countryCode)
+        .not("wca_id", "is", null);
+
+      const existingSet = new Set((allExisting || []).map((p: any) => p.wca_id));
+
+      for (const row of cacheRows) {
+        const members = row.members as any[];
+        if (Array.isArray(members)) {
+          for (const m of members) {
+            const id = typeof m === "object" ? m.wca_id || m.id : m;
+            if (id && !existingSet.has(Number(id))) wcaIds.push(Number(id));
+          }
+        }
+      }
+    }
+
+    wcaIds = [...new Set(wcaIds)];
+
+  } else {
+    const { data: dbPartners } = await supabase
+      .from("partners")
+      .select("wca_id")
+      .eq("country_code", countryCode)
+      .not("wca_id", "is", null);
+
+    wcaIds = (dbPartners || []).map((p: any) => p.wca_id).filter(Boolean);
+
+    const { data: cacheRows } = await supabase
+      .from("directory_cache")
+      .select("members")
+      .eq("country_code", countryCode);
+
+    if (cacheRows) {
+      for (const row of cacheRows) {
+        const members = row.members as any[];
+        if (Array.isArray(members)) {
+          for (const m of members) {
+            const id = typeof m === "object" ? m.wca_id || m.id : m;
+            if (id) wcaIds.push(Number(id));
+          }
+        }
+      }
+    }
+
+    wcaIds = [...new Set(wcaIds)];
+  }
+
+  if (wcaIds.length === 0) {
+    const modeLabels: Record<string, string> = { new: "nuovi", no_profile: "senza profilo", all: "tutti" };
+    return { success: false, message: `Nessun partner da scaricare in modalità "${modeLabels[mode] || mode}" per ${countryName}. Il database è già completo per questo criterio.` };
+  }
+
+  const { data: job, error } = await supabase
+    .from("download_jobs")
+    .insert({
+      country_code: countryCode,
+      country_name: countryName,
+      network_name: networkName,
+      wca_ids: wcaIds as any,
+      total_count: wcaIds.length,
+      delay_seconds: delaySec,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: `Errore creazione job: ${error.message}` };
+
+  const modeLabels: Record<string, string> = { new: "Nuovi partner", no_profile: "Solo profili mancanti", all: "Aggiorna tutti" };
+
+  return {
+    success: true,
+    job_id: job.id,
+    country: `${countryName} (${countryCode})`,
+    mode: modeLabels[mode] || mode,
+    total_partners: wcaIds.length,
+    delay_seconds: delaySec,
+    estimated_time_minutes: Math.ceil(wcaIds.length * (delaySec + 5) / 60),
+    message: `Job creato con successo! ${wcaIds.length} partner da scaricare per ${countryName}. Il download partirà automaticamente in background. Puoi monitorare il progresso dall'Operations Center.`,
+  };
+}
+
 async function executeTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "search_partners": return executeSearchPartners(args);
@@ -639,6 +829,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     case "check_blacklist": return executeCheckBlacklist(args);
     case "list_reminders": return executeListReminders(args);
     case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
+    case "create_download_job": return executeCreateDownloadJob(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
