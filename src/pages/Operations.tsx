@@ -218,17 +218,11 @@ export default function Operations() {
             </div>
           </div>
 
-          {/* ═══ CAROUSEL CONTAINER ═══ */}
-          <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden">
-            <div
-              className="flex h-full gap-3 transition-transform duration-300 ease-out"
-              style={{
-                width: carouselStep === 0 ? "100%" : "200%",
-                transform: carouselStep === 1 ? "translateX(-50%)" : "translateX(0)",
-              }}
-            >
-              {/* ═══ SLIDE 0: Stats + CountryGrid + Placeholder ═══ */}
-              <div className="flex gap-3 h-full" style={{ width: carouselStep === 0 ? "100%" : "50%" }}>
+          {/* ═══ CONTENT ═══ */}
+          <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden relative">
+            {/* ═══ STEP 0: Stats + CountryGrid ═══ */}
+            {carouselStep === 0 && (
+              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-left-4 duration-200">
                 {/* COL 1: Stats sidebar */}
                 <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                   {globalStats ? (
@@ -275,7 +269,7 @@ export default function Operations() {
                   )}
                 </div>
 
-              {/* COL 2: Country Grid + Job monitors */}
+                {/* COL 2: Country Grid + Job monitors */}
                 <div className="flex-1 min-h-0 flex flex-col gap-2">
                   <CountryGrid
                     selected={selectedCountries}
@@ -294,9 +288,11 @@ export default function Operations() {
                   )}
                 </div>
               </div>
+            )}
 
-              {/* ═══ SLIDE 1: Detail Panel + Partner List ═══ */}
-              <div className="flex gap-3 h-full" style={{ width: "50%" }}>
+            {/* ═══ STEP 1: Detail Panel + Partner List ═══ */}
+            {carouselStep === 1 && (
+              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-right-4 duration-200">
                 {/* LEFT: Partner Detail (40%) */}
                 <div className={cn(
                   "w-[40%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden",
@@ -328,27 +324,25 @@ export default function Operations() {
                     "flex-1 min-h-0 rounded-2xl border overflow-hidden",
                     isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
                   )}>
-                    {carouselStep === 1 && (
-                      <PartnerListPanel
-                        countryCodes={selectedCountries.map(c => c.code)}
-                        countryNames={selectedCountries.map(c => c.name)}
-                        selectedCountries={selectedCountries}
-                        isDark={isDark}
-                        onDeepSearch={handleDeepSearch}
-                        onGenerateAliases={handleGenerateAliases}
-                        deepSearchRunning={deepSearchRunning}
-                        aliasGenerating={aliasGenerating}
-                        onJobCreated={startJob}
-                        directoryOnly={directoryOnly}
-                        onDirectoryOnlyChange={setDirectoryOnly}
-                        onSelectPartner={setSelectedPartnerId}
-                        selectedPartnerId={selectedPartnerId}
-                      />
-                    )}
+                    <PartnerListPanel
+                      countryCodes={selectedCountries.map(c => c.code)}
+                      countryNames={selectedCountries.map(c => c.name)}
+                      selectedCountries={selectedCountries}
+                      isDark={isDark}
+                      onDeepSearch={handleDeepSearch}
+                      onGenerateAliases={handleGenerateAliases}
+                      deepSearchRunning={deepSearchRunning}
+                      aliasGenerating={aliasGenerating}
+                      onJobCreated={startJob}
+                      directoryOnly={directoryOnly}
+                      onDirectoryOnlyChange={setDirectoryOnly}
+                      onSelectPartner={setSelectedPartnerId}
+                      selectedPartnerId={selectedPartnerId}
+                    />
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
