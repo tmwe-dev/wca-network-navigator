@@ -1,55 +1,33 @@
 
 
-# Piano: Eliminare COL 3 Placeholder e Integrare il Tasto Conferma
+# Fix: Eliminare la terza colonna visibile nello Step 0
 
 ## Problema
 
-Nello step 0 (selezione paesi), la terza colonna e' uno spreco enorme di spazio: serve solo a mostrare un tasto "Conferma e prosegui" con delle bandierine. E' inutile e brutto.
+Il carousel non nasconde correttamente lo Slide 1 quando siamo nello Step 0. Il pannello dettaglio partner (con placeholder "Seleziona un partner dalla lista a destra") e' visibile a destra della CountryGrid, sprecando spazio.
+
+## Causa
+
+Il container del carousel ha `overflow-hidden` sul wrapper esterno, ma i due slide sono entrambi renderizzati e il layout `flex` li mostra affiancati. Quando `carouselStep === 0`, lo Slide 0 ha `width: 100%` e lo Slide 1 ha `width: 50%`, ma il container flex li mostra entrambi perche' non c'e' un vero clipping.
 
 ## Soluzione
 
-1. **Eliminare COL 3 dallo step 0** -- Lo step 0 diventa solo 2 colonne: Stats sidebar + Country Grid. Occupano tutto lo spazio disponibile.
+1. **`Operations.tsx`** -- Rendere lo Slide 1 solo quando `carouselStep === 1`**, oppure nasconderlo con `visibility: hidden` / `display: none` quando non attivo. Il modo piu' pulito: usare `overflow-hidden` sul container interno e impostare `min-width` correttamente, oppure semplicemente non renderizzare lo Slide 1 quando `carouselStep === 0`.
 
-2. **Tasto "Conferma" sopra la stats sidebar** -- Quando ci sono paesi selezionati, un bottone compatto appare in cima alla colonna Stats (o in cima alla CountryGrid), con le bandierine dei paesi e il tasto di conferma. Nessuna colonna dedicata.
+Approccio concreto: wrappare lo Slide 1 in un condizionale `{carouselStep === 1 && (...)}` e impostare lo Slide 0 a `width: 100%` sempre. Quando si conferma, lo Slide 0 scompare e appare lo Slide 1 con una transizione. Questo elimina qualsiasi possibilita' che la terza colonna sia visibile nello step 0.
 
-3. **ActiveJobBar / Terminal / JobMonitor** -- Questi restano visibili ma spostati sotto la CountryGrid (oppure in un banner compatto nell'header) quando ci sono job attivi, senza sprecare una colonna intera.
+In alternativa (per mantenere l'animazione carousel smooth): forzare `overflow: hidden` sul container diretto degli slide e assicurarsi che la `width` del container interno sia esattamente il 100% della viewport, non di piu'.
 
-4. **Placeholder "Seleziona un paese"** -- Eliminato completamente. La CountryGrid stessa e' gia' auto-esplicativa.
-
-## Dettaglio Tecnico -- `Operations.tsx`
-
-### Step 0: Layout a 2 colonne
+**Approccio scelto**: Conditional rendering + transizione fade/slide. Piu' semplice e senza rischi di leak visivo:
 
 ```text
-┌─────────────┬────────────────────────────────────┐
-│ Stats       │ Country Grid                       │
-│ sidebar     │ (filtri, lista paesi scrollabile)   │
-│             │                                    │
-│ [Conferma →]│ ActiveJobBar (se job attivi)        │
-│ (quando     │ DownloadTerminal (se job attivi)    │
-│ selezionati)│ JobMonitor (se job attivi)          │
-└─────────────┴────────────────────────────────────┘
+Step 0: [Stats | CountryGrid] ← occupa 100%
+Step 1: [DetailPanel | PartnerList] ← occupa 100%, renderizzato solo quando attivo
 ```
 
-- La stats sidebar ha in basso (o in cima) il bottone conferma che appare solo se `selectedCountries.length > 0`
-- La CountryGrid si espande per prendere tutto il resto dello spazio
-- ActiveJobBar/Terminal/JobMonitor appaiono sotto la grid solo se ci sono job attivi
-
-### Step 1: invariato (Detail 40% + PartnerList 60%)
-
-Nessun cambiamento allo step 1, funziona gia'.
-
-### Modifiche specifiche
-
-**Rimuovere** (righe ~269-317): L'intera COL 3 dello step 0 con il placeholder e il bottone conferma.
-
-**Aggiungere** nella stats sidebar (COL 1): Un bottone "Conferma" compatto in fondo alla colonna, visibile solo quando `selectedCountries.length > 0`. Mostra le bandierine e il conteggio.
-
-**Spostare** ActiveJobBar/Terminal/JobMonitor: Da COL 3 a sotto la CountryGrid (nella stessa COL 2, in fondo), visibili solo se ci sono job attivi.
-
-**Aggiustare larghezze**: Step 0 usa 2 colonne che occupano il 100% dello spazio (stats ~140px + grid flex-1).
+La transizione avviene con un semplice fade + slide CSS (`opacity` + `translateX`) gestito da classi condizionali.
 
 ## File modificati
 
-1. **`src/pages/Operations.tsx`** -- Rimozione COL 3 dallo step 0, bottone conferma nella stats sidebar, spostamento job monitors
+1. **`src/pages/Operations.tsx`** -- Sostituire il sistema carousel a doppio slide con rendering condizionale: Step 0 mostra Stats+Grid al 100%, Step 1 mostra Detail+List al 100%. Transizione con animazione CSS.
 
