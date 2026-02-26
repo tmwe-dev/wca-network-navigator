@@ -1,76 +1,108 @@
 
 
-# Piano: Tastoni Azione e Barre di Progresso nel Pannello Operations
+# Piano: Unificazione Tab Partner + Scarica in un Pannello Unico
 
 ## Problema
 
-La pagina Operations (COL 3, tab "Partner") usa il componente `PartnerListPanel` che mostra solo statistiche compatte e una lista partner. Manca completamente l'approccio "wizard con tastoni" gia' implementato nel `CountryWorkbench` del Partner Hub. L'utente vuole la stessa esperienza operativa: grossi pulsanti azione + barre di progresso + filtri intelligenti.
+Attualmente COL 3 ha due tab separate: "Partner" (tastoni + lista) e "Scarica" (ActionPanel + Terminal + JobMonitor). L'utente deve saltare avanti e indietro. Il tasto "Scarica Profili" nei tastoni fa solo un `setActiveTab("download")` -- un passaggio in piu' inutile.
 
-## Cosa cambia
+## Soluzione
 
-### `PartnerListPanel.tsx` -- Ristrutturazione completa
-
-Aggiungere sopra la lista partner:
-
-**4 Tastoni Azione** (stessa logica del CountryWorkbench, adattati al tema dark/light di Operations):
-1. **Scarica Profili** -- conta partner senza `raw_profile_html`, click naviga a tab "download" con modalita' `no_profile` preselezionata
-2. **Deep Search** -- conta partner con profilo ma senza `enrichment_data.deep_search_at`, click avvia deep search massiva
-3. **Genera Alias Aziende** -- conta partner senza `company_alias`, click invoca edge function
-4. **Genera Alias Contatti** -- conta partner senza `contact_alias` nei contatti, click invoca edge function
-
-Colori: verde (0 mancanti), ambra (parziale), rosso (>50% mancanti). Compatibili col tema dark di Operations.
-
-**6 Barre di Progresso** cliccabili (sotto i tastoni):
-- Profili, Deep Search, Email, Telefono, Alias Azienda, Alias Contatto
-- Click su una barra filtra la lista sotto per mostrare solo i partner mancanti di quel dato
-
-**Barra completamento globale** nell'header con percentuale.
-
-### Nuove Props
-
-`PartnerListPanel` riceve nuove callback:
-- `onSwitchToDownload?: () => void` -- per passare al tab download quando si clicca "Scarica Profili"
-- `onDeepSearch?: (partnerIds: string[]) => void` -- deep search massiva
-- `onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void` -- generazione alias
-
-### `Operations.tsx` -- Nuove callback e collegamento
-
-- Implementare `handleDeepSearch` (loop sequenziale come in PartnerHub)
-- Implementare `handleGenerateAliases` (invoke edge function)
-- Passare `onSwitchToDownload={() => setActiveTab("download")}` al PartnerListPanel
-- Collegare le callback al pannello
-
-### Calcolo Stats
-
-Tutti i dati necessari sono gia' disponibili dal hook `usePartners` che include `raw_profile_html`, `enrichment_data`, `company_alias`, e `partner_contacts` con `contact_alias`. I conteggi vengono calcolati con `useMemo` sui partner filtrati per paese.
-
-### Layout Finale (COL 3, tab Partner)
+Eliminare le Tabs. Il pannello destro diventa un unico flusso verticale scrollabile:
 
 ```text
 ┌──────────────────────────────────────────┐
+│  🇹🇭 Thailand · 92 partner               │
 │  Completamento: ██████████░░ 72%         │
 ├──────────────────────────────────────────┤
-│ [📥 PROFILI] [🔍 DEEP]  [🏷 ALIAS] [👤 ALIAS] │
-│  14 mancanti  67 manc.   42 manc.  38 manc. │
+│ [📥 PROFILI] [🔍 DEEP] [🏷 ALIAS] [👤 ALIAS] │
 ├──────────────────────────────────────────┤
 │ Profili  ██████████░░  78/92             │
 │ Deep S.  ████░░░░░░░░  25/92             │
 │ Email    ██████████░░  71/92             │
-│ Telefono █████░░░░░░░  45/92             │
-│ Alias Az ██████░░░░░░  50/92             │
-│ Alias Ct ████░░░░░░░░  34/92             │
+│ ...                                      │
 ├──────────────────────────────────────────┤
-│ [Cerca...] [Ordina] [Filtro attivo]      │
+│ ▼ DOWNLOAD  [collapsible, aperto se     │
+│   cliccato "Profili" o se job attivi]    │
+│   Network: [Tutti ▾]                     │
+│   Modalita': [Nuovi | Senza profilo | …] │
+│   Delay: ████░░ 15s                      │
+│   [⚡ Scarica 14 partner]               │
+│   Terminal log...                        │
+│   Active jobs...                         │
+├──────────────────────────────────────────┤
+│ [Cerca...] [Ordina]                      │
 │ Lista partner scorrevole...              │
 └──────────────────────────────────────────┘
 ```
 
-### Nessuna migrazione DB
+## Dettaglio Tecnico
 
-Tutti i campi esistono gia'. Nessun cambiamento backend.
+### 1. `PartnerListPanel.tsx` -- Integrazione download inline
+
+Il componente assorbe la logica dell'`ActionPanel` direttamente al suo interno:
+
+- **Sezione download collassabile** (`Collapsible`) posizionata tra le progress bar e la search bar
+- Si apre automaticamente quando:
+  - L'utente clicca il tasto "Profili" (anziche' switchare tab)
+  - Ci sono job attivi per i paesi selezionati
+- Contiene: selezione network, modalita' download (toggle chips anziche' dropdown), slider delay, bottone avvio, terminale compatto
+- Le modalita' download diventano **3 toggle chips** inline: `Nuovi` | `Senza profilo` | `Tutti` -- piu' immediato di un dropdown
+- Il terminale e il job monitor sono versioni compatte inline (max-height con scroll)
+
+**Nuove props necessarie:**
+- `onJobCreated?: (jobId: string) => void` -- per avviare il processore
+- `directoryOnly?: boolean` + `onDirectoryOnlyChange?`
+
+**Logica copiata dall'ActionPanel:**
+- Query `directory-cache`, `db-partners-for-countries`, `no-profile-wca-ids`
+- `handleStartScan`, `handleStartDownload`, `executeDownload`
+- Directory scan con cache, cleanup stale partners, auto-download
+- Stima tempo, slider delay, selezione network
+
+### 2. `Operations.tsx` -- Rimozione Tabs
+
+- Eliminare `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`
+- Eliminare `activeTab` state
+- Eliminare import di `ActionPanel`, `AdvancedTools`
+- COL 3 diventa un singolo `PartnerListPanel` con tutte le props
+- `ActiveJobBar` resta sopra il pannello
+- `DownloadTerminal` e `JobMonitor` vengono rimossi dal livello Operations (integrati nel PartnerListPanel)
+
+### 3. Componenti rimossi/semplificati
+
+- `ActionPanel` non viene piu' importato in Operations (resta disponibile se usato altrove)
+- `AdvancedTools` viene integrato come sezione collassabile dentro il pannello download del PartnerListPanel
+- Le import di `Tabs` ecc. vengono rimosse da Operations
+
+### 4. UX delle modalita' download
+
+Le 3 modalita' diventano toggle chips orizzontali con contatori:
+
+```text
+[Nuovi (5)] [Senza profilo (14)] [Tutti (92)]
+```
+
+- Chip attivo evidenziato con colore
+- Il chip "Solo Directory" diventa un toggle separato sopra
+- Sotto i chips: slider delay + stima tempo + bottone avvio
+
+### 5. Vista senza paese selezionato
+
+Quando nessun paese e' selezionato, la COL 3 mostra:
+- `ActiveJobBar` (se ci sono job)
+- `DownloadTerminal` compatto (se ci sono job)
+- `JobMonitor` (se ci sono job)
+- Placeholder "Seleziona un paese" (se non ci sono job)
+
+Questo rimane identico a oggi, nessun cambiamento.
 
 ## File modificati
 
-1. `src/components/operations/PartnerListPanel.tsx` -- Aggiunta tastoni, barre progresso, filtri da barra, logica deep search/alias inline
-2. `src/pages/Operations.tsx` -- Nuove callback `handleDeepSearch`, `handleGenerateAliases`, props aggiuntive a PartnerListPanel
+1. **`src/components/operations/PartnerListPanel.tsx`** -- Integrazione completa della logica download: queries directory, scan, download, terminale compatto, toggle chips modalita'
+2. **`src/pages/Operations.tsx`** -- Rimozione Tabs, semplificazione a pannello unico, rimozione import ActionPanel/AdvancedTools
+
+## Nessuna migrazione DB
+
+Tutto usa query e componenti esistenti. Nessun cambiamento backend.
 
