@@ -1,33 +1,76 @@
 
+Obiettivo: eliminare definitivamente i “buchi” visivi nel flusso Operations e usare lo spazio in modo intelligente durante il passaggio Step 0 → Step 1.
 
-# Fix: Eliminare la terza colonna visibile nello Step 0
+1) Analisi UI e test effettuati
+- Ho verificato il comportamento reale in preview (viewport ~857x691), selezionando un paese e cliccando “Conferma”.
+- Risultato:
+  - Step 0: ora è realmente a 2 colonne (sidebar stats + country grid), quindi il vecchio “ghost slide” non è più il problema principale.
+  - Step 1: il layout resta fisso 40/60 anche quando nessun partner è selezionato; la colonna sinistra mostra solo placeholder (“Seleziona un partner...”) e genera un vuoto percepito molto grande.
+- Conclusione: il buco che vedi adesso non è più il carousel vecchio, ma la colonna dettaglio sempre visibile in Step 1.
 
-## Problema
+2) Strategia UX (riempimento intelligente spazi)
+- Passo da layout fisso a layout adattivo in Step 1:
+  - Nessun partner selezionato: lista partner a larghezza piena (100%), zero colonna vuota.
+  - Partner selezionato: appare il pannello dettaglio a sinistra (split tipo 38/62 o 40/60), con transizione fluida.
+- In questo modo lo spazio viene sempre usato per contenuto utile, mai per placeholder.
 
-Il carousel non nasconde correttamente lo Slide 1 quando siamo nello Step 0. Il pannello dettaglio partner (con placeholder "Seleziona un partner dalla lista a destra") e' visibile a destra della CountryGrid, sprecando spazio.
+3) Piano implementativo
+- File target: `src/pages/Operations.tsx` (solo frontend, nessun cambio backend).
+- Modifiche:
+  1. Introdurre uno stato derivato:
+     - `const detailOpen = carouselStep === 1 && !!selectedPartnerId && !!selectedPartner`
+  2. Rifattorizzare Step 1:
+     - Render condizionale del pannello sinistro dettagli solo quando `detailOpen === true`.
+     - Pannello destro (`PartnerListPanel`) full width quando `detailOpen === false`.
+  3. Aggiungere transizioni pulite:
+     - Entrata/uscita pannello dettaglio con fade/slide breve.
+     - Nessun “salto” del layout (uso `min-w-0`, `overflow-hidden`, classi animate coerenti).
+  4. Sostituire il placeholder gigante:
+     - invece del blocco vuoto a sinistra, mostrare un hint compatto sopra la lista (nel pannello destro) quando nessun partner è selezionato.
+  5. Rifinire comportamento “indietro”:
+     - `onBack` nel dettaglio chiude il dettaglio (torna lista full width) senza uscire da Step 1.
+     - freccia header continua a riportare da Step 1 a Step 0.
 
-## Causa
-
-Il container del carousel ha `overflow-hidden` sul wrapper esterno, ma i due slide sono entrambi renderizzati e il layout `flex` li mostra affiancati. Quando `carouselStep === 0`, lo Slide 0 ha `width: 100%` e lo Slide 1 ha `width: 50%`, ma il container flex li mostra entrambi perche' non c'e' un vero clipping.
-
-## Soluzione
-
-1. **`Operations.tsx`** -- Rendere lo Slide 1 solo quando `carouselStep === 1`**, oppure nasconderlo con `visibility: hidden` / `display: none` quando non attivo. Il modo piu' pulito: usare `overflow-hidden` sul container interno e impostare `min-width` correttamente, oppure semplicemente non renderizzare lo Slide 1 quando `carouselStep === 0`.
-
-Approccio concreto: wrappare lo Slide 1 in un condizionale `{carouselStep === 1 && (...)}` e impostare lo Slide 0 a `width: 100%` sempre. Quando si conferma, lo Slide 0 scompare e appare lo Slide 1 con una transizione. Questo elimina qualsiasi possibilita' che la terza colonna sia visibile nello step 0.
-
-In alternativa (per mantenere l'animazione carousel smooth): forzare `overflow: hidden` sul container diretto degli slide e assicurarsi che la `width` del container interno sia esattamente il 100% della viewport, non di piu'.
-
-**Approccio scelto**: Conditional rendering + transizione fade/slide. Piu' semplice e senza rischi di leak visivo:
-
+4) Dettagli tecnici
+- Problema tecnico attuale:
+  - In Step 1 il blocco:
+    - sinistra `w-[40%]` sempre montato
+    - destra `flex-1`
+  - produce sempre due colonne anche quando la sinistra non ha dati utili.
+- Nuova struttura:
 ```text
-Step 0: [Stats | CountryGrid] ← occupa 100%
-Step 1: [DetailPanel | PartnerList] ← occupa 100%, renderizzato solo quando attivo
+Step 1 (adaptive)
+┌───────────────────────────────────────────────────────────┐
+│ if detailOpen = false                                    │
+│   [ PartnerListPanel 100% width ]                        │
+│                                                           │
+│ if detailOpen = true                                     │
+│   [ Detail 38-40% ] [ PartnerList 60-62% ]               │
+└───────────────────────────────────────────────────────────┘
 ```
+- Vantaggi:
+  - zero spazio morto
+  - migliore leggibilità su viewport medi (come i tuoi screenshot)
+  - UX più coerente con “drill-down”: prima lista, poi dettaglio.
 
-La transizione avviene con un semplice fade + slide CSS (`opacity` + `translateX`) gestito da classi condizionali.
+5) Piano test end-to-end (obbligatorio)
+- Test 1: Step 0
+  - selezione paesi + conferma
+  - verificare assenza totale di terza colonna/overflow.
+- Test 2: Step 1 senza partner selezionato
+  - la lista deve occupare 100% larghezza.
+  - nessun pannello placeholder gigante a sinistra.
+- Test 3: Step 1 con partner selezionato
+  - click su partner -> dettaglio appare a sinistra con animazione.
+  - lista resta utilizzabile a destra.
+- Test 4: chiusura dettaglio
+  - da `PartnerDetailCompact` usare back -> ritorno a lista full width.
+- Test 5: ritorno a Step 0
+  - freccia header -> Step 0 pulito, senza buchi.
+- Test 6: responsive rapido
+  - verifica almeno su 1366, 857, 390: nessun blocco vuoto persistente.
 
-## File modificati
-
-1. **`src/pages/Operations.tsx`** -- Sostituire il sistema carousel a doppio slide con rendering condizionale: Step 0 mostra Stats+Grid al 100%, Step 1 mostra Detail+List al 100%. Transizione con animazione CSS.
-
+6) Impatto file
+- `src/pages/Operations.tsx`
+  - aggiornamento layout Step 1 da split fisso a split dinamico “content-first”.
+  - nessun impatto su DB, auth, funzioni backend.
