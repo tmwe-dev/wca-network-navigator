@@ -1,76 +1,66 @@
 
-Obiettivo: eliminare definitivamente i “buchi” visivi nel flusso Operations e usare lo spazio in modo intelligente durante il passaggio Step 0 → Step 1.
 
-1) Analisi UI e test effettuati
-- Ho verificato il comportamento reale in preview (viewport ~857x691), selezionando un paese e cliccando “Conferma”.
-- Risultato:
-  - Step 0: ora è realmente a 2 colonne (sidebar stats + country grid), quindi il vecchio “ghost slide” non è più il problema principale.
-  - Step 1: il layout resta fisso 40/60 anche quando nessun partner è selezionato; la colonna sinistra mostra solo placeholder (“Seleziona un partner...”) e genera un vuoto percepito molto grande.
-- Conclusione: il buco che vedi adesso non è più il carousel vecchio, ma la colonna dettaglio sempre visibile in Step 1.
+# Piano: Layout 2 Colonne Fisso + Download Visibile
 
-2) Strategia UX (riempimento intelligente spazi)
-- Passo da layout fisso a layout adattivo in Step 1:
-  - Nessun partner selezionato: lista partner a larghezza piena (100%), zero colonna vuota.
-  - Partner selezionato: appare il pannello dettaglio a sinistra (split tipo 38/62 o 40/60), con transizione fluida.
-- In questo modo lo spazio viene sempre usato per contenuto utile, mai per placeholder.
+## Problemi identificati
 
-3) Piano implementativo
-- File target: `src/pages/Operations.tsx` (solo frontend, nessun cambio backend).
-- Modifiche:
-  1. Introdurre uno stato derivato:
-     - `const detailOpen = carouselStep === 1 && !!selectedPartnerId && !!selectedPartner`
-  2. Rifattorizzare Step 1:
-     - Render condizionale del pannello sinistro dettagli solo quando `detailOpen === true`.
-     - Pannello destro (`PartnerListPanel`) full width quando `detailOpen === false`.
-  3. Aggiungere transizioni pulite:
-     - Entrata/uscita pannello dettaglio con fade/slide breve.
-     - Nessun “salto” del layout (uso `min-w-0`, `overflow-hidden`, classi animate coerenti).
-  4. Sostituire il placeholder gigante:
-     - invece del blocco vuoto a sinistra, mostrare un hint compatto sopra la lista (nel pannello destro) quando nessun partner è selezionato.
-  5. Rifinire comportamento “indietro”:
-     - `onBack` nel dettaglio chiude il dettaglio (torna lista full width) senza uscire da Step 1.
-     - freccia header continua a riportare da Step 1 a Step 0.
+1. **Step 1 usa tutta la larghezza con un solo pannello** quando nessun partner e' selezionato. L'utente dice esplicitamente: "Non occupare mai tutta la pagina con un contenitore solo."
+2. **Il dettaglio partner appare a sinistra** invece che a destra. L'utente vuole: lista a sinistra, dettaglio a destra.
+3. **La sezione download e' nascosta** dentro un `Collapsible` (riga 487-623 di PartnerListPanel). L'utente non la trova. Vuole i controlli download come "tastoni" visibili in alto, non nascosti.
 
-4) Dettagli tecnici
-- Problema tecnico attuale:
-  - In Step 1 il blocco:
-    - sinistra `w-[40%]` sempre montato
-    - destra `flex-1`
-  - produce sempre due colonne anche quando la sinistra non ha dati utili.
-- Nuova struttura:
+## Soluzione
+
+### 1. Step 1: sempre 2 colonne (Operations.tsx)
+
 ```text
-Step 1 (adaptive)
-┌───────────────────────────────────────────────────────────┐
-│ if detailOpen = false                                    │
-│   [ PartnerListPanel 100% width ]                        │
-│                                                           │
-│ if detailOpen = true                                     │
-│   [ Detail 38-40% ] [ PartnerList 60-62% ]               │
-└───────────────────────────────────────────────────────────┘
+┌────────────────────────────┬───────────────────────────┐
+│ LEFT (55-60%)              │ RIGHT (40-45%)            │
+│ PartnerListPanel           │ PartnerDetailCompact      │
+│ (action buttons, barre,   │ (dettaglio partner)       │
+│  search, lista partner)   │                           │
+│                            │ Se nessun partner:        │
+│                            │ placeholder compatto      │
+│                            │ con stats/hint            │
+└────────────────────────────┴───────────────────────────┘
 ```
-- Vantaggi:
-  - zero spazio morto
-  - migliore leggibilità su viewport medi (come i tuoi screenshot)
-  - UX più coerente con “drill-down”: prima lista, poi dettaglio.
 
-5) Piano test end-to-end (obbligatorio)
-- Test 1: Step 0
-  - selezione paesi + conferma
-  - verificare assenza totale di terza colonna/overflow.
-- Test 2: Step 1 senza partner selezionato
-  - la lista deve occupare 100% larghezza.
-  - nessun pannello placeholder gigante a sinistra.
-- Test 3: Step 1 con partner selezionato
-  - click su partner -> dettaglio appare a sinistra con animazione.
-  - lista resta utilizzabile a destra.
-- Test 4: chiusura dettaglio
-  - da `PartnerDetailCompact` usare back -> ritorno a lista full width.
-- Test 5: ritorno a Step 0
-  - freccia header -> Step 0 pulito, senza buchi.
-- Test 6: responsive rapido
-  - verifica almeno su 1366, 857, 390: nessun blocco vuoto persistente.
+- Invertire le colonne: lista a SINISTRA, dettaglio a DESTRA
+- Il pannello destro e' SEMPRE presente (mai full-width singolo)
+- Quando nessun partner selezionato: il pannello destro mostra un riepilogo compatto (stats dei paesi selezionati, job attivi, hint "Seleziona un partner")
+- Quando partner selezionato: mostra PartnerDetailCompact
 
-6) Impatto file
-- `src/pages/Operations.tsx`
-  - aggiornamento layout Step 1 da split fisso a split dinamico “content-first”.
-  - nessun impatto su DB, auth, funzioni backend.
+### 2. Download visibile come "tastoni" (PartnerListPanel.tsx)
+
+- **Rimuovere il Collapsible** che wrappa la sezione download (righe 487-623)
+- **Aggiungere un quinto ActionButton** nella griglia dei "tastoni" (riga 447) per "Scarica Profili" con conteggio dei mancanti, oppure trasformare il pulsante "Profili" esistente per includere direttamente le opzioni download
+- I 3 toggle chips (Nuovi / No profilo / Tutti) diventano visibili direttamente sotto i tastoni, come una riga di chip sempre presente
+- Il delay slider e il bottone "Scarica N partner" restano inline, visibili senza dover aprire nulla
+- Terminal e JobMonitor compatti restano sotto, visibili solo quando ci sono job attivi (non dentro un collapsible)
+
+### 3. Griglia tastoni aggiornata
+
+```text
+Riga tastoni (grid-cols-5 o grid-cols-4 con download integrato):
+┌──────────┬──────────┬──────────┬──────────┐
+│ Scarica  │ Deep     │ Alias    │ Alias    │
+│ Profili  │ Search   │ Azienda  │ Contatto │
+│ (12)     │ (45)     │ (30)     │ (28)     │
+└──────────┴──────────┴──────────┴──────────┘
+
+Sotto: [Nuovi(5)] [No profilo(12)] [Tutti(50)] | Delay: 15s | [▶ Scarica 12]
+```
+
+Il click sul tasto "Scarica Profili" non apre un collapsible, ma evidenzia la riga di opzioni download che e' gia' visibile sotto.
+
+## File modificati
+
+1. **`src/pages/Operations.tsx`**
+   - Step 1: layout sempre a 2 colonne (LEFT: PartnerListPanel ~58%, RIGHT: Detail/placeholder ~42%)
+   - Invertire posizione: lista a sinistra, dettaglio a destra
+   - Pannello destro: se no partner → placeholder con stats compatte; se partner → PartnerDetailCompact
+
+2. **`src/components/operations/PartnerListPanel.tsx`**
+   - Rimuovere `Collapsible` wrapper dalla sezione download
+   - Rendere i controlli download (mode chips, delay, bottone avvio) sempre visibili come riga compatta sotto i tastoni
+   - Terminal/JobMonitor visibili inline solo quando ci sono job attivi, senza collapsible
+
