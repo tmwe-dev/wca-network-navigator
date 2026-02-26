@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, FileText, Bot } from "lucide-react";
+import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, FileText, Bot, ArrowLeft } from "lucide-react";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
@@ -9,16 +9,19 @@ import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
+import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
+import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-/** Read directory totals from the SAME query key used by CountryGrid */
+/** Read directory totals */
 function useDirectoryTotal() {
   return useQuery({
     queryKey: ["cache-data-by-country"],
@@ -42,6 +45,8 @@ export default function Operations() {
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
+  const [carouselStep, setCarouselStep] = useState(0); // 0 = grid view, 1 = partner view
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [aiOpen, setAiOpen] = useState(false);
@@ -65,8 +70,12 @@ export default function Operations() {
   } : null;
   const { data: jobs } = useDownloadJobs();
   const { emergencyStop, startJob } = useDownloadProcessor();
+  const toggleFavorite = useToggleFavorite();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
+
+  // Partner detail (lifted from PartnerListPanel)
+  const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
   const toggleCountry = useCallback((code: string, name: string) => {
     setSelectedCountries(prev =>
@@ -76,6 +85,20 @@ export default function Operations() {
 
   const removeCountry = useCallback((code: string) => {
     setSelectedCountries(prev => prev.filter(c => c.code !== code));
+  }, []);
+
+  // Confirm selection → slide to step 1
+  const confirmSelection = useCallback(() => {
+    if (selectedCountries.length > 0) {
+      setCarouselStep(1);
+      setSelectedPartnerId(null);
+    }
+  }, [selectedCountries.length]);
+
+  // Go back to grid
+  const goBack = useCallback(() => {
+    setCarouselStep(0);
+    setSelectedPartnerId(null);
   }, []);
 
   const handleDeepSearch = useCallback(async (partnerIds: string[]) => {
@@ -119,12 +142,6 @@ export default function Operations() {
 
   const th = t(isDark);
 
-  const countryLabel = selectedCountries.length === 0
-    ? "Seleziona un paese"
-    : selectedCountries.length === 1
-      ? `${getCountryFlag(selectedCountries[0].code)} ${selectedCountries[0].name}`
-      : `${selectedCountries.length} paesi selezionati`;
-
   return (
     <ThemeCtx.Provider value={isDark}>
       <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
@@ -136,7 +153,48 @@ export default function Operations() {
           {/* ═══ TOP BAR ═══ */}
           <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
             <div className="flex items-center gap-3">
+              {carouselStep === 1 && (
+                <button
+                  onClick={goBack}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    isDark ? "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                  )}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              )}
               <h1 className={`text-sm font-semibold ${th.h1}`}>Operations</h1>
+
+              {/* Country badges in header (step 1) */}
+              {carouselStep === 1 && selectedCountries.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto max-w-[300px]">
+                  {selectedCountries.map(c => (
+                    <span key={c.code} className={cn(
+                      "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium",
+                      isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"
+                    )}>
+                      {getCountryFlag(c.code)} {c.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Stats inline badges (step 1) */}
+              {carouselStep === 1 && globalStats && (
+                <div className="flex items-center gap-2 ml-2">
+                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                    <Users className="w-3 h-3 inline mr-0.5" />{globalStats.totalPartners}
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-violet-400" : "text-violet-600"}`}>
+                    <FileText className="w-3 h-3 inline mr-0.5" />{globalStats.withProfile}
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+                    <Mail className="w-3 h-3 inline mr-0.5" />{globalStats.withEmail}
+                  </span>
+                </div>
+              )}
+
               {activeJobs.length > 0 && (
                 <span className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
@@ -160,84 +218,158 @@ export default function Operations() {
             </div>
           </div>
 
-          {/* ═══ MAIN 3-COLUMN LAYOUT ═══ */}
-          <div className="flex-1 flex min-h-0 px-4 pb-3 gap-3">
-            {/* ── COL 1: Stats sidebar ── */}
-            <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-              {globalStats ? (
-                <>
-                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
-                  <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
-                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
-                    progressColor="from-violet-400 to-purple-500"
-                    onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
-                  <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
-                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
-                    progressColor="from-sky-400 to-blue-500" />
-                  <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
-                    progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
-                    progressColor="from-teal-400 to-emerald-500" />
-                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
-                </>
-              ) : (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
-                ))
-              )}
-            </div>
+          {/* ═══ CAROUSEL CONTAINER ═══ */}
+          <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden">
+            <div
+              className="flex h-full gap-3 transition-transform duration-300 ease-out"
+              style={{
+                width: carouselStep === 0 ? "100%" : "200%",
+                transform: carouselStep === 1 ? "translateX(-50%)" : "translateX(0)",
+              }}
+            >
+              {/* ═══ SLIDE 0: Stats + CountryGrid + Placeholder ═══ */}
+              <div className="flex gap-3 h-full" style={{ width: carouselStep === 0 ? "100%" : "50%" }}>
+                {/* COL 1: Stats sidebar */}
+                <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                  {globalStats ? (
+                    <>
+                      <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
+                      <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
+                      <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
+                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
+                        progressColor="from-violet-400 to-purple-500"
+                        onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
+                      <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
+                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
+                        progressColor="from-sky-400 to-blue-500" />
+                      <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
+                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
+                        progressColor="from-teal-400 to-emerald-500" />
+                      <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
+                    </>
+                  ) : (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
+                    ))
+                  )}
+                </div>
 
-            {/* ── COL 2: Country Grid ── */}
-            <div className="min-w-[280px] w-[35%] max-w-[400px] flex-shrink-0 min-h-0 flex flex-col">
-              <CountryGrid
-                selected={selectedCountries}
-                onToggle={toggleCountry}
-                onRemove={removeCountry}
-                filterMode={filterMode}
-                directoryOnly={directoryOnly}
-                onDirectoryOnlyChange={setDirectoryOnly}
-              />
-            </div>
+                {/* COL 2: Country Grid */}
+                <div className="min-w-[280px] w-[35%] max-w-[400px] flex-shrink-0 min-h-0 flex flex-col">
+                  <CountryGrid
+                    selected={selectedCountries}
+                    onToggle={toggleCountry}
+                    onRemove={removeCountry}
+                    filterMode={filterMode}
+                    directoryOnly={directoryOnly}
+                    onDirectoryOnlyChange={setDirectoryOnly}
+                  />
+                </div>
 
-            {/* ── COL 3: Unified Panel ── */}
-            <div className="flex-1 min-h-0 flex flex-col">
-              {selectedCountries.length === 0 ? (
-                <div className="flex-1 flex flex-col gap-3 overflow-auto">
-                  <ActiveJobBar />
-                  <DownloadTerminal />
-                  <JobMonitor />
-                  {!jobs?.some(j => j.status === "running" || j.status === "pending" || j.status === "paused") && (
-                    <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                {/* COL 3: Placeholder / Jobs */}
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <div className="flex-1 flex flex-col gap-3 overflow-auto">
+                    <ActiveJobBar />
+                    <DownloadTerminal />
+                    <JobMonitor />
+                    {selectedCountries.length > 0 ? (
+                      /* Confirm button */
+                      <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                        <div className="text-center space-y-4">
+                          <div className="flex flex-wrap justify-center gap-2">
+                            {selectedCountries.map(c => (
+                              <span key={c.code} className={cn(
+                                "text-xl",
+                              )}>
+                                {getCountryFlag(c.code)}
+                              </span>
+                            ))}
+                          </div>
+                          <p className={`text-sm font-medium ${th.h2}`}>
+                            {selectedCountries.length === 1
+                              ? selectedCountries[0].name
+                              : `${selectedCountries.length} paesi selezionati`}
+                          </p>
+                          <button
+                            onClick={confirmSelection}
+                            className={cn(
+                              "px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]",
+                              isDark
+                                ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25"
+                                : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
+                            )}
+                          >
+                            Conferma e prosegui →
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      !jobs?.some(j => j.status === "running" || j.status === "pending" || j.status === "paused") && (
+                        <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                          <div className="text-center space-y-3">
+                            <Globe className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+                            <p className={`text-sm ${th.sub}`}>Seleziona un paese per iniziare</p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══ SLIDE 1: Detail Panel + Partner List ═══ */}
+              <div className="flex gap-3 h-full" style={{ width: "50%" }}>
+                {/* LEFT: Partner Detail (40%) */}
+                <div className={cn(
+                  "w-[40%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden",
+                  isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                )}>
+                  {selectedPartnerId && selectedPartner ? (
+                    <div className="h-full overflow-auto">
+                      <PartnerDetailCompact
+                        partner={selectedPartner}
+                        onBack={() => setSelectedPartnerId(null)}
+                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                        isDark={isDark}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
                       <div className="text-center space-y-3">
-                        <Globe className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                        <p className={`text-sm ${th.sub}`}>Seleziona un paese per iniziare</p>
+                        <Users className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+                        <p className={`text-xs ${th.sub}`}>Seleziona un partner<br />dalla lista a destra</p>
                       </div>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className={`flex items-center gap-3 px-4 py-2 rounded-t-2xl border border-b-0 ${isDark ? "bg-white/[0.04] backdrop-blur-xl border-white/[0.08]" : "bg-white/60 backdrop-blur-xl border-white/80"}`}>
-                    <span className={`text-sm font-semibold ${th.h2}`}>{countryLabel}</span>
-                  </div>
+
+                {/* RIGHT: Partner List (60%) */}
+                <div className="flex-1 min-h-0 flex flex-col">
                   <ActiveJobBar />
-                  <div className={`flex-1 min-h-0 rounded-b-2xl border border-t-0 overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                    <PartnerListPanel
-                      countryCodes={selectedCountries.map(c => c.code)}
-                      countryNames={selectedCountries.map(c => c.name)}
-                      selectedCountries={selectedCountries}
-                      isDark={isDark}
-                      onDeepSearch={handleDeepSearch}
-                      onGenerateAliases={handleGenerateAliases}
-                      deepSearchRunning={deepSearchRunning}
-                      aliasGenerating={aliasGenerating}
-                      onJobCreated={startJob}
-                      directoryOnly={directoryOnly}
-                      onDirectoryOnlyChange={setDirectoryOnly}
-                    />
+                  <div className={cn(
+                    "flex-1 min-h-0 rounded-2xl border overflow-hidden",
+                    isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                  )}>
+                    {carouselStep === 1 && (
+                      <PartnerListPanel
+                        countryCodes={selectedCountries.map(c => c.code)}
+                        countryNames={selectedCountries.map(c => c.name)}
+                        selectedCountries={selectedCountries}
+                        isDark={isDark}
+                        onDeepSearch={handleDeepSearch}
+                        onGenerateAliases={handleGenerateAliases}
+                        deepSearchRunning={deepSearchRunning}
+                        aliasGenerating={aliasGenerating}
+                        onJobCreated={startJob}
+                        directoryOnly={directoryOnly}
+                        onDirectoryOnlyChange={setDirectoryOnly}
+                        onSelectPartner={setSelectedPartnerId}
+                        selectedPartnerId={selectedPartnerId}
+                      />
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

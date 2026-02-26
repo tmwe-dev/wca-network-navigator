@@ -19,7 +19,7 @@ import {
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
   Zap, Timer, FolderDown, RefreshCw, Square,
 } from "lucide-react";
-import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
+import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,6 @@ import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { JobMonitor } from "@/components/download/JobMonitor";
 
 import { MiniStars } from "@/components/partners/shared/MiniStars";
-import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 
 /* ── Helpers ── */
 function statusColor(missing: number, total: number, isDark: boolean) {
@@ -108,6 +107,8 @@ interface PartnerListPanelProps {
   onJobCreated?: (jobId: string) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
+  onSelectPartner?: (id: string | null) => void;
+  selectedPartnerId?: string | null;
 }
 
 export function PartnerListPanel({
@@ -115,10 +116,10 @@ export function PartnerListPanel({
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
   onJobCreated, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
@@ -409,20 +410,10 @@ export function PartnerListPanel({
     }
   }, [partners, progressFilter, sortBy]);
 
-  const { data: selectedPartner } = usePartner(selectedId || "");
-
-  if (selectedId && selectedPartner) {
-    return (
-      <div className="h-full overflow-auto">
-        <PartnerDetailCompact
-          partner={selectedPartner}
-          onBack={() => setSelectedId(null)}
-          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-          isDark={isDark}
-        />
-      </div>
-    );
-  }
+  // Partner click handler — delegate to parent
+  const handleSelectPartner = useCallback((id: string) => {
+    if (onSelectPartner) onSelectPartner(id);
+  }, [onSelectPartner]);
 
   const toggleProgressFilter = (key: ProgressFilterKey) => {
     setProgressFilter(prev => prev === key ? null : key);
@@ -678,10 +669,12 @@ export function PartnerListPanel({
                   return (
                     <div
                       key={partner.id}
-                      onClick={() => setSelectedId(partner.id)}
+                      onClick={() => handleSelectPartner(partner.id)}
                       className={cn(
                         "p-3 cursor-pointer transition-all duration-200 group",
-                        isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
+                        selectedPartnerId === partner.id
+                          ? isDark ? "bg-sky-950/40 ring-1 ring-sky-400/30" : "bg-sky-50 ring-1 ring-sky-300/40"
+                          : isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
                         q === "missing" && "border-l-4 border-l-red-500",
                         q === "partial" && "border-l-4 border-l-amber-400",
                         q === "complete" && "border-l-4 border-l-emerald-500",
