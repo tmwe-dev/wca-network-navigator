@@ -1,110 +1,76 @@
 
 
-# Piano: Country Workbench con "Tastoni Azione" Intelligenti
+# Piano: Tastoni Azione e Barre di Progresso nel Pannello Operations
 
-## Contesto e Obiettivo
+## Problema
 
-Attualmente il Country Workbench (Livello 2 del Partner Hub) mostra filtri chip per esplorare i dati, ma non offre **azioni dirette**. L'utente deve navigare altrove (Operations, Email Composer) per operare. L'obiettivo e' trasformare il Workbench in un "mago operativo" dove grossi pulsanti guidano l'utente passo-passo nel completamento dei dati, senza pensare.
+La pagina Operations (COL 3, tab "Partner") usa il componente `PartnerListPanel` che mostra solo statistiche compatte e una lista partner. Manca completamente l'approccio "wizard con tastoni" gia' implementato nel `CountryWorkbench` del Partner Hub. L'utente vuole la stessa esperienza operativa: grossi pulsanti azione + barre di progresso + filtri intelligenti.
 
-## Architettura della UI
+## Cosa cambia
+
+### `PartnerListPanel.tsx` -- Ristrutturazione completa
+
+Aggiungere sopra la lista partner:
+
+**4 Tastoni Azione** (stessa logica del CountryWorkbench, adattati al tema dark/light di Operations):
+1. **Scarica Profili** -- conta partner senza `raw_profile_html`, click naviga a tab "download" con modalita' `no_profile` preselezionata
+2. **Deep Search** -- conta partner con profilo ma senza `enrichment_data.deep_search_at`, click avvia deep search massiva
+3. **Genera Alias Aziende** -- conta partner senza `company_alias`, click invoca edge function
+4. **Genera Alias Contatti** -- conta partner senza `contact_alias` nei contatti, click invoca edge function
+
+Colori: verde (0 mancanti), ambra (parziale), rosso (>50% mancanti). Compatibili col tema dark di Operations.
+
+**6 Barre di Progresso** cliccabili (sotto i tastoni):
+- Profili, Deep Search, Email, Telefono, Alias Azienda, Alias Contatto
+- Click su una barra filtra la lista sotto per mostrare solo i partner mancanti di quel dato
+
+**Barra completamento globale** nell'header con percentuale.
+
+### Nuove Props
+
+`PartnerListPanel` riceve nuove callback:
+- `onSwitchToDownload?: () => void` -- per passare al tab download quando si clicca "Scarica Profili"
+- `onDeepSearch?: (partnerIds: string[]) => void` -- deep search massiva
+- `onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void` -- generazione alias
+
+### `Operations.tsx` -- Nuove callback e collegamento
+
+- Implementare `handleDeepSearch` (loop sequenziale come in PartnerHub)
+- Implementare `handleGenerateAliases` (invoke edge function)
+- Passare `onSwitchToDownload={() => setActiveTab("download")}` al PartnerListPanel
+- Collegare le callback al pannello
+
+### Calcolo Stats
+
+Tutti i dati necessari sono gia' disponibili dal hook `usePartners` che include `raw_profile_html`, `enrichment_data`, `company_alias`, e `partner_contacts` con `contact_alias`. I conteggi vengono calcolati con `useMemo` sui partner filtrati per paese.
+
+### Layout Finale (COL 3, tab Partner)
 
 ```text
-┌─────────────────────────────────────────────┐
-│  ← 🇹🇭 Thailand  ·  92 partner             │
-│  ━━━━━━━━━━━━━━━━ 78% completamento ━━━━━  │
-├─────────────────────────────────────────────┤
-│                                             │
-│  ┌─────────────┐  ┌─────────────┐          │
-│  │ 📥 SCARICA  │  │ 🔍 DEEP     │          │
-│  │ 14 profili  │  │ SEARCH      │          │
-│  │ mancanti    │  │ 67 mancanti │          │
-│  └─────────────┘  └─────────────┘          │
-│  ┌─────────────┐  ┌─────────────┐          │
-│  │ 🏷️ GENERA   │  │ 📧 GENERA   │          │
-│  │ ALIAS       │  │ ALIAS       │          │
-│  │ 42 aziende  │  │ CONTATTI    │          │
-│  │ senza alias │  │ 38 mancanti │          │
-│  └─────────────┘  └─────────────┘          │
-│                                             │
-│  ── Riepilogo Dati ──────────────────────  │
-│  Profili  ██████████░░  78/92              │
-│  Deep S.  ████░░░░░░░░  25/92              │
-│  Email    ██████████░░  71/92              │
-│  Telefono █████░░░░░░░  45/92              │
-│  Alias Az ██████░░░░░░  50/92              │
-│  Alias Ct ████░░░░░░░░  34/92              │
-│                                             │
-│  ── Lista Partner (filtro attivo) ────────  │
-│  [chip filtri come ora, sotto le barre]    │
-│  ...lista partner scorrevole...            │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  Completamento: ██████████░░ 72%         │
+├──────────────────────────────────────────┤
+│ [📥 PROFILI] [🔍 DEEP]  [🏷 ALIAS] [👤 ALIAS] │
+│  14 mancanti  67 manc.   42 manc.  38 manc. │
+├──────────────────────────────────────────┤
+│ Profili  ██████████░░  78/92             │
+│ Deep S.  ████░░░░░░░░  25/92             │
+│ Email    ██████████░░  71/92             │
+│ Telefono █████░░░░░░░  45/92             │
+│ Alias Az ██████░░░░░░  50/92             │
+│ Alias Ct ████░░░░░░░░  34/92             │
+├──────────────────────────────────────────┤
+│ [Cerca...] [Ordina] [Filtro attivo]      │
+│ Lista partner scorrevole...              │
+└──────────────────────────────────────────┘
 ```
 
-## Dettaglio dei "Tastoni"
+### Nessuna migrazione DB
 
-Ogni tasto e' un grosso pulsante card con:
-- Icona grande + titolo azione
-- Contatore dei partner da elaborare (dato dinamico)
-- Colore: **verde** se completato (0 mancanti), **ambra** se parziale, **rosso** se critico (>50% mancanti)
-- Click diretto = avvia l'azione senza ulteriori conferme
+Tutti i campi esistono gia'. Nessun cambiamento backend.
 
-### 1. Scarica Profili Mancanti
-- Conta: partner senza `raw_profile_html`
-- Azione: naviga a Operations con il paese preselezionato (come gia' fa `onDownloadProfiles`)
-- Disabilitato se 0
+## File modificati
 
-### 2. Deep Search
-- Conta: partner con profilo ma senza `enrichment_data.deep_search_at`
-- Azione: seleziona automaticamente tutti quelli senza deep search, avvia `handleBulkDeepSearch` gia' esistente
-- Mostra progresso inline nel tasto stesso
-
-### 3. Genera Alias Aziende
-- Conta: partner senza `company_alias`
-- Azione: invoca `generate-aliases` con `countryCodes: [countryCode]`
-- Mostra spinner durante l'operazione
-
-### 4. Genera Alias Contatti
-- Conta: contatti senza `contact_alias`
-- Azione: stessa edge function con flag per alias contatti
-
-## Barre di Progresso (Riepilogo Visivo)
-
-Sotto i tastoni, 6 barre di progresso orizzontali mostrano lo stato di completamento:
-- Profili scaricati (X / totale)
-- Deep Search completate (X / totale)
-- Email presenti (X / totale)
-- Telefono presenti (X / totale)
-- Alias azienda (X / totale)
-- Alias contatto (X / totale)
-
-Ogni barra e' cliccabile e attiva il filtro corrispondente sulla lista sotto (es. click su "Email" filtra per "senza email").
-
-## Modifiche Tecniche
-
-### 1. `CountryWorkbench.tsx` -- Ristrutturazione completa
-- Aggiungere nuove props: `onDeepSearch`, `onGenerateAliases`
-- Calcolare nuovi contatori: `withAlias`, `withContactAlias`, `withDeepSearch`
-- Sezione tastoni sopra i filtri chip
-- Sezione barre di progresso tra tastoni e lista
-- I filtri chip restano ma diventano secondari (sotto le barre)
-
-### 2. `PartnerHub.tsx` -- Nuove callback
-- `handleCountryDeepSearch(countryCode)`: seleziona tutti i partner del paese senza deep search, avvia loop
-- `handleGenerateAliases(countryCode)`: invoca edge function `generate-aliases` con il paese
-- Passare queste callback al Workbench
-
-### 3. Dati aggiuntivi necessari
-- `company_alias` e' gia' nella tabella `partners` -- il hook `usePartners` lo deve includere nel select (verificare)
-- `contact_alias` e' gia' nella tabella `partner_contacts` -- disponibile via relazione
-
-### 4. Nessuna migrazione DB necessaria
-- Tutti i campi (`company_alias`, `contact_alias`, `raw_profile_html`, `enrichment_data`) esistono gia'
-
-## Sincronizzazione dei Contatori
-
-I tastoni si aggiornano automaticamente tramite `queryClient.invalidateQueries(["partners"])` che gia' viene chiamato dopo deep search e alias generation. Le barre di progresso sono calcolate in un `useMemo` dai dati dei partner filtrati per paese.
-
-## Priorita' Visiva
-
-I tastoni sono ordinati per urgenza: quelli con piu' gap (rossi) appaiono prima. Se un tasto ha 0 mancanti, diventa verde con checkmark e non e' cliccabile.
+1. `src/components/operations/PartnerListPanel.tsx` -- Aggiunta tastoni, barre progresso, filtri da barra, logica deep search/alias inline
+2. `src/pages/Operations.tsx` -- Nuove callback `handleDeepSearch`, `handleGenerateAliases`, props aggiuntive a PartnerListPanel
 
