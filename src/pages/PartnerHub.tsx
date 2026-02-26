@@ -61,6 +61,7 @@ export default function PartnerHub() {
   const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
+  const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
   const deepSearchAbortRef = useRef(false);
 
   const queryClient = useQueryClient();
@@ -248,6 +249,51 @@ export default function PartnerHub() {
     navigate("/", { state: { preselectedCountry: countryCode } });
   };
 
+  const handleCountryDeepSearch = useCallback(async (partnerIds: string[]) => {
+    if (partnerIds.length === 0) return;
+    deepSearchAbortRef.current = false;
+    setDeepSearching(true);
+    setSelectedIds(new Set(partnerIds));
+    let success = 0, failed = 0;
+
+    for (let i = 0; i < partnerIds.length; i++) {
+      if (deepSearchAbortRef.current) break;
+      setDeepSearchProgress({ current: i + 1, total: partnerIds.length });
+      try {
+        const { error } = await supabase.functions.invoke("deep-search-partner", {
+          body: { partnerId: partnerIds[i] },
+        });
+        if (error) throw error;
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    const stopped = deepSearchAbortRef.current;
+    deepSearchAbortRef.current = false;
+    setDeepSearching(false);
+    setDeepSearchProgress(null);
+    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    toast.success(`Deep Search ${stopped ? "interrotta" : "completata"}: ${success} ok, ${failed} errori`);
+  }, [queryClient]);
+
+  const handleGenerateAliases = useCallback(async (countryCode: string, type: "company" | "contact") => {
+    setAliasGenerating(type);
+    try {
+      const { error } = await supabase.functions.invoke("generate-aliases", {
+        body: { countryCode, type },
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`);
+    } catch (e: any) {
+      toast.error(`Errore generazione alias: ${e.message || "sconosciuto"}`);
+    } finally {
+      setAliasGenerating(null);
+    }
+  }, [queryClient]);
+
   // Active events bar
   const renderEventsBar = () => {
     if (!deepSearching || !deepSearchProgress) return null;
@@ -419,6 +465,11 @@ export default function PartnerHub() {
               }
             }}
             onDownloadProfiles={handleDownloadProfiles}
+            onDeepSearch={handleCountryDeepSearch}
+            onGenerateAliases={handleGenerateAliases}
+            deepSearching={deepSearching}
+            deepSearchProgress={deepSearchProgress}
+            aliasGenerating={aliasGenerating}
           />
         ) : (
         <ScrollArea className="flex-1">
