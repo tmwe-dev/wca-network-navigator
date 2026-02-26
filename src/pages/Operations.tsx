@@ -290,15 +290,15 @@ export default function Operations() {
               </div>
             )}
 
-            {/* ═══ STEP 1: Detail Panel + Partner List ═══ */}
+            {/* ═══ STEP 1: Adaptive Partner View ═══ */}
             {carouselStep === 1 && (
-              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-right-4 duration-200">
-                {/* LEFT: Partner Detail (40%) */}
-                <div className={cn(
-                  "w-[40%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden",
-                  isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
-                )}>
-                  {selectedPartnerId && selectedPartner ? (
+              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-right-4 duration-200 overflow-hidden">
+                {/* LEFT: Partner Detail — only when a partner is selected */}
+                {selectedPartnerId && selectedPartner && (
+                  <div className={cn(
+                    "w-[38%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden animate-in fade-in slide-in-from-left-4 duration-200",
+                    isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                  )}>
                     <div className="h-full overflow-auto">
                       <PartnerDetailCompact
                         partner={selectedPartner}
@@ -307,18 +307,11 @@ export default function Operations() {
                         isDark={isDark}
                       />
                     </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center space-y-3">
-                        <Users className={`w-12 h-12 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                        <p className={`text-xs ${th.sub}`}>Seleziona un partner<br />dalla lista a destra</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* RIGHT: Partner List (60%) */}
-                <div className="flex-1 min-h-0 flex flex-col">
+                {/* RIGHT: Partner List — full width when no detail, 62% when detail open */}
+                <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                   <ActiveJobBar />
                   <div className={cn(
                     "flex-1 min-h-0 rounded-2xl border overflow-hidden",
