@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, FileText, Bot } from "lucide-react";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
@@ -12,8 +12,9 @@ import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { AdvancedTools } from "@/components/download/AdvancedTools";
 import { ResyncConfigure } from "@/components/download/ResyncConfigure";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
@@ -51,6 +52,9 @@ export default function Operations() {
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [aiOpen, setAiOpen] = useState(false);
+  const [deepSearchRunning, setDeepSearchRunning] = useState(false);
+  const [aliasGenerating, setAliasGenerating] = useState(false);
+  const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
   const dirTotals = dirData ? {
@@ -87,6 +91,45 @@ export default function Operations() {
   const removeCountry = useCallback((code: string) => {
     setSelectedCountries(prev => prev.filter(c => c.code !== code));
   }, []);
+
+  const handleDeepSearch = useCallback(async (partnerIds: string[]) => {
+    if (deepSearchRunning || partnerIds.length === 0) return;
+    setDeepSearchRunning(true);
+    let done = 0;
+    try {
+      for (const id of partnerIds) {
+        done++;
+        toast.loading(`Deep Search ${done}/${partnerIds.length}...`, { id: "deep-search-ops" });
+        const { error } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId: id } });
+        if (error) console.error("Deep search error for", id, error);
+      }
+      toast.success(`Deep Search completata: ${done} partner`, { id: "deep-search-ops" });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Errore Deep Search", { id: "deep-search-ops" });
+    } finally {
+      setDeepSearchRunning(false);
+    }
+  }, [deepSearchRunning, queryClient]);
+
+  const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
+    if (aliasGenerating) return;
+    setAliasGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { countryCodes: codes } });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Alias generati: ${data.processed} aziende, ${data.contacts} contatti`);
+        queryClient.invalidateQueries({ queryKey: ["partners"] });
+      } else {
+        toast.error(data?.error || "Errore generazione alias");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Errore");
+    } finally {
+      setAliasGenerating(false);
+    }
+  }, [aliasGenerating, queryClient]);
 
   const th = t(isDark);
 
@@ -209,6 +252,11 @@ export default function Operations() {
                         countryCodes={selectedCountries.map(c => c.code)}
                         countryNames={selectedCountries.map(c => c.name)}
                         isDark={isDark}
+                        onSwitchToDownload={() => setActiveTab("download")}
+                        onDeepSearch={handleDeepSearch}
+                        onGenerateAliases={handleGenerateAliases}
+                        deepSearchRunning={deepSearchRunning}
+                        aliasGenerating={aliasGenerating}
                       />
                     </TabsContent>
                     <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
