@@ -45,7 +45,8 @@ export default function Operations() {
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
-  const [carouselStep, setCarouselStep] = useState(0); // 0 = grid view, 1 = partner view
+  const [carouselStep, setCarouselStep] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
@@ -74,7 +75,10 @@ export default function Operations() {
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
 
-  // Partner detail (lifted from PartnerListPanel)
+  // Active country for tab
+  const activeCountry = selectedCountries[activeTab] || selectedCountries[0];
+  const activeCountryCode = activeCountry?.code || "";
+
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
   const toggleCountry = useCallback((code: string, name: string) => {
@@ -87,15 +91,14 @@ export default function Operations() {
     setSelectedCountries(prev => prev.filter(c => c.code !== code));
   }, []);
 
-  // Confirm selection → slide to step 1
   const confirmSelection = useCallback(() => {
     if (selectedCountries.length > 0) {
       setCarouselStep(1);
+      setActiveTab(0);
       setSelectedPartnerId(null);
     }
   }, [selectedCountries.length]);
 
-  // Go back to grid
   const goBack = useCallback(() => {
     setCarouselStep(0);
     setSelectedPartnerId(null);
@@ -154,46 +157,11 @@ export default function Operations() {
           <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
             <div className="flex items-center gap-3">
               {carouselStep === 1 && (
-                <button
-                  onClick={goBack}
-                  className={cn(
-                    "p-1.5 rounded-lg transition-all",
-                    isDark ? "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                  )}
-                >
+                <button onClick={goBack} className={cn("p-1.5 rounded-lg transition-all", isDark ? "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600")}>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               )}
               <h1 className={`text-sm font-semibold ${th.h1}`}>Operations</h1>
-
-              {/* Country badges in header (step 1) */}
-              {carouselStep === 1 && selectedCountries.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto max-w-[300px]">
-                  {selectedCountries.map(c => (
-                    <span key={c.code} className={cn(
-                      "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium",
-                      isDark ? "bg-sky-500/15 text-sky-300 border border-sky-500/25" : "bg-sky-50 text-sky-700 border border-sky-200"
-                    )}>
-                      {getCountryFlag(c.code)} {c.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Stats inline badges (step 1) */}
-              {carouselStep === 1 && globalStats && (
-                <div className="flex items-center gap-2 ml-2">
-                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                    <Users className="w-3 h-3 inline mr-0.5" />{globalStats.totalPartners}
-                  </span>
-                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-violet-400" : "text-violet-600"}`}>
-                    <FileText className="w-3 h-3 inline mr-0.5" />{globalStats.withProfile}
-                  </span>
-                  <span className={`text-[10px] font-mono font-bold ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-                    <Mail className="w-3 h-3 inline mr-0.5" />{globalStats.withEmail}
-                  </span>
-                </div>
-              )}
 
               {activeJobs.length > 0 && (
                 <span className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
@@ -246,7 +214,6 @@ export default function Operations() {
                       <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
                     ))
                   )}
-                  {/* Confirm button */}
                   {selectedCountries.length > 0 && (
                     <div className="mt-auto pt-2 border-t border-white/[0.08]">
                       <div className="flex flex-wrap gap-1 mb-1.5 justify-center">
@@ -254,15 +221,7 @@ export default function Operations() {
                           <span key={c.code} className="text-sm">{getCountryFlag(c.code)}</span>
                         ))}
                       </div>
-                      <button
-                        onClick={confirmSelection}
-                        className={cn(
-                          "w-full py-2 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97]",
-                          isDark
-                            ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25"
-                            : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
-                        )}
-                      >
+                      <button onClick={confirmSelection} className={cn("w-full py-2 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97]", isDark ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30")}>
                         Conferma →
                       </button>
                     </div>
@@ -290,100 +249,90 @@ export default function Operations() {
               </div>
             )}
 
-            {/* ═══ STEP 1: Fixed 2-Column Layout (List LEFT, Detail RIGHT) ═══ */}
+            {/* ═══ STEP 1: Tab per Paese + 2 Colonne Fisse ═══ */}
             {carouselStep === 1 && (
-              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-right-4 duration-200 overflow-hidden">
-                {/* LEFT: Partner List (always ~58%) */}
-                <div className={cn(
-                  "w-[58%] flex-shrink-0 min-h-0 flex flex-col"
-                )}>
-                  <ActiveJobBar />
-                  <div className={cn(
-                    "flex-1 min-h-0 rounded-2xl border overflow-hidden",
-                    isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
-                  )}>
-                    <PartnerListPanel
-                      countryCodes={selectedCountries.map(c => c.code)}
-                      countryNames={selectedCountries.map(c => c.name)}
-                      selectedCountries={selectedCountries}
-                      isDark={isDark}
-                      onDeepSearch={handleDeepSearch}
-                      onGenerateAliases={handleGenerateAliases}
-                      deepSearchRunning={deepSearchRunning}
-                      aliasGenerating={aliasGenerating}
-                      onJobCreated={startJob}
-                      directoryOnly={directoryOnly}
-                      onDirectoryOnlyChange={setDirectoryOnly}
-                      onSelectPartner={setSelectedPartnerId}
-                      selectedPartnerId={selectedPartnerId}
-                    />
+              <div className="flex flex-col gap-2 h-full animate-in fade-in slide-in-from-right-4 duration-200 overflow-hidden">
+                {/* Country Tab Bar */}
+                {selectedCountries.length > 1 && (
+                  <div className="flex items-center gap-1 flex-shrink-0 overflow-x-auto pb-1">
+                    {selectedCountries.map((c, idx) => (
+                      <button
+                        key={c.code}
+                        onClick={() => { setActiveTab(idx); setSelectedPartnerId(null); }}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 border",
+                          idx === activeTab
+                            ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                            : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white/60 border-slate-200 text-slate-500 hover:bg-white"
+                        )}
+                      >
+                        {getCountryFlag(c.code)} {c.name}
+                      </button>
+                    ))}
                   </div>
-                </div>
+                )}
 
-                {/* RIGHT: Detail Panel (always ~42%) */}
-                <div className={cn(
-                  "flex-1 min-w-0 min-h-0 rounded-2xl border overflow-hidden",
-                  isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
-                )}>
-                  {selectedPartnerId && selectedPartner ? (
-                    <div className="h-full overflow-auto animate-in fade-in duration-200">
-                      <PartnerDetailCompact
-                        partner={selectedPartner}
-                        onBack={() => setSelectedPartnerId(null)}
-                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                {/* 2-column layout */}
+                <div className="flex gap-3 flex-1 min-h-0 overflow-hidden">
+                  {/* LEFT: Partner List (~58%) */}
+                  <div className="w-[58%] flex-shrink-0 min-h-0 flex flex-col gap-2">
+                    <ActiveJobBar />
+                    <div className={cn(
+                      "flex-1 min-h-0 rounded-2xl border overflow-hidden",
+                      isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                    )}>
+                      <PartnerListPanel
+                        countryCode={activeCountryCode}
+                        countryName={activeCountry?.name || ""}
                         isDark={isDark}
+                        onDeepSearch={handleDeepSearch}
+                        onGenerateAliases={handleGenerateAliases}
+                        deepSearchRunning={deepSearchRunning}
+                        aliasGenerating={aliasGenerating}
+                        onJobCreated={startJob}
+                        directoryOnly={directoryOnly}
+                        onDirectoryOnlyChange={setDirectoryOnly}
+                        onSelectPartner={setSelectedPartnerId}
+                        selectedPartnerId={selectedPartnerId}
                       />
                     </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center space-y-3 px-6">
-                        <div className={cn(
-                          "w-14 h-14 rounded-2xl mx-auto flex items-center justify-center",
-                          isDark ? "bg-white/[0.06]" : "bg-slate-100"
-                        )}>
-                          <Users className={`w-7 h-7 ${isDark ? "text-white/20" : "text-slate-300"}`} />
-                        </div>
-                        <div>
-                          <p className={`text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Seleziona un partner</p>
-                          <p className={`text-xs mt-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Clicca su un partner dalla lista a sinistra per vederne i dettagli</p>
-                        </div>
-                        {globalStats && (
-                          <div className={cn(
-                            "grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl border",
-                            isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/40"
-                          )}>
-                            <div className="text-center">
-                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{globalStats.totalPartners}</p>
-                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Partner</p>
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-violet-400" : "text-violet-600"}`}>{globalStats.withProfile}</p>
-                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Profili</p>
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-sky-400" : "text-sky-600"}`}>{globalStats.withEmail}</p>
-                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Email</p>
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-teal-400" : "text-teal-600"}`}>{globalStats.withPhone}</p>
-                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Telefoni</p>
-                            </div>
-                          </div>
-                        )}
+                  </div>
+
+                  {/* RIGHT: Detail Panel (~42%) */}
+                  <div className={cn(
+                    "flex-1 min-w-0 min-h-0 rounded-2xl border overflow-hidden",
+                    isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                  )}>
+                    {selectedPartnerId && selectedPartner ? (
+                      <div className="h-full overflow-auto animate-in fade-in duration-200">
+                        <PartnerDetailCompact
+                          partner={selectedPartner}
+                          onBack={() => setSelectedPartnerId(null)}
+                          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                          isDark={isDark}
+                        />
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center space-y-3 px-6">
+                          <div className={cn("w-14 h-14 rounded-2xl mx-auto flex items-center justify-center", isDark ? "bg-white/[0.06]" : "bg-slate-100")}>
+                            <Users className={`w-7 h-7 ${isDark ? "text-white/20" : "text-slate-300"}`} />
+                          </div>
+                          <div>
+                            <p className={`text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Seleziona un partner</p>
+                            <p className={`text-xs mt-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Clicca su un partner dalla lista per vederne i dettagli</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      <AiAssistantDialog
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        context={{ selectedCountries, filterMode }}
-      />
+      <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
     </ThemeCtx.Provider>
   );
 }
@@ -403,10 +352,7 @@ function StatItem({ icon: Icon, label, value, color, isDark, progress, progressC
     : isDark ? "bg-white/[0.03]" : "bg-white/40";
 
   return (
-    <div
-      onClick={onClick}
-      className={`rounded-lg border p-2 transition-all duration-150 ${activeBg} ${activeBorder} ${isClickable ? "cursor-pointer hover:scale-[1.02]" : ""} ${isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""}`}
-    >
+    <div onClick={onClick} className={`rounded-lg border p-2 transition-all duration-150 ${activeBg} ${activeBorder} ${isClickable ? "cursor-pointer hover:scale-[1.02]" : ""} ${isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""}`}>
       <div className="flex items-center gap-1.5 mb-0.5">
         <Icon className={`w-3.5 h-3.5 ${color}`} />
         <span className={`text-[9px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>
