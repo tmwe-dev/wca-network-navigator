@@ -1,55 +1,110 @@
 
 
-# Aggiornamento Guida Progetto + Pulizia Codice Deprecato
+# Piano: Country Workbench con "Tastoni Azione" Intelligenti
 
-## Parte 1: Aggiornamento completo della Guida
+## Contesto e Obiettivo
 
-La guida attuale e' molto datata e non riflette le funzionalita' reali del progetto. Verra' riscritta completamente con tutte le sezioni corrispondenti alle pagine nella sidebar.
+Attualmente il Country Workbench (Livello 2 del Partner Hub) mostra filtri chip per esplorare i dati, ma non offre **azioni dirette**. L'utente deve navigare altrove (Operations, Email Composer) per operare. L'obiettivo e' trasformare il Workbench in un "mago operativo" dove grossi pulsanti guidano l'utente passo-passo nel completamento dei dati, senza pensare.
 
-**File: `src/pages/Guida.tsx`**
+## Architettura della UI
 
-Le sezioni aggiornate saranno:
+```text
+┌─────────────────────────────────────────────┐
+│  ← 🇹🇭 Thailand  ·  92 partner             │
+│  ━━━━━━━━━━━━━━━━ 78% completamento ━━━━━  │
+├─────────────────────────────────────────────┤
+│                                             │
+│  ┌─────────────┐  ┌─────────────┐          │
+│  │ 📥 SCARICA  │  │ 🔍 DEEP     │          │
+│  │ 14 profili  │  │ SEARCH      │          │
+│  │ mancanti    │  │ 67 mancanti │          │
+│  └─────────────┘  └─────────────┘          │
+│  ┌─────────────┐  ┌─────────────┐          │
+│  │ 🏷️ GENERA   │  │ 📧 GENERA   │          │
+│  │ ALIAS       │  │ ALIAS       │          │
+│  │ 42 aziende  │  │ CONTATTI    │          │
+│  │ senza alias │  │ 38 mancanti │          │
+│  └─────────────┘  └─────────────┘          │
+│                                             │
+│  ── Riepilogo Dati ──────────────────────  │
+│  Profili  ██████████░░  78/92              │
+│  Deep S.  ████░░░░░░░░  25/92              │
+│  Email    ██████████░░  71/92              │
+│  Telefono █████░░░░░░░  45/92              │
+│  Alias Az ██████░░░░░░  50/92              │
+│  Alias Ct ████░░░░░░░░  34/92              │
+│                                             │
+│  ── Lista Partner (filtro attivo) ────────  │
+│  [chip filtri come ora, sotto le barre]    │
+│  ...lista partner scorrevole...            │
+└─────────────────────────────────────────────┘
+```
 
-| Sezione | Icona | Contenuto |
-|---------|-------|-----------|
-| **Operations** | Globe | Dashboard centrale con griglia paesi, statistiche globali (partner, email, telefoni, profili, directory), job di download in background, terminale live, pannello partner per paese, strumenti avanzati (resync, WCA browser), assistente AI integrato |
-| **Partner Hub** | Users | Navigazione a 3 livelli (paesi → workbench paese → lista flat), filtri avanzati (network, certificazioni, servizi, rating, anni WCA, scadenza membership), Deep Search bulk con progresso, selezione multipla con azioni (email, attivita workspace, deep search), dettaglio partner completo con contatti, social, rating, servizi |
-| **Campaigns** | Mail | Globo 3D interattivo per selezione partner per paese, filtro network, invio batch a Campaign Jobs, preview email personalizzata |
-| **Email Composer** | Send | Composizione email HTML con variabili dinamiche (company_name, contact_name, city, country), selezione destinatari per paese/partner/batch, allegati da template, link personalizzati, anteprima live, invio diretto SMTP |
-| **Email Workspace** | Sparkles | Generazione email AI personalizzate, lista contatti con indicatori arricchimento (enriched/website/LinkedIn), Deep Search integrata con progresso e stop, eliminazione bulk attivita, filtri (enriched/non enriched, paese, tipo), barra obiettivo con documenti di riferimento e link |
-| **Prospect Center** | Building2 | Gestione prospect italiani da Report Aziende, griglia ATECO interattiva con ranking, filtri avanzati (fatturato, dipendenti, regione, provincia), importazione automatica tramite estensione Chrome, ricerca rapida per nome/P.IVA |
-| **Agenda** | Calendar | Calendario con vista mensile, reminder con priorita e scadenza, tab attivita con gestione batch, collegamento diretto a partner, completamento con un click |
-| **Impostazioni** | Settings | 9 tab: Generale (WhatsApp), Email (SMTP + test invio), Connessioni (WCA credenziali + estensione + LinkedIn credenziali + estensione + cookie manuale), Import/Export (CSV/JSON con selezione campi), Blacklist (gestione aziende escluse), Report Aziende (credenziali + estensione), Template (upload allegati per categoria), Profilo AI (personalizzazione tono e stile), Abbonamento (piano e crediti) |
+## Dettaglio dei "Tastoni"
 
-Inoltre verra aggiunta una sezione **Estensioni Chrome** che documenta le 3 estensioni:
-- WCA World (login + cookie + scraping directory)
-- LinkedIn (login + cookie + estrazione profili)
-- Report Aziende (login + scraping prospect)
+Ogni tasto e' un grosso pulsante card con:
+- Icona grande + titolo azione
+- Contatore dei partner da elaborare (dato dinamico)
+- Colore: **verde** se completato (0 mancanti), **ambra** se parziale, **rosso** se critico (>50% mancanti)
+- Click diretto = avvia l'azione senza ulteriori conferme
 
-E una sezione **Deep Search** che spiega il flusso di arricchimento: scoperta sito web (da email o Firecrawl), scraping sito, analisi AI, logo (Google Favicon API), link WhatsApp automatico.
+### 1. Scarica Profili Mancanti
+- Conta: partner senza `raw_profile_html`
+- Azione: naviga a Operations con il paese preselezionato (come gia' fa `onDownloadProfiles`)
+- Disabilitato se 0
 
-## Parte 2: Pulizia codice deprecato
+### 2. Deep Search
+- Conta: partner con profilo ma senza `enrichment_data.deep_search_at`
+- Azione: seleziona automaticamente tutti quelli senza deep search, avvia `handleBulkDeepSearch` gia' esistente
+- Mostra progresso inline nel tasto stesso
 
-File e codice da rimuovere perche' non piu' utilizzati:
+### 3. Genera Alias Aziende
+- Conta: partner senza `company_alias`
+- Azione: invoca `generate-aliases` con `countryCodes: [countryCode]`
+- Mostra spinner durante l'operazione
 
-| File | Motivo |
-|------|--------|
-| `src/pages/Prospects.tsx` | Sostituito da `ProspectCenter.tsx` — non importato da nessuna parte, non ha route in App.tsx |
-| `src/hooks/useScrapingSettings.old.ts` | Versione vecchia, sostituita da `useScrapingSettings.ts` (shim con valori fissi) |
-| `src/hooks/useDownloadProcessor.old.ts` | Versione vecchia, sostituita da `useDownloadProcessor.ts` |
-| `src/components/settings/ScrapingSettings.old.tsx` | Tab scraping rimossa dalle impostazioni |
-| `src/backup/` (intera cartella) | Backup manuale datato febbraio 2026, non referenziato |
-| `DELAY_VALUES` e `DELAY_LABELS` in `theme.ts` | Marcati `@deprecated`, mai usati altrove — rimuovere le 2 righe |
+### 4. Genera Alias Contatti
+- Conta: contatti senza `contact_alias`
+- Azione: stessa edge function con flag per alias contatti
 
-## Riepilogo file modificati
+## Barre di Progresso (Riepilogo Visivo)
 
-| File | Azione |
-|------|--------|
-| `src/pages/Guida.tsx` | Riscrittura completa con tutte le sezioni aggiornate |
-| `src/pages/Prospects.tsx` | Eliminazione |
-| `src/hooks/useScrapingSettings.old.ts` | Eliminazione |
-| `src/hooks/useDownloadProcessor.old.ts` | Eliminazione |
-| `src/components/settings/ScrapingSettings.old.tsx` | Eliminazione |
-| `src/backup/` | Eliminazione intera cartella (11 file) |
-| `src/components/download/theme.ts` | Rimozione 2 costanti `@deprecated` |
+Sotto i tastoni, 6 barre di progresso orizzontali mostrano lo stato di completamento:
+- Profili scaricati (X / totale)
+- Deep Search completate (X / totale)
+- Email presenti (X / totale)
+- Telefono presenti (X / totale)
+- Alias azienda (X / totale)
+- Alias contatto (X / totale)
+
+Ogni barra e' cliccabile e attiva il filtro corrispondente sulla lista sotto (es. click su "Email" filtra per "senza email").
+
+## Modifiche Tecniche
+
+### 1. `CountryWorkbench.tsx` -- Ristrutturazione completa
+- Aggiungere nuove props: `onDeepSearch`, `onGenerateAliases`
+- Calcolare nuovi contatori: `withAlias`, `withContactAlias`, `withDeepSearch`
+- Sezione tastoni sopra i filtri chip
+- Sezione barre di progresso tra tastoni e lista
+- I filtri chip restano ma diventano secondari (sotto le barre)
+
+### 2. `PartnerHub.tsx` -- Nuove callback
+- `handleCountryDeepSearch(countryCode)`: seleziona tutti i partner del paese senza deep search, avvia loop
+- `handleGenerateAliases(countryCode)`: invoca edge function `generate-aliases` con il paese
+- Passare queste callback al Workbench
+
+### 3. Dati aggiuntivi necessari
+- `company_alias` e' gia' nella tabella `partners` -- il hook `usePartners` lo deve includere nel select (verificare)
+- `contact_alias` e' gia' nella tabella `partner_contacts` -- disponibile via relazione
+
+### 4. Nessuna migrazione DB necessaria
+- Tutti i campi (`company_alias`, `contact_alias`, `raw_profile_html`, `enrichment_data`) esistono gia'
+
+## Sincronizzazione dei Contatori
+
+I tastoni si aggiornano automaticamente tramite `queryClient.invalidateQueries(["partners"])` che gia' viene chiamato dopo deep search e alias generation. Le barre di progresso sono calcolate in un `useMemo` dai dati dei partner filtrati per paese.
+
+## Priorita' Visiva
+
+I tastoni sono ordinati per urgenza: quelli con piu' gap (rossi) appaiono prima. Se un tasto ha 0 mancanti, diventa verde con checkmark e non e' cliccabile.
 
