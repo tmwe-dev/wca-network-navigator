@@ -290,28 +290,13 @@ export default function Operations() {
               </div>
             )}
 
-            {/* ═══ STEP 1: Adaptive Partner View ═══ */}
+            {/* ═══ STEP 1: Fixed 2-Column Layout (List LEFT, Detail RIGHT) ═══ */}
             {carouselStep === 1 && (
               <div className="flex gap-3 h-full animate-in fade-in slide-in-from-right-4 duration-200 overflow-hidden">
-                {/* LEFT: Partner Detail — only when a partner is selected */}
-                {selectedPartnerId && selectedPartner && (
-                  <div className={cn(
-                    "w-[38%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden animate-in fade-in slide-in-from-left-4 duration-200",
-                    isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
-                  )}>
-                    <div className="h-full overflow-auto">
-                      <PartnerDetailCompact
-                        partner={selectedPartner}
-                        onBack={() => setSelectedPartnerId(null)}
-                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-                        isDark={isDark}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* RIGHT: Partner List — full width when no detail, 62% when detail open */}
-                <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+                {/* LEFT: Partner List (always ~58%) */}
+                <div className={cn(
+                  "w-[58%] flex-shrink-0 min-h-0 flex flex-col"
+                )}>
                   <ActiveJobBar />
                   <div className={cn(
                     "flex-1 min-h-0 rounded-2xl border overflow-hidden",
@@ -333,6 +318,61 @@ export default function Operations() {
                       selectedPartnerId={selectedPartnerId}
                     />
                   </div>
+                </div>
+
+                {/* RIGHT: Detail Panel (always ~42%) */}
+                <div className={cn(
+                  "flex-1 min-w-0 min-h-0 rounded-2xl border overflow-hidden",
+                  isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                )}>
+                  {selectedPartnerId && selectedPartner ? (
+                    <div className="h-full overflow-auto animate-in fade-in duration-200">
+                      <PartnerDetailCompact
+                        partner={selectedPartner}
+                        onBack={() => setSelectedPartnerId(null)}
+                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                        isDark={isDark}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center space-y-3 px-6">
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl mx-auto flex items-center justify-center",
+                          isDark ? "bg-white/[0.06]" : "bg-slate-100"
+                        )}>
+                          <Users className={`w-7 h-7 ${isDark ? "text-white/20" : "text-slate-300"}`} />
+                        </div>
+                        <div>
+                          <p className={`text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Seleziona un partner</p>
+                          <p className={`text-xs mt-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Clicca su un partner dalla lista a sinistra per vederne i dettagli</p>
+                        </div>
+                        {globalStats && (
+                          <div className={cn(
+                            "grid grid-cols-2 gap-2 mt-4 p-3 rounded-xl border",
+                            isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/40"
+                          )}>
+                            <div className="text-center">
+                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{globalStats.totalPartners}</p>
+                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Partner</p>
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-violet-400" : "text-violet-600"}`}>{globalStats.withProfile}</p>
+                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Profili</p>
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-sky-400" : "text-sky-600"}`}>{globalStats.withEmail}</p>
+                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Email</p>
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-lg font-mono font-extrabold ${isDark ? "text-teal-400" : "text-teal-600"}`}>{globalStats.withPhone}</p>
+                              <p className={`text-[9px] uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Telefoni</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
