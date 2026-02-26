@@ -384,79 +384,65 @@ export function PartnerListPanel({
                   icon={Download} label="Scarica Profili" missing={missingProfiles} total={stats.total}
                 >
                   {wizardStep === 1 && !isScanning && (
-                    <div className="space-y-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-                          <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
-                          <SelectContent className={th.selContent}>
-                            <SelectItem value="__all__">Tutti i network</SelectItem>
-                            {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                          <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
-                          <FolderDown className="w-3 h-3" /> Dir
-                        </label>
-                        {totalCount > 0 && (
-                          <span className={`font-mono text-[10px] shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{downloadedCount}/{totalCount}</span>
-                        )}
+                    <div className="space-y-3 mt-2">
+                      {/* 3 clear radio cards */}
+                      <div className="space-y-1.5">
+                        <DownloadChoice
+                          selected={downloadMode === "new"}
+                          onClick={() => setDownloadMode("new")}
+                          isDark={isDark}
+                          title="Mai scaricati"
+                          description="Partner presenti in directory ma non ancora nel database"
+                          count={missingIds.length}
+                          color="text-sky-400"
+                        />
+                        <DownloadChoice
+                          selected={downloadMode === "no_profile"}
+                          onClick={() => setDownloadMode("no_profile")}
+                          isDark={isDark}
+                          title="Senza profilo completo"
+                          description="Partner nel database ma senza dati del profilo"
+                          count={noProfileInDirectoryCount + missingIds.length}
+                          color="text-amber-400"
+                        />
+                        <DownloadChoice
+                          selected={downloadMode === "all"}
+                          onClick={() => setDownloadMode("all")}
+                          isDark={isDark}
+                          title="Riscarica tutti"
+                          description="Aggiorna tutti i profili dei partner di questo paese"
+                          count={totalCount}
+                          color="text-violet-400"
+                        />
                       </div>
 
-                      {!directoryOnly && (
-                        <div className="flex gap-1.5">
-                          {([
-                            { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
-                            { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
-                            { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
-                          ]).map(chip => (
-                            <button key={chip.key} onClick={() => setDownloadMode(chip.key)}
-                              className={cn("flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
-                                downloadMode === chip.key
-                                  ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                                  : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                              )}>{chip.label} ({chip.count})</button>
-                          ))}
-                        </div>
-                      )}
-
-                      {directoryOnly && (
-                        <div className="flex items-center gap-3">
-                          {hasCache && totalCount > 0 && <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ {totalCount} aziende</p>}
-                          <label className={`flex items-center gap-1.5 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                            <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
-                            <Zap className="w-3 h-3" /> Scarica dopo
-                          </label>
-                        </div>
-                      )}
-
+                      {/* Delay + big download button */}
                       <div className="flex items-center gap-2">
-                        {!directoryOnly && idsToDownload.length > 0 && (
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className={`text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}><Timer className="w-3 h-3 inline mr-0.5" />{delay}s</span>
-                            <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
-                            <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{estimateLabel}</span>
-                          </div>
-                        )}
-                        <Button
-                          onClick={() => {
-                            if (directoryOnly) { if (dirThenDownload) setAutoDownloadPending(true); handleStartScan(); }
-                            else { handleStartDownload(); }
-                          }}
-                          disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
-                          className={cn("h-8 text-xs font-bold shrink-0", isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white", !directoryOnly && idsToDownload.length > 0 ? "" : "flex-1")}
-                          size="sm"
-                        >
-                          {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Avvio...</> : (
-                            directoryOnly
-                              ? <><FolderDown className="w-3.5 h-3.5 mr-1" />{dirThenDownload ? "Scan+Scarica" : (hasCache ? "Aggiorna Dir" : "Scarica Dir")}</>
-                              : <><Zap className="w-3.5 h-3.5 mr-1" /> Scarica {idsToDownload.length}</>
-                          )}
-                        </Button>
+                        <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+                        <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
+                        <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{delay}s · {estimateLabel}</span>
                       </div>
 
-                      {hasCache && !scanComplete && !directoryOnly && (
-                        <button onClick={handleStartScan} className={`flex items-center gap-1 text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
-                          <RefreshCw className="w-3 h-3" /> Aggiorna directory
+                      <Button
+                        onClick={() => handleStartDownload()}
+                        disabled={idsToDownload.length === 0 || createJob.isPending}
+                        className={cn(
+                          "w-full h-10 text-sm font-bold rounded-xl transition-all",
+                          idsToDownload.length > 0
+                            ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
+                            : ""
+                        )}
+                      >
+                        {createJob.isPending
+                          ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio in corso...</>
+                          : <><Download className="w-4 h-4 mr-2" /> SCARICA {idsToDownload.length} PROFILI</>
+                        }
+                      </Button>
+
+                      {/* Refresh directory link */}
+                      {hasCache && !scanComplete && (
+                        <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
+                          <RefreshCw className="w-3 h-3" /> Aggiorna elenco dalla directory
                         </button>
                       )}
                     </div>
@@ -698,5 +684,33 @@ function WizardRow({ step, active, isDark, icon: Icon, label, missing, total, ch
       </div>
       {children}
     </div>
+  );
+}
+
+/* ── Download Choice Card ── */
+function DownloadChoice({ selected, onClick, isDark, title, description, count, color }: {
+  selected: boolean; onClick: () => void; isDark: boolean;
+  title: string; description: string; count: number; color: string;
+}) {
+  return (
+    <button onClick={onClick} className={cn(
+      "w-full text-left rounded-lg border p-2.5 transition-all flex items-center gap-3",
+      selected
+        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
+        : isDark ? "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]" : "bg-white/60 border-slate-200 hover:bg-slate-50"
+    )}>
+      <div className={cn(
+        "w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+        selected
+          ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
+      )}>
+        {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-xs font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{title}</p>
+        <p className={cn("text-[10px] mt-0.5", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
+      </div>
+      <span className={cn("text-lg font-mono font-extrabold shrink-0", color)}>{count}</span>
+    </button>
   );
 }
