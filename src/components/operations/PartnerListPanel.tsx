@@ -352,7 +352,7 @@ export function PartnerListPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col overflow-hidden">
         {/* ═══ SECTION A: Dashboard Paese ═══ */}
         <div className={`px-3 pt-3 pb-2 flex-shrink-0 space-y-2`}>
           {/* Stats grid 2x4 */}
@@ -530,7 +530,7 @@ export function PartnerListPanel({
           </p>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
