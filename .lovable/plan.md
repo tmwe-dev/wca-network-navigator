@@ -1,108 +1,55 @@
 
 
-# Piano: Unificazione Tab Partner + Scarica in un Pannello Unico
+# Piano: Eliminare COL 3 Placeholder e Integrare il Tasto Conferma
 
 ## Problema
 
-Attualmente COL 3 ha due tab separate: "Partner" (tastoni + lista) e "Scarica" (ActionPanel + Terminal + JobMonitor). L'utente deve saltare avanti e indietro. Il tasto "Scarica Profili" nei tastoni fa solo un `setActiveTab("download")` -- un passaggio in piu' inutile.
+Nello step 0 (selezione paesi), la terza colonna e' uno spreco enorme di spazio: serve solo a mostrare un tasto "Conferma e prosegui" con delle bandierine. E' inutile e brutto.
 
 ## Soluzione
 
-Eliminare le Tabs. Il pannello destro diventa un unico flusso verticale scrollabile:
+1. **Eliminare COL 3 dallo step 0** -- Lo step 0 diventa solo 2 colonne: Stats sidebar + Country Grid. Occupano tutto lo spazio disponibile.
+
+2. **Tasto "Conferma" sopra la stats sidebar** -- Quando ci sono paesi selezionati, un bottone compatto appare in cima alla colonna Stats (o in cima alla CountryGrid), con le bandierine dei paesi e il tasto di conferma. Nessuna colonna dedicata.
+
+3. **ActiveJobBar / Terminal / JobMonitor** -- Questi restano visibili ma spostati sotto la CountryGrid (oppure in un banner compatto nell'header) quando ci sono job attivi, senza sprecare una colonna intera.
+
+4. **Placeholder "Seleziona un paese"** -- Eliminato completamente. La CountryGrid stessa e' gia' auto-esplicativa.
+
+## Dettaglio Tecnico -- `Operations.tsx`
+
+### Step 0: Layout a 2 colonne
 
 ```text
-┌──────────────────────────────────────────┐
-│  🇹🇭 Thailand · 92 partner               │
-│  Completamento: ██████████░░ 72%         │
-├──────────────────────────────────────────┤
-│ [📥 PROFILI] [🔍 DEEP] [🏷 ALIAS] [👤 ALIAS] │
-├──────────────────────────────────────────┤
-│ Profili  ██████████░░  78/92             │
-│ Deep S.  ████░░░░░░░░  25/92             │
-│ Email    ██████████░░  71/92             │
-│ ...                                      │
-├──────────────────────────────────────────┤
-│ ▼ DOWNLOAD  [collapsible, aperto se     │
-│   cliccato "Profili" o se job attivi]    │
-│   Network: [Tutti ▾]                     │
-│   Modalita': [Nuovi | Senza profilo | …] │
-│   Delay: ████░░ 15s                      │
-│   [⚡ Scarica 14 partner]               │
-│   Terminal log...                        │
-│   Active jobs...                         │
-├──────────────────────────────────────────┤
-│ [Cerca...] [Ordina]                      │
-│ Lista partner scorrevole...              │
-└──────────────────────────────────────────┘
+┌─────────────┬────────────────────────────────────┐
+│ Stats       │ Country Grid                       │
+│ sidebar     │ (filtri, lista paesi scrollabile)   │
+│             │                                    │
+│ [Conferma →]│ ActiveJobBar (se job attivi)        │
+│ (quando     │ DownloadTerminal (se job attivi)    │
+│ selezionati)│ JobMonitor (se job attivi)          │
+└─────────────┴────────────────────────────────────┘
 ```
 
-## Dettaglio Tecnico
+- La stats sidebar ha in basso (o in cima) il bottone conferma che appare solo se `selectedCountries.length > 0`
+- La CountryGrid si espande per prendere tutto il resto dello spazio
+- ActiveJobBar/Terminal/JobMonitor appaiono sotto la grid solo se ci sono job attivi
 
-### 1. `PartnerListPanel.tsx` -- Integrazione download inline
+### Step 1: invariato (Detail 40% + PartnerList 60%)
 
-Il componente assorbe la logica dell'`ActionPanel` direttamente al suo interno:
+Nessun cambiamento allo step 1, funziona gia'.
 
-- **Sezione download collassabile** (`Collapsible`) posizionata tra le progress bar e la search bar
-- Si apre automaticamente quando:
-  - L'utente clicca il tasto "Profili" (anziche' switchare tab)
-  - Ci sono job attivi per i paesi selezionati
-- Contiene: selezione network, modalita' download (toggle chips anziche' dropdown), slider delay, bottone avvio, terminale compatto
-- Le modalita' download diventano **3 toggle chips** inline: `Nuovi` | `Senza profilo` | `Tutti` -- piu' immediato di un dropdown
-- Il terminale e il job monitor sono versioni compatte inline (max-height con scroll)
+### Modifiche specifiche
 
-**Nuove props necessarie:**
-- `onJobCreated?: (jobId: string) => void` -- per avviare il processore
-- `directoryOnly?: boolean` + `onDirectoryOnlyChange?`
+**Rimuovere** (righe ~269-317): L'intera COL 3 dello step 0 con il placeholder e il bottone conferma.
 
-**Logica copiata dall'ActionPanel:**
-- Query `directory-cache`, `db-partners-for-countries`, `no-profile-wca-ids`
-- `handleStartScan`, `handleStartDownload`, `executeDownload`
-- Directory scan con cache, cleanup stale partners, auto-download
-- Stima tempo, slider delay, selezione network
+**Aggiungere** nella stats sidebar (COL 1): Un bottone "Conferma" compatto in fondo alla colonna, visibile solo quando `selectedCountries.length > 0`. Mostra le bandierine e il conteggio.
 
-### 2. `Operations.tsx` -- Rimozione Tabs
+**Spostare** ActiveJobBar/Terminal/JobMonitor: Da COL 3 a sotto la CountryGrid (nella stessa COL 2, in fondo), visibili solo se ci sono job attivi.
 
-- Eliminare `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`
-- Eliminare `activeTab` state
-- Eliminare import di `ActionPanel`, `AdvancedTools`
-- COL 3 diventa un singolo `PartnerListPanel` con tutte le props
-- `ActiveJobBar` resta sopra il pannello
-- `DownloadTerminal` e `JobMonitor` vengono rimossi dal livello Operations (integrati nel PartnerListPanel)
-
-### 3. Componenti rimossi/semplificati
-
-- `ActionPanel` non viene piu' importato in Operations (resta disponibile se usato altrove)
-- `AdvancedTools` viene integrato come sezione collassabile dentro il pannello download del PartnerListPanel
-- Le import di `Tabs` ecc. vengono rimosse da Operations
-
-### 4. UX delle modalita' download
-
-Le 3 modalita' diventano toggle chips orizzontali con contatori:
-
-```text
-[Nuovi (5)] [Senza profilo (14)] [Tutti (92)]
-```
-
-- Chip attivo evidenziato con colore
-- Il chip "Solo Directory" diventa un toggle separato sopra
-- Sotto i chips: slider delay + stima tempo + bottone avvio
-
-### 5. Vista senza paese selezionato
-
-Quando nessun paese e' selezionato, la COL 3 mostra:
-- `ActiveJobBar` (se ci sono job)
-- `DownloadTerminal` compatto (se ci sono job)
-- `JobMonitor` (se ci sono job)
-- Placeholder "Seleziona un paese" (se non ci sono job)
-
-Questo rimane identico a oggi, nessun cambiamento.
+**Aggiustare larghezze**: Step 0 usa 2 colonne che occupano il 100% dello spazio (stats ~140px + grid flex-1).
 
 ## File modificati
 
-1. **`src/components/operations/PartnerListPanel.tsx`** -- Integrazione completa della logica download: queries directory, scan, download, terminale compatto, toggle chips modalita'
-2. **`src/pages/Operations.tsx`** -- Rimozione Tabs, semplificazione a pannello unico, rimozione import ActionPanel/AdvancedTools
-
-## Nessuna migrazione DB
-
-Tutto usa query e componenti esistenti. Nessun cambiamento backend.
+1. **`src/pages/Operations.tsx`** -- Rimozione COL 3 dallo step 0, bottone conferma nella stats sidebar, spostamento job monitors
 
