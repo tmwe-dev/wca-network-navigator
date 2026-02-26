@@ -252,10 +252,31 @@ export default function Operations() {
                       <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
                     ))
                   )}
+                  {/* Confirm button */}
+                  {selectedCountries.length > 0 && (
+                    <div className="mt-auto pt-2 border-t border-white/[0.08]">
+                      <div className="flex flex-wrap gap-1 mb-1.5 justify-center">
+                        {selectedCountries.map(c => (
+                          <span key={c.code} className="text-sm">{getCountryFlag(c.code)}</span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={confirmSelection}
+                        className={cn(
+                          "w-full py-2 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97]",
+                          isDark
+                            ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25"
+                            : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
+                        )}
+                      >
+                        Conferma →
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* COL 2: Country Grid */}
-                <div className="min-w-[280px] w-[35%] max-w-[400px] flex-shrink-0 min-h-0 flex flex-col">
+              {/* COL 2: Country Grid + Job monitors */}
+                <div className="flex-1 min-h-0 flex flex-col gap-2">
                   <CountryGrid
                     selected={selectedCountries}
                     onToggle={toggleCountry}
@@ -264,56 +285,13 @@ export default function Operations() {
                     directoryOnly={directoryOnly}
                     onDirectoryOnlyChange={setDirectoryOnly}
                   />
-                </div>
-
-                {/* COL 3: Placeholder / Jobs */}
-                <div className="flex-1 min-h-0 flex flex-col">
-                  <div className="flex-1 flex flex-col gap-3 overflow-auto">
-                    <ActiveJobBar />
-                    <DownloadTerminal />
-                    <JobMonitor />
-                    {selectedCountries.length > 0 ? (
-                      /* Confirm button */
-                      <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                        <div className="text-center space-y-4">
-                          <div className="flex flex-wrap justify-center gap-2">
-                            {selectedCountries.map(c => (
-                              <span key={c.code} className={cn(
-                                "text-xl",
-                              )}>
-                                {getCountryFlag(c.code)}
-                              </span>
-                            ))}
-                          </div>
-                          <p className={`text-sm font-medium ${th.h2}`}>
-                            {selectedCountries.length === 1
-                              ? selectedCountries[0].name
-                              : `${selectedCountries.length} paesi selezionati`}
-                          </p>
-                          <button
-                            onClick={confirmSelection}
-                            className={cn(
-                              "px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]",
-                              isDark
-                                ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25"
-                                : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
-                            )}
-                          >
-                            Conferma e prosegui →
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      !jobs?.some(j => j.status === "running" || j.status === "pending" || j.status === "paused") && (
-                        <div className={`flex-1 flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                          <div className="text-center space-y-3">
-                            <Globe className={`w-16 h-16 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
-                            <p className={`text-sm ${th.sub}`}>Seleziona un paese per iniziare</p>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
+                  {activeJobs.length > 0 && (
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <ActiveJobBar />
+                      <DownloadTerminal />
+                      <JobMonitor />
+                    </div>
+                  )}
                 </div>
               </div>
 
