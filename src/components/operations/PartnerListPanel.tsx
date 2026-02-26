@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+// Collapsible removed – download section always visible
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -123,7 +123,7 @@ export function PartnerListPanel({
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
-  const [downloadOpen, setDownloadOpen] = useState(false);
+  // downloadOpen removed – section always visible
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -451,7 +451,7 @@ export function PartnerListPanel({
                 missing={stats.total - stats.withProfile}
                 total={stats.total}
                 isDark={isDark}
-                onClick={() => setDownloadOpen(true)}
+                onClick={() => toggleProgressFilter("profiles")}
               />
               <ActionButton
                 icon={Telescope}
@@ -483,144 +483,136 @@ export function PartnerListPanel({
           </div>
         )}
 
-        {/* ═══ DOWNLOAD SECTION (Collapsible) ═══ */}
-        <Collapsible open={downloadOpen || isScanning} onOpenChange={setDownloadOpen}>
-          <CollapsibleTrigger className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-all flex-shrink-0",
-            isDark ? "text-slate-300 hover:bg-white/[0.04]" : "text-slate-600 hover:bg-slate-50"
-          )}>
-            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", (downloadOpen || isScanning) && "rotate-180")} />
-            <Download className="w-3.5 h-3.5" />
-            <span>Download</span>
-            {totalCount > 0 && (
-              <span className={`ml-auto font-mono text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                {downloadedCount}/{totalCount} in DB
-              </span>
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className={`mx-3 mb-2 p-3 rounded-xl border space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"}`}>
-              {isScanning ? (
-                /* Scanning state */
-                <div className="text-center space-y-2">
-                  <Loader2 className={`w-6 h-6 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-                  <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                    {selectedCountries.length > 1 && `Paese ${currentCountryIdx + 1}/${selectedCountries.length}: `}
-                    {selectedCountries[currentCountryIdx]?.name} — Pg {currentPage}
-                  </p>
-                  {scannedMembers.length > 0 && <p className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
-                  {scanError && <p className={`text-xs ${isDark ? "text-red-400" : "text-red-600"}`}>⚠️ {scanError}</p>}
-                  <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-xs">
-                    <Square className="w-3 h-3 mr-1" /> Stop
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Network selector */}
-                  <div className="flex items-center gap-2">
-                    <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-                      <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
-                      <SelectContent className={th.selContent}>
-                        <SelectItem value="__all__">Tutti i network</SelectItem>
-                        {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
-                      <FolderDown className="w-3 h-3" /> Solo Dir
-                    </label>
-                  </div>
-
-                  {/* Mode toggle chips */}
-                  {!directoryOnly && (
-                    <div className="flex gap-1.5">
-                      {([
-                        { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
-                        { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
-                        { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
-                      ]).map(chip => (
-                        <button
-                          key={chip.key}
-                          onClick={() => setDownloadMode(chip.key)}
-                          className={cn(
-                            "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
-                            downloadMode === chip.key
-                              ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                              : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                          )}
-                        >
-                          {chip.label} ({chip.count})
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Directory-only options */}
-                  {directoryOnly && (
-                    <div className="space-y-2">
-                      {hasCache && totalCount > 0 && (
-                        <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ Directory: {totalCount} aziende</p>
-                      )}
-                      <label className={`flex items-center gap-2 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                        <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
-                        <Zap className="w-3 h-3" /> Scarica dopo scansione
-                      </label>
-                    </div>
-                  )}
-
-                  {/* Delay slider */}
-                  {!directoryOnly && idsToDownload.length > 0 && (
-                    <div className="space-y-1">
-                      <div className={`flex items-center justify-between text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                        <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> Delay: <b className={isDark ? "text-white" : "text-slate-800"}>{delay}s</b></span>
-                        <span className="font-mono">{estimateLabel}</span>
-                      </div>
-                      <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4" />
-                    </div>
-                  )}
-
-                  {/* Start button */}
-                  <Button
-                    onClick={() => {
-                      if (directoryOnly) {
-                        if (dirThenDownload) setAutoDownloadPending(true);
-                        handleStartScan();
-                      } else {
-                        handleStartDownload();
-                      }
-                    }}
-                    disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
-                    className={`w-full h-8 text-xs ${isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white"}`}
-                    size="sm"
-                  >
-                    {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> Avvio...</> : (
-                      directoryOnly
-                        ? <><FolderDown className="w-3.5 h-3.5 mr-1.5" />{dirThenDownload ? (hasCache ? "Aggiorna e Scarica" : "Scansiona e Scarica") : (hasCache ? "Aggiorna Directory" : "Scarica Directory")}</>
-                        : <><Zap className="w-3.5 h-3.5 mr-1.5" /> Scarica {idsToDownload.length} partner</>
-                    )}
-                  </Button>
-
-                  {/* Refresh scan button */}
-                  {hasCache && !scanComplete && !directoryOnly && (
-                    <button onClick={handleStartScan} className={`flex items-center gap-1 mx-auto text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
-                      <RefreshCw className="w-3 h-3" /> Aggiorna directory
-                    </button>
-                  )}
-
-                  {skippedCountries.length > 0 && (
-                    <p className={`text-[10px] ${isDark ? "text-amber-400/60" : "text-amber-500"}`}>⚠ {skippedCountries.length} paesi saltati</p>
-                  )}
-                </>
-              )}
-
-              {/* Inline terminal + jobs */}
-              <div className="max-h-40 overflow-auto space-y-2">
-                <DownloadTerminal />
-                <JobMonitor />
+        {/* ═══ DOWNLOAD SECTION (Always visible) ═══ */}
+        <div className={`px-3 pb-2 flex-shrink-0 space-y-2`}>
+          {isScanning ? (
+            <div className={`p-3 rounded-xl border space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"}`}>
+              <div className="text-center space-y-2">
+                <Loader2 className={`w-5 h-5 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  {selectedCountries.length > 1 && `Paese ${currentCountryIdx + 1}/${selectedCountries.length}: `}
+                  {selectedCountries[currentCountryIdx]?.name} — Pg {currentPage}
+                </p>
+                {scannedMembers.length > 0 && <p className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
+                {scanError && <p className={`text-xs ${isDark ? "text-red-400" : "text-red-600"}`}>⚠️ {scanError}</p>}
+                <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-xs">
+                  <Square className="w-3 h-3 mr-1" /> Stop
+                </Button>
               </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          ) : (
+            <>
+              {/* Network + Directory toggle row */}
+              <div className="flex items-center gap-2">
+                <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                  <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
+                  <SelectContent className={th.selContent}>
+                    <SelectItem value="__all__">Tutti i network</SelectItem>
+                    {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
+                  <FolderDown className="w-3 h-3" /> Solo Dir
+                </label>
+                {totalCount > 0 && (
+                  <span className={`font-mono text-[10px] shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    {downloadedCount}/{totalCount}
+                  </span>
+                )}
+              </div>
+
+              {/* Mode toggle chips */}
+              {!directoryOnly && (
+                <div className="flex gap-1.5">
+                  {([
+                    { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
+                    { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
+                    { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
+                  ]).map(chip => (
+                    <button
+                      key={chip.key}
+                      onClick={() => setDownloadMode(chip.key)}
+                      className={cn(
+                        "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
+                        downloadMode === chip.key
+                          ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                          : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                      )}
+                    >
+                      {chip.label} ({chip.count})
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Directory-only options */}
+              {directoryOnly && (
+                <div className="flex items-center gap-3">
+                  {hasCache && totalCount > 0 && (
+                    <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ {totalCount} aziende</p>
+                  )}
+                  <label className={`flex items-center gap-1.5 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
+                    <Zap className="w-3 h-3" /> Scarica dopo
+                  </label>
+                </div>
+              )}
+
+              {/* Delay + Start row */}
+              <div className="flex items-center gap-2">
+                {!directoryOnly && idsToDownload.length > 0 && (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className={`text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      <Timer className="w-3 h-3 inline mr-0.5" />{delay}s
+                    </span>
+                    <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
+                    <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{estimateLabel}</span>
+                  </div>
+                )}
+                <Button
+                  onClick={() => {
+                    if (directoryOnly) {
+                      if (dirThenDownload) setAutoDownloadPending(true);
+                      handleStartScan();
+                    } else {
+                      handleStartDownload();
+                    }
+                  }}
+                  disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
+                  className={cn(
+                    "h-8 text-xs font-bold shrink-0",
+                    isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white",
+                    !directoryOnly && idsToDownload.length > 0 ? "" : "flex-1"
+                  )}
+                  size="sm"
+                >
+                  {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Avvio...</> : (
+                    directoryOnly
+                      ? <><FolderDown className="w-3.5 h-3.5 mr-1" />{dirThenDownload ? (hasCache ? "Aggiorna+Scarica" : "Scan+Scarica") : (hasCache ? "Aggiorna Dir" : "Scarica Dir")}</>
+                      : <><Zap className="w-3.5 h-3.5 mr-1" /> Scarica {idsToDownload.length}</>
+                  )}
+                </Button>
+              </div>
+
+              {/* Refresh + warnings */}
+              {hasCache && !scanComplete && !directoryOnly && (
+                <button onClick={handleStartScan} className={`flex items-center gap-1 text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
+                  <RefreshCw className="w-3 h-3" /> Aggiorna directory
+                </button>
+              )}
+              {skippedCountries.length > 0 && (
+                <p className={`text-[10px] ${isDark ? "text-amber-400/60" : "text-amber-500"}`}>⚠ {skippedCountries.length} paesi saltati</p>
+              )}
+            </>
+          )}
+
+          {/* Terminal + Jobs (visible when active) */}
+          <div className="max-h-32 overflow-auto space-y-1">
+            <DownloadTerminal />
+            <JobMonitor />
+          </div>
+        </div>
 
         {/* ═══ Search + Sort ═══ */}
         <div className="px-3 pb-2 space-y-1.5 flex-shrink-0">
