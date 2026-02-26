@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search, Phone, Mail, ChevronRight, Users, Loader2, Filter,
-  FileText, Trophy, Wand2, Send,
+  FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
 } from "lucide-react";
 import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -26,6 +26,15 @@ import { t } from "@/components/download/theme";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 
+/* ── Helpers ── */
+function statusColor(missing: number, total: number, isDark: boolean) {
+  if (total === 0) return { bg: isDark ? "bg-slate-800/40" : "bg-slate-100", border: isDark ? "border-slate-700/50" : "border-slate-200", text: isDark ? "text-slate-400" : "text-slate-500" };
+  const pct = missing / total;
+  if (pct === 0) return { bg: isDark ? "bg-emerald-950/40" : "bg-emerald-50", border: isDark ? "border-emerald-500/25" : "border-emerald-300", text: isDark ? "text-emerald-400" : "text-emerald-600" };
+  if (pct <= 0.5) return { bg: isDark ? "bg-amber-950/40" : "bg-amber-50", border: isDark ? "border-amber-500/25" : "border-amber-300", text: isDark ? "text-amber-400" : "text-amber-600" };
+  return { bg: isDark ? "bg-rose-950/40" : "bg-rose-50", border: isDark ? "border-rose-500/25" : "border-rose-300", text: isDark ? "text-rose-400" : "text-rose-600" };
+}
+
 function coverageColor(count: number, total: number, isDark: boolean) {
   if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
   const pct = count / total;
@@ -34,32 +43,77 @@ function coverageColor(count: number, total: number, isDark: boolean) {
   return isDark ? "text-rose-400" : "text-rose-500";
 }
 
-function MiniProgress({ label, value, total, isDark, color }: { label: string; value: number; total: number; isDark: boolean; color: string }) {
+type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
+
+function ProgressBar({ label, value, total, isDark, gradientColor, active, onClick }: {
+  label: string; value: number; total: number; isDark: boolean; gradientColor: string; active: boolean; onClick: () => void;
+}) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="flex-1 flex items-center gap-1.5 min-w-0">
-      <span className={`text-[9px] w-8 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>
+    <button onClick={onClick} className={cn(
+      "flex items-center gap-2 px-2 py-1 rounded-lg transition-all text-left w-full",
+      active
+        ? isDark ? "bg-sky-950/50 ring-1 ring-sky-400/30" : "bg-sky-50 ring-1 ring-sky-300/50"
+        : isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
+    )}>
+      <span className={`text-[10px] w-14 shrink-0 font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
       <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-        <div className={`h-full rounded-full bg-gradient-to-r ${color}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full bg-gradient-to-r ${gradientColor}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className={`text-[9px] font-bold w-7 text-right ${isDark ? "text-slate-400" : "text-slate-500"}`}>{pct}%</span>
-    </div>
+      <span className={`text-[10px] font-mono font-bold w-16 text-right ${isDark ? "text-slate-300" : "text-slate-600"}`}>{value}/{total}</span>
+    </button>
   );
 }
 
+/* ── Action Button ("Testone") ── */
+function ActionButton({ icon: Icon, label, missing, total, isDark, onClick, loading, disabled }: {
+  icon: any; label: string; missing: number; total: number; isDark: boolean;
+  onClick: () => void; loading?: boolean; disabled?: boolean;
+}) {
+  const st = statusColor(missing, total, isDark);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading || missing === 0}
+      className={cn(
+        "flex-1 min-w-0 rounded-xl border-2 p-2.5 transition-all duration-200",
+        st.bg, st.border,
+        missing > 0 ? "cursor-pointer hover:scale-[1.03] active:scale-[0.98]" : "opacity-60 cursor-default",
+        "disabled:opacity-40"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        {loading ? <Loader2 className={`w-4 h-4 animate-spin ${st.text}`} /> : <Icon className={`w-4 h-4 ${st.text}`} />}
+        <span className={`text-xs font-bold truncate ${isDark ? "text-slate-200" : "text-slate-700"}`}>{label}</span>
+      </div>
+      <p className={`text-lg font-mono font-extrabold mt-1 ${st.text}`}>{missing}</p>
+      <p className={`text-[9px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>mancanti su {total}</p>
+    </button>
+  );
+}
+
+/* ── Props ── */
 interface PartnerListPanelProps {
   countryCodes: string[];
   countryNames: string[];
   isDark: boolean;
+  onSwitchToDownload?: () => void;
+  onDeepSearch?: (partnerIds: string[]) => void;
+  onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
+  deepSearchRunning?: boolean;
+  aliasGenerating?: boolean;
 }
 
-export function PartnerListPanel({ countryCodes, countryNames, isDark }: PartnerListPanelProps) {
+export function PartnerListPanel({
+  countryCodes, countryNames, isDark,
+  onSwitchToDownload, onDeepSearch, onGenerateAliases,
+  deepSearchRunning, aliasGenerating,
+}: PartnerListPanelProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
-  const [filterIncomplete, setFilterIncomplete] = useState(false);
-  const [generatingAliases, setGeneratingAliases] = useState(false);
+  const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
 
   const { data: partners, isLoading } = usePartners({
@@ -70,31 +124,44 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
   const toggleFavorite = useToggleFavorite();
   const queryClient = useQueryClient();
 
-  const handleGenerateAliases = useCallback(async () => {
-    if (!countryCodes.length) return;
-    setGeneratingAliases(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-aliases", {
-        body: { countryCodes },
-      });
-      if (error) throw error;
-      if (data?.success) {
-        toast.success(`Alias generati: ${data.processed} aziende, ${data.contacts} contatti`);
-        queryClient.invalidateQueries({ queryKey: ["partners"] });
-      } else {
-        toast.error(data?.error || "Errore nella generazione alias");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Errore");
-    } finally {
-      setGeneratingAliases(false);
-    }
-  }, [countryCodes, queryClient]);
+  /* ── Compute stats from partner data ── */
+  const stats = useMemo(() => {
+    const list = partners || [];
+    const total = list.length;
+    let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
+    list.forEach((p: any) => {
+      if (p.raw_profile_html) withProfile++;
+      if (p.enrichment_data && (p.enrichment_data as any)?.deep_search_at) withDeep++;
+      if (p.email || (p.partner_contacts || []).some((c: any) => c.email)) withEmail++;
+      if (p.phone || (p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile)) withPhone++;
+      if (p.company_alias) withAliasCo++;
+      if ((p.partner_contacts || []).some((c: any) => c.contact_alias)) withAliasCt++;
+    });
+    return { total, withProfile, withDeep, withEmail, withPhone, withAliasCo, withAliasCt };
+  }, [partners]);
 
+  const globalPct = stats.total > 0
+    ? Math.round(((stats.withProfile + stats.withDeep + stats.withEmail + stats.withPhone + stats.withAliasCo + stats.withAliasCt) / (stats.total * 6)) * 100)
+    : 0;
+
+  /* ── Filter partners based on progress bar click ── */
   const filteredPartners = useMemo(() => {
-    let list = filterIncomplete
-      ? (partners || []).filter((p: any) => getPartnerContactQuality(p.partner_contacts) !== "complete")
-      : partners || [];
+    let list = partners || [];
+
+    // Apply progress filter
+    if (progressFilter) {
+      list = list.filter((p: any) => {
+        switch (progressFilter) {
+          case "profiles": return !p.raw_profile_html;
+          case "deep": return !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at);
+          case "email": return !p.email && !(p.partner_contacts || []).some((c: any) => c.email);
+          case "phone": return !p.phone && !(p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile);
+          case "alias_co": return !p.company_alias;
+          case "alias_ct": return !(p.partner_contacts || []).some((c: any) => c.contact_alias);
+          default: return true;
+        }
+      });
+    }
 
     const sorted = [...list];
     switch (sortBy) {
@@ -108,26 +175,9 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
       });
       default: return sorted;
     }
-  }, [partners, filterIncomplete, sortBy]);
+  }, [partners, progressFilter, sortBy]);
 
-  const { data: selectedPartner, isLoading: detailLoading } = usePartner(selectedId || "");
-  const { data: countryStatsData } = useCountryStats();
-
-  const aggregatedStats = useMemo(() => {
-    if (!countryStatsData) return null;
-    let total = 0, withProfile = 0, withoutProfile = 0, withEmail = 0, withPhone = 0;
-    countryCodes.forEach(cc => {
-      const s = countryStatsData.byCountry[cc];
-      if (s) {
-        total += s.total_partners;
-        withProfile += s.with_profile;
-        withoutProfile += s.without_profile;
-        withEmail += s.with_email;
-        withPhone += s.with_phone;
-      }
-    });
-    return { total, withProfile, withoutProfile, withEmail, withPhone };
-  }, [countryStatsData, countryCodes]);
+  const { data: selectedPartner } = usePartner(selectedId || "");
 
   if (selectedId && selectedPartner) {
     return (
@@ -142,38 +192,89 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
     );
   }
 
+  const toggleProgressFilter = (key: ProgressFilterKey) => {
+    setProgressFilter(prev => prev === key ? null : key);
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col">
-        {/* Country Summary Stats */}
-        {aggregatedStats && aggregatedStats.total > 0 && (
+        {/* ═══ Global Completion Bar ═══ */}
+        {stats.total > 0 && (
           <div className={`px-3 pt-3 pb-1 flex-shrink-0`}>
-            <div className={`text-[11px] font-mono rounded-lg border px-3 py-2 space-y-1.5 ${isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50/80 border-slate-200/60"}`}>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className={`flex items-center gap-1 font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>
-                  <Users className="w-3.5 h-3.5" />{aggregatedStats.total}
-                </span>
-                <span className={`flex items-center gap-1 ${aggregatedStats.withoutProfile > 0 ? (isDark ? "text-orange-400" : "text-orange-600") : (isDark ? "text-emerald-400" : "text-emerald-600")}`}>
-                  <FileText className="w-3.5 h-3.5" />{aggregatedStats.withProfile}
-                  {aggregatedStats.withoutProfile > 0 && <span className="text-[9px]">({aggregatedStats.withoutProfile} ✗)</span>}
-                </span>
-                <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withEmail, aggregatedStats.total, isDark)}`}>
-                  <Mail className="w-3.5 h-3.5" />{aggregatedStats.withEmail}
-                </span>
-                <span className={`flex items-center gap-1 ${coverageColor(aggregatedStats.withPhone, aggregatedStats.total, isDark)}`}>
-                  <Phone className="w-3.5 h-3.5" />{aggregatedStats.withPhone}
-                </span>
+            <div className={`flex items-center gap-3 text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+              <span className="font-semibold">Completamento</span>
+              <div className={`flex-1 h-2 rounded-full overflow-hidden ${isDark ? "bg-white/[0.08]" : "bg-slate-200/80"}`}>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${globalPct >= 80 ? "bg-gradient-to-r from-emerald-500 to-emerald-400" : globalPct >= 50 ? "bg-gradient-to-r from-amber-500 to-amber-400" : "bg-gradient-to-r from-rose-500 to-rose-400"}`}
+                  style={{ width: `${globalPct}%` }}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <MiniProgress label="Profili" value={aggregatedStats.withProfile} total={aggregatedStats.total} isDark={isDark} color="from-violet-500 to-purple-500" />
-                <MiniProgress label="Email" value={aggregatedStats.withEmail} total={aggregatedStats.total} isDark={isDark} color="from-sky-400 to-blue-500" />
-                <MiniProgress label="Tel" value={aggregatedStats.withPhone} total={aggregatedStats.total} isDark={isDark} color="from-teal-400 to-emerald-500" />
-              </div>
+              <span className="font-mono font-bold">{globalPct}%</span>
             </div>
           </div>
         )}
-        {/* Search + Sort */}
-        <div className="p-3 space-y-2 flex-shrink-0">
+
+        {/* ═══ 4 Action Buttons ("Tastoni") ═══ */}
+        {stats.total > 0 && (
+          <div className="px-3 pt-2 pb-1 flex-shrink-0">
+            <div className="grid grid-cols-4 gap-2">
+              <ActionButton
+                icon={Download}
+                label="Profili"
+                missing={stats.total - stats.withProfile}
+                total={stats.total}
+                isDark={isDark}
+                onClick={() => onSwitchToDownload?.()}
+              />
+              <ActionButton
+                icon={Telescope}
+                label="Deep Search"
+                missing={stats.total - stats.withDeep}
+                total={stats.total}
+                isDark={isDark}
+                onClick={() => {
+                  const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
+                  if (ids.length > 0) onDeepSearch?.(ids);
+                }}
+                loading={deepSearchRunning}
+              />
+              <ActionButton
+                icon={Building2}
+                label="Alias Az."
+                missing={stats.total - stats.withAliasCo}
+                total={stats.total}
+                isDark={isDark}
+                onClick={() => onGenerateAliases?.(countryCodes, "company")}
+                loading={aliasGenerating}
+              />
+              <ActionButton
+                icon={UserCircle}
+                label="Alias Ct."
+                missing={stats.total - stats.withAliasCt}
+                total={stats.total}
+                isDark={isDark}
+                onClick={() => onGenerateAliases?.(countryCodes, "contact")}
+                loading={aliasGenerating}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ═══ 6 Clickable Progress Bars ═══ */}
+        {stats.total > 0 && (
+          <div className={`px-3 pt-1 pb-2 flex-shrink-0 space-y-0.5`}>
+            <ProgressBar label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} gradientColor="from-violet-500 to-purple-500" active={progressFilter === "profiles"} onClick={() => toggleProgressFilter("profiles")} />
+            <ProgressBar label="Deep S." value={stats.withDeep} total={stats.total} isDark={isDark} gradientColor="from-cyan-500 to-blue-500" active={progressFilter === "deep"} onClick={() => toggleProgressFilter("deep")} />
+            <ProgressBar label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} gradientColor="from-sky-400 to-blue-500" active={progressFilter === "email"} onClick={() => toggleProgressFilter("email")} />
+            <ProgressBar label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} gradientColor="from-teal-400 to-emerald-500" active={progressFilter === "phone"} onClick={() => toggleProgressFilter("phone")} />
+            <ProgressBar label="Alias Az." value={stats.withAliasCo} total={stats.total} isDark={isDark} gradientColor="from-amber-400 to-orange-500" active={progressFilter === "alias_co"} onClick={() => toggleProgressFilter("alias_co")} />
+            <ProgressBar label="Alias Ct." value={stats.withAliasCt} total={stats.total} isDark={isDark} gradientColor="from-pink-400 to-rose-500" active={progressFilter === "alias_ct"} onClick={() => toggleProgressFilter("alias_ct")} />
+          </div>
+        )}
+
+        {/* ═══ Search + Sort ═══ */}
+        <div className="px-3 pb-2 space-y-1.5 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
@@ -181,11 +282,11 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                 placeholder="Cerca partner..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className={`pl-10 h-9 rounded-xl text-sm ${th.input}`}
+                className={`pl-10 h-8 rounded-xl text-xs ${th.input}`}
               />
             </div>
             <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-              <SelectTrigger className={`w-[140px] h-9 rounded-xl text-xs ${th.selTrigger}`}>
+              <SelectTrigger className={`w-[120px] h-8 rounded-xl text-xs ${th.selTrigger}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className={th.selContent}>
@@ -194,34 +295,13 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                 <SelectItem value="contacts_desc">Contatti ↓</SelectItem>
               </SelectContent>
             </Select>
-            <button
-              onClick={() => setFilterIncomplete(!filterIncomplete)}
-              className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border transition-all shrink-0 ${
-                filterIncomplete
-                  ? isDark ? "bg-sky-500/15 text-sky-300 border-sky-500/25" : "bg-sky-50 text-sky-700 border-sky-200"
-                  : isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-400" : "bg-white/70 border-slate-200 text-slate-500"
-              }`}
-            >
-              <Filter className="w-3 h-3" />
-              Incompleti
-            </button>
-            <button
-              onClick={handleGenerateAliases}
-              disabled={generatingAliases || !countryCodes.length}
-              className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border transition-all shrink-0 ${
-                isDark ? "bg-white/[0.05] border-white/[0.1] text-slate-400 hover:bg-white/[0.1]" : "bg-white/70 border-slate-200 text-slate-500 hover:bg-white"
-              } disabled:opacity-40`}
-            >
-              {generatingAliases ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-              Alias
-            </button>
           </div>
-          <p className={`text-xs ${th.dim}`}>
-            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner in ${countryNames.join(", ")}`}
+          <p className={`text-[11px] ${th.dim}`}>
+            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""} in ${countryNames.join(", ")}`}
           </p>
         </div>
 
-        {/* Partner List */}
+        {/* ═══ Partner List ═══ */}
         <ScrollArea className="flex-1">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
             {isLoading
@@ -277,7 +357,6 @@ export function PartnerListPanel({ countryCodes, countryNames, isDark }: Partner
                             <span className="text-lg leading-none">{getCountryFlag(partner.country_code)}</span>
                             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
                           </div>
-                          {/* Contact info */}
                           <div className="flex items-center gap-2 mt-1.5 text-xs">
                             {primaryContact ? (
                               <>
