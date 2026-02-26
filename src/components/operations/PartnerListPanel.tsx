@@ -1,13 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
-import { useCountryStats } from "@/hooks/useCountryStats";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-// Collapsible removed – download section always visible
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -15,9 +13,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, Phone, Mail, ChevronRight, ChevronDown, Users, Loader2, Filter,
+  Search, Phone, Mail, ChevronRight, Users, Loader2,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
-  Zap, Timer, FolderDown, RefreshCw, Square,
+  Zap, Timer, FolderDown, RefreshCw, Square, CheckCircle2,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -33,72 +31,12 @@ import { useWcaSession } from "@/hooks/useWcaSession";
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { JobMonitor } from "@/components/download/JobMonitor";
-
 import { MiniStars } from "@/components/partners/shared/MiniStars";
-
-/* ── Helpers ── */
-function statusColor(missing: number, total: number, isDark: boolean) {
-  if (total === 0) return { bg: isDark ? "bg-slate-800/40" : "bg-slate-100", border: isDark ? "border-slate-700/50" : "border-slate-200", text: isDark ? "text-slate-400" : "text-slate-500" };
-  const pct = missing / total;
-  if (pct === 0) return { bg: isDark ? "bg-emerald-950/40" : "bg-emerald-50", border: isDark ? "border-emerald-500/25" : "border-emerald-300", text: isDark ? "text-emerald-400" : "text-emerald-600" };
-  if (pct <= 0.5) return { bg: isDark ? "bg-amber-950/40" : "bg-amber-50", border: isDark ? "border-amber-500/25" : "border-amber-300", text: isDark ? "text-amber-400" : "text-amber-600" };
-  return { bg: isDark ? "bg-rose-950/40" : "bg-rose-50", border: isDark ? "border-rose-500/25" : "border-rose-300", text: isDark ? "text-rose-400" : "text-rose-600" };
-}
-
-type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
-
-function ProgressBar({ label, value, total, isDark, gradientColor, active, onClick }: {
-  label: string; value: number; total: number; isDark: boolean; gradientColor: string; active: boolean; onClick: () => void;
-}) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <button onClick={onClick} className={cn(
-      "flex items-center gap-2 px-2 py-1 rounded-lg transition-all text-left w-full",
-      active
-        ? isDark ? "bg-sky-950/50 ring-1 ring-sky-400/30" : "bg-sky-50 ring-1 ring-sky-300/50"
-        : isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"
-    )}>
-      <span className={`text-[10px] w-14 shrink-0 font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
-      <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-        <div className={`h-full rounded-full bg-gradient-to-r ${gradientColor}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className={`text-[10px] font-mono font-bold w-16 text-right ${isDark ? "text-slate-300" : "text-slate-600"}`}>{value}/{total}</span>
-    </button>
-  );
-}
-
-/* ── Action Button ("Testone") ── */
-function ActionButton({ icon: Icon, label, missing, total, isDark, onClick, loading, disabled }: {
-  icon: any; label: string; missing: number; total: number; isDark: boolean;
-  onClick: () => void; loading?: boolean; disabled?: boolean;
-}) {
-  const st = statusColor(missing, total, isDark);
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading || missing === 0}
-      className={cn(
-        "flex-1 min-w-0 rounded-xl border-2 p-2.5 transition-all duration-200",
-        st.bg, st.border,
-        missing > 0 ? "cursor-pointer hover:scale-[1.03] active:scale-[0.98]" : "opacity-60 cursor-default",
-        "disabled:opacity-40"
-      )}
-    >
-      <div className="flex items-center gap-2">
-        {loading ? <Loader2 className={`w-4 h-4 animate-spin ${st.text}`} /> : <Icon className={`w-4 h-4 ${st.text}`} />}
-        <span className={`text-xs font-bold truncate ${isDark ? "text-slate-200" : "text-slate-700"}`}>{label}</span>
-      </div>
-      <p className={`text-lg font-mono font-extrabold mt-1 ${st.text}`}>{missing}</p>
-      <p className={`text-[9px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>mancanti su {total}</p>
-    </button>
-  );
-}
 
 /* ── Props ── */
 interface PartnerListPanelProps {
-  countryCodes: string[];
-  countryNames: string[];
-  selectedCountries: { code: string; name: string }[];
+  countryCode: string;
+  countryName: string;
   isDark: boolean;
   onDeepSearch?: (partnerIds: string[]) => void;
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
@@ -112,18 +50,19 @@ interface PartnerListPanelProps {
 }
 
 export function PartnerListPanel({
-  countryCodes, countryNames, selectedCountries, isDark,
+  countryCode, countryName, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
   onJobCreated, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
+  const countryCodes = useMemo(() => countryCode ? [countryCode] : [], [countryCode]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
+  type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
-  // downloadOpen removed – section always visible
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -134,7 +73,7 @@ export function PartnerListPanel({
   const queryClient = useQueryClient();
 
   /* ════════════════════════════════════════════
-   * DOWNLOAD LOGIC (absorbed from ActionPanel)
+   * DOWNLOAD LOGIC
    * ════════════════════════════════════════════ */
   const createJob = useCreateDownloadJob();
   const { ensureSession } = useWcaSession();
@@ -151,14 +90,12 @@ export function PartnerListPanel({
   const [scanComplete, setScanComplete] = useState(false);
   const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [currentCountryIdx, setCurrentCountryIdx] = useState(0);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
   const abortRef = useRef(false);
   const [dirThenDownload, setDirThenDownload] = useState(false);
   const [autoDownloadPending, setAutoDownloadPending] = useState(false);
 
-  const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
+  const { data: cachedEntries = [] } = useQuery({
     queryKey: ["directory-cache", countryCodes, networkKeys],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
@@ -172,7 +109,7 @@ export function PartnerListPanel({
     enabled: countryCodes.length > 0,
   });
 
-  const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
+  const { data: dbPartners = [] } = useQuery({
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
@@ -238,8 +175,9 @@ export function PartnerListPanel({
   }, [missingIds.length, noProfileInDirectoryCount, downloadMode]);
 
   useEffect(() => {
-    setScanComplete(false); setScannedMembers([]); setScanError(null); setSkippedCountries([]); setAutoDownloadPending(false);
-  }, [countryCodes.join(",")]);
+    setScanComplete(false); setScannedMembers([]); setScanError(null); setAutoDownloadPending(false);
+    setProgressFilter(null);
+  }, [countryCode]);
 
   useEffect(() => {
     if (!autoDownloadPending || !scanComplete || isScanning) return;
@@ -280,87 +218,72 @@ export function PartnerListPanel({
     return () => clearTimeout(timer);
   }, [autoDownloadPending, scanComplete, isScanning]);
 
-  const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
+  const saveScanToCache = useCallback(async (cc: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await supabase.from("directory_cache").upsert({
-      country_code: countryCode, network_name: netKey, members: membersJson as any,
+      country_code: cc, network_name: netKey, members: membersJson as any,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: "country_code,network_name" });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
   }, [queryClient]);
 
   const handleStartScan = useCallback(async () => {
-    setIsScanning(true); setScanError(null); setSkippedCountries([]); abortRef.current = false;
-    const allMembers: DirectoryMember[] = []; const skipped: string[] = [];
+    setIsScanning(true); setScanError(null); abortRef.current = false;
+    const allMembers: DirectoryMember[] = [];
     const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
-    for (let ci = 0; ci < selectedCountries.length; ci++) {
+    if (skipCachedDirs && cachedCountryCodes.has(countryCode)) {
+      setIsScanning(false); setScanComplete(true); return;
+    }
+    for (const netKey of networkKeys) {
       if (abortRef.current) break;
-      setCurrentCountryIdx(ci);
-      const country = selectedCountries[ci];
-      if (skipCachedDirs && cachedCountryCodes.has(country.code)) continue;
-      for (const netKey of networkKeys) {
-        if (abortRef.current) break;
-        let page = 1; let hasNext = true; let countryTotal = 0; let countryPages = 0;
-        const countryMembers: DirectoryMember[] = []; let countryFailed = false;
-        while (hasNext && !abortRef.current) {
-          setCurrentPage(page);
-          let result: DirectoryResult | null = null; let lastError = "";
-          try {
-            result = await scrapeWcaDirectory(country.code, netKey, page);
-            if (!result.success) { lastError = result.error || "Errore sconosciuto"; result = null; }
-          } catch (err) { lastError = err instanceof Error ? err.message : "Errore di rete"; result = null; }
-          if (!result || !result.success) { setScanError(`${country.name}: ${lastError}`); countryFailed = true; break; }
-          if (result.members.length > 0) {
-            const newMembers = result.members.map(m => ({ ...m, country: m.country || country.name, country_code: country.code }));
-            countryMembers.push(...newMembers); allMembers.push(...newMembers); setScannedMembers([...allMembers]);
-          }
-          countryTotal = result.pagination.total_results; countryPages = result.pagination.total_pages;
-          hasNext = result.pagination.has_next_page || result.members.length >= 50;
-          page++;
-          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 3000));
+      let page = 1; let hasNext = true; let countryTotal = 0; let countryPages = 0;
+      const countryMembers: DirectoryMember[] = [];
+      while (hasNext && !abortRef.current) {
+        setCurrentPage(page);
+        let result: DirectoryResult | null = null; let lastError = "";
+        try {
+          result = await scrapeWcaDirectory(countryCode, netKey, page);
+          if (!result.success) { lastError = result.error || "Errore sconosciuto"; result = null; }
+        } catch (err) { lastError = err instanceof Error ? err.message : "Errore di rete"; result = null; }
+        if (!result || !result.success) { setScanError(`${countryName}: ${lastError}`); break; }
+        if (result.members.length > 0) {
+          const newMembers = result.members.map(m => ({ ...m, country: m.country || countryName, country_code: countryCode }));
+          countryMembers.push(...newMembers); allMembers.push(...newMembers); setScannedMembers([...allMembers]);
         }
-        if (countryFailed) { const label = `${country.name} (${country.code})`; if (!skipped.includes(label)) { skipped.push(label); setSkippedCountries([...skipped]); } }
-        if (countryMembers.length > 0) await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
+        countryTotal = result.pagination.total_results; countryPages = result.pagination.total_pages;
+        hasNext = result.pagination.has_next_page || result.members.length >= 50;
+        page++;
+        if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 3000));
       }
-      if (ci < selectedCountries.length - 1 && !abortRef.current) await new Promise(r => setTimeout(r, 10000));
+      if (countryMembers.length > 0) await saveScanToCache(countryCode, netKey, countryMembers, countryTotal, countryPages);
     }
     setIsScanning(false); setScanComplete(true);
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
     queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
-  }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
+  }, [countryCode, countryName, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
   const handleStartDownload = async () => {
     const sessionOk = await ensureSession();
-    if (!sessionOk) { toast.error("Sessione WCA non attiva. Effettua il login o verifica le credenziali."); return; }
+    if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
     await executeDownload();
   };
 
   const executeDownload = async () => {
     if (idsToDownload.length === 0) { toast.info("Nessun partner da scaricare"); return; }
     const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
-    if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso. Attendi il completamento."); return; }
-    const idsByCountry = new Map<string, number[]>();
-    for (const m of sourceMembers) {
-      if (!m.wca_id || !idsToDownload.includes(m.wca_id)) continue;
-      const cc = m.country_code || selectedCountries.find(c => c.name === m.country || c.code === m.country)?.code;
-      if (!cc) continue;
-      if (!idsByCountry.has(cc)) idsByCountry.set(cc, []);
-      idsByCountry.get(cc)!.push(m.wca_id);
-    }
-    for (const country of selectedCountries) {
-      const countryIds = idsByCountry.get(country.code) || [];
-      if (countryIds.length === 0) continue;
-      const jobId = await createJob.mutateAsync({
-        country_code: country.code, country_name: country.name,
-        network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-        wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
-      });
-      if (jobId && onJobCreated) onJobCreated(jobId);
-    }
+    if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
+    const countryIds = idsToDownload;
+    if (countryIds.length === 0) return;
+    const jobId = await createJob.mutateAsync({
+      country_code: countryCode, country_name: countryName,
+      network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
+      wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
+    });
+    if (jobId && onJobCreated) onJobCreated(jobId);
   };
 
   /* ════════════════════════════════════════════
-   * STATS + FILTERS (existing logic)
+   * STATS
    * ════════════════════════════════════════════ */
   const stats = useMemo(() => {
     const list = partners || [];
@@ -376,10 +299,6 @@ export function PartnerListPanel({
     });
     return { total, withProfile, withDeep, withEmail, withPhone, withAliasCo, withAliasCt };
   }, [partners]);
-
-  const globalPct = stats.total > 0
-    ? Math.round(((stats.withProfile + stats.withDeep + stats.withEmail + stats.withPhone + stats.withAliasCo + stats.withAliasCt) / (stats.total * 6)) * 100)
-    : 0;
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];
@@ -410,7 +329,6 @@ export function PartnerListPanel({
     }
   }, [partners, progressFilter, sortBy]);
 
-  // Partner click handler — delegate to parent
   const handleSelectPartner = useCallback((id: string) => {
     if (onSelectPartner) onSelectPartner(id);
   }, [onSelectPartner]);
@@ -422,214 +340,198 @@ export function PartnerListPanel({
   const totalCount = uniqueIds.length;
   const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
 
+  /* ════════════════════════════════════════════
+   * WIZARD: determine next action
+   * ════════════════════════════════════════════ */
+  const missingProfiles = stats.total - stats.withProfile;
+  const missingDeep = stats.total - stats.withDeep;
+  const missingAliasCo = stats.total - stats.withAliasCo;
+  const missingAliasCt = stats.total - stats.withAliasCt;
+
+  const wizardStep = missingProfiles > 0 ? 1 : missingDeep > 0 ? 2 : (missingAliasCo > 0 || missingAliasCt > 0) ? 3 : 4;
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col">
-        {/* ═══ Global Completion Bar ═══ */}
-        {stats.total > 0 && (
-          <div className={`px-3 pt-3 pb-1 flex-shrink-0`}>
-            <div className={`flex items-center gap-3 text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-              <span className="font-semibold">Completamento</span>
-              <div className={`flex-1 h-2 rounded-full overflow-hidden ${isDark ? "bg-white/[0.08]" : "bg-slate-200/80"}`}>
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${globalPct >= 80 ? "bg-gradient-to-r from-emerald-500 to-emerald-400" : globalPct >= 50 ? "bg-gradient-to-r from-amber-500 to-amber-400" : "bg-gradient-to-r from-rose-500 to-rose-400"}`}
-                  style={{ width: `${globalPct}%` }}
-                />
-              </div>
-              <span className="font-mono font-bold">{globalPct}%</span>
-            </div>
+        {/* ═══ SECTION A: Dashboard Paese ═══ */}
+        <div className={`px-3 pt-3 pb-2 flex-shrink-0 space-y-2`}>
+          {/* Stats grid 2x4 */}
+          <div className="grid grid-cols-4 gap-1.5">
+            <DashCell label="Directory" value={totalCount} isDark={isDark} color="text-amber-400" />
+            <DashCell label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} color="text-sky-400" />
+            <DashCell label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} color="text-violet-400" onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+            <DashCell label="Deep S." value={stats.withDeep} total={stats.total} isDark={isDark} color="text-cyan-400" onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+            <DashCell label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} color="text-sky-400" onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+            <DashCell label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} color="text-teal-400" onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+            <DashCell label="Alias Az." value={stats.withAliasCo} total={stats.total} isDark={isDark} color="text-amber-400" onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
+            <DashCell label="Alias Ct." value={stats.withAliasCt} total={stats.total} isDark={isDark} color="text-pink-400" onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
           </div>
-        )}
+        </div>
 
-        {/* ═══ 4 Action Buttons ("Tastoni") ═══ */}
-        {stats.total > 0 && (
-          <div className="px-3 pt-2 pb-1 flex-shrink-0">
-            <div className="grid grid-cols-4 gap-2">
-              <ActionButton
-                icon={Download}
-                label="Profili"
-                missing={stats.total - stats.withProfile}
-                total={stats.total}
-                isDark={isDark}
-                onClick={() => toggleProgressFilter("profiles")}
-              />
-              <ActionButton
-                icon={Telescope}
-                label="Deep Search"
-                missing={stats.total - stats.withDeep}
-                total={stats.total}
-                isDark={isDark}
-                onClick={() => {
-                  const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
-                  if (ids.length > 0) onDeepSearch?.(ids);
-                }}
-                loading={deepSearchRunning}
-              />
-              <ActionButton icon={Building2} label="Alias Az." missing={stats.total - stats.withAliasCo} total={stats.total} isDark={isDark} onClick={() => onGenerateAliases?.(countryCodes, "company")} loading={aliasGenerating} />
-              <ActionButton icon={UserCircle} label="Alias Ct." missing={stats.total - stats.withAliasCt} total={stats.total} isDark={isDark} onClick={() => onGenerateAliases?.(countryCodes, "contact")} loading={aliasGenerating} />
-            </div>
-          </div>
-        )}
-
-        {/* ═══ 6 Clickable Progress Bars ═══ */}
-        {stats.total > 0 && (
-          <div className={`px-3 pt-1 pb-1 flex-shrink-0 space-y-0.5`}>
-            <ProgressBar label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} gradientColor="from-violet-500 to-purple-500" active={progressFilter === "profiles"} onClick={() => toggleProgressFilter("profiles")} />
-            <ProgressBar label="Deep S." value={stats.withDeep} total={stats.total} isDark={isDark} gradientColor="from-cyan-500 to-blue-500" active={progressFilter === "deep"} onClick={() => toggleProgressFilter("deep")} />
-            <ProgressBar label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} gradientColor="from-sky-400 to-blue-500" active={progressFilter === "email"} onClick={() => toggleProgressFilter("email")} />
-            <ProgressBar label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} gradientColor="from-teal-400 to-emerald-500" active={progressFilter === "phone"} onClick={() => toggleProgressFilter("phone")} />
-            <ProgressBar label="Alias Az." value={stats.withAliasCo} total={stats.total} isDark={isDark} gradientColor="from-amber-400 to-orange-500" active={progressFilter === "alias_co"} onClick={() => toggleProgressFilter("alias_co")} />
-            <ProgressBar label="Alias Ct." value={stats.withAliasCt} total={stats.total} isDark={isDark} gradientColor="from-pink-400 to-rose-500" active={progressFilter === "alias_ct"} onClick={() => toggleProgressFilter("alias_ct")} />
-          </div>
-        )}
-
-        {/* ═══ DOWNLOAD SECTION (Always visible) ═══ */}
-        <div className={`px-3 pb-2 flex-shrink-0 space-y-2`}>
-          {isScanning ? (
-            <div className={`p-3 rounded-xl border space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"}`}>
-              <div className="text-center space-y-2">
-                <Loader2 className={`w-5 h-5 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-                <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                  {selectedCountries.length > 1 && `Paese ${currentCountryIdx + 1}/${selectedCountries.length}: `}
-                  {selectedCountries[currentCountryIdx]?.name} — Pg {currentPage}
-                </p>
-                {scannedMembers.length > 0 && <p className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
-                {scanError && <p className={`text-xs ${isDark ? "text-red-400" : "text-red-600"}`}>⚠️ {scanError}</p>}
-                <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-xs">
-                  <Square className="w-3 h-3 mr-1" /> Stop
-                </Button>
+        {/* ═══ SECTION B: Wizard Step-by-Step ═══ */}
+        <div className={`px-3 pb-2 flex-shrink-0`}>
+          <div className={`rounded-xl border p-2.5 space-y-2 ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-slate-50/60 border-slate-200/60"}`}>
+            {wizardStep === 4 ? (
+              <div className="flex items-center gap-2 py-1">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span className={`text-sm font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Paese completato!</span>
               </div>
-            </div>
-          ) : (
-            <>
-              {/* Network + Directory toggle row */}
-              <div className="flex items-center gap-2">
-                <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-                  <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
-                  <SelectContent className={th.selContent}>
-                    <SelectItem value="__all__">Tutti i network</SelectItem>
-                    {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
-                  <FolderDown className="w-3 h-3" /> Solo Dir
-                </label>
-                {totalCount > 0 && (
-                  <span className={`font-mono text-[10px] shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                    {downloadedCount}/{totalCount}
-                  </span>
-                )}
-              </div>
-
-              {/* Mode toggle chips */}
-              {!directoryOnly && (
-                <div className="flex gap-1.5">
-                  {([
-                    { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
-                    { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
-                    { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
-                  ]).map(chip => (
-                    <button
-                      key={chip.key}
-                      onClick={() => setDownloadMode(chip.key)}
-                      className={cn(
-                        "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
-                        downloadMode === chip.key
-                          ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                          : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                      )}
-                    >
-                      {chip.label} ({chip.count})
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Directory-only options */}
-              {directoryOnly && (
-                <div className="flex items-center gap-3">
-                  {hasCache && totalCount > 0 && (
-                    <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ {totalCount} aziende</p>
-                  )}
-                  <label className={`flex items-center gap-1.5 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                    <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
-                    <Zap className="w-3 h-3" /> Scarica dopo
-                  </label>
-                </div>
-              )}
-
-              {/* Delay + Start row */}
-              <div className="flex items-center gap-2">
-                {!directoryOnly && idsToDownload.length > 0 && (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className={`text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      <Timer className="w-3 h-3 inline mr-0.5" />{delay}s
-                    </span>
-                    <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
-                    <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{estimateLabel}</span>
-                  </div>
-                )}
-                <Button
-                  onClick={() => {
-                    if (directoryOnly) {
-                      if (dirThenDownload) setAutoDownloadPending(true);
-                      handleStartScan();
-                    } else {
-                      handleStartDownload();
-                    }
-                  }}
-                  disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
-                  className={cn(
-                    "h-8 text-xs font-bold shrink-0",
-                    isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white",
-                    !directoryOnly && idsToDownload.length > 0 ? "" : "flex-1"
-                  )}
-                  size="sm"
+            ) : (
+              <div className="space-y-2">
+                {/* Step 1: Download Profili */}
+                <WizardRow
+                  step={1} active={wizardStep === 1} isDark={isDark}
+                  icon={Download} label="Scarica Profili" missing={missingProfiles} total={stats.total}
                 >
-                  {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Avvio...</> : (
-                    directoryOnly
-                      ? <><FolderDown className="w-3.5 h-3.5 mr-1" />{dirThenDownload ? (hasCache ? "Aggiorna+Scarica" : "Scan+Scarica") : (hasCache ? "Aggiorna Dir" : "Scarica Dir")}</>
-                      : <><Zap className="w-3.5 h-3.5 mr-1" /> Scarica {idsToDownload.length}</>
+                  {wizardStep === 1 && !isScanning && (
+                    <div className="space-y-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                          <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
+                          <SelectContent className={th.selContent}>
+                            <SelectItem value="__all__">Tutti i network</SelectItem>
+                            {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
+                          <FolderDown className="w-3 h-3" /> Dir
+                        </label>
+                        {totalCount > 0 && (
+                          <span className={`font-mono text-[10px] shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{downloadedCount}/{totalCount}</span>
+                        )}
+                      </div>
+
+                      {!directoryOnly && (
+                        <div className="flex gap-1.5">
+                          {([
+                            { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
+                            { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
+                            { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
+                          ]).map(chip => (
+                            <button key={chip.key} onClick={() => setDownloadMode(chip.key)}
+                              className={cn("flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
+                                downloadMode === chip.key
+                                  ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                                  : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                              )}>{chip.label} ({chip.count})</button>
+                          ))}
+                        </div>
+                      )}
+
+                      {directoryOnly && (
+                        <div className="flex items-center gap-3">
+                          {hasCache && totalCount > 0 && <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ {totalCount} aziende</p>}
+                          <label className={`flex items-center gap-1.5 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
+                            <Zap className="w-3 h-3" /> Scarica dopo
+                          </label>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        {!directoryOnly && idsToDownload.length > 0 && (
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={`text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}><Timer className="w-3 h-3 inline mr-0.5" />{delay}s</span>
+                            <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
+                            <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{estimateLabel}</span>
+                          </div>
+                        )}
+                        <Button
+                          onClick={() => {
+                            if (directoryOnly) { if (dirThenDownload) setAutoDownloadPending(true); handleStartScan(); }
+                            else { handleStartDownload(); }
+                          }}
+                          disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
+                          className={cn("h-8 text-xs font-bold shrink-0", isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white", !directoryOnly && idsToDownload.length > 0 ? "" : "flex-1")}
+                          size="sm"
+                        >
+                          {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Avvio...</> : (
+                            directoryOnly
+                              ? <><FolderDown className="w-3.5 h-3.5 mr-1" />{dirThenDownload ? "Scan+Scarica" : (hasCache ? "Aggiorna Dir" : "Scarica Dir")}</>
+                              : <><Zap className="w-3.5 h-3.5 mr-1" /> Scarica {idsToDownload.length}</>
+                          )}
+                        </Button>
+                      </div>
+
+                      {hasCache && !scanComplete && !directoryOnly && (
+                        <button onClick={handleStartScan} className={`flex items-center gap-1 text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
+                          <RefreshCw className="w-3 h-3" /> Aggiorna directory
+                        </button>
+                      )}
+                    </div>
                   )}
-                </Button>
+                  {isScanning && (
+                    <div className="mt-2 text-center space-y-1">
+                      <Loader2 className={`w-4 h-4 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                      <p className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>{countryName} — Pg {currentPage}</p>
+                      {scannedMembers.length > 0 && <p className={`text-xs font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
+                      {scanError && <p className={`text-[10px] text-red-400`}>⚠️ {scanError}</p>}
+                      <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-[10px]">
+                        <Square className="w-3 h-3 mr-1" /> Stop
+                      </Button>
+                    </div>
+                  )}
+                </WizardRow>
+
+                {/* Step 2: Deep Search */}
+                <WizardRow step={2} active={wizardStep === 2} isDark={isDark}
+                  icon={Telescope} label="Deep Search" missing={missingDeep} total={stats.total}
+                >
+                  {wizardStep === 2 && (
+                    <Button size="sm" className={cn("mt-2 h-8 text-xs font-bold w-full", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
+                      disabled={deepSearchRunning}
+                      onClick={() => {
+                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
+                        if (ids.length > 0) onDeepSearch?.(ids);
+                      }}
+                    >
+                      {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Avvia Deep Search ({missingDeep})</>}
+                    </Button>
+                  )}
+                </WizardRow>
+
+                {/* Step 3: Generate Alias */}
+                <WizardRow step={3} active={wizardStep === 3} isDark={isDark}
+                  icon={Wand2} label="Genera Alias" missing={missingAliasCo + missingAliasCt} total={stats.total * 2}
+                >
+                  {wizardStep === 3 && (
+                    <div className="flex gap-2 mt-2">
+                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
+                        disabled={aliasGenerating || missingAliasCo === 0}
+                        onClick={() => onGenerateAliases?.(countryCodes, "company")}
+                      >
+                        <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
+                      </Button>
+                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
+                        disabled={aliasGenerating || missingAliasCt === 0}
+                        onClick={() => onGenerateAliases?.(countryCodes, "contact")}
+                      >
+                        <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
+                      </Button>
+                    </div>
+                  )}
+                </WizardRow>
               </div>
+            )}
+          </div>
 
-              {/* Refresh + warnings */}
-              {hasCache && !scanComplete && !directoryOnly && (
-                <button onClick={handleStartScan} className={`flex items-center gap-1 text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
-                  <RefreshCw className="w-3 h-3" /> Aggiorna directory
-                </button>
-              )}
-              {skippedCountries.length > 0 && (
-                <p className={`text-[10px] ${isDark ? "text-amber-400/60" : "text-amber-500"}`}>⚠ {skippedCountries.length} paesi saltati</p>
-              )}
-            </>
-          )}
-
-          {/* Terminal + Jobs (visible when active) */}
-          <div className="max-h-32 overflow-auto space-y-1">
+          {/* Terminal + Jobs inline */}
+          <div className="max-h-28 overflow-auto space-y-1 mt-2">
             <DownloadTerminal />
             <JobMonitor />
           </div>
         </div>
 
-        {/* ═══ Search + Sort ═══ */}
-        <div className="px-3 pb-2 space-y-1.5 flex-shrink-0">
+        {/* ═══ SECTION C: Search + Partner List ═══ */}
+        <div className="px-3 pb-1.5 space-y-1 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
-              <Input
-                placeholder="Cerca partner..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className={`pl-10 h-8 rounded-xl text-xs ${th.input}`}
-              />
+              <Input placeholder="Cerca partner..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-10 h-8 rounded-xl text-xs ${th.input}`} />
             </div>
             <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-              <SelectTrigger className={`w-[120px] h-8 rounded-xl text-xs ${th.selTrigger}`}>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className={`w-[120px] h-8 rounded-xl text-xs ${th.selTrigger}`}><SelectValue /></SelectTrigger>
               <SelectContent className={th.selContent}>
                 <SelectItem value="name_asc">Nome A-Z</SelectItem>
                 <SelectItem value="rating_desc">Rating ↓</SelectItem>
@@ -638,11 +540,10 @@ export function PartnerListPanel({
             </Select>
           </div>
           <p className={`text-[11px] ${th.dim}`}>
-            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""} in ${countryNames.join(", ")}`}
+            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""} — ${countryName}`}
           </p>
         </div>
 
-        {/* ═══ Partner List ═══ */}
         <ScrollArea className="flex-1">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
             {isLoading
@@ -659,9 +560,7 @@ export function PartnerListPanel({
                   const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
 
                   return (
-                    <div
-                      key={partner.id}
-                      onClick={() => handleSelectPartner(partner.id)}
+                    <div key={partner.id} onClick={() => handleSelectPartner(partner.id)}
                       className={cn(
                         "p-3 cursor-pointer transition-all duration-200 group",
                         selectedPartnerId === partner.id
@@ -717,29 +616,12 @@ export function PartnerListPanel({
                           {primaryContact?.email && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEmailTarget({
-                                      email: primaryContact.email,
-                                      name: primaryContact.name,
-                                      company: partner.company_name,
-                                      partnerId: partner.id,
-                                    });
-                                  }}
-                                  className={cn(
-                                    "p-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100",
-                                    isDark
-                                      ? "bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20"
-                                      : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
-                                  )}
-                                >
+                                <button onClick={(e) => { e.stopPropagation(); setEmailTarget({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
+                                  className={cn("p-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100", isDark ? "bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20" : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100")}>
                                   <Send className="w-3.5 h-3.5" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="left" className="text-xs">
-                                Invia email a {primaryContact.email}
-                              </TooltipContent>
+                              <TooltipContent side="left" className="text-xs">Invia email a {primaryContact.email}</TooltipContent>
                             </Tooltip>
                           )}
                           <ChevronRight className={`w-4 h-4 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
@@ -752,16 +634,69 @@ export function PartnerListPanel({
         </ScrollArea>
       </div>
       {emailTarget && (
-        <SendEmailDialog
-          open={!!emailTarget}
-          onOpenChange={(open) => { if (!open) setEmailTarget(null); }}
-          recipientEmail={emailTarget.email}
-          recipientName={emailTarget.name}
-          companyName={emailTarget.company}
-          partnerId={emailTarget.partnerId}
-          isDark={isDark}
-        />
+        <SendEmailDialog open={!!emailTarget} onOpenChange={(open) => { if (!open) setEmailTarget(null); }}
+          recipientEmail={emailTarget.email} recipientName={emailTarget.name} companyName={emailTarget.company} partnerId={emailTarget.partnerId} isDark={isDark} />
       )}
     </TooltipProvider>
+  );
+}
+
+/* ── Dashboard Cell ── */
+function DashCell({ label, value, total, isDark, color, onClick, active }: {
+  label: string; value: number; total?: number; isDark: boolean; color: string;
+  onClick?: () => void; active?: boolean;
+}) {
+  const pct = total && total > 0 ? Math.round((value / total) * 100) : null;
+  return (
+    <button onClick={onClick} disabled={!onClick}
+      className={cn(
+        "rounded-lg border p-1.5 text-left transition-all",
+        active
+          ? isDark ? "bg-sky-950/50 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
+          : isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/40 border-slate-200/60",
+        onClick ? "cursor-pointer hover:scale-[1.02]" : "cursor-default"
+      )}>
+      <p className={`text-[9px] uppercase tracking-wider font-semibold truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</p>
+      <p className={`text-sm font-mono font-extrabold ${color}`}>{value}{total !== undefined && <span className={`text-[9px] font-normal ${isDark ? "text-slate-600" : "text-slate-400"}`}>/{total}</span>}</p>
+      {pct !== null && (
+        <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
+          <div className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </button>
+  );
+}
+
+/* ── Wizard Row ── */
+function WizardRow({ step, active, isDark, icon: Icon, label, missing, total, children }: {
+  step: number; active: boolean; isDark: boolean;
+  icon: any; label: string; missing: number; total: number;
+  children?: React.ReactNode;
+}) {
+  const done = missing === 0;
+  return (
+    <div className={cn(
+      "rounded-lg border p-2 transition-all",
+      active ? isDark ? "bg-sky-950/30 border-sky-500/30" : "bg-sky-50/80 border-sky-300"
+        : done ? isDark ? "bg-emerald-950/20 border-emerald-500/20" : "bg-emerald-50/60 border-emerald-300/50"
+        : isDark ? "bg-white/[0.01] border-white/[0.04] opacity-50" : "bg-slate-50/40 border-slate-200/40 opacity-50"
+    )}>
+      <div className="flex items-center gap-2">
+        <span className={cn(
+          "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+          done ? "bg-emerald-500/20 text-emerald-400" : active ? isDark ? "bg-sky-500/20 text-sky-400" : "bg-sky-100 text-sky-600" : isDark ? "bg-white/[0.06] text-slate-500" : "bg-slate-100 text-slate-400"
+        )}>
+          {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : step}
+        </span>
+        <Icon className={cn("w-4 h-4", done ? "text-emerald-400" : active ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
+        <span className={cn("text-xs font-bold flex-1", done ? isDark ? "text-emerald-400" : "text-emerald-600" : active ? isDark ? "text-sky-300" : "text-sky-700" : isDark ? "text-slate-500" : "text-slate-400")}>
+          {label}
+        </span>
+        <span className={cn("text-[10px] font-mono font-bold", done ? "text-emerald-400" : active ? isDark ? "text-sky-300" : "text-sky-600" : isDark ? "text-slate-600" : "text-slate-400")}>
+          {done ? "✓" : `${missing}/${total}`}
+        </span>
+      </div>
+      {children}
+    </div>
   );
 }
