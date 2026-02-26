@@ -1,28 +1,24 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Sun, Moon, Globe, Users, Mail, Phone, Download, FolderDown, FileText, Bot } from "lucide-react";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
-import { ActionPanel } from "@/components/download/ActionPanel";
-import { JobMonitor } from "@/components/download/JobMonitor";
-import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
-import { AdvancedTools } from "@/components/download/AdvancedTools";
-import { ResyncConfigure } from "@/components/download/ResyncConfigure";
+import { DownloadTerminal } from "@/components/download/DownloadTerminal";
+import { JobMonitor } from "@/components/download/JobMonitor";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Read directory totals from the SAME query key used by CountryGrid — zero extra network calls */
+/** Read directory totals from the SAME query key used by CountryGrid */
 function useDirectoryTotal() {
   return useQuery({
     queryKey: ["cache-data-by-country"],
@@ -38,8 +34,6 @@ function useDirectoryTotal() {
   });
 }
 
-
-
 export default function Operations() {
   const [isDark, setIsDark] = useState(() => {
     const s = localStorage.getItem("dl_theme");
@@ -48,7 +42,6 @@ export default function Operations() {
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
-  const [activeTab, setActiveTab] = useState("partner");
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [aiOpen, setAiOpen] = useState(false);
@@ -74,17 +67,10 @@ export default function Operations() {
   const { emergencyStop, startJob } = useDownloadProcessor();
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
-  const countryJobs = useMemo(() => {
-    if (selectedCountries.length === 0) return jobs || [];
-    const codes = new Set(selectedCountries.map(c => c.code));
-    return (jobs || []).filter(j => codes.has(j.country_code));
-  }, [jobs, selectedCountries]);
 
   const toggleCountry = useCallback((code: string, name: string) => {
     setSelectedCountries(prev =>
-      prev.some(c => c.code === code)
-        ? prev.filter(c => c.code !== code)
-        : [...prev, { code, name }]
+      prev.some(c => c.code === code) ? prev.filter(c => c.code !== code) : [...prev, { code, name }]
     );
   }, []);
 
@@ -147,7 +133,7 @@ export default function Operations() {
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
 
         <div className="relative z-10 h-full flex flex-col">
-          {/* ═══ TOP BAR (compact) ═══ */}
+          {/* ═══ TOP BAR ═══ */}
           <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h1 className={`text-sm font-semibold ${th.h1}`}>Operations</h1>
@@ -176,14 +162,12 @@ export default function Operations() {
 
           {/* ═══ MAIN 3-COLUMN LAYOUT ═══ */}
           <div className="flex-1 flex min-h-0 px-4 pb-3 gap-3">
-            {/* ── COL 1: Stats sidebar (narrow vertical) ── */}
+            {/* ── COL 1: Stats sidebar ── */}
             <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
               {globalStats ? (
                 <>
-                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
-                    onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"}
-                    onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
+                  <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
+                  <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
                   <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
                     progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
                     progressColor="from-violet-400 to-purple-500"
@@ -194,8 +178,7 @@ export default function Operations() {
                   <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
                     progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
                     progressColor="from-teal-400 to-emerald-500" />
-                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"}
-                    onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
+                  <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
                 </>
               ) : (
                 Array.from({ length: 6 }).map((_, i) => (
@@ -204,7 +187,7 @@ export default function Operations() {
               )}
             </div>
 
-            {/* ── COL 2: Country Grid (responsive) ── */}
+            {/* ── COL 2: Country Grid ── */}
             <div className="min-w-[280px] w-[35%] max-w-[400px] flex-shrink-0 min-h-0 flex flex-col">
               <CountryGrid
                 selected={selectedCountries}
@@ -216,7 +199,7 @@ export default function Operations() {
               />
             </div>
 
-            {/* ── COL 3: Contextual Panel (rest) ── */}
+            {/* ── COL 3: Unified Panel ── */}
             <div className="flex-1 min-h-0 flex flex-col">
               {selectedCountries.length === 0 ? (
                 <div className="flex-1 flex flex-col gap-3 overflow-auto">
@@ -233,40 +216,27 @@ export default function Operations() {
                   )}
                 </div>
               ) : (
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0">
                   <div className={`flex items-center gap-3 px-4 py-2 rounded-t-2xl border border-b-0 ${isDark ? "bg-white/[0.04] backdrop-blur-xl border-white/[0.08]" : "bg-white/60 backdrop-blur-xl border-white/80"}`}>
                     <span className={`text-sm font-semibold ${th.h2}`}>{countryLabel}</span>
-                    <TabsList className={`ml-auto ${isDark ? "bg-white/[0.06]" : "bg-slate-100/80"}`}>
-                      <TabsTrigger value="partner" className="gap-1.5 text-xs">
-                        <Users className="w-3.5 h-3.5" />Partner
-                      </TabsTrigger>
-                      <TabsTrigger value="download" className="gap-1.5 text-xs">
-                        <Download className="w-3.5 h-3.5" />Scarica
-                      </TabsTrigger>
-                    </TabsList>
                   </div>
                   <ActiveJobBar />
                   <div className={`flex-1 min-h-0 rounded-b-2xl border border-t-0 overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                    <TabsContent value="partner" className="h-full m-0 data-[state=inactive]:hidden">
-                      <PartnerListPanel
-                        countryCodes={selectedCountries.map(c => c.code)}
-                        countryNames={selectedCountries.map(c => c.name)}
-                        isDark={isDark}
-                        onSwitchToDownload={() => setActiveTab("download")}
-                        onDeepSearch={handleDeepSearch}
-                        onGenerateAliases={handleGenerateAliases}
-                        deepSearchRunning={deepSearchRunning}
-                        aliasGenerating={aliasGenerating}
-                      />
-                    </TabsContent>
-                    <TabsContent value="download" className="h-full m-0 overflow-auto p-4 space-y-4 data-[state=inactive]:hidden">
-                      <ActionPanel selectedCountries={selectedCountries} directoryOnly={directoryOnly} onDirectoryOnlyChange={setDirectoryOnly} onJobCreated={startJob} />
-                      <DownloadTerminal />
-                      <JobMonitor />
-                      <AdvancedTools isDark={isDark} />
-                    </TabsContent>
+                    <PartnerListPanel
+                      countryCodes={selectedCountries.map(c => c.code)}
+                      countryNames={selectedCountries.map(c => c.name)}
+                      selectedCountries={selectedCountries}
+                      isDark={isDark}
+                      onDeepSearch={handleDeepSearch}
+                      onGenerateAliases={handleGenerateAliases}
+                      deepSearchRunning={deepSearchRunning}
+                      aliasGenerating={aliasGenerating}
+                      onJobCreated={startJob}
+                      directoryOnly={directoryOnly}
+                      onDirectoryOnlyChange={setDirectoryOnly}
+                    />
                   </div>
-                </Tabs>
+                </div>
               )}
             </div>
           </div>
@@ -316,4 +286,3 @@ function StatItem({ icon: Icon, label, value, color, isDark, progress, progressC
     </div>
   );
 }
-

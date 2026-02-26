@@ -1,9 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -11,17 +15,24 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, Phone, Mail, ChevronRight, Users, Loader2, Filter,
+  Search, Phone, Mail, ChevronRight, ChevronDown, Users, Loader2, Filter,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
+  Zap, Timer, FolderDown, RefreshCw, Square,
 } from "lucide-react";
 import { usePartners, usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { t } from "@/components/download/theme";
+import { WCA_NETWORKS } from "@/data/wcaFilters";
+import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
+import { useWcaSession } from "@/hooks/useWcaSession";
+import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
+import { DownloadTerminal } from "@/components/download/DownloadTerminal";
+import { JobMonitor } from "@/components/download/JobMonitor";
 
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
@@ -33,14 +44,6 @@ function statusColor(missing: number, total: number, isDark: boolean) {
   if (pct === 0) return { bg: isDark ? "bg-emerald-950/40" : "bg-emerald-50", border: isDark ? "border-emerald-500/25" : "border-emerald-300", text: isDark ? "text-emerald-400" : "text-emerald-600" };
   if (pct <= 0.5) return { bg: isDark ? "bg-amber-950/40" : "bg-amber-50", border: isDark ? "border-amber-500/25" : "border-amber-300", text: isDark ? "text-amber-400" : "text-amber-600" };
   return { bg: isDark ? "bg-rose-950/40" : "bg-rose-50", border: isDark ? "border-rose-500/25" : "border-rose-300", text: isDark ? "text-rose-400" : "text-rose-600" };
-}
-
-function coverageColor(count: number, total: number, isDark: boolean) {
-  if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
-  const pct = count / total;
-  if (pct >= 0.8) return isDark ? "text-emerald-400" : "text-emerald-600";
-  if (pct >= 0.5) return isDark ? "text-amber-400" : "text-amber-600";
-  return isDark ? "text-rose-400" : "text-rose-500";
 }
 
 type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
@@ -96,18 +99,22 @@ function ActionButton({ icon: Icon, label, missing, total, isDark, onClick, load
 interface PartnerListPanelProps {
   countryCodes: string[];
   countryNames: string[];
+  selectedCountries: { code: string; name: string }[];
   isDark: boolean;
-  onSwitchToDownload?: () => void;
   onDeepSearch?: (partnerIds: string[]) => void;
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
+  onJobCreated?: (jobId: string) => void;
+  directoryOnly?: boolean;
+  onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
 export function PartnerListPanel({
-  countryCodes, countryNames, isDark,
-  onSwitchToDownload, onDeepSearch, onGenerateAliases,
+  countryCodes, countryNames, selectedCountries, isDark,
+  onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
+  onJobCreated, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
 }: PartnerListPanelProps) {
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -115,6 +122,7 @@ export function PartnerListPanel({
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
+  const [downloadOpen, setDownloadOpen] = useState(false);
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -124,7 +132,235 @@ export function PartnerListPanel({
   const toggleFavorite = useToggleFavorite();
   const queryClient = useQueryClient();
 
-  /* ── Compute stats from partner data ── */
+  /* ════════════════════════════════════════════
+   * DOWNLOAD LOGIC (absorbed from ActionPanel)
+   * ════════════════════════════════════════════ */
+  const createJob = useCreateDownloadJob();
+  const { ensureSession } = useWcaSession();
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
+  const networks = selectedNetwork === "__all__" ? [] : [selectedNetwork];
+  const networkKeys = networks.length > 0 ? networks : [""];
+  const [delay, setDelay] = useState(15);
+  type DownloadMode = "new" | "no_profile" | "all";
+  const [downloadMode, setDownloadMode] = useState<DownloadMode>("new");
+  const directoryOnly = directoryOnlyProp ?? false;
+  const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
+  const [skipCachedDirs, setSkipCachedDirs] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [currentCountryIdx, setCurrentCountryIdx] = useState(0);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [skippedCountries, setSkippedCountries] = useState<string[]>([]);
+  const abortRef = useRef(false);
+  const [dirThenDownload, setDirThenDownload] = useState(false);
+  const [autoDownloadPending, setAutoDownloadPending] = useState(false);
+
+  const { data: cachedEntries = [], isLoading: loadingCache } = useQuery({
+    queryKey: ["directory-cache", countryCodes, networkKeys],
+    queryFn: async () => {
+      if (countryCodes.length === 0) return [];
+      let q = supabase.from("directory_cache").select("*").in("country_code", countryCodes);
+      if (networks.length > 0) q = q.in("network_name", networks);
+      else q = q.eq("network_name", "");
+      const { data } = await q;
+      return data || [];
+    },
+    staleTime: 30_000,
+    enabled: countryCodes.length > 0,
+  });
+
+  const { data: dbPartners = [], isLoading: loadingDb } = useQuery({
+    queryKey: ["db-partners-for-countries", countryCodes],
+    queryFn: async () => {
+      if (countryCodes.length === 0) return [];
+      const { data: byCountry } = await supabase
+        .from("partners")
+        .select("wca_id, company_name, city, country_code, country_name, updated_at")
+        .in("country_code", countryCodes)
+        .not("wca_id", "is", null)
+        .order("company_name");
+      return (byCountry || []).map(p => ({
+        wca_id: p.wca_id!, company_name: p.company_name, city: p.city,
+        country_code: p.country_code, country_name: p.country_name, updated_at: p.updated_at,
+      }));
+    },
+    staleTime: 30_000,
+    enabled: countryCodes.length > 0,
+  });
+
+  const { data: noProfileIds = [] } = useQuery({
+    queryKey: ["no-profile-wca-ids", countryCodes],
+    queryFn: async () => {
+      if (countryCodes.length === 0) return [];
+      const { data } = await supabase
+        .from("partners").select("wca_id")
+        .in("country_code", countryCodes).not("wca_id", "is", null).is("raw_profile_html", null);
+      return (data || []).map(p => p.wca_id!);
+    },
+    staleTime: 30_000,
+    enabled: countryCodes.length > 0,
+  });
+
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+    const members = entry.members as any[];
+    return (members || []).map((m: any) => ({
+      company_name: m.company_name, city: m.city, country: m.country,
+      country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
+    }));
+  });
+
+  const hasCache = cachedMembers.length > 0;
+  const dbWcaSet = new Set(dbPartners.map(p => p.wca_id));
+  const sourceMembers = scanComplete ? scannedMembers : cachedMembers;
+  const allIds = sourceMembers.filter(m => m.wca_id).map(m => m.wca_id!);
+  const uniqueIds = [...new Set(allIds)];
+  const missingIds = uniqueIds.filter(id => !dbWcaSet.has(id));
+  const noProfileWcaSet = useMemo(() => new Set(noProfileIds), [noProfileIds]);
+  const noProfileInDirectoryCount = useMemo(() => uniqueIds.filter(id => noProfileWcaSet.has(id)).length, [uniqueIds, noProfileWcaSet]);
+
+  const idsToDownload = useMemo(() => {
+    if (downloadMode === "all") return uniqueIds;
+    if (downloadMode === "no_profile") {
+      const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
+      return [...new Set([...missingIds, ...existingNoProfile])];
+    }
+    return missingIds;
+  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet]);
+
+  const totalTime = idsToDownload.length * (delay + 5);
+  const estimateLabel = totalTime >= 3600 ? `~${(totalTime / 3600).toFixed(1)} ore` : totalTime >= 60 ? `~${Math.ceil(totalTime / 60)} min` : `~${totalTime}s`;
+
+  useEffect(() => {
+    if (missingIds.length === 0 && noProfileInDirectoryCount > 0 && downloadMode === "new") setDownloadMode("no_profile");
+  }, [missingIds.length, noProfileInDirectoryCount, downloadMode]);
+
+  useEffect(() => {
+    setScanComplete(false); setScannedMembers([]); setScanError(null); setSkippedCountries([]); setAutoDownloadPending(false);
+  }, [countryCodes.join(",")]);
+
+  useEffect(() => {
+    if (!autoDownloadPending || !scanComplete || isScanning) return;
+    setAutoDownloadPending(false);
+    const runCleanupAndDownload = async () => {
+      const freshWcaIds = new Set(scannedMembers.filter(m => m.wca_id).map(m => m.wca_id!));
+      if (freshWcaIds.size === 0) { toast.error("Nessun partner trovato nella directory"); return; }
+      const { data: dbPartnersForCleanup } = await supabase.from("partners").select("id, wca_id").in("country_code", countryCodes).not("wca_id", "is", null);
+      const dbList = dbPartnersForCleanup || [];
+      const stalePartners = dbList.filter(p => p.wca_id && !freshWcaIds.has(p.wca_id));
+      let removedCount = 0;
+      if (stalePartners.length > 0) {
+        const staleIds = stalePartners.map(p => p.id);
+        for (let i = 0; i < staleIds.length; i += 50) {
+          const batch = staleIds.slice(i, i + 50);
+          await supabase.from("partner_contacts").delete().in("partner_id", batch);
+          await supabase.from("partner_networks").delete().in("partner_id", batch);
+          await supabase.from("partner_services").delete().in("partner_id", batch);
+          await supabase.from("partner_certifications").delete().in("partner_id", batch);
+          await supabase.from("partner_social_links").delete().in("partner_id", batch);
+          await supabase.from("interactions").delete().in("partner_id", batch);
+          await supabase.from("reminders").delete().in("partner_id", batch);
+          await supabase.from("activities").delete().in("partner_id", batch);
+          await supabase.from("partners").delete().in("id", batch);
+        }
+        removedCount = stalePartners.length;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+      await queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
+      await queryClient.invalidateQueries({ queryKey: ["partners"] });
+      await queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+      setDownloadMode("no_profile");
+      toast.success(`Pulizia: ${removedCount > 0 ? `${removedCount} obsoleti rimossi. ` : ""}Avvio download...`);
+      await new Promise(r => setTimeout(r, 2000));
+      await handleStartDownload();
+    };
+    const timer = setTimeout(runCleanupAndDownload, 1000);
+    return () => clearTimeout(timer);
+  }, [autoDownloadPending, scanComplete, isScanning]);
+
+  const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
+    const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
+    await supabase.from("directory_cache").upsert({
+      country_code: countryCode, network_name: netKey, members: membersJson as any,
+      total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }, { onConflict: "country_code,network_name" });
+    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+  }, [queryClient]);
+
+  const handleStartScan = useCallback(async () => {
+    setIsScanning(true); setScanError(null); setSkippedCountries([]); abortRef.current = false;
+    const allMembers: DirectoryMember[] = []; const skipped: string[] = [];
+    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    for (let ci = 0; ci < selectedCountries.length; ci++) {
+      if (abortRef.current) break;
+      setCurrentCountryIdx(ci);
+      const country = selectedCountries[ci];
+      if (skipCachedDirs && cachedCountryCodes.has(country.code)) continue;
+      for (const netKey of networkKeys) {
+        if (abortRef.current) break;
+        let page = 1; let hasNext = true; let countryTotal = 0; let countryPages = 0;
+        const countryMembers: DirectoryMember[] = []; let countryFailed = false;
+        while (hasNext && !abortRef.current) {
+          setCurrentPage(page);
+          let result: DirectoryResult | null = null; let lastError = "";
+          try {
+            result = await scrapeWcaDirectory(country.code, netKey, page);
+            if (!result.success) { lastError = result.error || "Errore sconosciuto"; result = null; }
+          } catch (err) { lastError = err instanceof Error ? err.message : "Errore di rete"; result = null; }
+          if (!result || !result.success) { setScanError(`${country.name}: ${lastError}`); countryFailed = true; break; }
+          if (result.members.length > 0) {
+            const newMembers = result.members.map(m => ({ ...m, country: m.country || country.name, country_code: country.code }));
+            countryMembers.push(...newMembers); allMembers.push(...newMembers); setScannedMembers([...allMembers]);
+          }
+          countryTotal = result.pagination.total_results; countryPages = result.pagination.total_pages;
+          hasNext = result.pagination.has_next_page || result.members.length >= 50;
+          page++;
+          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 3000));
+        }
+        if (countryFailed) { const label = `${country.name} (${country.code})`; if (!skipped.includes(label)) { skipped.push(label); setSkippedCountries([...skipped]); } }
+        if (countryMembers.length > 0) await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
+      }
+      if (ci < selectedCountries.length - 1 && !abortRef.current) await new Promise(r => setTimeout(r, 10000));
+    }
+    setIsScanning(false); setScanComplete(true);
+    queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
+    queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+  }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
+
+  const handleStartDownload = async () => {
+    const sessionOk = await ensureSession();
+    if (!sessionOk) { toast.error("Sessione WCA non attiva. Effettua il login o verifica le credenziali."); return; }
+    await executeDownload();
+  };
+
+  const executeDownload = async () => {
+    if (idsToDownload.length === 0) { toast.info("Nessun partner da scaricare"); return; }
+    const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
+    if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso. Attendi il completamento."); return; }
+    const idsByCountry = new Map<string, number[]>();
+    for (const m of sourceMembers) {
+      if (!m.wca_id || !idsToDownload.includes(m.wca_id)) continue;
+      const cc = m.country_code || selectedCountries.find(c => c.name === m.country || c.code === m.country)?.code;
+      if (!cc) continue;
+      if (!idsByCountry.has(cc)) idsByCountry.set(cc, []);
+      idsByCountry.get(cc)!.push(m.wca_id);
+    }
+    for (const country of selectedCountries) {
+      const countryIds = idsByCountry.get(country.code) || [];
+      if (countryIds.length === 0) continue;
+      const jobId = await createJob.mutateAsync({
+        country_code: country.code, country_name: country.name,
+        network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
+        wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
+      });
+      if (jobId && onJobCreated) onJobCreated(jobId);
+    }
+  };
+
+  /* ════════════════════════════════════════════
+   * STATS + FILTERS (existing logic)
+   * ════════════════════════════════════════════ */
   const stats = useMemo(() => {
     const list = partners || [];
     const total = list.length;
@@ -144,11 +380,8 @@ export function PartnerListPanel({
     ? Math.round(((stats.withProfile + stats.withDeep + stats.withEmail + stats.withPhone + stats.withAliasCo + stats.withAliasCt) / (stats.total * 6)) * 100)
     : 0;
 
-  /* ── Filter partners based on progress bar click ── */
   const filteredPartners = useMemo(() => {
     let list = partners || [];
-
-    // Apply progress filter
     if (progressFilter) {
       list = list.filter((p: any) => {
         switch (progressFilter) {
@@ -162,7 +395,6 @@ export function PartnerListPanel({
         }
       });
     }
-
     const sorted = [...list];
     switch (sortBy) {
       case "name_asc": return sorted.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
@@ -196,6 +428,9 @@ export function PartnerListPanel({
     setProgressFilter(prev => prev === key ? null : key);
   };
 
+  const totalCount = uniqueIds.length;
+  const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col">
@@ -225,7 +460,7 @@ export function PartnerListPanel({
                 missing={stats.total - stats.withProfile}
                 total={stats.total}
                 isDark={isDark}
-                onClick={() => onSwitchToDownload?.()}
+                onClick={() => setDownloadOpen(true)}
               />
               <ActionButton
                 icon={Telescope}
@@ -239,31 +474,15 @@ export function PartnerListPanel({
                 }}
                 loading={deepSearchRunning}
               />
-              <ActionButton
-                icon={Building2}
-                label="Alias Az."
-                missing={stats.total - stats.withAliasCo}
-                total={stats.total}
-                isDark={isDark}
-                onClick={() => onGenerateAliases?.(countryCodes, "company")}
-                loading={aliasGenerating}
-              />
-              <ActionButton
-                icon={UserCircle}
-                label="Alias Ct."
-                missing={stats.total - stats.withAliasCt}
-                total={stats.total}
-                isDark={isDark}
-                onClick={() => onGenerateAliases?.(countryCodes, "contact")}
-                loading={aliasGenerating}
-              />
+              <ActionButton icon={Building2} label="Alias Az." missing={stats.total - stats.withAliasCo} total={stats.total} isDark={isDark} onClick={() => onGenerateAliases?.(countryCodes, "company")} loading={aliasGenerating} />
+              <ActionButton icon={UserCircle} label="Alias Ct." missing={stats.total - stats.withAliasCt} total={stats.total} isDark={isDark} onClick={() => onGenerateAliases?.(countryCodes, "contact")} loading={aliasGenerating} />
             </div>
           </div>
         )}
 
         {/* ═══ 6 Clickable Progress Bars ═══ */}
         {stats.total > 0 && (
-          <div className={`px-3 pt-1 pb-2 flex-shrink-0 space-y-0.5`}>
+          <div className={`px-3 pt-1 pb-1 flex-shrink-0 space-y-0.5`}>
             <ProgressBar label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} gradientColor="from-violet-500 to-purple-500" active={progressFilter === "profiles"} onClick={() => toggleProgressFilter("profiles")} />
             <ProgressBar label="Deep S." value={stats.withDeep} total={stats.total} isDark={isDark} gradientColor="from-cyan-500 to-blue-500" active={progressFilter === "deep"} onClick={() => toggleProgressFilter("deep")} />
             <ProgressBar label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} gradientColor="from-sky-400 to-blue-500" active={progressFilter === "email"} onClick={() => toggleProgressFilter("email")} />
@@ -272,6 +491,145 @@ export function PartnerListPanel({
             <ProgressBar label="Alias Ct." value={stats.withAliasCt} total={stats.total} isDark={isDark} gradientColor="from-pink-400 to-rose-500" active={progressFilter === "alias_ct"} onClick={() => toggleProgressFilter("alias_ct")} />
           </div>
         )}
+
+        {/* ═══ DOWNLOAD SECTION (Collapsible) ═══ */}
+        <Collapsible open={downloadOpen || isScanning} onOpenChange={setDownloadOpen}>
+          <CollapsibleTrigger className={cn(
+            "flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-all flex-shrink-0",
+            isDark ? "text-slate-300 hover:bg-white/[0.04]" : "text-slate-600 hover:bg-slate-50"
+          )}>
+            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", (downloadOpen || isScanning) && "rotate-180")} />
+            <Download className="w-3.5 h-3.5" />
+            <span>Download</span>
+            {totalCount > 0 && (
+              <span className={`ml-auto font-mono text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                {downloadedCount}/{totalCount} in DB
+              </span>
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className={`mx-3 mb-2 p-3 rounded-xl border space-y-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"}`}>
+              {isScanning ? (
+                /* Scanning state */
+                <div className="text-center space-y-2">
+                  <Loader2 className={`w-6 h-6 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                  <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                    {selectedCountries.length > 1 && `Paese ${currentCountryIdx + 1}/${selectedCountries.length}: `}
+                    {selectedCountries[currentCountryIdx]?.name} — Pg {currentPage}
+                  </p>
+                  {scannedMembers.length > 0 && <p className={`text-sm font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
+                  {scanError && <p className={`text-xs ${isDark ? "text-red-400" : "text-red-600"}`}>⚠️ {scanError}</p>}
+                  <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-xs">
+                    <Square className="w-3 h-3 mr-1" /> Stop
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Network selector */}
+                  <div className="flex items-center gap-2">
+                    <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                      <SelectTrigger className={`h-7 text-xs flex-1 ${th.selTrigger}`}><SelectValue /></SelectTrigger>
+                      <SelectContent className={th.selContent}>
+                        <SelectItem value="__all__">Tutti i network</SelectItem>
+                        {WCA_NETWORKS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <label className={`flex items-center gap-1.5 text-[10px] shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      <Switch checked={directoryOnly} onCheckedChange={v => setDirectoryOnly(v)} className="scale-75" />
+                      <FolderDown className="w-3 h-3" /> Solo Dir
+                    </label>
+                  </div>
+
+                  {/* Mode toggle chips */}
+                  {!directoryOnly && (
+                    <div className="flex gap-1.5">
+                      {([
+                        { key: "new" as DownloadMode, label: "Nuovi", count: missingIds.length },
+                        { key: "no_profile" as DownloadMode, label: "No profilo", count: noProfileInDirectoryCount },
+                        { key: "all" as DownloadMode, label: "Tutti", count: totalCount },
+                      ]).map(chip => (
+                        <button
+                          key={chip.key}
+                          onClick={() => setDownloadMode(chip.key)}
+                          className={cn(
+                            "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border",
+                            downloadMode === chip.key
+                              ? isDark ? "bg-sky-500/20 border-sky-400/40 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                              : isDark ? "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                          )}
+                        >
+                          {chip.label} ({chip.count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Directory-only options */}
+                  {directoryOnly && (
+                    <div className="space-y-2">
+                      {hasCache && totalCount > 0 && (
+                        <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>✅ Directory: {totalCount} aziende</p>
+                      )}
+                      <label className={`flex items-center gap-2 text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        <Switch checked={dirThenDownload} onCheckedChange={setDirThenDownload} className="scale-75" />
+                        <Zap className="w-3 h-3" /> Scarica dopo scansione
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Delay slider */}
+                  {!directoryOnly && idsToDownload.length > 0 && (
+                    <div className="space-y-1">
+                      <div className={`flex items-center justify-between text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> Delay: <b className={isDark ? "text-white" : "text-slate-800"}>{delay}s</b></span>
+                        <span className="font-mono">{estimateLabel}</span>
+                      </div>
+                      <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4" />
+                    </div>
+                  )}
+
+                  {/* Start button */}
+                  <Button
+                    onClick={() => {
+                      if (directoryOnly) {
+                        if (dirThenDownload) setAutoDownloadPending(true);
+                        handleStartScan();
+                      } else {
+                        handleStartDownload();
+                      }
+                    }}
+                    disabled={(directoryOnly ? isScanning : idsToDownload.length === 0) || createJob.isPending}
+                    className={`w-full h-8 text-xs ${isDark ? "bg-sky-600 hover:bg-sky-500 text-white" : "bg-sky-500 hover:bg-sky-600 text-white"}`}
+                    size="sm"
+                  >
+                    {createJob.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> Avvio...</> : (
+                      directoryOnly
+                        ? <><FolderDown className="w-3.5 h-3.5 mr-1.5" />{dirThenDownload ? (hasCache ? "Aggiorna e Scarica" : "Scansiona e Scarica") : (hasCache ? "Aggiorna Directory" : "Scarica Directory")}</>
+                        : <><Zap className="w-3.5 h-3.5 mr-1.5" /> Scarica {idsToDownload.length} partner</>
+                    )}
+                  </Button>
+
+                  {/* Refresh scan button */}
+                  {hasCache && !scanComplete && !directoryOnly && (
+                    <button onClick={handleStartScan} className={`flex items-center gap-1 mx-auto text-[10px] ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"}`}>
+                      <RefreshCw className="w-3 h-3" /> Aggiorna directory
+                    </button>
+                  )}
+
+                  {skippedCountries.length > 0 && (
+                    <p className={`text-[10px] ${isDark ? "text-amber-400/60" : "text-amber-500"}`}>⚠ {skippedCountries.length} paesi saltati</p>
+                  )}
+                </>
+              )}
+
+              {/* Inline terminal + jobs */}
+              <div className="max-h-40 overflow-auto space-y-2">
+                <DownloadTerminal />
+                <JobMonitor />
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* ═══ Search + Sort ═══ */}
         <div className="px-3 pb-2 space-y-1.5 flex-shrink-0">
