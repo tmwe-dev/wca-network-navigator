@@ -26,6 +26,7 @@ export function AppLayout() {
   const pageInfo = PAGE_INFO[currentPath] || PAGE_INFO["/"];
   const isDarkPage = currentPath === "/campaigns";
   const isCampaignsPage = isDarkPage;
+  const isOperationsRoute = currentPath === "/" || currentPath === "/operations";
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -43,7 +44,7 @@ export function AppLayout() {
     <div className="flex min-h-screen w-full bg-background">
       <AppSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Top bar */}
         <header className={`sticky top-0 z-40 h-16 border-b ${isCampaignsPage ? 'bg-slate-900/95 border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-border'}`}>
           <div className="flex items-center gap-4 h-full px-6">
@@ -78,7 +79,7 @@ export function AppLayout() {
         </header>
 
         {/* Main content — Operations needs no padding/overflow since it manages its own */}
-        <main className={`flex-1 ${currentPath === "/operations" ? "overflow-hidden" : "p-6 overflow-auto"}`}>
+        <main className={`flex-1 min-h-0 ${isOperationsRoute ? "overflow-hidden" : "p-6 overflow-auto"}`}>
           <Outlet />
         </main>
       </div>

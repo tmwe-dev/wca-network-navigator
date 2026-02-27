@@ -125,7 +125,7 @@ export default function Operations() {
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div className={`h-full relative flex flex-col ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
+      <div className={`h-full min-h-0 relative flex flex-col overflow-hidden ${th.pageBg}`}>
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
