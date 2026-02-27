@@ -165,10 +165,6 @@ Deno.serve(async (req) => {
           partnerUpdate.branch_cities = profile.branchCities
         }
 
-        if (profileHtml) {
-          partnerUpdate.raw_profile_html = profileHtml
-        }
-
         if (Object.keys(partnerUpdate).length > 0) {
           partnerUpdate.updated_at = new Date().toISOString()
           await supabase.from('partners').update(partnerUpdate).eq('id', partnerId)
@@ -233,6 +229,14 @@ Deno.serve(async (req) => {
             }
           }
         }
+      }
+
+      // ── Save raw HTML independently (even if structured profile is empty) ──
+      if (profileHtml) {
+        await supabase.from('partners').update({
+          raw_profile_html: profileHtml,
+          updated_at: new Date().toISOString()
+        }).eq('id', partnerId)
       }
 
       // ══════════════════════════════════════════════════
