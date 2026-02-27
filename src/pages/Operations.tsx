@@ -49,7 +49,7 @@ export default function Operations() {
   });
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
 
-  const [activeCountry, setActiveCountry] = useState<{ code: string; name: string } | null>(null);
+  const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
@@ -101,12 +101,22 @@ export default function Operations() {
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
 
-  const activeCountryCode = activeCountry?.code || "";
+  const activeCountryCodes = useMemo(() => selectedCountries.map(c => c.code), [selectedCountries]);
+  const activeCountryNames = useMemo(() => selectedCountries.map(c => c.name), [selectedCountries]);
+  const hasSelection = selectedCountries.length > 0;
 
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
   const handleCountryClick = useCallback((code: string, name: string) => {
-    setActiveCountry(prev => prev?.code === code ? null : { code, name });
+    setSelectedCountries(prev => {
+      const exists = prev.some(c => c.code === code);
+      return exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
+    });
+    setSelectedPartnerId(null);
+  }, []);
+
+  const handleRemoveCountry = useCallback((code: string) => {
+    setSelectedCountries(prev => prev.filter(c => c.code !== code));
     setSelectedPartnerId(null);
   }, []);
 
@@ -292,17 +302,17 @@ export default function Operations() {
             {/* LEFT: Country Grid (fixed width) */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
-              activeCountry ? "w-[260px]" : "w-full"
+              hasSelection ? "w-[260px]" : "w-full"
             )}>
               <CountryGrid
-                selected={activeCountry ? [activeCountry] : []}
+                selected={selectedCountries}
                 onToggle={handleCountryClick}
-                onRemove={() => { setActiveCountry(null); setSelectedPartnerId(null); }}
+                onRemove={handleRemoveCountry}
                 filterMode={filterMode}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
               />
-              {(activeJobs.length > 0 || showTerminal) && !activeCountry && (
+              {(activeJobs.length > 0 || showTerminal) && !hasSelection && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <ActiveJobBar />
                   {showTerminal && <DownloadTerminal />}
@@ -312,7 +322,7 @@ export default function Operations() {
             </div>
 
             {/* CENTER: Partner List + Detail overlay */}
-            {activeCountry && (
+            {hasSelection && (
               <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
                 <ActiveJobBar />
                 <div className={cn(
@@ -320,8 +330,8 @@ export default function Operations() {
                   isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
                 )}>
                   <PartnerListPanel
-                    countryCode={activeCountryCode}
-                    countryName={activeCountry.name}
+                    countryCodes={activeCountryCodes}
+                    countryNames={activeCountryNames}
                     isDark={isDark}
                     onDeepSearch={handleDeepSearch}
                     onGenerateAliases={handleGenerateAliases}
@@ -393,7 +403,7 @@ export default function Operations() {
           </div>
         </div>
       </div>
-      <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries: activeCountry ? [activeCountry] : [], filterMode }} />
+      <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
     </ThemeCtx.Provider>
   );
 }
