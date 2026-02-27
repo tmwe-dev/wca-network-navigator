@@ -159,20 +159,26 @@ export function PartnerListPanel({
   const noProfileInDirectoryCount = useMemo(() => uniqueIds.filter(id => noProfileWcaSet.has(id)).length, [uniqueIds, noProfileWcaSet]);
 
   const idsToDownload = useMemo(() => {
-    if (downloadMode === "all") return uniqueIds;
+    if (downloadMode === "all") {
+      return uniqueIds.length > 0 ? uniqueIds : dbPartners.filter(p => p.wca_id).map(p => p.wca_id);
+    }
     if (downloadMode === "no_profile") {
-      const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
-      return [...new Set([...missingIds, ...existingNoProfile])];
+      if (uniqueIds.length > 0) {
+        const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
+        return [...new Set([...missingIds, ...existingNoProfile])];
+      }
+      return noProfileIds; // fallback diretto dal DB
     }
     return missingIds;
-  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet]);
+  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet, noProfileIds, dbPartners]);
 
   const totalTime = idsToDownload.length * (delay + 5);
   const estimateLabel = totalTime >= 3600 ? `~${(totalTime / 3600).toFixed(1)} ore` : totalTime >= 60 ? `~${Math.ceil(totalTime / 60)} min` : `~${totalTime}s`;
 
   useEffect(() => {
     if (missingIds.length === 0 && noProfileInDirectoryCount > 0 && downloadMode === "new") setDownloadMode("no_profile");
-  }, [missingIds.length, noProfileInDirectoryCount, downloadMode]);
+    if (!hasCache && noProfileIds.length > 0 && downloadMode === "new") setDownloadMode("no_profile");
+  }, [missingIds.length, noProfileInDirectoryCount, downloadMode, hasCache, noProfileIds.length]);
 
   useEffect(() => {
     setScanComplete(false); setScannedMembers([]); setScanError(null); setAutoDownloadPending(false);
@@ -352,8 +358,8 @@ export function PartnerListPanel({
     setProgressFilter(prev => prev === key ? null : key);
   };
 
-  const totalCount = uniqueIds.length;
-  const downloadedCount = uniqueIds.filter(id => dbWcaSet.has(id)).length;
+  const totalCount = uniqueIds.length > 0 ? uniqueIds.length : stats.total;
+  const downloadedCount = uniqueIds.length > 0 ? uniqueIds.filter(id => dbWcaSet.has(id)).length : stats.withProfile;
 
   /* ════════════════════════════════════════════
    * WIZARD: determine next action
