@@ -381,12 +381,12 @@ export function PartnerListPanel({
             <div className="flex items-center gap-2 flex-wrap text-[11px]">
               <StatChip label="Totale WCA" value={totalCount} isDark={isDark} />
               <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
-              <StatChip label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-              <StatChip label="Deep Search" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-              <StatChip label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-              <StatChip label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
-              <StatChip label="Alias Azienda" value={stats.withAliasCo} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
-              <StatChip label="Alias Contatti" value={stats.withAliasCt} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
+              <MissingChip label="Profilo" missing={stats.total - stats.withProfile} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+              <MissingChip label="Deep" missing={stats.total - stats.withDeep} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+              <MissingChip label="Email" missing={stats.total - stats.withEmail} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+              <MissingChip label="Telefono" missing={stats.total - stats.withPhone} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+              <MissingChip label="Alias Az." missing={stats.total - stats.withAliasCo} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
+              <MissingChip label="Alias Ct." missing={stats.total - stats.withAliasCt} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
             </div>
             <button
               onClick={() => setWizardOpen(p => !p)}
@@ -609,7 +609,7 @@ export function PartnerListPanel({
   );
 }
 
-/* ── Stat Chip (inline) ── */
+/* ── Stat Chip (inline, for non-clickable stats) ── */
 function StatChip({ label, value, total, isDark, onClick, active }: {
   label: string; value: number; total?: number; isDark: boolean;
   onClick?: () => void; active?: boolean;
@@ -625,6 +625,34 @@ function StatChip({ label, value, total, isDark, onClick, active }: {
       <span className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>{label}</span>
       <span className={cn("font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{value}</span>
       {pct !== null && <span className={cn("text-[9px]", pct >= 80 ? "text-emerald-500" : pct >= 40 ? "text-amber-500" : "text-rose-500")}>{pct}%</span>}
+    </span>
+  );
+}
+
+/* ── Missing Chip (clickable, shows missing count) ── */
+function MissingChip({ label, missing, isDark, onClick, active }: {
+  label: string; missing: number; isDark: boolean;
+  onClick?: () => void; active?: boolean;
+}) {
+  const done = missing === 0;
+  return (
+    <span onClick={done ? undefined : onClick}
+      className={cn(
+        "inline-flex items-center gap-0.5 font-mono whitespace-nowrap transition-all",
+        done ? "" : onClick ? "cursor-pointer hover:opacity-80" : "",
+        done ? "text-emerald-500" : active ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-slate-400" : "text-slate-500")
+      )}>
+      {done ? (
+        <>
+          <span className="text-emerald-500">✓</span>
+          <span className={cn("text-[10px]", "text-emerald-500")}>{label}</span>
+        </>
+      ) : (
+        <>
+          <span className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>Senza {label}</span>
+          <span className={cn("font-bold", active ? (isDark ? "text-sky-300" : "text-sky-700") : "text-rose-500")}>{missing}</span>
+        </>
+      )}
     </span>
   );
 }
