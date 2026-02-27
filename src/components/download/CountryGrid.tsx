@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/select";
 
 import {
-  Search, CheckCircle, X, CheckSquare,
+  Search, CheckCircle, X, CheckSquare, Mail, Phone,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -270,7 +270,7 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
           <p className={`text-[11px] font-semibold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
           {st.pCount > 0 && (
             <p className={`text-[9px] font-mono mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              {st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""} · ✉{s?.with_email || 0} · ☎{s?.with_phone || 0}
+              {st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""} <Mail className="inline w-2.5 h-2.5 -mt-px" />{s?.with_email || 0} <Phone className="inline w-2.5 h-2.5 -mt-px" />{s?.with_phone || 0}
             </p>
           )}
         </div>

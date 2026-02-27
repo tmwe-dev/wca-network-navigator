@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Sun, Moon, Users, Bot, X, Eye } from "lucide-react";
+import {
+  Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen,
+} from "lucide-react";
 import { DeepSearchCanvas, type DeepSearchResult, type DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
@@ -20,6 +22,7 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /** Read directory totals */
@@ -174,22 +177,48 @@ export default function Operations() {
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* ═══ TOP BAR ═══ */}
-          <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
+          <TooltipProvider delayDuration={150}>
+          <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+            {/* Left: Title + active badge */}
             <div className="flex items-center gap-3">
-              <h1 className={`text-sm font-semibold ${th.h1}`}>Operations</h1>
+              <h1 className={cn("text-base font-bold tracking-tight", isDark ? "text-slate-100" : "text-slate-800")}>Operations</h1>
               {activeJobs.length > 0 && (
-                <span className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-sky-50 text-sky-600 border border-sky-200"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-sky-500"}`} />
+                <span className={cn(
+                  "flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full",
+                  isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-amber-50 text-amber-600 border border-amber-200"
+                )}>
+                  <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isDark ? "bg-amber-400" : "bg-amber-500")} />
                   {activeJobs.length} attivi
                 </span>
               )}
-              <SpeedGauge
-                lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
-                onStop={() => emergencyStop()}
-                idle={activeJobs.length === 0}
-              />
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Center: Stats pills */}
+            {globalStats && (() => {
+              const missingProfile = globalStats.totalPartners - globalStats.withProfile;
+              const missingEmail = globalStats.totalPartners - globalStats.withEmail;
+              const missingPhone = globalStats.totalPartners - globalStats.withPhone;
+              return (
+                <div className="flex items-center gap-1.5">
+                  <StatPill icon={Globe} value={globalStats.scannedCountries} label="Paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
+                  <StatPill icon={Users} value={globalStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
+                  <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
+                  <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} variant={missingEmail > 0 ? "warn" : "ok"} />
+                  <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} variant={missingPhone > 0 ? "warn" : "ok"} />
+                  <StatPill icon={FolderOpen} value={globalStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
+                </div>
+              );
+            })()}
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5">
+              {activeJobs.length > 0 && (
+                <SpeedGauge
+                  lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
+                  onStop={() => emergencyStop()}
+                  idle={activeJobs.length === 0}
+                />
+              )}
               <WcaSessionIndicator />
               {(deepSearchRunning || dsResults.length > 0) && !dsCanvasOpen && (
                 <button onClick={() => setDsCanvasOpen(true)} className={cn(
@@ -213,28 +242,7 @@ export default function Operations() {
               </button>
             </div>
           </div>
-
-          {/* ═══ STATS STRIP ═══ */}
-          {globalStats && (() => {
-            const missingProfile = globalStats.totalPartners - globalStats.withProfile;
-            const missingEmail = globalStats.totalPartners - globalStats.withEmail;
-            const missingPhone = globalStats.totalPartners - globalStats.withPhone;
-            const dot = isDark ? "text-white/10" : "text-slate-200";
-            return (
-            <div className={cn("flex items-center gap-3 px-4 py-1 flex-shrink-0 text-sm", isDark ? "text-slate-500" : "text-slate-400")}>
-              <StatsChip emoji="🌍" value={globalStats.scannedCountries} label="paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-              <span className={dot}>·</span>
-              <StatsChip emoji="👥" value={globalStats.totalPartners.toLocaleString()} label="partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
-              <span className={dot}>·</span>
-              <MissingChip emoji="📄" label="Profilo" missing={missingProfile} isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
-              <span className={dot}>·</span>
-              <MissingChip emoji="✉️" label="Email" missing={missingEmail} isDark={isDark} />
-              <span className={dot}>·</span>
-              <MissingChip emoji="📞" label="Tel" missing={missingPhone} isDark={isDark} />
-              <span className={dot}>·</span>
-              <StatsChip emoji="📁" value={(globalStats.totalDirectory ?? 0).toLocaleString()} label="directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
-            </div>);
-          })()}
+          </TooltipProvider>
 
           {/* ═══ MAIN: Country Grid + Partner List + Detail ═══ */}
           <div className="flex-1 min-h-0 px-4 pb-3 flex gap-3">
@@ -329,56 +337,39 @@ export default function Operations() {
   );
 }
 
-/* ── Inline Stats Chip ── */
-function StatsChip({ emoji, value, label, isDark, pct, onClick, active }: {
-  emoji: string; value: string | number; label: string; isDark: boolean;
-  pct?: number; onClick?: () => void; active?: boolean;
-}) {
-  const isClickable = !!onClick;
-  return (
-    <span
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap transition-all duration-150",
-        isClickable ? "cursor-pointer hover:opacity-80" : "",
-        active ? (isDark ? "text-sky-400" : "text-sky-600") : ""
-      )}
-    >
-      <span>{emoji}</span>
-      <span className={cn("font-semibold tabular-nums", isDark ? "text-slate-200" : "text-slate-700")}>{value}</span>
-      <span>{label}</span>
-      {pct !== undefined && (
-        <span className={cn("tabular-nums", isDark ? "text-slate-600" : "text-slate-300")}>({pct}%)</span>
-      )}
-    </span>
-  );
-}
-
-/* ── Missing Chip (shows count of MISSING items, green checkmark when 0) ── */
-function MissingChip({ emoji, label, missing, isDark, onClick, active }: {
-  emoji: string; label: string; missing: number; isDark: boolean;
+/* ── Stat Pill (mini-card with icon, number, label) ── */
+function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant = "info" }: {
+  icon: any; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
+  variant?: "info" | "warn" | "ok";
 }) {
-  const isClickable = !!onClick;
-  const isComplete = missing === 0;
+  const isComplete = variant === "ok" || (variant === "warn" && value === 0);
+  const colorClass = isComplete
+    ? isDark ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10" : "text-emerald-600 border-emerald-200 bg-emerald-50"
+    : variant === "warn"
+      ? isDark ? "text-rose-400 border-rose-500/20 bg-rose-500/10" : "text-rose-600 border-rose-200 bg-rose-50"
+      : active
+        ? isDark ? "text-sky-400 border-sky-500/30 bg-sky-500/15" : "text-sky-600 border-sky-300 bg-sky-50"
+        : isDark ? "text-slate-300 border-white/[0.08] bg-white/[0.03]" : "text-slate-600 border-slate-200 bg-white/60";
+
   return (
-    <span
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap transition-all duration-150",
-        isClickable ? "cursor-pointer hover:opacity-80" : "",
-        active ? (isDark ? "text-sky-400" : "text-sky-600") : ""
-      )}
-    >
-      <span>{emoji}</span>
-      {isComplete ? (
-        <span className={isDark ? "text-emerald-400 font-semibold" : "text-emerald-600 font-semibold"}>✓ {label}</span>
-      ) : (
-        <>
-          <span className={isDark ? "text-slate-500" : "text-slate-400"}>Senza {label}</span>
-          <span className={cn("font-semibold tabular-nums", isDark ? "text-slate-200" : "text-slate-700")}>{missing.toLocaleString()}</span>
-        </>
-      )}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] transition-all whitespace-nowrap",
+            onClick ? "cursor-pointer hover:scale-105" : "cursor-default",
+            colorClass
+          )}
+        >
+          <Icon className="w-3.5 h-3.5" />
+          <span className="font-bold tabular-nums">{value.toLocaleString()}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs font-medium">
+        {label}: {value.toLocaleString()}
+      </TooltipContent>
+    </Tooltip>
   );
 }
