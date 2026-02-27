@@ -1,50 +1,69 @@
 
 
-## Problema: `raw_profile_html` non viene salvato
+## Audit completo dei contatori Operations
 
-Ho trovato il bug nel file `src/lib/download/profileSaver.ts`.
+### Problemi trovati
 
-### Causa root
+**1. Barra globale in alto (Operations.tsx) ancora con formato vecchio**
 
-Il salvataggio di `raw_profile_html` (riga 88) si trova **dentro** il blocco `if (result.profile)` (riga 67). Se l'estensione Chrome restituisce `profileHtml` (il body HTML della pagina) ma il parsing strutturato del profilo non produce un oggetto `profile` valido, l'HTML grezzo non viene mai scritto nel database.
+La stats strip mostra "📄 183 profili (13%)" — cioè quanti CE L'HANNO. Questo è incoerente con i MissingChip nel pannello paese che mostrano "Senza Profilo 3". L'utente vede due informazioni contrastanti: in alto "183 profili" sembra positivo, ma aprendo l'Afghanistan vede "Senza Profilo 3".
 
-Per i 3 partner afghani, l'estensione ha estratto contatti (email + telefoni) e catturato l'HTML, ma il parser dei campi profilo (`address`, `phone`, `website`, etc.) non ha trovato abbastanza dati strutturati, quindi `result.profile` era vuoto/nullo. Di conseguenza:
-- `raw_profile_html` = mai scritto nel DB
-- `get_country_stats()` controlla `raw_profile_html IS NOT NULL` → risultato: 0 profili
+**Fix**: Convertire i chip cliccabili della barra globale allo stesso formato "mancanti" usato nel pannello paese:
+- "Senza Profilo **1217**" invece di "📄 183 profili (13%)"
+- "Senza Email **1052**" invece di "✉️ 348 email (25%)"  
+- "Senza Telefono **779**" invece di "📞 621 tel (44%)"
+- Chip non cliccabili (paesi, partner totali, directory) restano invariati
 
-### Dato attuale nel DB (Afghanistan)
+**2. Badge paese verde = solo "scaricato", ignora profili mancanti**
 
-```text
-with_profile: 0      ← raw_profile_html è NULL per tutti e 3
-with_email: 3         ← contatti email estratti correttamente  
-with_phone: 3         ← contatti telefono estratti correttamente
-with_deep_search: 3   ← deep search completato
-```
+La card Afghanistan mostra pallino verde "100%" perché `3/3 scaricati`. Ma il profilo HTML è NULL per tutti e 3. La logica `isDone` nel filtro considera `allProfiles`, ma il badge visivo usa solo `dlPct` (linea 233 CountryGrid). L'utente legge "verde 100%" come "tutto fatto" — falso.
 
-### Fix
+**Fix**: Il badge deve diventare giallo/ambra se `allDownloaded` ma `noProfile > 0`. Aggiungere un sotto-indicatore per profili mancanti:
+- 🟢 100% = scaricati + profili completi
+- 🟡 100%↓ = scaricati ma profili mancanti (tooltip "3 scaricati, 3 senza profilo")
+- Logica: `if (dlPct >= 100 && noProfile > 0)` → ambra
 
-**File: `src/lib/download/profileSaver.ts`**
+**3. Afghanistan with_profile: 0 — atteso**
 
-Spostare il salvataggio di `raw_profile_html` **fuori** dal blocco `if (result.profile)`, in modo che venga salvato indipendentemente dalla presenza di dati strutturati nel profilo:
+I 3 partner afghani hanno `raw_profile_html = NULL` nel DB. Il fix al `profileSaver.ts` è stato appena applicato ma i profili non sono stati ri-scaricati. Questo è corretto — richiede un nuovo download con il pulsante "Scarica Profili" dal filtro "Senza Profilo".
 
+**4. Selezione multipla paesi per download cumulativo — non supportata**
+
+Attualmente `activeCountry` è un singolo oggetto `{ code, name } | null`. La CountryGrid ha un pulsante "Seleziona tutti" ma il click su un paese sostituisce la selezione precedente (`setActiveCountry`). Non è possibile selezionare più paesi incompleti e fare un download cumulativo.
+
+**Fuori scope per ora** — richiede refactoring significativo del flusso download che opera su un singolo `countryCode`.
+
+### File modificati
+
+1. **`src/pages/Operations.tsx`** — Convertire i StatsChip di profili/email/telefono al formato "mancanti" con stile verde quando il conteggio è 0
+2. **`src/components/download/CountryGrid.tsx`** — Badge: ambra se 100% scaricati ma profili mancanti; aggiungere micro-indicatore profilo nella card
+
+### Dettaglio implementazione
+
+**Operations.tsx** (stats strip, ~linea 162-175):
 ```typescript
-// PRIMA (bug): raw_profile_html dentro if (result.profile)
-if (result.profile) {
-    // ... campi strutturati ...
-    if (result.profileHtml) upd.raw_profile_html = result.profileHtml;  // ← mai raggiunto se profile è vuoto
-}
+// Chip cliccabili: mostrare MANCANTI
+const missingProfile = globalStats.totalPartners - globalStats.withProfile;
+const missingEmail = globalStats.totalPartners - globalStats.withEmail;
+const missingPhone = globalStats.totalPartners - globalStats.withPhone;
 
-// DOPO (fix): salvataggio separato
-if (result.profile) {
-    // ... campi strutturati ...
-}
-
-// Salva sempre l'HTML grezzo, indipendentemente dal profilo strutturato
-if (result.profileHtml) {
-    await supabase.from("partners").update({ raw_profile_html: result.profileHtml }).eq("id", partnerId);
-    profileSaved = true;
-}
+// Render:
+<MissingGlobalChip emoji="📄" label="Profilo" missing={missingProfile} onClick={...} />
+<MissingGlobalChip emoji="✉️" label="Email" missing={missingEmail} />
+<MissingGlobalChip emoji="📞" label="Tel" missing={missingPhone} />
+// Se missing=0 → "✓ Profilo" verde
 ```
 
-Questo fix è una modifica di ~5 righe nel file `profileSaver.ts`. Dopo l'applicazione, i prossimi download salveranno sempre l'HTML. Per i 3 partner afghani già scaricati, sarà necessario ri-scaricarli (usando il filtro "Senza Profilo" + pulsante "Scarica Profili").
+**CountryGrid.tsx** (badge, ~linea 233-248):
+```typescript
+// PRIMA: verde se dlPct >= 100
+// DOPO: verde solo se dlPct >= 100 AND noProfile === 0
+if (st.cCount > 0 && dlPct >= 100 && st.noProfile === 0) {
+  dotColor = "bg-emerald-500"; // veramente completo
+} else if (st.cCount > 0 && dlPct >= 100 && st.noProfile > 0) {
+  dotColor = "bg-amber-500"; // scaricato ma profili mancanti
+  label = "100%";
+  tooltip = `Tutti scaricati — ${st.noProfile} senza profilo`;
+}
+```
 
