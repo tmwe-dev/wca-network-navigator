@@ -379,7 +379,7 @@ export function PartnerListPanel({
             <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</span>
             <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
             <div className="flex items-center gap-2 flex-wrap text-[11px]">
-              <StatChip label="Directory" value={totalCount} isDark={isDark} />
+              <StatChip label="Totale WCA" value={totalCount} isDark={isDark} />
               <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
               <StatChip label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
               <StatChip label="Deep Search" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
@@ -454,7 +454,7 @@ export function PartnerListPanel({
                         </Button>
                         {hasCache && !scanComplete && (
                           <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
-                            <RefreshCw className="w-3 h-3" /> Aggiorna elenco dalla directory
+                            <RefreshCw className="w-3 h-3" /> Riscansiona directory WCA
                           </button>
                         )}
                       </div>
