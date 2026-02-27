@@ -6,8 +6,7 @@ import {
 } from "@/components/ui/select";
 
 import {
-  Search, Users, Mail, Phone, CheckCircle, X, FolderDown, Trophy,
-  CheckSquare, FileWarning, HelpCircle, ArrowDown,
+  Search, CheckCircle, X, CheckSquare,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -228,34 +227,23 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   const s = stats[country.code];
   const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
 
-  // Status badge
-  let StatusIcon: any, statusColor: string, statusBg: string, statusLabel: string, pulse = false;
+  // Simplified: single colored dot + compact label
+  let dotColor: string, label: string;
   if (st.isDone) {
-    StatusIcon = Trophy;
-    statusColor = isDark ? "text-emerald-400" : "text-emerald-600";
-    statusBg = isDark ? "bg-emerald-500/20 border-emerald-500/30" : "bg-emerald-100 border-emerald-300";
-    statusLabel = "100%";
+    dotColor = "bg-emerald-500";
+    label = "✓";
   } else if (st.allDownloaded && !st.allProfiles) {
-    StatusIcon = FileWarning;
-    statusColor = isDark ? "text-orange-400" : "text-orange-600";
-    statusBg = isDark ? "bg-orange-500/20 border-orange-500/30" : "bg-orange-100 border-orange-300";
-    statusLabel = `${st.noProfile}!`;
-    pulse = true;
+    dotColor = "bg-orange-500 animate-pulse";
+    label = `!${st.noProfile}`;
   } else if (st.pCount > 0 && st.hasDir) {
-    StatusIcon = ArrowDown;
-    statusColor = isDark ? "text-blue-400" : "text-blue-600";
-    statusBg = isDark ? "bg-blue-500/20 border-blue-500/30" : "bg-blue-100 border-blue-300";
-    statusLabel = `${dlPct}%`;
+    dotColor = "bg-blue-500";
+    label = `${dlPct}%`;
   } else if (st.pCount > 0) {
-    StatusIcon = Users;
-    statusColor = isDark ? "text-slate-300" : "text-slate-600";
-    statusBg = isDark ? "bg-slate-700/40 border-slate-600/30" : "bg-slate-100 border-slate-300";
-    statusLabel = `${st.pCount}`;
+    dotColor = "bg-slate-400";
+    label = `${st.pCount}`;
   } else {
-    StatusIcon = HelpCircle;
-    statusColor = isDark ? "text-slate-500" : "text-slate-400";
-    statusBg = isDark ? "bg-slate-800/40 border-slate-700/30" : "bg-slate-100 border-slate-200";
-    statusLabel = "—";
+    dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
+    label = "—";
   }
 
   const cardBorder = isSelected
@@ -275,27 +263,14 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
         <div className="min-w-0 flex-1">
           <p className={`text-[11px] font-semibold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
           {st.pCount > 0 && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                <Users className="w-2.5 h-2.5" />{st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""}
-              </span>
-              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${coverageColor(s?.with_email || 0, st.pCount, isDark)}`}>
-                <Mail className="w-2.5 h-2.5" />{s?.with_email || 0}
-              </span>
-              <span className={`flex items-center gap-0.5 text-[9px] font-mono ${coverageColor(s?.with_phone || 0, st.pCount, isDark)}`}>
-                <Phone className="w-2.5 h-2.5" />{s?.with_phone || 0}
-              </span>
-              {st.noProfile > 0 && (
-                <span className={`text-[9px] font-mono ${isDark ? "text-orange-400/70" : "text-orange-500"}`}>
-                  !{st.noProfile}p
-                </span>
-              )}
-            </div>
+            <p className={`text-[9px] font-mono mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              {st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""} · ✉{s?.with_email || 0} · ☎{s?.with_phone || 0}
+            </p>
           )}
         </div>
-        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border flex-shrink-0 ${statusBg} ${pulse ? "animate-pulse" : ""}`}>
-          <StatusIcon className={`w-3 h-3 ${statusColor}`} />
-          <span className={`text-[10px] font-bold font-mono ${statusColor}`}>{statusLabel}</span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+          <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{label}</span>
         </div>
         {isSelected && (
           <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
