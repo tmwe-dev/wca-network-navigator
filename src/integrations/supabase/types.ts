@@ -1333,6 +1333,9 @@ export type Database = {
           hq_count: number
           total_partners: number
           with_both: number
+          with_company_alias: number
+          with_contact_alias: number
+          with_deep_search: number
           with_email: number
           with_phone: number
           with_profile: number
