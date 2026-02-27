@@ -170,6 +170,17 @@ export function useDownloadProcessor() {
           const timeout40s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
             setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
           );
+          if (typeof extractContactsRef.current !== 'function') {
+            markRequestSent();
+            await appendLog(jobId, "ERROR", `Errore #${wcaId}: Extension bridge non inizializzato — saltato`);
+            contactsMissing++;
+            processedSet.add(wcaId);
+            await supabase.from("download_jobs").update({
+              current_index: processedSet.size, processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId, last_contact_result: "skipped", contacts_missing_count: contactsMissing,
+            }).eq("id", jobId);
+            continue;
+          }
           const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
           markRequestSent();
 
