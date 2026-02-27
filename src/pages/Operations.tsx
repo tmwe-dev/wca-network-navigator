@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Users, Bot, X } from "lucide-react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Sun, Moon, Users, Bot, X, Eye } from "lucide-react";
+import { DeepSearchCanvas, type DeepSearchResult, type DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
@@ -51,6 +52,10 @@ export default function Operations() {
   const [aiOpen, setAiOpen] = useState(false);
   const [deepSearchRunning, setDeepSearchRunning] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState(false);
+  const [dsCanvasOpen, setDsCanvasOpen] = useState(false);
+  const [dsResults, setDsResults] = useState<DeepSearchResult[]>([]);
+  const [dsCurrent, setDsCurrent] = useState<DeepSearchCurrent | null>(null);
+  const dsAbortRef = useRef(false);
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
@@ -85,22 +90,59 @@ export default function Operations() {
   const handleDeepSearch = useCallback(async (partnerIds: string[]) => {
     if (deepSearchRunning || partnerIds.length === 0) return;
     setDeepSearchRunning(true);
+    setDsResults([]);
+    setDsCanvasOpen(true);
+    dsAbortRef.current = false;
     let done = 0;
     try {
       for (const id of partnerIds) {
+        if (dsAbortRef.current) break;
         done++;
+        // Pre-call: fetch partner info from cache for display
+        const cached = queryClient.getQueryData<any[]>(["partners"])
+          ?.flat()?.find((p: any) => p.id === id);
+        setDsCurrent({
+          partnerId: id,
+          companyName: cached?.company_name || `Partner ${done}`,
+          countryCode: cached?.country_code,
+          logoUrl: cached?.logo_url,
+          index: done,
+          total: partnerIds.length,
+        });
         toast.loading(`Deep Search ${done}/${partnerIds.length}...`, { id: "deep-search-ops" });
-        const { error } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId: id } });
+        const { data, error } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId: id } });
+        const result: DeepSearchResult = {
+          partnerId: id,
+          companyName: data?.companyName || cached?.company_name || `Partner ${done}`,
+          countryCode: cached?.country_code,
+          logoUrl: cached?.logo_url,
+          socialLinksFound: data?.socialLinksFound || 0,
+          logoFound: data?.logoFound || false,
+          contactProfilesFound: data?.contactProfilesFound || 0,
+          companyProfileFound: data?.companyProfileFound || false,
+          rating: data?.rating || 0,
+          rateLimited: data?.rateLimited,
+          error: error ? String(error) : undefined,
+        };
+        setDsResults(prev => [...prev, result]);
         if (error) console.error("Deep search error for", id, error);
       }
-      toast.success(`Deep Search completata: ${done} partner`, { id: "deep-search-ops" });
+      const msg = dsAbortRef.current
+        ? `Deep Search interrotta: ${done} partner processati`
+        : `Deep Search completata: ${done} partner`;
+      dsAbortRef.current ? toast.info(msg, { id: "deep-search-ops" }) : toast.success(msg, { id: "deep-search-ops" });
       queryClient.invalidateQueries({ queryKey: ["partners"] });
     } catch (e: any) {
       toast.error(e?.message || "Errore Deep Search", { id: "deep-search-ops" });
     } finally {
       setDeepSearchRunning(false);
+      setDsCurrent(null);
     }
   }, [deepSearchRunning, queryClient]);
+
+  const handleStopDeepSearch = useCallback(() => {
+    dsAbortRef.current = true;
+  }, []);
 
   const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
     if (aliasGenerating) return;
@@ -149,10 +191,24 @@ export default function Operations() {
             </div>
             <div className="flex items-center gap-2">
               <WcaSessionIndicator />
-              <button onClick={() => setAiOpen(true)} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"}`} title="Assistente AI">
+              {(deepSearchRunning || dsResults.length > 0) && !dsCanvasOpen && (
+                <button onClick={() => setDsCanvasOpen(true)} className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"
+                )} title="Mostra Deep Search">
+                  <Eye className="w-4 h-4" />
+                </button>
+              )}
+              <button onClick={() => setAiOpen(true)} className={cn(
+                "p-1.5 rounded-lg transition-all",
+                isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"
+              )} title="Assistente AI">
                 <Bot className="w-4 h-4" />
               </button>
-              <button onClick={toggleTheme} className={`p-1.5 rounded-lg transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"}`}>
+              <button onClick={toggleTheme} className={cn(
+                "p-1.5 rounded-lg transition-all",
+                isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"
+              )}>
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
@@ -251,6 +307,17 @@ export default function Operations() {
                       </div>
                     </div>
                   )}
+
+                  {/* Deep Search Canvas overlay */}
+                  <DeepSearchCanvas
+                    open={dsCanvasOpen}
+                    onClose={() => setDsCanvasOpen(false)}
+                    onStop={handleStopDeepSearch}
+                    current={dsCurrent}
+                    results={dsResults}
+                    running={deepSearchRunning}
+                    isDark={isDark}
+                  />
                 </div>
               </div>
             )}
