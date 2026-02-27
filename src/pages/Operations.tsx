@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import {
-  Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen,
+  Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Terminal, Download,
 } from "lucide-react";
 import { DeepSearchCanvas, type DeepSearchResult, type DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
+import { DownloadCanvas, type DownloadResult, type DownloadCurrent } from "@/components/operations/DownloadCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
@@ -59,6 +60,10 @@ export default function Operations() {
   const [dsResults, setDsResults] = useState<DeepSearchResult[]>([]);
   const [dsCurrent, setDsCurrent] = useState<DeepSearchCurrent | null>(null);
   const dsAbortRef = useRef(false);
+  const [dlCanvasOpen, setDlCanvasOpen] = useState(false);
+  const [dlResults, setDlResults] = useState<DownloadResult[]>([]);
+  const [dlCurrent, setDlCurrent] = useState<DownloadCurrent | null>(null);
+  const [showTerminal, setShowTerminal] = useState(false);
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
@@ -76,8 +81,23 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
-  const { emergencyStop, startJob } = useDownloadProcessor();
+  const { emergencyStop, startJob: rawStartJob, onProgressRef, onResultRef } = useDownloadProcessor();
   const toggleFavorite = useToggleFavorite();
+
+  // Wire download canvas callbacks
+  onProgressRef.current = useCallback((p: DownloadCurrent) => {
+    setDlCurrent(p);
+    if (!dlCanvasOpen) setDlCanvasOpen(true);
+  }, [dlCanvasOpen]);
+  onResultRef.current = useCallback((r: DownloadResult) => {
+    setDlResults(prev => [...prev, r]);
+  }, []);
+
+  const startJob = useCallback((jobId: string) => {
+    setDlResults([]);
+    setDlCanvasOpen(true);
+    rawStartJob(jobId);
+  }, [rawStartJob]);
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
 
@@ -222,6 +242,27 @@ export default function Operations() {
                 />
               )}
               <WcaSessionIndicator />
+              {/* Download Canvas eye button */}
+              {(activeJobs.length > 0 || dlResults.length > 0) && !dlCanvasOpen && (
+                <button onClick={() => setDlCanvasOpen(true)} className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  isDark ? "bg-sky-500/20 hover:bg-sky-500/30 text-sky-400" : "bg-sky-50 hover:bg-sky-100 text-sky-600 shadow-sm"
+                )} title="Mostra Download Canvas">
+                  <Download className="w-4 h-4" />
+                </button>
+              )}
+              {/* Terminal button */}
+              {(activeJobs.length > 0 || (jobs || []).length > 0) && (
+                <button onClick={() => setShowTerminal(v => !v)} className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  showTerminal
+                    ? isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                    : isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-slate-400" : "bg-white/80 hover:bg-white shadow-sm text-slate-500"
+                )} title="Terminal">
+                  <Terminal className="w-4 h-4" />
+                </button>
+              )}
+              {/* Deep Search eye button */}
               {(deepSearchRunning || dsResults.length > 0) && !dsCanvasOpen && (
                 <button onClick={() => setDsCanvasOpen(true)} className={cn(
                   "p-1.5 rounded-lg transition-all",
@@ -261,10 +302,10 @@ export default function Operations() {
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
               />
-              {activeJobs.length > 0 && !activeCountry && (
+              {(activeJobs.length > 0 || showTerminal) && !activeCountry && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <ActiveJobBar />
-                  <DownloadTerminal />
+                  {showTerminal && <DownloadTerminal />}
                   <JobMonitor />
                 </div>
               )}
@@ -328,7 +369,25 @@ export default function Operations() {
                     running={deepSearchRunning}
                     isDark={isDark}
                   />
+
+                  {/* Download Canvas overlay */}
+                  <DownloadCanvas
+                    open={dlCanvasOpen}
+                    onClose={() => setDlCanvasOpen(false)}
+                    onStop={() => emergencyStop()}
+                    current={dlCurrent}
+                    results={dlResults}
+                    running={activeJobs.length > 0}
+                    isDark={isDark}
+                  />
                 </div>
+
+                {/* Terminal below partner panel */}
+                {showTerminal && (
+                  <div className="flex-shrink-0">
+                    <DownloadTerminal />
+                  </div>
+                )}
               </div>
             )}
           </div>

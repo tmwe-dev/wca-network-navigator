@@ -17,12 +17,36 @@ import { saveExtractionResult } from "@/lib/download/profileSaver";
  *   4. Saves results
  *   5. Repeats until done or aborted
  */
+export interface DlProgress {
+  partnerId: string;
+  companyName: string;
+  countryCode?: string;
+  index: number;
+  total: number;
+}
+
+export interface DlResult {
+  partnerId: string;
+  companyName: string;
+  countryCode?: string;
+  profileSaved: boolean;
+  emailCount: number;
+  phoneCount: number;
+  contactCount: number;
+  skipped?: boolean;
+  error?: string;
+}
+
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const queryClient = useQueryClient();
   const abortRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Callback refs for canvas integration
+  const onProgressRef = useRef<((p: DlProgress) => void) | null>(null);
+  const onResultRef = useRef<((r: DlResult) => void) | null>(null);
 
   // Stable refs to avoid stale closures
   const availableRef = useRef(isAvailable);
@@ -127,9 +151,19 @@ export function useDownloadProcessor() {
           if (newP) partnerId = newP.id;
         }
 
+        // Emit progress to canvas
+        const progressName = existing?.company_name || cacheMap.get(wcaId)?.name || `WCA ${wcaId}`;
+        onProgressRef.current?.({
+          partnerId: partnerId || `wca-${wcaId}`,
+          companyName: progressName,
+          countryCode: job.country_code,
+          index: processedSet.size + 1,
+          total: wcaIds.length,
+        });
+
         // Extract profile via Chrome extension
         let hasEmail = false, hasPhone = false, profileSaved = false;
-        let companyName = existing?.company_name || cacheMap.get(wcaId)?.name || `WCA ${wcaId}`;
+        let companyName = progressName;
         let extractedEmailCount = 0, extractedPhoneCount = 0;
 
         try {
@@ -147,6 +181,7 @@ export function useDownloadProcessor() {
             await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} non esiste più su WCA — saltato`);
             contactsMissing++;
             processedSet.add(wcaId);
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             await supabase.from("download_jobs").update({
               current_index: processedSet.size, processed_ids: [...processedSet] as any,
               last_processed_wca_id: wcaId, last_contact_result: "not_found", contacts_missing_count: contactsMissing,
@@ -176,6 +211,7 @@ export function useDownloadProcessor() {
             }
 
             processedSet.add(wcaId);
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             await supabase.from("download_jobs").update({
               current_index: processedSet.size, processed_ids: [...processedSet] as any,
               last_processed_wca_id: wcaId, last_contact_result: "skipped", contacts_missing_count: contactsMissing,
@@ -236,6 +272,17 @@ export function useDownloadProcessor() {
         const hasAny = hasEmail || hasPhone;
         if (hasAny) contactsFound++; else contactsMissing++;
         processedSet.add(wcaId);
+
+        // Emit result to canvas
+        onResultRef.current?.({
+          partnerId: partnerId || `wca-${wcaId}`,
+          companyName,
+          countryCode: job.country_code,
+          profileSaved,
+          emailCount: extractedEmailCount,
+          phoneCount: extractedPhoneCount,
+          contactCount: extractedEmailCount + extractedPhoneCount,
+        });
 
         const indicators = [
           profileSaved ? "📋 Profilo ✓" : "📋 Profilo ✗",
@@ -341,5 +388,5 @@ export function useDownloadProcessor() {
     return () => clearInterval(interval);
   }, []);
 
-  return { startJob, emergencyStop, isProcessing };
+  return { startJob, emergencyStop, isProcessing, onProgressRef, onResultRef };
 }
