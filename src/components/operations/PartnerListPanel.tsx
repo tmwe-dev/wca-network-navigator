@@ -35,8 +35,8 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
-  countryCode: string;
-  countryName: string;
+  countryCodes: string[];
+  countryNames: string[];
   isDark: boolean;
   onDeepSearch?: (partnerIds: string[]) => void;
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
@@ -50,14 +50,15 @@ interface PartnerListPanelProps {
 }
 
 export function PartnerListPanel({
-  countryCode, countryName, isDark,
+  countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
   onJobCreated, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
-  const countryCodes = useMemo(() => countryCode ? [countryCode] : [], [countryCode]);
+  const countryCode = countryCodes[0] || "";
+  const countryName = countryNames[0] || "";
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
   type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
@@ -183,7 +184,7 @@ export function PartnerListPanel({
   useEffect(() => {
     setScanComplete(false); setScannedMembers([]); setScanError(null); setAutoDownloadPending(false);
     setProgressFilter(null);
-  }, [countryCode]);
+  }, [countryCodes.join(",")]);
 
   useEffect(() => {
     if (!autoDownloadPending || !scanComplete || isScanning) return;
@@ -278,12 +279,14 @@ export function PartnerListPanel({
     if (idsToDownload.length === 0) { toast.info("Nessun partner da scaricare"); return; }
     const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
     if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
-    const countryIds = idsToDownload;
-    if (countryIds.length === 0) return;
+    // Use first country for job metadata — partners are already filtered by all selected countries
+    const primaryCode = countryCodes[0] || "";
+    const primaryName = countryNames[0] || "";
+    const jobLabel = countryCodes.length > 1 ? `${primaryName} +${countryCodes.length - 1}` : primaryName;
     const jobId = await createJob.mutateAsync({
-      country_code: countryCode, country_name: countryName,
+      country_code: primaryCode, country_name: jobLabel,
       network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-      wca_ids: countryIds, delay_seconds: Math.max(delay, 10),
+      wca_ids: idsToDownload, delay_seconds: Math.max(delay, 10),
     });
     if (jobId && onJobCreated) onJobCreated(jobId);
   };
@@ -293,7 +296,25 @@ export function PartnerListPanel({
    * ════════════════════════════════════════════ */
   /* Server-side stats from RPC (no 1000-row limit) */
   const { data: countryStatsData } = useCountryStats();
-  const serverStats = countryStatsData?.byCountry?.[countryCode];
+  // Aggregate stats across all selected countries
+  const serverStats = useMemo(() => {
+    if (!countryStatsData?.byCountry || countryCodes.length === 0) return null;
+    if (countryCodes.length === 1) return countryStatsData.byCountry[countryCodes[0]] || null;
+    const agg = { total_partners: 0, with_profile: 0, with_deep_search: 0, with_email: 0, with_phone: 0, with_company_alias: 0, with_contact_alias: 0 };
+    countryCodes.forEach(cc => {
+      const s = countryStatsData.byCountry[cc];
+      if (s) {
+        agg.total_partners += s.total_partners;
+        agg.with_profile += s.with_profile;
+        agg.with_deep_search += s.with_deep_search;
+        agg.with_email += s.with_email;
+        agg.with_phone += s.with_phone;
+        agg.with_company_alias += s.with_company_alias;
+        agg.with_contact_alias += s.with_contact_alias;
+      }
+    });
+    return agg;
+  }, [countryStatsData, countryCodes]);
   const stats = useMemo(() => {
     if (serverStats) {
       return {
@@ -401,9 +422,16 @@ export function PartnerListPanel({
         <div className="px-3 pt-2.5 pb-1 flex-shrink-0 space-y-2">
           {/* ── ROW 1: Country + progress + wizard ── */}
           <div className="flex items-center gap-2.5">
-            <span className="text-xl leading-none">{getCountryFlag(countryCode)}</span>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {countryCodes.slice(0, 5).map(cc => (
+                <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
+              ))}
+              {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", isDark ? "text-slate-400" : "text-slate-500")}>+{countryCodes.length - 5}</span>}
+            </div>
             <div className="flex-1 min-w-0">
-              <h2 className={cn("text-sm font-bold truncate", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</h2>
+              <h2 className={cn("text-sm font-bold truncate", isDark ? "text-slate-100" : "text-slate-800")}>
+                {countryCodes.length === 1 ? countryName : `${countryCodes.length} paesi`}
+              </h2>
               {totalCount > 0 && (
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className={cn("flex-1 h-2 rounded-full overflow-hidden", isDark ? "bg-white/[0.06]" : "bg-slate-200/60")}>
@@ -489,8 +517,10 @@ export function PartnerListPanel({
                 if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
                 const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
                 if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
+                const primaryCode = countryCodes[0] || "";
+                const primaryName = countryNames.length > 1 ? `${countryNames[0]} +${countryNames.length - 1}` : countryNames[0] || "";
                 const jobId = await createJob.mutateAsync({
-                  country_code: countryCode, country_name: countryName,
+                  country_code: primaryCode, country_name: primaryName,
                   network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
                   wca_ids: filteredWcaIds, delay_seconds: Math.max(delay, 10),
                 });
