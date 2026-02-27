@@ -14,9 +14,15 @@
     var data = event.data;
     if (!data || data.direction !== "from-webapp") return;
 
+    // Forward ALL fields from the webapp message (action, wcaId, username, password, etc.)
+    var msg = { source: "wca-content-bridge" };
+    var keys = Object.keys(data);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i] !== "direction") msg[keys[i]] = data[keys[i]];
+    }
+
     try {
-      chrome.runtime.sendMessage(
-        { source: "wca-content-bridge", action: data.action, wcaId: data.wcaId },
+      chrome.runtime.sendMessage(msg,
         function (response) {
           // Check for invalidated context inside callback too
           if (chrome.runtime.lastError) {
