@@ -306,7 +306,6 @@ export function PartnerListPanel({
         withAliasCt: serverStats.with_contact_alias,
       };
     }
-    // Fallback client-side (only if RPC not loaded yet)
     const list = partners || [];
     const total = list.length;
     let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
@@ -320,6 +319,26 @@ export function PartnerListPanel({
     });
     return { total, withProfile, withDeep, withEmail, withPhone, withAliasCo, withAliasCt };
   }, [serverStats, partners]);
+
+  /* ── Tri-state verification logic (client-side from loaded partners) ── */
+  const verified = useMemo(() => {
+    const list = partners || [];
+    // Email verified = all partners with profile have been checked for email
+    const missingEmailList = list.filter((p: any) => !p.email && !(p.partner_contacts || []).some((c: any) => c.email));
+    const emailVerified = missingEmailList.length === 0 || missingEmailList.every((p: any) => !!p.raw_profile_html);
+    // Phone verified = all partners with profile have been checked for phone
+    const missingPhoneList = list.filter((p: any) => !p.phone && !(p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile));
+    const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every((p: any) => !!p.raw_profile_html);
+    // Deep search verified = all partners have enrichment_data.deep_search_at
+    const missingDeepList = list.filter((p: any) => !(p.enrichment_data as any)?.deep_search_at);
+    const deepVerified = missingDeepList.length === 0 || missingDeepList.every((p: any) => !!(p.enrichment_data as any)?.deep_search_at);
+    // Alias verified = ai_parsed_at exists (alias generation was run)
+    const missingAliasCoList = list.filter((p: any) => !p.company_alias);
+    const aliasCoVerified = missingAliasCoList.length === 0 || missingAliasCoList.every((p: any) => !!p.ai_parsed_at);
+    const missingAliasCtList = list.filter((p: any) => !(p.partner_contacts || []).some((c: any) => c.contact_alias));
+    const aliasCtVerified = missingAliasCtList.length === 0 || missingAliasCtList.every((p: any) => !!p.ai_parsed_at);
+    return { email: emailVerified, phone: phoneVerified, deep: deepVerified, aliasCo: aliasCoVerified, aliasCt: aliasCtVerified };
+  }, [partners]);
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];
@@ -416,15 +435,21 @@ export function PartnerListPanel({
             </button>
           </div>
 
-          {/* ── ROW 2: 6 icon indicators (clickable filters) ── */}
+           {/* ── ROW 2: Counts + 6 icon indicators ── */}
           <div className="flex items-center gap-1">
+            <div className={cn("flex items-center gap-1.5 mr-1.5 pr-1.5 border-r", isDark ? "border-white/[0.08]" : "border-slate-200")}>
+              <span className={cn("text-[10px] font-bold tabular-nums", isDark ? "text-slate-300" : "text-slate-600")}>{stats.total}</span>
+              <span className={cn("text-[9px]", isDark ? "text-slate-600" : "text-slate-400")}>tot</span>
+              <span className={cn("text-[10px] font-bold tabular-nums", isDark ? "text-emerald-400" : "text-emerald-600")}>{stats.withProfile}</span>
+              <span className={cn("text-[9px]", isDark ? "text-slate-600" : "text-slate-400")}>↓</span>
+            </div>
             <IconIndicator icon={FileText} count={stats.total - stats.withProfile} label="Senza Profilo" isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-            <IconIndicator icon={Mail} count={stats.total - stats.withEmail} label="Senza Email" isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-            <IconIndicator icon={Phone} count={stats.total - stats.withPhone} label="Senza Telefono" isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+            <IconIndicator icon={Mail} count={stats.total - stats.withEmail} label="Senza Email" isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} verified={verified.email} />
+            <IconIndicator icon={Phone} count={stats.total - stats.withPhone} label="Senza Telefono" isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} verified={verified.phone} />
             <div className={cn("w-px h-5 mx-0.5", isDark ? "bg-white/[0.08]" : "bg-slate-200")} />
-            <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-            <IconIndicator icon={Building2} count={stats.total - stats.withAliasCo} label="Senza Alias Azienda" isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
-            <IconIndicator icon={UserCircle} count={stats.total - stats.withAliasCt} label="Senza Alias Contatto" isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
+            <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
+            <IconIndicator icon={Building2} count={stats.total - stats.withAliasCo} label="Senza Alias Azienda" isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} verified={verified.aliasCo} />
+            <IconIndicator icon={UserCircle} count={stats.total - stats.withAliasCt} label="Senza Alias Contatto" isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} verified={verified.aliasCt} />
           </div>
 
           {/* ── ROW 3: Search + sort (compact) ── */}
@@ -668,12 +693,13 @@ export function PartnerListPanel({
   );
 }
 
-/* ── Icon Indicator (circular with badge) ── */
-function IconIndicator({ icon: Icon, count, label, isDark, onClick, active }: {
+/* ── Icon Indicator (circular with badge) — tri-state ── */
+function IconIndicator({ icon: Icon, count, label, isDark, onClick, active, verified }: {
   icon: any; count: number; label: string; isDark: boolean;
-  onClick?: () => void; active?: boolean;
+  onClick?: () => void; active?: boolean; verified?: boolean;
 }) {
   const done = count === 0;
+  const verifiedMissing = count > 0 && verified;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -683,9 +709,11 @@ function IconIndicator({ icon: Icon, count, label, isDark, onClick, active }: {
             "relative w-7 h-7 rounded-full flex items-center justify-center transition-all",
             done
               ? isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-50 text-emerald-600"
-              : active
-                ? isDark ? "bg-sky-500/20 text-sky-400 ring-1 ring-sky-400/40" : "bg-sky-100 text-sky-600 ring-1 ring-sky-300"
-                : isDark ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.1]" : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+              : verifiedMissing
+                ? isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50/80 text-emerald-500"
+                : active
+                  ? isDark ? "bg-sky-500/20 text-sky-400 ring-1 ring-sky-400/40" : "bg-sky-100 text-sky-600 ring-1 ring-sky-300"
+                  : isDark ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.1]" : "bg-slate-100 text-slate-500 hover:bg-slate-200",
             done ? "cursor-default" : "cursor-pointer"
           )}
         >
@@ -695,7 +723,9 @@ function IconIndicator({ icon: Icon, count, label, isDark, onClick, active }: {
               "absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-bold leading-none px-0.5",
               active
                 ? "bg-sky-500 text-white"
-                : "bg-rose-500 text-white"
+                : verifiedMissing
+                  ? "bg-emerald-500 text-white"
+                  : "bg-rose-500 text-white"
             )}>
               {count > 99 ? "99+" : count}
             </span>
@@ -703,7 +733,7 @@ function IconIndicator({ icon: Icon, count, label, isDark, onClick, active }: {
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">
-        {done ? `${label} ✓` : `${label}: ${count}`}
+        {done ? `${label} ✓` : verifiedMissing ? `${label}: ${count} mancanti (verificato ✓)` : `${label}: ${count} mancanti`}
       </TooltipContent>
     </Tooltip>
   );

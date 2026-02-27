@@ -135,6 +135,7 @@ export default function Operations() {
         : `Deep Search completata: ${done} partner`;
       dsAbortRef.current ? toast.info(msg, { id: "deep-search-ops" }) : toast.success(msg, { id: "deep-search-ops" });
       queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     } catch (e: any) {
       toast.error(e?.message || "Errore Deep Search", { id: "deep-search-ops" });
     } finally {
@@ -156,6 +157,7 @@ export default function Operations() {
       if (data?.success) {
         toast.success(`Alias generati: ${data.processed} aziende, ${data.contacts} contatti`);
         queryClient.invalidateQueries({ queryKey: ["partners"] });
+        queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       } else {
         toast.error(data?.error || "Errore generazione alias");
       }
