@@ -256,6 +256,7 @@ export function useDownloadProcessor() {
         if (processedSet.size % 5 === 0) {
           queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
+          queryClient.invalidateQueries({ queryKey: ["country-stats"] });
         }
       }
 
@@ -279,6 +280,7 @@ export function useDownloadProcessor() {
       queryClient.invalidateQueries({ queryKey: ["ops-global-stats"] });
       queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
       queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     }
   }, [queryClient]);
 
