@@ -1,61 +1,68 @@
 
 
-## Piano: Indicatori tri-stato + Toast z-index + Contatori visibili
+## Piano: Download Canvas + Terminal Button + Feedback Dinamico
 
-### Problema 1: Toast nascosti
-Il componente `Sonner` in `src/components/ui/sonner.tsx` non ha `z-index` esplicito. La pagina Operations usa `relative z-10`, coprendo i toast.
+### Problema
+1. Durante il download profili, l'utente vede solo un flag verde e il nome azienda — non sa COSA è stato scaricato (profilo, N email, N telefoni)
+2. Non c'è un bottone per aprire il Terminal dalla pagina Operations quando un paese è selezionato
+3. Manca un canvas visuale (come DeepSearchCanvas) che mostri in tempo reale il profilo in fase di compilazione
 
-**Fix**: Aggiungere `style={{ zIndex: 9999 }}` al `<Sonner>`.
+### Soluzione
 
----
+#### 1. Nuovo componente: `DownloadCanvas.tsx`
+Canvas overlay (stessa struttura di DeepSearchCanvas) che mostra:
+- **Current Card** animata con il profilo in fase di download:
+  - Nome azienda + flag
+  - 4 slot con animazione "typing": Profilo, Email (×N), Telefono (×N), Contatti (×N)
+  - Ogni slot parte grigio/pulsante, poi diventa verde con il conteggio quando il dato arriva
+- **Barra di progresso** globale (done/total con %)
+- **Cronologia** dei profili completati con indicatori per ogni dato estratto (📋✓ 📧×2 📱×1)
+- Bottoni Stop e Chiudi
 
-### Problema 2: Logica tri-stato per gli indicatori
+**Types**:
+```typescript
+export interface DownloadResult {
+  partnerId: string;
+  companyName: string;
+  countryCode?: string;
+  profileSaved: boolean;
+  emailCount: number;
+  phoneCount: number;
+  contactCount: number;
+  skipped?: boolean;
+  error?: string;
+}
+export interface DownloadCurrent {
+  partnerId: string;
+  companyName: string;
+  countryCode?: string;
+  index: number;
+  total: number;
+}
+```
 
-Gli `IconIndicator` attualmente hanno solo 2 stati: verde (count=0) o rosso (count>0). Serve un terzo stato: **"verificato ma assente"** (verde con conteggio).
+#### 2. Modificare `useDownloadProcessor.ts`
+Aggiungere callback per emettere eventi al canvas:
+- `onProgress?: (current: DownloadCurrent) => void` — chiamato prima di ogni profilo
+- `onResult?: (result: DownloadResult) => void` — chiamato dopo ogni profilo con i dettagli di cosa è stato estratto
 
-**Logica di verifica** (senza nuovi campi DB):
-- **Profilo**: Verde ✓ se `count === 0`. Rosso se mancante (invariato).
-- **Email/Telefono**: Se il profilo esiste (`raw_profile_html` presente) ma email/telefono mancano → il download è stato fatto, dato verificato → **verde con numero**. Se nemmeno il profilo c'è → rosso.
-- **Deep Search**: Se `enrichment_data.deep_search_at` esiste → verificato. Mancante ma non ancora eseguito → rosso.
-- **Alias Azienda/Contatto**: Se `ai_parsed_at` esiste → verificato (alias generation già eseguita). Se non esiste → rosso.
+Esporre questi come props opzionali del hook oppure usare un ref per i callback.
 
-**Implementazione in `PartnerListPanel.tsx`**:
-1. Aggiungere al `stats` un campo `verified` per ogni metrica, calcolato da `useCountryStats` o dal conteggio locale. Serve estendere l'RPC `get_country_stats` per restituire:
-   - `with_profile_no_email` (profilo OK ma email mancante = verified missing)
-   - `with_profile_no_phone`
-   - `with_deep_no_alias_co` (deep fatto ma alias mancante)
-   
-   **Alternativa più semplice** (senza toccare RPC): Calcolare client-side dalla lista `partners` già caricata. Per ogni indicatore, contare quanti hanno "operazione prerequisita completata ma dato assente".
+#### 3. Modificare `Operations.tsx`
+- Aggiungere stato per `dlCanvasOpen`, `dlResults`, `dlCurrent` (come per deep search)
+- Passare i callback a `useDownloadProcessor`
+- Aggiungere bottone **Terminal** (icona `Terminal`) nella top bar accanto al bottone Eye per deep search — visibile quando ci sono job attivi o completati
+- Aggiungere bottone **Eye download** per riaprire il DownloadCanvas
+- Il DownloadCanvas si apre automaticamente quando parte un job di download
 
-2. Modificare `IconIndicator` per accettare un prop `verified: boolean`:
-   - `count === 0` → verde con ✓
-   - `count > 0 && verified` → **verde con numero** (sfondo emerald, badge emerald invece di rosso)
-   - `count > 0 && !verified` → rosso con numero (attuale)
+#### 4. Aggiungere bottone Terminal in `PartnerListPanel.tsx`
+Nella toolbar del pannello, aggiungere un bottone con icona Terminal che mostra/nasconde il DownloadTerminal sotto la lista partner (o come overlay).
 
-3. Nella tooltip: 
-   - Verificato: "Email: 2 mancanti (verificato ✓)"
-   - Non verificato: "Email: 2 mancanti"
+### File da creare/modificare
 
----
-
-### Problema 3: Contatori totale/scaricati non visibili
-
-Il conteggio `downloadedCount/totalCount` c'è nella progress bar ma l'utente non lo vede. Renderlo più prominente:
-- Aggiungere sotto la barra di progresso due chip compatti: `Totale: N` e `Scaricati: N/M` con font più grande e visibilità maggiore.
-
----
-
-### Problema 4: Sincronizzazione indicatori dopo operazioni
-
-Dopo ogni operazione (alias, deep search, download), invalidare `country-stats` e `partners` per aggiornare tutti i contatori. Verificare che `handleGenerateAliases` in `Operations.tsx` invalidi anche `country-stats`.
-
----
-
-### File da modificare
-
-| File | Modifica |
-|------|----------|
-| `src/components/ui/sonner.tsx` | Aggiungere `style={{ zIndex: 9999 }}` |
-| `src/components/operations/PartnerListPanel.tsx` | Tri-stato per `IconIndicator`, contatori totale/scaricati più visibili |
-| `src/pages/Operations.tsx` | Invalidare `country-stats` dopo alias/deep search |
+| File | Azione |
+|------|--------|
+| `src/components/operations/DownloadCanvas.tsx` | **NUOVO** — Canvas visuale per download profili |
+| `src/hooks/useDownloadProcessor.ts` | Aggiungere callback onProgress/onResult |
+| `src/pages/Operations.tsx` | Integrare DownloadCanvas, bottone Terminal, bottone Eye download |
 
