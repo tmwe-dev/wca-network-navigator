@@ -190,51 +190,25 @@ export default function Operations() {
           <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden relative">
             {/* ═══ STEP 0: Stats + CountryGrid ═══ */}
             {carouselStep === 0 && (
-              <div className="flex flex-col gap-2 h-full animate-in fade-in slide-in-from-left-4 duration-200">
-                {/* ── Compact Status Bar ── */}
-                <div className={cn(
-                  "flex items-center gap-1 px-2 py-1.5 rounded-xl border flex-shrink-0 overflow-x-auto",
-                  isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"
-                )}>
-                  {globalStats ? (
-                    <>
-                      <ChipStat icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-                      <ChipStat icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
-                      <ChipStat icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"}
-                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0} />
-                      <ChipStat icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
-                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0} />
-                      <ChipStat icon={Phone} label="Tel" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
-                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0} />
-                      <ChipStat icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
-                    </>
-                  ) : (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <Skeleton key={i} className={`h-8 w-24 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
-                    ))
-                  )}
-
-                  {/* Spacer + selection confirm */}
-                  <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
-                    {selectedCountries.length > 0 && (
-                      <>
-                        <div className="flex items-center gap-0.5">
-                          {selectedCountries.slice(0, 6).map(c => (
-                            <span key={c.code} className="text-sm leading-none">{getCountryFlag(c.code)}</span>
-                          ))}
-                          {selectedCountries.length > 6 && (
-                            <span className={`text-[10px] font-bold ml-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>+{selectedCountries.length - 6}</span>
-                          )}
-                        </div>
-                        <button onClick={confirmSelection} className={cn("px-3 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] whitespace-nowrap", isDark ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30")}>
-                          Conferma →
-                        </button>
-                      </>
-                    )}
+              <div className="flex flex-col gap-0 h-full animate-in fade-in slide-in-from-left-4 duration-200">
+                {/* ── Inline stats strip ── */}
+                {globalStats && (
+                  <div className={cn("flex items-center gap-3 px-1 py-1 flex-shrink-0 text-sm", isDark ? "text-slate-500" : "text-slate-400")}>
+                    <StatsChip emoji="🌍" value={globalStats.scannedCountries} label="paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
+                    <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+                    <StatsChip emoji="👥" value={globalStats.totalPartners.toLocaleString()} label="partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
+                    <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+                    <StatsChip emoji="📄" value={globalStats.withProfile.toLocaleString()} label="profili" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
+                    <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+                    <StatsChip emoji="✉️" value={globalStats.withEmail.toLocaleString()} label="email" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0} />
+                    <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+                    <StatsChip emoji="📞" value={globalStats.withPhone.toLocaleString()} label="tel" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0} />
+                    <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+                    <StatsChip emoji="📁" value={(globalStats.totalDirectory ?? 0).toLocaleString()} label="directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
                   </div>
-                </div>
+                )}
 
-                {/* ── Country Grid + Job monitors ── */}
+                {/* ── Country Grid full width + Job monitors ── */}
                 <div className="flex-1 min-h-0 flex flex-col gap-2">
                   <CountryGrid
                     selected={selectedCountries}
@@ -252,6 +226,23 @@ export default function Operations() {
                     </div>
                   )}
                 </div>
+
+                {/* ── Fixed bottom-right confirm button ── */}
+                {selectedCountries.length > 0 && (
+                  <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center gap-0.5">
+                      {selectedCountries.slice(0, 6).map(c => (
+                        <span key={c.code} className="text-lg leading-none drop-shadow">{getCountryFlag(c.code)}</span>
+                      ))}
+                      {selectedCountries.length > 6 && (
+                        <span className="text-xs font-bold ml-1 text-white/70">+{selectedCountries.length - 6}</span>
+                      )}
+                    </div>
+                    <button onClick={confirmSelection} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-sky-500 hover:bg-sky-400 text-white shadow-2xl shadow-sky-500/40 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]">
+                      Conferma →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -343,30 +334,27 @@ export default function Operations() {
   );
 }
 
-/* ── Horizontal Chip Stat ── */
-function ChipStat({ icon: Icon, label, value, color, isDark, pct, onClick, active }: {
-  icon: any; label: string; value: string | number; color: string; isDark: boolean;
+/* ── Inline Stats Chip ── */
+function StatsChip({ emoji, value, label, isDark, pct, onClick, active }: {
+  emoji: string; value: string | number; label: string; isDark: boolean;
   pct?: number; onClick?: () => void; active?: boolean;
 }) {
   const isClickable = !!onClick;
   return (
-    <div
+    <span
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 whitespace-nowrap flex-shrink-0",
-        active
-          ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50/80 border-sky-400 ring-1 ring-sky-300/40"
-          : isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white/40 border-slate-200/60",
-        isClickable ? "cursor-pointer hover:scale-[1.02]" : "",
-        isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""
+        "inline-flex items-center gap-1 whitespace-nowrap transition-all duration-150",
+        isClickable ? "cursor-pointer hover:opacity-80" : "",
+        active ? (isDark ? "text-sky-400" : "text-sky-600") : ""
       )}
     >
-      <Icon className={`w-3.5 h-3.5 ${color} flex-shrink-0`} />
-      <span className={isDark ? "text-slate-400" : "text-slate-500"}>{label}</span>
-      <span className={`font-mono font-extrabold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+      <span>{emoji}</span>
+      <span className={cn("font-semibold tabular-nums", isDark ? "text-slate-200" : "text-slate-700")}>{value}</span>
+      <span>{label}</span>
       {pct !== undefined && (
-        <span className={`text-[10px] font-mono font-bold ${color}`}>{pct}%</span>
+        <span className={cn("tabular-nums", isDark ? "text-slate-600" : "text-slate-300")}>({pct}%)</span>
       )}
-    </div>
+    </span>
   );
 }
