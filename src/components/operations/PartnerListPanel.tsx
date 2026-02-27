@@ -376,7 +376,7 @@ export function PartnerListPanel({
           {/* Row 1: Country name + inline stat chips */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-lg leading-none">{getCountryFlag(countryCode)}</span>
-            <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</span>
+            <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>📍 {countryName}</span>
             <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
             <div className="flex items-center gap-2 flex-wrap text-[11px]">
               <StatChip label="Totale WCA" value={totalCount} isDark={isDark} />
@@ -454,7 +454,7 @@ export function PartnerListPanel({
                         </Button>
                         {hasCache && !scanComplete && (
                           <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
-                            <RefreshCw className="w-3 h-3" /> Riscansiona directory WCA
+                            <RefreshCw className="w-3 h-3" /> ↻ Sincronizza con WCA Directory
                           </button>
                         )}
                       </div>
