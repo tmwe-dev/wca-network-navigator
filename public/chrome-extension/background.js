@@ -514,6 +514,78 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
+  if (message.action === "autoLogin") {
+    (async function () {
+      try {
+        var username = message.username;
+        var password = message.password;
+        if (!username || !password) {
+          sendResponse({ success: false, error: "Credenziali mancanti" });
+          return;
+        }
+
+        // Open WCA login page in background tab
+        var tab = await chrome.tabs.create({
+          url: "https://www.wcaworld.com/Account/Login",
+          active: false,
+        });
+
+        await waitForTabLoad(tab.id, 20000);
+
+        // Inject and fill login form
+        function fillAndSubmitLogin(u, p) {
+          try {
+            var userInput = document.querySelector("#UserName") || document.querySelector("input[name='UserName']") || document.querySelector("input[type='text']") || document.querySelector("input[type='email']");
+            var passInput = document.querySelector("#Password") || document.querySelector("input[name='Password']") || document.querySelector("input[type='password']");
+            if (!userInput || !passInput) return { success: false, error: "Campi non trovati" };
+            var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+            userInput.focus(); nativeSet.call(userInput, u); userInput.dispatchEvent(new Event("input", { bubbles: true })); userInput.dispatchEvent(new Event("change", { bubbles: true }));
+            passInput.focus(); nativeSet.call(passInput, p); passInput.dispatchEvent(new Event("input", { bubbles: true })); passInput.dispatchEvent(new Event("change", { bubbles: true }));
+            var submitBtn = document.querySelector("input[type='submit']") || document.querySelector("button[type='submit']") || document.querySelector(".btn-login") || document.querySelector("button.btn-primary");
+            var form = userInput.closest("form") || document.querySelector("form");
+            if (submitBtn) { submitBtn.click(); } else if (form) { form.submit(); } else { return { success: false, error: "Nessun submit trovato" }; }
+            return { success: true };
+          } catch (e) { return { success: false, error: e.message }; }
+        }
+
+        var injRes = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: fillAndSubmitLogin,
+          args: [username, password],
+        });
+        var formResult = injRes[0] && injRes[0].result;
+        if (!formResult || !formResult.success) {
+          try { chrome.tabs.remove(tab.id); } catch (e) {}
+          sendResponse({ success: false, error: (formResult && formResult.error) || "Form non trovato" });
+          return;
+        }
+
+        // Wait for redirect after login
+        await new Promise(function (resolve) {
+          var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 10000);
+          var navigated = false;
+          function listener(id, info) {
+            if (id === tab.id && info.status === "complete" && !navigated) {
+              navigated = true; clearTimeout(timeout);
+              chrome.tabs.onUpdated.removeListener(listener);
+              setTimeout(resolve, 2000);
+            }
+          }
+          chrome.tabs.onUpdated.addListener(listener);
+        });
+
+        // Sync cookies after login
+        await syncWcaCookiesToServer();
+
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        sendResponse({ success: true });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
   if (message.action === "syncCookie") {
     (async function () {
       try {
