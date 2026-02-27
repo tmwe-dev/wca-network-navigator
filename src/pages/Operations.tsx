@@ -125,12 +125,12 @@ export default function Operations() {
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
+      <div className={`h-full relative flex flex-col ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
         <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
 
-        <div className="relative z-10 h-full flex flex-col">
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* ═══ TOP BAR ═══ */}
           <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -181,7 +181,7 @@ export default function Operations() {
           })()}
 
           {/* ═══ MAIN: Country Grid + Partner List + Detail ═══ */}
-          <div className="flex-1 min-h-0 px-4 pb-3 flex gap-3 overflow-hidden">
+          <div className="flex-1 min-h-0 px-4 pb-3 flex gap-3">
             {/* LEFT: Country Grid (fixed width) */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
