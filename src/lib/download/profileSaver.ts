@@ -85,13 +85,17 @@ export async function saveExtractionResult(
       upd.has_branches = true;
       upd.branch_cities = p.branchCities;
     }
-    if (result.profileHtml) upd.raw_profile_html = result.profileHtml;
     if (Object.keys(upd).length > 0) {
       await supabase.from("partners").update(upd).eq("id", partnerId);
       profileSaved = true;
     }
   }
-  if (result.profileHtml || result.profile?.description) profileSaved = true;
+
+  // Save raw HTML independently — even if structured profile is empty
+  if (result.profileHtml) {
+    await supabase.from("partners").update({ raw_profile_html: result.profileHtml }).eq("id", partnerId);
+    profileSaved = true;
+  }
 
   return { hasEmail, hasPhone, profileSaved, companyName, extractedEmailCount, extractedPhoneCount };
 }
