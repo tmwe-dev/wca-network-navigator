@@ -1,38 +1,36 @@
 
 
-## Piano: Ripristino selezione multi-paese
+## Fix: `extractContactsRef.current is not a function`
 
-### Modifiche in `src/pages/Operations.tsx`
+### Root Cause
+Line 173 in `useDownloadProcessor.ts` calls `extractContactsRef.current(wcaId)` without checking if it's actually a function. The ref is initialized on line 56 and synced on line 57, but if the auto-start interval triggers `startJob` before the component has fully rendered with the `extractContacts` callback from `useExtensionBridge`, the ref's `.current` may be `undefined` or stale.
 
-1. Sostituire `activeCountry: { code, name } | null` con `selectedCountries: { code: string; name: string }[]`
-2. `handleCountryClick` → toggle nel/dall'array (aggiunge se non presente, rimuove se presente)
-3. Derivare `activeCountryCodes = selectedCountries.map(c => c.code)`
-4. Pannello destro visibile quando `selectedCountries.length > 0` (non solo single)
-5. `CountryGrid.selected` → `selectedCountries` direttamente
-6. `CountryGrid.onRemove` → accetta `code: string` e rimuove solo quel paese dall'array
-7. `PartnerListPanel` riceve `countryCodes` e `countryNames` (array) invece di singoli
-8. Passare tutti i codici selezionati a `handleGenerateAliases`
-9. `AiAssistantDialog` context usa `selectedCountries` direttamente
-10. Grid a sinistra si restringe a 260px quando `selectedCountries.length > 0`
+### Fix in `src/hooks/useDownloadProcessor.ts`
 
-### Modifiche in `src/components/operations/PartnerListPanel.tsx`
+Add a guard at line 173 before calling `extractContactsRef.current`:
 
-1. Props: `countryCode: string` → `countryCodes: string[]`, `countryName: string` → `countryNames: string[]`
-2. Rimuovere il `useMemo` che wrappa `countryCode` in array (linea 60) — usare `countryCodes` direttamente
-3. Header: mostrare le flag di tutti i paesi selezionati + "N paesi" quando >1
-4. Il reset su cambio paese (useEffect linea ~184) deve dipendere da `countryCodes`
-5. Scan directory: iterare su tutti i `countryCodes`
+```typescript
+// Before the extraction call, verify the function exists
+if (typeof extractContactsRef.current !== 'function') {
+  markRequestSent();
+  await appendLog(jobId, "ERROR", `Errore #${wcaId}: Extension bridge non inizializzato — saltato`);
+  contactsMissing++;
+  processedSet.add(wcaId);
+  // update job progress and continue to next profile
+  await supabase.from("download_jobs").update({
+    current_index: processedSet.size, processed_ids: [...processedSet] as any,
+    last_processed_wca_id: wcaId, last_contact_result: "skipped", contacts_missing_count: contactsMissing,
+  }).eq("id", jobId);
+  continue;
+}
+const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
+```
 
-### Modifiche in `src/components/download/CountryGrid.tsx`
-
-1. `onRemove` prop: cambiare tipo da `(code: string) => void` (già accetta string nella firma ma Operations passa `() => void`)
-2. Nessun'altra modifica necessaria — supporta già multi-select
+This prevents the crash and skips the profile gracefully instead of throwing an unhandled error that corrupts every subsequent profile in the loop.
 
 ### File
 
-| File | Modifica |
-|------|----------|
-| `src/pages/Operations.tsx` | `activeCountry` → `selectedCountries[]`, multi-toggle |
-| `src/components/operations/PartnerListPanel.tsx` | Props multi-country, header multi-flag |
-| `src/components/download/CountryGrid.tsx` | Verifica `onRemove(code)` coerente |
+| File | Change |
+|------|--------|
+| `src/hooks/useDownloadProcessor.ts` | Add `typeof` guard before `extractContactsRef.current()` call |
 
