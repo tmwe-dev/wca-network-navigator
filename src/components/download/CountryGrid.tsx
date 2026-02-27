@@ -226,24 +226,26 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   const st = getStatus(country.code);
   const s = stats[country.code];
   const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
+  const missing = st.cCount > 0 ? st.cCount - st.pCount : 0;
 
-  // Simplified: single colored dot + compact label
-  let dotColor: string, label: string;
-  if (st.isDone) {
+  // Unified badge: 🟢 100% | 🟡 partial | 🔴 0% with directory | ⚪ no data
+  let dotColor: string, label: string, tooltip: string;
+  if (st.cCount > 0 && dlPct >= 100) {
     dotColor = "bg-emerald-500";
-    label = "✓";
-  } else if (st.allDownloaded && !st.allProfiles) {
-    dotColor = "bg-orange-500 animate-pulse";
-    label = `!${st.noProfile}`;
-  } else if (st.pCount > 0 && st.hasDir) {
-    dotColor = "bg-blue-500";
+    label = "100%";
+    tooltip = `Tutti i ${st.cCount} partner scaricati`;
+  } else if (st.cCount > 0 && st.pCount > 0) {
+    dotColor = "bg-amber-500";
     label = `${dlPct}%`;
-  } else if (st.pCount > 0) {
-    dotColor = "bg-slate-400";
-    label = `${st.pCount}`;
+    tooltip = `${st.pCount} di ${st.cCount} scaricati — ${missing} mancanti`;
+  } else if (st.cCount > 0 && st.pCount === 0) {
+    dotColor = "bg-rose-500";
+    label = `0/${st.cCount}`;
+    tooltip = `${st.cCount} partner in directory, nessuno ancora scaricato`;
   } else {
     dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
     label = "—";
+    tooltip = "Nessun dato in directory";
   }
 
   const cardBorder = isSelected
@@ -257,6 +259,7 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
     <button
       onClick={() => onToggle(country.code, country.name)}
       className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder}`}
+      title={tooltip}
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <span className="text-lg leading-none flex-shrink-0">{getCountryFlag(country.code)}</span>
