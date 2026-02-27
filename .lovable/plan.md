@@ -1,54 +1,54 @@
 
 
-## Analisi dei problemi
+## Piano: Barra azioni contestuale ai filtri MissingChip
 
-### 1. Dati potenzialmente errati nella RPC `get_country_stats`
+### Problema
+Quando l'utente clicca su un MissingChip (es. "Senza Alias Az."), la lista si filtra correttamente ma non appaiono pulsanti d'azione per operare sui risultati filtrati. L'utente deve aprire manualmente il wizard per trovare i comandi.
 
-La funzione SQL controlla solo `partner_contacts.email` per il conteggio email, ma NON controlla `partners.email` (il campo email aziendale). Stessa cosa per il telefono: controlla solo `partner_contacts.direct_phone/mobile` ma non `partners.phone/mobile`. Questo può causare conteggi inferiori al reale.
-
-**Fix**: Aggiornare la RPC per includere anche i campi direttamente sulla tabella `partners` nella logica di conteggio email e telefono.
-
-### 2. UX dei StatChip invertita rispetto all'uso operativo
-
-I chip mostrano "Email **100**/178" (quanti CE L'HANNO), ma quando li clicchi filtrano quelli che NON ce l'hanno. L'utente vuole che il chip comunichi chiaramente quanti MANCANO, perché l'obiettivo operativo è sempre completare i dati.
-
-**Fix**: Invertire la visualizzazione dei chip cliccabili per mostrare i MANCANTI:
-- "Senza Profilo **178**" invece di "Profili **0**/178"
-- "Senza Deep **55**" invece di "Deep Search **123**/178"
-- "Senza Email **78**" invece di "Email **100**/178"
-- Quando il conteggio mancante è 0, mostrare "✓" verde
-
-I chip non cliccabili ("Totale WCA", "Scaricati") restano invariati.
-
-### File modificati
-
-1. **`supabase/migrations/` (nuova)** -- Aggiornare la RPC `get_country_stats` per contare anche `partners.email` e `partners.phone/mobile` oltre ai contatti
-2. **`src/components/operations/PartnerListPanel.tsx`** -- Invertire la label e il valore dei StatChip cliccabili per mostrare i mancanti anziché i presenti; aggiornare il componente `StatChip` per supportare la modalità "mancanti"
-
-### Dettaglio tecnico RPC
-
-```sql
--- Aggiungere nella CTE partner_base:
-CASE WHEN p.email IS NOT NULL THEN 1 ELSE 0 END as has_partner_email,
-CASE WHEN p.phone IS NOT NULL OR p.mobile IS NOT NULL THEN 1 ELSE 0 END as has_partner_phone
-
--- Nel SELECT finale, cambiare:
--- with_email: partner ha email propria OPPURE almeno un contatto con email
-COUNT(*) FILTER (WHERE ca.has_email = true OR pb.has_partner_email = 1)
--- with_phone: analogo
-COUNT(*) FILTER (WHERE ca.has_phone = true OR pb.has_partner_phone = 1)
-```
-
-### Dettaglio UX StatChip
+### Soluzione
+Aggiungere una **barra azioni contestuale** che appare automaticamente sotto i filtri quando un MissingChip è attivo. I pulsanti cambiano in base al filtro selezionato:
 
 ```text
-PRIMA (confuso):
-[Totale WCA 178] [Scaricati 178/178] [Profili 0/178] [Deep 123/178] [Email 100/178]
-
-DOPO (operativo):
-[Totale WCA 178] [Scaricati 178/178] [Senza Profilo 178] [Senza Deep 55] [Senza Email 78]
-                                       ↑ click filtra i 178 senza profilo
+Filtro attivo          → Azioni mostrate
+─────────────────────────────────────────────
+Senza Profilo          → [Scarica Profili (N)]
+Senza Email            → [Scarica Profili (N)]  (re-download per completare)
+Senza Telefono         → [Scarica Profili (N)]
+Senza Deep             → [Avvia Deep Search (N)]
+Senza Alias Az.        → [Genera Alias Azienda (N)]
+Senza Alias Ct.        → [Genera Alias Contatto (N)]
 ```
 
-Quando il mancante è 0, il chip mostra "✓ Profili" in verde e non è cliccabile.
+### File modificato
+- **`src/components/operations/PartnerListPanel.tsx`**
+  - Nuovo componente `FilterActionBar` che riceve il `progressFilter` attivo e il conteggio dei partner filtrati
+  - Posizionato tra la riga dei filtri e la search bar (sotto i MissingChip)
+  - Per "profiles/email/phone": pulsante download che imposta `downloadMode` appropriato e apre il wizard, oppure avvia direttamente il download dei partner filtrati senza profilo
+  - Per "deep": pulsante che chiama `onDeepSearch` con gli ID dei partner filtrati
+  - Per "alias_co/alias_ct": pulsante che chiama `onGenerateAliases` con il tipo appropriato
+  - Stile: barra compatta con sfondo colorato (simile ai pulsanti del wizard), icona + label + conteggio
+
+### Dettaglio implementazione
+
+Inserire dopo riga 421 (sotto il conteggio partner) un blocco condizionale:
+
+```typescript
+{progressFilter && (
+  <FilterActionBar
+    filter={progressFilter}
+    count={filteredPartners.length}
+    isDark={isDark}
+    onDownload={() => { setDownloadMode("no_profile"); setWizardOpen(true); }}
+    onDeepSearch={() => {
+      const ids = filteredPartners.map((p: any) => p.id);
+      if (ids.length > 0) onDeepSearch?.(ids);
+    }}
+    onGenerateAlias={(type) => onGenerateAliases?.(countryCodes, type)}
+    deepSearchRunning={deepSearchRunning}
+    aliasGenerating={aliasGenerating}
+  />
+)}
+```
+
+Il componente `FilterActionBar` renderizza il pulsante appropriato in base al filtro attivo, con icona, label e conteggio dei partner da processare.
 
