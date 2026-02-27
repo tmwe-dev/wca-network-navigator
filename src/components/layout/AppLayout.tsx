@@ -77,8 +77,8 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Main content */}
-        <main className="flex-1 p-6 overflow-auto">
+        {/* Main content — Operations needs no padding/overflow since it manages its own */}
+        <main className={`flex-1 ${currentPath === "/operations" ? "overflow-hidden" : "p-6 overflow-auto"}`}>
           <Outlet />
         </main>
       </div>

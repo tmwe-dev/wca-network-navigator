@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -529,7 +528,7 @@ export function PartnerListPanel({
         )}
 
         {/* ═══ PARTNER LIST (immediate, scrollable) ═══ */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => (
@@ -616,7 +615,7 @@ export function PartnerListPanel({
                   );
                 })}
           </div>
-        </ScrollArea>
+        </div>
       </div>
       {emailTarget && (
         <SendEmailDialog open={!!emailTarget} onOpenChange={(open) => { if (!open) setEmailTarget(null); }}

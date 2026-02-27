@@ -259,12 +259,14 @@ async function downloadAll() {
   var status = document.getElementById("status");
   status.innerHTML = "";
 
-  // Fetch background.js from the server (always latest v6 with profile extraction)
+  // Fetch background.js and content.js from the server (always latest)
   try {
     var bgRes = await fetch("/chrome-extension/background.js");
     FILES["background.js"] = await bgRes.text();
+    var csRes = await fetch("/chrome-extension/content.js");
+    FILES["content.js"] = await csRes.text();
   } catch (e) {
-    status.innerHTML = '<p style="color:#fca5a5;">❌ Errore: impossibile scaricare background.js dal server.</p>';
+    status.innerHTML = '<p style="color:#fca5a5;">❌ Errore: impossibile scaricare i file dal server.</p>';
     return;
   }
 

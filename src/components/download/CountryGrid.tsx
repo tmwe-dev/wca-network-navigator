@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -181,8 +180,8 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode }: Countr
       </div>
 
       {/* ═══ COUNTRY LIST ═══ */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-1 pr-2">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-1 pr-1">
           {filtered.map(c => (
             <CountryCard
               key={c.code}
@@ -199,7 +198,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode }: Countr
             <div className={`text-center py-8 text-sm ${th.dim}`}>Nessun paese trovato</div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
