@@ -369,7 +369,9 @@ export function PartnerListPanel({
   const missingAliasCo = stats.total - stats.withAliasCo;
   const missingAliasCt = stats.total - stats.withAliasCt;
 
-  const wizardStep = missingProfiles > 0 ? 1 : missingDeep > 0 ? 2 : (missingAliasCo > 0 || missingAliasCt > 0) ? 3 : 4;
+  // wizardStep must stay at 1 if there are ANY downloadable IDs (missing from DB OR missing profile)
+  const hasDownloadableIds = idsToDownload.length > 0 || missingIds.length > 0;
+  const wizardStep = (missingProfiles > 0 || hasDownloadableIds) ? 1 : missingDeep > 0 ? 2 : (missingAliasCo > 0 || missingAliasCt > 0) ? 3 : 4;
 
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -431,7 +433,26 @@ export function PartnerListPanel({
               filter={progressFilter}
               count={filteredPartners.length}
               isDark={isDark}
-              onDownload={() => { setDownloadMode("no_profile"); setWizardOpen(true); }}
+              onDownload={async () => {
+                // Directly create a download job for filtered partners with wca_id
+                const filteredWcaIds = filteredPartners
+                  .map((p: any) => p.wca_id)
+                  .filter((id: number | null): id is number => id != null);
+                if (filteredWcaIds.length === 0) {
+                  toast.error("Nessun partner filtrato ha un WCA ID scaricabile");
+                  return;
+                }
+                const sessionOk = await ensureSession();
+                if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
+                const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
+                if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
+                const jobId = await createJob.mutateAsync({
+                  country_code: countryCode, country_name: countryName,
+                  network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
+                  wca_ids: filteredWcaIds, delay_seconds: Math.max(delay, 10),
+                });
+                if (jobId && onJobCreated) onJobCreated(jobId);
+              }}
               onDeepSearch={() => {
                 const ids = filteredPartners.map((p: any) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
@@ -781,16 +802,16 @@ function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearch, onGe
   filter: string;
   count: number;
   isDark: boolean;
-  onDownload: () => void;
+  onDownload: () => void | Promise<void>;
   onDeepSearch: () => void;
   onGenerateAlias: (type: "company" | "contact") => void;
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
 }) {
   const configs: Record<string, { icon: any; label: string; action: () => void; disabled?: boolean; color: string }> = {
-    profiles: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
-    email: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
-    phone: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    profiles: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    email: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    phone: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
     deep: { icon: Telescope, label: "Avvia Deep Search", action: onDeepSearch, disabled: deepSearchRunning, color: isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-cyan-500 hover:bg-cyan-600" },
     alias_co: { icon: Building2, label: "Genera Alias Azienda", action: () => onGenerateAlias("company"), disabled: aliasGenerating, color: isDark ? "bg-amber-600 hover:bg-amber-500" : "bg-amber-500 hover:bg-amber-600" },
     alias_ct: { icon: UserCircle, label: "Genera Alias Contatto", action: () => onGenerateAlias("contact"), disabled: aliasGenerating, color: isDark ? "bg-pink-600 hover:bg-pink-500" : "bg-pink-500 hover:bg-pink-600" },
