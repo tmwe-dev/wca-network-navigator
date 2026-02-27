@@ -1,81 +1,40 @@
 
 
-## Deep Search Canvas - Piano di Implementazione
+## Diagnosi
 
-### Obiettivo
-Creare un canvas visivo che mostra in tempo reale i risultati della Deep Search mentre processa ogni partner: logo trovato, profili LinkedIn, dati aziendali, social links, rating calcolato. Visibile con un click, stile terminale ma con dati strutturati.
+Il problema e' nel calcolo di `idsToDownload` (riga 161-168 di `PartnerListPanel.tsx`). Quando la modalita' e' `no_profile`, il codice filtra `noProfileIds` attraverso `uniqueIds` (che proviene dalla directory cache). Se la directory cache e' vuota per l'Albania, `uniqueIds` e' vuoto, quindi `idsToDownload` risulta sempre 0 — il bottone mostra "SCARICA 0 PROFILI" ed e' disabilitato.
 
-### Componente nuovo: `src/components/operations/DeepSearchCanvas.tsx`
+I partner esistono nel DB (li vedi nella lista), hanno WCA ID, ma mancano di `raw_profile_html`. Il sistema pero' pretende che quegli ID siano anche nella directory cache per poterli scaricare.
 
-Un pannello che si apre come overlay (simile al detail overlay già esistente) o come pannello laterale, mostrando:
+## Piano di fix
 
-- **Header**: progresso globale (3/12 partner), barra percentuale, pulsante Stop
-- **Card partner corrente** (animata, in primo piano):
-  - Logo (appare quando trovato, con animazione fade-in)
-  - Nome azienda + bandiera paese
-  - Sezione contatti: per ogni contatto mostra LinkedIn trovato/non trovato, Facebook, Instagram, WhatsApp con icone colorate
-  - Seniority estratta (senior/mid/junior badge)
-  - Background professionale trovato (1-2 righe)
-  - Company profile: awards, specialties, news
-  - Rating calcolato (stelle animate)
-  - Website scoperto (se nuovo)
-- **Cronologia partner precedenti** (compatta, scroll verso l'alto): mini-card con logo + nome + risultati sintetici (icone: quanti social trovati, rating)
+### File: `src/components/operations/PartnerListPanel.tsx`
 
-### Modifiche a `src/pages/Operations.tsx`
+**1. Fix `idsToDownload` memo (riga 161-168)**
+- Modalita' `no_profile`: usare direttamente `noProfileIds` dal DB quando la directory cache e' vuota, senza filtrarli attraverso `uniqueIds`
+- Modalita' `new`: invariata (dipende da directory cache per definizione)
+- Modalita' `all`: fallback su WCA IDs dal DB quando cache vuota
 
-1. Nuovo stato: `deepSearchResults: DeepSearchResult[]` - array di risultati accumulati
-2. Nuovo stato: `deepSearchCanvasOpen: boolean` - toggle visibilita canvas
-3. Nuovo stato: `deepSearchCurrent: { partnerId, companyName, index, total } | null`
-4. Modificare `handleDeepSearch`: prima di invocare l'edge function, settare il partner corrente; dopo la response, pushare il risultato nell'array
-5. Il canvas si apre automaticamente quando parte la deep search, chiudibile con X
-
-### Flusso dati
-
-Il loop esistente in `handleDeepSearch` (riga 85-103) gia processa sequenzialmente. Per ogni iterazione:
-1. **Pre-call**: fetch partner name/logo dal DB locale (gia in cache react-query) → mostra card "in ricerca" con spinner
-2. **Post-call**: la response dell'edge function restituisce `{ socialLinksFound, logoFound, contactProfilesFound, companyProfileFound, rating, companyName }` → aggiorna la card con i risultati trovati
-3. **Transizione**: dopo 1.5s, la card corrente scorre nella cronologia e si prepara la prossima
-
-### Struttura tecnica
-
-```text
-┌─────────────────────────────────────┐
-│ 🔍 Deep Search  3/12    [Stop] [X] │
-│ ████████░░░░░░░░░░  25%             │
-├─────────────────────────────────────┤
-│                                     │
-│  [logo]  Airone Log Sh.p.k  🇦🇱    │
-│  ─────────────────────────────      │
-│  👤 John Smith                      │
-│    🔗 LinkedIn ✓  📘 Facebook ✗    │
-│    📸 Instagram ✗  💬 WhatsApp ✓   │
-│    🏷 Senior · Operations Manager  │
-│    📝 "10+ years in Balkans..."     │
-│                                     │
-│  🏢 Company Profile                │
-│    🏆 Awards: ISO 9001, IATA       │
-│    ⭐ Rating: ★★★★☆ (4/5)         │
-│    🌐 Website: airone-log.al        │
-│                                     │
-├── Completati ───────────────────────┤
-│ ✅ ABC Logistics    🔗2 ⭐3        │
-│ ✅ XYZ Freight      🔗4 ⭐5        │
-└─────────────────────────────────────┘
+```typescript
+const idsToDownload = useMemo(() => {
+  if (downloadMode === "all") {
+    return uniqueIds.length > 0 ? uniqueIds : dbPartners.map(p => p.wca_id);
+  }
+  if (downloadMode === "no_profile") {
+    // Use noProfileIds directly from DB — no dependency on directory cache
+    if (uniqueIds.length > 0) {
+      const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
+      return [...new Set([...missingIds, ...existingNoProfile])];
+    }
+    return noProfileIds; // ← fallback diretto dal DB
+  }
+  return missingIds;
+}, [downloadMode, uniqueIds, missingIds, noProfileWcaSet, noProfileIds, dbPartners]);
 ```
 
-### File da creare/modificare
+**2. Auto-select `no_profile` mode quando non c'e' cache (riga 173-175)**
+- Aggiungere condizione: se `hasCache === false` e `noProfileIds.length > 0`, forzare `downloadMode` a `no_profile`
 
-| File | Azione |
-|------|--------|
-| `src/components/operations/DeepSearchCanvas.tsx` | **Nuovo** - componente canvas completo |
-| `src/pages/Operations.tsx` | Aggiungere stati, modificare `handleDeepSearch`, renderizzare canvas |
-
-### Dettagli implementativi
-
-- Il canvas si posiziona come overlay nel pannello centrale (stessa posizione del detail overlay), z-index superiore
-- Tema dark/light coerente con il resto di Operations (usa `t(isDark)`)
-- Auto-scroll sulla cronologia completati
-- Animazioni: fade-in per ogni dato trovato, pulse per elemento in ricerca
-- Il canvas rimane visibile dopo il completamento per review, chiudibile con X
-- Pulsante "eye" nella barra di progresso deep search per toggle canvas quando minimizzato
+**3. Fix contatori nel wizard**
+- `totalCount` e `downloadedCount` (righe 355-356) usano `uniqueIds` che dipende dalla cache. Quando cache vuota, mostra "0 WCA / 0 Scaricati" — fuorviante. Aggiungere fallback su `stats.total` e `stats.withProfile`.
 
