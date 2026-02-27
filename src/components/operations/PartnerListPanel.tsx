@@ -369,7 +369,7 @@ export function PartnerListPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="h-full flex flex-col overflow-hidden">
+      <div className="h-full min-h-0 flex flex-col">
         {/* ═══ COMPACT HEADER: Country + inline stats + wizard toggle ═══ */}
         <div className={`px-3 pt-2 pb-1.5 flex-shrink-0 space-y-1.5`}>
           {/* Row 1: Country name + inline stat chips */}
