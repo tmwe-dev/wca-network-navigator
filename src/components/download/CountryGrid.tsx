@@ -228,12 +228,16 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
   const missing = st.cCount > 0 ? st.cCount - st.pCount : 0;
 
-  // Unified badge: 🟢 100% | 🟡 partial | 🔴 0% with directory | ⚪ no data
+  // Unified badge: 🟢 complete | 🟡 downloaded but missing profiles | 🟡 partial | 🔴 0% | ⚪ no data
   let dotColor: string, label: string, tooltip: string;
-  if (st.cCount > 0 && dlPct >= 100) {
+  if (st.cCount > 0 && dlPct >= 100 && st.noProfile === 0) {
     dotColor = "bg-emerald-500";
     label = "100%";
-    tooltip = `Tutti i ${st.cCount} partner scaricati`;
+    tooltip = `Tutti i ${st.cCount} partner scaricati e completi`;
+  } else if (st.cCount > 0 && dlPct >= 100 && st.noProfile > 0) {
+    dotColor = "bg-amber-500";
+    label = "100%↓";
+    tooltip = `Tutti scaricati — ${st.noProfile} senza profilo`;
   } else if (st.cCount > 0 && st.pCount > 0) {
     dotColor = "bg-amber-500";
     label = `${dlPct}%`;

@@ -159,21 +159,26 @@ export default function Operations() {
           </div>
 
           {/* ═══ STATS STRIP ═══ */}
-          {globalStats && (
+          {globalStats && (() => {
+            const missingProfile = globalStats.totalPartners - globalStats.withProfile;
+            const missingEmail = globalStats.totalPartners - globalStats.withEmail;
+            const missingPhone = globalStats.totalPartners - globalStats.withPhone;
+            const dot = isDark ? "text-white/10" : "text-slate-200";
+            return (
             <div className={cn("flex items-center gap-3 px-4 py-1 flex-shrink-0 text-sm", isDark ? "text-slate-500" : "text-slate-400")}>
               <StatsChip emoji="🌍" value={globalStats.scannedCountries} label="paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-              <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+              <span className={dot}>·</span>
               <StatsChip emoji="👥" value={globalStats.totalPartners.toLocaleString()} label="partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
-              <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
-              <StatsChip emoji="📄" value={globalStats.withProfile.toLocaleString()} label="profili" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
-              <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
-              <StatsChip emoji="✉️" value={globalStats.withEmail.toLocaleString()} label="email" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0} />
-              <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
-              <StatsChip emoji="📞" value={globalStats.withPhone.toLocaleString()} label="tel" isDark={isDark} pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0} />
-              <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+              <span className={dot}>·</span>
+              <MissingChip emoji="📄" label="Profilo" missing={missingProfile} isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
+              <span className={dot}>·</span>
+              <MissingChip emoji="✉️" label="Email" missing={missingEmail} isDark={isDark} />
+              <span className={dot}>·</span>
+              <MissingChip emoji="📞" label="Tel" missing={missingPhone} isDark={isDark} />
+              <span className={dot}>·</span>
               <StatsChip emoji="📁" value={(globalStats.totalDirectory ?? 0).toLocaleString()} label="directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
-            </div>
-          )}
+            </div>);
+          })()}
 
           {/* ═══ MAIN: Country Grid + Partner List + Detail ═══ */}
           <div className="flex-1 min-h-0 px-4 pb-3 flex gap-3 overflow-hidden">
@@ -277,6 +282,35 @@ function StatsChip({ emoji, value, label, isDark, pct, onClick, active }: {
       <span>{label}</span>
       {pct !== undefined && (
         <span className={cn("tabular-nums", isDark ? "text-slate-600" : "text-slate-300")}>({pct}%)</span>
+      )}
+    </span>
+  );
+}
+
+/* ── Missing Chip (shows count of MISSING items, green checkmark when 0) ── */
+function MissingChip({ emoji, label, missing, isDark, onClick, active }: {
+  emoji: string; label: string; missing: number; isDark: boolean;
+  onClick?: () => void; active?: boolean;
+}) {
+  const isClickable = !!onClick;
+  const isComplete = missing === 0;
+  return (
+    <span
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 whitespace-nowrap transition-all duration-150",
+        isClickable ? "cursor-pointer hover:opacity-80" : "",
+        active ? (isDark ? "text-sky-400" : "text-sky-600") : ""
+      )}
+    >
+      <span>{emoji}</span>
+      {isComplete ? (
+        <span className={isDark ? "text-emerald-400 font-semibold" : "text-emerald-600 font-semibold"}>✓ {label}</span>
+      ) : (
+        <>
+          <span className={isDark ? "text-slate-500" : "text-slate-400"}>Senza {label}</span>
+          <span className={cn("font-semibold tabular-nums", isDark ? "text-slate-200" : "text-slate-700")}>{missing.toLocaleString()}</span>
+        </>
       )}
     </span>
   );
