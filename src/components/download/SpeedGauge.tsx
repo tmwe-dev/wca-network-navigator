@@ -76,6 +76,8 @@ export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
     prevWaitingRef.current = isWaiting;
   }, [isWaiting, elapsed]);
 
+  if (idle) return null;
+
   return (
     <div className="flex items-center gap-2">
       <div className="relative" style={{ width: 80, height: 52 }}>
@@ -93,39 +95,17 @@ export function SpeedGauge({ lastUpdatedAt, onStop, idle }: SpeedGaugeProps) {
           </div>
         )}
         <svg viewBox="0 0 80 52" width={80} height={52}>
-          {/* Red zone: 0-10s → -90° to -30° */}
           <path d={makeArc(-90, -30)} fill="none" stroke="#ef4444" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
-          {/* Yellow zone: 10-15s → -30° to 0° */}
           <path d={makeArc(-30, 0)} fill="none" stroke="#f59e0b" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
-          {/* Green zone: 15-30s → 0° to 90° */}
           <path d={makeArc(0, 90)} fill="none" stroke="#22c55e" strokeWidth={5} strokeLinecap="round" opacity={0.3} />
-
-          {/* Needle */}
-          <line
-            x1={cx} y1={cy} x2={nx} y2={ny}
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            style={{ transition: "all 0.5s ease-out" }}
-          />
-          {/* Center dot */}
+          <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth={2} strokeLinecap="round" style={{ transition: "all 0.5s ease-out" }} />
           <circle cx={cx} cy={cy} r={2.5} fill={color} />
-
-          {/* Value */}
-          <text x={cx} y={cy - 8} textAnchor="middle" fontSize={14} fontWeight="bold" fontFamily="monospace" fill={color}>
-            {elapsed}s
-          </text>
+          <text x={cx} y={cy - 8} textAnchor="middle" fontSize={14} fontWeight="bold" fontFamily="monospace" fill={color}>{elapsed}s</text>
         </svg>
-        {/* Label below gauge */}
-        <div
-          className={`absolute -bottom-0.5 left-0 right-0 text-center leading-none ${isDark ? "text-slate-500" : "text-slate-400"}`}
-          style={{ fontSize: 7 }}
-        >
+        <div className={`absolute -bottom-0.5 left-0 right-0 text-center leading-none ${isDark ? "text-slate-500" : "text-slate-400"}`} style={{ fontSize: 7 }}>
           dall'ultima richiesta
         </div>
       </div>
-
-      {/* STOP button */}
       <StopButton onStop={onStop} idle={idle} />
     </div>
   );

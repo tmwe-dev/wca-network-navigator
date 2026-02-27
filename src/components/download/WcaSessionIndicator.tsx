@@ -17,17 +17,17 @@ export function WcaSessionIndicator() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs ${
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${
             isDark
-              ? "bg-white/[0.04] border-white/[0.1] text-slate-300"
-              : "bg-white/60 border-slate-200 text-slate-600"
+              ? "text-slate-500"
+              : "text-slate-400"
           }`}>
-            <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
-            <span className="hidden sm:inline">{label}</span>
+            <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+            <span className="text-[10px]">{isOk ? "WCA" : "WCA ✕"}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{isOk ? "Sessione WCA attiva" : "Sessione WCA non attiva"}</p>
+          <p>{isOk ? "Sessione WCA attiva" : "Sessione WCA non attiva — configura nelle Impostazioni"}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

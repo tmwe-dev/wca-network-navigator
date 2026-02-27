@@ -444,10 +444,9 @@ export function PartnerListPanel({
                           <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Profili incompleti" description={`${noProfileInDirectoryCount + missingIds.length} importati ma senza dati di contatto o profilo`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
                           <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Aggiorna tutto" description={`Riscarica e aggiorna tutti i ${totalCount} partner di questo paese`} count={totalCount} color="text-violet-400" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
-                          <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
-                          <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{delay}s · {estimateLabel}</span>
+                        <div className={cn("flex items-center justify-between text-[10px] font-mono px-1", isDark ? "text-slate-500" : "text-slate-400")}>
+                          <span>⏱ Delay: {delay}s tra ogni profilo</span>
+                          <span>{estimateLabel}</span>
                         </div>
                         <Button onClick={() => handleStartDownload()} disabled={idsToDownload.length === 0 || createJob.isPending}
                           className={cn("w-full h-10 text-sm font-bold rounded-xl transition-all", idsToDownload.length > 0 ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30" : "")}>
