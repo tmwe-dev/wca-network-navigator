@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Sun, Moon, Users, Bot } from "lucide-react";
+import { Sun, Moon, Users, Bot, X } from "lucide-react";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
@@ -199,12 +199,12 @@ export default function Operations() {
               )}
             </div>
 
-            {/* CENTER: Partner List (when country selected) */}
+            {/* CENTER: Partner List + Detail overlay */}
             {activeCountry && (
               <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
                 <ActiveJobBar />
                 <div className={cn(
-                  "flex-1 min-h-0 rounded-2xl border overflow-hidden",
+                  "flex-1 min-h-0 rounded-2xl border overflow-hidden relative",
                   isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
                 )}>
                   <PartnerListPanel
@@ -221,23 +221,31 @@ export default function Operations() {
                     onSelectPartner={setSelectedPartnerId}
                     selectedPartnerId={selectedPartnerId}
                   />
-                </div>
-              </div>
-            )}
 
-            {/* RIGHT: Detail Panel (when partner selected) */}
-            {activeCountry && selectedPartnerId && selectedPartner && (
-              <div className={cn(
-                "w-[38%] flex-shrink-0 min-h-0 rounded-2xl border overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200",
-                isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
-              )}>
-                <div className="h-full overflow-auto">
-                  <PartnerDetailCompact
-                    partner={selectedPartner}
-                    onBack={() => setSelectedPartnerId(null)}
-                    onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-                    isDark={isDark}
-                  />
+                  {/* Detail overlay slide-in */}
+                  {selectedPartnerId && selectedPartner && (
+                    <div className={cn(
+                      "absolute inset-0 z-20 flex flex-col animate-in slide-in-from-right-8 duration-200",
+                      isDark ? "bg-slate-950/95 backdrop-blur-xl" : "bg-white/95 backdrop-blur-xl"
+                    )}>
+                      <div className={cn("flex items-center px-3 py-1.5 flex-shrink-0 border-b", isDark ? "border-white/[0.08]" : "border-slate-200/60")}>
+                        <button onClick={() => setSelectedPartnerId(null)}
+                          className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
+                            isDark ? "text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                          )}>
+                          <X className="w-4 h-4" /> Chiudi
+                        </button>
+                      </div>
+                      <div className="flex-1 min-h-0 overflow-auto">
+                        <PartnerDetailCompact
+                          partner={selectedPartner}
+                          onBack={() => setSelectedPartnerId(null)}
+                          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                          isDark={isDark}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
