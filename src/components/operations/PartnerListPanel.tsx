@@ -379,12 +379,12 @@ export function PartnerListPanel({
             <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</span>
             <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
             <div className="flex items-center gap-2 flex-wrap text-[11px]">
-              <StatChip label="Dir" value={totalCount} isDark={isDark} />
-              <StatChip label="DL" value={downloadedCount} total={totalCount} isDark={isDark} />
-              <StatChip label="Prof" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-              <StatChip label="DS" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-              <StatChip label="✉" value={stats.withEmail} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-              <StatChip label="☎" value={stats.withPhone} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+              <StatChip label="Directory" value={totalCount} isDark={isDark} />
+              <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
+              <StatChip label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+              <StatChip label="Deep" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+              <StatChip label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+              <StatChip label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
             </div>
             <button
               onClick={() => setWizardOpen(p => !p)}
@@ -438,9 +438,9 @@ export function PartnerListPanel({
                     {wizardStep === 1 && !isScanning && (
                       <div className="space-y-3 mt-2">
                         <div className="space-y-1.5">
-                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} title="Mai scaricati" description="Partner in directory ma non nel database" count={missingIds.length} color="text-sky-400" />
-                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} title="Senza profilo completo" description="Partner nel DB senza dati profilo" count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
-                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} title="Riscarica tutti" description="Aggiorna tutti i profili" count={totalCount} color="text-violet-400" />
+                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Mai scaricati" description={`${missingIds.length} partner presenti nella directory WCA ma non ancora nel tuo database`} count={missingIds.length} color="text-sky-400" />
+                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Senza profilo completo" description={`${noProfileInDirectoryCount + missingIds.length} partner già nel database ma senza i dati del profilo dettagliato`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
+                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Riscarica tutti" description={`Aggiorna i dati di tutti i ${totalCount} partner della directory, anche quelli già completi`} count={totalCount} color="text-violet-400" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
@@ -689,29 +689,38 @@ function WizardRow({ step, active, isDark, icon: Icon, label, missing, total, ch
 }
 
 /* ── Download Choice Card ── */
-function DownloadChoice({ selected, onClick, isDark, title, description, count, color }: {
+function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, description, count, color }: {
   selected: boolean; onClick: () => void; isDark: boolean;
-  title: string; description: string; count: number; color: string;
+  icon: any; title: string; description: string; count: number; color: string;
 }) {
   return (
     <button onClick={onClick} className={cn(
-      "w-full text-left rounded-lg border p-2.5 transition-all flex items-center gap-3",
+      "w-full text-left rounded-xl border p-3 transition-all flex items-start gap-3",
       selected
-        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
+        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40 shadow-lg shadow-sky-200/40"
         : isDark ? "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]" : "bg-white/60 border-slate-200 hover:bg-slate-50"
     )}>
       <div className={cn(
-        "w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+        "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center mt-0.5",
         selected
-          ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
+          ? isDark ? "bg-sky-500/20" : "bg-sky-100"
+          : isDark ? "bg-white/[0.04]" : "bg-slate-100"
       )}>
-        {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+        <Icon className={cn("w-4 h-4", selected ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
       </div>
       <div className="flex-1 min-w-0">
         <p className={cn("text-xs font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{title}</p>
-        <p className={cn("text-[10px] mt-0.5", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
+        <p className={cn("text-[10px] mt-0.5 leading-relaxed", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
       </div>
-      <span className={cn("text-lg font-mono font-extrabold shrink-0", color)}>{count}</span>
+      <div className="flex flex-col items-center gap-0.5 shrink-0">
+        <span className={cn("text-lg font-mono font-extrabold", color)}>{count}</span>
+        <div className={cn(
+          "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+          selected ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
+        )}>
+          {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+        </div>
+      </div>
     </button>
   );
 }
