@@ -18,6 +18,7 @@ import {
   Zap, Timer, FolderDown, RefreshCw, Square, CheckCircle2,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
+import { useCountryStats } from "@/hooks/useCountryStats";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -285,7 +286,22 @@ export function PartnerListPanel({
   /* ════════════════════════════════════════════
    * STATS
    * ════════════════════════════════════════════ */
+  /* Server-side stats from RPC (no 1000-row limit) */
+  const { data: countryStatsData } = useCountryStats();
+  const serverStats = countryStatsData?.byCountry?.[countryCode];
   const stats = useMemo(() => {
+    if (serverStats) {
+      return {
+        total: serverStats.total_partners,
+        withProfile: serverStats.with_profile,
+        withDeep: serverStats.with_deep_search,
+        withEmail: serverStats.with_email,
+        withPhone: serverStats.with_phone,
+        withAliasCo: serverStats.with_company_alias,
+        withAliasCt: serverStats.with_contact_alias,
+      };
+    }
+    // Fallback client-side (only if RPC not loaded yet)
     const list = partners || [];
     const total = list.length;
     let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
@@ -298,7 +314,7 @@ export function PartnerListPanel({
       if ((p.partner_contacts || []).some((c: any) => c.contact_alias)) withAliasCt++;
     });
     return { total, withProfile, withDeep, withEmail, withPhone, withAliasCo, withAliasCt };
-  }, [partners]);
+  }, [serverStats, partners]);
 
   const filteredPartners = useMemo(() => {
     let list = partners || [];

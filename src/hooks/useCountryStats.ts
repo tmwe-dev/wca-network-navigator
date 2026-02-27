@@ -11,6 +11,9 @@ export interface CountryStats {
   with_email: number;
   with_phone: number;
   with_both: number;
+  with_deep_search: number;
+  with_company_alias: number;
+  with_contact_alias: number;
 }
 
 /**
@@ -26,6 +29,7 @@ export function useCountryStats() {
 
       const byCountry: Record<string, CountryStats> = {};
       let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;
+      let gDeep = 0, gAliasCo = 0, gAliasCt = 0;
 
       (data || []).forEach((r: any) => {
         const s: CountryStats = {
@@ -38,6 +42,9 @@ export function useCountryStats() {
           with_email: Number(r.with_email) || 0,
           with_phone: Number(r.with_phone) || 0,
           with_both: Number(r.with_both) || 0,
+          with_deep_search: Number(r.with_deep_search) || 0,
+          with_company_alias: Number(r.with_company_alias) || 0,
+          with_contact_alias: Number(r.with_contact_alias) || 0,
         };
         byCountry[s.country_code] = s;
         gTotal += s.total_partners;
@@ -46,6 +53,9 @@ export function useCountryStats() {
         gBoth += s.with_both;
         gProfile += s.with_profile;
         gNoProfile += s.without_profile;
+        gDeep += s.with_deep_search;
+        gAliasCo += s.with_company_alias;
+        gAliasCt += s.with_contact_alias;
       });
 
       return {
@@ -57,6 +67,9 @@ export function useCountryStats() {
           withBoth: gBoth,
           withProfile: gProfile,
           withoutProfile: gNoProfile,
+          withDeepSearch: gDeep,
+          withCompanyAlias: gAliasCo,
+          withContactAlias: gAliasCt,
         },
       };
     },
