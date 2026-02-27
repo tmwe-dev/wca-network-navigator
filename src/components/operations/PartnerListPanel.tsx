@@ -366,167 +366,40 @@ export function PartnerListPanel({
 
   const wizardStep = missingProfiles > 0 ? 1 : missingDeep > 0 ? 2 : (missingAliasCo > 0 || missingAliasCt > 0) ? 3 : 4;
 
+  const [wizardOpen, setWizardOpen] = useState(false);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col overflow-hidden">
-        {/* ═══ SECTION A: Dashboard Paese ═══ */}
-        <div className={`px-3 pt-3 pb-2 flex-shrink-0 space-y-2`}>
-          {/* Stats grid 2x4 */}
-          <div className="grid grid-cols-4 gap-1.5">
-            <DashCell label="Directory" value={totalCount} isDark={isDark} color="text-amber-400" />
-            <DashCell label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} color="text-sky-400" />
-            <DashCell label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} color="text-violet-400" onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-            <DashCell label="Deep S." value={stats.withDeep} total={stats.total} isDark={isDark} color="text-cyan-400" onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-            <DashCell label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} color="text-sky-400" onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-            <DashCell label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} color="text-teal-400" onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
-            <DashCell label="Alias Az." value={stats.withAliasCo} total={stats.total} isDark={isDark} color="text-amber-400" onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
-            <DashCell label="Alias Ct." value={stats.withAliasCt} total={stats.total} isDark={isDark} color="text-pink-400" onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
-          </div>
-        </div>
-
-        {/* ═══ SECTION B: Wizard Step-by-Step ═══ */}
-        <div className={`px-3 pb-2 flex-shrink-0`}>
-          <div className={`rounded-xl border p-2.5 space-y-2 ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-slate-50/60 border-slate-200/60"}`}>
-            {wizardStep === 4 ? (
-              <div className="flex items-center gap-2 py-1">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span className={`text-sm font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Paese completato!</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Step 1: Download Profili */}
-                <WizardRow
-                  step={1} active={wizardStep === 1} isDark={isDark}
-                  icon={Download} label="Scarica Profili" missing={missingProfiles} total={stats.total}
-                >
-                  {wizardStep === 1 && !isScanning && (
-                    <div className="space-y-3 mt-2">
-                      {/* 3 clear radio cards */}
-                      <div className="space-y-1.5">
-                        <DownloadChoice
-                          selected={downloadMode === "new"}
-                          onClick={() => setDownloadMode("new")}
-                          isDark={isDark}
-                          title="Mai scaricati"
-                          description="Partner presenti in directory ma non ancora nel database"
-                          count={missingIds.length}
-                          color="text-sky-400"
-                        />
-                        <DownloadChoice
-                          selected={downloadMode === "no_profile"}
-                          onClick={() => setDownloadMode("no_profile")}
-                          isDark={isDark}
-                          title="Senza profilo completo"
-                          description="Partner nel database ma senza dati del profilo"
-                          count={noProfileInDirectoryCount + missingIds.length}
-                          color="text-amber-400"
-                        />
-                        <DownloadChoice
-                          selected={downloadMode === "all"}
-                          onClick={() => setDownloadMode("all")}
-                          isDark={isDark}
-                          title="Riscarica tutti"
-                          description="Aggiorna tutti i profili dei partner di questo paese"
-                          count={totalCount}
-                          color="text-violet-400"
-                        />
-                      </div>
-
-                      {/* Delay + big download button */}
-                      <div className="flex items-center gap-2">
-                        <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
-                        <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
-                        <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{delay}s · {estimateLabel}</span>
-                      </div>
-
-                      <Button
-                        onClick={() => handleStartDownload()}
-                        disabled={idsToDownload.length === 0 || createJob.isPending}
-                        className={cn(
-                          "w-full h-10 text-sm font-bold rounded-xl transition-all",
-                          idsToDownload.length > 0
-                            ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
-                            : ""
-                        )}
-                      >
-                        {createJob.isPending
-                          ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio in corso...</>
-                          : <><Download className="w-4 h-4 mr-2" /> SCARICA {idsToDownload.length} PROFILI</>
-                        }
-                      </Button>
-
-                      {/* Refresh directory link */}
-                      {hasCache && !scanComplete && (
-                        <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
-                          <RefreshCw className="w-3 h-3" /> Aggiorna elenco dalla directory
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {isScanning && (
-                    <div className="mt-2 text-center space-y-1">
-                      <Loader2 className={`w-4 h-4 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-                      <p className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>{countryName} — Pg {currentPage}</p>
-                      {scannedMembers.length > 0 && <p className={`text-xs font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
-                      {scanError && <p className={`text-[10px] text-red-400`}>⚠️ {scanError}</p>}
-                      <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-[10px]">
-                        <Square className="w-3 h-3 mr-1" /> Stop
-                      </Button>
-                    </div>
-                  )}
-                </WizardRow>
-
-                {/* Step 2: Deep Search */}
-                <WizardRow step={2} active={wizardStep === 2} isDark={isDark}
-                  icon={Telescope} label="Deep Search" missing={missingDeep} total={stats.total}
-                >
-                  {wizardStep === 2 && (
-                    <Button size="sm" className={cn("mt-2 h-8 text-xs font-bold w-full", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
-                      disabled={deepSearchRunning}
-                      onClick={() => {
-                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
-                        if (ids.length > 0) onDeepSearch?.(ids);
-                      }}
-                    >
-                      {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Avvia Deep Search ({missingDeep})</>}
-                    </Button>
-                  )}
-                </WizardRow>
-
-                {/* Step 3: Generate Alias */}
-                <WizardRow step={3} active={wizardStep === 3} isDark={isDark}
-                  icon={Wand2} label="Genera Alias" missing={missingAliasCo + missingAliasCt} total={stats.total * 2}
-                >
-                  {wizardStep === 3 && (
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
-                        disabled={aliasGenerating || missingAliasCo === 0}
-                        onClick={() => onGenerateAliases?.(countryCodes, "company")}
-                      >
-                        <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
-                      </Button>
-                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
-                        disabled={aliasGenerating || missingAliasCt === 0}
-                        onClick={() => onGenerateAliases?.(countryCodes, "contact")}
-                      >
-                        <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
-                      </Button>
-                    </div>
-                  )}
-                </WizardRow>
-              </div>
-            )}
+        {/* ═══ COMPACT HEADER: Country + inline stats + wizard toggle ═══ */}
+        <div className={`px-3 pt-2 pb-1.5 flex-shrink-0 space-y-1.5`}>
+          {/* Row 1: Country name + inline stat chips */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-lg leading-none">{getCountryFlag(countryCode)}</span>
+            <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</span>
+            <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
+            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+              <StatChip label="Dir" value={totalCount} isDark={isDark} />
+              <StatChip label="DL" value={downloadedCount} total={totalCount} isDark={isDark} />
+              <StatChip label="Prof" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+              <StatChip label="DS" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+              <StatChip label="✉" value={stats.withEmail} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+              <StatChip label="☎" value={stats.withPhone} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+            </div>
+            <button
+              onClick={() => setWizardOpen(p => !p)}
+              className={cn(
+                "ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all",
+                wizardStep < 4
+                  ? isDark ? "bg-sky-500/15 border-sky-500/30 text-sky-400 hover:bg-sky-500/25" : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
+                  : isDark ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-600"
+              )}
+            >
+              {wizardStep < 4 ? <><Zap className="w-3 h-3" /> Step {wizardStep}/3</> : <><CheckCircle2 className="w-3 h-3" /> Completo</>}
+            </button>
           </div>
 
-          {/* Terminal + Jobs inline */}
-          <div className="max-h-28 overflow-auto space-y-1 mt-2">
-            <DownloadTerminal />
-            <JobMonitor />
-          </div>
-        </div>
-
-        {/* ═══ SECTION C: Search + Partner List ═══ */}
-        <div className="px-3 pb-1.5 space-y-1 flex-shrink-0">
+          {/* Row 2: Search + sort */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
@@ -541,11 +414,103 @@ export function PartnerListPanel({
               </SelectContent>
             </Select>
           </div>
-          <p className={`text-[11px] ${th.dim}`}>
-            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""} — ${countryName}`}
+          <p className={`text-[10px] ${th.dim}`}>
+            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""}`}
           </p>
         </div>
 
+        {/* ═══ WIZARD (collapsible) ═══ */}
+        {wizardOpen && (
+          <div className={`px-3 pb-2 flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-200`}>
+            <div className={`rounded-xl border p-2.5 space-y-2 ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-slate-50/60 border-slate-200/60"}`}>
+              {wizardStep === 4 ? (
+                <div className="flex items-center gap-2 py-1">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <span className={`text-sm font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Paese completato!</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Step 1: Download Profili */}
+                  <WizardRow
+                    step={1} active={wizardStep === 1} isDark={isDark}
+                    icon={Download} label="Scarica Profili" missing={missingProfiles} total={stats.total}
+                  >
+                    {wizardStep === 1 && !isScanning && (
+                      <div className="space-y-3 mt-2">
+                        <div className="space-y-1.5">
+                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} title="Mai scaricati" description="Partner in directory ma non nel database" count={missingIds.length} color="text-sky-400" />
+                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} title="Senza profilo completo" description="Partner nel DB senza dati profilo" count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
+                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} title="Riscarica tutti" description="Aggiorna tutti i profili" count={totalCount} color="text-violet-400" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+                          <Slider value={[delay]} onValueChange={([v]) => setDelay(v)} min={10} max={60} step={1} className="h-4 flex-1" />
+                          <span className={`text-[10px] font-mono shrink-0 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{delay}s · {estimateLabel}</span>
+                        </div>
+                        <Button onClick={() => handleStartDownload()} disabled={idsToDownload.length === 0 || createJob.isPending}
+                          className={cn("w-full h-10 text-sm font-bold rounded-xl transition-all", idsToDownload.length > 0 ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30" : "")}>
+                          {createJob.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</> : <><Download className="w-4 h-4 mr-2" /> SCARICA {idsToDownload.length} PROFILI</>}
+                        </Button>
+                        {hasCache && !scanComplete && (
+                          <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
+                            <RefreshCw className="w-3 h-3" /> Aggiorna elenco dalla directory
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {isScanning && (
+                      <div className="mt-2 text-center space-y-1">
+                        <Loader2 className={`w-4 h-4 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
+                        <p className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>{countryName} — Pg {currentPage}</p>
+                        {scannedMembers.length > 0 && <p className={`text-xs font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
+                        {scanError && <p className="text-[10px] text-red-400">⚠️ {scanError}</p>}
+                        <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-[10px]">
+                          <Square className="w-3 h-3 mr-1" /> Stop
+                        </Button>
+                      </div>
+                    )}
+                  </WizardRow>
+
+                  {/* Step 2: Deep Search */}
+                  <WizardRow step={2} active={wizardStep === 2} isDark={isDark} icon={Telescope} label="Deep Search" missing={missingDeep} total={stats.total}>
+                    {wizardStep === 2 && (
+                      <Button size="sm" className={cn("mt-2 h-8 text-xs font-bold w-full", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
+                        disabled={deepSearchRunning}
+                        onClick={() => {
+                          const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
+                          if (ids.length > 0) onDeepSearch?.(ids);
+                        }}>
+                        {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Avvia Deep Search ({missingDeep})</>}
+                      </Button>
+                    )}
+                  </WizardRow>
+
+                  {/* Step 3: Generate Alias */}
+                  <WizardRow step={3} active={wizardStep === 3} isDark={isDark} icon={Wand2} label="Genera Alias" missing={missingAliasCo + missingAliasCt} total={stats.total * 2}>
+                    {wizardStep === 3 && (
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
+                          disabled={aliasGenerating || missingAliasCo === 0} onClick={() => onGenerateAliases?.(countryCodes, "company")}>
+                          <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
+                        </Button>
+                        <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
+                          disabled={aliasGenerating || missingAliasCt === 0} onClick={() => onGenerateAliases?.(countryCodes, "contact")}>
+                          <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
+                        </Button>
+                      </div>
+                    )}
+                  </WizardRow>
+                </div>
+              )}
+            </div>
+            <div className="max-h-28 overflow-auto space-y-1 mt-2">
+              <DownloadTerminal />
+              <JobMonitor />
+            </div>
+          </div>
+        )}
+
+        {/* ═══ PARTNER LIST (immediate, scrollable) ═══ */}
         <ScrollArea className="flex-1 min-h-0">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
             {isLoading
@@ -643,7 +608,27 @@ export function PartnerListPanel({
   );
 }
 
-/* ── Dashboard Cell ── */
+/* ── Stat Chip (inline) ── */
+function StatChip({ label, value, total, isDark, onClick, active }: {
+  label: string; value: number; total?: number; isDark: boolean;
+  onClick?: () => void; active?: boolean;
+}) {
+  const pct = total && total > 0 ? Math.round((value / total) * 100) : null;
+  return (
+    <span onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-0.5 font-mono whitespace-nowrap transition-all",
+        onClick ? "cursor-pointer hover:opacity-80" : "",
+        active ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-slate-400" : "text-slate-500")
+      )}>
+      <span className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>{label}</span>
+      <span className={cn("font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{value}</span>
+      {pct !== null && <span className={cn("text-[9px]", pct >= 80 ? "text-emerald-500" : pct >= 40 ? "text-amber-500" : "text-rose-500")}>{pct}%</span>}
+    </span>
+  );
+}
+
+/* ── Dashboard Cell (unused, kept for reference) ── */
 function DashCell({ label, value, total, isDark, color, onClick, active }: {
   label: string; value: number; total?: number; isDark: boolean; color: string;
   onClick?: () => void; active?: boolean;
