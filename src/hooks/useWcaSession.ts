@@ -1,15 +1,8 @@
 /**
- * Simplified WCA session hook.
- * 
- * Single concept: before any WCA operation, open a known WCA page via the
- * Chrome extension and check if it loads with real contacts.
- * If not, attempt auto-login with saved credentials.
- * 
- * No DB polling, no complex state machine, no manual user interaction.
+ * WCA session hook with dual-path: Chrome extension (preferred) or server-side fallback.
  */
 import { useState, useCallback, useRef } from "react";
 import { useExtensionBridge } from "./useExtensionBridge";
-import { supabase } from "@/integrations/supabase/client";
 
 export function useWcaSession() {
   const [isSessionActive, setIsSessionActive] = useState<boolean | null>(null);
@@ -17,106 +10,108 @@ export function useWcaSession() {
   const { isAvailable, checkAvailable, verifySession, syncCookie } = useExtensionBridge();
 
   /**
-   * Ensures the WCA session is active.
-   * 1. Asks extension to open a test WCA profile
-   * 2. If contacts are visible → session OK
-   * 3. If not → attempt auto-login via extension, then retry
-   * 4. Returns true/false. No UI, no dialogs.
+   * Try server-side auto-login via edge function.
+   * This works even without the Chrome extension — the edge function
+   * performs the login server-side and saves the cookie to DB.
    */
+  const tryServerSideLogin = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("[WcaSession] Trying server-side auto-login...");
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wca-auto-login`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      console.log("[WcaSession] Server-side result:", data.message || data.error);
+      return data.success === true && data.authenticated === true;
+    } catch (err) {
+      console.error("[WcaSession] Server-side login error:", err);
+      return false;
+    }
+  }, []);
+
   const ensureSession = useCallback(async (): Promise<boolean> => {
-    // Prevent concurrent checks
     if (checkingRef.current) return isSessionActive ?? false;
     checkingRef.current = true;
 
     try {
-      // Check extension availability
+      // Path A: Try via Chrome extension
       const extOk = isAvailable || await checkAvailable();
-      if (!extOk) {
-        console.warn("[WcaSession] Extension not available");
-        setIsSessionActive(false);
-        return false;
-      }
 
-      // Step 1: Verify session by opening a real WCA profile
-      const result = await verifySession();
-      
-      if (result.success && result.authenticated) {
-        console.log("[WcaSession] ✅ Session active");
-        setIsSessionActive(true);
-        return true;
-      }
-
-      // Step 2: Session not active — try auto-login
-      console.log("[WcaSession] Session not active, attempting auto-login...");
-
-      // Fetch credentials from DB
-      try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
-        const res = await fetch(url, {
-          headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        });
-        const creds = await res.json();
-
-        if (!creds.username || !creds.password) {
-          console.warn("[WcaSession] No WCA credentials saved");
-          setIsSessionActive(false);
-          return false;
-        }
-
-        // Ask extension to perform auto-login
-        // The extension's "autoLogin" action fills in the login form and submits
-        const loginResult = await new Promise<boolean>((resolve) => {
-          const requestId = `autoLogin_${Date.now()}`;
-          const timeout = setTimeout(() => resolve(false), 45000);
-
-          const handler = (event: MessageEvent) => {
-            if (event.source !== window) return;
-            if (event.data?.direction !== "from-extension") return;
-            if (event.data?.requestId !== requestId) return;
-            
-            clearTimeout(timeout);
-            window.removeEventListener("message", handler);
-            resolve(event.data?.response?.success === true);
-          };
-
-          window.addEventListener("message", handler);
-          window.postMessage({
-            direction: "from-webapp",
-            action: "autoLogin",
-            requestId,
-            username: creds.username,
-            password: creds.password,
-          }, "*");
-        });
-
-        if (!loginResult) {
-          console.warn("[WcaSession] Auto-login failed");
-          setIsSessionActive(false);
-          return false;
-        }
-
-        // Step 3: After login, sync cookie and verify again
-        await syncCookie();
-        const retryResult = await verifySession();
-        
-        if (retryResult.success && retryResult.authenticated) {
-          console.log("[WcaSession] ✅ Session active after auto-login");
+      if (extOk) {
+        const result = await verifySession();
+        if (result.success && result.authenticated) {
+          console.log("[WcaSession] ✅ Session active (extension)");
           setIsSessionActive(true);
           return true;
         }
 
-        console.warn("[WcaSession] Session still not active after auto-login");
-        setIsSessionActive(false);
-        return false;
-      } catch (err) {
-        console.error("[WcaSession] Auto-login error:", err);
-        setIsSessionActive(false);
-        return false;
+        // Extension available but session expired — try auto-login via extension
+        console.log("[WcaSession] Session expired, attempting extension auto-login...");
+        try {
+          const credUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
+          const credRes = await fetch(credUrl, {
+            headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          });
+          const creds = await credRes.json();
+
+          if (creds.username && creds.password) {
+            const loginResult = await new Promise<boolean>((resolve) => {
+              const requestId = `autoLogin_${Date.now()}`;
+              const timeout = setTimeout(() => resolve(false), 45000);
+              const handler = (event: MessageEvent) => {
+                if (event.source !== window) return;
+                if (event.data?.direction !== "from-extension") return;
+                if (event.data?.requestId !== requestId) return;
+                clearTimeout(timeout);
+                window.removeEventListener("message", handler);
+                resolve(event.data?.response?.success === true);
+              };
+              window.addEventListener("message", handler);
+              window.postMessage({
+                direction: "from-webapp",
+                action: "autoLogin",
+                requestId,
+                username: creds.username,
+                password: creds.password,
+              }, "*");
+            });
+
+            if (loginResult) {
+              await syncCookie();
+              const retry = await verifySession();
+              if (retry.success && retry.authenticated) {
+                console.log("[WcaSession] ✅ Session active after extension auto-login");
+                setIsSessionActive(true);
+                return true;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("[WcaSession] Extension auto-login failed:", err);
+        }
       }
+
+      // Path B: No extension or extension login failed — try server-side
+      console.log("[WcaSession] Falling back to server-side login...");
+      const serverOk = await tryServerSideLogin();
+      if (serverOk) {
+        console.log("[WcaSession] ✅ Session active (server-side)");
+        setIsSessionActive(true);
+        return true;
+      }
+
+      console.warn("[WcaSession] ❌ All login methods failed");
+      setIsSessionActive(false);
+      return false;
     } finally {
       checkingRef.current = false;
     }
-  }, [isAvailable, checkAvailable, verifySession, syncCookie, isSessionActive]);
+  }, [isAvailable, checkAvailable, verifySession, syncCookie, isSessionActive, tryServerSideLogin]);
 
   return {
     isSessionActive,
