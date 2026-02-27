@@ -1,116 +1,40 @@
 
 
-# Refactoring Step 1: Tab per Paese + Wizard Step-by-Step
+# Bug: Contatori a zero - Causa e Soluzione
 
-## Problema principale
+## Causa principale
 
-1. **Numeri sbagliati**: `PartnerListPanel` usa `usePartners({ countries: countryCodes })` che aggrega TUTTI i paesi selezionati. Le stats mostrano dati misti (es. Thailandia + Antigua insieme), creando confusione.
-2. **Nessuna separazione per paese**: non c'e' modo di capire quale paese stai guardando.
-3. **Download nascosto nel flusso**: i controlli download sono mescolati con stats e barre di progresso in un flusso verticale lungo. L'utente non capisce cosa fa cosa.
+Le stats (Profili, Deep Search, Email, Telefono, Alias) sono calcolate **client-side** (righe 288-300 di `PartnerListPanel.tsx`) iterando su `partners` restituiti da `usePartners()`. Questa query usa il default Supabase di **1000 righe massimo**. La Thailandia ha migliaia di partner, quindi:
 
-## Soluzione: Tab per Paese + Wizard Guidato
+1. `usePartners({ countries: ["TH"] })` restituisce solo i primi 1000
+2. I contatori sono calcolati su 1000 partner invece che su tutti
+3. Peggio: se il campo `raw_profile_html` e' `null` per i primi 1000 risultati (ordinati per nome), il contatore "Profili" mostra 0 anche se i profili esistono per partner con nomi successivi
 
-### Layout Step 1
+## Soluzione
 
-```text
-┌─ HEADER: [←] Operations [🇹🇭 Thailand] [🇦🇬 Antigua] ─────────────────────┐
-│                                                                              │
-│  ┌── LEFT (58%) ──────────────────┐  ┌── RIGHT (42%) ────────────────────┐  │
-│  │                                │  │                                    │  │
-│  │  TAB BAR: 🇹🇭 Thailand | 🇦🇬 AG │  │  Partner Detail (se selezionato)  │  │
-│  │                                │  │  oppure                            │  │
-│  │  ┌─ DASHBOARD PAESE ────────┐  │  │  Dashboard Riepilogo Paese        │  │
-│  │  │ Directory: 180           │  │  │  (stats + azioni rapide)          │  │
-│  │  │ Scaricati: 178 (99%)     │  │  │                                    │  │
-│  │  │ Con Profilo: 0 (0%)      │  │  └────────────────────────────────────┘  │
-│  │  │ Con Email: 100 (56%)     │  │                                          │
-│  │  │ Con Telefono: 76 (43%)   │  │                                          │
-│  │  │ Deep Search: 123 (69%)   │  │                                          │
-│  │  │ Alias Az: 100 (56%)      │  │                                          │
-│  │  │ Alias Ct: 100 (56%)      │  │                                          │
-│  │  └──────────────────────────┘  │                                          │
-│  │                                │                                          │
-│  │  ┌─ WIZARD: Prossima Azione ┐  │                                          │
-│  │  │                          │  │                                          │
-│  │  │  Step 1: Scarica Profili │  │                                          │
-│  │  │  [178 mancanti]          │  │                                          │
-│  │  │  ▶ AVVIA DOWNLOAD        │  │                                          │
-│  │  │                          │  │                                          │
-│  │  │  (completato? → next)    │  │                                          │
-│  │  │  Step 2: Deep Search     │  │                                          │
-│  │  │  Step 3: Genera Alias    │  │                                          │
-│  │  └──────────────────────────┘  │                                          │
-│  │                                │                                          │
-│  │  ┌─ LISTA PARTNER ──────────┐  │                                          │
-│  │  │ [Search] [Sort]          │  │                                          │
-│  │  │ partner 1...             │  │                                          │
-│  │  │ partner 2...             │  │                                          │
-│  │  └──────────────────────────┘  │                                          │
-│  └────────────────────────────────┘                                          │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
+Usare la funzione RPC `get_country_stats()` gia' esistente (aggregazione server-side, nessun limite di righe) per i contatori del dashboard, ed estenderla per includere i campi mancanti (deep search, alias azienda, alias contatto).
 
-### Dettaglio implementativo
+### 1. Estendere `get_country_stats()` con nuovi campi
 
-#### 1. `Operations.tsx` -- Aggiungere stato `activeCountryTab`
+Aggiungere alla funzione SQL:
+- `with_deep_search` (count partner con `enrichment_data->>'deep_search_at'` non null)
+- `with_company_alias` (count partner con `company_alias` non null)
+- `with_contact_alias` (count partner che hanno almeno un contatto con `contact_alias` non null)
 
-- Nuovo stato: `const [activeTab, setActiveTab] = useState(0)` -- indice del paese attivo tra `selectedCountries`
-- Il paese attivo determina il `countryCode` singolo passato a `PartnerListPanel`
-- Tab bar sopra il pannello sinistro con bandierina + nome per ogni paese selezionato
-- Reset tab a 0 quando si cambia selezione paesi
+### 2. Aggiornare `useCountryStats.ts`
 
-#### 2. `PartnerListPanel.tsx` -- Refactoring completo in 3 sezioni
+Aggiungere i nuovi campi all'interfaccia `CountryStats` e al parsing dei risultati.
 
-Riceve UN SOLO `countryCode` (non piu' array). Questo risolve il bug dei numeri sbagliati.
+### 3. Sostituire stats client-side in `PartnerListPanel.tsx`
 
-**Sezione A: Dashboard Paese (compatta, sempre visibile)**
-- Griglia 2x4 con i contatori reali per QUEL paese:
-  - Directory (da `directory_cache`) | Scaricati (da `partners` count)
-  - Con Profilo | Senza Profilo
-  - Con Email | Con Telefono
-  - Deep Search | Alias
-- Ogni cella mostra: valore / totale + barra percentuale colorata
-- Click su una cella = filtra la lista sotto
-
-**Sezione B: Wizard "Prossima Azione" (cuore della UX)**
-- Calcola automaticamente qual e' la prossima azione utile in base ai gap:
-  1. Se mancano profili → mostra "Scarica Profili" con bottone grosso + delay slider
-  2. Se profili OK ma manca Deep Search → mostra "Avvia Deep Search" con conteggio
-  3. Se Deep OK ma mancano Alias → mostra "Genera Alias" con conteggio
-  4. Se tutto completato → mostra badge verde "Paese completato!"
-- Ogni step ha:
-  - Titolo chiaro (es. "Step 1: Scarica 178 Profili Mancanti")
-  - Bottone grosso colorato per avviare
-  - Indicatore di progresso se job attivo
-  - Steps futuri visibili ma grigi/disabilitati
-- Il wizard mostra TUTTI gli step come lista verticale, con lo step attivo evidenziato e gli altri grigi
-
-**Sezione C: Lista Partner (invariata)**
-- Search + Sort + ScrollArea con partner cards
-- Click su partner → dettaglio nel pannello destro
-
-#### 3. Pannello Destro (`Operations.tsx`)
-- Se partner selezionato: `PartnerDetailCompact` (invariato)
-- Se nessun partner: Riepilogo compatto del paese attivo con stats + terminal/job monitor se attivi
-
-### Flusso dati corretto
-
-- `usePartners({ countries: [activeCountryCode] })` -- UN paese alla volta
-- `useCountryStats()` -- filtrato per `activeCountryCode` da `statsData.byCountry[activeCountryCode]`
-- `directory_cache` query filtrata per singolo `countryCode`
-- I conteggi download (`noProfileIds`, `cachedMembers`, etc.) tutti scoped al singolo paese
+- Importare `useCountryStats()`
+- Estrarre `statsData.byCountry[countryCode]` per il paese attivo
+- Usare questi valori server-side per il dashboard (DashCell) invece di `stats` calcolati client-side
+- Mantenere il calcolo client-side solo per il filtro della lista (progressFilter), che opera sui 1000 partner visibili
 
 ### File modificati
 
-1. **`src/pages/Operations.tsx`**
-   - Aggiungere `activeTab` state e tab bar
-   - Passare singolo `countryCode` a `PartnerListPanel` invece di array
-   - Pannello destro: detail partner o riepilogo paese
-
-2. **`src/components/operations/PartnerListPanel.tsx`**
-   - Cambiare props: `countryCode: string` (singolo) invece di `countryCodes: string[]`
-   - Rifattorizzare in 3 sezioni: Dashboard + Wizard + Lista
-   - Wizard step-by-step con logica automatica di suggerimento prossima azione
-   - Rimuovere i 4 ActionButton attuali e le 6 ProgressBar separate
-   - Integrare i controlli download (network, mode, delay, start) dentro lo step 1 del wizard
+1. **Migrazione SQL**: Estendere `get_country_stats()` con `with_deep_search`, `with_company_alias`, `with_contact_alias`
+2. **`src/hooks/useCountryStats.ts`**: Aggiungere i nuovi campi
+3. **`src/components/operations/PartnerListPanel.tsx`**: Usare `useCountryStats()` per i contatori dashboard invece del calcolo client-side
 
