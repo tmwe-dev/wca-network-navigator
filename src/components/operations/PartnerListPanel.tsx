@@ -381,20 +381,29 @@ export function PartnerListPanel({
         {/* ═══ COMPACT HEADER: Country + inline stats + wizard toggle ═══ */}
         <div className={`px-3 pt-2 pb-1.5 flex-shrink-0 space-y-1.5`}>
           {/* Row 1: Country name + inline stat chips */}
+          {/* ── RIGA PRIMARIA: Country + Totale + Scaricati con barra ── */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-lg leading-none">{getCountryFlag(countryCode)}</span>
             <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>📍 {countryName}</span>
             <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
-            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+            <div className="flex items-center gap-2 text-[11px]">
               <StatChip label="Totale WCA" value={totalCount} isDark={isDark} />
               <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
-              <MissingChip label="Profilo" missing={stats.total - stats.withProfile} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-              <MissingChip label="Deep" missing={stats.total - stats.withDeep} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-              <MissingChip label="Email" missing={stats.total - stats.withEmail} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-              <MissingChip label="Telefono" missing={stats.total - stats.withPhone} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
-              <MissingChip label="Alias Az." missing={stats.total - stats.withAliasCo} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
-              <MissingChip label="Alias Ct." missing={stats.total - stats.withAliasCt} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
             </div>
+            {/* Progress bar compatta */}
+            {totalCount > 0 && (
+              <div className="flex items-center gap-1.5 ml-1">
+                <div className={cn("w-20 h-1.5 rounded-full overflow-hidden", isDark ? "bg-white/[0.06]" : "bg-slate-200/60")}>
+                  <div
+                    className={cn("h-full rounded-full transition-all", downloadedCount >= totalCount ? "bg-emerald-500" : downloadedCount >= totalCount * 0.5 ? "bg-amber-500" : "bg-rose-500")}
+                    style={{ width: `${Math.min(100, Math.round((downloadedCount / totalCount) * 100))}%` }}
+                  />
+                </div>
+                <span className={cn("text-[10px] font-mono font-bold", downloadedCount >= totalCount ? "text-emerald-500" : "text-amber-500")}>
+                  {Math.round((downloadedCount / totalCount) * 100)}%
+                </span>
+              </div>
+            )}
             <button
               onClick={() => setWizardOpen(p => !p)}
               className={cn(
@@ -406,6 +415,28 @@ export function PartnerListPanel({
             >
               {wizardStep < 4 ? <><Zap className="w-3 h-3" /> Step {wizardStep}/3</> : <><CheckCircle2 className="w-3 h-3" /> Completo</>}
             </button>
+          </div>
+
+          {/* ── RIGA SECONDARIA: Completezza Contatti + Arricchimento ── */}
+          <div className={cn("flex gap-4 text-[11px] flex-wrap", isDark ? "text-slate-400" : "text-slate-500")}>
+            {/* Gruppo 1: Completezza Contatti */}
+            <div className="flex items-center gap-1.5">
+              <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isDark ? "text-slate-500" : "text-slate-400")}>Contatti:</span>
+              <MissingChip label="Profilo" missing={stats.total - stats.withProfile} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
+              <MissingChip label="Email" missing={stats.total - stats.withEmail} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
+              <MissingChip label="Telefono" missing={stats.total - stats.withPhone} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+            </div>
+            {/* Gruppo 2: Arricchimento */}
+            <div className="flex items-center gap-1.5">
+              <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isDark ? "text-slate-500" : "text-slate-400")}>Arricchimento:</span>
+              <MissingChip label="Deep" missing={stats.total - stats.withDeep} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
+              <MissingChip label="Alias Az." missing={stats.total - stats.withAliasCo} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
+              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
+              <MissingChip label="Alias Ct." missing={stats.total - stats.withAliasCt} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
+            </div>
           </div>
 
           {/* Row 2: Search + sort */}

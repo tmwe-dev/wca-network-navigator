@@ -257,6 +257,9 @@ export function useDownloadProcessor() {
           queryClient.invalidateQueries({ queryKey: ["contact-completeness"] });
           queryClient.invalidateQueries({ queryKey: ["partner-counts-by-country-with-type"] });
           queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+          queryClient.invalidateQueries({ queryKey: ["no-profile-wca-ids"] });
+          queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
+          queryClient.invalidateQueries({ queryKey: ["partners"] });
         }
       }
 
