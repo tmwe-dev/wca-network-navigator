@@ -382,9 +382,11 @@ export function PartnerListPanel({
               <StatChip label="Directory" value={totalCount} isDark={isDark} />
               <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
               <StatChip label="Profili" value={stats.withProfile} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-              <StatChip label="Deep" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+              <StatChip label="Deep Search" value={stats.withDeep} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
               <StatChip label="Email" value={stats.withEmail} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
               <StatChip label="Telefono" value={stats.withPhone} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+              <StatChip label="Alias Azienda" value={stats.withAliasCo} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
+              <StatChip label="Alias Contatti" value={stats.withAliasCt} total={stats.total} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
             </div>
             <button
               onClick={() => setWizardOpen(p => !p)}
@@ -438,9 +440,9 @@ export function PartnerListPanel({
                     {wizardStep === 1 && !isScanning && (
                       <div className="space-y-3 mt-2">
                         <div className="space-y-1.5">
-                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Mai scaricati" description={`${missingIds.length} partner presenti nella directory WCA ma non ancora nel tuo database`} count={missingIds.length} color="text-sky-400" />
-                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Senza profilo completo" description={`${noProfileInDirectoryCount + missingIds.length} partner già nel database ma senza i dati del profilo dettagliato`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
-                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Riscarica tutti" description={`Aggiorna i dati di tutti i ${totalCount} partner della directory, anche quelli già completi`} count={totalCount} color="text-violet-400" />
+                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Nuovi da scaricare" description={`${missingIds.length} partner presenti in directory ma mai importati nel database`} count={missingIds.length} color="text-sky-400" />
+                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Profili incompleti" description={`${noProfileInDirectoryCount + missingIds.length} importati ma senza dati di contatto o profilo`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
+                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Aggiorna tutto" description={`Riscarica e aggiorna tutti i ${totalCount} partner di questo paese`} count={totalCount} color="text-violet-400" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Timer className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
