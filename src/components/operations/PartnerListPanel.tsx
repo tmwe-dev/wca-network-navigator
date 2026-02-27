@@ -12,9 +12,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, Phone, Mail, ChevronRight, Users, Loader2,
+  Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
-  Zap, Timer, FolderDown, RefreshCw, Square, CheckCircle2,
+  Zap, FolderDown, RefreshCw, Square, CheckCircle2,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { useCountryStats } from "@/hooks/useCountryStats";
@@ -378,85 +378,73 @@ export function PartnerListPanel({
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-full min-h-0 flex flex-col">
-        {/* ═══ COMPACT HEADER: Country + inline stats + wizard toggle ═══ */}
-        <div className={`px-3 pt-2 pb-1.5 flex-shrink-0 space-y-1.5`}>
-          {/* Row 1: Country name + inline stat chips */}
-          {/* ── RIGA PRIMARIA: Country + Totale + Scaricati con barra ── */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-lg leading-none">{getCountryFlag(countryCode)}</span>
-            <span className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>📍 {countryName}</span>
-            <span className={isDark ? "text-white/10" : "text-slate-200"}>·</span>
-            <div className="flex items-center gap-2 text-[11px]">
-              <StatChip label="Totale WCA" value={totalCount} isDark={isDark} />
-              <StatChip label="Scaricati" value={downloadedCount} total={totalCount} isDark={isDark} />
-            </div>
-            {/* Progress bar compatta */}
-            {totalCount > 0 && (
-              <div className="flex items-center gap-1.5 ml-1">
-                <div className={cn("w-20 h-1.5 rounded-full overflow-hidden", isDark ? "bg-white/[0.06]" : "bg-slate-200/60")}>
-                  <div
-                    className={cn("h-full rounded-full transition-all", downloadedCount >= totalCount ? "bg-emerald-500" : downloadedCount >= totalCount * 0.5 ? "bg-amber-500" : "bg-rose-500")}
-                    style={{ width: `${Math.min(100, Math.round((downloadedCount / totalCount) * 100))}%` }}
-                  />
+        {/* ═══ COMPACT HEADER ═══ */}
+        <div className="px-3 pt-2.5 pb-1 flex-shrink-0 space-y-2">
+          {/* ── ROW 1: Country + progress + wizard ── */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl leading-none">{getCountryFlag(countryCode)}</span>
+            <div className="flex-1 min-w-0">
+              <h2 className={cn("text-sm font-bold truncate", isDark ? "text-slate-100" : "text-slate-800")}>{countryName}</h2>
+              {totalCount > 0 && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className={cn("flex-1 h-2 rounded-full overflow-hidden", isDark ? "bg-white/[0.06]" : "bg-slate-200/60")}>
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-500",
+                        downloadedCount >= totalCount ? "bg-emerald-500" : downloadedCount >= totalCount * 0.5 ? "bg-amber-500" : "bg-rose-500"
+                      )}
+                      style={{ width: `${Math.min(100, Math.round((downloadedCount / totalCount) * 100))}%` }}
+                    />
+                  </div>
+                  <span className={cn("text-[10px] font-mono font-bold tabular-nums whitespace-nowrap",
+                    downloadedCount >= totalCount ? "text-emerald-500" : "text-amber-500"
+                  )}>
+                    {downloadedCount}/{totalCount} ({Math.round((downloadedCount / totalCount) * 100)}%)
+                  </span>
                 </div>
-                <span className={cn("text-[10px] font-mono font-bold", downloadedCount >= totalCount ? "text-emerald-500" : "text-amber-500")}>
-                  {Math.round((downloadedCount / totalCount) * 100)}%
-                </span>
-              </div>
-            )}
+              )}
+            </div>
             <button
               onClick={() => setWizardOpen(p => !p)}
               className={cn(
-                "ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all",
+                "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all shrink-0",
                 wizardStep < 4
                   ? isDark ? "bg-sky-500/15 border-sky-500/30 text-sky-400 hover:bg-sky-500/25" : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
                   : isDark ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-600"
               )}
             >
-              {wizardStep < 4 ? <><Zap className="w-3 h-3" /> Step {wizardStep}/3</> : <><CheckCircle2 className="w-3 h-3" /> Completo</>}
+              {wizardStep < 4 ? <><Zap className="w-3 h-3" /> Step {wizardStep}/3</> : <><CheckCircle2 className="w-3 h-3" /> OK</>}
             </button>
           </div>
 
-          {/* ── RIGA SECONDARIA: Completezza Contatti + Arricchimento ── */}
-          <div className={cn("flex gap-4 text-[11px] flex-wrap", isDark ? "text-slate-400" : "text-slate-500")}>
-            {/* Gruppo 1: Completezza Contatti */}
-            <div className="flex items-center gap-1.5">
-              <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isDark ? "text-slate-500" : "text-slate-400")}>Contatti:</span>
-              <MissingChip label="Profilo" missing={stats.total - stats.withProfile} isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
-              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
-              <MissingChip label="Email" missing={stats.total - stats.withEmail} isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
-              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
-              <MissingChip label="Telefono" missing={stats.total - stats.withPhone} isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
-            </div>
-            {/* Gruppo 2: Arricchimento */}
-            <div className="flex items-center gap-1.5">
-              <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isDark ? "text-slate-500" : "text-slate-400")}>Arricchimento:</span>
-              <MissingChip label="Deep" missing={stats.total - stats.withDeep} isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
-              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
-              <MissingChip label="Alias Az." missing={stats.total - stats.withAliasCo} isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
-              <span className={isDark ? "text-white/5" : "text-slate-200"}>·</span>
-              <MissingChip label="Alias Ct." missing={stats.total - stats.withAliasCt} isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
-            </div>
+          {/* ── ROW 2: 6 icon indicators (clickable filters) ── */}
+          <div className="flex items-center gap-1">
+            <IconIndicator icon={FileText} count={stats.total - stats.withProfile} label="Senza Profilo" isDark={isDark} onClick={() => toggleProgressFilter("profiles")} active={progressFilter === "profiles"} />
+            <IconIndicator icon={Mail} count={stats.total - stats.withEmail} label="Senza Email" isDark={isDark} onClick={() => toggleProgressFilter("email")} active={progressFilter === "email"} />
+            <IconIndicator icon={Phone} count={stats.total - stats.withPhone} label="Senza Telefono" isDark={isDark} onClick={() => toggleProgressFilter("phone")} active={progressFilter === "phone"} />
+            <div className={cn("w-px h-5 mx-0.5", isDark ? "bg-white/[0.08]" : "bg-slate-200")} />
+            <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} />
+            <IconIndicator icon={Building2} count={stats.total - stats.withAliasCo} label="Senza Alias Azienda" isDark={isDark} onClick={() => toggleProgressFilter("alias_co")} active={progressFilter === "alias_co"} />
+            <IconIndicator icon={UserCircle} count={stats.total - stats.withAliasCt} label="Senza Alias Contatto" isDark={isDark} onClick={() => toggleProgressFilter("alias_ct")} active={progressFilter === "alias_ct"} />
           </div>
 
-          {/* Row 2: Search + sort */}
+          {/* ── ROW 3: Search + sort (compact) ── */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
-              <Input placeholder="Cerca partner..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-10 h-8 rounded-xl text-xs ${th.input}`} />
+              <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${th.dim}`} />
+              <Input placeholder="Cerca partner..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-8 h-7 rounded-lg text-xs ${th.input}`} />
             </div>
             <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-              <SelectTrigger className={`w-[120px] h-8 rounded-xl text-xs ${th.selTrigger}`}><SelectValue /></SelectTrigger>
+              <SelectTrigger className={`w-[100px] h-7 rounded-lg text-[11px] ${th.selTrigger}`}><SelectValue /></SelectTrigger>
               <SelectContent className={th.selContent}>
-                <SelectItem value="name_asc">Nome A-Z</SelectItem>
-                <SelectItem value="rating_desc">Rating ↓</SelectItem>
-                <SelectItem value="contacts_desc">Contatti ↓</SelectItem>
+                <SelectItem value="name_asc" className="text-xs">Nome A-Z</SelectItem>
+                <SelectItem value="rating_desc" className="text-xs">Rating ↓</SelectItem>
+                <SelectItem value="contacts_desc" className="text-xs">Contatti ↓</SelectItem>
               </SelectContent>
             </Select>
+            <span className={cn("text-[10px] tabular-nums whitespace-nowrap", th.dim)}>
+              {isLoading ? "..." : `${filteredPartners.length}${progressFilter ? " filtrati" : ""}`}
+            </span>
           </div>
-          <p className={`text-[10px] ${th.dim}`}>
-            {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""}`}
-          </p>
 
           {/* ═══ FILTER ACTION BAR ═══ */}
           {progressFilter && filteredPartners.length > 0 && (
@@ -465,7 +453,6 @@ export function PartnerListPanel({
               count={filteredPartners.length}
               isDark={isDark}
               onDownload={async () => {
-                // Directly create a download job for filtered partners with wca_id
                 const filteredWcaIds = filteredPartners
                   .map((p: any) => p.wca_id)
                   .filter((id: number | null): id is number => id != null);
@@ -495,90 +482,86 @@ export function PartnerListPanel({
           )}
         </div>
 
-        {/* ═══ WIZARD (collapsible) ═══ */}
+        {/* ═══ WIZARD (collapsible, horizontal) ═══ */}
         {wizardOpen && (
-          <div className={`px-3 pb-2 flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-200`}>
-            <div className={`rounded-xl border p-2.5 space-y-2 ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-slate-50/60 border-slate-200/60"}`}>
+          <div className="px-3 pb-1.5 flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className={cn("rounded-xl border p-2", isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-slate-50/60 border-slate-200/60")}>
               {wizardStep === 4 ? (
                 <div className="flex items-center gap-2 py-1">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <span className={`text-sm font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Paese completato!</span>
+                  <span className={cn("text-sm font-bold", isDark ? "text-emerald-400" : "text-emerald-600")}>Paese completato!</span>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {/* Step 1: Download Profili */}
-                  <WizardRow
-                    step={1} active={wizardStep === 1} isDark={isDark}
-                    icon={Download} label="Scarica Profili" missing={missingProfiles} total={stats.total}
-                  >
-                    {wizardStep === 1 && !isScanning && (
-                      <div className="space-y-3 mt-2">
-                        <div className="space-y-1.5">
-                          <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Nuovi da scaricare" description={`${missingIds.length} partner presenti in directory ma mai importati nel database`} count={missingIds.length} color="text-sky-400" />
-                          <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Profili incompleti" description={`${noProfileInDirectoryCount + missingIds.length} importati ma senza dati di contatto o profilo`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
-                          <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Aggiorna tutto" description={`Riscarica e aggiorna tutti i ${totalCount} partner di questo paese`} count={totalCount} color="text-violet-400" />
-                        </div>
-                        <div className={cn("flex items-center justify-between text-[10px] font-mono px-1", isDark ? "text-slate-500" : "text-slate-400")}>
-                          <span>⏱ Delay: {delay}s tra ogni profilo</span>
-                          <span>{estimateLabel}</span>
-                        </div>
-                        <Button onClick={() => handleStartDownload()} disabled={idsToDownload.length === 0 || createJob.isPending}
-                          className={cn("w-full h-10 text-sm font-bold rounded-xl transition-all", idsToDownload.length > 0 ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30" : "")}>
-                          {createJob.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio...</> : <><Download className="w-4 h-4 mr-2" /> SCARICA {idsToDownload.length} PROFILI</>}
-                        </Button>
-                        {hasCache && !scanComplete && (
-                          <button onClick={handleStartScan} className={`flex items-center gap-1.5 text-[10px] mx-auto ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"} transition-colors`}>
-                            <RefreshCw className="w-3 h-3" /> ↻ Sincronizza con WCA Directory
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {isScanning && (
-                      <div className="mt-2 text-center space-y-1">
-                        <Loader2 className={`w-4 h-4 animate-spin mx-auto ${isDark ? "text-amber-400" : "text-amber-500"}`} />
-                        <p className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>{countryName} — Pg {currentPage}</p>
-                        {scannedMembers.length > 0 && <p className={`text-xs font-mono font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{scannedMembers.length} trovati</p>}
-                        {scanError && <p className="text-[10px] text-red-400">⚠️ {scanError}</p>}
-                        <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-[10px]">
-                          <Square className="w-3 h-3 mr-1" /> Stop
-                        </Button>
-                      </div>
-                    )}
-                  </WizardRow>
+                <>
+                  {/* Horizontal step indicators */}
+                  <div className="flex items-center gap-1 mb-2">
+                    <HorizStep step={1} active={wizardStep === 1} done={missingProfiles === 0} isDark={isDark} icon={Download} label="Profili" missing={missingProfiles} />
+                    <div className={cn("flex-shrink-0 w-4 h-px", isDark ? "bg-white/[0.1]" : "bg-slate-200")} />
+                    <HorizStep step={2} active={wizardStep === 2} done={missingDeep === 0} isDark={isDark} icon={Telescope} label="Deep" missing={missingDeep} />
+                    <div className={cn("flex-shrink-0 w-4 h-px", isDark ? "bg-white/[0.1]" : "bg-slate-200")} />
+                    <HorizStep step={3} active={wizardStep === 3} done={missingAliasCo === 0 && missingAliasCt === 0} isDark={isDark} icon={Wand2} label="Alias" missing={missingAliasCo + missingAliasCt} />
+                  </div>
 
-                  {/* Step 2: Deep Search */}
-                  <WizardRow step={2} active={wizardStep === 2} isDark={isDark} icon={Telescope} label="Deep Search" missing={missingDeep} total={stats.total}>
-                    {wizardStep === 2 && (
-                      <Button size="sm" className={cn("mt-2 h-8 text-xs font-bold w-full", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
-                        disabled={deepSearchRunning}
-                        onClick={() => {
-                          const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
-                          if (ids.length > 0) onDeepSearch?.(ids);
-                        }}>
-                        {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Avvia Deep Search ({missingDeep})</>}
+                  {/* Active step expanded content */}
+                  {wizardStep === 1 && !isScanning && (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <DownloadChoice selected={downloadMode === "new"} onClick={() => setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Nuovi" description={`${missingIds.length} da importare`} count={missingIds.length} color="text-sky-400" />
+                        <DownloadChoice selected={downloadMode === "no_profile"} onClick={() => setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Incompleti" description={`${noProfileInDirectoryCount + missingIds.length} senza profilo`} count={noProfileInDirectoryCount + missingIds.length} color="text-amber-400" />
+                        <DownloadChoice selected={downloadMode === "all"} onClick={() => setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Tutti" description={`Aggiorna ${totalCount} partner`} count={totalCount} color="text-violet-400" />
+                      </div>
+                      <div className={cn("flex items-center justify-between text-[10px] font-mono px-1", isDark ? "text-slate-500" : "text-slate-400")}>
+                        <span>⏱ {delay}s delay</span>
+                        <span>{estimateLabel}</span>
+                      </div>
+                      <Button onClick={() => handleStartDownload()} disabled={idsToDownload.length === 0 || createJob.isPending}
+                        className={cn("w-full h-9 text-xs font-bold rounded-xl transition-all", idsToDownload.length > 0 ? isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30" : "")}>
+                        {createJob.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Avvio...</> : <><Download className="w-4 h-4 mr-1" /> SCARICA {idsToDownload.length}</>}
                       </Button>
-                    )}
-                  </WizardRow>
-
-                  {/* Step 3: Generate Alias */}
-                  <WizardRow step={3} active={wizardStep === 3} isDark={isDark} icon={Wand2} label="Genera Alias" missing={missingAliasCo + missingAliasCt} total={stats.total * 2}>
-                    {wizardStep === 3 && (
-                      <div className="flex gap-2 mt-2">
-                        <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
-                          disabled={aliasGenerating || missingAliasCo === 0} onClick={() => onGenerateAliases?.(countryCodes, "company")}>
-                          <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
-                        </Button>
-                        <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
-                          disabled={aliasGenerating || missingAliasCt === 0} onClick={() => onGenerateAliases?.(countryCodes, "contact")}>
-                          <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
-                        </Button>
-                      </div>
-                    )}
-                  </WizardRow>
-                </div>
+                      {hasCache && !scanComplete && (
+                        <button onClick={handleStartScan} className={cn("flex items-center gap-1 text-[10px] mx-auto transition-colors", isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600")}>
+                          <RefreshCw className="w-3 h-3" /> Sincronizza Directory
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {wizardStep === 1 && isScanning && (
+                    <div className="text-center space-y-1 py-1">
+                      <Loader2 className={cn("w-4 h-4 animate-spin mx-auto", isDark ? "text-amber-400" : "text-amber-500")} />
+                      <p className={cn("text-[10px]", isDark ? "text-slate-400" : "text-slate-500")}>{countryName} — Pg {currentPage}</p>
+                      {scannedMembers.length > 0 && <p className={cn("text-xs font-mono font-bold", isDark ? "text-white" : "text-slate-800")}>{scannedMembers.length} trovati</p>}
+                      {scanError && <p className="text-[10px] text-red-400">⚠️ {scanError}</p>}
+                      <Button size="sm" variant="ghost" onClick={() => { abortRef.current = true; setIsScanning(false); setScanComplete(true); }} className="text-[10px]">
+                        <Square className="w-3 h-3 mr-1" /> Stop
+                      </Button>
+                    </div>
+                  )}
+                  {wizardStep === 2 && (
+                    <Button size="sm" className={cn("w-full h-8 text-xs font-bold", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
+                      disabled={deepSearchRunning}
+                      onClick={() => {
+                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
+                        if (ids.length > 0) onDeepSearch?.(ids);
+                      }}>
+                      {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Deep Search ({missingDeep})</>}
+                    </Button>
+                  )}
+                  {wizardStep === 3 && (
+                    <div className="flex gap-2">
+                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
+                        disabled={aliasGenerating || missingAliasCo === 0} onClick={() => onGenerateAliases?.(countryCodes, "company")}>
+                        <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
+                      </Button>
+                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
+                        disabled={aliasGenerating || missingAliasCt === 0} onClick={() => onGenerateAliases?.(countryCodes, "contact")}>
+                        <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            <div className="max-h-28 overflow-auto space-y-1 mt-2">
+            <div className="max-h-24 overflow-auto space-y-1 mt-1.5">
               <DownloadTerminal />
               <JobMonitor />
             </div>
@@ -600,73 +583,75 @@ export function PartnerListPanel({
                   const years = getYearsMember(partner.member_since);
                   const contacts = partner.partner_contacts || [];
                   const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+                  const hasProfile = !!partner.raw_profile_html;
+                  const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
+                  const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
+                  const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
 
                   return (
                     <div key={partner.id} onClick={() => handleSelectPartner(partner.id)}
                       className={cn(
-                        "p-3 cursor-pointer transition-all duration-200 group",
+                        "px-3 py-2 cursor-pointer transition-all duration-150 group",
                         selectedPartnerId === partner.id
-                          ? isDark ? "bg-sky-950/40 ring-1 ring-sky-400/30" : "bg-sky-50 ring-1 ring-sky-300/40"
-                          : isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
-                        q === "missing" && "border-l-4 border-l-red-500",
-                        q === "partial" && "border-l-4 border-l-amber-400",
-                        q === "complete" && "border-l-4 border-l-emerald-500",
+                          ? isDark ? "bg-sky-950/40" : "bg-sky-50"
+                          : isDark ? "hover:bg-white/[0.04]" : "hover:bg-sky-50/40",
                       )}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-2.5">
+                        {/* Logo */}
                         {partner.logo_url ? (
-                          <img src={partner.logo_url} alt="" className="w-8 h-8 rounded-lg object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                          <img src={partner.logo_url} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                         ) : (
-                          <div className={`w-8 h-8 rounded-lg shrink-0 ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`} />
+                          <div className={cn("w-7 h-7 rounded-md shrink-0 flex items-center justify-center text-[10px] font-bold", isDark ? "bg-white/[0.06] text-slate-500" : "bg-slate-100 text-slate-400")}>
+                            {partner.company_name?.charAt(0)}
+                          </div>
                         )}
+
+                        {/* Main info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className={`font-semibold text-sm truncate ${th.h2}`}>{partner.city}</p>
-                              <p className={`text-xs truncate ${th.sub}`}>
-                                {partner.company_name}
-                                {partner.company_alias && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">{partner.company_alias}</span>}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {years > 0 && (
-                                <span className="flex items-center gap-0.5">
-                                  <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                                  <span className="text-xs font-bold text-amber-500">{years}</span>
-                                </span>
-                              )}
-                            </div>
+                          <div className="flex items-center gap-1.5">
+                            <p className={cn("font-bold text-xs truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
+                            {partner.company_alias && (
+                              <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-teal-900/30 text-teal-400" : "bg-teal-100 text-teal-700")}>{partner.company_alias}</span>
+                            )}
+                            {years > 0 && (
+                              <span className="flex items-center gap-0.5 shrink-0">
+                                <Trophy className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                <span className="text-[10px] font-bold text-amber-500">{years}</span>
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-lg leading-none">{getCountryFlag(partner.country_code)}</span>
-                            {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1.5 text-xs">
-                            {primaryContact ? (
-                              <>
-                                <span className={`truncate max-w-[100px] ${th.dim}`}>{primaryContact.name}</span>
-                                <Mail className={cn("w-3.5 h-3.5", primaryContact.email ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                                <Phone className={cn("w-3.5 h-3.5", (primaryContact.direct_phone || primaryContact.mobile) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                                {contacts.length > 1 && <span className={`text-[10px] ${th.dim}`}>+{contacts.length - 1}</span>}
-                              </>
-                            ) : (
-                              <span className={`italic ${th.dim}`}>Nessun contatto</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={cn("text-[11px] truncate", isDark ? "text-slate-400" : "text-slate-500")}>{partner.city}</span>
+                            {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
+                            {primaryContact && (
+                              <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {primaryContact.name}</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+
+                        {/* Status dots */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <StatusDot ok={hasProfile} label="Profilo" isDark={isDark} />
+                          <StatusDot ok={hasEmail} label="Email" isDark={isDark} />
+                          <StatusDot ok={hasPhone} label="Telefono" isDark={isDark} />
+                          <StatusDot ok={hasDeep} label="Deep Search" isDark={isDark} />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           {primaryContact?.email && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button onClick={(e) => { e.stopPropagation(); setEmailTarget({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
-                                  className={cn("p-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100", isDark ? "bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20" : "bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100")}>
-                                  <Send className="w-3.5 h-3.5" />
+                                  className={cn("p-1 rounded-md transition-all", isDark ? "text-sky-400 hover:bg-sky-500/20" : "text-sky-600 hover:bg-sky-50")}>
+                                  <Send className="w-3 h-3" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="left" className="text-xs">Invia email a {primaryContact.email}</TooltipContent>
+                              <TooltipContent side="left" className="text-xs">{primaryContact.email}</TooltipContent>
                             </Tooltip>
                           )}
-                          <ChevronRight className={`w-4 h-4 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                          <ChevronRight className={cn("w-3.5 h-3.5", isDark ? "text-slate-600" : "text-slate-300")} />
                         </div>
                       </div>
                     </div>
@@ -683,146 +668,124 @@ export function PartnerListPanel({
   );
 }
 
-/* ── Stat Chip (inline, for non-clickable stats) ── */
-function StatChip({ label, value, total, isDark, onClick, active }: {
-  label: string; value: number; total?: number; isDark: boolean;
+/* ── Icon Indicator (circular with badge) ── */
+function IconIndicator({ icon: Icon, count, label, isDark, onClick, active }: {
+  icon: any; count: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
 }) {
-  const pct = total && total > 0 ? Math.round((value / total) * 100) : null;
+  const done = count === 0;
   return (
-    <span onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-0.5 font-mono whitespace-nowrap transition-all",
-        onClick ? "cursor-pointer hover:opacity-80" : "",
-        active ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-slate-400" : "text-slate-500")
-      )}>
-      <span className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>{label}</span>
-      <span className={cn("font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{value}</span>
-      {pct !== null && <span className={cn("text-[9px]", pct >= 80 ? "text-emerald-500" : pct >= 40 ? "text-amber-500" : "text-rose-500")}>{pct}%</span>}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={done ? undefined : onClick}
+          className={cn(
+            "relative w-7 h-7 rounded-full flex items-center justify-center transition-all",
+            done
+              ? isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-50 text-emerald-600"
+              : active
+                ? isDark ? "bg-sky-500/20 text-sky-400 ring-1 ring-sky-400/40" : "bg-sky-100 text-sky-600 ring-1 ring-sky-300"
+                : isDark ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.1]" : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+            done ? "cursor-default" : "cursor-pointer"
+          )}
+        >
+          <Icon className="w-3.5 h-3.5" />
+          {count > 0 && (
+            <span className={cn(
+              "absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-bold leading-none px-0.5",
+              active
+                ? "bg-sky-500 text-white"
+                : "bg-rose-500 text-white"
+            )}>
+              {count > 99 ? "99+" : count}
+            </span>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {done ? `${label} ✓` : `${label}: ${count}`}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-/* ── Missing Chip (clickable, shows missing count) ── */
-function MissingChip({ label, missing, isDark, onClick, active }: {
-  label: string; missing: number; isDark: boolean;
-  onClick?: () => void; active?: boolean;
-}) {
-  const done = missing === 0;
+/* ── Status Dot (for partner cards) ── */
+function StatusDot({ ok, label, isDark }: { ok: boolean; label: string; isDark: boolean }) {
   return (
-    <span onClick={done ? undefined : onClick}
-      className={cn(
-        "inline-flex items-center gap-0.5 font-mono whitespace-nowrap transition-all",
-        done ? "" : onClick ? "cursor-pointer hover:opacity-80" : "",
-        done ? "text-emerald-500" : active ? (isDark ? "text-sky-400" : "text-sky-600") : (isDark ? "text-slate-400" : "text-slate-500")
-      )}>
-      {done ? (
-        <>
-          <span className="text-emerald-500">✓</span>
-          <span className={cn("text-[10px]", "text-emerald-500")}>{label}</span>
-        </>
-      ) : (
-        <>
-          <span className={cn("text-[10px]", isDark ? "text-slate-500" : "text-slate-400")}>Senza {label}</span>
-          <span className={cn("font-bold", active ? (isDark ? "text-sky-300" : "text-sky-700") : "text-rose-500")}>{missing}</span>
-        </>
-      )}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={cn(
+          "w-2 h-2 rounded-full transition-colors",
+          ok
+            ? "bg-emerald-500"
+            : isDark ? "bg-white/[0.1]" : "bg-slate-200"
+        )} />
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-[10px]">
+        {ok ? `${label} ✓` : `${label} mancante`}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-/* ── Dashboard Cell (unused, kept for reference) ── */
-function DashCell({ label, value, total, isDark, color, onClick, active }: {
-  label: string; value: number; total?: number; isDark: boolean; color: string;
-  onClick?: () => void; active?: boolean;
+/* ── Horizontal Wizard Step ── */
+function HorizStep({ step, active, done, isDark, icon: Icon, label, missing }: {
+  step: number; active: boolean; done: boolean; isDark: boolean;
+  icon: any; label: string; missing: number;
 }) {
-  const pct = total && total > 0 ? Math.round((value / total) * 100) : null;
-  return (
-    <button onClick={onClick} disabled={!onClick}
-      className={cn(
-        "rounded-lg border p-1.5 text-left transition-all",
-        active
-          ? isDark ? "bg-sky-950/50 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
-          : isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/40 border-slate-200/60",
-        onClick ? "cursor-pointer hover:scale-[1.02]" : "cursor-default"
-      )}>
-      <p className={`text-[9px] uppercase tracking-wider font-semibold truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</p>
-      <p className={`text-sm font-mono font-extrabold ${color}`}>{value}{total !== undefined && <span className={`text-[9px] font-normal ${isDark ? "text-slate-600" : "text-slate-400"}`}>/{total}</span>}</p>
-      {pct !== null && (
-        <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-          <div className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${pct}%` }} />
-        </div>
-      )}
-    </button>
-  );
-}
-
-/* ── Wizard Row ── */
-function WizardRow({ step, active, isDark, icon: Icon, label, missing, total, children }: {
-  step: number; active: boolean; isDark: boolean;
-  icon: any; label: string; missing: number; total: number;
-  children?: React.ReactNode;
-}) {
-  const done = missing === 0;
   return (
     <div className={cn(
-      "rounded-lg border p-2 transition-all",
-      active ? isDark ? "bg-sky-950/30 border-sky-500/30" : "bg-sky-50/80 border-sky-300"
-        : done ? isDark ? "bg-emerald-950/20 border-emerald-500/20" : "bg-emerald-50/60 border-emerald-300/50"
-        : isDark ? "bg-white/[0.01] border-white/[0.04] opacity-50" : "bg-slate-50/40 border-slate-200/40 opacity-50"
+      "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all flex-1",
+      done ? isDark ? "bg-emerald-500/10" : "bg-emerald-50"
+        : active ? isDark ? "bg-sky-500/15 ring-1 ring-sky-500/30" : "bg-sky-50 ring-1 ring-sky-200"
+        : isDark ? "bg-white/[0.02] opacity-40" : "bg-slate-50/40 opacity-40"
     )}>
-      <div className="flex items-center gap-2">
-        <span className={cn(
-          "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-          done ? "bg-emerald-500/20 text-emerald-400" : active ? isDark ? "bg-sky-500/20 text-sky-400" : "bg-sky-100 text-sky-600" : isDark ? "bg-white/[0.06] text-slate-500" : "bg-slate-100 text-slate-400"
-        )}>
-          {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : step}
-        </span>
-        <Icon className={cn("w-4 h-4", done ? "text-emerald-400" : active ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
-        <span className={cn("text-xs font-bold flex-1", done ? isDark ? "text-emerald-400" : "text-emerald-600" : active ? isDark ? "text-sky-300" : "text-sky-700" : isDark ? "text-slate-500" : "text-slate-400")}>
-          {label}
-        </span>
-        <span className={cn("text-[10px] font-mono font-bold", done ? "text-emerald-400" : active ? isDark ? "text-sky-300" : "text-sky-600" : isDark ? "text-slate-600" : "text-slate-400")}>
-          {done ? "✓" : `${missing}/${total}`}
-        </span>
-      </div>
-      {children}
+      <span className={cn(
+        "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
+        done ? "bg-emerald-500/20 text-emerald-400" : active ? isDark ? "bg-sky-500/20 text-sky-400" : "bg-sky-100 text-sky-600" : isDark ? "bg-white/[0.06] text-slate-600" : "bg-slate-200 text-slate-400"
+      )}>
+        {done ? <CheckCircle2 className="w-3 h-3" /> : step}
+      </span>
+      <Icon className={cn("w-3 h-3 shrink-0", done ? "text-emerald-400" : active ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-600" : "text-slate-400")} />
+      <span className={cn("text-[10px] font-bold truncate", done ? "text-emerald-500" : active ? isDark ? "text-sky-300" : "text-sky-700" : isDark ? "text-slate-600" : "text-slate-400")}>
+        {label}
+      </span>
+      <span className={cn("text-[9px] font-mono font-bold ml-auto shrink-0", done ? "text-emerald-400" : isDark ? "text-slate-500" : "text-slate-400")}>
+        {done ? "✓" : missing}
+      </span>
     </div>
   );
 }
 
-/* ── Download Choice Card ── */
+
+/* ── Download Choice Card (compact) ── */
 function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, description, count, color }: {
   selected: boolean; onClick: () => void; isDark: boolean;
   icon: any; title: string; description: string; count: number; color: string;
 }) {
   return (
     <button onClick={onClick} className={cn(
-      "w-full text-left rounded-xl border p-3 transition-all flex items-start gap-3",
+      "w-full text-left rounded-lg border px-2.5 py-1.5 transition-all flex items-center gap-2",
       selected
-        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20 shadow-lg shadow-sky-500/10" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40 shadow-lg shadow-sky-200/40"
+        ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50 border-sky-300 ring-1 ring-sky-300/40"
         : isDark ? "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]" : "bg-white/60 border-slate-200 hover:bg-slate-50"
     )}>
       <div className={cn(
-        "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center mt-0.5",
-        selected
-          ? isDark ? "bg-sky-500/20" : "bg-sky-100"
-          : isDark ? "bg-white/[0.04]" : "bg-slate-100"
+        "w-6 h-6 rounded-md shrink-0 flex items-center justify-center",
+        selected ? isDark ? "bg-sky-500/20" : "bg-sky-100" : isDark ? "bg-white/[0.04]" : "bg-slate-100"
       )}>
-        <Icon className={cn("w-4 h-4", selected ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
+        <Icon className={cn("w-3.5 h-3.5", selected ? isDark ? "text-sky-400" : "text-sky-600" : isDark ? "text-slate-500" : "text-slate-400")} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={cn("text-xs font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{title}</p>
-        <p className={cn("text-[10px] mt-0.5 leading-relaxed", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
+        <p className={cn("text-[11px] font-bold", isDark ? "text-slate-200" : "text-slate-700")}>{title}</p>
+        <p className={cn("text-[9px] leading-tight", isDark ? "text-slate-500" : "text-slate-400")}>{description}</p>
       </div>
-      <div className="flex flex-col items-center gap-0.5 shrink-0">
-        <span className={cn("text-lg font-mono font-extrabold", color)}>{count}</span>
-        <div className={cn(
-          "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-          selected ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
-        )}>
-          {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-        </div>
+      <span className={cn("text-sm font-mono font-extrabold shrink-0", color)}>{count}</span>
+      <div className={cn(
+        "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0",
+        selected ? "border-sky-400 bg-sky-400" : isDark ? "border-slate-600" : "border-slate-300"
+      )}>
+        {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
       </div>
     </button>
   );
