@@ -190,45 +190,51 @@ export default function Operations() {
           <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden relative">
             {/* ═══ STEP 0: Stats + CountryGrid ═══ */}
             {carouselStep === 0 && (
-              <div className="flex gap-3 h-full animate-in fade-in slide-in-from-left-4 duration-200">
-                {/* COL 1: Stats sidebar */}
-                <div className={`w-[140px] flex-shrink-0 flex flex-col gap-2 overflow-auto rounded-xl border p-2 ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+              <div className="flex flex-col gap-2 h-full animate-in fade-in slide-in-from-left-4 duration-200">
+                {/* ── Compact Status Bar ── */}
+                <div className={cn(
+                  "flex items-center gap-1 px-2 py-1.5 rounded-xl border flex-shrink-0 overflow-x-auto",
+                  isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"
+                )}>
                   {globalStats ? (
                     <>
-                      <StatItem icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
-                      <StatItem icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
-                      <StatItem icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"}
-                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0}
-                        progressColor="from-violet-400 to-purple-500"
-                        onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} />
-                      <StatItem icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
-                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0}
-                        progressColor="from-sky-400 to-blue-500" />
-                      <StatItem icon={Phone} label="Telefoni" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
-                        progress={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0}
-                        progressColor="from-teal-400 to-emerald-500" />
-                      <StatItem icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
+                      <ChipStat icon={Globe} label="Paesi" value={globalStats.scannedCountries} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"} onClick={() => setFilterMode("all")} active={filterMode === "all"} />
+                      <ChipStat icon={Users} label="Partner" value={globalStats.totalPartners.toLocaleString()} isDark={isDark} color={isDark ? "text-emerald-400" : "text-emerald-500"} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} />
+                      <ChipStat icon={FileText} label="Profili" value={globalStats.withProfile.toLocaleString()} isDark={isDark} color={isDark ? "text-violet-400" : "text-violet-500"} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"}
+                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withProfile / globalStats.totalPartners) * 100) : 0} />
+                      <ChipStat icon={Mail} label="Email" value={globalStats.withEmail.toLocaleString()} isDark={isDark} color={isDark ? "text-sky-400" : "text-sky-500"}
+                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withEmail / globalStats.totalPartners) * 100) : 0} />
+                      <ChipStat icon={Phone} label="Tel" value={globalStats.withPhone.toLocaleString()} isDark={isDark} color={isDark ? "text-teal-400" : "text-teal-500"}
+                        pct={globalStats.totalPartners > 0 ? Math.round((globalStats.withPhone / globalStats.totalPartners) * 100) : 0} />
+                      <ChipStat icon={FolderDown} label="Directory" value={(globalStats.totalDirectory ?? 0).toLocaleString()} isDark={isDark} color={isDark ? "text-amber-400" : "text-amber-500"} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} />
                     </>
                   ) : (
                     Array.from({ length: 6 }).map((_, i) => (
-                      <Skeleton key={i} className={`h-14 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
+                      <Skeleton key={i} className={`h-8 w-24 rounded-lg ${isDark ? "bg-white/[0.06]" : ""}`} />
                     ))
                   )}
-                  {selectedCountries.length > 0 && (
-                    <div className="mt-auto pt-2 border-t border-white/[0.08]">
-                      <div className="flex flex-wrap gap-1 mb-1.5 justify-center">
-                        {selectedCountries.map(c => (
-                          <span key={c.code} className="text-sm">{getCountryFlag(c.code)}</span>
-                        ))}
-                      </div>
-                      <button onClick={confirmSelection} className={cn("w-full py-2 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97]", isDark ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30")}>
-                        Conferma →
-                      </button>
-                    </div>
-                  )}
+
+                  {/* Spacer + selection confirm */}
+                  <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
+                    {selectedCountries.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-0.5">
+                          {selectedCountries.slice(0, 6).map(c => (
+                            <span key={c.code} className="text-sm leading-none">{getCountryFlag(c.code)}</span>
+                          ))}
+                          {selectedCountries.length > 6 && (
+                            <span className={`text-[10px] font-bold ml-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>+{selectedCountries.length - 6}</span>
+                          )}
+                        </div>
+                        <button onClick={confirmSelection} className={cn("px-3 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] whitespace-nowrap", isDark ? "bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30")}>
+                          Conferma →
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                {/* COL 2: Country Grid + Job monitors */}
+                {/* ── Country Grid + Job monitors ── */}
                 <div className="flex-1 min-h-0 flex flex-col gap-2">
                   <CountryGrid
                     selected={selectedCountries}
@@ -337,34 +343,29 @@ export default function Operations() {
   );
 }
 
-/* ── Vertical Stat Item ── */
-function StatItem({ icon: Icon, label, value, color, isDark, progress, progressColor, onClick, active }: {
+/* ── Horizontal Chip Stat ── */
+function ChipStat({ icon: Icon, label, value, color, isDark, pct, onClick, active }: {
   icon: any; label: string; value: string | number; color: string; isDark: boolean;
-  progress?: number; progressColor?: string;
-  onClick?: () => void; active?: boolean;
+  pct?: number; onClick?: () => void; active?: boolean;
 }) {
   const isClickable = !!onClick;
-  const activeBorder = active
-    ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/40"
-    : isDark ? "border-white/[0.06]" : "border-slate-200/60";
-  const activeBg = active
-    ? isDark ? "bg-sky-950/40" : "bg-sky-50/80"
-    : isDark ? "bg-white/[0.03]" : "bg-white/40";
-
   return (
-    <div onClick={onClick} className={`rounded-lg border p-2 transition-all duration-150 ${activeBg} ${activeBorder} ${isClickable ? "cursor-pointer hover:scale-[1.02]" : ""} ${isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""}`}>
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
-        <span className={`text-[9px] uppercase tracking-wider font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>{label}</span>
-      </div>
-      <span className={`text-lg font-mono font-extrabold leading-tight ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
-      {progress !== undefined && (
-        <div className="mt-1 flex items-center gap-1">
-          <div className={`flex-1 h-1 rounded-full overflow-hidden ${isDark ? "bg-white/[0.06]" : "bg-slate-200/60"}`}>
-            <div className={`h-full rounded-full bg-gradient-to-r ${progressColor || "from-sky-400 to-blue-500"}`} style={{ width: `${progress}%` }} />
-          </div>
-          <span className={`text-[9px] font-mono font-bold ${color}`}>{progress}%</span>
-        </div>
+    <div
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 whitespace-nowrap flex-shrink-0",
+        active
+          ? isDark ? "bg-sky-950/40 border-sky-400/40 ring-1 ring-sky-400/20" : "bg-sky-50/80 border-sky-400 ring-1 ring-sky-300/40"
+          : isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white/40 border-slate-200/60",
+        isClickable ? "cursor-pointer hover:scale-[1.02]" : "",
+        isClickable && !active ? (isDark ? "hover:bg-white/[0.06]" : "hover:bg-white/60") : ""
+      )}
+    >
+      <Icon className={`w-3.5 h-3.5 ${color} flex-shrink-0`} />
+      <span className={isDark ? "text-slate-400" : "text-slate-500"}>{label}</span>
+      <span className={`font-mono font-extrabold ${isDark ? "text-white" : "text-slate-800"}`}>{value}</span>
+      {pct !== undefined && (
+        <span className={`text-[10px] font-mono font-bold ${color}`}>{pct}%</span>
       )}
     </div>
   );
