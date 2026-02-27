@@ -419,6 +419,23 @@ export function PartnerListPanel({
           <p className={`text-[10px] ${th.dim}`}>
             {isLoading ? "Caricamento..." : `${filteredPartners.length} partner${progressFilter ? " (filtrati)" : ""}`}
           </p>
+
+          {/* ═══ FILTER ACTION BAR ═══ */}
+          {progressFilter && filteredPartners.length > 0 && (
+            <FilterActionBar
+              filter={progressFilter}
+              count={filteredPartners.length}
+              isDark={isDark}
+              onDownload={() => { setDownloadMode("no_profile"); setWizardOpen(true); }}
+              onDeepSearch={() => {
+                const ids = filteredPartners.map((p: any) => p.id);
+                if (ids.length > 0) onDeepSearch?.(ids);
+              }}
+              onGenerateAlias={(type) => onGenerateAliases?.(countryCodes, type)}
+              deepSearchRunning={deepSearchRunning}
+              aliasGenerating={aliasGenerating}
+            />
+          )}
         </div>
 
         {/* ═══ WIZARD (collapsible) ═══ */}
@@ -751,5 +768,49 @@ function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, descript
         </div>
       </div>
     </button>
+  );
+}
+
+/* ── Filter Action Bar ── */
+function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearch, onGenerateAlias, deepSearchRunning, aliasGenerating }: {
+  filter: string;
+  count: number;
+  isDark: boolean;
+  onDownload: () => void;
+  onDeepSearch: () => void;
+  onGenerateAlias: (type: "company" | "contact") => void;
+  deepSearchRunning?: boolean;
+  aliasGenerating?: boolean;
+}) {
+  const configs: Record<string, { icon: any; label: string; action: () => void; disabled?: boolean; color: string }> = {
+    profiles: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    email: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    phone: { icon: Download, label: "Scarica Profili", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
+    deep: { icon: Telescope, label: "Avvia Deep Search", action: onDeepSearch, disabled: deepSearchRunning, color: isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-cyan-500 hover:bg-cyan-600" },
+    alias_co: { icon: Building2, label: "Genera Alias Azienda", action: () => onGenerateAlias("company"), disabled: aliasGenerating, color: isDark ? "bg-amber-600 hover:bg-amber-500" : "bg-amber-500 hover:bg-amber-600" },
+    alias_ct: { icon: UserCircle, label: "Genera Alias Contatto", action: () => onGenerateAlias("contact"), disabled: aliasGenerating, color: isDark ? "bg-pink-600 hover:bg-pink-500" : "bg-pink-500 hover:bg-pink-600" },
+  };
+
+  const cfg = configs[filter];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+
+  return (
+    <div className={cn(
+      "flex items-center gap-2 px-2 py-1.5 rounded-xl border animate-in fade-in slide-in-from-top-2 duration-150",
+      isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-slate-50/80 border-slate-200/60"
+    )}>
+      <button
+        onClick={cfg.action}
+        disabled={cfg.disabled || count === 0}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed",
+          cfg.color
+        )}
+      >
+        {cfg.disabled ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+        {cfg.label} ({count})
+      </button>
+    </div>
   );
 }
