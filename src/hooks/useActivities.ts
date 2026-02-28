@@ -42,20 +42,28 @@ export function useCreateActivities() {
         assigned_to?: string | null;
         activity_type: "send_email" | "phone_call" | "add_to_campaign" | "meeting" | "follow_up" | "other";
         title: string;
-        description?: string;
+        description?: string | null;
         priority?: string;
         due_date?: string | null;
+        scheduled_at?: string | null;
+        campaign_batch_id?: string | null;
       }[]
     ) => {
+      // Clean "none" values from assigned_to
+      const cleaned = activities.map(a => ({
+        ...a,
+        assigned_to: a.assigned_to === "none" ? null : a.assigned_to,
+      }));
       const { data, error } = await supabase
         .from("activities")
-        .insert(activities as any)
+        .insert(cleaned as any)
         .select();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: ["all-activities"] });
     },
   });
 }
