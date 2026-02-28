@@ -1,98 +1,59 @@
 
 
-# Piano: Import Intelligente con Formato Libero e Mapping AI
+# Partner Hub — Ottimizzazione per Esplorazione e Discovery
 
-## Situazione Attuale
-La pagina Import accetta solo CSV/Excel con colonne pre-mappate (company_name, email, phone, ecc.). Se il cliente ha un file con colonne diverse (es. "Ragione Sociale", "Telefono Ufficio", "Sede") il sistema tenta un mapping statico limitato. Non c'e' supporto per testo libero incollato.
+## Obiettivo
+Trasformare il Partner Hub da dashboard orientata alla completezza dati a un "book" di esplorazione partner. Mantenere i filtri utili per la selezione operativa, rimuovere gli elementi di gestione dati (action buttons, progress bars), e migliorare la scheda partner a destra come un canvas ricco e chiaro.
 
-## Cosa Realizziamo
+## Modifiche
 
-### 3 Modalita di Input nella tab Upload
+### 1. CountryWorkbench.tsx — Snellire, tenere filtri utili
 
-1. **Testo Libero (Paste Area)** — L'utente incolla testo grezzo (da email, tabelle copiate, elenchi). AI analizza il contenuto e lo struttura nella tabella `imported_contacts`.
+**Rimuovere:**
+- I 4 ActionButton (Download profili, Deep Search, Alias azienda, Alias contatti) — appartengono a Operations
+- Le 6 ProgressRow (Profili, Deep S., Email, Telefono, Alias Az, Alias Ct)
+- I filter chips negativi (No Tel, No Email, No Prof, No Deep) — non servono per discovery
 
-2. **File con Mapping AI Automatico** — L'utente carica il suo file (qualsiasi formato colonne). AI campiona le prime 5 righe, identifica la corrispondenza colonne-fonte → colonne-destinazione, mostra un'anteprima del mapping proposto, e l'utente conferma.
+**Mantenere e riposizionare:**
+- Filter chips positivi riformulati: "Con Tel", "Con Email", "Deep Search", + aggiungere "Con Rating 3+", "Con Servizi"
+- Header compatto (bandiera, nome, conteggio)
+- Select All / conteggio filtrati
 
-3. **File Standard** (gia esistente) — Il mapping statico attuale per file con colonne note.
+**Arricchire la lista partner:**
+- Rating stelle prominente accanto al nome
+- Icone servizi trasporto + specialita sotto il nome
+- Badge network piccoli
+- Trophy anni WCA
 
-### Edge Function: `analyze-import-structure`
-Nuova edge function che:
-- Riceve un campione di righe (max 5) + tipo input (paste/file)
-- Chiama Gemini Flash per generare il mapping colonne
-- Per il testo libero: estrae righe strutturate dal testo grezzo
-- Ritorna: `{ column_mapping: Record<string, string>, parsed_rows: any[], confidence: number }`
+**Rimuovere dalla props interface:** `onDownloadProfiles`, `onDeepSearch`, `onGenerateAliases`, `deepSearching`, `deepSearchProgress`, `aliasGenerating`
 
-### Flusso Completo
+### 2. CountryCards.tsx — Semplificare
 
-```text
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Input:          │     │ analyze-import-  │     │ Anteprima       │
-│  - Paste text    │────▶│ structure        │────▶│ Mapping AI      │
-│  - File upload   │     │ (campiona 5 righe│     │ (utente conferma│
-│                  │     │  + AI mapping)   │     │  o corregge)    │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                           │
-                         ┌──────────────────┐              │
-                         │ Importa in       │◀─────────────┘
-                         │ imported_contacts │
-                         │ (staging)         │
-                         └────────┬─────────┘
-                                  │
-                         ┌────────▼─────────┐
-                         │ process-ai-import │  (normalizzazione batch)
-                         └────────┬─────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              ▼                   ▼                   ▼
-     ┌────────────────┐  ┌───────────────┐  ┌────────────────┐
-     │ OK → Contatti   │  │ Errori →      │  │ Non recuperab. │
-     │ nello staging   │  │ Correzione AI │  │ → Export CSV   │
-     └────────────────┘  │ batch         │  │ per ricaricare │
-                         └───────────────┘  └────────────────┘
-```
+- Rimuovere la barra progresso profili (% completamento)
+- Rimuovere stats Phone/Mail/Users/entrambi
+- Rimuovere warning "senza profilo" e bottone "Scarica profili"
+- Mostrare solo: bandiera, nome paese, numero partner, rating medio (calcolato da stats)
+- Card piu pulita e cliccabile
 
-### Gestione Errori con Export
+### 3. PartnerDetailFull.tsx — Aprire sezioni per default
 
-Nella tab Errori, aggiungiamo:
-- **Pulsante "Correggi con AI"** — prende gli errori pending, li manda a AI per tentativo di correzione, aggiorna `corrected_data`
-- **Pulsante "Esporta non recuperabili"** — genera un CSV con le righe fallite (raw_data) che l'utente puo correggere manualmente e ricaricare
+- Contatti Azienda: da Collapsible a sezione sempre aperta
+- Contatti Ufficio: da Collapsible a sezione sempre aperta
+- Profilo Aziendale: da Collapsible a sezione sempre aperta
+- Servizi gia aperti (confermato)
+- Spostare la sezione KPI subito sotto l'header, prima dei servizi
 
-## Dettaglio Implementazione
+### 4. PartnerHub.tsx — Layout full-height
 
-### Step 1: Nuova Edge Function `analyze-import-structure`
-- Input: `{ sample_rows: any[], input_type: "paste" | "file", raw_text?: string }`
-- Per `paste`: AI estrae righe strutturate dal testo libero
-- Per `file`: AI mappa colonne sorgente → colonne destinazione
-- Output via tool-calling: `{ column_mapping, parsed_rows, confidence, warnings }`
+- Rimuovere `-m-4` e usare `h-[calc(100vh-3.25rem)]` per far partire il pannello dall'alto
+- Rimuovere le props di download/deepSearch/alias dal passaggio a CountryWorkbench
 
-### Step 2: UI — Tab Upload con 3 sotto-sezioni
-- **Sotto-tab "Incolla Testo"**: Textarea grande + pulsante "Analizza con AI"
-- **Sotto-tab "Carica File"**: File input attuale + step intermedio di conferma mapping
-- Dopo analisi AI: mostra tabella anteprima con mapping proposto (colonna sorgente → colonna destinazione)
-- Pulsante "Conferma e Importa" che usa il mapping confermato per popolare `imported_contacts`
-
-### Step 3: UI — Tab Errori migliorata
-- Pulsante "Correggi con AI" che chiama `process-ai-import` sugli errori pending
-- Pulsante "Esporta CSV errori" che genera e scarica un file con le righe non recuperabili
-- Contatore errori corretti vs non recuperabili
-
-### Step 4: Aggiornare `process-ai-import`
-- Aggiungere modalita `fix_errors` che prende record da `import_errors` e tenta correzione
-- Se corretto: inserisce in `imported_contacts` e aggiorna stato errore a `corrected`
-- Se non corretto: marca come `dismissed`
-
-### Step 5: Hook `useImportLogs` — nuove mutation
-- `useAnalyzeImportStructure` — chiama la nuova edge function
-- `useFixImportErrors` — chiama process-ai-import in modalita fix
-- `useExportErrors` — genera CSV client-side dalle righe fallite
-
-## File da Creare/Modificare
+## File da modificare
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/analyze-import-structure/index.ts` | Creare |
-| `supabase/config.toml` | Aggiungere funzione |
-| `supabase/functions/process-ai-import/index.ts` | Aggiungere modalita fix_errors |
-| `src/pages/Import.tsx` | Ristrutturare tab Upload + migliorare tab Errori |
-| `src/hooks/useImportLogs.ts` | Aggiungere nuovi hooks |
+| `CountryWorkbench.tsx` | Rimuovere ActionButtons, ProgressRows, filtri negativi; mantenere filtri positivi; arricchire lista con rating/servizi/network |
+| `CountryCards.tsx` | Rimuovere progress bar e stats contatti, card minimale |
+| `PartnerDetailFull.tsx` | Aprire Collapsible per default (sezioni sempre visibili), KPI band sotto header |
+| `PartnerHub.tsx` | Aggiustare layout, rimuovere props non necessarie dal CountryWorkbench |
 
