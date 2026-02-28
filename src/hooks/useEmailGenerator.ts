@@ -29,8 +29,38 @@ export function useEmailGenerator() {
       const { data, error } = await supabase.functions.invoke("generate-email", {
         body: params,
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      
+      // Handle structured error responses (e.g. 422 no_email)
+      if (error) {
+        // Try to parse the response body for structured errors
+        let parsed: any = null;
+        try {
+          if (error.context instanceof Response) {
+            parsed = await error.context.json();
+          }
+        } catch {}
+        
+        if (parsed?.error === "no_email") {
+          toast({
+            title: "Email mancante",
+            description: `${parsed.partner_name || "Il partner"} non ha un indirizzo email. Aggiungi un contatto con email prima di generare.`,
+            variant: "destructive",
+          });
+          return null;
+        }
+        throw new Error(parsed?.message || parsed?.error || error.message);
+      }
+      if (data?.error) {
+        if (data.error === "no_email") {
+          toast({
+            title: "Email mancante",
+            description: `${data.partner_name || "Il partner"} non ha un indirizzo email. Aggiungi un contatto con email prima di generare.`,
+            variant: "destructive",
+          });
+          return null;
+        }
+        throw new Error(data.message || data.error);
+      }
       const result = data as GeneratedEmail;
       setEmail(result);
 
