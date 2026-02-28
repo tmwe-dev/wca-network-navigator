@@ -205,11 +205,8 @@ export function CountryWorkbench({
                 <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1">
                   <Checkbox checked={isSelected} />
                 </div>
-                {partner.logo_url && (
-                  <div className="w-8 h-8 shrink-0 mt-0.5 rounded overflow-hidden">
-                    <img src={partner.logo_url} alt="" className="w-full h-full object-contain" />
-                  </div>
-                )}
+
+
                 <div className="flex-1 min-w-0">
                   {/* Name + Rating */}
                    <div className="flex items-center gap-2">
