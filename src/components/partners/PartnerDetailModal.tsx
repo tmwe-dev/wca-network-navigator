@@ -6,6 +6,7 @@ import { Building2, MapPin, Mail, Phone, Globe, ExternalLink, Award, Users, Netw
 import { useNavigate } from "react-router-dom";
 import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
 import { formatServiceCategory } from "@/lib/countries";
+import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { PartnerRating } from "./PartnerRating";
 
 interface PartnerDetailModalProps {
@@ -26,8 +27,8 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-3">
-            {partner.logo_url && (
-              <img src={partner.logo_url} alt="" className="w-12 h-12 object-contain rounded border bg-white p-1" />
+            {getRealLogoUrl(partner.logo_url) && (
+              <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-12 h-12 object-contain rounded border bg-white p-1" />
             )}
             <div>
               <DialogTitle className="flex items-center gap-2">

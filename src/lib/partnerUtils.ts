@@ -1,6 +1,13 @@
 import { getYearsMember } from "@/lib/countries";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 
+/** Returns the logo URL only if it's a real company logo (not a Google favicon fallback) */
+export function getRealLogoUrl(logoUrl: string | null | undefined): string | null {
+  if (!logoUrl) return null;
+  if (logoUrl.includes("google.com/s2/favicons")) return null;
+  return logoUrl;
+}
+
 export type SortOption =
   | "name_asc"
   | "name_desc"

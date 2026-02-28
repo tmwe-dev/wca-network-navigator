@@ -32,6 +32,7 @@ import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "
 import { DownloadTerminal } from "@/components/download/DownloadTerminal";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
+import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
@@ -653,8 +654,8 @@ export function PartnerListPanel({
                     >
                       <div className="flex items-center gap-2.5">
                         {/* Logo */}
-                        {partner.logo_url ? (
-                          <img src={partner.logo_url} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                        {getRealLogoUrl(partner.logo_url) ? (
+                          <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                         ) : (
                           <div className={cn("w-7 h-7 rounded-md shrink-0 flex items-center justify-center text-[10px] font-bold", isDark ? "bg-white/[0.06] text-slate-500" : "bg-slate-100 text-slate-400")}>
                             {partner.company_name?.charAt(0)}

@@ -1,4 +1,5 @@
 import { useState, useCallback, Suspense, lazy } from "react";
+import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,9 +112,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
             <div className="shrink-0">
-              {partner.logo_url ? (
+              {getRealLogoUrl(partner.logo_url) ? (
                 <img
-                  src={partner.logo_url}
+                  src={getRealLogoUrl(partner.logo_url)!}
                   alt={partner.company_name}
                   className="w-14 h-14 rounded-xl object-contain bg-muted/50 border border-primary/10"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

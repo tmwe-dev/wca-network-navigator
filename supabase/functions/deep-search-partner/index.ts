@@ -573,27 +573,13 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
             } catch { logoUrl = null }
           }
 
-          // Fallback: Google favicon at 128px
-          if (!logoUrl) {
-            try {
-              const domain = new URL(websiteUrl).hostname
-              logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
-            } catch {}
-          }
-
+          // Only save real logos, no favicon fallbacks
           if (logoUrl) {
             const { error } = await supabase.from('partners').update({ logo_url: logoUrl }).eq('id', partnerId)
             if (!error) logoFound = true
           }
         } else {
-          // Scrape failed - use Google favicon as fallback
-          try {
-            const domain = new URL(websiteUrl).hostname
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
-            const { error } = await supabase.from('partners').update({ logo_url: faviconUrl }).eq('id', partnerId)
-            if (!error) logoFound = true
-            console.log(`Logo fallback to Google favicon: ${faviconUrl}`)
-          } catch {}
+          // Scrape failed - no fallback, leave logo_url empty
         }
       } catch (e) {
         console.error('Logo error:', e)

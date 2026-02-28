@@ -15,6 +15,7 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
 import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
+import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -206,8 +207,8 @@ export function CountryWorkbench({
                   <Checkbox checked={isSelected} />
                 </div>
                 <div className="w-8 h-8 shrink-0 mt-0.5 rounded overflow-hidden bg-muted/50">
-                  {partner.logo_url ? (
-                    <img src={partner.logo_url} alt="" className="w-full h-full object-contain" />
+                  {getRealLogoUrl(partner.logo_url) ? (
+                    <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain" />
                   ) : null}
                 </div>
                 <div className="flex-1 min-w-0">
