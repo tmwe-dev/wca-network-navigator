@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
-  Users, PackageCheck, Command,
+  Users, PackageCheck, Command, Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -31,6 +31,7 @@ const navSections = [
     label: "Gestione",
     items: [
       { title: "Agenda", url: "/reminders", icon: Calendar },
+      { title: "Import", url: "/import", icon: Upload },
       { title: "Impostazioni", url: "/settings", icon: Settings },
       { title: "Guida", url: "/guida", icon: BookOpen },
     ],

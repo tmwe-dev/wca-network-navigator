@@ -22,6 +22,7 @@ import CampaignJobs from "./pages/CampaignJobs";
 import EmailComposer from "./pages/EmailComposer";
 import Workspace from "./pages/Workspace";
 import Sorting from "./pages/Sorting";
+import Import from "./pages/Import";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/email-composer" element={<EmailComposer />} />
                 <Route path="/workspace" element={<Workspace />} />
                 <Route path="/sorting" element={<Sorting />} />
+                <Route path="/import" element={<Import />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

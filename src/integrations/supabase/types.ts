@@ -532,6 +532,184 @@ export type Database = {
         }
         Relationships: []
       }
+      import_errors: {
+        Row: {
+          ai_suggestions: Json | null
+          attempted_corrections: number
+          corrected_data: Json | null
+          created_at: string
+          error_message: string | null
+          error_type: string
+          id: string
+          import_log_id: string
+          raw_data: Json | null
+          row_number: number
+          status: string
+        }
+        Insert: {
+          ai_suggestions?: Json | null
+          attempted_corrections?: number
+          corrected_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          error_type?: string
+          id?: string
+          import_log_id: string
+          raw_data?: Json | null
+          row_number?: number
+          status?: string
+        }
+        Update: {
+          ai_suggestions?: Json | null
+          attempted_corrections?: number
+          corrected_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          error_type?: string
+          id?: string
+          import_log_id?: string
+          raw_data?: Json | null
+          row_number?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_errors_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_rows: number
+          file_name: string
+          file_size: number
+          file_url: string | null
+          id: string
+          imported_rows: number
+          normalization_method: string
+          processing_batch: number
+          status: string
+          total_batches: number
+          total_rows: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          file_name: string
+          file_size?: number
+          file_url?: string | null
+          id?: string
+          imported_rows?: number
+          normalization_method?: string
+          processing_batch?: number
+          status?: string
+          total_batches?: number
+          total_rows?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          file_name?: string
+          file_size?: number
+          file_url?: string | null
+          id?: string
+          imported_rows?: number
+          normalization_method?: string
+          processing_batch?: number
+          status?: string
+          total_batches?: number
+          total_rows?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      imported_contacts: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_alias: string | null
+          company_name: string | null
+          contact_alias: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          id: string
+          import_log_id: string
+          is_selected: boolean
+          is_transferred: boolean
+          mobile: string | null
+          name: string | null
+          note: string | null
+          origin: string | null
+          phone: string | null
+          raw_data: Json | null
+          row_number: number
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          contact_alias?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          import_log_id: string
+          is_selected?: boolean
+          is_transferred?: boolean
+          mobile?: string | null
+          name?: string | null
+          note?: string | null
+          origin?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          row_number?: number
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          contact_alias?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          import_log_id?: string
+          is_selected?: boolean
+          is_transferred?: boolean
+          mobile?: string | null
+          name?: string | null
+          note?: string | null
+          origin?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          row_number?: number
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imported_contacts_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interactions: {
         Row: {
           created_at: string | null
