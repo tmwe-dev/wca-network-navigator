@@ -149,24 +149,21 @@ export default function Operations() {
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div className={`h-full min-h-0 relative flex flex-col overflow-hidden ${th.pageBg}`}>
-        <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
-        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
-        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-violet-500/[0.03]" : "from-sky-200/20"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
+      <div className="h-full min-h-0 relative flex flex-col overflow-hidden bg-background">
+        {/* Subtle ambient — single layer only */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.06),transparent)]" />
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
-          <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
             {/* Left: Title + active badge */}
             <div className="flex items-center gap-3">
-              <h1 className={cn("text-base font-bold tracking-tight", isDark ? "text-slate-100" : "text-slate-800")}>Operations</h1>
+              <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
+              <h1 className="text-sm font-semibold text-gradient-blue">Operations</h1>
               {activeJobs.length > 0 && (
-                <span className={cn(
-                  "flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full",
-                  isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-amber-50 text-amber-600 border border-amber-200"
-                )}>
-                  <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isDark ? "bg-amber-400" : "bg-amber-500")} />
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full micro-badge-amber">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                   {activeJobs.length} attivi
                 </span>
               )}
@@ -199,45 +196,30 @@ export default function Operations() {
                 />
               )}
               <WcaSessionIndicator />
-              {/* Download Canvas eye button */}
               {(activeJobs.length > 0 || dlResults.length > 0) && !dlCanvasOpen && (
-                <button onClick={() => setDlCanvasOpen(true)} className={cn(
-                  "p-1.5 rounded-lg transition-all",
-                  isDark ? "bg-sky-500/20 hover:bg-sky-500/30 text-sky-400" : "bg-sky-50 hover:bg-sky-100 text-sky-600 shadow-sm"
-                )} title="Mostra Download Canvas">
+                <button onClick={() => setDlCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-primary/10 hover:bg-primary/20 text-primary" title="Mostra Download Canvas">
                   <Download className="w-4 h-4" />
                 </button>
               )}
-              {/* Terminal button */}
               {(activeJobs.length > 0 || (jobs || []).length > 0) && (
                 <button onClick={() => setShowTerminal(v => !v)} className={cn(
-                  "p-1.5 rounded-lg transition-all",
+                  "p-1.5 rounded-md transition-all",
                   showTerminal
-                    ? isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                    : isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-slate-400" : "bg-white/80 hover:bg-white shadow-sm text-slate-500"
+                    ? "bg-success/15 text-success border border-success/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )} title="Terminal">
                   <Terminal className="w-4 h-4" />
                 </button>
               )}
-              {/* Deep Search eye button */}
               {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
-                <button onClick={() => deepSearch.setCanvasOpen(true)} className={cn(
-                  "p-1.5 rounded-lg transition-all",
-                  isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"
-                )} title="Mostra Deep Search">
+                <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Mostra Deep Search">
                   <Eye className="w-4 h-4" />
                 </button>
               )}
-              <button onClick={() => setAiOpen(true)} className={cn(
-                "p-1.5 rounded-lg transition-all",
-                isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"
-              )} title="Assistente AI">
+              <button onClick={() => setAiOpen(true)} className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted" title="Assistente AI">
                 <Bot className="w-4 h-4" />
               </button>
-              <button onClick={toggleTheme} className={cn(
-                "p-1.5 rounded-lg transition-all",
-                isDark ? "bg-slate-800/60 hover:bg-slate-700/60 text-amber-400" : "bg-white/80 hover:bg-white shadow-sm text-sky-600"
-              )}>
+              <button onClick={toggleTheme} className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted">
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
@@ -274,8 +256,8 @@ export default function Operations() {
               <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
                 <ActiveJobBar />
                 <div className={cn(
-                  "flex-1 min-h-0 rounded-2xl border overflow-hidden relative",
-                  isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80 shadow-sm"
+                  "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
+                  "bg-card/50 backdrop-blur-sm border-border"
                 )}>
                   <PartnerListPanel
                     countryCodes={activeCountryCodes}
@@ -294,15 +276,10 @@ export default function Operations() {
 
                   {/* Detail overlay slide-in */}
                   {selectedPartnerId && selectedPartner && (
-                    <div className={cn(
-                      "absolute inset-0 z-20 flex flex-col animate-in slide-in-from-right-8 duration-200",
-                      isDark ? "bg-slate-950/95 backdrop-blur-xl" : "bg-white/95 backdrop-blur-xl"
-                    )}>
-                      <div className={cn("flex items-center px-3 py-1.5 flex-shrink-0 border-b", isDark ? "border-white/[0.08]" : "border-slate-200/60")}>
+                    <div className="absolute inset-0 z-20 flex flex-col animate-in slide-in-from-right-8 duration-200 bg-background/95 backdrop-blur-md">
+                      <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
                         <button onClick={() => setSelectedPartnerId(null)}
-                          className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors",
-                            isDark ? "text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                          )}>
+                          className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted">
                           <X className="w-4 h-4" /> Chiudi
                         </button>
                       </div>
@@ -363,13 +340,12 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
   variant?: "info" | "warn" | "ok";
 }) {
   const isComplete = variant === "ok" || (variant === "warn" && value === 0);
-  const colorClass = isComplete
-    ? isDark ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10" : "text-emerald-600 border-emerald-200 bg-emerald-50"
+
+  const badgeClass = isComplete
+    ? "micro-badge-green"
     : variant === "warn"
-      ? isDark ? "text-rose-400 border-rose-500/20 bg-rose-500/10" : "text-rose-600 border-rose-200 bg-rose-50"
-      : active
-        ? isDark ? "text-sky-400 border-sky-500/30 bg-sky-500/15" : "text-sky-600 border-sky-300 bg-sky-50"
-        : isDark ? "text-slate-300 border-white/[0.08] bg-white/[0.03]" : "text-slate-600 border-slate-200 bg-white/60";
+      ? "micro-badge-red"
+      : "micro-badge-blue";
 
   return (
     <Tooltip>
@@ -377,9 +353,10 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
         <button
           onClick={onClick}
           className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] transition-all whitespace-nowrap",
-            onClick ? "cursor-pointer hover:scale-105" : "cursor-default",
-            colorClass
+            "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap",
+            badgeClass,
+            onClick && "cursor-pointer hover:scale-105",
+            active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
           )}
         >
           <Icon className="w-3.5 h-3.5" />
