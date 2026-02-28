@@ -13,7 +13,7 @@ import {
   Star, StarOff, Phone, Mail, Globe, MapPin, Calendar,
   ChevronDown, Users, User, Sparkles, Loader2, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
-  MessageSquare, Clock, Box,
+  MessageSquare, Clock, Box, ClipboardList, Briefcase, Send,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,9 +44,12 @@ const PartnerMiniGlobe = lazy(() =>
 interface PartnerDetailFullProps {
   partner: any;
   onToggleFavorite: () => void;
+  onAssignActivity?: (partnerId: string) => void;
+  onSendToWorkspace?: (partnerId: string) => void;
+  onEmail?: (partnerId: string) => void;
 }
 
-export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFullProps) {
+export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity, onSendToWorkspace, onEmail }: PartnerDetailFullProps) {
   const [deepSearching, setDeepSearching] = useState(false);
   const queryClient = useQueryClient();
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
@@ -186,20 +189,36 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
               </TooltipTrigger>
               <TooltipContent>{partner.is_favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}</TooltipContent>
             </Tooltip>
-            <Button
-              size="sm"
-              className="rounded-xl bg-gradient-to-r from-primary to-sky-400 text-primary-foreground hover:opacity-90 transition-all shadow-sm shadow-primary/20"
-              onClick={handleDeepSearch}
-              disabled={deepSearching}
-            >
-              {deepSearching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-              Deep Search
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* ═══ KPI BAND ═══ */}
+      {/* ═══ ACTION BAR ═══ */}
+      <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/[0.06] backdrop-blur-xl border border-violet-500/15">
+        {onAssignActivity && (
+          <Button size="sm" variant="ghost" onClick={() => onAssignActivity(partner.id)}
+            className="h-7 px-2.5 text-xs gap-1.5 text-violet-300 hover:bg-violet-500/15 hover:text-violet-100">
+            <ClipboardList className="w-3.5 h-3.5" /> Attività
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={handleDeepSearch} disabled={deepSearching}
+          className="h-7 px-2.5 text-xs gap-1.5 text-violet-300 hover:bg-violet-500/15 hover:text-violet-100">
+          {deepSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          Deep Search
+        </Button>
+        {onSendToWorkspace && (
+          <Button size="sm" variant="ghost" onClick={() => onSendToWorkspace(partner.id)}
+            className="h-7 px-2.5 text-xs gap-1.5 text-violet-300 hover:bg-violet-500/15 hover:text-violet-100">
+            <Briefcase className="w-3.5 h-3.5" /> Workspace
+          </Button>
+        )}
+        {onEmail && (
+          <Button size="sm" variant="ghost" onClick={() => onEmail(partner.id)}
+            className="h-7 px-2.5 text-xs gap-1.5 text-violet-300 hover:bg-violet-500/15 hover:text-violet-100">
+            <Send className="w-3.5 h-3.5" /> Email
+          </Button>
+        )}
+      </div>
       <div className="bg-gradient-to-br from-primary/5 via-card to-sky-500/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {years > 0 && (

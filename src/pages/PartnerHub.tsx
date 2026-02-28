@@ -702,6 +702,25 @@ export default function PartnerHub() {
             onToggleFavorite={() =>
               toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })
             }
+            onAssignActivity={(id) => {
+              setSelectedIds(new Set([id]));
+              setAssignDialogOpen(true);
+            }}
+            onSendToWorkspace={async (id) => {
+              setSendingToWorkspace(true);
+              try {
+                await createActivities.mutateAsync([{
+                  partner_id: id,
+                  activity_type: "send_email" as const,
+                  title: "Outreach email",
+                  priority: "medium",
+                }]);
+                toast.success("Attività creata — apertura Workspace...");
+                navigate("/workspace");
+              } catch { toast.error("Errore"); }
+              finally { setSendingToWorkspace(false); }
+            }}
+            onEmail={(id) => navigate("/email-composer", { state: { partnerIds: [id] } })}
           />
         ) : null}
       </div>
