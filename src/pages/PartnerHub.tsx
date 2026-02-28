@@ -317,7 +317,7 @@ export default function PartnerHub() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[calc(100vh-3rem)] -m-4 relative overflow-hidden">
+    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
@@ -439,7 +439,6 @@ export default function PartnerHub() {
         {viewLevel === "countries" ? (
           <CountryCards
             onSelectCountry={handleCountrySelect}
-            onDownloadProfiles={handleDownloadProfiles}
           />
         ) : viewLevel === "country" && selectedCountry ? (
           <CountryWorkbench
@@ -457,12 +456,6 @@ export default function PartnerHub() {
                 setSelectedIds(new Set(ids));
               }
             }}
-            onDownloadProfiles={handleDownloadProfiles}
-            onDeepSearch={handleCountryDeepSearch}
-            onGenerateAliases={handleGenerateAliases}
-            deepSearching={deepSearching}
-            deepSearchProgress={deepSearchProgress}
-            aliasGenerating={aliasGenerating}
           />
         ) : (
         <ScrollArea className="flex-1">
