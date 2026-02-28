@@ -71,7 +71,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   };
 
   return (
-    <aside className="flex flex-col w-[220px] h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border select-none">
+    <aside className="sidebar-drawer flex flex-col w-[220px] h-screen text-sidebar-foreground select-none">
       {/* Brand */}
       <div className="flex items-center gap-2.5 h-14 px-4 border-b border-sidebar-border">
         <div className="flex items-center justify-center w-7 h-7 rounded-md bg-sidebar-primary/90">
