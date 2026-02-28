@@ -386,3 +386,138 @@ export function useCreateActivitiesFromImport() {
     },
   });
 }
+
+export function useAnalyzeImportStructure() {
+  return useMutation({
+    mutationFn: async ({
+      sampleRows,
+      inputType,
+      rawText,
+    }: {
+      sampleRows?: any[];
+      inputType: "paste" | "file";
+      rawText?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("analyze-import-structure", {
+        body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText },
+      });
+      if (error) throw error;
+      return data as {
+        column_mapping: Record<string, string>;
+        parsed_rows: any[];
+        confidence: number;
+        warnings: string[];
+      };
+    },
+    onError: (err) => {
+      toast({ title: "Errore analisi AI", description: String(err), variant: "destructive" });
+    },
+  });
+}
+
+export function useFixImportErrors() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (importLogId: string) => {
+      const { data, error } = await supabase.functions.invoke("process-ai-import", {
+        body: { import_log_id: importLogId, mode: "fix_errors" },
+      });
+      if (error) throw error;
+      return data as { corrected: number; dismissed: number };
+    },
+    onSuccess: (result, importLogId) => {
+      queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
+      queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
+      toast({
+        title: "Correzione completata",
+        description: `${result.corrected} corretti, ${result.dismissed} non recuperabili`,
+      });
+    },
+    onError: (err) => {
+      toast({ title: "Errore correzione AI", description: String(err), variant: "destructive" });
+    },
+  });
+}
+
+export function exportErrorsToCSV(errors: ImportError[]) {
+  const headers = ["row_number", "error_type", "error_message", "raw_data"];
+  const csvRows = [headers.join(",")];
+
+  for (const err of errors) {
+    const raw = err.raw_data ? JSON.stringify(err.raw_data).replace(/"/g, '""') : "";
+    csvRows.push([
+      err.row_number,
+      err.error_type,
+      `"${(err.error_message || "").replace(/"/g, '""')}"`,
+      `"${raw}"`,
+    ].join(","));
+  }
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `errori_import_${Date.now()}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function useCreateImportFromParsedRows() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      rows,
+      userId,
+      fileName,
+    }: {
+      rows: any[];
+      userId: string;
+      fileName: string;
+    }) => {
+      const { data: importLog, error: logError } = await supabase
+        .from("import_logs")
+        .insert({
+          user_id: userId,
+          file_name: fileName,
+          file_size: 0,
+          total_rows: rows.length,
+          status: "pending",
+          normalization_method: "ai",
+        })
+        .select()
+        .single();
+      if (logError) throw logError;
+
+      const contacts = rows.map((row, index) => ({
+        import_log_id: importLog.id,
+        row_number: index + 1,
+        company_name: row.company_name || null,
+        name: row.name || null,
+        email: row.email || null,
+        phone: row.phone || null,
+        mobile: row.mobile || null,
+        country: row.country || null,
+        city: row.city || null,
+        address: row.address || null,
+        zip_code: row.zip_code || null,
+        note: row.note || null,
+        origin: row.origin || null,
+        raw_data: row,
+      }));
+
+      for (let i = 0; i < contacts.length; i += 100) {
+        const batch = contacts.slice(i, i + 100);
+        const { error: insertError } = await supabase.from("imported_contacts").insert(batch);
+        if (insertError) throw insertError;
+      }
+
+      return importLog as ImportLog;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+    },
+  });
+}

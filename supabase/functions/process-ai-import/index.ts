@@ -22,8 +22,13 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { import_log_id } = await req.json();
+    const { import_log_id, mode } = await req.json();
     if (!import_log_id) throw new Error("import_log_id is required");
+
+    // Fix errors mode
+    if (mode === "fix_errors") {
+      return await handleFixErrors(supabase, import_log_id, lovableApiKey, corsHeaders);
+    }
 
     // Get import log
     const { data: importLog, error: logError } = await supabase
@@ -260,5 +265,162 @@ async function logImportError(
     error_type: errorType,
     error_message: errorMessage,
     raw_data: rawData,
+  });
+}
+
+async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, corsHeaders: Record<string, string>) {
+  if (!lovableApiKey) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Get pending errors
+  const { data: errors, error: fetchErr } = await supabase
+    .from("import_errors")
+    .select("*")
+    .eq("import_log_id", importLogId)
+    .eq("status", "pending")
+    .order("row_number", { ascending: true })
+    .limit(25);
+
+  if (fetchErr) throw new Error(fetchErr.message);
+  if (!errors || errors.length === 0) {
+    return new Response(JSON.stringify({ corrected: 0, dismissed: 0 }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const prompt = `Sei un assistente specializzato nella correzione di dati aziendali per un CRM di freight forwarder.
+
+Per ogni record nel seguente array, prova a correggere e completare i dati mancanti o invalidi.
+Ogni record ha raw_data (dati originali) e error_message (cosa è andato storto).
+
+Rispondi con un array dove ogni elemento ha:
+- corrected: true/false (se sei riuscito a correggere)
+- data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code)
+  Se non riesci a correggere, data può essere null.`;
+
+  const records = errors.map((e: any) => ({
+    row_number: e.row_number,
+    raw_data: e.raw_data,
+    error_message: e.error_message,
+    error_type: e.error_type,
+  }));
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: JSON.stringify(records) },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "return_corrections",
+          description: "Returns correction results for each error",
+          parameters: {
+            type: "object",
+            properties: {
+              results: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    corrected: { type: "boolean" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        company_name: { type: "string" },
+                        name: { type: "string" },
+                        email: { type: "string" },
+                        phone: { type: "string" },
+                        mobile: { type: "string" },
+                        country: { type: "string" },
+                        city: { type: "string" },
+                        address: { type: "string" },
+                        zip_code: { type: "string" },
+                      },
+                    },
+                  },
+                  required: ["corrected"],
+                },
+              },
+            },
+            required: ["results"],
+            additionalProperties: false,
+          },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "return_corrections" } },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`AI error ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("No tool call in AI response");
+
+  const parsed = JSON.parse(toolCall.function.arguments);
+  const results = parsed.results || [];
+
+  let correctedCount = 0;
+  let dismissedCount = 0;
+
+  for (let i = 0; i < errors.length; i++) {
+    const err = errors[i];
+    const result = results[i];
+
+    if (result?.corrected && result.data) {
+      // Insert corrected contact back into staging
+      await supabase.from("imported_contacts").insert({
+        import_log_id: importLogId,
+        row_number: err.row_number,
+        company_name: result.data.company_name || null,
+        name: result.data.name || null,
+        email: result.data.email || null,
+        phone: result.data.phone || null,
+        mobile: result.data.mobile || null,
+        country: result.data.country || null,
+        city: result.data.city || null,
+        address: result.data.address || null,
+        zip_code: result.data.zip_code || null,
+        raw_data: err.raw_data,
+      });
+
+      await supabase.from("import_errors").update({
+        status: "corrected",
+        corrected_data: result.data,
+        attempted_corrections: (err.attempted_corrections || 0) + 1,
+      }).eq("id", err.id);
+
+      correctedCount++;
+    } else {
+      await supabase.from("import_errors").update({
+        status: "dismissed",
+        attempted_corrections: (err.attempted_corrections || 0) + 1,
+      }).eq("id", err.id);
+
+      dismissedCount++;
+    }
+  }
+
+  // Update import log error count
+  await supabase.from("import_logs").update({
+    imported_rows: supabase.rpc ? undefined : undefined, // will be recalculated
+  }).eq("id", importLogId);
+
+  return new Response(JSON.stringify({ corrected: correctedCount, dismissed: dismissedCount }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
