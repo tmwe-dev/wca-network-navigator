@@ -1,41 +1,50 @@
-import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Calendar,
-  Download,
   Mail,
   Globe,
-  ChevronLeft,
-  ChevronRight,
   Moon,
   Sun,
   Settings,
   Wifi,
   WifiOff,
-  Database,
   BookOpen,
-  Building2,
   Send,
   Sparkles,
   Users,
   PackageCheck,
+  Command,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWcaSession } from "@/hooks/useWcaSession";
+import { useState } from "react";
 
-const navItems = [
-  { title: "Operations", url: "/", icon: Globe },
-  { title: "Partner Hub", url: "/partner-hub", icon: Users },
-  { title: "Campaigns", url: "/campaigns", icon: Mail },
-  { title: "Email", url: "/email-composer", icon: Send },
-  { title: "Workspace", url: "/workspace", icon: Sparkles },
-  { title: "Sorting", url: "/sorting", icon: PackageCheck },
-  { title: "Prospect Center", url: "/prospects", icon: Building2 },
-  { title: "Agenda", url: "/reminders", icon: Calendar },
-  { title: "Impostazioni", url: "/settings", icon: Settings },
-  { title: "Guida", url: "/guida", icon: BookOpen },
+const navSections = [
+  {
+    label: "Operazioni",
+    items: [
+      { title: "Operations", url: "/", icon: Globe },
+      { title: "Partner Hub", url: "/partner-hub", icon: Users },
+      { title: "Sorting", url: "/sorting", icon: PackageCheck },
+    ],
+  },
+  {
+    label: "Comunicazione",
+    items: [
+      { title: "Campaigns", url: "/campaigns", icon: Mail },
+      { title: "Email", url: "/email-composer", icon: Send },
+      { title: "Workspace", url: "/workspace", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Gestione",
+    items: [
+      { title: "Agenda", url: "/reminders", icon: Calendar },
+      { title: "Impostazioni", url: "/settings", icon: Settings },
+      { title: "Guida", url: "/guida", icon: BookOpen },
+    ],
+  },
 ];
 
 interface AppSidebarProps {
@@ -45,9 +54,16 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const location = useLocation();
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.classList.contains("dark")
+  );
   const { isSessionActive } = useWcaSession();
-  const wcaStatus = isSessionActive === true ? "ok" : isSessionActive === false ? "expired" : "checking";
+  const wcaStatus =
+    isSessionActive === true
+      ? "ok"
+      : isSessionActive === false
+        ? "expired"
+        : "checking";
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -55,151 +71,116 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   };
 
   return (
-    <aside
-      className={cn(
-        "flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 h-screen sticky top-0",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Logo */}
-      <div className={cn(
-        "flex items-center h-16 px-4 border-b border-sidebar-border",
-        collapsed ? "justify-center" : "gap-3"
-      )}>
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary">
-          <Globe className="w-5 h-5 text-sidebar-primary-foreground" />
+    <aside className="flex flex-col w-[220px] h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border select-none">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 h-14 px-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-sidebar-primary/90">
+          <Command className="w-4 h-4 text-sidebar-primary-foreground" />
         </div>
-        {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm">WCA Partners</span>
-            <span className="text-xs text-sidebar-foreground/70">CRM</span>
-          </div>
-        )}
+        <span className="text-[13px] font-semibold tracking-tight truncate">
+          WCA Partners
+        </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.url;
-          
-          const NavItem = (
-            <Link
-              key={item.title}
-              to={item.url}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="flex-1">{item.title}</span>}
-            </Link>
-          );
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.title} delayDuration={0}>
-                <TooltipTrigger asChild>{NavItem}</TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {item.title}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-
-          return NavItem;
-        })}
+      {/* Sections */}
+      <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-4">
+        {navSections.map((section) => (
+          <div key={section.label}>
+            <span className="block px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+              {section.label}
+            </span>
+            <div className="space-y-px">
+              {section.items.map((item) => {
+                const isActive = location.pathname === item.url;
+                return (
+                  <Link
+                    key={item.url}
+                    to={item.url}
+                    className={cn(
+                      "group flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-foreground"
+                        : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "w-4 h-4 flex-shrink-0 transition-colors",
+                        isActive
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
+                      )}
+                    />
+                    <span className="truncate">{item.title}</span>
+                    {isActive && (
+                      <span className="ml-auto w-1 h-4 rounded-full bg-sidebar-primary" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      <div className="p-2 border-t border-sidebar-border space-y-1">
-      {/* WCA Session Status */}
+      {/* Footer */}
+      <div className="px-2 py-2 border-t border-sidebar-border space-y-px">
+        {/* WCA status */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-          {wcaStatus === "expired" ? (
+            {wcaStatus === "expired" ? (
               <Link
                 to="/settings"
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  "text-destructive hover:bg-destructive/10",
-                  collapsed && "justify-center px-0"
-                )}
+                className="flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <span className="relative flex-shrink-0">
                   <WifiOff className="w-4 h-4" />
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-destructive" />
                 </span>
-                {!collapsed && <span>WCA Scaduto</span>}
+                <span>WCA Offline</span>
               </Link>
             ) : (
               <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                  wcaStatus === "ok" ? "text-emerald-500" : "text-muted-foreground",
-                  collapsed && "justify-center px-0"
+                  "flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium",
+                  wcaStatus === "ok"
+                    ? "text-success"
+                    : "text-muted-foreground"
                 )}
               >
                 <span className="relative flex-shrink-0">
                   <Wifi className="w-4 h-4" />
                   {wcaStatus === "ok" && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success" />
                   )}
                 </span>
-                {!collapsed && (
-                  <span>{wcaStatus === "ok" ? "WCA Connesso" : "Verifica..."}</span>
-                )}
+                <span>
+                  {wcaStatus === "ok" ? "WCA Online" : "Verifica…"}
+                </span>
               </div>
             )}
           </TooltipTrigger>
-          <TooltipContent side="right">
-            {wcaStatus === "ok" ? "Sessione WCA attiva" :
-             wcaStatus === "expired" ? "Sessione WCA non attiva — clicca per configurare" :
-             "Verifica sessione in corso..."}
+          <TooltipContent side="right" className="text-xs">
+            {wcaStatus === "ok"
+              ? "Sessione WCA attiva"
+              : wcaStatus === "expired"
+                ? "Sessione scaduta — clicca per configurare"
+                : "Verifica in corso…"}
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className={cn(
-                "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "justify-center px-0" : "justify-start"
-              )}
-            >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              {!collapsed && <span className="ml-3">{isDark ? "Light Mode" : "Dark Mode"}</span>}
-            </Button>
-          </TooltipTrigger>
-          {collapsed && (
-            <TooltipContent side="right">
-              {isDark ? "Light Mode" : "Dark Mode"}
-            </TooltipContent>
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+        >
+          {isDark ? (
+            <Sun className="w-4 h-4" />
+          ) : (
+            <Moon className="w-4 h-4" />
           )}
-        </Tooltip>
-
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className={cn(
-                "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "justify-center px-0" : "justify-start"
-              )}
-            >
-              {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-              {!collapsed && <span className="ml-3">Collapse</span>}
-            </Button>
-          </TooltipTrigger>
-          {collapsed && (
-            <TooltipContent side="right">Expand</TooltipContent>
-          )}
-        </Tooltip>
+          <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+        </button>
       </div>
     </aside>
   );
