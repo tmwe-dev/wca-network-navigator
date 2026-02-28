@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/select";
 
 import {
-  Search, CheckCircle, X, CheckSquare, Mail, Phone,
+  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -292,8 +292,8 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
     tooltip = `${st.cCount} partner in directory, nessuno ancora scaricato`;
   } else {
     dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
-    label = "—";
-    tooltip = "Nessun dato in directory";
+    label = "scan";
+    tooltip = "Nessun dato — seleziona e scansiona la directory per iniziare";
   }
 
   // Left tab color for completion status
@@ -327,8 +327,14 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-          <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{label}</span>
+          {label === "scan" ? (
+            <FolderSearch className={`w-3.5 h-3.5 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+          ) : (
+            <>
+              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+              <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{label}</span>
+            </>
+          )}
         </div>
         {isSelected && (
           <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
