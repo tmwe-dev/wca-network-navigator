@@ -2,60 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* WCA Partners CRM Design System
-   Primary: Sky Blue (#0ea5e9)
-   Professional, clean, data-focused interface
-*/
-
 @layer base {
   :root {
-    /* Core backgrounds */
     --background: 210 40% 98%;
     --foreground: 215 25% 15%;
-
-    /* Cards and surfaces */
     --card: 0 0% 100%;
     --card-foreground: 215 25% 15%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
-
-    /* Primary - Sky Blue brand color */
     --primary: 199 89% 48%;
     --primary-foreground: 0 0% 100%;
-
-    /* Secondary */
     --secondary: 210 40% 96%;
     --secondary-foreground: 215 25% 27%;
-
-    /* Muted elements */
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-
-    /* Accent for highlights */
     --accent: 199 89% 94%;
     --accent-foreground: 199 89% 30%;
-
-    /* Destructive actions */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    /* Success state */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-
-    /* Warning state */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-
-    /* Borders and inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 199 89% 48%;
-
     --radius: 0.5rem;
-
-    /* Sidebar - slightly darker for hierarchy */
     --sidebar-background: 215 28% 17%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 199 89% 48%;
@@ -64,8 +36,6 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 215 25% 25%;
     --sidebar-ring: 199 89% 48%;
-
-    /* Charts and data visualization */
     --chart-1: 199 89% 48%;
     --chart-2: 173 80% 40%;
     --chart-3: 262 83% 58%;
@@ -74,49 +44,37 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 7%;
     --foreground: 210 40% 98%;
-
-    --card: 215 28% 15%;
+    --card: 216 34% 11%;
     --card-foreground: 210 40% 98%;
-
-    --popover: 215 28% 15%;
+    --popover: 216 34% 12%;
     --popover-foreground: 210 40% 98%;
-
-    --primary: 199 89% 48%;
+    --primary: 210 100% 56%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 215 25% 22%;
+    --secondary: 215 25% 17%;
     --secondary-foreground: 210 40% 98%;
-
-    --muted: 215 25% 22%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 199 89% 25%;
-    --accent-foreground: 199 89% 90%;
-
+    --muted: 216 34% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 262 71% 40%;
+    --accent-foreground: 213 31% 91%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-
     --success: 142 71% 35%;
     --success-foreground: 0 0% 100%;
-
     --warning: 38 92% 40%;
     --warning-foreground: 0 0% 100%;
-
-    --border: 215 25% 22%;
-    --input: 215 25% 22%;
-    --ring: 199 89% 48%;
-
-    --sidebar-background: 222 47% 8%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 210 100% 56%;
+    --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary: 210 100% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 15%;
+    --sidebar-accent: 215 25% 13%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 18%;
-    --sidebar-ring: 199 89% 48%;
-
+    --sidebar-border: 216 34% 14%;
+    --sidebar-ring: 210 100% 56%;
     --chart-1: 199 89% 55%;
     --chart-2: 173 80% 50%;
     --chart-3: 262 83% 65%;
@@ -129,81 +87,201 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56,139,253,0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(138,75,255,0.07), transparent);
+    min-height: 100vh;
   }
 }
 
-/* Space Station Theme */
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Keyframes */
+@keyframes shimmer-move {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes pulse-glow-blue { 0%,100% { box-shadow: 0 0 4px #3b82f6; } 50% { box-shadow: 0 0 12px #3b82f6; } }
+@keyframes pulse-glow-green { 0%,100% { box-shadow: 0 0 4px #22c55e; } 50% { box-shadow: 0 0 12px #22c55e; } }
+@keyframes pulse-glow-amber { 0%,100% { box-shadow: 0 0 4px #f59e0b; } 50% { box-shadow: 0 0 12px #f59e0b; } }
+@keyframes pulse-glow-red { 0%,100% { box-shadow: 0 0 4px #ef4444; } 50% { box-shadow: 0 0 12px #ef4444; } }
+
 @layer components {
+  /* Glass panels */
+  .glass-panel {
+    background: rgba(255,255,255,0.03);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .glass-panel-blue {
+    background: rgba(255,255,255,0.03);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(56,139,253,0.18);
+  }
+  .glass-panel-green {
+    background: rgba(255,255,255,0.03);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(34,197,94,0.18);
+  }
+  .glass-panel-amber {
+    background: rgba(255,255,255,0.03);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(245,158,11,0.18);
+  }
+  .glass-panel-purple {
+    background: rgba(255,255,255,0.03);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(138,75,255,0.18);
+  }
+
+  /* Gradient text */
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-green {
+    background: linear-gradient(135deg, #34d399 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-amber {
+    background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow effects */
+  .glow-blue { box-shadow: 0 0 20px rgba(56,139,253,0.35), 0 0 40px rgba(56,139,253,0.15); }
+  .glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.35), 0 0 40px rgba(34,197,94,0.15); }
+  .glow-amber { box-shadow: 0 0 20px rgba(245,158,11,0.35), 0 0 40px rgba(245,158,11,0.15); }
+  .glow-purple { box-shadow: 0 0 20px rgba(138,75,255,0.35), 0 0 40px rgba(138,75,255,0.15); }
+
+  /* Gradient borders */
+  .border-gradient-blue {
+    border: 1px solid transparent;
+    background: linear-gradient(hsl(222 47% 7%), hsl(222 47% 7%)) padding-box,
+                linear-gradient(135deg, rgba(56,139,253,0.6), rgba(138,75,255,0.4)) border-box;
+  }
+  .border-gradient-green {
+    border: 1px solid transparent;
+    background: linear-gradient(hsl(222 47% 7%), hsl(222 47% 7%)) padding-box,
+                linear-gradient(135deg, rgba(34,197,94,0.5), rgba(56,139,253,0.3)) border-box;
+  }
+  .border-gradient-amber {
+    border: 1px solid transparent;
+    background: linear-gradient(hsl(222 47% 7%), hsl(222 47% 7%)) padding-box,
+                linear-gradient(135deg, rgba(245,158,11,0.6), rgba(239,68,68,0.3)) border-box;
+  }
+
+  /* Shimmer effect */
+  .shimmer-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-effect::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmer-move 2.5s infinite;
+  }
+
+  /* Status dots */
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-dot-blue { background: #3b82f6; animation: pulse-glow-blue 2s ease-in-out infinite; }
+  .status-dot-green { background: #22c55e; animation: pulse-glow-green 2s ease-in-out infinite; }
+  .status-dot-amber { background: #f59e0b; animation: pulse-glow-amber 2s ease-in-out infinite; }
+  .status-dot-red { background: #ef4444; animation: pulse-glow-red 2s ease-in-out infinite; }
+  .status-dot-sm { width: 4px; height: 4px; }
+
+  /* Card interactions */
+  .card-hover {
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+  .card-interactive {
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .card-interactive:focus-within {
+    @apply rounded-xl;
+    box-shadow: 0 0 0 1px rgba(56,139,253,0.3), 0 8px 24px rgba(56,139,253,0.15);
+  }
+
+  /* Micro badges */
+  .micro-badge-blue { @apply bg-blue-500/20 text-blue-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-amber { @apply bg-amber-500/20 text-amber-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-green { @apply bg-emerald-500/20 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-red { @apply bg-red-500/20 text-red-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-purple { @apply bg-purple-500/20 text-purple-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+
+  /* Alert boxes */
+  .alert-danger {
+    background: linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .alert-warning {
+    background: linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+  .alert-ok {
+    background: linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04));
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
+  /* Legacy: Space Station Theme */
   .space-panel {
     @apply bg-black/40 backdrop-blur-xl border rounded-2xl;
   }
-
   .space-panel-amber {
     @apply space-panel border-amber-500/30 shadow-2xl;
-    box-shadow: 
-      0 0 30px rgba(245, 158, 11, 0.1),
-      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
-
   .space-panel-emerald {
     @apply space-panel border-emerald-500/30 shadow-2xl;
-    box-shadow: 
-      0 0 30px rgba(16, 185, 129, 0.1),
-      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
+  .space-text-primary { @apply text-amber-400; }
+  .space-text-secondary { @apply text-emerald-400; }
+  .space-input { @apply bg-black/50 border-amber-500/40 text-amber-100 placeholder:text-amber-100/40; }
+  .space-input:focus { @apply ring-amber-500/50 border-amber-500/60; }
+  .space-badge { @apply bg-emerald-500/20 border border-emerald-500/40 text-emerald-300; }
+  .space-button-primary { @apply bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 border-0; }
+  .space-stat-card { @apply bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center; }
+  .space-floating-bar { @apply bg-black/60 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-2; }
 
-  .space-text-primary {
-    @apply text-amber-400;
-  }
-
-  .space-text-secondary {
-    @apply text-emerald-400;
-  }
-
-  .space-input {
-    @apply bg-black/50 border-amber-500/40 text-amber-100 placeholder:text-amber-100/40;
-  }
-
-  .space-input:focus {
-    @apply ring-amber-500/50 border-amber-500/60;
-  }
-
-  .space-badge {
-    @apply bg-emerald-500/20 border border-emerald-500/40 text-emerald-300;
-  }
-
-  .space-button-primary {
-    @apply bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 border-0;
-  }
-
-  .space-stat-card {
-    @apply bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center;
-  }
-
-  .space-floating-bar {
-    @apply bg-black/60 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-2;
-  }
-
-  /* Partner Hub Glassmorphism */
+  /* Legacy: Glassmorphism */
   .glass-surface {
     background: linear-gradient(135deg, hsl(222 47% 11% / 0.95), hsl(215 28% 17% / 0.9));
   }
-
   .glass-card {
     @apply backdrop-blur-xl border rounded-xl;
     background: hsl(0 0% 100% / 0.05);
     border-color: hsl(0 0% 100% / 0.1);
   }
-
   .glass-badge {
     @apply backdrop-blur-md rounded-lg px-3 py-2;
     background: hsl(0 0% 100% / 0.08);
     border: 1px solid hsl(0 0% 100% / 0.12);
   }
-
   .glass-section {
     @apply backdrop-blur-md rounded-xl p-4;
     background: hsl(0 0% 100% / 0.03);
