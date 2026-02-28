@@ -103,5 +103,11 @@ export function useLinkedInExtensionBridge() {
     [sendMessage]
   );
 
-  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile };
+  const sendDirectMessage = useCallback(
+    (profileUrl: string, message: string) =>
+      sendMessage("sendMessage", { url: profileUrl, message }, 60000),
+    [sendMessage]
+  );
+
+  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage };
 }

@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle } from "lucide-react";
+import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle, Send } from "lucide-react";
+import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +75,7 @@ export default function ContactListPanel({
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string } | null>(null);
 
   const emailActivities = useMemo(() => {
     if (!activities) return [];
@@ -227,10 +229,16 @@ export default function ContactListPanel({
                             <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
                             {hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
                             {linkedinUrl && (
-                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()} title="LinkedIn">
-                                <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
-                              </a>
+                              <>
+                                <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()} title="LinkedIn">
+                                  <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
+                                </a>
+                                <button onClick={(e) => { e.stopPropagation(); setDmTarget({ url: linkedinUrl, contactName: displayName || null, companyName: companyDisplay || "" }); }}
+                                  title="Invia messaggio LinkedIn" className="inline-flex">
+                                  <Send className="w-3 h-3 text-[#0A66C2]/60 shrink-0 hover:text-[#0A66C2] hover:scale-110 transition-all" />
+                                </button>
+                              </>
                             )}
                           </div>
                           {contact ? (
@@ -285,6 +293,16 @@ export default function ContactListPanel({
           )}
         </div>
       </ScrollArea>
+
+      {dmTarget && (
+        <LinkedInDMDialog
+          open={!!dmTarget}
+          onOpenChange={(open) => { if (!open) setDmTarget(null); }}
+          profileUrl={dmTarget.url}
+          contactName={dmTarget.contactName}
+          companyName={dmTarget.companyName}
+        />
+      )}
     </div>
   );
 }
