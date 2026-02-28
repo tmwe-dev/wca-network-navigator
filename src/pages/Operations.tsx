@@ -235,8 +235,8 @@ export default function Operations() {
                   <StatPill icon={Globe} value={globalStats.scannedCountries} label="Paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={globalStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
-                  <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} variant={missingEmail > 0 ? "warn" : "ok"} />
-                  <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} variant={missingPhone > 0 ? "warn" : "ok"} />
+                  <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} onClick={() => setFilterMode("no_email")} active={filterMode === "no_email"} variant={missingEmail > 0 ? "warn" : "ok"} />
+                  <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} onClick={() => setFilterMode("no_phone")} active={filterMode === "no_phone"} variant={missingPhone > 0 ? "warn" : "ok"} />
                   <StatPill icon={FolderOpen} value={globalStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
                 </div>
               );
@@ -309,6 +309,7 @@ export default function Operations() {
                 onToggle={handleCountryClick}
                 onRemove={handleRemoveCountry}
                 filterMode={filterMode}
+                onFilterModeChange={setFilterMode}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
               />

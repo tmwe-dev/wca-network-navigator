@@ -14,20 +14,21 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
 
-export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing";
+export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing" | "no_email" | "no_phone" | "no_deep";
 
 interface CountryGridProps {
   selected: { code: string; name: string }[];
   onToggle: (code: string, name: string) => void;
   onRemove: (code: string) => void;
   filterMode: FilterKey;
+  onFilterModeChange?: (mode: FilterKey) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
 type SortKey = "name" | "partners" | "directory" | "completion";
 
-export function CountryGrid({ selected, onToggle, onRemove, filterMode }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilterModeChange }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -69,13 +70,18 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode }: Countr
 
   // Counts for filter labels
   let doneCount = 0, todoCount = 0, noProfileCount = 0, missingCount = 0, totalWithData = 0;
+  let noEmailCount = 0, noPhoneCount = 0, noDeepCount = 0;
   WCA_COUNTRIES.forEach(c => {
     const st = getStatus(c.code);
+    const s = stats[c.code];
     if (st.isDone) doneCount++;
     if (st.isTodo && (st.pCount > 0 || exploredSet.has(c.code))) todoCount++;
     if (st.noProfile > 0) noProfileCount++;
     if (!exploredSet.has(c.code) && st.pCount === 0) missingCount++;
     if (st.pCount > 0 || exploredSet.has(c.code)) totalWithData++;
+    if (st.pCount > 0 && (st.pCount - (s?.with_email || 0)) > 0) noEmailCount++;
+    if (st.pCount > 0 && (st.pCount - (s?.with_phone || 0)) > 0) noPhoneCount++;
+    if (st.pCount > 0 && (st.pCount - (s?.with_deep_search || 0)) > 0) noDeepCount++;
   });
 
   const filtered = WCA_COUNTRIES.filter(c => {
@@ -88,6 +94,9 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode }: Countr
     if (filterMode === "todo") return st.isTodo && (st.pCount > 0 || exploredSet.has(c.code));
     if (filterMode === "no_profile") return st.noProfile > 0;
     if (filterMode === "missing") return !exploredSet.has(c.code) && st.pCount === 0;
+    if (filterMode === "no_email") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_email || 0)) > 0; }
+    if (filterMode === "no_phone") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_phone || 0)) > 0; }
+    if (filterMode === "no_deep") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_deep_search || 0)) > 0; }
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -156,6 +165,34 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode }: Countr
             <span className="font-mono">{filtered.length}</span>
           </button>
         </div>
+
+        {/* Quality filter chips */}
+        {onFilterModeChange && (
+          <div className="flex flex-wrap gap-1">
+            {([
+              { key: "no_profile" as FilterKey, label: "No Profilo", count: noProfileCount },
+              { key: "no_email" as FilterKey, label: "No Email", count: noEmailCount },
+              { key: "no_phone" as FilterKey, label: "No Tel", count: noPhoneCount },
+              { key: "no_deep" as FilterKey, label: "No Deep", count: noDeepCount },
+              { key: "done" as FilterKey, label: "✓ Completi", count: doneCount },
+            ]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => onFilterModeChange(filterMode === f.key ? "all" : f.key)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${
+                  filterMode === f.key
+                    ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
+                    : f.count > 0
+                      ? isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20" : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                      : isDark ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                }`}
+              >
+                {f.label}
+                <span className="font-mono">{f.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Selected flags */}
         {selected.length > 0 && (
@@ -251,6 +288,13 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
     tooltip = "Nessun dato in directory";
   }
 
+  // Left tab color for completion status
+  const leftTab = st.isDone
+    ? "border-l-[3px] border-l-emerald-500"
+    : (st.cCount > 0 && dlPct >= 100 && st.noProfile > 0)
+      ? "border-l-[3px] border-l-amber-500"
+      : "";
+
   const cardBorder = isSelected
     ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/50"
     : isDark ? "border-white/[0.06]" : "border-slate-200/80";
@@ -261,7 +305,7 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   return (
     <button
       onClick={() => onToggle(country.code, country.name)}
-      className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder}`}
+      className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder} ${leftTab}`}
       title={tooltip}
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
