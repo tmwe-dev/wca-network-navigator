@@ -77,7 +77,7 @@ export function PartnerListPanel({
    * DOWNLOAD LOGIC
    * ════════════════════════════════════════════ */
   const createJob = useCreateDownloadJob();
-  const { ensureSession } = useWcaSession();
+  const { ensureSession, lastError: wcaLastError } = useWcaSession();
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");
   const networks = selectedNetwork === "__all__" ? [] : [selectedNetwork];
   const networkKeys = networks.length > 0 ? networks : [""];
@@ -269,9 +269,13 @@ export function PartnerListPanel({
     queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
   }, [countryCode, countryName, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
+  // wcaLastError already destructured from useWcaSession at top
   const handleStartDownload = async () => {
     const sessionOk = await ensureSession();
-    if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
+    if (!sessionOk) {
+      toast.error(wcaLastError || "Sessione WCA non attiva. Controlla estensione e credenziali.");
+      return;
+    }
     await executeDownload();
   };
 
@@ -602,16 +606,11 @@ export function PartnerListPanel({
                     </Button>
                   )}
                   {wizardStep === 3 && (
-                    <div className="flex gap-2">
-                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
-                        disabled={aliasGenerating || missingAliasCo === 0} onClick={() => onGenerateAliases?.(countryCodes, "company")}>
-                        <Building2 className="w-3.5 h-3.5 mr-1" /> Azienda ({missingAliasCo})
-                      </Button>
-                      <Button size="sm" className={cn("flex-1 h-8 text-xs font-bold", isDark ? "bg-pink-600 hover:bg-pink-500 text-white" : "bg-pink-500 hover:bg-pink-600 text-white")}
-                        disabled={aliasGenerating || missingAliasCt === 0} onClick={() => onGenerateAliases?.(countryCodes, "contact")}>
-                        <UserCircle className="w-3.5 h-3.5 mr-1" /> Contatto ({missingAliasCt})
-                      </Button>
-                    </div>
+                    <Button size="sm" className={cn("w-full h-8 text-xs font-bold", isDark ? "bg-amber-600 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white")}
+                      disabled={aliasGenerating || (missingAliasCo === 0 && missingAliasCt === 0)}
+                      onClick={() => onGenerateAliases?.(countryCodes, "company")}>
+                      {aliasGenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Generazione...</> : <><Wand2 className="w-3.5 h-3.5 mr-1" /> Genera Alias ({missingAliasCo + missingAliasCt})</>}
+                    </Button>
                   )}
                 </>
               )}
