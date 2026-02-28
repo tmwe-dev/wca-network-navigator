@@ -298,7 +298,7 @@ export default function PartnerHub() {
   const renderEventsBar = () => {
     if (!deepSearching || !deepSearchProgress) return null;
     return (
-      <div className="px-4 py-2 border-b border-border/50 bg-primary/5">
+      <div className="px-4 py-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2 text-xs">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
           <span className="font-medium">
@@ -317,22 +317,16 @@ export default function PartnerHub() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[calc(100vh-4rem)] -m-6 relative overflow-hidden">
-      {/* Ambient gradient backgrounds */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:block hidden" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-sky-500/[0.07] via-transparent to-transparent dark:block hidden" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-violet-500/[0.05] via-transparent to-transparent dark:block hidden" />
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-sky-50/30 dark:hidden" />
-
-      <ResizablePanelGroup direction="horizontal" className="relative z-10 h-full">
+    <div className="h-[calc(100vh-3rem)] -m-4 relative overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
-      <div className="h-full flex flex-col bg-white/[0.03] dark:bg-white/[0.03] bg-white/60 backdrop-blur-xl border-r border-white/[0.08] dark:border-white/[0.08] border-slate-200/60">
+      <div className="h-full flex flex-col border-r border-border bg-background">
         {/* Header */}
-        <div className="p-4 border-b border-white/[0.08] dark:border-white/[0.08] border-slate-200/60 space-y-3 bg-gradient-to-br from-sky-500/[0.06] via-transparent to-violet-500/[0.04]">
+        <div className="px-4 py-3 border-b border-border space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
+            <h1 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+              <Globe className="w-4 h-4 text-primary" />
               Partner
             </h1>
             <div className="flex items-center gap-2">
@@ -341,33 +335,33 @@ export default function PartnerHub() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-violet-500 hover:bg-violet-500/10"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
                     onClick={() => setAiOpen(true)}
                   >
-                    <Bot className="w-4.5 h-4.5" />
+                    <Bot className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Assistente AI</TooltipContent>
               </Tooltip>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+              <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
               <button
                 onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
                 className={cn(
-                  "px-2 py-1 text-xs rounded-md transition-all",
-                  viewLevel !== "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "px-2 py-1 text-xs rounded transition-all font-medium",
+                  viewLevel !== "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <MapPin className="w-3.5 h-3.5 inline mr-1" />
+                <MapPin className="w-3 h-3 inline mr-1" />
                 Paesi
               </button>
               <button
                 onClick={() => setViewLevel("list")}
                 className={cn(
-                  "px-2 py-1 text-xs rounded-md transition-all",
-                  viewLevel === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "px-2 py-1 text-xs rounded transition-all font-medium",
+                  viewLevel === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Users className="w-3.5 h-3.5 inline mr-1" />
+                <Users className="w-3 h-3 inline mr-1" />
                 Lista
               </button>
             </div>
@@ -382,7 +376,7 @@ export default function PartnerHub() {
                   placeholder="Cerca partner..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 rounded-xl"
+                  className="pl-9 h-8 text-[13px] rounded-md border-border"
                 />
               </div>
               <PartnerFiltersSheet
@@ -394,7 +388,7 @@ export default function PartnerHub() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="h-7 text-xs w-[160px] rounded-lg">
+                <SelectTrigger className="h-7 text-xs w-[140px] rounded-md">
                   <SelectValue placeholder="Ordina..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -413,10 +407,10 @@ export default function PartnerHub() {
               <button
                 onClick={handleSelectAll}
                 className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all shrink-0",
+                  "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all shrink-0",
                   selectedIds.size > 0 && selectedIds.size === filteredPartners.length
                     ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-muted border-border text-muted-foreground hover:bg-accent"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 <CheckSquare className="w-3 h-3" />
@@ -425,10 +419,10 @@ export default function PartnerHub() {
               <button
                 onClick={() => setFilterIncomplete(!filterIncomplete)}
                 className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all shrink-0",
+                  "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all shrink-0",
                   filterIncomplete
                     ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-muted border-border text-muted-foreground hover:bg-accent"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 <Filter className="w-3 h-3" />
@@ -473,7 +467,7 @@ export default function PartnerHub() {
           />
         ) : (
         <ScrollArea className="flex-1">
-          <div className="divide-y">
+          <div className="divide-y divide-border">
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="p-4 space-y-2">
@@ -492,14 +486,13 @@ export default function PartnerHub() {
                       key={partner.id}
                       onClick={() => setSelectedId(partner.id)}
                       className={cn(
-                        "w-full text-left p-3 transition-all duration-300 cursor-pointer relative group/card",
-                        "hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:bg-sky-50/50",
-                        "hover:scale-[1.01] hover:shadow-lg hover:shadow-sky-500/[0.06]",
-                        selectedId === partner.id && "bg-white/[0.08] dark:bg-white/[0.08] bg-sky-50/80 shadow-md shadow-sky-500/[0.08]",
+                        "w-full text-left p-3 transition-colors cursor-pointer relative group/card",
+                        "hover:bg-muted/50",
+                        selectedId === partner.id && "bg-muted",
                         selectedIds.has(partner.id) && "bg-primary/5",
-                        q === "missing" && "border-l-4 border-l-destructive",
-                        q === "partial" && "border-l-4 border-l-amber-400",
-                        q === "complete" && "border-l-4 border-l-sky-500",
+                        q === "missing" && "border-l-2 border-l-destructive",
+                        q === "partial" && "border-l-2 border-l-warning",
+                        q === "complete" && "border-l-2 border-l-primary",
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -512,7 +505,7 @@ export default function PartnerHub() {
                             <img
                               src={`https://www.google.com/s2/favicons?domain=${partner.website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}&sz=64`}
                               alt=""
-                              className="w-9 h-9 rounded-lg object-contain bg-muted border p-1"
+                              className="w-8 h-8 rounded-md object-contain bg-muted border border-border p-1"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = "none";
                                 (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
@@ -520,9 +513,9 @@ export default function PartnerHub() {
                             />
                           ) : null}
                           {partner.website ? (
-                            <div className="hidden w-9 h-9 rounded-lg bg-muted border" />
+                            <div className="hidden w-8 h-8 rounded-md bg-muted border border-border" />
                           ) : (
-                            <div className="w-9 h-9 rounded-lg bg-muted border" />
+                            <div className="w-8 h-8 rounded-md bg-muted border border-border" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -694,14 +687,14 @@ export default function PartnerHub() {
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={65} minSize={40}>
       {/* ═══ RIGHT PANEL: Detail ═══ */}
-      <div className="h-full overflow-y-auto bg-transparent">
+      <div className="h-full overflow-y-auto">
         {!selectedId ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center space-y-2">
-              <Globe className="w-16 h-16 mx-auto opacity-20" />
-              <p className="text-lg">Seleziona un partner</p>
-              <p className="text-sm text-muted-foreground/60">
-                {filteredPartners.length} partner disponibili
+            <div className="text-center space-y-1">
+              <Globe className="w-10 h-10 mx-auto opacity-15" />
+              <p className="text-sm font-medium">Seleziona un partner</p>
+              <p className="text-xs text-muted-foreground/60">
+                {filteredPartners.length} disponibili
               </p>
             </div>
           </div>
