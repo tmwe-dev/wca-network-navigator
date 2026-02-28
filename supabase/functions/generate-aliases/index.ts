@@ -23,22 +23,17 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Load partners that need alias generation:
-    // company_alias IS NULL OR have at least one contact without contact_alias
+    // Load ALL partners in selected countries (including those without contacts)
     const { data: partners, error: pErr } = await supabase
       .from("partners")
       .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, email, direct_phone, mobile, contact_alias)")
-      .in("country_code", countryCodes)
-      .not("partner_contacts", "is", null);
+      .in("country_code", countryCodes);
 
     if (pErr) throw pErr;
 
-    // Filter: partners that (a) have at least one contact with email/phone AND
-    // (b) are missing company_alias OR have at least one contact missing contact_alias
+    // Filter: partners that need company_alias OR have contacts needing contact_alias
     const eligible = (partners || []).filter((p: any) => {
       const contacts = p.partner_contacts || [];
-      const hasContactInfo = contacts.some((c: any) => c.email || c.direct_phone || c.mobile);
-      if (!hasContactInfo) return false;
       const needsCompanyAlias = !p.company_alias;
       const needsContactAlias = contacts.some((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile));
       return needsCompanyAlias || needsContactAlias;

@@ -132,7 +132,7 @@ export default function Operations() {
       const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { countryCodes: codes } });
       if (error) throw error;
       if (data?.success) {
-        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti`);
+        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`);
         queryClient.invalidateQueries({ queryKey: ["partners"] });
         queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       } else {
