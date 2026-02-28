@@ -1,59 +1,31 @@
 
 
-# Partner Hub — Ottimizzazione per Esplorazione e Discovery
+## Problema
 
-## Obiettivo
-Trasformare il Partner Hub da dashboard orientata alla completezza dati a un "book" di esplorazione partner. Mantenere i filtri utili per la selezione operativa, rimuovere gli elementi di gestione dati (action buttons, progress bars), e migliorare la scheda partner a destra come un canvas ricco e chiaro.
+Il `PartnerDetailCompact` (dettaglio singolo partner) ha solo il bottone **Deep Search** standalone. I bottoni **Attività**, **Workspace** e **Email** esistono solo nella `BulkActionBar`, che appare quando selezioni partner con le checkbox nella lista. L'utente si aspetta di poter eseguire tutte le azioni anche sul singolo partner dal dettaglio.
 
-## Modifiche
+## Piano
 
-### 1. CountryWorkbench.tsx — Snellire, tenere filtri utili
+### 1. Aggiungere barra azioni nel dettaglio partner (`PartnerDetailCompact.tsx`)
 
-**Rimuovere:**
-- I 4 ActionButton (Download profili, Deep Search, Alias azienda, Alias contatti) — appartengono a Operations
-- Le 6 ProgressRow (Profili, Deep S., Email, Telefono, Alias Az, Alias Ct)
-- I filter chips negativi (No Tel, No Email, No Prof, No Deep) — non servono per discovery
+Aggiungere una riga di bottoni nell'header del dettaglio partner con stile glassmorphism lilla coerente con la `BulkActionBar`:
+- **Attività** (ClipboardList) — apre il dialog assegnazione attività per quel singolo partner
+- **Deep Search** (Sparkles) — già presente, va integrato nella nuova riga
+- **Workspace** (Briefcase) — invia il partner al workspace
+- **Email** (Send) — naviga all'email composer con quel partner
 
-**Mantenere e riposizionare:**
-- Filter chips positivi riformulati: "Con Tel", "Con Email", "Deep Search", + aggiungere "Con Rating 3+", "Con Servizi"
-- Header compatto (bandiera, nome, conteggio)
-- Select All / conteggio filtrati
+### 2. Passare i callback necessari (`PartnerHub.tsx`)
 
-**Arricchire la lista partner:**
-- Rating stelle prominente accanto al nome
-- Icone servizi trasporto + specialita sotto il nome
-- Badge network piccoli
-- Trophy anni WCA
+Aggiungere props al `PartnerDetailCompact`:
+- `onAssignActivity(partnerId)` — apre `AssignActivityDialog` preselezionando quel partner
+- `onSendToWorkspace(partnerId)` — chiama la logica esistente per un singolo ID
+- `onEmail(partnerId)` — naviga a `/email-composer` con quel partner
 
-**Rimuovere dalla props interface:** `onDownloadProfiles`, `onDeepSearch`, `onGenerateAliases`, `deepSearching`, `deepSearchProgress`, `aliasGenerating`
+### 3. Rimuovere il bottone Deep Search isolato
 
-### 2. CountryCards.tsx — Semplificare
+Sostituire il bottone Deep Search standalone con la nuova barra unificata che include tutte e 4 le azioni nella stessa riga compatta.
 
-- Rimuovere la barra progresso profili (% completamento)
-- Rimuovere stats Phone/Mail/Users/entrambi
-- Rimuovere warning "senza profilo" e bottone "Scarica profili"
-- Mostrare solo: bandiera, nome paese, numero partner, rating medio (calcolato da stats)
-- Card piu pulita e cliccabile
-
-### 3. PartnerDetailFull.tsx — Aprire sezioni per default
-
-- Contatti Azienda: da Collapsible a sezione sempre aperta
-- Contatti Ufficio: da Collapsible a sezione sempre aperta
-- Profilo Aziendale: da Collapsible a sezione sempre aperta
-- Servizi gia aperti (confermato)
-- Spostare la sezione KPI subito sotto l'header, prima dei servizi
-
-### 4. PartnerHub.tsx — Layout full-height
-
-- Rimuovere `-m-4` e usare `h-[calc(100vh-3.25rem)]` per far partire il pannello dall'alto
-- Rimuovere le props di download/deepSearch/alias dal passaggio a CountryWorkbench
-
-## File da modificare
-
-| File | Azione |
-|------|--------|
-| `CountryWorkbench.tsx` | Rimuovere ActionButtons, ProgressRows, filtri negativi; mantenere filtri positivi; arricchire lista con rating/servizi/network |
-| `CountryCards.tsx` | Rimuovere progress bar e stats contatti, card minimale |
-| `PartnerDetailFull.tsx` | Aprire Collapsible per default (sezioni sempre visibili), KPI band sotto header |
-| `PartnerHub.tsx` | Aggiustare layout, rimuovere props non necessarie dal CountryWorkbench |
+### File da modificare
+- `src/components/partners/PartnerDetailCompact.tsx` — aggiungere barra azioni unificata
+- `src/pages/PartnerHub.tsx` — passare i nuovi callback
 
