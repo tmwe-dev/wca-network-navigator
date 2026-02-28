@@ -1,38 +1,34 @@
 
 
-## Problema
+## Analisi del Problema
 
-Quando si lancia "Genera Tutte", il sistema tenta di generare email anche per partner senza indirizzo email, causando errori 422 ripetuti. L'utente vuole semplicemente che questi partner vengano esclusi automaticamente.
+Due bug correlati causano il comportamento osservato:
 
-## Piano
+### Bug 1: Il conteggio UI non corrisponde alla logica del backend
+- L'indicatore **"Senza Alias Contatto: 78 mancanti"** conta TUTTI i partner dove nessun contatto ha `contact_alias`
+- Ma la edge function `generate-aliases` processa solo contatti che hanno `email || direct_phone || mobile`
+- Risultato: molti dei 78 partner hanno contatti senza info di contatto, quindi il backend li salta e restituisce "0 da elaborare"
 
-### 1. Filtrare le attività senza email prima della generazione (`Workspace.tsx`)
+### Bug 2: La edge function esclude contatti senza email/telefono dalla generazione alias
+- Gli alias contatto (cognome) sono utili anche per la visualizzazione UI, non solo per le email
+- Escludere i contatti senza email/telefono è troppo restrittivo
 
-Nel metodo `handleGenerateAll`, prima di iterare, filtrare le attività che hanno un contatto con email disponibile. Usare i dati già presenti in `AllActivity.selected_contact.email` o i dati del partner (`partners.email` non è nel select corrente, ma `selected_contact` sì).
+## Piano di Implementazione
 
-Aggiungere un pre-filtro:
-```
-const withEmail = toGenerate.filter(a => 
-  a.selected_contact?.email || /* fallback partner email check */
-);
-```
+### 1. Edge function: rimuovere il filtro restrittivo sui contatti (`generate-aliases/index.ts`)
 
-Se alcune attività vengono escluse, mostrare un toast informativo: "X partner esclusi (email mancante)".
+Nella sezione che filtra i partner eligibili (riga ~36), cambiare il criterio per i contatti:
+- **Prima**: `!c.contact_alias && (c.email || c.direct_phone || c.mobile)` 
+- **Dopo**: `!c.contact_alias` (genera alias per TUTTI i contatti senza alias, indipendentemente dall'avere email/telefono)
 
-### 2. Verificare i dati disponibili nel tipo `AllActivity`
+Stesso cambiamento nella costruzione del `partnerList` per il batch AI (riga ~55):
+- **Prima**: `.filter((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile))`
+- **Dopo**: `.filter((c: any) => !c.contact_alias)`
 
-Il tipo `AllActivity` in `useActivities.ts` include `selected_contact.email`. Bisogna verificare se serve anche il campo `partners.email` (email generica del partner) come fallback. Il select attuale non lo include — va aggiunto alla query.
+### 2. UI: allineare il conteggio `withAliasCt` (`PartnerListPanel.tsx`)
 
-### 3. Aggiungere `email` al select di `partners` in `useAllActivities`
-
-Modificare la query in `useAllActivities` per includere `email` nel select dei partners:
-```
-partners(company_name, company_alias, country_code, country_name, city, enriched_at, website, logo_url, email)
-```
-
-Aggiornare il tipo `AllActivity.partners` di conseguenza.
+Il conteggio attuale è già corretto (conta partner con almeno un contatto con alias) - non necessita modifiche dato che sistemiamo il backend.
 
 ### File da modificare
-- `src/hooks/useActivities.ts` — aggiungere `email` al select partners + tipo
-- `src/pages/Workspace.tsx` — filtrare attività senza email in `handleGenerateAll`
+- `supabase/functions/generate-aliases/index.ts` — rimuovere filtro `email || phone || mobile` dai contatti
 
