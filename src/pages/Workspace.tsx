@@ -177,7 +177,7 @@ export default function Workspace() {
       {/* Right: Config + Canvas */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top action bar */}
-        <div className="px-4 h-10 flex items-center gap-2 border-b border-border bg-background shrink-0">
+        <div className="px-4 h-10 flex items-center gap-2 border-b border-border bg-background shrink-0 relative">
           {deepSearch.running && deepSearch.current && (
             <div className="flex items-center gap-2 mr-1">
               <span className="text-[11px] text-primary font-medium whitespace-nowrap">
@@ -223,6 +223,23 @@ export default function Workspace() {
             <Zap className="w-3.5 h-3.5" />
             {selectedCount > 0 ? `Genera (${selectedCount})` : "Genera Tutte"}
           </Button>
+
+          {/* Progress shimmer bar */}
+          {(batchGenerating || deepSearch.running) && (
+            <div
+              className="progress-shimmer-bar"
+              style={{
+                width: batchProgress
+                  ? `${(batchProgress.current / batchProgress.total) * 100}%`
+                  : deepSearch.current
+                    ? `${(deepSearch.current.index / deepSearch.current.total) * 100}%`
+                    : '30%',
+              }}
+            />
+          )}
+          {!batchGenerating && !deepSearch.running && batchProgress === null && generatedEmails.size > 0 && (
+            <div className="progress-shimmer-bar fade-out" style={{ width: '100%' }} />
+          )}
         </div>
 
         {/* GoalBar */}

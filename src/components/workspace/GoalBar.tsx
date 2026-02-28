@@ -133,20 +133,20 @@ export default function GoalBar({
       </div>
 
       <Tabs defaultValue="goal" className="w-full">
-        <TabsList className="h-8 bg-muted/40 border border-border rounded-md p-0.5 gap-0.5">
-          <TabsTrigger value="goal" className="h-6 px-3 text-xs gap-1.5 rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground">
+        <TabsList className="h-8 bg-transparent border-0 rounded-none p-0 gap-1">
+          <TabsTrigger value="goal" className="mission-tab h-6 gap-1.5">
             <Target className="w-3.5 h-3.5" /> Goal
           </TabsTrigger>
-          <TabsTrigger value="proposal" className="h-6 px-3 text-xs gap-1.5 rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground">
+          <TabsTrigger value="proposal" className="mission-tab h-6 gap-1.5">
             <FileText className="w-3.5 h-3.5" /> Proposta
           </TabsTrigger>
-          <TabsTrigger value="docs" className="h-6 px-3 text-xs gap-1.5 rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground">
+          <TabsTrigger value="docs" className="mission-tab h-6 gap-1.5">
             <Paperclip className="w-3.5 h-3.5" /> Documenti
-            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-primary/20 text-primary hover:bg-primary/20">{safeDocuments.length}</Badge>}
+            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeDocuments.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="links" className="h-6 px-3 text-xs gap-1.5 rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground">
+          <TabsTrigger value="links" className="mission-tab h-6 gap-1.5">
             <Link2 className="w-3.5 h-3.5" /> Link
-            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-primary/20 text-primary hover:bg-primary/20">{safeLinks.length}</Badge>}
+            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-500/20 text-violet-300 hover:bg-violet-500/20">{safeLinks.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
