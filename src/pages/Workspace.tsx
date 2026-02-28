@@ -144,23 +144,22 @@ export default function Workspace() {
   const selectedCount = selectedIds.size;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-stone-50/80">
-      {/* Left: Contact list — full height */}
-      <div className="w-[320px] shrink-0 border-r border-stone-200/60 bg-white/80 backdrop-blur-sm overflow-hidden flex flex-col">
-        {/* Header inside contact list */}
-        <div className="px-3 py-2.5 border-b border-stone-200/60 space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-            </div>
-            <h1 className="text-sm font-bold tracking-tight text-stone-800">Email Workspace</h1>
-          </div>
+    <div className="flex h-[calc(100vh-3rem)] overflow-hidden bg-background">
+      {/* Left: Contact list */}
+      <div className="w-[320px] shrink-0 border-r border-border bg-background overflow-hidden flex flex-col">
+        <div className="h-[52px] flex items-center gap-2.5 px-3 border-b border-white/[0.06] glass-panel shrink-0">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold text-gradient-blue">Email Workspace</span>
+          <span className="glass-panel-blue text-blue-300 text-xs font-mono px-2 py-0.5 rounded-full glow-blue">
+            {emailActivities.length}
+          </span>
+          <div className="flex-1" />
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca partner..."
-              className="pl-8 h-7 text-xs bg-white/80 border-stone-200 text-stone-600 placeholder:text-stone-400 focus:ring-violet-300/50"
+              placeholder="Cerca..."
+              className="pl-7 h-7 w-32 text-xs bg-white/[0.05] border-white/10 placeholder:text-white/30 focus:border-blue-500/50 focus:ring-0 focus:bg-white/[0.07] rounded-md"
             />
           </div>
         </div>
@@ -178,10 +177,10 @@ export default function Workspace() {
       {/* Right: Config + Canvas */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top action bar */}
-        <div className="px-4 py-2 border-b border-stone-200/60 flex items-center gap-2 bg-white/60 backdrop-blur-sm shrink-0">
+        <div className="px-4 h-10 flex items-center gap-2 border-b border-border bg-background shrink-0">
           {deepSearch.running && deepSearch.current && (
             <div className="flex items-center gap-2 mr-1">
-              <span className="text-[11px] text-violet-600 font-medium whitespace-nowrap">
+              <span className="text-[11px] text-primary font-medium whitespace-nowrap">
                 Deep Search {deepSearch.current.index}/{deepSearch.current.total}
               </span>
               <Progress value={(deepSearch.current.index / deepSearch.current.total) * 100} className="w-20 h-1.5" />
@@ -194,7 +193,7 @@ export default function Workspace() {
               <Square className="w-3.5 h-3.5" /> Stop
             </Button>
           ) : (
-            <Button onClick={handleDeepSearch} disabled={batchGenerating || emailActivities.length === 0} size="sm" variant="outline" className="h-7 gap-1.5 text-xs border-violet-200 text-violet-600 hover:bg-violet-50">
+            <Button onClick={handleDeepSearch} disabled={batchGenerating || emailActivities.length === 0} size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
               <Sparkles className="w-3.5 h-3.5" />
               {selectedCount > 0 ? `Deep Search (${selectedCount})` : "Deep Search"}
             </Button>
@@ -220,14 +219,14 @@ export default function Workspace() {
             </AlertDialog>
           )}
 
-          <Button onClick={handleGenerateAll} disabled={batchGenerating || deepSearch.running || emailActivities.length === 0} size="sm" className="h-7 gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs">
+          <Button onClick={handleGenerateAll} disabled={batchGenerating || deepSearch.running || emailActivities.length === 0} size="sm" className="h-7 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
             <Zap className="w-3.5 h-3.5" />
             {selectedCount > 0 ? `Genera (${selectedCount})` : "Genera Tutte"}
           </Button>
         </div>
 
-        {/* GoalBar config area */}
-        <div className="px-4 py-2.5 border-b border-stone-200/60 bg-white/40 shrink-0">
+        {/* GoalBar */}
+        <div className="px-4 py-2.5 border-b border-border shrink-0">
           <GoalBar
             goal={goal} baseProposal={baseProposal}
             onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
@@ -240,7 +239,7 @@ export default function Workspace() {
           />
         </div>
 
-        {/* Email Canvas — fills remaining space */}
+        {/* Email Canvas */}
         <div className="flex-1 overflow-hidden">
           <EmailCanvas
             activity={selectedActivity} goal={goal} baseProposal={baseProposal}

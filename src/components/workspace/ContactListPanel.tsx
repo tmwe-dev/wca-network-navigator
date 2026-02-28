@@ -13,15 +13,15 @@ import { cn } from "@/lib/utils";
 
 type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
 
-const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
-  { key: "with_email", label: "Con email" },
-  { key: "no_email", label: "Senza email" },
-  { key: "with_contact", label: "Con contatto" },
-  { key: "no_contact", label: "Senza contatto" },
-  { key: "with_alias", label: "Con alias" },
-  { key: "no_alias", label: "Senza alias" },
-  { key: "enriched", label: "Arricchito" },
-  { key: "not_enriched", label: "Non arricchito" },
+const FILTER_CHIPS: { key: FilterKey; label: string; variant: "green" | "red" }[] = [
+  { key: "with_email", label: "Con email", variant: "green" },
+  { key: "no_email", label: "Senza email", variant: "red" },
+  { key: "with_contact", label: "Con contatto", variant: "green" },
+  { key: "no_contact", label: "Senza contatto", variant: "red" },
+  { key: "with_alias", label: "Con alias", variant: "green" },
+  { key: "no_alias", label: "Senza alias", variant: "red" },
+  { key: "enriched", label: "Arricchito", variant: "green" },
+  { key: "not_enriched", label: "Non arricchito", variant: "red" },
 ];
 
 function matchesFilter(a: AllActivity, f: FilterKey): boolean {
@@ -38,7 +38,6 @@ function matchesFilter(a: AllActivity, f: FilterKey): boolean {
   }
 }
 
-/** Fetch LinkedIn URLs for a set of partner IDs */
 function useLinkedInLinks(partnerIds: string[]) {
   return useQuery({
     queryKey: ["linkedin-links-workspace", partnerIds],
@@ -83,7 +82,6 @@ export default function ContactListPanel({
     );
   }, [activities]);
 
-  // Collect unique partner IDs for LinkedIn query
   const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id))], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
 
@@ -103,38 +101,24 @@ export default function ContactListPanel({
   const filtered = useMemo(() => {
     if (activeFilters.size === 0) return searched;
     return searched.filter((a) => {
-      for (const f of activeFilters) {
-        if (!matchesFilter(a, f)) return false;
-      }
+      for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
       return true;
     });
   }, [searched, activeFilters]);
 
   const filterCounts = useMemo(() => {
     const counts = {} as Record<FilterKey, number>;
-    for (const chip of FILTER_CHIPS) {
-      counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length;
-    }
+    for (const chip of FILTER_CHIPS) { counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length; }
     return counts;
   }, [searched]);
 
   const grouped = useMemo(
-    () =>
-      groupByCountry(
-        filtered,
-        (a) => a.partners?.country_code || "??",
-        (a) => a.partners?.country_name || "?"
-      ),
+    () => groupByCountry(filtered, (a) => a.partners?.country_code || "??", (a) => a.partners?.country_name || "?"),
     [filtered]
   );
 
   const toggleFilter = useCallback((key: FilterKey) => {
-    setActiveFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setActiveFilters((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   }, []);
 
   const clearFilters = useCallback(() => setActiveFilters(new Set()), []);
@@ -153,52 +137,47 @@ export default function ContactListPanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with select all */}
-      <div className="px-3 py-2 border-b border-stone-200/60 space-y-2">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-border space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll()}
-              className="border-stone-300 data-[state=checked]:bg-violet-500 data-[state=checked]:border-violet-500"
-            />
-            <p className="text-[11px] text-stone-400 font-medium">
+            <Checkbox checked={allSelected}
+              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll()} />
+            <p className="text-[11px] text-muted-foreground font-medium">
               {selectedIds.size > 0 ? (
-                <span className="text-violet-600">{selectedIds.size} selezionati</span>
+                <span className="text-primary">{selectedIds.size} selezionati</span>
               ) : (
                 <>{filtered.length} attività · {grouped.length} paesi</>
               )}
             </p>
           </div>
         </div>
-        {/* Filter chips — combinable toggles */}
+        {/* Filter chips */}
         <div className="flex flex-wrap gap-1">
-          <button
-            onClick={clearFilters}
+          <button onClick={clearFilters}
             className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
+              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
               activeFilters.size === 0
-                ? "bg-violet-100 text-violet-700"
-                : "bg-stone-100 text-stone-400 hover:bg-stone-200 hover:text-stone-500"
-            )}
-          >
+                ? "micro-badge-blue ring-1 ring-current shadow-[0_0_8px_currentColor]"
+                : "micro-badge-blue"
+            )}>
             Tutti
           </button>
-          {FILTER_CHIPS.map((chip) => (
-            <button
-              key={chip.key}
-              onClick={() => toggleFilter(chip.key)}
-              className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
-                activeFilters.has(chip.key)
-                  ? "bg-violet-100 text-violet-700"
-                  : "bg-stone-100 text-stone-400 hover:bg-stone-200 hover:text-stone-500"
-              )}
-            >
-              {chip.label}
-              <span className="ml-1 opacity-60">{filterCounts[chip.key]}</span>
-            </button>
-          ))}
+          {FILTER_CHIPS.map((chip) => {
+            const isActive = activeFilters.has(chip.key);
+            const badgeClass = chip.variant === "green" ? "micro-badge-green" : "micro-badge-red";
+            return (
+              <button key={chip.key} onClick={() => toggleFilter(chip.key)}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
+                  badgeClass,
+                  isActive && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
+                )}>
+                {chip.label}
+                <span className="ml-1 opacity-60">{filterCounts[chip.key]}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -206,10 +185,10 @@ export default function ContactListPanel({
         <div className="p-1.5 space-y-0.5">
           {grouped.map(({ countryCode, countryName, items }) => (
             <div key={countryCode} className="mb-1">
-              <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
+              <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 <span>{getCountryFlag(countryCode)}</span>
                 <span>{countryName}</span>
-                <Badge className="text-[9px] h-4 px-1.5 bg-stone-100 text-stone-500 hover:bg-stone-100 border-0">
+                <Badge className="text-[9px] h-4 px-1.5 bg-muted text-muted-foreground hover:bg-muted border-0">
                   {items.length}
                 </Badge>
               </div>
@@ -225,96 +204,72 @@ export default function ContactListPanel({
                 const linkedinUrl = linkedinMap?.[activity.partner_id];
 
                 return (
-                  <div
-                    key={activity.id}
+                  <div key={activity.id}
                     className={cn(
-                      "flex items-start gap-2 p-2 rounded-lg transition-all duration-150 group",
-                      "hover:bg-stone-50",
-                      isSelected
-                        ? "bg-violet-50/50 border border-violet-300/50 shadow-sm"
-                        : "border border-transparent"
-                    )}
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={() => onToggleSelect(activity.id)}
-                      className="mt-1.5 border-stone-300 data-[state=checked]:bg-violet-500 data-[state=checked]:border-violet-500"
-                    />
-                    <button
-                      onClick={() => onSelect(activity)}
-                      className="flex-1 text-left min-w-0"
-                    >
+                      "flex items-start gap-2 p-2 rounded-md transition-colors duration-150 group",
+                      "hover:bg-muted/50",
+                      isSelected ? "bg-muted border border-primary/20" : "border border-transparent"
+                    )}>
+                    <Checkbox checked={isChecked} onCheckedChange={() => onToggleSelect(activity.id)} className="mt-1.5" />
+                    <button onClick={() => onSelect(activity)} className="flex-1 text-left min-w-0">
                       <div className="flex items-start gap-2">
                         <div className={cn(
-                          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors relative",
-                          isSelected ? "bg-violet-100 text-violet-600" : "bg-stone-100 text-stone-400"
+                          "w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors relative",
+                          isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                         )}>
                           <Building2 className="w-3.5 h-3.5" />
                           {isEnriched && (
-                            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-white" title="Arricchito" />
+                            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background" title="Arricchito" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-sm text-stone-700 truncate">{companyDisplay}</span>
-                            {hasWebsite && (
-                              <Globe className="w-3 h-3 text-blue-400 shrink-0" />
-                            )}
+                            <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
+                            {hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
                             {linkedinUrl && (
-                              <a
-                                href={linkedinUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="LinkedIn"
-                              >
+                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()} title="LinkedIn">
                                 <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
                               </a>
                             )}
                           </div>
                           {contact ? (
                             <div className="flex items-center gap-1 mt-0.5">
-                              <User className="w-3 h-3 text-stone-400" />
-                              <span className="text-xs text-stone-500 truncate">
-                                {displayName}
-                                {contact.title && ` · ${contact.title}`}
+                              <User className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground truncate">
+                                {displayName}{contact.title && ` · ${contact.title}`}
                               </span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1 mt-0.5">
-                              <AlertTriangle className="w-3 h-3 text-amber-500" />
-                              <span className="text-[11px] text-amber-500">Nessun contatto</span>
+                              <AlertTriangle className="w-3 h-3 text-warning" />
+                              <span className="text-[11px] text-warning">Nessun contatto</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {hasEmail ? (
-                              <Mail className="w-3 h-3 text-violet-400" />
+                              <Mail className="w-3 h-3 text-primary/60" />
                             ) : contact ? (
                               <div className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-red-300" />
-                                <span className="text-[10px] text-red-400">No email</span>
+                                <Mail className="w-3 h-3 text-destructive/60" />
+                                <span className="text-[10px] text-destructive/80">No email</span>
                               </div>
                             ) : null}
                             {(contact?.direct_phone || contact?.mobile) && (
                               <>
-                                <Phone className="w-3 h-3 text-violet-400" />
-                                <a
-                                  href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  title="WhatsApp"
-                                  className="inline-flex"
-                                >
-                                  <MessageCircle className="w-3 h-3 text-emerald-500 hover:scale-110 transition-transform" />
+                                <Phone className="w-3 h-3 text-primary/60" />
+                                <a href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
+                                  target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                                  title="WhatsApp" className="inline-flex">
+                                  <MessageCircle className="w-3 h-3 text-success hover:scale-110 transition-transform" />
                                 </a>
                               </>
                             )}
                           </div>
                         </div>
                         <ChevronRight className={cn(
-                          "w-3.5 h-3.5 shrink-0 transition-transform text-stone-300",
-                          isSelected && "text-violet-400 rotate-90"
+                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/30",
+                          isSelected && "text-primary rotate-90"
                         )} />
                       </div>
                     </button>
@@ -324,7 +279,7 @@ export default function ContactListPanel({
             </div>
           ))}
           {grouped.length === 0 && (
-            <div className="text-center py-8 text-stone-400 text-sm">
+            <div className="text-center py-8 text-muted-foreground text-sm">
               Nessuna attività email trovata
             </div>
           )}
