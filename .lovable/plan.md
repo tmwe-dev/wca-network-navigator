@@ -1,36 +1,28 @@
 
 
-## Diagnosi: 3 problemi distinti in Operations
+## Test Results & Fixes Needed
 
-### Problema 1: Alias genera "0 aziende, undefined contatti"
+### What Works
+1. **Contextual stat pills** - WORKING. When Thailand is selected, counters correctly show: 1 SELEZ, 178 PARTNER, 6 NO PROFILO, 78 NO EMAIL, 102 NO TEL, 179 DIRECTORY.
 
-**Causa**: L'edge function `generate-aliases` filtra con `.is("company_alias", null)`. Se l'alias azienda e' gia' stato generato in precedenza, quei partner vengono esclusi anche se i contatti non hanno ancora alias. Inoltre il client chiama separatamente per "company" e "contact" ma la funzione li genera sempre insieme -- il parametro `type` viene ignorato.
+### What Needs Fixing
 
-**Fix**:
-- Modificare la query dell'edge function per includere partner dove `company_alias IS NULL` OPPURE che hanno almeno un contatto senza `contact_alias`
-- Cambiare il client (`Operations.tsx` linea 128-146 e `PartnerListPanel.tsx` linea 533 e 607-613) per chiamare la funzione una sola volta con entrambi i tipi (non separatamente)
-- Aggiungere `undefined` safety nel toast: `data.contacts ?? 0`
+#### Fix 1: Edge function `generate-aliases` excludes partners without contacts
 
-### Problema 2: Contatori top bar non sincronizzati con selezione paese
+The edge function query uses `.not("partner_contacts", "is", null)` which excludes partners that have no contacts. Of the 78 Thailand partners without `company_alias`, **77 have zero contacts** — so they get excluded. The `eligible` filter further requires `hasContactInfo = true`, double-excluding them.
 
-**Causa**: Le `StatPill` in `Operations.tsx` (linee 173-186) mostrano sempre `globalStats` (somma di TUTTI i paesi), non i dati dei paesi selezionati. Quando selezioni Thailandia, i numeri in alto restano globali.
+The company alias generation does NOT need contacts — it just cleans the company name.
 
-**Fix**:
-- Quando `selectedCountries.length > 0`, calcolare i pill values aggregando solo i paesi selezionati da `countryStatsData.byCountry` anziche' usare `countryStatsData.global`
+**Changes to `supabase/functions/generate-aliases/index.ts`:**
+- Remove `.not("partner_contacts", "is", null)` filter
+- Split eligible logic: partners need company alias OR have contacts needing contact alias
+- Partners with no contacts should still be included if they need a company_alias
+- The AI prompt payload should handle partners with empty contacts arrays
 
-### Problema 3: "Sessione WCA non attiva" -- download non parte
+#### Fix 2: Toast shows "undefined" for contacts count
 
-**Causa**: `ensureSession()` in `useWcaSession.ts` chiama `verifySession()` dall'extension bridge. Se l'estensione non risponde in tempo o la sessione e' scaduta, tenta l'auto-login. Ma `fetchWcaCredentials()` potrebbe fallire silenziosamente (token scaduto, errore di rete). Il toast "Sessione WCA non attiva" appare senza dettagli su quale step e' fallito.
+In `Operations.tsx` line 135, the toast already uses `data.contacts ?? 0`, so this should work now. But we should also show the `total` field from the response to give context (e.g., "Alias generati: 78 aziende, 3 contatti su 81 elaborati").
 
-**Fix**:
-- In `useWcaSession.ts`: aggiungere log dettagliati per ogni step del flusso (extension check, session verify, credential fetch, auto-login attempt)
-- Mostrare toast piu' specifici: "Estensione non trovata", "Credenziali non configurate", "Auto-login fallito" anziche' generico "non attiva"
-- In `handleStartDownload` (PartnerListPanel linea 272-276): mostrare `lastError` dalla sessione se disponibile
-
-### File da modificare
-
-1. `supabase/functions/generate-aliases/index.ts` -- query inclusiva (company OR contact alias mancante)
-2. `src/pages/Operations.tsx` -- stat pills contestuali ai paesi selezionati
-3. `src/components/operations/PartnerListPanel.tsx` -- unificare chiamata alias, migliorare errore download
-4. `src/hooks/useWcaSession.ts` -- toast specifici per ogni step di fallimento
+### Files to Change
+1. `supabase/functions/generate-aliases/index.ts` — Remove contact-required filter; allow company-only alias generation for partners without contacts
 
