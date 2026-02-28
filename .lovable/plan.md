@@ -1,31 +1,29 @@
 
 
-## Analisi: Download Vietnam senza Directory
+## Piano: Salvare networks, services e certifications in `profileSaver.ts`
 
-Il flusso attuale per scaricare un paese senza dati in directory richiede due passaggi:
+### Contesto
+L'estensione Chrome estrae `result.profile.networks[]` (oggetti `{name, expires}`), `result.profile.services[]` (stringhe) e `result.profile.certifications[]` (stringhe) ma `profileSaver.ts` li ignora. Vanno salvati durante il download.
 
-1. **Selezionare il paese** nella CountryGrid (Vietnam appare quando si ordina per nome o si usa il filtro "missing")
-2. **Avviare la scansione directory** dal PartnerListPanel che appare a destra - il pulsante "Scansiona Directory" lancia `scrapeWcaDirectory` che popola la `directory_cache`
-3. **Poi scaricare** i profili con il pulsante Download
+### Modifica: `src/lib/download/profileSaver.ts`
 
-### Problema di UX
+Dopo il blocco di salvataggio profilo (dopo `raw_profile_html`), aggiungere tre blocchi:
 
-Quando un paese non ha dati in directory ne nel database, il PartnerListPanel mostra 0 partner e il wizard di download non ha WCA ID da processare. Il pulsante "Scansiona Directory" dovrebbe essere l'azione primaria e ben visibile, ma potrebbe non essere abbastanza evidente.
+**A) Networks** — Per ogni elemento in `result.profile.networks[]`:
+- SELECT esistenti da `partner_networks` per quel `partner_id`
+- INSERT solo quelli con `network_name` non già presente
+- Mappare `{name, expires}` a `{partner_id, network_name, expires}`
 
-### Piano
+**B) Services** — Per ogni stringa in `result.profile.services[]`:
+- Mappare il testo estratto dal DOM alla enum `service_category` valida: `air_freight`, `ocean_fcl`, `ocean_lcl`, `road_freight`, `rail_freight`, `project_cargo`, `dangerous_goods`, `perishables`, `pharma`, `ecommerce`, `relocations`, `customs_broker`, `warehousing`, `nvocc`
+- Usare una lookup map (es. "air" → `air_freight`, "sea"/"ocean"/"fcl" → `ocean_fcl`, ecc.)
+- SELECT esistenti, INSERT solo quelli mancanti
 
-#### 1. Rendere il pulsante "Scansiona Directory" prominente per paesi vuoti (`PartnerListPanel.tsx`)
-
-Quando `!hasCache && dbPartners.length === 0`, mostrare un empty state dedicato con:
-- Messaggio chiaro: "Nessun dato per [Paese]. Scansiona la directory WCA per iniziare."
-- Pulsante primario grande "Scansiona Directory"
-- Opzionalmente un pulsante "Clean + Download" che avvia scansione + download automatico (`dirThenDownload`)
-
-#### 2. Migliorare la visibilità nella CountryGrid (`CountryGrid.tsx`)
-
-Per i paesi senza dati (grigio, label "—"), aggiungere un'icona o tooltip che indichi "Scansiona per iniziare". Il paese è già visibile e selezionabile, serve solo un hint visivo.
+**C) Certifications** — Per ogni stringa in `result.profile.certifications[]`:
+- Normalizzare il testo e filtrare per valori validi nella enum `certification_type`: `IATA`, `BASC`, `ISO`, `C-TPAT`, `AEO`
+- Usare regex/includes per mappare (es. testo contenente "IATA" → `IATA`, "ISO" → `ISO`, ecc.)
+- SELECT esistenti, INSERT solo quelli mancanti
 
 ### File da modificare
-- `src/components/operations/PartnerListPanel.tsx` — empty state prominente con CTA scansione per paesi senza directory
-- `src/components/download/CountryGrid.tsx` — hint visivo per paesi non ancora esplorati
+- `src/lib/download/profileSaver.ts` — aggiungere 3 blocchi di upsert dopo il salvataggio profilo/HTML
 
