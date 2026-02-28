@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
@@ -18,10 +18,15 @@ const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
 };
 
 export function AppLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const location = useLocation();
   const deepSearch = useDeepSearchRunner();
+
+  // Close sidebar on navigation
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   // Get current page info
   const currentPath = location.pathname;
@@ -45,7 +50,24 @@ export function AppLayout() {
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+        {/* Hover trigger zone — invisible strip on the left edge */}
+        <div
+          className="fixed left-0 top-0 w-2 h-full z-50"
+          onMouseEnter={() => setSidebarOpen(true)}
+        />
+
+        {/* Sidebar overlay */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setSidebarOpen(false)} />
+        )}
+
+        {/* Sidebar drawer */}
+        <div
+          className={`fixed left-0 top-0 h-full z-50 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+          onMouseLeave={() => setSidebarOpen(false)}
+        >
+          <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
+        </div>
         
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Top bar */}
