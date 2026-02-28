@@ -287,6 +287,18 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     const allMembers: DirectoryMember[] = [];
     const skipped: string[] = [];
 
+    // Helper: wait while tab is hidden (pause on blur)
+    const waitIfHidden = () => new Promise<void>((resolve) => {
+      if (!document.hidden) { resolve(); return; }
+      const handler = () => {
+        if (!document.hidden) {
+          document.removeEventListener("visibilitychange", handler);
+          resolve();
+        }
+      };
+      document.addEventListener("visibilitychange", handler);
+    });
+
     // Build set of already-cached country codes to skip
     const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
 
@@ -300,6 +312,11 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         continue;
       }
 
+      // Memory protection: every 5 countries, trim intermediate state
+      if (ci > 0 && ci % 5 === 0) {
+        setScannedMembers([...allMembers]); // force re-render with clean copy
+      }
+
       for (const netKey of networkKeys) {
         if (abortRef.current) break;
         let page = 1;
@@ -310,6 +327,9 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         let countryFailed = false;
 
         while (hasNext && !abortRef.current) {
+          // Pause if tab is hidden
+          await waitIfHidden();
+
           setCurrentPage(page);
           let result: DirectoryResult | null = null;
           let lastError = "";
@@ -334,7 +354,8 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
             const newMembers = result.members.map(m => ({ ...m, country: m.country || country.name, country_code: country.code }));
             countryMembers.push(...newMembers);
             allMembers.push(...newMembers);
-            setScannedMembers([...allMembers]);
+            // Only update UI every 100 members to reduce re-renders
+            if (allMembers.length % 100 < 50) setScannedMembers([...allMembers]);
           }
           countryTotal = result.pagination.total_results;
           countryPages = result.pagination.total_pages;
@@ -352,9 +373,13 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
 
       // Pause between countries (use delay slider, minimum 10s)
       if (ci < selectedCountries.length - 1 && !abortRef.current) {
+        await waitIfHidden();
         await new Promise(r => setTimeout(r, Math.max(delay * 1000, 10000)));
       }
     }
+
+    // Final sync of all members
+    setScannedMembers([...allMembers]);
 
     setIsScanning(false);
     setScanComplete(true);
