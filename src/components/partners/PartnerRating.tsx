@@ -2,12 +2,13 @@ import { Star, StarHalf } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RatingDetails {
-  reliability: number;
-  completeness: number;
-  seniority: number;
+  website_quality: number;
+  service_mix: number;
   network_size: number;
-  infrastructure: number;
-  specialties: number;
+  seniority: number;
+  international: number;
+  linkedin_presence: number;
+  company_profile: number;
 }
 
 interface PartnerRatingProps {
@@ -18,12 +19,13 @@ interface PartnerRatingProps {
 }
 
 const CRITERIA_LABELS: Record<string, string> = {
-  reliability: "Affidabilità",
-  completeness: "Completezza",
-  seniority: "Anzianità WCA",
+  website_quality: "Qualità Sito Web",
+  service_mix: "Mix Servizi",
   network_size: "Dimensione Network",
-  infrastructure: "Infrastruttura",
-  specialties: "Specializzazioni",
+  seniority: "Anzianità WCA",
+  international: "Presenza Internazionale",
+  linkedin_presence: "LinkedIn Manager",
+  company_profile: "Profilo Aziendale",
 };
 
 function StarDisplay({ rating, size }: { rating: number; size: "sm" | "md" | "lg" }) {

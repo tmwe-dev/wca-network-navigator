@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
     // Get partner data
     const { data: partner, error: partnerError } = await supabase
       .from('partners')
-      .select('id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone')
+      .select('id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone, branch_cities, has_branches')
       .eq('id', partnerId)
       .single()
 
@@ -550,15 +550,16 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
       }
     }
 
-    // ═══ LOGO FROM WEBSITE ═══
+    // ═══ LOGO + WEBSITE QUALITY FROM WEBSITE ═══
+    let websiteQualityScore = 0
     if (partner.website) {
       try {
         const websiteUrl = partner.website.startsWith('http') ? partner.website : `https://${partner.website}`
-        console.log(`Scraping logo: ${websiteUrl}`)
+        console.log(`Scraping logo + website quality: ${websiteUrl}`)
         const scrapeResp = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: websiteUrl, formats: ['links'] }),
+          body: JSON.stringify({ url: websiteUrl, formats: ['links', 'markdown'] }),
         })
         if (scrapeResp.ok) {
           const scrapeData = await scrapeResp.json()
@@ -578,11 +579,41 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
             const { error } = await supabase.from('partners').update({ logo_url: logoUrl }).eq('id', partnerId)
             if (!error) logoFound = true
           }
-        } else {
-          // Scrape failed - no fallback, leave logo_url empty
+
+          // ── Website quality AI evaluation ──
+          const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || ''
+          if (markdown.length > 100 && !rateLimited) {
+            try {
+              const truncated = markdown.slice(0, 3000)
+              const qualityAnswer = await aiPickUrl(
+                `You are evaluating the website of a logistics/freight forwarding company. Based on the website content below, rate it 1-5 on these criteria:
+- Modern design and structure (navigation, sections, visual hierarchy)
+- Content completeness (services described, contact info, about page)
+- Professionalism (proper language, no broken content, structured pages)
+- Business quality signals (multiple services listed, locations, certifications mentioned)
+
+A score of 1 = very basic/poor site. 5 = excellent professional site.
+Respond with ONLY a single number 1-5.
+
+Website content:
+${truncated}`,
+                lovableKey, totalTokens
+              )
+              if (qualityAnswer) {
+                const parsed = parseInt(qualityAnswer.replace(/[^1-5]/g, ''))
+                if (parsed >= 1 && parsed <= 5) {
+                  websiteQualityScore = parsed
+                  console.log(`Website quality score: ${parsed}/5`)
+                }
+              }
+            } catch (e: any) {
+              if (e.message === 'RATE_LIMITED') rateLimited = true
+              else console.error('Website quality eval error:', e)
+            }
+          }
         }
       } catch (e) {
-        console.error('Logo error:', e)
+        console.error('Logo/website quality error:', e)
       }
     }
 
@@ -597,46 +628,113 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
       ...existingEnrichment,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(companyProfile ? { company_profile: companyProfile } : {}),
+      ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(),
     }
 
     await supabase.from('partners').update({ enrichment_data: updatedEnrichment }).eq('id', partnerId)
 
-    // ═══ DETERMINISTIC RATING ═══
-    let score = 0
-    // Website present
-    if (partner.website) score += 1
-    // Company email
-    if (partner.email) score += 0.5
-    // Contacts with email
-    if (contacts?.some(c => c.email)) score += 1
-    // Contacts with phone
-    if (contacts?.some(c => c.mobile || c.direct_phone)) score += 0.5
-    // Profile description
-    if (partner.profile_description) score += 0.5
-    // Networks count
-    if (networks.length >= 3) score += 1
-    else if (networks.length >= 1) score += 0.5
-    // Certifications
-    if (certifications.length >= 2) score += 0.5
-    else if (certifications.length >= 1) score += 0.25
-    // Social links found
-    if (socialLinksFound >= 3) score += 0.5
-    else if (socialLinksFound >= 1) score += 0.25
-    // Years of membership
+    // ═══ LOAD SERVICES FOR RATING ═══
+    const { data: services = [] } = await supabase
+      .from('partner_services')
+      .select('service_category')
+      .eq('partner_id', partnerId)
+
+    // ═══ NEW QUALITY-BASED RATING (7 weighted criteria) ═══
+
+    // 1. Website quality (20%) — AI evaluated above
+    const websiteScore = websiteQualityScore || (partner.website ? 2 : 1)
+
+    // 2. Service mix (20%) — penalize ocean-only, reward air+road+warehousing
+    const svcSet = new Set(services.map((s: any) => s.service_category))
+    let serviceMixScore = 1
+    if (svcSet.has('ocean_fcl') || svcSet.has('ocean_lcl')) serviceMixScore = 1
+    if (svcSet.has('air_freight')) serviceMixScore += 1.5
+    if (svcSet.has('road_freight')) serviceMixScore += 1
+    if (svcSet.has('warehousing')) serviceMixScore += 1
+    if (svcSet.has('customs_broker')) serviceMixScore += 0.5
+    // Penalty: ocean-only partner
+    if ((svcSet.has('ocean_fcl') || svcSet.has('ocean_lcl')) && !svcSet.has('air_freight') && !svcSet.has('road_freight') && !svcSet.has('warehousing')) {
+      serviceMixScore = 1
+    }
+    serviceMixScore = Math.min(5, Math.max(1, serviceMixScore))
+
+    // 3. Network size (15%)
+    let networkScore = 1
+    if (networks.length >= 5) networkScore = 5
+    else if (networks.length >= 3) networkScore = 3
+    else if (networks.length >= 2) networkScore = 2
+    else if (networks.length >= 1) networkScore = 1.5
+
+    // 4. WCA Seniority (15%)
+    let seniorityScore = 1
     if (partner.member_since) {
       const memberYears = (Date.now() - new Date(partner.member_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-      if (memberYears >= 10) score += 0.5
-      else if (memberYears >= 5) score += 0.25
+      if (memberYears >= 20) seniorityScore = 5
+      else if (memberYears >= 15) seniorityScore = 4
+      else if (memberYears >= 10) seniorityScore = 3
+      else if (memberYears >= 5) seniorityScore = 2
+      else seniorityScore = 1
     }
-    // Company profile enrichment
-    if (companyProfile?.specialties?.length > 0) score += 0.25
-    if (companyProfile?.awards?.length > 0) score += 0.25
 
-    // Scale to 1-5
-    const rating = Math.min(5, Math.max(1, Math.round(score * 0.8 + 1)))
-    await supabase.from('partners').update({ rating }).eq('id', partnerId)
-    console.log(`Rating calculated: ${rating}/5 (raw score: ${score})`)
+    // 5. International presence (10%) — branch cities count
+    const branchCities = Array.isArray(partner.branch_cities) ? partner.branch_cities : []
+    let internationalScore = 1
+    if (branchCities.length >= 10) internationalScore = 5
+    else if (branchCities.length >= 6) internationalScore = 4
+    else if (branchCities.length >= 3) internationalScore = 3
+    else if (branchCities.length >= 1) internationalScore = 2
+
+    // 6. LinkedIn managers (10%) — contacts with LinkedIn + seniority bonus
+    const linkedinLinks = existingLinks.filter(l => l.platform === 'linkedin' && l.contact_id)
+    let linkedinScore = 1
+    if (contacts && contacts.length > 0) {
+      const linkedinRatio = linkedinLinks.length / contacts.length
+      linkedinScore = Math.min(5, Math.max(1, Math.round(linkedinRatio * 4 + 1)))
+      // Bonus for senior contacts
+      const seniorCount = Object.values(contactProfiles).filter((p: any) => p.seniority === 'senior').length
+      if (seniorCount >= 2) linkedinScore = Math.min(5, linkedinScore + 1)
+      else if (seniorCount >= 1) linkedinScore = Math.min(5, linkedinScore + 0.5)
+    }
+
+    // 7. Company profile (10%) — employee count, founded year, awards, specialties
+    let companyProfileScore = 1
+    if (companyProfile) {
+      let cpPoints = 0
+      if (companyProfile.employee_count_estimate && companyProfile.employee_count_estimate > 50) cpPoints += 1.5
+      else if (companyProfile.employee_count_estimate && companyProfile.employee_count_estimate > 10) cpPoints += 1
+      if (companyProfile.founded_year && companyProfile.founded_year < 2010) cpPoints += 1
+      if (companyProfile.awards?.length > 0) cpPoints += 1
+      if (companyProfile.specialties?.length >= 2) cpPoints += 1
+      else if (companyProfile.specialties?.length >= 1) cpPoints += 0.5
+      companyProfileScore = Math.min(5, Math.max(1, 1 + cpPoints))
+    }
+
+    // Weighted average
+    const rawRating =
+      websiteScore * 0.20 +
+      serviceMixScore * 0.20 +
+      networkScore * 0.15 +
+      seniorityScore * 0.15 +
+      internationalScore * 0.10 +
+      linkedinScore * 0.10 +
+      companyProfileScore * 0.10
+
+    // Round to nearest 0.5
+    const rating = Math.min(5, Math.max(1, Math.round(rawRating * 2) / 2))
+
+    const ratingDetails = {
+      website_quality: Math.round(websiteScore * 10) / 10,
+      service_mix: Math.round(serviceMixScore * 10) / 10,
+      network_size: Math.round(networkScore * 10) / 10,
+      seniority: Math.round(seniorityScore * 10) / 10,
+      international: Math.round(internationalScore * 10) / 10,
+      linkedin_presence: Math.round(linkedinScore * 10) / 10,
+      company_profile: Math.round(companyProfileScore * 10) / 10,
+    }
+
+    await supabase.from('partners').update({ rating, rating_details: ratingDetails }).eq('id', partnerId)
+    console.log(`Rating calculated: ${rating}/5 (details: ${JSON.stringify(ratingDetails)})`)
 
     console.log(`Deep search complete for ${partner.company_name}: ${socialLinksFound} social links, logo: ${logoFound}, profiles: ${Object.keys(contactProfiles).length}, rating: ${rating}${rateLimited ? ' (rate limited)' : ''}`)
 

@@ -22,12 +22,13 @@ export interface AIClassification {
   partner_type: string;
   rating?: number;
   rating_details?: {
-    reliability: number;
-    completeness: number;
-    seniority: number;
+    website_quality: number;
+    service_mix: number;
     network_size: number;
-    infrastructure: number;
-    specialties: number;
+    seniority: number;
+    international: number;
+    linkedin_presence: number;
+    company_profile: number;
   };
 }
 
