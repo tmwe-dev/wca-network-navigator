@@ -14,6 +14,7 @@
     try {
       var msg = { source: "li-content-bridge", action: data.action };
       if (data.url) msg.url = data.url;
+      if (data.message) msg.message = data.message;
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {

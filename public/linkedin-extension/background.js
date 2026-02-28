@@ -217,6 +217,91 @@ async function autoLoginLinkedIn() {
   };
 }
 
+// ── Send a direct message on LinkedIn ──
+function typeLinkedInMessage(messageText) {
+  try {
+    // Look for the message input in the messaging overlay or page
+    var msgBox = document.querySelector("div.msg-form__contenteditable[contenteditable='true']")
+      || document.querySelector("div[role='textbox'][contenteditable='true']");
+
+    if (!msgBox) return { success: false, error: "Campo messaggio non trovato" };
+
+    msgBox.focus();
+    // Use execCommand for contenteditable divs
+    document.execCommand("selectAll", false, null);
+    document.execCommand("insertText", false, messageText);
+    msgBox.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // Find and click send button
+    var sendBtn = document.querySelector("button.msg-form__send-button")
+      || document.querySelector("button[type='submit'].msg-form__send-btn")
+      || document.querySelector("button.msg-form__send-toggle button")
+      || Array.from(document.querySelectorAll("button")).find(function (b) {
+          return /invia|send/i.test(b.textContent);
+        });
+
+    if (sendBtn) {
+      sendBtn.click();
+      return { success: true, method: "button" };
+    }
+    return { success: false, error: "Bottone invio non trovato. Messaggio inserito ma non inviato." };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function sendLinkedInMessage(profileUrl, message) {
+  if (!profileUrl) return { success: false, error: "URL profilo mancante" };
+  if (!message) return { success: false, error: "Messaggio mancante" };
+
+  // Normalize to messaging URL
+  var messagingUrl = profileUrl.replace(/\/$/, "");
+  // If it's a profile URL, open the overlay messaging
+  if (!/\/messaging\//.test(messagingUrl)) {
+    // Open profile first to trigger the message button
+    var tab = await chrome.tabs.create({ url: messagingUrl, active: false });
+    try {
+      await waitForTabLoad(tab.id, 20000);
+
+      // Click the "Message" button on the profile
+      var clickRes = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var msgBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='essag']")
+            || Array.from(document.querySelectorAll("button, a")).find(function (el) {
+              return /messag|scrivi/i.test(el.textContent) && el.offsetParent !== null;
+            });
+          if (msgBtn) { msgBtn.click(); return { success: true }; }
+          return { success: false, error: "Bottone Messaggio non trovato nel profilo" };
+        },
+      });
+
+      var clickResult = clickRes[0] && clickRes[0].result;
+      if (!clickResult || !clickResult.success) {
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        return { success: false, error: (clickResult && clickResult.error) || "Bottone messaggio non trovato" };
+      }
+
+      // Wait for messaging overlay to load
+      await new Promise(function (r) { setTimeout(r, 3000); });
+
+      // Type and send the message
+      var typeRes = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: typeLinkedInMessage,
+        args: [message],
+      });
+      var typeResult = typeRes[0] && typeRes[0].result;
+
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return typeResult || { success: false, error: "Nessun risultato" };
+    } catch (err) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return { success: false, error: err.message };
+    }
+  }
+}
+
 // ── Extract profile by URL ──
 async function extractProfileByUrl(url) {
   if (!url) return { success: false, error: "URL mancante" };
@@ -276,6 +361,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "extractProfile") {
     (async function () {
       try { var result = await extractProfileByUrl(message.url); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    })();
+    return true;
+  }
+
+  if (message.action === "sendMessage") {
+    (async function () {
+      try { var result = await sendLinkedInMessage(message.url, message.message); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
     })();
     return true;
