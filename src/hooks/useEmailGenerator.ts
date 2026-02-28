@@ -31,8 +31,20 @@ export function useEmailGenerator() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setEmail(data as GeneratedEmail);
-      return data as GeneratedEmail;
+      const result = data as GeneratedEmail;
+      setEmail(result);
+
+      // Save to activity so it appears in Sorting
+      await supabase
+        .from("activities")
+        .update({
+          email_subject: result.subject,
+          email_body: result.body,
+          scheduled_at: new Date().toISOString(),
+        })
+        .eq("id", params.activity_id);
+
+      return result;
     } catch (err: any) {
       toast({ title: "Errore generazione", description: err.message, variant: "destructive" });
       return null;
