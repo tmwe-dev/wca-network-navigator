@@ -24,15 +24,15 @@ export function useWorkspaceDocuments() {
         .upload(path, file);
       if (uploadErr) throw uploadErr;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = await supabase.storage
         .from("workspace-docs")
-        .getPublicUrl(path);
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
 
       const { data, error } = await supabase
         .from("workspace_documents")
         .insert({
           file_name: file.name,
-          file_url: urlData.publicUrl,
+          file_url: urlData?.signedUrl || path,
           file_size: file.size,
         } as any)
         .select()
