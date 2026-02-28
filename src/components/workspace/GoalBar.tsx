@@ -4,8 +4,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Target, FileText, Paperclip, Link2, X, Plus, Loader2 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Target, FileText, Paperclip, Link2, X, Plus, Loader2, Save, Trash2,
+  FileIcon, ExternalLink,
+} from "lucide-react";
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
+import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
+import { toast } from "@/hooks/use-toast";
 
 interface GoalBarProps {
   goal: string;
@@ -19,17 +27,44 @@ interface GoalBarProps {
   referenceLinks: string[];
   onAddLink: (url: string) => void;
   onRemoveLink: (idx: number) => void;
+  // Presets
+  presets: WorkspacePreset[];
+  activePresetId: string | null;
+  onLoadPreset: (preset: WorkspacePreset) => void;
+  onSavePreset: (name: string, id?: string) => void;
+  onDeletePreset: (id: string) => void;
+}
+
+function getFileIcon(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return "📄";
+  if (ext === "doc" || ext === "docx") return "📝";
+  if (ext === "txt" || ext === "md") return "📃";
+  return "📎";
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function tryHostname(url: string) {
+  try { return new URL(url).hostname; } catch { return url; }
 }
 
 export default function GoalBar({
   goal, baseProposal, onGoalChange, onBaseProposalChange,
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
+  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset,
 }: GoalBarProps) {
   const safeDocuments = documents ?? [];
   const safeLinks = referenceLinks ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [linkInput, setLinkInput] = useState("");
+  const [presetName, setPresetName] = useState("");
+  const [showSave, setShowSave] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,116 +81,208 @@ export default function GoalBar({
     setLinkInput("");
   };
 
+  const handlePresetSelect = (value: string) => {
+    if (value === "__save__") {
+      setShowSave(true);
+      return;
+    }
+    const preset = presets.find((p) => p.id === value);
+    if (preset) onLoadPreset(preset);
+  };
+
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) {
+      toast({ title: "Inserisci un nome", variant: "destructive" });
+      return;
+    }
+    onSavePreset(name, activePresetId || undefined);
+    setShowSave(false);
+    setPresetName("");
+    toast({ title: "Preset salvato" });
+  };
+
   return (
-    <Tabs defaultValue="goal" className="w-full">
-      <TabsList className="h-9 bg-stone-100/80 border border-stone-200/60 rounded-lg p-0.5 gap-0.5">
-        <TabsTrigger
-          value="goal"
-          className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500"
-        >
-          <Target className="w-3.5 h-3.5" />
-          Goal
-        </TabsTrigger>
-        <TabsTrigger
-          value="proposal"
-          className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500"
-        >
-          <FileText className="w-3.5 h-3.5" />
-          Proposta
-        </TabsTrigger>
-        <TabsTrigger
-          value="docs"
-          className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500"
-        >
-          <Paperclip className="w-3.5 h-3.5" />
-          Documenti
-          {safeDocuments.length > 0 && (
-            <Badge className="h-4 px-1 text-[9px] bg-violet-200 text-violet-700 hover:bg-violet-200">{safeDocuments.length}</Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger
-          value="links"
-          className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500"
-        >
-          <Link2 className="w-3.5 h-3.5" />
-          Link
-          {safeLinks.length > 0 && (
-            <Badge className="h-4 px-1 text-[9px] bg-violet-200 text-violet-700 hover:bg-violet-200">{safeLinks.length}</Badge>
-          )}
-        </TabsTrigger>
-      </TabsList>
+    <div className="space-y-2">
+      {/* Preset selector row */}
+      <div className="flex items-center gap-2">
+        <Select onValueChange={handlePresetSelect} value={activePresetId || ""}>
+          <SelectTrigger className="h-8 w-48 text-xs bg-white/80 border-stone-200">
+            <SelectValue placeholder="Carica preset..." />
+          </SelectTrigger>
+          <SelectContent>
+            {presets.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="text-xs">
+                {p.name}
+              </SelectItem>
+            ))}
+            <SelectItem value="__save__" className="text-xs text-violet-600 font-medium">
+              + Salva come nuovo preset
+            </SelectItem>
+          </SelectContent>
+        </Select>
 
-      <TabsContent value="goal" className="mt-2">
-        <Textarea
-          value={goal}
-          onChange={(e) => onGoalChange(e.target.value)}
-          placeholder="Es. Proporre una collaborazione per spedizioni via mare FCL verso il Far East..."
-          className="min-h-[56px] max-h-[80px] text-sm bg-white/80 border-stone-200 resize-none focus:ring-violet-300/50 text-stone-700 placeholder:text-stone-400"
-        />
-      </TabsContent>
-
-      <TabsContent value="proposal" className="mt-2">
-        <Textarea
-          value={baseProposal}
-          onChange={(e) => onBaseProposalChange(e.target.value)}
-          placeholder="Es. Offriamo transit time competitivi di 25 giorni, servizio door-to-door con tracking..."
-          className="min-h-[56px] max-h-[80px] text-sm bg-white/80 border-stone-200 resize-none focus:ring-violet-300/50 text-stone-700 placeholder:text-stone-400"
-        />
-      </TabsContent>
-
-      <TabsContent value="docs" className="mt-2">
-        <div className="flex flex-wrap items-center gap-1.5 min-h-[40px] p-2 rounded-lg bg-white/80 border border-stone-200">
-          {safeDocuments.map((doc) => (
-            <Badge key={doc.id} className="gap-1 text-xs pr-1 bg-violet-100 text-violet-700 hover:bg-violet-150 border-0">
-              {doc.file_name.length > 20 ? doc.file_name.slice(0, 18) + "…" : doc.file_name}
-              <button onClick={() => onRemoveDocument(doc.id)} className="ml-0.5 hover:text-red-500">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
-          <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="hidden" onChange={handleFileChange} />
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 text-xs gap-1 border-stone-200 text-stone-500 hover:bg-violet-50 hover:text-violet-600"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-            Allega
-          </Button>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="links" className="mt-2">
-        <div className="flex flex-wrap items-center gap-1.5 min-h-[40px] p-2 rounded-lg bg-white/80 border border-stone-200">
-          {safeLinks.map((link, idx) => (
-            <Badge key={idx} className="gap-1 text-xs pr-1 bg-amber-100 text-amber-800 hover:bg-amber-150 border-0">
-              {new URL(link).hostname}
-              <button onClick={() => onRemoveLink(idx)} className="ml-0.5 hover:text-red-500">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
-          <div className="flex items-center gap-1">
-            <Input
-              value={linkInput}
-              onChange={(e) => setLinkInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddLink()}
-              placeholder="https://..."
-              className="h-6 text-xs w-40 bg-white border-stone-200"
-            />
+        {activePresetId && (
+          <>
             <Button
-              variant="outline"
-              size="sm"
-              className="h-6 text-xs border-stone-200 text-stone-500 hover:bg-violet-50"
-              onClick={handleAddLink}
+              variant="outline" size="sm"
+              className="h-8 text-xs gap-1 border-stone-200 text-stone-500 hover:bg-violet-50"
+              onClick={() => onSavePreset(presets.find(p => p.id === activePresetId)?.name || "Preset", activePresetId)}
             >
-              <Plus className="w-3 h-3" />
+              <Save className="w-3 h-3" /> Aggiorna
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs gap-1 border-red-200 text-red-400 hover:bg-red-50"
+              onClick={() => { onDeletePreset(activePresetId); toast({ title: "Preset eliminato" }); }}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </>
+        )}
+
+        {showSave && (
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
+              placeholder="Nome preset..."
+              className="h-8 w-36 text-xs bg-white border-stone-200"
+              autoFocus
+            />
+            <Button size="sm" className="h-8 text-xs bg-violet-500 hover:bg-violet-600 text-white" onClick={handleSavePreset}>
+              Salva
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setShowSave(false)}>
+              <X className="w-3 h-3" />
             </Button>
           </div>
-        </div>
-      </TabsContent>
-    </Tabs>
+        )}
+      </div>
+
+      <Tabs defaultValue="goal" className="w-full">
+        <TabsList className="h-9 bg-stone-100/80 border border-stone-200/60 rounded-lg p-0.5 gap-0.5">
+          <TabsTrigger value="goal" className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500">
+            <Target className="w-3.5 h-3.5" /> Goal
+          </TabsTrigger>
+          <TabsTrigger value="proposal" className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500">
+            <FileText className="w-3.5 h-3.5" /> Proposta
+          </TabsTrigger>
+          <TabsTrigger value="docs" className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500">
+            <Paperclip className="w-3.5 h-3.5" /> Documenti
+            {safeDocuments.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-200 text-violet-700 hover:bg-violet-200">{safeDocuments.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="links" className="h-7 px-3 text-xs gap-1.5 rounded-md data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none text-stone-500">
+            <Link2 className="w-3.5 h-3.5" /> Link
+            {safeLinks.length > 0 && <Badge className="h-4 px-1 text-[9px] bg-violet-200 text-violet-700 hover:bg-violet-200">{safeLinks.length}</Badge>}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="goal" className="mt-2">
+          <Textarea
+            value={goal}
+            onChange={(e) => onGoalChange(e.target.value)}
+            placeholder="Es. Proporre una collaborazione per spedizioni via mare FCL verso il Far East..."
+            className="min-h-[56px] max-h-[80px] text-sm bg-white/80 border-stone-200 resize-none focus:ring-violet-300/50 text-stone-700 placeholder:text-stone-400"
+          />
+        </TabsContent>
+
+        <TabsContent value="proposal" className="mt-2">
+          <Textarea
+            value={baseProposal}
+            onChange={(e) => onBaseProposalChange(e.target.value)}
+            placeholder="Es. Offriamo transit time competitivi di 25 giorni, servizio door-to-door con tracking..."
+            className="min-h-[56px] max-h-[80px] text-sm bg-white/80 border-stone-200 resize-none focus:ring-violet-300/50 text-stone-700 placeholder:text-stone-400"
+          />
+        </TabsContent>
+
+        <TabsContent value="docs" className="mt-2">
+          <div className="space-y-2">
+            {/* Thumbnails grid */}
+            {safeDocuments.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {safeDocuments.map((doc) => (
+                  <div key={doc.id} className="relative group bg-white border border-stone-200 rounded-lg p-2.5 hover:border-violet-300 transition-colors">
+                    <button
+                      onClick={() => onRemoveDocument(doc.id)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-100 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <span className="text-2xl">{getFileIcon(doc.file_name)}</span>
+                      <span className="text-[10px] text-stone-600 truncate w-full text-center font-medium">
+                        {doc.file_name.length > 18 ? doc.file_name.slice(0, 16) + "…" : doc.file_name}
+                      </span>
+                      <span className="text-[9px] text-stone-400">{formatSize(doc.file_size)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" className="hidden" onChange={handleFileChange} />
+            <Button
+              variant="outline" size="sm"
+              className="h-7 text-xs gap-1 border-stone-200 text-stone-500 hover:bg-violet-50 hover:text-violet-600 w-full"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+              Allega documento
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="links" className="mt-2">
+          <div className="space-y-2">
+            {/* Link previews */}
+            {safeLinks.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {safeLinks.map((link, idx) => (
+                  <div key={idx} className="relative group bg-white border border-stone-200 rounded-lg p-2 hover:border-amber-300 transition-colors">
+                    <button
+                      onClick={() => onRemoveLink(idx)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-100 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <a href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${tryHostname(link)}&sz=32`}
+                        alt=""
+                        className="w-5 h-5 rounded shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-stone-700 truncate">{tryHostname(link)}</p>
+                        <p className="text-[9px] text-stone-400 truncate">{link}</p>
+                      </div>
+                      <ExternalLink className="w-3 h-3 text-stone-300 shrink-0" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Input
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddLink()}
+                placeholder="https://..."
+                className="h-7 text-xs bg-white border-stone-200 flex-1"
+              />
+              <Button
+                variant="outline" size="sm"
+                className="h-7 text-xs border-stone-200 text-stone-500 hover:bg-violet-50"
+                onClick={handleAddLink}
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

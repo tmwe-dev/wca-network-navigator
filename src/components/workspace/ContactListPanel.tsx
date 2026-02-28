@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin } from "lucide-react";
+import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle } from "lucide-react";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -296,7 +296,19 @@ export default function ContactListPanel({
                               </div>
                             ) : null}
                             {(contact?.direct_phone || contact?.mobile) && (
-                              <Phone className="w-3 h-3 text-violet-400" />
+                              <>
+                                <Phone className="w-3 h-3 text-violet-400" />
+                                <a
+                                  href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="WhatsApp"
+                                  className="inline-flex"
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-500 hover:scale-110 transition-transform" />
+                                </a>
+                              </>
                             )}
                           </div>
                         </div>

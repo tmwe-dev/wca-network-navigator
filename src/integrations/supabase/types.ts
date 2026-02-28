@@ -1335,6 +1335,42 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_presets: {
+        Row: {
+          base_proposal: string | null
+          created_at: string | null
+          document_ids: Json | null
+          goal: string | null
+          id: string
+          name: string
+          reference_links: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          base_proposal?: string | null
+          created_at?: string | null
+          document_ids?: Json | null
+          goal?: string | null
+          id?: string
+          name: string
+          reference_links?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          base_proposal?: string | null
+          created_at?: string | null
+          document_ids?: Json | null
+          goal?: string | null
+          id?: string
+          name?: string
+          reference_links?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
