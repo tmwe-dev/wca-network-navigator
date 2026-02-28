@@ -1,34 +1,31 @@
 
 
-## Analisi del Problema
+## Analisi: Download Vietnam senza Directory
 
-Due bug correlati causano il comportamento osservato:
+Il flusso attuale per scaricare un paese senza dati in directory richiede due passaggi:
 
-### Bug 1: Il conteggio UI non corrisponde alla logica del backend
-- L'indicatore **"Senza Alias Contatto: 78 mancanti"** conta TUTTI i partner dove nessun contatto ha `contact_alias`
-- Ma la edge function `generate-aliases` processa solo contatti che hanno `email || direct_phone || mobile`
-- Risultato: molti dei 78 partner hanno contatti senza info di contatto, quindi il backend li salta e restituisce "0 da elaborare"
+1. **Selezionare il paese** nella CountryGrid (Vietnam appare quando si ordina per nome o si usa il filtro "missing")
+2. **Avviare la scansione directory** dal PartnerListPanel che appare a destra - il pulsante "Scansiona Directory" lancia `scrapeWcaDirectory` che popola la `directory_cache`
+3. **Poi scaricare** i profili con il pulsante Download
 
-### Bug 2: La edge function esclude contatti senza email/telefono dalla generazione alias
-- Gli alias contatto (cognome) sono utili anche per la visualizzazione UI, non solo per le email
-- Escludere i contatti senza email/telefono è troppo restrittivo
+### Problema di UX
 
-## Piano di Implementazione
+Quando un paese non ha dati in directory ne nel database, il PartnerListPanel mostra 0 partner e il wizard di download non ha WCA ID da processare. Il pulsante "Scansiona Directory" dovrebbe essere l'azione primaria e ben visibile, ma potrebbe non essere abbastanza evidente.
 
-### 1. Edge function: rimuovere il filtro restrittivo sui contatti (`generate-aliases/index.ts`)
+### Piano
 
-Nella sezione che filtra i partner eligibili (riga ~36), cambiare il criterio per i contatti:
-- **Prima**: `!c.contact_alias && (c.email || c.direct_phone || c.mobile)` 
-- **Dopo**: `!c.contact_alias` (genera alias per TUTTI i contatti senza alias, indipendentemente dall'avere email/telefono)
+#### 1. Rendere il pulsante "Scansiona Directory" prominente per paesi vuoti (`PartnerListPanel.tsx`)
 
-Stesso cambiamento nella costruzione del `partnerList` per il batch AI (riga ~55):
-- **Prima**: `.filter((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile))`
-- **Dopo**: `.filter((c: any) => !c.contact_alias)`
+Quando `!hasCache && dbPartners.length === 0`, mostrare un empty state dedicato con:
+- Messaggio chiaro: "Nessun dato per [Paese]. Scansiona la directory WCA per iniziare."
+- Pulsante primario grande "Scansiona Directory"
+- Opzionalmente un pulsante "Clean + Download" che avvia scansione + download automatico (`dirThenDownload`)
 
-### 2. UI: allineare il conteggio `withAliasCt` (`PartnerListPanel.tsx`)
+#### 2. Migliorare la visibilità nella CountryGrid (`CountryGrid.tsx`)
 
-Il conteggio attuale è già corretto (conta partner con almeno un contatto con alias) - non necessita modifiche dato che sistemiamo il backend.
+Per i paesi senza dati (grigio, label "—"), aggiungere un'icona o tooltip che indichi "Scansiona per iniziare". Il paese è già visibile e selezionabile, serve solo un hint visivo.
 
 ### File da modificare
-- `supabase/functions/generate-aliases/index.ts` — rimuovere filtro `email || phone || mobile` dai contatti
+- `src/components/operations/PartnerListPanel.tsx` — empty state prominente con CTA scansione per paesi senza directory
+- `src/components/download/CountryGrid.tsx` — hint visivo per paesi non ancora esplorati
 
