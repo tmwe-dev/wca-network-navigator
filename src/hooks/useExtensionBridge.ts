@@ -150,11 +150,12 @@ export function useExtensionBridge() {
     };
   }, []);
 
-  // Send a message to the extension and wait for response
+  // Send a message to the extension and wait for response (with nonce anti-spoof)
   const sendMessage = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
       return new Promise((resolve) => {
         const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const nonce = crypto.randomUUID();
 
         const timer = setTimeout(() => {
           pendingRef.current.delete(requestId);
@@ -166,14 +167,16 @@ export function useExtensionBridge() {
           resolve(response);
         });
 
+        const origin = window.location.origin;
         window.postMessage(
           {
             direction: "from-webapp",
             action,
             requestId,
+            nonce,
             ...payload,
           },
-          "*"
+          origin || "*"
         );
       });
     },

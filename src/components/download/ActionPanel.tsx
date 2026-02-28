@@ -71,7 +71,8 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       let q = supabase.from("directory_cache").select("*").in("country_code", countryCodes);
       if (networks.length > 0) q = q.in("network_name", networks);
       else q = q.eq("network_name", "");
-      const { data } = await q;
+      const { data, error } = await q;
+      if (error) { toast({ title: "Errore directory cache", description: error.message, variant: "destructive" }); return []; }
       return data || [];
     },
     staleTime: 30_000,
@@ -83,12 +84,13 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     queryKey: ["db-partners-for-countries", countryCodes],
     queryFn: async () => {
       if (countryCodes.length === 0) return [];
-      const { data: byCountry } = await supabase
+      const { data: byCountry, error } = await supabase
         .from("partners")
         .select("wca_id, company_name, city, country_code, country_name, updated_at")
         .in("country_code", countryCodes)
         .not("wca_id", "is", null)
         .order("company_name");
+      if (error) { toast({ title: "Errore caricamento partner", description: error.message, variant: "destructive" }); return []; }
       return (byCountry || []).map(p => ({
         wca_id: p.wca_id!,
         company_name: p.company_name,
@@ -338,7 +340,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
           countryPages = result.pagination.total_pages;
           hasNext = result.pagination.has_next_page || result.members.length >= 50;
           page++;
-          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, 3000));
+          if (hasNext && !abortRef.current) await new Promise(r => setTimeout(r, Math.max(delay * 1000, 3000)));
         }
 
         if (countryFailed) {
@@ -348,9 +350,9 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
         if (countryMembers.length > 0) await saveScanToCache(country.code, netKey, countryMembers, countryTotal, countryPages);
       }
 
-      // Pause between countries (minimum 10s)
+      // Pause between countries (use delay slider, minimum 10s)
       if (ci < selectedCountries.length - 1 && !abortRef.current) {
-        await new Promise(r => setTimeout(r, 10000));
+        await new Promise(r => setTimeout(r, Math.max(delay * 1000, 10000)));
       }
     }
 

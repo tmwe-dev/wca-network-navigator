@@ -47,14 +47,11 @@ export function useWcaSession() {
       // Step 3: Auto-login via extension
       console.log("[WcaSession] Session expired, attempting extension auto-login...");
       try {
-        const credUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
-        const credRes = await fetch(credUrl, {
-          headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        });
-        const creds = await credRes.json();
+        const { fetchWcaCredentials } = await import("@/lib/wcaCredentials");
+        const creds = await fetchWcaCredentials();
 
-        if (!creds.username || !creds.password) {
-          const msg = "Credenziali WCA non configurate. Vai nelle Impostazioni per inserirle.";
+        if (!creds) {
+          const msg = "Credenziali WCA non configurate o sessione scaduta. Vai nelle Impostazioni per inserirle.";
           setLastError(msg);
           setSessionActive(false);
           return false;
