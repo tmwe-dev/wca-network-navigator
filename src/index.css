@@ -99,7 +99,7 @@
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; transition: background 0.2s; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
 /* Keyframes */
@@ -111,6 +111,14 @@
 @keyframes pulse-glow-green { 0%,100% { box-shadow: 0 0 4px #22c55e; } 50% { box-shadow: 0 0 12px #22c55e; } }
 @keyframes pulse-glow-amber { 0%,100% { box-shadow: 0 0 4px #f59e0b; } 50% { box-shadow: 0 0 12px #f59e0b; } }
 @keyframes pulse-glow-red { 0%,100% { box-shadow: 0 0 4px #ef4444; } 50% { box-shadow: 0 0 12px #ef4444; } }
+@keyframes skeleton-fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.98); }
+}
+@keyframes content-fade-in {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
 
 @layer components {
   /* Sidebar drawer */
@@ -345,5 +353,31 @@
     @apply backdrop-blur-md rounded-xl p-4;
     background: hsl(0 0% 100% / 0.03);
     border: 1px solid hsl(0 0% 100% / 0.08);
+  }
+
+  /* Skeleton loading transitions */
+  .skeleton-out {
+    animation: skeleton-fade-out 0.3s ease forwards;
+  }
+  .content-in {
+    animation: content-fade-in 0.3s ease forwards;
+  }
+
+  /* Card micro-interactions */
+  .card-press {
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+  }
+  .card-press:active {
+    transform: scale(0.98);
+  }
+
+  /* List item stagger helper */
+  .stagger-item {
+    animation: content-fade-in 0.25s ease backwards;
+  }
+
+  /* Focus ring consistent */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }

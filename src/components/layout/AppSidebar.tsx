@@ -1,19 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
-  Calendar,
-  Mail,
-  Globe,
-  Moon,
-  Sun,
-  Settings,
-  Wifi,
-  WifiOff,
-  BookOpen,
-  Send,
-  Sparkles,
-  Users,
-  PackageCheck,
-  Command,
+  Calendar, Mail, Globe, Moon, Sun, Settings,
+  Wifi, WifiOff, BookOpen, Send, Sparkles,
+  Users, PackageCheck, Command,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -59,27 +49,37 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   );
   const { isSessionActive } = useWcaSession();
   const wcaStatus =
-    isSessionActive === true
-      ? "ok"
-      : isSessionActive === false
-        ? "expired"
-        : "checking";
+    isSessionActive === true ? "ok"
+    : isSessionActive === false ? "expired"
+    : "checking";
 
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle("dark");
   };
 
+  let itemIndex = 0;
+
   return (
     <aside className="sidebar-drawer flex flex-col w-[220px] h-screen text-sidebar-foreground select-none">
       {/* Brand */}
       <div className="flex items-center gap-2.5 h-14 px-4 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-sidebar-primary/90">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="flex items-center justify-center w-7 h-7 rounded-md bg-sidebar-primary/90"
+        >
           <Command className="w-4 h-4 text-sidebar-primary-foreground" />
-        </div>
-        <span className="text-[13px] font-semibold tracking-tight truncate">
+        </motion.div>
+        <motion.span
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className="text-[13px] font-semibold tracking-tight truncate"
+        >
           WCA Partners
-        </span>
+        </motion.span>
       </div>
 
       {/* Sections */}
@@ -92,30 +92,42 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             <div className="space-y-px">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.url;
+                const delay = itemIndex * 0.03;
+                itemIndex++;
                 return (
-                  <Link
+                  <motion.div
                     key={item.url}
-                    to={item.url}
-                    className={cn(
-                      "group flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-colors",
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-foreground"
-                        : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-                    )}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay, duration: 0.25, ease: "easeOut" }}
                   >
-                    <item.icon
+                    <Link
+                      to={item.url}
                       className={cn(
-                        "w-4 h-4 flex-shrink-0 transition-colors",
+                        "group relative flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-all duration-150",
                         isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}
-                    />
-                    <span className="truncate">{item.title}</span>
-                    {isActive && (
-                      <span className="ml-auto w-1 h-4 rounded-full bg-sidebar-primary" />
-                    )}
-                  </Link>
+                    >
+                      <item.icon
+                        className={cn(
+                          "w-4 h-4 flex-shrink-0 transition-all duration-150",
+                          isActive
+                            ? "text-sidebar-primary"
+                            : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 group-hover:scale-110"
+                        )}
+                      />
+                      <span className="truncate">{item.title}</span>
+                      {isActive && (
+                        <motion.span
+                          layoutId="sidebar-indicator"
+                          className="ml-auto w-1 h-4 rounded-full bg-sidebar-primary"
+                          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                        />
+                      )}
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>
@@ -135,28 +147,24 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
               >
                 <span className="relative flex-shrink-0">
                   <WifiOff className="w-4 h-4" />
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-destructive" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                 </span>
                 <span>WCA Offline</span>
               </Link>
             ) : (
               <div
                 className={cn(
-                  "flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium",
-                  wcaStatus === "ok"
-                    ? "text-success"
-                    : "text-muted-foreground"
+                  "flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-colors",
+                  wcaStatus === "ok" ? "text-success" : "text-muted-foreground"
                 )}
               >
                 <span className="relative flex-shrink-0">
                   <Wifi className="w-4 h-4" />
                   {wcaStatus === "ok" && (
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success" />
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   )}
                 </span>
-                <span>
-                  {wcaStatus === "ok" ? "WCA Online" : "Verifica…"}
-                </span>
+                <span>{wcaStatus === "ok" ? "WCA Online" : "Verifica…"}</span>
               </div>
             )}
           </TooltipTrigger>
@@ -172,13 +180,16 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+          className="flex items-center gap-2.5 w-full px-2 py-[7px] rounded-md text-[13px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors group"
         >
-          {isDark ? (
-            <Sun className="w-4 h-4" />
-          ) : (
-            <Moon className="w-4 h-4" />
-          )}
+          <motion.div
+            key={isDark ? "sun" : "moon"}
+            initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+            animate={{ rotate: 0, opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            {isDark ? <Sun className="w-4 h-4 group-hover:text-warning" /> : <Moon className="w-4 h-4" />}
+          </motion.div>
           <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
         </button>
       </div>

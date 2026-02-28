@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -12,7 +13,6 @@ export function AppLayout() {
   const location = useLocation();
   const deepSearch = useDeepSearchRunner();
 
-  // Close sidebar on navigation
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -35,19 +35,25 @@ export function AppLayout() {
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background">
-        {/* Hover trigger — invisible 2px strip */}
+        {/* Hover trigger */}
         <div
           className="fixed left-0 top-0 w-[3px] h-full z-50"
           onMouseEnter={() => setSidebarOpen(true)}
         />
 
         {/* Backdrop */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-[2px]"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-[2px]"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Sidebar drawer */}
         <div
@@ -56,27 +62,17 @@ export function AppLayout() {
           }`}
           onMouseLeave={() => setSidebarOpen(false)}
         >
-          <AppSidebar
-            collapsed={false}
-            onToggle={() => setSidebarOpen(false)}
-          />
+          <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
 
         {/* Main column */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
-          {/* Top bar — thin, clean */}
+          {/* Top bar */}
           <header className="sticky top-0 z-30 h-12 border-b border-border bg-background/80 backdrop-blur-md">
             <div className="flex items-center justify-between h-full px-4">
-              {/* Left: campaign controls portal */}
-              <div
-                id="campaign-header-controls"
-                className="flex items-center gap-3 flex-1 min-w-0"
-              />
-
-              {/* Right cluster */}
+              <div id="campaign-header-controls" className="flex items-center gap-3 flex-1 min-w-0" />
               <div className="flex items-center gap-2">
                 <CreditCounter />
-
                 {!isCampaignsPage && (
                   <button
                     onClick={() => setCommandOpen(true)}
@@ -93,13 +89,24 @@ export function AppLayout() {
             </div>
           </header>
 
-          {/* Content */}
+          {/* Content with page transitions */}
           <main
             className={`flex-1 min-h-0 ${
               isOperationsRoute ? "overflow-hidden" : "p-4 overflow-auto"
             }`}
           >
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="h-full"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
 
