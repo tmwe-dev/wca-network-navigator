@@ -171,6 +171,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
         {onFilterModeChange && (
           <div className="flex flex-wrap gap-1">
             {([
+              { key: "missing" as FilterKey, label: "Missing", count: missingCount },
               { key: "no_profile" as FilterKey, label: "No Profilo", count: noProfileCount },
               { key: "no_email" as FilterKey, label: "No Email", count: noEmailCount },
               { key: "no_phone" as FilterKey, label: "No Tel", count: noPhoneCount },
