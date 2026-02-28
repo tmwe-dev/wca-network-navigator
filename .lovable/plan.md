@@ -1,61 +1,74 @@
 
 
-## Piano: Deep Search in background persistente
+## Piano: Pagina Sorting — Area di controllo e invio job
 
-### Problema attuale
-La Deep Search è un loop `for...of` che gira nello state React del componente pagina. Navigando altrove, il componente si smonta e il loop si interrompe silenziosamente.
+### Concetto
 
-### Soluzione: Job persistente su database + polling
+Una nuova pagina `/sorting` che funge da "dogana" per tutti i job (email, chiamate) creati altrove. L'utente rivede ogni messaggio prima di autorizzarne l'invio, singolarmente o in batch.
 
-Riutilizzare lo stesso pattern dei `download_jobs` già esistenti:
+### Modello dati
 
-1. **Nuova tabella `deep_search_jobs`** (migrazione SQL):
-   - `id`, `user_id`, `partner_ids` (jsonb array), `processed_ids` (jsonb array), `status` (pending/running/completed/cancelled), `current_index`, `total`, `results` (jsonb), `created_at`, `updated_at`
-   - RLS: utente vede solo i propri job
+Aggiungere colonne alla tabella `activities` esistente (migrazione):
 
-2. **Modificare `handleDeepSearch` in `Operations.tsx`**:
-   - Invece di eseguire il loop inline, inserire una riga in `deep_search_jobs` con `status: 'pending'`
-   - Avviare un polling (`setInterval` 3s) che legge lo stato del job e aggiorna i progressi UI
+```sql
+ALTER TABLE activities
+  ADD COLUMN IF NOT EXISTS email_subject text,
+  ADD COLUMN IF NOT EXISTS email_body text,
+  ADD COLUMN IF NOT EXISTS scheduled_at timestamptz,
+  ADD COLUMN IF NOT EXISTS reviewed boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sent_at timestamptz;
+```
 
-3. **Nuovo edge function `process-deep-search-job`**:
-   - Riceve `jobId`, legge i `partner_ids` non ancora processati
-   - Esegue la Deep Search per ogni partner (chiamando la logica già in `deep-search-partner`)
-   - Aggiorna `processed_ids`, `current_index`, `results` ad ogni step
-   - Rispetta l'abort: controlla `status` nel DB prima di ogni iterazione
-   - Se `status = 'cancelled'`, si ferma
+- `email_subject` / `email_body`: il messaggio generato al momento della creazione del job
+- `scheduled_at`: data/ora programmata per l'invio
+- `reviewed`: flag che indica che l'utente ha controllato il contenuto
+- `sent_at`: timestamp di invio effettivo
 
-4. **Avvio del job**:
-   - `handleDeepSearch` → insert job → invoke `process-deep-search-job` (fire-and-forget, senza await della risposta completa)
-   - Il function timeout di Supabase è ~400s, quindi per batch grandi il job si auto-riprende tramite un meccanismo di "chunking": il function processa N partner, poi se ne mancano altri, si re-invoca
+Nessuna nuova tabella. Le activities con `status = 'pending'` e `email_body IS NOT NULL` sono quelle in attesa nella Sorting.
 
-5. **UI: DeepSearchCanvas rimane reattivo**:
-   - Il canvas legge lo stato dal DB via polling, non dallo state locale
-   - Funziona da qualsiasi pagina: basta aprire il canvas per vedere il progresso
-   - Il bottone "Stop" setta `status = 'cancelled'` nel DB
+### Pagina `/sorting` — Layout a due colonne
 
-6. **Ripresa automatica**:
-   - All'avvio dell'app, controllare se esistono job `running` → mostrare notifica + riprendere il polling
+**Sinistra (40%)** — `SortingList.tsx`:
+- Query: `activities` filtrate per `status = 'pending'`, `email_body IS NOT NULL`, ordinate per `scheduled_at`
+- Raggruppate per paese (bandiera + nome)
+- Ogni riga mostra: checkbox, nome azienda (alias), nome contatto (alias), email, orario programmato, badge "Rivisto" verde se `reviewed = true`
+- Barra toolbar in alto: filtri (Tutti / Da rivedere / Rivisti / Programmati oggi), ricerca, selezione rapida (Tutti, Nessuno)
+- Contatore: "12 in coda · 5 rivisti · 3 programmati oggi"
 
-### Alternative più semplice (meno invasiva)
+**Destra (60%)** — `SortingCanvas.tsx`:
+- Mostra il dettaglio del job selezionato
+- Header: azienda, paese, contatto, email destinatario
+- Body: anteprima email (subject + body HTML) in un riquadro stilizzato come email
+- Bottoni azione:
+  - **Approva** (segna `reviewed = true`)
+  - **Modifica** (apre editor inline del body)
+  - **Invia ora** (chiama edge function `send-email`, setta `sent_at` e `status = 'completed'`)
+  - **Scarta** (setta `status = 'cancelled'`)
+- Senza selezione: placeholder "Seleziona un job dalla lista"
 
-Se preferisci una soluzione più leggera senza nuova tabella:
+**Barra azioni batch** (bottom bar, visibile quando selezione > 0):
+- "Approva selezionati" → bulk update `reviewed = true`
+- "Invia selezionati" → solo quelli con `reviewed = true`, invio sequenziale con progress bar
+- "Scarta selezionati" → bulk `status = 'cancelled'`
 
-- **Spostare il loop in un hook globale** (`useDeepSearchRunner`) montato in `AppLayout` (sempre presente)
-- Il hook mantiene la coda e il progresso nello state React globale
-- Navigando tra pagine il loop continua perché `AppLayout` non si smonta mai
-- Svantaggio: chiudendo il browser il progresso si perde
+### Flusso di creazione job (upstream)
 
-### Raccomandazione
+Quando il Workspace genera un'email, salvare `email_subject` e `email_body` nell'activity corrispondente + impostare `scheduled_at`. L'activity appare automaticamente nella Sorting.
 
-L'approccio **hook globale in AppLayout** è più rapido da implementare e risolve il caso d'uso principale (navigare tra pagine senza perdere il progresso). Il job persistente su DB è più robusto ma richiede più lavoro.
+### Navigazione
 
-### File da modificare
+Aggiungere "Sorting" nella sidebar tra "Workspace" e "Agenda", con icona `PackageCheck` (lucide).
 
-| File | Modifica |
-|------|----------|
-| `src/hooks/useDeepSearchRunner.ts` | Nuovo hook globale con coda, loop, progresso |
-| `src/components/layout/AppLayout.tsx` | Montare il hook, esporre via context |
-| `src/pages/Operations.tsx` | Usare il context invece del loop locale |
-| `src/pages/Workspace.tsx` | Usare il context invece del loop locale |
-| `src/components/operations/DeepSearchCanvas.tsx` | Leggere progresso dal context |
+### File da creare/modificare
+
+| File | Azione |
+|------|--------|
+| Migrazione SQL | Aggiungere colonne `email_subject`, `email_body`, `scheduled_at`, `reviewed`, `sent_at` ad `activities` |
+| `src/pages/Sorting.tsx` | Nuova pagina con layout a due colonne |
+| `src/components/sorting/SortingList.tsx` | Lista job raggruppata per paese con checkbox e filtri |
+| `src/components/sorting/SortingCanvas.tsx` | Anteprima email + azioni (approva/modifica/invia/scarta) |
+| `src/hooks/useSortingJobs.ts` | Hook per query/mutazioni activities in coda sorting |
+| `src/App.tsx` | Route `/sorting` |
+| `src/components/layout/AppSidebar.tsx` | Voce "Sorting" nella nav |
+| `src/pages/Workspace.tsx` | Salvare email generata nell'activity quando confermata |
 
