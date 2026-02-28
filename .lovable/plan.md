@@ -1,36 +1,40 @@
 
 
-## Piano: Contatore token per partner e per paese
+## Piano: Nuova tab "Contenuti" nelle Impostazioni
 
-### Problema
-I token consumati durante Deep Search vengono tracciati e detratti dai crediti, ma non vengono salvati nel profilo del partner. Non c'e visibilita su quanto costa ogni singola analisi.
+### Obiettivo
+Creare una sezione centralizzata nelle Impostazioni per gestire tutti i contenuti utilizzati nelle comunicazioni: goal, proposte, documenti e link di riferimento. Attualmente questi dati vivono solo nei preset del Workspace (`workspace_presets`) e nei documenti (`workspace_documents`), ma non esiste un punto unico per esplorarli e gestirli.
 
 ### Modifiche
 
-#### 1. `supabase/functions/deep-search-partner/index.ts`
-Salvare i token consumati dentro `enrichment_data` al momento del salvataggio (riga ~627-633):
-```
-tokens_used: {
-  prompt: totalTokens.prompt,
-  completion: totalTokens.completion,
-  credits_consumed: inputCost + outputCost
-}
-```
-Calcolare `credits_consumed` prima del salvataggio e includerlo nel JSON.
+#### 1. Nuovo componente `src/components/settings/ContentManager.tsx`
+Componente con 4 sotto-sezioni (accordion o tabs interni):
 
-#### 2. `src/components/partners/EnrichmentCard.tsx`
-Aggiungere una riga in fondo alla sezione Enrichment che mostri:
-- Token input/output usati
-- Crediti consumati
-- Icona `Coins` con badge colorato (verde se < 20 crediti, ambra se 20-50, rosso se > 50)
+**A) Goal e Proposte** — Lista di tutti i preset salvati (`useWorkspacePresets`):
+- Mostra nome, goal e proposta di ogni preset in card espandibili
+- Permette di modificare goal/proposta inline e salvare
+- Permette di aggiungere un nuovo preset direttamente da qui
+- Permette di eliminare preset
 
-#### 3. `src/components/partners/CountryWorkbench.tsx`
-Aggiungere nell'header del paese un contatore aggregato:
-- Somma `enrichment_data.tokens_used.credits_consumed` di tutti i partner del paese che hanno dati Deep Search
-- Mostrare come badge compatto accanto al nome del paese (es. "⚡ 142 crediti AI")
+**B) Documenti** — Lista di tutti i documenti caricati (`useWorkspaceDocuments` + query diretta su `workspace_documents`):
+- Mostra nome file, dimensione, data di caricamento
+- Permette upload di nuovi documenti
+- Permette eliminazione
+- Link per scaricare/visualizzare il file
 
-### File da modificare
-1. `supabase/functions/deep-search-partner/index.ts` — salvare `tokens_used` in `enrichment_data`
-2. `src/components/partners/EnrichmentCard.tsx` — mostrare token/crediti per partner
-3. `src/components/partners/CountryWorkbench.tsx` — mostrare totale crediti AI aggregato per paese
+**C) Link di riferimento** — Aggregazione dei link da tutti i preset:
+- Mostra tutti i link unici con favicon e hostname
+- Permette di aggiungere/rimuovere link dal preset attivo
+
+#### 2. `src/pages/Settings.tsx`
+- Importare `ContentManager`
+- Aggiungere tab "Contenuti" con icona `BookOpen` tra "Template" e "Profilo AI"
+- Aggiungere `<TabsContent value="contenuti">` con il componente
+
+#### 3. Query documenti completa
+Il `useWorkspaceDocuments` attuale tiene i documenti solo in state locale. Il `ContentManager` fara una query diretta a `workspace_documents` per caricare tutti i documenti salvati nel database, non solo quelli della sessione corrente.
+
+### File da creare/modificare
+1. **Creare** `src/components/settings/ContentManager.tsx` — componente principale
+2. **Modificare** `src/pages/Settings.tsx` — aggiungere tab + import
 
