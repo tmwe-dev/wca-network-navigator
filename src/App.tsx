@@ -18,6 +18,7 @@ import ProspectCenter from "./pages/ProspectCenter";
 import CampaignJobs from "./pages/CampaignJobs";
 import EmailComposer from "./pages/EmailComposer";
 import Workspace from "./pages/Workspace";
+import Sorting from "./pages/Sorting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/campaign-jobs" element={<CampaignJobs />} />
               <Route path="/email-composer" element={<EmailComposer />} />
               <Route path="/workspace" element={<Workspace />} />
+              <Route path="/sorting" element={<Sorting />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

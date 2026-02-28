@@ -18,6 +18,7 @@ import {
   Send,
   Sparkles,
   Users,
+  PackageCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const navItems = [
   { title: "Campaigns", url: "/campaigns", icon: Mail },
   { title: "Email", url: "/email-composer", icon: Send },
   { title: "Workspace", url: "/workspace", icon: Sparkles },
+  { title: "Sorting", url: "/sorting", icon: PackageCheck },
   { title: "Prospect Center", url: "/prospects", icon: Building2 },
   { title: "Agenda", url: "/reminders", icon: Calendar },
   { title: "Impostazioni", url: "/settings", icon: Settings },
