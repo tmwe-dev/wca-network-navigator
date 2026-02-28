@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 // ── Global serial queue for extractContacts — safety net against concurrent extractions ──
 const EXTRACT_LOCK_KEY = '__extractContactsLock__';
@@ -126,16 +127,35 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // CONTINUOUS polling every 3s
+  // CONTINUOUS polling every 3s with watchdog
+  const consecutiveFailsRef = useRef(0);
+
   useEffect(() => {
     const doPing = () => {
+      const id = `poll_${Date.now()}`;
+      const timer = setTimeout(() => {
+        // No response within 5s → extension unreachable
+        consecutiveFailsRef.current++;
+        if (consecutiveFailsRef.current >= 2 && availableRef.current) {
+          setIsAvailable(false);
+          toast.warning("Estensione browser non risponde", { id: "ext-watchdog", duration: 5000 });
+        }
+      }, 5000);
+
+      const handler = (e: MessageEvent) => {
+        if (e.data?.direction === "from-extension" && e.data?.requestId === id) {
+          clearTimeout(timer);
+          window.removeEventListener("message", handler);
+          consecutiveFailsRef.current = 0;
+          if (e.data?.response?.success) setIsAvailable(true);
+        }
+      };
+      window.addEventListener("message", handler);
+
+      const origin = window.location.origin;
       window.postMessage(
-        {
-          direction: "from-webapp",
-          action: "ping",
-          requestId: `poll_${Date.now()}`,
-        },
-        "*"
+        { direction: "from-webapp", action: "ping", requestId: id },
+        origin || "*"
       );
     };
 
