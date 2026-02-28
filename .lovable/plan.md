@@ -1,74 +1,85 @@
 
 
-## Piano: Pagina Sorting — Area di controllo e invio job
+## Piano: Workspace Avanzato — Preset, Layout Ottimizzato, Thumbnails, WhatsApp
 
-### Concetto
+### 1. Nuova tabella `workspace_presets`
 
-Una nuova pagina `/sorting` che funge da "dogana" per tutti i job (email, chiamate) creati altrove. L'utente rivede ogni messaggio prima di autorizzarne l'invio, singolarmente o in batch.
-
-### Modello dati
-
-Aggiungere colonne alla tabella `activities` esistente (migrazione):
+Tabella per salvare combinazioni riutilizzabili di goal + proposta + documenti + link:
 
 ```sql
-ALTER TABLE activities
-  ADD COLUMN IF NOT EXISTS email_subject text,
-  ADD COLUMN IF NOT EXISTS email_body text,
-  ADD COLUMN IF NOT EXISTS scheduled_at timestamptz,
-  ADD COLUMN IF NOT EXISTS reviewed boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS sent_at timestamptz;
+CREATE TABLE workspace_presets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  goal text DEFAULT '',
+  base_proposal text DEFAULT '',
+  document_ids jsonb DEFAULT '[]',
+  reference_links jsonb DEFAULT '[]',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- RLS: utente vede solo i propri
 ```
 
-- `email_subject` / `email_body`: il messaggio generato al momento della creazione del job
-- `scheduled_at`: data/ora programmata per l'invio
-- `reviewed`: flag che indica che l'utente ha controllato il contenuto
-- `sent_at`: timestamp di invio effettivo
+### 2. Layout ristrutturato — full height
 
-Nessuna nuova tabella. Le activities con `status = 'pending'` e `email_body IS NOT NULL` sono quelle in attesa nella Sorting.
+Attualmente: header + GoalBar tabs + split panel (sprecando spazio verticale).
 
-### Pagina `/sorting` — Layout a due colonne
+Nuovo layout:
+```text
+┌──────────────────────────────────────────────────────┐
+│ Header compatto (titolo + search + azioni)            │
+├───────────┬──────────────────────────────────────────┤
+│           │  GoalBar (tabs Goal/Proposta/Docs/Links) │
+│           │  + dropdown preset + salva/carica        │
+│  Contact  │  + thumbnails documenti + link previews  │
+│  List     ├──────────────────────────────────────────┤
+│  (full    │                                          │
+│  height)  │  Email Canvas                            │
+│           │  (anteprima email selezionata)            │
+│           │                                          │
+├───────────┴──────────────────────────────────────────┤
+```
 
-**Sinistra (40%)** — `SortingList.tsx`:
-- Query: `activities` filtrate per `status = 'pending'`, `email_body IS NOT NULL`, ordinate per `scheduled_at`
-- Raggruppate per paese (bandiera + nome)
-- Ogni riga mostra: checkbox, nome azienda (alias), nome contatto (alias), email, orario programmato, badge "Rivisto" verde se `reviewed = true`
-- Barra toolbar in alto: filtri (Tutti / Da rivedere / Rivisti / Programmati oggi), ricerca, selezione rapida (Tutti, Nessuno)
-- Contatore: "12 in coda · 5 rivisti · 3 programmati oggi"
+- Lista contatti a sinistra a **tutta altezza** (dal header fino al fondo)
+- Destra divisa: config bar in alto (GoalBar + preset + thumbnails) e canvas email sotto
 
-**Destra (60%)** — `SortingCanvas.tsx`:
-- Mostra il dettaglio del job selezionato
-- Header: azienda, paese, contatto, email destinatario
-- Body: anteprima email (subject + body HTML) in un riquadro stilizzato come email
-- Bottoni azione:
-  - **Approva** (segna `reviewed = true`)
-  - **Modifica** (apre editor inline del body)
-  - **Invia ora** (chiama edge function `send-email`, setta `sent_at` e `status = 'completed'`)
-  - **Scarta** (setta `status = 'cancelled'`)
-- Senza selezione: placeholder "Seleziona un job dalla lista"
+### 3. GoalBar con dropdown preset
 
-**Barra azioni batch** (bottom bar, visibile quando selezione > 0):
-- "Approva selezionati" → bulk update `reviewed = true`
-- "Invia selezionati" → solo quelli con `reviewed = true`, invio sequenziale con progress bar
-- "Scarta selezionati" → bulk `status = 'cancelled'`
+- Aggiungere un `Select` dropdown accanto alle tabs: "Carica preset..."
+- Opzioni: preset salvati dall'utente + "Salva come nuovo preset"
+- Al caricamento: popola goal, proposta, documenti, link
+- Bottone piccolo "Salva" per aggiornare/creare preset corrente
 
-### Flusso di creazione job (upstream)
+### 4. Thumbnails documenti e link
 
-Quando il Workspace genera un'email, salvare `email_subject` e `email_body` nell'activity corrispondente + impostare `scheduled_at`. L'activity appare automaticamente nella Sorting.
+Nella sezione Documenti del GoalBar (o in un pannello dedicato sotto le tabs):
+- Mostrare miniature dei PDF/documenti (icona tipo file + nome + dimensione)
+- Per i link: mostrare favicon + hostname + titolo della pagina (recuperato client-side via unfurl o semplicemente hostname)
+- Layout a griglia compatta con card piccole
 
-### Navigazione
+### 5. WhatsApp quick link nella lista contatti
 
-Aggiungere "Sorting" nella sidebar tra "Workspace" e "Agenda", con icona `PackageCheck` (lucide).
+Per ogni contatto che ha `mobile` o `direct_phone`:
+- Icona WhatsApp verde cliccabile
+- Link: `https://wa.me/{numero}` (pulito da spazi e caratteri speciali)
+- Posizionato accanto alle icone email/phone esistenti
+
+### 6. Hook `useWorkspacePresets`
+
+- `fetchPresets()`: lista preset dell'utente
+- `savePreset(name, goal, proposal, docIds, links)`: insert/upsert
+- `deletePreset(id)`
+- `loadPreset(id)`: ritorna i dati per popolare il form
 
 ### File da creare/modificare
 
 | File | Azione |
 |------|--------|
-| Migrazione SQL | Aggiungere colonne `email_subject`, `email_body`, `scheduled_at`, `reviewed`, `sent_at` ad `activities` |
-| `src/pages/Sorting.tsx` | Nuova pagina con layout a due colonne |
-| `src/components/sorting/SortingList.tsx` | Lista job raggruppata per paese con checkbox e filtri |
-| `src/components/sorting/SortingCanvas.tsx` | Anteprima email + azioni (approva/modifica/invia/scarta) |
-| `src/hooks/useSortingJobs.ts` | Hook per query/mutazioni activities in coda sorting |
-| `src/App.tsx` | Route `/sorting` |
-| `src/components/layout/AppSidebar.tsx` | Voce "Sorting" nella nav |
-| `src/pages/Workspace.tsx` | Salvare email generata nell'activity quando confermata |
+| Migrazione SQL | Creare tabella `workspace_presets` con RLS |
+| `src/hooks/useWorkspacePresets.ts` | Nuovo hook CRUD preset |
+| `src/components/workspace/GoalBar.tsx` | Aggiungere dropdown preset, salva, thumbnails docs/links |
+| `src/pages/Workspace.tsx` | Ristrutturare layout full-height, integrare preset |
+| `src/components/workspace/ContactListPanel.tsx` | Aggiungere icona WhatsApp per contatti con telefono |
+| `src/components/workspace/EmailCanvas.tsx` | Nessuna modifica strutturale, solo adattamento al nuovo layout |
 
