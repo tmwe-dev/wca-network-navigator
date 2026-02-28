@@ -5,7 +5,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star,
+  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -16,6 +16,8 @@ import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/compon
 import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
 import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ── Helpers ── */
 const hasPhone = (p: any) =>
@@ -72,6 +74,26 @@ export function CountryWorkbench({
     () => (partners || []).filter((p: any) => p.country_code === countryCode),
     [partners, countryCode]
   );
+
+  /* ── LinkedIn links for all country partners ── */
+  const partnerIds = useMemo(() => countryPartners.map((p: any) => p.id), [countryPartners]);
+  const { data: linkedinMap } = useQuery({
+    queryKey: ["linkedin-links-hub", countryCode, partnerIds],
+    queryFn: async () => {
+      if (!partnerIds.length) return {} as Record<string, string>;
+      const { data, error } = await supabase
+        .from("partner_social_links")
+        .select("partner_id, url")
+        .eq("platform", "linkedin")
+        .in("partner_id", partnerIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r) => { map[r.partner_id] = r.url; });
+      return map;
+    },
+    enabled: partnerIds.length > 0,
+    staleTime: 30_000,
+  });
 
   /* ── Dynamic filter counts ── */
   const dynamicCounts = useMemo(() => {
@@ -170,6 +192,8 @@ export function CountryWorkbench({
             const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
             const networks = partner.partner_networks || [];
 
+            const linkedinUrl = linkedinMap?.[partner.id];
+
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
                 className={cn(
@@ -183,9 +207,15 @@ export function CountryWorkbench({
                 </div>
                 <div className="flex-1 min-w-0">
                   {/* Name + Rating */}
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">{partner.company_name}</p>
-                    {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
+                   <div className="flex items-center gap-2">
+                     <p className="text-sm font-medium truncate">{partner.company_name}</p>
+                     {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
+                     {linkedinUrl && (
+                       <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                         onClick={(e) => e.stopPropagation()} title="LinkedIn">
+                         <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
+                       </a>
+                     )}
                   </div>
 
                   {/* City + Deep Search badge */}
