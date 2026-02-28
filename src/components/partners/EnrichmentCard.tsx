@@ -1,4 +1,4 @@
-import { Sparkles, Award, Briefcase, Globe2, Users, ChevronDown } from "lucide-react";
+import { Sparkles, Award, Briefcase, Globe2, Users, ChevronDown, Coins } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -27,6 +27,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   const companyProfile = enrichment?.company_profile;
   const contactProfiles = enrichment?.contact_profiles;
   const deepSearchAt = enrichment?.deep_search_at;
+  const tokensUsed = enrichment?.tokens_used;
   const hasCompanyData = companyProfile && (
     companyProfile.awards?.length > 0 ||
     companyProfile.specialties?.length > 0 ||
@@ -163,6 +164,22 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
             </div>
           </CollapsibleContent>
         </Collapsible>
+      )}
+
+      {/* Token consumption */}
+      {tokensUsed && tokensUsed.credits_consumed > 0 && (
+        <div className="flex items-center gap-2 pt-1 border-t border-violet-500/10">
+          <Coins className={cn("w-3.5 h-3.5", 
+            tokensUsed.credits_consumed > 50 ? "text-destructive" : 
+            tokensUsed.credits_consumed > 20 ? "text-amber-500" : "text-emerald-500"
+          )} />
+          <span className="text-[10px] text-muted-foreground">
+            {tokensUsed.credits_consumed} crediti AI
+          </span>
+          <span className="text-[9px] text-muted-foreground/60 ml-auto">
+            {tokensUsed.prompt?.toLocaleString()}↑ {tokensUsed.completion?.toLocaleString()}↓
+          </span>
+        </div>
       )}
     </div>
   );

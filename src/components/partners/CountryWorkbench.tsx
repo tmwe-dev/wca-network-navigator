@@ -5,7 +5,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin, ClipboardList,
+  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin, ClipboardList, Coins,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -75,6 +75,14 @@ export function CountryWorkbench({
     () => (partners || []).filter((p: any) => p.country_code === countryCode),
     [partners, countryCode]
   );
+
+  /* ── Aggregate AI credits consumed ── */
+  const totalAiCredits = useMemo(() => {
+    return countryPartners.reduce((sum: number, p: any) => {
+      const credits = (p.enrichment_data as any)?.tokens_used?.credits_consumed || 0;
+      return sum + credits;
+    }, 0);
+  }, [countryPartners]);
 
   /* ── LinkedIn links for all country partners ── */
   const partnerIds = useMemo(() => countryPartners.map((p: any) => p.id), [countryPartners]);
@@ -163,7 +171,15 @@ export function CountryWorkbench({
           <span className="text-xl">{flag}</span>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
-            <p className="text-[10px] text-muted-foreground">{countryPartners.length} partner</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-muted-foreground">{countryPartners.length} partner</p>
+              {totalAiCredits > 0 && (
+                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                  <Coins className="w-3 h-3 text-amber-500" />
+                  {totalAiCredits} crediti AI
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

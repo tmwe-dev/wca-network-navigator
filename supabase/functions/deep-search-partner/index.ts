@@ -622,6 +622,11 @@ ${truncated}`,
       await consumeCredits(userId, totalTokens, supabase)
     }
 
+    // ═══ CALCULATE CREDITS CONSUMED ═══
+    const inputCostForSave = Math.ceil(totalTokens.prompt / 1000 * 1)
+    const outputCostForSave = Math.ceil(totalTokens.completion / 1000 * 2)
+    const creditsConsumed = inputCostForSave + outputCostForSave
+
     // ═══ SAVE ENRICHMENT DATA ═══
     const existingEnrichment = (partner.enrichment_data as any) || {}
     const updatedEnrichment = {
@@ -630,6 +635,11 @@ ${truncated}`,
       ...(companyProfile ? { company_profile: companyProfile } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(),
+      tokens_used: {
+        prompt: totalTokens.prompt,
+        completion: totalTokens.completion,
+        credits_consumed: creditsConsumed,
+      },
     }
 
     await supabase.from('partners').update({ enrichment_data: updatedEnrichment }).eq('id', partnerId)
