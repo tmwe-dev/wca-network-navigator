@@ -23,20 +23,25 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Load partners without alias that have contacts with email/phone
+    // Load partners that need alias generation:
+    // company_alias IS NULL OR have at least one contact without contact_alias
     const { data: partners, error: pErr } = await supabase
       .from("partners")
-      .select("id, company_name, country_code, partner_contacts(id, name, title, email, direct_phone, mobile, contact_alias)")
+      .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, email, direct_phone, mobile, contact_alias)")
       .in("country_code", countryCodes)
-      .is("company_alias", null)
       .not("partner_contacts", "is", null);
 
     if (pErr) throw pErr;
 
-    // Filter: only partners that have at least one contact with email or phone
+    // Filter: partners that (a) have at least one contact with email/phone AND
+    // (b) are missing company_alias OR have at least one contact missing contact_alias
     const eligible = (partners || []).filter((p: any) => {
       const contacts = p.partner_contacts || [];
-      return contacts.some((c: any) => c.email || c.direct_phone || c.mobile);
+      const hasContactInfo = contacts.some((c: any) => c.email || c.direct_phone || c.mobile);
+      if (!hasContactInfo) return false;
+      const needsCompanyAlias = !p.company_alias;
+      const needsContactAlias = contacts.some((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile));
+      return needsCompanyAlias || needsContactAlias;
     });
 
     if (!eligible.length) {
@@ -54,7 +59,7 @@ serve(async (req) => {
 
       const partnerList = batch.map((p: any) => {
         const contacts = (p.partner_contacts || [])
-          .filter((c: any) => !c.contact_alias) // skip contacts that already have alias
+          .filter((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile))
           .map((c: any) => ({
             contact_id: c.id,
             full_name: c.name,
@@ -63,9 +68,10 @@ serve(async (req) => {
         return {
           partner_id: p.id,
           company_name: p.company_name,
+          needs_company_alias: !p.company_alias,
           contacts,
         };
-      });
+      }).filter((p: any) => p.needs_company_alias || p.contacts.length > 0);
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -165,7 +171,9 @@ REGOLE PER ALIAS CONTATTO (contact_alias):
 
       // Save to DB
       for (const alias of aliases) {
-        if (alias.company_alias) {
+        // Only save company alias if the partner needed one
+        const original = batch.find((p: any) => p.id === alias.partner_id);
+        if (alias.company_alias && (!original || !original.company_alias)) {
           await supabase
             .from("partners")
             .update({ company_alias: alias.company_alias })

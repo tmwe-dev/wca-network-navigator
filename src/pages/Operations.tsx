@@ -132,7 +132,7 @@ export default function Operations() {
       const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { countryCodes: codes } });
       if (error) throw error;
       if (data?.success) {
-        toast.success(`Alias generati: ${data.processed} aziende, ${data.contacts} contatti`);
+        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti`);
         queryClient.invalidateQueries({ queryKey: ["partners"] });
         queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       } else {
@@ -169,19 +169,36 @@ export default function Operations() {
               )}
             </div>
 
-            {/* Center: Stats pills */}
+            {/* Center: Stats pills — contextual to selected countries */}
             {globalStats && (() => {
-              const missingProfile = globalStats.totalPartners - globalStats.withProfile;
-              const missingEmail = globalStats.totalPartners - globalStats.withEmail;
-              const missingPhone = globalStats.totalPartners - globalStats.withPhone;
+              const contextStats = (() => {
+                if (selectedCountries.length > 0 && countryStatsData?.byCountry) {
+                  const agg = { totalPartners: 0, withProfile: 0, withEmail: 0, withPhone: 0 };
+                  selectedCountries.forEach(c => {
+                    const s = countryStatsData.byCountry[c.code];
+                    if (s) {
+                      agg.totalPartners += s.total_partners;
+                      agg.withProfile += s.with_profile;
+                      agg.withEmail += s.with_email;
+                      agg.withPhone += s.with_phone;
+                    }
+                  });
+                  const dirCount = dirData ? selectedCountries.reduce((sum, c) => sum + (dirData[c.code]?.count || 0), 0) : 0;
+                  return { ...agg, scannedCountries: selectedCountries.length, totalDirectory: dirCount };
+                }
+                return globalStats;
+              })();
+              const missingProfile = contextStats.totalPartners - contextStats.withProfile;
+              const missingEmail = contextStats.totalPartners - contextStats.withEmail;
+              const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
                 <div className="flex items-center gap-1.5">
-                  <StatPill icon={Globe} value={globalStats.scannedCountries} label="Paesi" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
-                  <StatPill icon={Users} value={globalStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
+                  <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
+                  <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
                   <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} onClick={() => setFilterMode("no_email")} active={filterMode === "no_email"} variant={missingEmail > 0 ? "warn" : "ok"} />
                   <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} onClick={() => setFilterMode("no_phone")} active={filterMode === "no_phone"} variant={missingPhone > 0 ? "warn" : "ok"} />
-                  <StatPill icon={FolderOpen} value={globalStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
+                  <StatPill icon={FolderOpen} value={contextStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
                 </div>
               );
             })()}
