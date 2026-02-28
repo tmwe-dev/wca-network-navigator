@@ -1,0 +1,388 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+export interface ImportLog {
+  id: string;
+  user_id: string;
+  file_name: string;
+  file_url: string | null;
+  file_size: number;
+  total_rows: number;
+  imported_rows: number;
+  error_rows: number;
+  status: string;
+  normalization_method: string;
+  processing_batch: number;
+  total_batches: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ImportedContact {
+  id: string;
+  import_log_id: string;
+  row_number: number;
+  company_name: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  country: string | null;
+  city: string | null;
+  address: string | null;
+  zip_code: string | null;
+  note: string | null;
+  origin: string | null;
+  company_alias: string | null;
+  contact_alias: string | null;
+  is_selected: boolean;
+  is_transferred: boolean;
+  raw_data: any;
+  created_at: string;
+}
+
+export interface ImportError {
+  id: string;
+  import_log_id: string;
+  row_number: number;
+  error_type: string;
+  error_message: string | null;
+  raw_data: any;
+  corrected_data: any;
+  status: string;
+  attempted_corrections: number;
+  ai_suggestions: any;
+  created_at: string;
+}
+
+export function useImportLogs() {
+  return useQuery({
+    queryKey: ["import-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("import_logs")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as ImportLog[];
+    },
+  });
+}
+
+export function useImportLog(id: string | null) {
+  return useQuery({
+    queryKey: ["import-log", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("import_logs")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data as ImportLog;
+    },
+    enabled: !!id,
+    refetchInterval: (query) => {
+      const log = query.state.data as ImportLog | null;
+      return log?.status === "processing" ? 2000 : false;
+    },
+  });
+}
+
+export function useImportedContacts(importLogId: string | null) {
+  return useQuery({
+    queryKey: ["imported-contacts", importLogId],
+    queryFn: async () => {
+      if (!importLogId) return [];
+      const { data, error } = await supabase
+        .from("imported_contacts")
+        .select("*")
+        .eq("import_log_id", importLogId)
+        .order("row_number", { ascending: true });
+      if (error) throw error;
+      return data as ImportedContact[];
+    },
+    enabled: !!importLogId,
+  });
+}
+
+export function useImportErrors(importLogId: string | null) {
+  return useQuery({
+    queryKey: ["import-errors", importLogId],
+    queryFn: async () => {
+      if (!importLogId) return [];
+      const { data, error } = await supabase
+        .from("import_errors")
+        .select("*")
+        .eq("import_log_id", importLogId)
+        .order("row_number", { ascending: true });
+      if (error) throw error;
+      return data as ImportError[];
+    },
+    enabled: !!importLogId,
+  });
+}
+
+export function useCreateImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      file,
+      rows,
+      userId,
+    }: {
+      file: File;
+      rows: any[];
+      userId: string;
+    }) => {
+      // 1. Upload file to storage
+      const filePath = `${userId}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("import-files")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("import-files")
+        .getPublicUrl(filePath);
+
+      // 2. Create import log
+      const { data: importLog, error: logError } = await supabase
+        .from("import_logs")
+        .insert({
+          user_id: userId,
+          file_name: file.name,
+          file_url: urlData.publicUrl,
+          file_size: file.size,
+          total_rows: rows.length,
+          status: "pending",
+        })
+        .select()
+        .single();
+      if (logError) throw logError;
+
+      // 3. Insert contacts into staging
+      const contacts = rows.map((row, index) => ({
+        import_log_id: importLog.id,
+        row_number: index + 1,
+        company_name: row.company_name || row.ragione_sociale || row.azienda || null,
+        name: row.name || row.nome || row.contatto || null,
+        email: row.email || row.mail || null,
+        phone: row.phone || row.telefono || row.tel || null,
+        mobile: row.mobile || row.cellulare || row.cell || null,
+        country: row.country || row.paese || row.nazione || null,
+        city: row.city || row.citta || row.città || null,
+        address: row.address || row.indirizzo || null,
+        zip_code: row.zip_code || row.cap || null,
+        note: row.note || row.notes || null,
+        origin: row.origin || row.origine || null,
+        raw_data: row,
+      }));
+
+      // Insert in batches of 100
+      for (let i = 0; i < contacts.length; i += 100) {
+        const batch = contacts.slice(i, i + 100);
+        const { error: insertError } = await supabase
+          .from("imported_contacts")
+          .insert(batch);
+        if (insertError) throw insertError;
+      }
+
+      return importLog as ImportLog;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+    },
+  });
+}
+
+export function useProcessImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (importLogId: string) => {
+      const { data, error } = await supabase.functions.invoke("process-ai-import", {
+        body: { import_log_id: importLogId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, importLogId) => {
+      queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
+      queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
+      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      toast({ title: "Elaborazione completata" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Errore elaborazione",
+        description: String(err),
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useToggleContactSelection() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, selected }: { id: string; selected: boolean }) => {
+      const { error } = await supabase
+        .from("imported_contacts")
+        .update({ is_selected: selected })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+    },
+  });
+}
+
+export function useTransferToPartners() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (contacts: ImportedContact[]) => {
+      let successCount = 0;
+      for (const c of contacts) {
+        // Insert partner
+        const { data: partner, error: pError } = await supabase
+          .from("partners")
+          .insert({
+            company_name: c.company_name || "Unknown",
+            country_code: (c.country || "XX").substring(0, 2).toUpperCase(),
+            country_name: c.country || "Unknown",
+            city: c.city || "Unknown",
+            address: c.address,
+            phone: c.phone,
+            mobile: c.mobile,
+            email: c.email,
+            company_alias: c.company_alias,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (pError) {
+          console.error("Transfer error:", pError);
+          continue;
+        }
+
+        // Insert contact if name exists
+        if (c.name) {
+          await supabase.from("partner_contacts").insert({
+            partner_id: partner.id,
+            name: c.name,
+            email: c.email,
+            direct_phone: c.phone,
+            mobile: c.mobile,
+            contact_alias: c.contact_alias,
+            is_primary: true,
+          });
+        }
+
+        // Mark as transferred
+        await supabase
+          .from("imported_contacts")
+          .update({ is_transferred: true })
+          .eq("id", c.id);
+
+        successCount++;
+      }
+      return successCount;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: `${count} partner trasferiti con successo` });
+    },
+  });
+}
+
+export function useCreateActivitiesFromImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      contacts,
+      activityType,
+      campaignBatchId,
+    }: {
+      contacts: ImportedContact[];
+      activityType: "send_email" | "phone_call";
+      campaignBatchId?: string;
+    }) => {
+      // First transfer to partners, then create activities
+      let count = 0;
+      for (const c of contacts) {
+        // Upsert partner
+        const { data: partner, error: pError } = await supabase
+          .from("partners")
+          .insert({
+            company_name: c.company_name || "Unknown",
+            country_code: (c.country || "XX").substring(0, 2).toUpperCase(),
+            country_name: c.country || "Unknown",
+            city: c.city || "Unknown",
+            phone: c.phone,
+            email: c.email,
+            company_alias: c.company_alias,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (pError) continue;
+
+        // Create contact
+        let contactId: string | null = null;
+        if (c.name) {
+          const { data: contact } = await supabase
+            .from("partner_contacts")
+            .insert({
+              partner_id: partner.id,
+              name: c.name,
+              email: c.email,
+              direct_phone: c.phone,
+              mobile: c.mobile,
+              contact_alias: c.contact_alias,
+              is_primary: true,
+            })
+            .select()
+            .single();
+          contactId = contact?.id || null;
+        }
+
+        // Create activity
+        await supabase.from("activities").insert({
+          partner_id: partner.id,
+          activity_type: activityType,
+          title: `${activityType === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
+          status: "pending",
+          priority: "medium",
+          selected_contact_id: contactId,
+          campaign_batch_id: campaignBatchId || null,
+        });
+
+        await supabase
+          .from("imported_contacts")
+          .update({ is_transferred: true })
+          .eq("id", c.id);
+
+        count++;
+      }
+      return count;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: `${count} attività create con successo` });
+    },
+  });
+}
