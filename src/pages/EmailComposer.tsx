@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,8 +147,19 @@ export default function EmailComposer() {
     );
   };
 
+  const isValidUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch { return false; }
+  };
+
   const addLink = () => {
     if (!newLinkLabel || !newLinkUrl) return;
+    if (!isValidUrl(newLinkUrl)) {
+      toast.error("URL non valido. Usa http:// o https://");
+      return;
+    }
     setLinks((prev) => [...prev, { label: newLinkLabel, url: newLinkUrl }]);
     setNewLinkLabel("");
     setNewLinkUrl("");
@@ -161,18 +173,27 @@ export default function EmailComposer() {
     setHtmlBody((prev) => prev + v);
   };
 
-  const buildFinalHtml = (body: string, partner: any, contactName: string) => {
-    let html = body
-      .replace(/\{\{company_name\}\}/g, partner.company_name || "")
-      .replace(/\{\{contact_name\}\}/g, contactName || "")
-      .replace(/\{\{city\}\}/g, partner.city || "")
-      .replace(/\{\{country\}\}/g, partner.country_name || "");
+  const escapeHtml = (str: string) =>
+    str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-    // Add links
-    if (links.length > 0) {
+  const buildFinalHtml = (body: string, partner: any, contactName: string) => {
+    const safeCompanyName = escapeHtml(partner.company_name || "");
+    const safeContactName = escapeHtml(contactName || "");
+    const safeCity = escapeHtml(partner.city || "");
+    const safeCountry = escapeHtml(partner.country_name || "");
+
+    let html = body
+      .replace(/\{\{company_name\}\}/g, safeCompanyName)
+      .replace(/\{\{contact_name\}\}/g, safeContactName)
+      .replace(/\{\{city\}\}/g, safeCity)
+      .replace(/\{\{country\}\}/g, safeCountry);
+
+    // Add links (only valid URLs)
+    const validLinks = links.filter((l) => isValidUrl(l.url));
+    if (validLinks.length > 0) {
       html += `<br/><br/><p><strong>Link utili:</strong></p><ul>`;
-      links.forEach((l) => {
-        html += `<li><a href="${l.url}" target="_blank">${l.label}</a></li>`;
+      validLinks.forEach((l) => {
+        html += `<li><a href="${encodeURI(l.url)}" target="_blank">${escapeHtml(l.label)}</a></li>`;
       });
       html += `</ul>`;
     }
@@ -182,12 +203,15 @@ export default function EmailComposer() {
     if (attachedTemplates.length > 0) {
       html += `<br/><p><strong>Allegati:</strong></p><ul>`;
       attachedTemplates.forEach((t: any) => {
-        html += `<li><a href="${t.file_url}" target="_blank">${t.file_name}</a></li>`;
+        html += `<li><a href="${encodeURI(t.file_url)}" target="_blank">${escapeHtml(t.file_name)}</a></li>`;
       });
       html += `</ul>`;
     }
 
-    return html;
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'div', 'span', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'img', 'hr', 'blockquote', 'pre', 'code', 'b', 'i', 'u'],
+      ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'style', 'class', 'width', 'height', 'colspan', 'rowspan'],
+    });
   };
 
   const handleSaveDraft = async () => {

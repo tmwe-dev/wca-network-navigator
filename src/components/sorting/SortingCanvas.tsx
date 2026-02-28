@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -89,7 +90,7 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
                 <span className="text-xs text-muted-foreground">Oggetto:</span>
                 <span className="ml-2 text-sm font-medium">{job.email_subject || "(senza oggetto)"}</span>
               </div>
-              <div className="p-4 bg-background text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: job.email_body || "" }} />
+              <div className="p-4 bg-background text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.email_body || "", { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'div', 'span', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'img', 'hr', 'blockquote', 'pre', 'code', 'b', 'i', 'u'], ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'style', 'class'] }) }} />
             </div>
           )}
         </div>
