@@ -2,30 +2,37 @@
 
 ## Problema
 
-Il `PartnerDetailCompact` (dettaglio singolo partner) ha solo il bottone **Deep Search** standalone. I bottoni **Attività**, **Workspace** e **Email** esistono solo nella `BulkActionBar`, che appare quando selezioni partner con le checkbox nella lista. L'utente si aspetta di poter eseguire tutte le azioni anche sul singolo partner dal dettaglio.
+Quando si lancia "Genera Tutte", il sistema tenta di generare email anche per partner senza indirizzo email, causando errori 422 ripetuti. L'utente vuole semplicemente che questi partner vengano esclusi automaticamente.
 
 ## Piano
 
-### 1. Aggiungere barra azioni nel dettaglio partner (`PartnerDetailCompact.tsx`)
+### 1. Filtrare le attività senza email prima della generazione (`Workspace.tsx`)
 
-Aggiungere una riga di bottoni nell'header del dettaglio partner con stile glassmorphism lilla coerente con la `BulkActionBar`:
-- **Attività** (ClipboardList) — apre il dialog assegnazione attività per quel singolo partner
-- **Deep Search** (Sparkles) — già presente, va integrato nella nuova riga
-- **Workspace** (Briefcase) — invia il partner al workspace
-- **Email** (Send) — naviga all'email composer con quel partner
+Nel metodo `handleGenerateAll`, prima di iterare, filtrare le attività che hanno un contatto con email disponibile. Usare i dati già presenti in `AllActivity.selected_contact.email` o i dati del partner (`partners.email` non è nel select corrente, ma `selected_contact` sì).
 
-### 2. Passare i callback necessari (`PartnerHub.tsx`)
+Aggiungere un pre-filtro:
+```
+const withEmail = toGenerate.filter(a => 
+  a.selected_contact?.email || /* fallback partner email check */
+);
+```
 
-Aggiungere props al `PartnerDetailCompact`:
-- `onAssignActivity(partnerId)` — apre `AssignActivityDialog` preselezionando quel partner
-- `onSendToWorkspace(partnerId)` — chiama la logica esistente per un singolo ID
-- `onEmail(partnerId)` — naviga a `/email-composer` con quel partner
+Se alcune attività vengono escluse, mostrare un toast informativo: "X partner esclusi (email mancante)".
 
-### 3. Rimuovere il bottone Deep Search isolato
+### 2. Verificare i dati disponibili nel tipo `AllActivity`
 
-Sostituire il bottone Deep Search standalone con la nuova barra unificata che include tutte e 4 le azioni nella stessa riga compatta.
+Il tipo `AllActivity` in `useActivities.ts` include `selected_contact.email`. Bisogna verificare se serve anche il campo `partners.email` (email generica del partner) come fallback. Il select attuale non lo include — va aggiunto alla query.
+
+### 3. Aggiungere `email` al select di `partners` in `useAllActivities`
+
+Modificare la query in `useAllActivities` per includere `email` nel select dei partners:
+```
+partners(company_name, company_alias, country_code, country_name, city, enriched_at, website, logo_url, email)
+```
+
+Aggiornare il tipo `AllActivity.partners` di conseguenza.
 
 ### File da modificare
-- `src/components/partners/PartnerDetailCompact.tsx` — aggiungere barra azioni unificata
-- `src/pages/PartnerHub.tsx` — passare i nuovi callback
+- `src/hooks/useActivities.ts` — aggiungere `email` al select partners + tipo
+- `src/pages/Workspace.tsx` — filtrare attività senza email in `handleGenerateAll`
 
