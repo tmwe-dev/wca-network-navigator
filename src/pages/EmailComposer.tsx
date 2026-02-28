@@ -11,10 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Send, Save, Eye, Plus, Trash2, Loader2, Mail, Globe, Users, Briefcase, Link as LinkIcon, Paperclip, X } from "lucide-react";
+import { Send, Save, Eye, Plus, Trash2, Loader2, Mail, Globe, Users, Briefcase, Link as LinkIcon, Paperclip, X, ListOrdered } from "lucide-react";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
+import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
+import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 
 const CATEGORIES = [
   { value: "offerta_cliente", label: "Offerta nuovo cliente" },
@@ -51,6 +54,12 @@ export default function EmailComposer() {
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0, failed: 0 });
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [queueDelay, setQueueDelay] = useState(5);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [activeQueueStatus, setActiveQueueStatus] = useState("idle");
+
+  const enqueueCampaign = useEnqueueCampaign();
+  const { processing, startProcessing } = useProcessQueue();
 
   const saveDraft = useSaveEmailDraft();
   const { data: templates = [] } = useEmailTemplates();
@@ -238,7 +247,7 @@ export default function EmailComposer() {
     }
   };
 
-  const handleSend = async () => {
+  const handleEnqueue = async () => {
     if (!subject || !htmlBody) {
       toast.error("Compila oggetto e corpo email");
       return;
@@ -249,26 +258,53 @@ export default function EmailComposer() {
     }
 
     setSending(true);
-    setSendProgress({ sent: 0, total: recipientsWithEmail.length, failed: 0 });
-    let sent = 0;
-    let failed = 0;
 
-    // Fetch contacts for all partner IDs
-    const partnerIds = recipientsWithEmail.map((r) => r.id);
-    const { data: contacts } = await supabase
-      .from("partner_contacts")
-      .select("partner_id, name, is_primary")
-      .in("partner_id", partnerIds.slice(0, 50));
+    try {
+      // Save draft first
+      const { data: savedDraft, error: draftError } = await supabase
+        .from("email_drafts" as any)
+        .insert({
+          subject,
+          html_body: htmlBody,
+          category,
+          recipient_type: recipientTab,
+          recipient_filter:
+            recipientTab === "country"
+              ? { country_names: selectedCountries }
+              : recipientTab === "partner"
+              ? { partner_ids: selectedPartnerIds }
+              : { batch_id: selectedBatchId },
+          attachment_ids: selectedAttachments,
+          link_urls: links,
+          status: "queued",
+          total_count: recipientsWithEmail.length,
+        } as any)
+        .select()
+        .single();
+      if (draftError) throw draftError;
 
-    const contactMap: Record<string, string> = {};
-    (contacts || []).forEach((c) => {
-      if (!contactMap[c.partner_id] || c.is_primary) {
-        contactMap[c.partner_id] = c.name;
+      const draftId = (savedDraft as any).id;
+
+      // Fetch contacts for variable substitution
+      const partnerIds = recipientsWithEmail.map((r) => r.id);
+      const contactBatches: any[] = [];
+      for (let i = 0; i < partnerIds.length; i += 50) {
+        const { data: contacts } = await supabase
+          .from("partner_contacts")
+          .select("partner_id, name, is_primary")
+          .in("partner_id", partnerIds.slice(i, i + 50));
+        if (contacts) contactBatches.push(...contacts);
       }
-    });
 
-    for (const partner of recipientsWithEmail) {
-      try {
+      const contactMap: Record<string, string> = {};
+      contactBatches.forEach((c: any) => {
+        if (!contactMap[c.partner_id] || c.is_primary) {
+          contactMap[c.partner_id] = c.name;
+        }
+      });
+
+      // Build recipients with resolved HTML
+      const resolvedRecipients = recipientsWithEmail.map((partner) => {
         const contactName = contactMap[partner.id] || "";
         const finalSubject = subject
           .replace(/\{\{company_name\}\}/g, partner.company_name || "")
@@ -276,25 +312,33 @@ export default function EmailComposer() {
           .replace(/\{\{city\}\}/g, partner.city || "")
           .replace(/\{\{country\}\}/g, partner.country_name || "");
         const finalHtml = buildFinalHtml(htmlBody, partner, contactName);
+        return {
+          partner_id: partner.id,
+          email: partner.email!,
+          name: partner.company_name,
+          subject: finalSubject,
+          html: finalHtml,
+        };
+      });
 
-        const { error } = await supabase.functions.invoke("send-email", {
-          body: {
-            to: partner.email,
-            subject: finalSubject,
-            html: finalHtml,
-            partner_id: partner.id,
-          },
-        });
-        if (error) throw error;
-        sent++;
-      } catch {
-        failed++;
-      }
-      setSendProgress({ sent, total: recipientsWithEmail.length, failed });
+      await enqueueCampaign.mutateAsync({
+        draftId,
+        recipients: resolvedRecipients,
+        delaySeconds: queueDelay,
+      });
+
+      setActiveDraftId(draftId);
+      setActiveQueueStatus("idle");
+
+      // Auto-start processing
+      startProcessing(draftId);
+      setActiveQueueStatus("processing");
+    } catch (err) {
+      console.error("Enqueue error:", err);
+      toast.error("Errore nell'accodamento della campagna");
     }
 
     setSending(false);
-    toast.success(`Invio completato: ${sent} inviate, ${failed} fallite`);
   };
 
   // Template groups for attachments
@@ -307,6 +351,7 @@ export default function EmailComposer() {
     });
     return groups;
   }, [templates]);
+
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] mx-auto">
@@ -431,6 +476,26 @@ export default function EmailComposer() {
           </CardContent>
         </Card>
 
+        {/* Queue delay control */}
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-muted-foreground" />
+                Ritardo tra invii
+              </label>
+              <span className="text-sm font-mono text-muted-foreground">{queueDelay}s</span>
+            </div>
+            <Slider
+              value={[queueDelay]}
+              onValueChange={([v]) => setQueueDelay(v)}
+              min={2}
+              max={30}
+              step={1}
+            />
+          </CardContent>
+        </Card>
+
         {/* Action buttons */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleSaveDraft} disabled={sending}>
@@ -442,16 +507,17 @@ export default function EmailComposer() {
           >
             <Eye className="w-4 h-4 mr-2" /> Anteprima
           </Button>
-          <Button onClick={handleSend} disabled={sending || recipientsWithEmail.length === 0}>
+          <Button onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0}>
             {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
             {sending
-              ? `Invio ${sendProgress.sent}/${sendProgress.total}...`
-              : `Invia a ${recipientsWithEmail.length} destinatari`}
+              ? "Preparazione coda..."
+              : `Accoda ${recipientsWithEmail.length} email`}
           </Button>
         </div>
 
-        {sending && sendProgress.failed > 0 && (
-          <p className="text-sm text-destructive">{sendProgress.failed} email fallite</p>
+        {/* Campaign Queue Monitor */}
+        {activeDraftId && (
+          <CampaignQueueMonitor draftId={activeDraftId} queueStatus={activeQueueStatus} />
         )}
 
         {/* Preview */}

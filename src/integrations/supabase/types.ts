@@ -448,6 +448,62 @@ export type Database = {
         }
         Relationships: []
       }
+      email_campaign_queue: {
+        Row: {
+          created_at: string
+          draft_id: string | null
+          error_message: string | null
+          html_body: string
+          id: string
+          partner_id: string
+          position: number
+          recipient_email: string
+          recipient_name: string | null
+          retry_count: number
+          sent_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id?: string | null
+          error_message?: string | null
+          html_body: string
+          id?: string
+          partner_id: string
+          position?: number
+          recipient_email: string
+          recipient_name?: string | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string | null
+          error_message?: string | null
+          html_body?: string
+          id?: string
+          partner_id?: string
+          position?: number
+          recipient_email?: string
+          recipient_name?: string | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_queue_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "email_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_drafts: {
         Row: {
           attachment_ids: Json | null
@@ -456,6 +512,10 @@ export type Database = {
           html_body: string | null
           id: string
           link_urls: Json | null
+          queue_completed_at: string | null
+          queue_delay_seconds: number
+          queue_started_at: string | null
+          queue_status: string
           recipient_filter: Json | null
           recipient_type: string | null
           sent_at: string | null
@@ -471,6 +531,10 @@ export type Database = {
           html_body?: string | null
           id?: string
           link_urls?: Json | null
+          queue_completed_at?: string | null
+          queue_delay_seconds?: number
+          queue_started_at?: string | null
+          queue_status?: string
           recipient_filter?: Json | null
           recipient_type?: string | null
           sent_at?: string | null
@@ -486,6 +550,10 @@ export type Database = {
           html_body?: string | null
           id?: string
           link_urls?: Json | null
+          queue_completed_at?: string | null
+          queue_delay_seconds?: number
+          queue_started_at?: string | null
+          queue_status?: string
           recipient_filter?: Json | null
           recipient_type?: string | null
           sent_at?: string | null
