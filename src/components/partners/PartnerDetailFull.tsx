@@ -198,6 +198,40 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         </div>
       </div>
 
+      {/* ═══ KPI BAND ═══ */}
+      <div className="bg-gradient-to-br from-primary/5 via-card to-sky-500/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {years > 0 && (
+            <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2">
+              <Calendar className="w-6 h-6 text-primary fill-primary mb-1" />
+              <p className="text-lg font-semibold text-foreground">{years}</p>
+              <p className="text-[10px] text-muted-foreground">Anni WCA</p>
+            </div>
+          )}
+          {Array.isArray(partner.branch_cities) && partner.branch_cities.length > 0 && (
+            <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2">
+              <Building2 className="w-6 h-6 text-primary fill-primary mb-1" />
+              <p className="text-lg font-semibold text-foreground">{partner.branch_cities.length}</p>
+              <p className="text-[10px] text-muted-foreground">Filiali</p>
+            </div>
+          )}
+          {branchCountries.length > 0 && (
+            <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2">
+              <Globe className="w-6 h-6 text-primary fill-primary mb-1" />
+              <p className="text-lg font-semibold text-foreground">{branchCountries.length + 1}</p>
+              <p className="text-[10px] text-muted-foreground">Paesi</p>
+            </div>
+          )}
+          {partner.partner_certifications?.length > 0 && (
+            <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2">
+              <ShieldCheck className="w-6 h-6 text-emerald-400 fill-emerald-400 mb-1" />
+              <p className="text-lg font-semibold text-foreground">{partner.partner_certifications.length}</p>
+              <p className="text-[10px] text-muted-foreground">Certificazioni</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ═══ TWO COLUMN LAYOUT ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
         {/* ─── LEFT COLUMN (60%) ─── */}
@@ -240,17 +274,13 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
             </div>
           )}
 
-          {/* Company Contacts - Collapsible */}
-          <Collapsible>
-            <CollapsibleTrigger className="w-full">
-              <div className="bg-gradient-to-r from-sky-500/10 via-card to-transparent hover:from-sky-500/15 text-foreground flex items-center gap-3 w-full cursor-pointer transition-all rounded-xl px-4 py-3 border border-sky-500/10 shadow-sm">
-                <Building2 className="w-7 h-7 text-sky-400 fill-sky-400" />
-                <span className="text-sm font-medium">Contatti Azienda</span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-2 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-2.5">
+          {/* Company Contacts - Always open */}
+          <div>
+            <div className="bg-gradient-to-r from-sky-500/10 via-card to-transparent text-foreground flex items-center gap-3 w-full rounded-xl px-4 py-3 border border-sky-500/10 shadow-sm">
+              <Building2 className="w-7 h-7 text-sky-400 fill-sky-400" />
+              <span className="text-sm font-medium">Contatti Azienda</span>
+            </div>
+            <div className="mt-2 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-2.5">
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className={cn("w-5 h-5", partner.phone ? "text-sky-500 fill-sky-500" : "text-muted-foreground/30")} />
                   {partner.phone ? (
@@ -307,22 +337,17 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                   </div>
                 )}
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+          </div>
 
-          {/* Office Contacts - Collapsible */}
+          {/* Office Contacts - Always open */}
           {partner.partner_contacts?.length > 0 && (
-            <Collapsible>
-              <CollapsibleTrigger className="w-full">
-                <div className="bg-gradient-to-r from-emerald-500/10 via-card to-transparent hover:from-emerald-500/15 text-foreground flex items-center gap-3 w-full cursor-pointer transition-all rounded-xl px-4 py-3 border border-emerald-500/10 shadow-sm">
-                  <Users className="w-7 h-7 text-emerald-400 fill-emerald-400" />
-                  <span className="text-sm font-medium">
-                    Contatti Ufficio ({partner.partner_contacts.length})
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
+            <div>
+              <div className="bg-gradient-to-r from-emerald-500/10 via-card to-transparent text-foreground flex items-center gap-3 w-full rounded-xl px-4 py-3 border border-emerald-500/10 shadow-sm">
+                <Users className="w-7 h-7 text-emerald-400 fill-emerald-400" />
+                <span className="text-sm font-medium">
+                  Contatti Ufficio ({partner.partner_contacts.length})
+                </span>
+              </div>
                 <div className="mt-2 space-y-2">
                   {partner.partner_contacts.map((c: any) => (
                     <div key={c.id} className="bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-1.5">
@@ -389,38 +414,32 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                     </div>
                   ))}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+            </div>
           )}
 
-          {/* Company Profile - Collapsible */}
+          {/* Company Profile - Always open */}
           {partner.profile_description && (
-            <Collapsible>
-              <CollapsibleTrigger className="w-full">
-                <div className="bg-gradient-to-r from-amber-500/10 via-card to-transparent hover:from-amber-500/15 text-foreground flex items-center gap-3 w-full cursor-pointer transition-all rounded-xl px-4 py-3 border border-amber-500/10 shadow-sm">
-                  <FileText className="w-7 h-7 text-amber-400 fill-amber-400" />
-                  <span className="text-sm font-medium">Profilo Aziendale</span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-2 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-4">
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{partner.profile_description}</p>
-                  {branchCountries.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Branch Offices</p>
-                      <div className="flex flex-wrap gap-2">
-                        {branchCountries.map(({ code, name }) => (
-                          <span key={code} className="flex items-center gap-1.5 text-sm text-muted-foreground bg-secondary/50 border rounded-lg py-1 px-2">
-                            <span className="text-lg">{getCountryFlag(code)}</span> {name}
-                          </span>
-                        ))}
-                      </div>
+            <div>
+              <div className="bg-gradient-to-r from-amber-500/10 via-card to-transparent text-foreground flex items-center gap-3 w-full rounded-xl px-4 py-3 border border-amber-500/10 shadow-sm">
+                <FileText className="w-7 h-7 text-amber-400 fill-amber-400" />
+                <span className="text-sm font-medium">Profilo Aziendale</span>
+              </div>
+              <div className="mt-2 bg-card/80 backdrop-blur-sm border border-primary/5 rounded-xl p-4 space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{partner.profile_description}</p>
+                {branchCountries.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Branch Offices</p>
+                    <div className="flex flex-wrap gap-2">
+                      {branchCountries.map(({ code, name }) => (
+                        <span key={code} className="flex items-center gap-1.5 text-sm text-muted-foreground bg-secondary/50 border rounded-lg py-1 px-2">
+                          <span className="text-lg">{getCountryFlag(code)}</span> {name}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Enrichment */}
@@ -617,40 +636,6 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
             </div>
           )}
 
-          {/* KPI Summary */}
-          <div className="bg-gradient-to-br from-primary/5 via-card to-sky-500/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">KPI</p>
-            <div className="grid grid-cols-2 gap-2.5">
-              {years > 0 && (
-                <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2 hover:shadow-sm transition-shadow">
-                  <Calendar className="w-6 h-6 text-primary fill-primary mb-1" />
-                  <p className="text-lg font-semibold text-foreground">{years}</p>
-                  <p className="text-[10px] text-muted-foreground">Anni WCA</p>
-                </div>
-              )}
-              {Array.isArray(partner.branch_cities) && partner.branch_cities.length > 0 && (
-                <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2 hover:shadow-sm transition-shadow">
-                  <Building2 className="w-6 h-6 text-primary fill-primary mb-1" />
-                  <p className="text-lg font-semibold text-foreground">{partner.branch_cities.length}</p>
-                  <p className="text-[10px] text-muted-foreground">Filiali</p>
-                </div>
-              )}
-              {branchCountries.length > 0 && (
-                <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2 hover:shadow-sm transition-shadow">
-                  <Globe className="w-6 h-6 text-primary fill-primary mb-1" />
-                  <p className="text-lg font-semibold text-foreground">{branchCountries.length + 1}</p>
-                  <p className="text-[10px] text-muted-foreground">Paesi</p>
-                </div>
-              )}
-              {partner.partner_certifications?.length > 0 && (
-                <div className="bg-card/80 border border-primary/5 rounded-xl flex flex-col items-center py-3 px-2 hover:shadow-sm transition-shadow">
-                  <ShieldCheck className="w-6 h-6 text-emerald-400 fill-emerald-400 mb-1" />
-                  <p className="text-lg font-semibold text-foreground">{partner.partner_certifications.length}</p>
-                  <p className="text-[10px] text-muted-foreground">Certificazioni</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
