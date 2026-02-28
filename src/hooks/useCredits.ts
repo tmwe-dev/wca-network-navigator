@@ -1,58 +1,49 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
-interface CreditsState {
-  balance: number;
-  totalConsumed: number;
-  loading: boolean;
-}
-
+/**
+ * Refactored credits hook using React Query for caching and deduplication.
+ * Replaces manual polling with proper staleTime and refetchInterval.
+ */
 export function useCredits() {
-  const [state, setState] = useState<CreditsState>({
-    balance: 0,
-    totalConsumed: 0,
-    loading: true,
-  });
+  const queryClient = useQueryClient();
 
-  const fetchCredits = useCallback(async () => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["user-credits"],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return { balance: 0, totalConsumed: 0 };
 
-      const { data } = await supabase
+      const { data: credits } = await supabase
         .from("user_credits")
         .select("balance, total_consumed")
         .eq("user_id", user.id)
         .single();
 
-      if (data) {
-        setState({
-          balance: data.balance,
-          totalConsumed: data.total_consumed,
-          loading: false,
-        });
-      }
-    } catch {
-      setState(prev => ({ ...prev, loading: false }));
-    }
-  }, []);
+      return {
+        balance: credits?.balance ?? 0,
+        totalConsumed: credits?.total_consumed ?? 0,
+      };
+    },
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
 
+  // Refetch on sign-in
   useEffect(() => {
-    fetchCredits();
-
-    // Poll every 30s for near-realtime updates
-    const interval = setInterval(fetchCredits, 30_000);
-
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") fetchCredits();
+      if (event === "SIGNED_IN") {
+        queryClient.invalidateQueries({ queryKey: ["user-credits"] });
+      }
     });
+    return () => subscription.unsubscribe();
+  }, [queryClient]);
 
-    return () => {
-      clearInterval(interval);
-      subscription.unsubscribe();
-    };
-  }, [fetchCredits]);
-
-  return { ...state, refetch: fetchCredits };
+  return {
+    balance: data?.balance ?? 0,
+    totalConsumed: data?.totalConsumed ?? 0,
+    loading: isLoading,
+    refetch: () => queryClient.invalidateQueries({ queryKey: ["user-credits"] }),
+  };
 }

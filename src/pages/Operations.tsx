@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-/** Read directory totals */
+/** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
   return useQuery({
     queryKey: ["cache-data-by-country"],
