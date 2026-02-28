@@ -2,7 +2,8 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import {
   Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Terminal, Download,
 } from "lucide-react";
-import { DeepSearchCanvas, type DeepSearchResult, type DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
+import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { DownloadCanvas, type DownloadResult, type DownloadCurrent } from "@/components/operations/DownloadCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
@@ -54,12 +55,8 @@ export default function Operations() {
   const [directoryOnly, setDirectoryOnly] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterKey>("all");
   const [aiOpen, setAiOpen] = useState(false);
-  const [deepSearchRunning, setDeepSearchRunning] = useState(false);
+  const deepSearch = useDeepSearch();
   const [aliasGenerating, setAliasGenerating] = useState(false);
-  const [dsCanvasOpen, setDsCanvasOpen] = useState(false);
-  const [dsResults, setDsResults] = useState<DeepSearchResult[]>([]);
-  const [dsCurrent, setDsCurrent] = useState<DeepSearchCurrent | null>(null);
-  const dsAbortRef = useRef(false);
   const [dlCanvasOpen, setDlCanvasOpen] = useState(false);
   const [dlResults, setDlResults] = useState<DownloadResult[]>([]);
   const [dlCurrent, setDlCurrent] = useState<DownloadCurrent | null>(null);
@@ -120,63 +117,13 @@ export default function Operations() {
     setSelectedPartnerId(null);
   }, []);
 
-  const handleDeepSearch = useCallback(async (partnerIds: string[]) => {
-    if (deepSearchRunning || partnerIds.length === 0) return;
-    setDeepSearchRunning(true);
-    setDsResults([]);
-    setDsCanvasOpen(true);
-    dsAbortRef.current = false;
-    let done = 0;
-    try {
-      for (const id of partnerIds) {
-        if (dsAbortRef.current) break;
-        done++;
-        // Pre-call: fetch partner info from cache for display
-        const cached = queryClient.getQueryData<any[]>(["partners"])
-          ?.flat()?.find((p: any) => p.id === id);
-        setDsCurrent({
-          partnerId: id,
-          companyName: cached?.company_name || `Partner ${done}`,
-          countryCode: cached?.country_code,
-          logoUrl: cached?.logo_url,
-          index: done,
-          total: partnerIds.length,
-        });
-        toast.loading(`Deep Search ${done}/${partnerIds.length}...`, { id: "deep-search-ops" });
-        const { data, error } = await supabase.functions.invoke("deep-search-partner", { body: { partnerId: id } });
-        const result: DeepSearchResult = {
-          partnerId: id,
-          companyName: data?.companyName || cached?.company_name || `Partner ${done}`,
-          countryCode: cached?.country_code,
-          logoUrl: cached?.logo_url,
-          socialLinksFound: data?.socialLinksFound || 0,
-          logoFound: data?.logoFound || false,
-          contactProfilesFound: data?.contactProfilesFound || 0,
-          companyProfileFound: data?.companyProfileFound || false,
-          rating: data?.rating || 0,
-          rateLimited: data?.rateLimited,
-          error: error ? String(error) : undefined,
-        };
-        setDsResults(prev => [...prev, result]);
-        if (error) console.error("Deep search error for", id, error);
-      }
-      const msg = dsAbortRef.current
-        ? `Deep Search interrotta: ${done} partner processati`
-        : `Deep Search completata: ${done} partner`;
-      dsAbortRef.current ? toast.info(msg, { id: "deep-search-ops" }) : toast.success(msg, { id: "deep-search-ops" });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-    } catch (e: any) {
-      toast.error(e?.message || "Errore Deep Search", { id: "deep-search-ops" });
-    } finally {
-      setDeepSearchRunning(false);
-      setDsCurrent(null);
-    }
-  }, [deepSearchRunning, queryClient]);
+  const handleDeepSearch = useCallback((partnerIds: string[]) => {
+    deepSearch.start(partnerIds);
+  }, [deepSearch]);
 
   const handleStopDeepSearch = useCallback(() => {
-    dsAbortRef.current = true;
-  }, []);
+    deepSearch.stop();
+  }, [deepSearch]);
 
   const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
     if (aliasGenerating) return;
@@ -273,8 +220,8 @@ export default function Operations() {
                 </button>
               )}
               {/* Deep Search eye button */}
-              {(deepSearchRunning || dsResults.length > 0) && !dsCanvasOpen && (
-                <button onClick={() => setDsCanvasOpen(true)} className={cn(
+              {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
+                <button onClick={() => deepSearch.setCanvasOpen(true)} className={cn(
                   "p-1.5 rounded-lg transition-all",
                   isDark ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400" : "bg-violet-50 hover:bg-violet-100 text-violet-600 shadow-sm"
                 )} title="Mostra Deep Search">
@@ -336,7 +283,7 @@ export default function Operations() {
                     isDark={isDark}
                     onDeepSearch={handleDeepSearch}
                     onGenerateAliases={handleGenerateAliases}
-                    deepSearchRunning={deepSearchRunning}
+                    deepSearchRunning={deepSearch.running}
                     aliasGenerating={aliasGenerating}
                     onJobCreated={startJob}
                     directoryOnly={directoryOnly}
@@ -372,12 +319,12 @@ export default function Operations() {
 
                   {/* Deep Search Canvas overlay */}
                   <DeepSearchCanvas
-                    open={dsCanvasOpen}
-                    onClose={() => setDsCanvasOpen(false)}
+                    open={deepSearch.canvasOpen}
+                    onClose={() => deepSearch.setCanvasOpen(false)}
                     onStop={handleStopDeepSearch}
-                    current={dsCurrent}
-                    results={dsResults}
-                    running={deepSearchRunning}
+                    current={deepSearch.current}
+                    results={deepSearch.results}
+                    running={deepSearch.running}
                     isDark={isDark}
                   />
 

@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
 import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks/useActivities";
 import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
-import { supabase } from "@/integrations/supabase/client";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { Sparkles, Search, Zap, Trash2, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,8 @@ export default function Workspace() {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
-  // Deep search state
-  const [deepSearching, setDeepSearching] = useState(false);
-  const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
-  const deepSearchAbortRef = useRef(false);
+  // Deep search from global context
+  const deepSearch = useDeepSearch();
 
   const { data: activities } = useAllActivities();
   const { generate } = useEmailGenerator();
@@ -99,41 +97,13 @@ export default function Workspace() {
   };
 
   // ── Deep Search ──
-  const handleDeepSearch = async () => {
+  const handleDeepSearch = () => {
     const targets = selectedIds.size > 0
       ? emailActivities.filter((a) => selectedIds.has(a.id))
       : emailActivities;
     const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id))];
     if (!uniquePartnerIds.length) return;
-
-    deepSearchAbortRef.current = false;
-    setDeepSearching(true);
-    setDeepSearchProgress({ current: 0, total: uniquePartnerIds.length });
-
-    let done = 0;
-    for (const partnerId of uniquePartnerIds) {
-      if (deepSearchAbortRef.current) break;
-      setDeepSearchProgress({ current: done + 1, total: uniquePartnerIds.length });
-      try {
-        await supabase.functions.invoke("deep-search-partner", {
-          body: { partner_id: partnerId },
-        });
-      } catch {
-        // continue
-      }
-      done++;
-      if (done < uniquePartnerIds.length && !deepSearchAbortRef.current) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    }
-
-    setDeepSearching(false);
-    setDeepSearchProgress(null);
-    if (deepSearchAbortRef.current) {
-      toast({ title: `Deep Search interrotta (${done}/${uniquePartnerIds.length})` });
-    } else {
-      toast({ title: `Deep Search completata su ${done} partner` });
-    }
+    deepSearch.start(uniquePartnerIds);
   };
 
   const handleGenerateAll = async () => {
@@ -213,13 +183,13 @@ export default function Workspace() {
         </div>
         <div className="flex items-center gap-2">
           {/* Deep Search progress */}
-          {deepSearching && deepSearchProgress && (
+           {deepSearch.running && deepSearch.current && (
             <div className="flex items-center gap-2 mr-1">
               <span className="text-[11px] text-violet-600 font-medium whitespace-nowrap">
-                Deep Search {deepSearchProgress.current}/{deepSearchProgress.total}
+                Deep Search {deepSearch.current.index}/{deepSearch.current.total}
               </span>
               <Progress
-                value={(deepSearchProgress.current / deepSearchProgress.total) * 100}
+                value={(deepSearch.current.index / deepSearch.current.total) * 100}
                 className="w-20 h-1.5"
               />
             </div>
@@ -235,9 +205,9 @@ export default function Workspace() {
           </div>
 
           {/* Deep Search / Stop */}
-          {deepSearching ? (
+          {deepSearch.running ? (
             <Button
-              onClick={() => { deepSearchAbortRef.current = true; }}
+              onClick={() => deepSearch.stop()}
               size="sm"
               variant="destructive"
               className="h-8 gap-1.5 text-xs shadow-sm"
@@ -291,7 +261,7 @@ export default function Workspace() {
 
           <Button
             onClick={handleGenerateAll}
-            disabled={batchGenerating || deepSearching || emailActivities.length === 0}
+            disabled={batchGenerating || deepSearch.running || emailActivities.length === 0}
             size="sm"
             className="h-8 gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs shadow-sm"
           >

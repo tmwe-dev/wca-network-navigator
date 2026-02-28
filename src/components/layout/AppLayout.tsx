@@ -5,6 +5,7 @@ import { CreditCounter } from "./CreditCounter";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Globe, Users, Bell, Mail, Download, BookOpen, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 
 const PAGE_INFO: Record<string, { title: string; icon: React.ReactNode }> = {
   "/": { title: "Partner Hub", icon: <Globe className="w-5 h-5" /> },
@@ -20,6 +21,7 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [commandOpen, setCommandOpen] = useState(false);
   const location = useLocation();
+  const deepSearch = useDeepSearchRunner();
 
   // Get current page info
   const currentPath = location.pathname;
@@ -41,50 +43,52 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <AppSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-      
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        {/* Top bar */}
-        <header className={`sticky top-0 z-40 h-16 border-b ${isCampaignsPage ? 'bg-slate-900/95 border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-border'}`}>
-          <div className="flex items-center gap-4 h-full px-6">
-            {/* Page title */}
-            <div className={`flex items-center gap-2 ${isCampaignsPage ? 'text-amber-400' : 'text-foreground'}`}>
-              {pageInfo.icon}
-              <h1 className="text-lg">{pageInfo.title}</h1>
+    <DeepSearchContext.Provider value={deepSearch}>
+      <div className="flex min-h-screen w-full bg-background">
+        <AppSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+        
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* Top bar */}
+          <header className={`sticky top-0 z-40 h-16 border-b ${isCampaignsPage ? 'bg-slate-900/95 border-amber-500/20' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-border'}`}>
+            <div className="flex items-center gap-4 h-full px-6">
+              {/* Page title */}
+              <div className={`flex items-center gap-2 ${isCampaignsPage ? 'text-amber-400' : 'text-foreground'}`}>
+                {pageInfo.icon}
+                <h1 className="text-lg">{pageInfo.title}</h1>
+              </div>
+
+              {/* Campaign controls slot - will be filled by portal */}
+              <div id="campaign-header-controls" className="flex items-center gap-4 flex-1" />
+
+              {/* Credit counter */}
+              <CreditCounter />
+
+              {/* Search - hide on campaigns page */}
+              {!isCampaignsPage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCommandOpen(true)}
+                  className="w-64 justify-start text-muted-foreground"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  <span>Search partners...</span>
+                  <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </Button>
+              )}
             </div>
+          </header>
 
-            {/* Campaign controls slot - will be filled by portal */}
-            <div id="campaign-header-controls" className="flex items-center gap-4 flex-1" />
+          {/* Main content — Operations needs no padding/overflow since it manages its own */}
+          <main className={`flex-1 min-h-0 ${isOperationsRoute ? "overflow-hidden" : "p-6 overflow-auto"}`}>
+            <Outlet />
+          </main>
+        </div>
 
-            {/* Credit counter */}
-            <CreditCounter />
-
-            {/* Search - hide on campaigns page */}
-            {!isCampaignsPage && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCommandOpen(true)}
-                className="w-64 justify-start text-muted-foreground"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                <span>Search partners...</span>
-                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-            )}
-          </div>
-        </header>
-
-        {/* Main content — Operations needs no padding/overflow since it manages its own */}
-        <main className={`flex-1 min-h-0 ${isOperationsRoute ? "overflow-hidden" : "p-6 overflow-auto"}`}>
-          <Outlet />
-        </main>
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       </div>
-
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </div>
+    </DeepSearchContext.Provider>
   );
 }
