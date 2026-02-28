@@ -333,7 +333,7 @@ export default function Operations() {
   );
 }
 
-/* ── Stat Pill (mini-card with icon, number, label) ── */
+/* ── Stat Pill — tri-state color by value ── */
 function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant = "info" }: {
   icon: any; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
@@ -341,11 +341,12 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
 }) {
   const isComplete = variant === "ok" || (variant === "warn" && value === 0);
 
-  const badgeClass = isComplete
-    ? "micro-badge-green"
-    : variant === "warn"
-      ? "micro-badge-red"
-      : "micro-badge-blue";
+  // Tri-state: 0 → green, ≤10 → amber, >10 → red
+  const pillClass = isComplete || value === 0
+    ? "bg-emerald-500/15 border-emerald-500/25 text-emerald-300"
+    : value <= 10
+      ? "bg-amber-500/15 border-amber-500/25 text-amber-300"
+      : "bg-red-500/15 border-red-500/25 text-red-300";
 
   return (
     <Tooltip>
@@ -353,14 +354,16 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
         <button
           onClick={onClick}
           className={cn(
-            "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap",
-            badgeClass,
-            onClick && "cursor-pointer hover:scale-105",
+            "flex flex-col items-center px-3 py-1 rounded-lg border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
+            pillClass,
             active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
           )}
         >
-          <Icon className="w-3.5 h-3.5" />
-          <span className="font-bold tabular-nums">{value.toLocaleString()}</span>
+          <div className="flex items-center gap-1.5">
+            <Icon className="w-3.5 h-3.5" />
+            <span className="text-xl font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
+          </div>
+          <span className="text-[10px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs font-medium">

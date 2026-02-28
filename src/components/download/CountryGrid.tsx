@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -175,22 +176,29 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
               { key: "no_phone" as FilterKey, label: "No Tel", count: noPhoneCount },
               { key: "no_deep" as FilterKey, label: "No Deep", count: noDeepCount },
               { key: "done" as FilterKey, label: "✓ Completi", count: doneCount },
-            ]).map(f => (
-              <button
-                key={f.key}
-                onClick={() => onFilterModeChange(filterMode === f.key ? "all" : f.key)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${
-                  filterMode === f.key
-                    ? isDark ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-sky-100 border-sky-300 text-sky-700"
-                    : f.count > 0
-                      ? isDark ? "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20" : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
-                      : isDark ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                }`}
-              >
-                {f.label}
-                <span className="font-mono">{f.count}</span>
-              </button>
-            ))}
+            ]).map(f => {
+              // badge-green for "done"/zero, badge-red for "no_*" with count, badge-amber for low count
+              const isActive = filterMode === f.key;
+              const chipClass = f.key === "done"
+                ? "micro-badge-green"
+                : f.count > 0
+                  ? "micro-badge-red"
+                  : "micro-badge-green";
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => onFilterModeChange(filterMode === f.key ? "all" : f.key)}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105",
+                    chipClass,
+                    isActive && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
+                  )}
+                >
+                  {f.label}
+                  <span className="font-mono">{f.count}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
