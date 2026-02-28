@@ -23,10 +23,15 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          email_body: string | null
+          email_subject: string | null
           id: string
           partner_id: string
           priority: string
+          reviewed: boolean
+          scheduled_at: string | null
           selected_contact_id: string | null
+          sent_at: string | null
           status: Database["public"]["Enums"]["activity_status"]
           title: string
         }
@@ -38,10 +43,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           partner_id: string
           priority?: string
+          reviewed?: boolean
+          scheduled_at?: string | null
           selected_contact_id?: string | null
+          sent_at?: string | null
           status?: Database["public"]["Enums"]["activity_status"]
           title: string
         }
@@ -53,10 +63,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           partner_id?: string
           priority?: string
+          reviewed?: boolean
+          scheduled_at?: string | null
           selected_contact_id?: string | null
+          sent_at?: string | null
           status?: Database["public"]["Enums"]["activity_status"]
           title?: string
         }
