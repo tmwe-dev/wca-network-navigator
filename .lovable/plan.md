@@ -1,12 +1,10 @@
 
 
-## Chiarimento necessario
+## Contenuto CSS mancante
 
-Il messaggio termina con "con questo contenuto esatto:" ma il contenuto CSS non è stato incluso — sembra troncato.
+Il messaggio contiene solo l'apertura di un blocco code ` ```css ` senza contenuto. Il CSS da incollare non è arrivato — probabilmente troncato.
 
-Il file `src/index.css` attuale contiene già il design system dark-first implementato nell'ultimo step (variabili dark, glass panels, glow effects, status dots, micro badges, ecc.).
+Per procedere ho bisogno che ri-incolli il contenuto CSS completo. Se il testo è troppo lungo per un singolo messaggio, puoi dividerlo in più parti.
 
-Ho bisogno del CSS che vuoi incollare per procedere. Puoi:
-1. Ri-incollare il contenuto completo
-2. Oppure descrivere le differenze rispetto alla versione attuale
+In alternativa, se il CSS attuale in `src/index.css` va bene e vuoi procedere con il prossimo step del redesign (applicare il design system ai componenti), dimmelo.
 
