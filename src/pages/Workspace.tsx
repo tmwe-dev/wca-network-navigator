@@ -112,7 +112,12 @@ export default function Workspace() {
 
   const handleGenerateAll = async () => {
     const targets = selectedIds.size > 0 ? emailActivities.filter((a) => selectedIds.has(a.id)) : emailActivities;
-    const toGenerate = targets.slice(0, 20);
+    const withEmail = targets.filter(a => a.selected_contact?.email || a.partners?.email);
+    const skipped = targets.length - withEmail.length;
+    if (skipped > 0) {
+      toast({ title: `${skipped} partner esclusi`, description: "Nessun indirizzo email disponibile" });
+    }
+    const toGenerate = withEmail.slice(0, 20);
     if (toGenerate.length === 0) return;
     setBatchGenerating(true);
     setBatchProgress({ current: 0, total: toGenerate.length });
