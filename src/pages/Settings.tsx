@@ -11,7 +11,7 @@ import {
   Globe, RefreshCw, ExternalLink, ClipboardPaste, XCircle,
   Upload, Download, FileSpreadsheet, File, FileText, Settings as SettingsIcon,
   Zap, Crown, Paperclip, KeyRound, Eye, EyeOff, Mail, Send, AlertCircle,
-  Brain, Linkedin, Link,
+  Brain, Linkedin, Link, BookOpen,
 } from "lucide-react";
 // ScrapingSettings deprecated — removed
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
@@ -26,6 +26,7 @@ import AIProfileSettings from "@/components/settings/AIProfileSettings";
 import { WCAScraper } from "@/components/partners/WCAScraper";
 import BlacklistManager from "@/components/settings/BlacklistManager";
 import TemplateManager from "@/components/settings/TemplateManager";
+import ContentManager from "@/components/settings/ContentManager";
 
 /* ── Export field config ── */
 
@@ -325,6 +326,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Paperclip className="w-4 h-4" /> Template
+          </TabsTrigger>
+          <TabsTrigger value="contenuti" className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" /> Contenuti
           </TabsTrigger>
           <TabsTrigger value="ai-profile" className="flex items-center gap-2">
             <Brain className="w-4 h-4" /> Profilo AI
@@ -865,6 +869,11 @@ export default function Settings() {
         {/* ════════════════ TEMPLATE ════════════════ */}
         <TabsContent value="templates">
           <TemplateManager />
+        </TabsContent>
+
+        {/* ════════════════ CONTENUTI ════════════════ */}
+        <TabsContent value="contenuti">
+          <ContentManager />
         </TabsContent>
 
         {/* ════════════════ PROFILO AI ════════════════ */}
