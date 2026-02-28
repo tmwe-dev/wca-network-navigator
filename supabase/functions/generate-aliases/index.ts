@@ -35,7 +35,7 @@ serve(async (req) => {
     const eligible = (partners || []).filter((p: any) => {
       const contacts = p.partner_contacts || [];
       const needsCompanyAlias = !p.company_alias;
-      const needsContactAlias = contacts.some((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile));
+      const needsContactAlias = contacts.some((c: any) => !c.contact_alias);
       return needsCompanyAlias || needsContactAlias;
     });
 
@@ -54,7 +54,7 @@ serve(async (req) => {
 
       const partnerList = batch.map((p: any) => {
         const contacts = (p.partner_contacts || [])
-          .filter((c: any) => !c.contact_alias && (c.email || c.direct_phone || c.mobile))
+          .filter((c: any) => !c.contact_alias)
           .map((c: any) => ({
             contact_id: c.id,
             full_name: c.name,
