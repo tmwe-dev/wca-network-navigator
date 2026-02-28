@@ -1,85 +1,41 @@
 
 
-## Piano: Workspace Avanzato — Preset, Layout Ottimizzato, Thumbnails, WhatsApp
+## Design System Ultra-Moderno — Dark-First Implementation
 
-### 1. Nuova tabella `workspace_presets`
+Three files to modify:
 
-Tabella per salvare combinazioni riutilizzabili di goal + proposta + documenti + link:
+### 1. `src/main.tsx` — Force dark mode
+Add `document.documentElement.classList.add('dark');` before `createRoot`.
 
-```sql
-CREATE TABLE workspace_presets (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  name text NOT NULL,
-  goal text DEFAULT '',
-  base_proposal text DEFAULT '',
-  document_ids jsonb DEFAULT '[]',
-  reference_links jsonb DEFAULT '[]',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
--- RLS: utente vede solo i propri
-```
+### 2. `src/index.css` — Complete rewrite
+- **Dark CSS variables**: background `222 47% 7%`, card `216 34% 11%`, border `216 34% 17%`, primary `210 100% 56%` (blue), accent `262 71% 40%` (purple), muted-foreground `215 20% 55%`
+- **Body**: radial gradients (blue at top, purple at bottom-right) for depth
+- **New utility classes**:
+  - `.glass-panel` / `-blue` / `-green` / `-amber` / `-purple` — backdrop-blur(24px) saturate(180%) with colored borders
+  - `.text-gradient-blue/green/amber` — gradient text with background-clip
+  - `.glow-blue/green/amber/purple` — box-shadow glow effects
+  - `.border-gradient-blue/green/amber` — gradient borders via padding-box trick
+  - `.shimmer-effect` — animated shimmer overlay
+  - `.status-dot` + `-blue/-green/-amber/-red` — pulsating indicator dots
+  - `.card-hover` — translateY(-2px) + deep shadow on hover
+  - `.card-interactive` — focus ring with blue glow
+  - `.micro-badge-blue/amber/green/red/purple` — compact 11px badges
+  - `.alert-danger/warning/ok` — gradient alert boxes
+  - Custom scrollbar (6px, transparent track, rgba white thumb)
+- **Legacy preserved**: `.space-panel-*`, `.glass-surface`, `.glass-card`, `.glass-badge`, `.glass-section`
 
-### 2. Layout ristrutturato — full height
+### 3. `tailwind.config.ts` — Extensions
+- **Fonts**: `"SF Pro Display", "Geist"` prepended to sans/display stacks
+- **New shadows**: `glass`, `float`, `glow-blue`, `glow-purple`
+- **New backgroundImage**: `gradient-radial`, `grid-pattern` (32px grid)
+- **New backgroundSize**: `grid: "32px 32px"`
+- **New keyframes**: `slide-in-right`, `slide-in-left`, `slide-in-up`, `float` (vertical oscillation), `glow-pulse`, `spin-slow` (8s)
+- **New animations**: matching entries for all new keyframes
 
-Attualmente: header + GoalBar tabs + split panel (sprecando spazio verticale).
-
-Nuovo layout:
-```text
-┌──────────────────────────────────────────────────────┐
-│ Header compatto (titolo + search + azioni)            │
-├───────────┬──────────────────────────────────────────┤
-│           │  GoalBar (tabs Goal/Proposta/Docs/Links) │
-│           │  + dropdown preset + salva/carica        │
-│  Contact  │  + thumbnails documenti + link previews  │
-│  List     ├──────────────────────────────────────────┤
-│  (full    │                                          │
-│  height)  │  Email Canvas                            │
-│           │  (anteprima email selezionata)            │
-│           │                                          │
-├───────────┴──────────────────────────────────────────┤
-```
-
-- Lista contatti a sinistra a **tutta altezza** (dal header fino al fondo)
-- Destra divisa: config bar in alto (GoalBar + preset + thumbnails) e canvas email sotto
-
-### 3. GoalBar con dropdown preset
-
-- Aggiungere un `Select` dropdown accanto alle tabs: "Carica preset..."
-- Opzioni: preset salvati dall'utente + "Salva come nuovo preset"
-- Al caricamento: popola goal, proposta, documenti, link
-- Bottone piccolo "Salva" per aggiornare/creare preset corrente
-
-### 4. Thumbnails documenti e link
-
-Nella sezione Documenti del GoalBar (o in un pannello dedicato sotto le tabs):
-- Mostrare miniature dei PDF/documenti (icona tipo file + nome + dimensione)
-- Per i link: mostrare favicon + hostname + titolo della pagina (recuperato client-side via unfurl o semplicemente hostname)
-- Layout a griglia compatta con card piccole
-
-### 5. WhatsApp quick link nella lista contatti
-
-Per ogni contatto che ha `mobile` o `direct_phone`:
-- Icona WhatsApp verde cliccabile
-- Link: `https://wa.me/{numero}` (pulito da spazi e caratteri speciali)
-- Posizionato accanto alle icone email/phone esistenti
-
-### 6. Hook `useWorkspacePresets`
-
-- `fetchPresets()`: lista preset dell'utente
-- `savePreset(name, goal, proposal, docIds, links)`: insert/upsert
-- `deletePreset(id)`
-- `loadPreset(id)`: ritorna i dati per popolare il form
-
-### File da creare/modificare
-
-| File | Azione |
+### Files
+| File | Action |
 |------|--------|
-| Migrazione SQL | Creare tabella `workspace_presets` con RLS |
-| `src/hooks/useWorkspacePresets.ts` | Nuovo hook CRUD preset |
-| `src/components/workspace/GoalBar.tsx` | Aggiungere dropdown preset, salva, thumbnails docs/links |
-| `src/pages/Workspace.tsx` | Ristrutturare layout full-height, integrare preset |
-| `src/components/workspace/ContactListPanel.tsx` | Aggiungere icona WhatsApp per contatti con telefono |
-| `src/components/workspace/EmailCanvas.tsx` | Nessuna modifica strutturale, solo adattamento al nuovo layout |
+| `src/main.tsx` | Add dark class to documentElement |
+| `src/index.css` | Full rewrite with new variables + utility classes |
+| `tailwind.config.ts` | Add fonts, shadows, keyframes, backgroundImage |
 
