@@ -1,36 +1,48 @@
 
 
-## Fix: `extractContactsRef.current is not a function`
+## Piano: Linguetta verde completamento + Filtri paese per qualità dati
 
-### Root Cause
-Line 173 in `useDownloadProcessor.ts` calls `extractContactsRef.current(wcaId)` without checking if it's actually a function. The ref is initialized on line 56 and synced on line 57, but if the auto-start interval triggers `startJob` before the component has fully rendered with the `extractContacts` callback from `useExtensionBridge`, the ref's `.current` may be `undefined` or stale.
+### 1. Linguetta verde sul bordo sinistro delle country card (`CountryGrid.tsx`)
 
-### Fix in `src/hooks/useDownloadProcessor.ts`
+Nella `CountryCard`, aggiungere un bordo sinistro colorato in base allo stato completamento:
+- **Verde (emerald-500)**: `isDone` — tutti scaricati E tutti con profilo
+- **Ambra (amber-500)**: scaricati al 100% ma con profili mancanti (`dlPct >= 100 && noProfile > 0`)
+- Nessuna linguetta per gli altri stati
 
-Add a guard at line 173 before calling `extractContactsRef.current`:
+Implementazione: aggiungere `border-l-[3px]` con il colore appropriato alla card.
 
-```typescript
-// Before the extraction call, verify the function exists
-if (typeof extractContactsRef.current !== 'function') {
-  markRequestSent();
-  await appendLog(jobId, "ERROR", `Errore #${wcaId}: Extension bridge non inizializzato — saltato`);
-  contactsMissing++;
-  processedSet.add(wcaId);
-  // update job progress and continue to next profile
-  await supabase.from("download_jobs").update({
-    current_index: processedSet.size, processed_ids: [...processedSet] as any,
-    last_processed_wca_id: wcaId, last_contact_result: "skipped", contacts_missing_count: contactsMissing,
-  }).eq("id", jobId);
-  continue;
-}
-const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
+### 2. Filtri qualità dati nella CountryGrid (`CountryGrid.tsx` + `Operations.tsx`)
+
+Espandere il tipo `FilterKey` con nuovi valori:
+```
+"no_email" | "no_phone" | "no_deep"
 ```
 
-This prevents the crash and skips the profile gracefully instead of throwing an unhandled error that corrupts every subsequent profile in the loop.
+Aggiungere chip filtro cliccabili nella toolbar della griglia paesi (sotto la barra di ricerca), stessa logica delle StatPill in alto:
+- **No Profilo** — paesi con `without_profile > 0`
+- **No Email** — paesi con partner senza email (`total - with_email > 0`)
+- **No Tel** — paesi con partner senza telefono (`total - with_phone > 0`)
+- **No Deep** — paesi con partner senza deep search (`total - with_deep_search > 0`)
 
-### File
+Ogni chip mostra il conteggio di paesi che rientrano in quel criterio. Cliccando si filtra la griglia per mostrare solo quei paesi.
 
-| File | Change |
-|------|--------|
-| `src/hooks/useDownloadProcessor.ts` | Add `typeof` guard before `extractContactsRef.current()` call |
+### 3. Logica di filtraggio nella `CountryGrid`
+
+Nella sezione `filtered`, aggiungere i nuovi casi:
+```typescript
+if (filterMode === "no_email") return (s?.total_partners || 0) - (s?.with_email || 0) > 0;
+if (filterMode === "no_phone") return (s?.total_partners || 0) - (s?.with_phone || 0) > 0;
+if (filterMode === "no_deep") return (s?.total_partners || 0) - (s?.with_deep_search || 0) > 0;
+```
+
+### 4. Propagazione filtro da StatPill in alto (`Operations.tsx`)
+
+Le StatPill "No Email", "No Tel" nella top bar attualmente non hanno `onClick`. Aggiungere `onClick` per settare il `filterMode` corrispondente, in modo che cliccando lì si filtri anche la griglia paesi.
+
+### File da modificare
+
+| File | Modifica |
+|------|----------|
+| `src/components/download/CountryGrid.tsx` | Linguetta verde, nuovi filtri, chip filtro, expand FilterKey |
+| `src/pages/Operations.tsx` | onClick su StatPill No Email/No Tel/No Deep, passare filterMode aggiornato |
 
