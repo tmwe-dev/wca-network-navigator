@@ -623,6 +623,51 @@ export function PartnerListPanel({
           </div>
         )}
 
+        {/* ═══ EMPTY STATE: no cache, no partners ═══ */}
+        {!isLoading && !hasCache && dbPartners.length === 0 && stats.total === 0 && countryCodes.length > 0 && !wizardOpen && (
+          <div className="flex-shrink-0 px-3 pb-2">
+            <div className={cn(
+              "rounded-xl border-2 border-dashed p-6 text-center space-y-3",
+              isDark ? "border-sky-500/20 bg-sky-950/20" : "border-sky-300/40 bg-sky-50/50"
+            )}>
+              <div className={cn("w-12 h-12 rounded-xl mx-auto flex items-center justify-center",
+                isDark ? "bg-sky-500/10" : "bg-sky-100"
+              )}>
+                <FolderDown className={cn("w-6 h-6", isDark ? "text-sky-400" : "text-sky-500")} />
+              </div>
+              <div>
+                <p className={cn("text-sm font-bold", isDark ? "text-slate-100" : "text-slate-800")}>
+                  Nessun dato per {countryName}
+                </p>
+                <p className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-slate-500")}>
+                  Scansiona la directory WCA per scoprire i partner disponibili
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={handleStartScan}
+                  disabled={isScanning}
+                  className={cn("w-full h-10 text-sm font-bold rounded-xl",
+                    isDark ? "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20" : "bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30"
+                  )}
+                >
+                  {isScanning ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Scansione...</> : <><Search className="w-4 h-4 mr-2" /> Scansiona Directory</>}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setDirThenDownload(true); setAutoDownloadPending(true); handleStartScan(); }}
+                  disabled={isScanning}
+                  className={cn("w-full h-8 text-xs font-semibold rounded-xl",
+                    isDark ? "border-white/[0.1] text-slate-300 hover:bg-white/[0.05]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  <Zap className="w-3.5 h-3.5 mr-1.5" /> Scansiona + Download Automatico
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ═══ PARTNER LIST (immediate, scrollable) ═══ */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className={`${isDark ? "divide-white/[0.06]" : "divide-slate-200/60"} divide-y`}>
