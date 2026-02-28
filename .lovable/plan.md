@@ -1,48 +1,61 @@
 
 
-## Piano: Linguetta verde completamento + Filtri paese per qualità dati
+## Piano: Deep Search in background persistente
 
-### 1. Linguetta verde sul bordo sinistro delle country card (`CountryGrid.tsx`)
+### Problema attuale
+La Deep Search è un loop `for...of` che gira nello state React del componente pagina. Navigando altrove, il componente si smonta e il loop si interrompe silenziosamente.
 
-Nella `CountryCard`, aggiungere un bordo sinistro colorato in base allo stato completamento:
-- **Verde (emerald-500)**: `isDone` — tutti scaricati E tutti con profilo
-- **Ambra (amber-500)**: scaricati al 100% ma con profili mancanti (`dlPct >= 100 && noProfile > 0`)
-- Nessuna linguetta per gli altri stati
+### Soluzione: Job persistente su database + polling
 
-Implementazione: aggiungere `border-l-[3px]` con il colore appropriato alla card.
+Riutilizzare lo stesso pattern dei `download_jobs` già esistenti:
 
-### 2. Filtri qualità dati nella CountryGrid (`CountryGrid.tsx` + `Operations.tsx`)
+1. **Nuova tabella `deep_search_jobs`** (migrazione SQL):
+   - `id`, `user_id`, `partner_ids` (jsonb array), `processed_ids` (jsonb array), `status` (pending/running/completed/cancelled), `current_index`, `total`, `results` (jsonb), `created_at`, `updated_at`
+   - RLS: utente vede solo i propri job
 
-Espandere il tipo `FilterKey` con nuovi valori:
-```
-"no_email" | "no_phone" | "no_deep"
-```
+2. **Modificare `handleDeepSearch` in `Operations.tsx`**:
+   - Invece di eseguire il loop inline, inserire una riga in `deep_search_jobs` con `status: 'pending'`
+   - Avviare un polling (`setInterval` 3s) che legge lo stato del job e aggiorna i progressi UI
 
-Aggiungere chip filtro cliccabili nella toolbar della griglia paesi (sotto la barra di ricerca), stessa logica delle StatPill in alto:
-- **No Profilo** — paesi con `without_profile > 0`
-- **No Email** — paesi con partner senza email (`total - with_email > 0`)
-- **No Tel** — paesi con partner senza telefono (`total - with_phone > 0`)
-- **No Deep** — paesi con partner senza deep search (`total - with_deep_search > 0`)
+3. **Nuovo edge function `process-deep-search-job`**:
+   - Riceve `jobId`, legge i `partner_ids` non ancora processati
+   - Esegue la Deep Search per ogni partner (chiamando la logica già in `deep-search-partner`)
+   - Aggiorna `processed_ids`, `current_index`, `results` ad ogni step
+   - Rispetta l'abort: controlla `status` nel DB prima di ogni iterazione
+   - Se `status = 'cancelled'`, si ferma
 
-Ogni chip mostra il conteggio di paesi che rientrano in quel criterio. Cliccando si filtra la griglia per mostrare solo quei paesi.
+4. **Avvio del job**:
+   - `handleDeepSearch` → insert job → invoke `process-deep-search-job` (fire-and-forget, senza await della risposta completa)
+   - Il function timeout di Supabase è ~400s, quindi per batch grandi il job si auto-riprende tramite un meccanismo di "chunking": il function processa N partner, poi se ne mancano altri, si re-invoca
 
-### 3. Logica di filtraggio nella `CountryGrid`
+5. **UI: DeepSearchCanvas rimane reattivo**:
+   - Il canvas legge lo stato dal DB via polling, non dallo state locale
+   - Funziona da qualsiasi pagina: basta aprire il canvas per vedere il progresso
+   - Il bottone "Stop" setta `status = 'cancelled'` nel DB
 
-Nella sezione `filtered`, aggiungere i nuovi casi:
-```typescript
-if (filterMode === "no_email") return (s?.total_partners || 0) - (s?.with_email || 0) > 0;
-if (filterMode === "no_phone") return (s?.total_partners || 0) - (s?.with_phone || 0) > 0;
-if (filterMode === "no_deep") return (s?.total_partners || 0) - (s?.with_deep_search || 0) > 0;
-```
+6. **Ripresa automatica**:
+   - All'avvio dell'app, controllare se esistono job `running` → mostrare notifica + riprendere il polling
 
-### 4. Propagazione filtro da StatPill in alto (`Operations.tsx`)
+### Alternative più semplice (meno invasiva)
 
-Le StatPill "No Email", "No Tel" nella top bar attualmente non hanno `onClick`. Aggiungere `onClick` per settare il `filterMode` corrispondente, in modo che cliccando lì si filtri anche la griglia paesi.
+Se preferisci una soluzione più leggera senza nuova tabella:
+
+- **Spostare il loop in un hook globale** (`useDeepSearchRunner`) montato in `AppLayout` (sempre presente)
+- Il hook mantiene la coda e il progresso nello state React globale
+- Navigando tra pagine il loop continua perché `AppLayout` non si smonta mai
+- Svantaggio: chiudendo il browser il progresso si perde
+
+### Raccomandazione
+
+L'approccio **hook globale in AppLayout** è più rapido da implementare e risolve il caso d'uso principale (navigare tra pagine senza perdere il progresso). Il job persistente su DB è più robusto ma richiede più lavoro.
 
 ### File da modificare
 
 | File | Modifica |
 |------|----------|
-| `src/components/download/CountryGrid.tsx` | Linguetta verde, nuovi filtri, chip filtro, expand FilterKey |
-| `src/pages/Operations.tsx` | onClick su StatPill No Email/No Tel/No Deep, passare filterMode aggiornato |
+| `src/hooks/useDeepSearchRunner.ts` | Nuovo hook globale con coda, loop, progresso |
+| `src/components/layout/AppLayout.tsx` | Montare il hook, esporre via context |
+| `src/pages/Operations.tsx` | Usare il context invece del loop locale |
+| `src/pages/Workspace.tsx` | Usare il context invece del loop locale |
+| `src/components/operations/DeepSearchCanvas.tsx` | Leggere progresso dal context |
 
