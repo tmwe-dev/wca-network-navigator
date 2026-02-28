@@ -145,9 +145,9 @@ export function useCreateImport() {
         .upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = await supabase.storage
         .from("import-files")
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365);
 
       // 2. Create import log
       const { data: importLog, error: logError } = await supabase
@@ -155,7 +155,7 @@ export function useCreateImport() {
         .insert({
           user_id: userId,
           file_name: file.name,
-          file_url: urlData.publicUrl,
+          file_url: urlData?.signedUrl || filePath,
           file_size: file.size,
           total_rows: rows.length,
           status: "pending",

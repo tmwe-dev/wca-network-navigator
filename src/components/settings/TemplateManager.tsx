@@ -89,11 +89,11 @@ export default function TemplateManager() {
           .upload(safeName, file);
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from("templates").getPublicUrl(safeName);
+        const { data: urlData } = await supabase.storage.from("templates").createSignedUrl(safeName, 60 * 60 * 24 * 365);
 
         const { error: dbError } = await supabase.from("email_templates").insert({
           name: file.name.replace(/\.[^/.]+$/, ""),
-          file_url: urlData.publicUrl,
+          file_url: urlData?.signedUrl || safeName,
           file_name: file.name,
           file_size: file.size,
           file_type: file.type || "application/octet-stream",
