@@ -336,6 +336,10 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
                     </span>
                   </div>
                 )}
+                {/* Company-level social links (LinkedIn, Facebook, etc.) */}
+                <div className="pt-1">
+                  <SocialLinks partnerId={partner.id} />
+                </div>
               </div>
           </div>
 
