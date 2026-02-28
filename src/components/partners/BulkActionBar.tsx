@@ -30,65 +30,55 @@ export function BulkActionBar({
   if (count === 0) return null;
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-3 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 shadow-lg">
-        <span className="text-sm font-medium">{count} selezionati</span>
-        <Button size="sm" variant="secondary" onClick={onAssignActivity} className="h-7 gap-1.5" disabled={deepSearching}>
-          <ClipboardList className="w-3.5 h-3.5" />
-          Assegna Attività
+    <div className="px-3 py-1.5 border-b border-violet-500/15 bg-violet-500/[0.06] backdrop-blur-xl shrink-0">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-violet-300">{count} sel.</span>
+
+        <Button size="sm" variant="ghost" onClick={onAssignActivity}
+          className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100" disabled={deepSearching}>
+          <ClipboardList className="w-3 h-3" /> Attività
         </Button>
+
         {onDeepSearch && !deepSearching && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onDeepSearch}
-            className="h-7 gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Deep Search
+          <Button size="sm" variant="ghost" onClick={onDeepSearch}
+            className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100">
+            <Sparkles className="w-3 h-3" /> Deep Search
           </Button>
         )}
+
         {deepSearching && (
           <>
-            <span className="text-sm flex items-center gap-1.5">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              {deepSearchProgress
-                ? `Deep Search ${deepSearchProgress.current}/${deepSearchProgress.total}...`
-                : "Deep Search..."}
+            <span className="text-[11px] flex items-center gap-1 text-violet-300">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {deepSearchProgress ? `${deepSearchProgress.current}/${deepSearchProgress.total}` : "..."}
             </span>
             {onStopDeepSearch && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={onStopDeepSearch}
-                className="h-7 gap-1.5"
-              >
-                <Square className="w-3 h-3 fill-current" />
-                Stop
+              <Button size="sm" variant="ghost" onClick={onStopDeepSearch}
+                className="h-6 px-2 text-[11px] gap-1 text-red-300 hover:bg-red-500/15">
+                <Square className="w-2.5 h-2.5 fill-current" /> Stop
               </Button>
             )}
           </>
         )}
+
         {onSendToWorkspace && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onSendToWorkspace}
-            className="h-7 gap-1.5"
-            disabled={deepSearching || sendingToWorkspace}
-          >
-            {sendingToWorkspace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Briefcase className="w-3.5 h-3.5" />}
+          <Button size="sm" variant="ghost" onClick={onSendToWorkspace}
+            className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100"
+            disabled={deepSearching || sendingToWorkspace}>
+            {sendingToWorkspace ? <Loader2 className="w-3 h-3 animate-spin" /> : <Briefcase className="w-3 h-3" />}
             Workspace
           </Button>
         )}
+
         {onEmail && (
-          <Button size="sm" variant="secondary" onClick={onEmail} className="h-7 gap-1.5" disabled={deepSearching}>
-            <Send className="w-3.5 h-3.5" />
-            Email
+          <Button size="sm" variant="ghost" onClick={onEmail}
+            className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100" disabled={deepSearching}>
+            <Send className="w-3 h-3" /> Email
           </Button>
         )}
-        <button onClick={onClear} className="ml-1 hover:bg-primary-foreground/20 rounded-full p-1 transition-colors" disabled={deepSearching}>
-          <X className="w-4 h-4" />
+
+        <button onClick={onClear} className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400" disabled={deepSearching}>
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

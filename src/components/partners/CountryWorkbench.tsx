@@ -5,7 +5,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin,
+  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin, ClipboardList,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -91,6 +91,22 @@ export function CountryWorkbench({
       const map: Record<string, string> = {};
       (data || []).forEach((r) => { map[r.partner_id] = r.url; });
       return map;
+    },
+    enabled: partnerIds.length > 0,
+    staleTime: 30_000,
+  });
+
+  /* ── Activity counts per partner ── */
+  const { data: activityPartnerIds } = useQuery({
+    queryKey: ["activity-partner-ids", countryCode, partnerIds],
+    queryFn: async () => {
+      if (!partnerIds.length) return new Set<string>();
+      const { data, error } = await supabase
+        .from("activities")
+        .select("partner_id")
+        .in("partner_id", partnerIds);
+      if (error) throw error;
+      return new Set((data || []).map((r) => r.partner_id));
     },
     enabled: partnerIds.length > 0,
     staleTime: 30_000,
@@ -194,6 +210,7 @@ export function CountryWorkbench({
             const networks = partner.partner_networks || [];
 
             const linkedinUrl = linkedinMap?.[partner.id];
+            const hasActivity = activityPartnerIds?.has(partner.id);
 
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
@@ -202,6 +219,7 @@ export function CountryWorkbench({
                   "hover:bg-accent/50",
                   selectedId === partner.id && "bg-accent",
                   isSelected && "bg-primary/5",
+                  hasActivity && "border-l-2 border-l-violet-500",
                 )}>
                 <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1">
                   <Checkbox checked={isSelected} />
@@ -216,12 +234,20 @@ export function CountryWorkbench({
                    <div className="flex items-center gap-2">
                      <p className="text-sm font-medium truncate">{partner.company_name}</p>
                      {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                     {linkedinUrl && (
-                       <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-                         onClick={(e) => e.stopPropagation()} title="LinkedIn">
-                         <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
-                       </a>
-                     )}
+                      {linkedinUrl && (
+                        <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()} title="LinkedIn">
+                          <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {hasActivity && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ClipboardList className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent>Ha attività assegnate</TooltipContent>
+                        </Tooltip>
+                      )}
                   </div>
 
                   {/* City + Deep Search badge */}
