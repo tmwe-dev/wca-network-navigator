@@ -322,61 +322,65 @@ export default function PartnerHub() {
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
       <div className="h-full flex flex-col border-r border-border bg-background">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-border space-y-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-              <Globe className="w-4 h-4 text-primary" />
-              Partner
-            </h1>
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                    onClick={() => setAiOpen(true)}
-                  >
-                    <Bot className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Assistente AI</TooltipContent>
-              </Tooltip>
-              <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
-              <button
-                onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
-                className={cn(
-                  "px-2 py-1 text-xs rounded transition-all font-medium",
-                  viewLevel !== "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
+        {/* Header — glass bar */}
+        <div className="h-[52px] flex items-center gap-3 px-4 border-b border-white/[0.06] glass-panel shrink-0">
+          <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow shrink-0" />
+          <span className="text-gradient-blue font-semibold text-sm">Partner Hub</span>
+          <span className="glass-panel-blue text-blue-300 text-xs font-mono px-2 py-0.5 rounded-full glow-blue">
+            {isLoading ? "…" : filteredPartners.length}
+          </span>
+
+          <div className="flex-1" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => setAiOpen(true)}
               >
-                <MapPin className="w-3 h-3 inline mr-1" />
-                Paesi
-              </button>
-              <button
-                onClick={() => setViewLevel("list")}
-                className={cn(
-                  "px-2 py-1 text-xs rounded transition-all font-medium",
-                  viewLevel === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Users className="w-3 h-3 inline mr-1" />
-                Lista
-              </button>
-            </div>
-            </div>
+                <Bot className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Assistente AI</TooltipContent>
+          </Tooltip>
+
+          <div className="flex items-center gap-0.5 rounded-md border border-white/[0.08] p-0.5">
+            <button
+              onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
+              className={cn(
+                "px-2 py-1 text-xs rounded transition-all font-medium",
+                viewLevel !== "list" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MapPin className="w-3 h-3 inline mr-1" />
+              Paesi
+            </button>
+            <button
+              onClick={() => setViewLevel("list")}
+              className={cn(
+                "px-2 py-1 text-xs rounded transition-all font-medium",
+                viewLevel === "list" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Users className="w-3 h-3 inline mr-1" />
+              Lista
+            </button>
           </div>
-          {viewLevel === "list" && (
-            <>
+        </div>
+
+        {/* Search + filters bar (list view only) */}
+        {viewLevel === "list" && (
+          <div className="px-4 py-2.5 border-b border-white/[0.06] space-y-2">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <Input
                   placeholder="Cerca partner..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-8 text-[13px] rounded-md border-border"
+                  className="pl-9 h-8 text-[13px] rounded-lg bg-white/[0.05] border-white/10 placeholder:text-white/30 focus:border-blue-500/50 focus:ring-0 focus:bg-white/[0.07]"
                 />
               </div>
               <PartnerFiltersSheet
@@ -401,16 +405,13 @@ export default function PartnerHub() {
                   <SelectItem value="contacts_desc">Contatti completi</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground shrink-0">
-                {isLoading ? "..." : `${filteredPartners.length} partner`}
-              </p>
               <button
                 onClick={handleSelectAll}
                 className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all shrink-0",
+                  "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium transition-all shrink-0",
+                  "micro-badge-blue",
                   selectedIds.size > 0 && selectedIds.size === filteredPartners.length
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
                 )}
               >
                 <CheckSquare className="w-3 h-3" />
@@ -419,19 +420,17 @@ export default function PartnerHub() {
               <button
                 onClick={() => setFilterIncomplete(!filterIncomplete)}
                 className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all shrink-0",
-                  filterIncomplete
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium transition-all shrink-0",
+                  "micro-badge-red",
+                  filterIncomplete && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
                 )}
               >
                 <Filter className="w-3 h-3" />
                 Incompleti
               </button>
             </div>
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Active events bar */}
         {renderEventsBar()}
