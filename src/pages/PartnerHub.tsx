@@ -432,6 +432,21 @@ export default function PartnerHub() {
           </div>
         )}
 
+        {/* Bulk action bar — top position */}
+        <BulkActionBar
+          count={selectedIds.size}
+          onClear={() => setSelectedIds(new Set())}
+          onAssignActivity={() => setAssignDialogOpen(true)}
+          onDeepSearch={handleBulkDeepSearch}
+          onStopDeepSearch={handleStopDeepSearch}
+          onEmail={handleBulkEmail}
+          onSendToWorkspace={handleSendToWorkspace}
+          sendingToWorkspace={sendingToWorkspace}
+          deepSearching={deepSearching}
+          deepSearchProgress={deepSearchProgress}
+          partnerIds={Array.from(selectedIds)}
+        />
+
         {/* Active events bar */}
         {renderEventsBar()}
 
@@ -655,20 +670,6 @@ export default function PartnerHub() {
         )}
       </div>
 
-      {/* Bulk actions */}
-      <BulkActionBar
-        count={selectedIds.size}
-        onClear={() => setSelectedIds(new Set())}
-        onAssignActivity={() => setAssignDialogOpen(true)}
-        onDeepSearch={handleBulkDeepSearch}
-        onStopDeepSearch={handleStopDeepSearch}
-        onEmail={handleBulkEmail}
-        onSendToWorkspace={handleSendToWorkspace}
-        sendingToWorkspace={sendingToWorkspace}
-        deepSearching={deepSearching}
-        deepSearchProgress={deepSearchProgress}
-        partnerIds={Array.from(selectedIds)}
-      />
       <AssignActivityDialog
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}

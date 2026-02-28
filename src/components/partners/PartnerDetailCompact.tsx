@@ -119,9 +119,12 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         )}
       </div>
 
+      {/* Enrichment — top priority */}
+      <EnrichmentCard partner={partner} />
+
       {/* Contacts */}
       {contacts.length > 0 && (
-        <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/50 border-white/80"}`}>
+        <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
           {contacts.map((c: any) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
@@ -161,19 +164,30 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         </div>
       )}
 
-      {/* Services */}
+      {/* Social */}
+      <SocialLinks partnerId={partner.id} />
+
+      {/* Company info — compact inline */}
+      <div className="space-y-1.5">
+        <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Info</p>
+        {partner.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-3.5 h-3.5 text-sky-500" /><span className={th.body}>{partner.phone}</span></div>}
+        {partner.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-3.5 h-3.5 text-sky-500" /><a href={`mailto:${partner.email}`} className={`hover:underline ${th.body}`}>{partner.email}</a></div>}
+        {partner.website && <div className="flex items-center gap-2 text-sm"><Globe className="w-3.5 h-3.5 text-sky-400" /><a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>{partner.website}</a></div>}
+        {partner.address && <div className="flex items-center gap-2 text-sm"><MapPin className="w-3.5 h-3.5 text-rose-400" /><span className={th.body}>{partner.address}</span></div>}
+        {partner.member_since && <div className="flex items-center gap-2 text-sm"><Calendar className="w-3.5 h-3.5 text-sky-500" /><span className={th.body}>Membro dal {format(new Date(partner.member_since), "MMMM yyyy", { locale: it })}</span></div>}
+      </div>
+
+      {/* Services — inline icons */}
       {services.length > 0 && (
-        <div className={`rounded-xl border p-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/50 border-white/80"}`}>
-          <p className={`text-xs uppercase tracking-wider font-medium mb-2 ${th.dim}`}>Servizi</p>
-          <div className="flex flex-wrap gap-2">
+        <div>
+          <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
+          <div className="flex flex-wrap gap-1.5">
             {services.map((s: any, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>
                   <TooltipTrigger>
-                    <div className={`p-2 rounded-lg border ${isDark ? "bg-white/[0.04] border-white/[0.08]" : "bg-white/60 border-slate-200"}`}>
-                      <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category))} />
-                    </div>
+                    <Icon className={cn("w-5 h-5", getServiceIconColor(s.service_category))} />
                   </TooltipTrigger>
                   <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                 </Tooltip>
@@ -183,37 +197,20 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         </div>
       )}
 
-      {/* Company info */}
-      <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/50 border-white/80"}`}>
-        <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Info Azienda</p>
-        {partner.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-sky-500" /><span className={th.body}>{partner.phone}</span></div>}
-        {partner.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-sky-500" /><a href={`mailto:${partner.email}`} className={`hover:underline ${th.body}`}>{partner.email}</a></div>}
-        {partner.website && <div className="flex items-center gap-2 text-sm"><Globe className="w-4 h-4 text-sky-400" /><a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>{partner.website}</a></div>}
-        {partner.address && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-rose-400" /><span className={th.body}>{partner.address}</span></div>}
-        {partner.member_since && <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4 text-sky-500" /><span className={th.body}>Membro dal {format(new Date(partner.member_since), "MMMM yyyy", { locale: it })}</span></div>}
-      </div>
-
-      {/* Networks */}
+      {/* Networks — inline badges */}
       {networks.length > 0 && (
-        <div className={`rounded-xl border p-3 ${isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/50 border-white/80"}`}>
-          <p className={`text-xs uppercase tracking-wider font-medium mb-2 ${th.dim}`}>Network</p>
-          <div className="space-y-1.5">
+        <div>
+          <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
+          <div className="flex flex-wrap gap-1.5">
             {networks.map((n: any) => (
-              <div key={n.id} className={`flex items-center gap-2 p-2 rounded-lg ${isDark ? "bg-white/[0.03]" : "bg-white/60"}`}>
-                <Globe className={`w-4 h-4 ${th.dim}`} />
-                <span className={`text-sm ${th.body}`}>{n.network_name}</span>
-                {n.expires && <span className={`text-xs ml-auto ${th.dim}`}>Exp {format(new Date(n.expires), "MM/yy")}</span>}
-              </div>
+              <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
+                {n.network_name}
+                {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}
+              </span>
             ))}
           </div>
         </div>
       )}
-
-      {/* Social */}
-      <SocialLinks partnerId={partner.id} />
-
-      {/* Enrichment */}
-      <EnrichmentCard partner={partner} />
 
       {/* Activities */}
       <ActivityList partnerId={partner.id} />
@@ -222,14 +219,14 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {partner.profile_description && (
         <Collapsible>
           <CollapsibleTrigger className="w-full">
-            <div className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer ${isDark ? "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06]" : "bg-white/50 border-white/80 hover:bg-white/70"}`}>
+            <div className={`flex items-center gap-2 py-2 cursor-pointer ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-white/50"} rounded-lg px-2 -mx-2 transition-colors`}>
               <FileText className={`w-4 h-4 ${th.dim}`} />
               <span className={`text-xs font-medium ${th.body}`}>Profilo Aziendale</span>
               <ChevronDown className={`w-3.5 h-3.5 ml-auto ${th.dim}`} />
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <p className={`text-sm leading-relaxed whitespace-pre-line mt-2 p-3 rounded-xl ${isDark ? "bg-white/[0.02] text-slate-300" : "bg-white/40 text-slate-600"}`}>
+            <p className={`text-sm leading-relaxed whitespace-pre-line mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
               {partner.profile_description}
             </p>
           </CollapsibleContent>
