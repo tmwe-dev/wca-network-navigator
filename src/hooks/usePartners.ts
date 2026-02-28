@@ -78,11 +78,12 @@ export function usePartners(filters?: PartnerFilters) {
         query = query.eq("is_favorite", true);
       }
 
-      const { data, error } = await query.order("company_name");
+      const { data, error } = await query.order("company_name").limit(2000);
 
       if (error) throw error;
       return data;
     },
+    staleTime: 30_000,
   });
 }
 
@@ -101,12 +102,14 @@ export function usePartnersByCountry(countryCode: string | null) {
         `)
         .eq("is_active", true)
         .eq("country_code", countryCode)
-        .order("company_name");
+        .order("company_name")
+        .limit(2000);
 
       if (error) throw error;
       return data;
     },
     enabled: !!countryCode,
+    staleTime: 30_000,
   });
 }
 
@@ -132,6 +135,7 @@ export function usePartner(id: string) {
       return data;
     },
     enabled: !!id,
+    staleTime: 30_000,
   });
 }
 
@@ -146,9 +150,11 @@ export function useToggleFavorite() {
         .eq("id", id);
 
       if (error) throw error;
+      return { id };
     },
-    onSuccess: () => {
+    onSuccess: ({ id }) => {
       queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", id] });
     },
   });
 }
@@ -160,7 +166,8 @@ export function usePartnerStats() {
       const { data: partners, error } = await supabase
         .from("partners")
         .select("id, country_code, country_name, partner_type, member_since")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .limit(5000);
 
       if (error) throw error;
 
@@ -190,5 +197,6 @@ export function usePartnerStats() {
         typeCounts,
       };
     },
+    staleTime: 60_000,
   });
 }

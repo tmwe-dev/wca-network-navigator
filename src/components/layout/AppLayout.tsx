@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
+import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
@@ -78,6 +79,7 @@ export function AppLayout() {
                 <div id="campaign-header-controls" className="flex items-center gap-3 flex-1 min-w-0" />
               </div>
               <div className="flex items-center gap-2">
+                <ActiveProcessIndicator />
                 <CreditCounter />
                 {!isCampaignsPage && (
                   <button
