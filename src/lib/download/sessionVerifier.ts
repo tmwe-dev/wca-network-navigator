@@ -47,12 +47,9 @@ export async function verifyWcaSession(
   // Auto-login attempt via extension
   await appendLog(jobId, "INFO", "🔑 Tentativo auto-login (estensione)...");
   try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
-    const res = await fetch(url, {
-      headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    });
-    const creds = await res.json();
-    if (creds.username && creds.password) {
+    const { fetchWcaCredentials } = await import("@/lib/wcaCredentials");
+    const creds = await fetchWcaCredentials();
+    if (creds) {
       const loginOk = await new Promise<boolean>((resolve) => {
         const requestId = `autoLogin_${Date.now()}`;
         const timer = setTimeout(() => resolve(false), 45000);
@@ -83,7 +80,7 @@ export async function verifyWcaSession(
         }
       }
     } else {
-      await appendLog(jobId, "WARN", "⚠️ Credenziali WCA non configurate nelle impostazioni");
+      await appendLog(jobId, "WARN", "⚠️ Credenziali WCA non disponibili (non configurate o sessione scaduta)");
     }
   } catch {
     // Fall through

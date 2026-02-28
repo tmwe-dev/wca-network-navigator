@@ -4,8 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { Button } from "@/components/ui/button";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,12 +36,6 @@ export function AppLayout() {
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background">
-        {/* Hover trigger */}
-        <div
-          className="fixed left-0 top-0 w-[3px] h-full z-50"
-          onMouseEnter={() => setSidebarOpen(true)}
-        />
-
         {/* Backdrop */}
         <AnimatePresence>
           {sidebarOpen && (
@@ -70,7 +65,18 @@ export function AppLayout() {
           {/* Top bar */}
           <header className="sticky top-0 z-30 h-12 border-b border-border bg-background/80 backdrop-blur-md">
             <div className="flex items-center justify-between h-full px-4">
-              <div id="campaign-header-controls" className="flex items-center gap-3 flex-1 min-w-0" />
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => setSidebarOpen((o) => !o)}
+                  aria-label="Toggle sidebar"
+                >
+                  <Menu className="w-4 h-4" />
+                </Button>
+                <div id="campaign-header-controls" className="flex items-center gap-3 flex-1 min-w-0" />
+              </div>
               <div className="flex items-center gap-2">
                 <CreditCounter />
                 {!isCampaignsPage && (

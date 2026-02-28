@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef } from "react"
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 
 export interface DeepSearchState {
@@ -43,9 +44,23 @@ export function useDeepSearchRunner(): DeepSearchState {
         if (abortRef.current) break;
         done++;
 
-        // Get partner info from cache
-        const cached = queryClient.getQueryData<any[]>(["partners"])
-          ?.flat()?.find((p: any) => p.id === id);
+        // Get partner info — try filtered cache first, then fetch if missing
+        let cached: any = null;
+        const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
+        for (const [, data] of allCached) {
+          if (Array.isArray(data)) {
+            cached = data.flat().find((p: any) => p.id === id);
+            if (cached) break;
+          }
+        }
+        if (!cached) {
+          const { data } = await supabase
+            .from("partners")
+            .select("id, company_name, country_code, logo_url")
+            .eq("id", id)
+            .maybeSingle();
+          cached = data;
+        }
 
         setCurrent({
           partnerId: id,
@@ -86,8 +101,8 @@ export function useDeepSearchRunner(): DeepSearchState {
         ? toast.info(msg, { id: "deep-search-global" })
         : toast.success(msg, { id: "deep-search-global" });
 
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
     } catch (e: any) {
       toast.error(e?.message || "Errore Deep Search", { id: "deep-search-global" });
     } finally {
