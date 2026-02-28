@@ -18,6 +18,7 @@ import {
   Sparkles, Users, Mail, Phone, ArrowRight, ClipboardPaste,
   FileSearch, Download, Wand2, ArrowLeftRight,
 } from "lucide-react";
+import { ImportErrorMonitor } from "@/components/import/ImportErrorMonitor";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -654,74 +655,14 @@ export default function Import() {
 
             {/* ====== ERRORS TAB ====== */}
             <TabsContent value="errors" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-destructive" />
-                      Errori di importazione
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{pendingErrors.length} pending</Badge>
-                      <Badge variant="default">{correctedErrors.length} corretti</Badge>
-                      <Badge variant="destructive">{dismissedErrors.length} non recuperabili</Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    {pendingErrors.length > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => activeLogId && fixErrors.mutate(activeLogId)}
-                        disabled={fixErrors.isPending}
-                      >
-                        {fixErrors.isPending ? (
-                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        Correggi con AI ({pendingErrors.length})
-                      </Button>
-                    )}
-                    {(dismissedErrors.length > 0 || pendingErrors.length > 0) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => exportErrorsToCSV([...pendingErrors, ...dismissedErrors])}
-                      >
-                        <Download className="w-3.5 h-3.5 mr-1.5" />
-                        Esporta CSV errori
-                      </Button>
-                    )}
-                  </div>
-
-                  <ScrollArea className="h-[calc(100vh-420px)]">
-                    <div className="space-y-2">
-                      {errors.map((err) => (
-                        <Alert
-                          key={err.id}
-                          variant={err.status === "corrected" ? "default" : "destructive"}
-                        >
-                          <AlertTitle className="text-xs flex items-center gap-2">
-                            Riga {err.row_number} — {err.error_type}
-                            {err.status === "corrected" && <Badge variant="default" className="text-[9px]">Corretto</Badge>}
-                            {err.status === "dismissed" && <Badge variant="destructive" className="text-[9px]">Non recuperabile</Badge>}
-                          </AlertTitle>
-                          <AlertDescription className="text-xs">
-                            {err.error_message}
-                            {err.corrected_data && (
-                              <pre className="mt-1 text-[10px] bg-background/50 p-1 rounded overflow-x-auto">
-                                {JSON.stringify(err.corrected_data, null, 2).substring(0, 300)}
-                              </pre>
-                            )}
-                          </AlertDescription>
-                        </Alert>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              <ImportErrorMonitor
+                errors={errors}
+                pendingErrors={pendingErrors}
+                correctedErrors={correctedErrors}
+                dismissedErrors={dismissedErrors}
+                activeLogId={activeLogId}
+                fixErrors={fixErrors}
+              />
             </TabsContent>
           </Tabs>
         </div>

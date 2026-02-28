@@ -22,12 +22,12 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { import_log_id, mode } = await req.json();
+    const { import_log_id, mode, custom_prompt, batch_offset } = await req.json();
     if (!import_log_id) throw new Error("import_log_id is required");
 
     // Fix errors mode
     if (mode === "fix_errors") {
-      return await handleFixErrors(supabase, import_log_id, lovableApiKey, corsHeaders);
+      return await handleFixErrors(supabase, import_log_id, lovableApiKey, corsHeaders, custom_prompt, batch_offset || 0);
     }
 
     // Get import log
@@ -268,30 +268,39 @@ async function logImportError(
   });
 }
 
-async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, corsHeaders: Record<string, string>) {
+async function handleFixErrors(supabase: any, importLogId: string, lovableApiKey: string | undefined, corsHeaders: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
   if (!lovableApiKey) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Get pending errors
+  const FIX_BATCH_SIZE = 15;
+
+  // Get pending errors with offset for batch processing
   const { data: errors, error: fetchErr } = await supabase
     .from("import_errors")
     .select("*")
     .eq("import_log_id", importLogId)
     .eq("status", "pending")
     .order("row_number", { ascending: true })
-    .limit(25);
+    .range(batchOffset, batchOffset + FIX_BATCH_SIZE - 1);
 
   if (fetchErr) throw new Error(fetchErr.message);
   if (!errors || errors.length === 0) {
-    return new Response(JSON.stringify({ corrected: 0, dismissed: 0 }), {
+    return new Response(JSON.stringify({ corrected: 0, dismissed: 0, has_more: false, next_offset: batchOffset }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const prompt = `Sei un assistente specializzato nella correzione di dati aziendali per un CRM di freight forwarder.
+  // Count total remaining
+  const { count: totalPending } = await supabase
+    .from("import_errors")
+    .select("id", { count: "exact", head: true })
+    .eq("import_log_id", importLogId)
+    .eq("status", "pending");
+
+  const defaultPrompt = `Sei un assistente specializzato nella correzione di dati aziendali per un CRM di freight forwarder.
 
 Per ogni record nel seguente array, prova a correggere e completare i dati mancanti o invalidi.
 Ogni record ha raw_data (dati originali) e error_message (cosa è andato storto).
@@ -300,6 +309,10 @@ Rispondi con un array dove ogni elemento ha:
 - corrected: true/false (se sei riuscito a correggere)
 - data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code)
   Se non riesci a correggere, data può essere null.`;
+
+  const prompt = customPrompt 
+    ? `${customPrompt}\n\nRispondi con un array dove ogni elemento ha:\n- corrected: true/false\n- data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code). Se non riesci, data = null.`
+    : defaultPrompt;
 
   const records = errors.map((e: any) => ({
     row_number: e.row_number,
@@ -382,7 +395,6 @@ Rispondi con un array dove ogni elemento ha:
     const result = results[i];
 
     if (result?.corrected && result.data) {
-      // Insert corrected contact back into staging
       await supabase.from("imported_contacts").insert({
         import_log_id: importLogId,
         row_number: err.row_number,
@@ -401,6 +413,7 @@ Rispondi con un array dove ogni elemento ha:
       await supabase.from("import_errors").update({
         status: "corrected",
         corrected_data: result.data,
+        ai_suggestions: customPrompt ? { custom_prompt: customPrompt } : null,
         attempted_corrections: (err.attempted_corrections || 0) + 1,
       }).eq("id", err.id);
 
@@ -415,12 +428,17 @@ Rispondi con un array dove ogni elemento ha:
     }
   }
 
-  // Update import log error count
-  await supabase.from("import_logs").update({
-    imported_rows: supabase.rpc ? undefined : undefined, // will be recalculated
-  }).eq("id", importLogId);
+  const remainingAfter = (totalPending || 0) - errors.length;
+  const hasMore = remainingAfter > 0;
 
-  return new Response(JSON.stringify({ corrected: correctedCount, dismissed: dismissedCount }), {
+  return new Response(JSON.stringify({ 
+    corrected: correctedCount, 
+    dismissed: dismissedCount, 
+    has_more: hasMore,
+    remaining: remainingAfter,
+    next_offset: 0, // Always 0 since we process "pending" status and they change after processing
+    total_pending_before: totalPending || 0,
+  }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

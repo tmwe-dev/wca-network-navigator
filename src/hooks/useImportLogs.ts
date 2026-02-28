@@ -419,20 +419,20 @@ export function useFixImportErrors() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (importLogId: string) => {
+    mutationFn: async ({ importLogId, customPrompt }: { importLogId: string; customPrompt?: string }) => {
       const { data, error } = await supabase.functions.invoke("process-ai-import", {
-        body: { import_log_id: importLogId, mode: "fix_errors" },
+        body: { import_log_id: importLogId, mode: "fix_errors", custom_prompt: customPrompt || undefined },
       });
       if (error) throw error;
-      return data as { corrected: number; dismissed: number };
+      return data as { corrected: number; dismissed: number; has_more: boolean; remaining: number };
     },
-    onSuccess: (result, importLogId) => {
+    onSuccess: (result, { importLogId }) => {
       queryClient.invalidateQueries({ queryKey: ["import-errors", importLogId] });
       queryClient.invalidateQueries({ queryKey: ["imported-contacts", importLogId] });
       queryClient.invalidateQueries({ queryKey: ["import-log", importLogId] });
       toast({
-        title: "Correzione completata",
-        description: `${result.corrected} corretti, ${result.dismissed} non recuperabili`,
+        title: "Batch completato",
+        description: `${result.corrected} corretti, ${result.dismissed} non recuperabili${result.has_more ? ` — ${result.remaining} rimanenti` : ""}`,
       });
     },
     onError: (err) => {
