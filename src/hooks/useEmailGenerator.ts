@@ -22,6 +22,7 @@ export function useEmailGenerator() {
     language?: string;
     document_ids?: string[];
     reference_urls?: string[];
+    quality?: "fast" | "standard" | "premium";
   }) => {
     setIsGenerating(true);
     setEmail(null);
