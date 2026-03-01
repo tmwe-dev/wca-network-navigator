@@ -32,14 +32,30 @@ Deno.serve(async (req) => {
       })
     }
 
+    const userId = claims.claims.sub as string
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { data, error } = await supabase
+    // Try user_wca_credentials first (per-user)
+    const { data: userCreds } = await supabase
+      .from('user_wca_credentials')
+      .select('wca_username, wca_password')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (userCreds?.wca_username && userCreds?.wca_password) {
+      return new Response(JSON.stringify({
+        username: userCreds.wca_username,
+        password: userCreds.wca_password,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Fallback: app_settings (legacy)
+    const { data } = await supabase
       .from('app_settings')
       .select('key, value')
       .in('key', ['wca_username', 'wca_password'])
-
-    if (error) throw error
 
     const settings: Record<string, string> = {}
     data?.forEach((row: any) => { settings[row.key] = row.value })
