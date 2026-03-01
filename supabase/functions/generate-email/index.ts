@@ -196,7 +196,7 @@ MITTENTE (TU):
 
 KNOWLEDGE BASE:
 ${settings.ai_knowledge_base || "Non configurata"}
-
+${settings.ai_sales_knowledge_base ? `\nSALES TECHNIQUES GUIDE:\n${settings.ai_sales_knowledge_base}\n` : ""}
 STILE DI COMUNICAZIONE:
 - Tono: ${settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}

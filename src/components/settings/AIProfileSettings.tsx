@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/select";
 import {
   Brain, Building2, BookOpen, MessageSquareText, Globe2,
-  Save, Loader2, User, Mail, Phone, Briefcase,
+  Save, Loader2, User, Mail, Phone, Briefcase, TrendingUp, RotateCcw,
 } from "lucide-react";
+import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/data/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ const AI_KEYS = [
   "ai_contact_role", "ai_email_signature", "ai_phone_signature",
   "ai_email_signature_block",
   "ai_knowledge_base",
+  "ai_sales_knowledge_base",
   "ai_tone", "ai_language", "ai_style_instructions",
   "ai_sector", "ai_networks", "ai_sector_notes",
 ] as const;
@@ -155,6 +157,37 @@ export default function AIProfileSettings() {
             onChange={e => set("ai_knowledge_base", e.target.value)}
             placeholder={`Es. Siamo una società di spedizioni internazionali fondata nel 1995, con sede a Milano.\n\nServizi principali:\n- Air Freight (import/export)\n- Ocean FCL & LCL\n- Project Cargo & Heavy Lift\n- Customs Brokerage\n\nCertificazioni: IATA, AEO, ISO 9001\nFlotta: 15 mezzi propri per distribuzione locale\nZone: Europa, Far East, Middle East, Americas\nNetwork: WCA (membro dal 2010), FIATA\n\nPunti di forza: transit time competitivi su Far East, team dedicato dangerous goods, servizio door-to-door con tracking in tempo reale.`}
             className="min-h-[200px] text-sm"
+          />
+        </CardContent>
+      </Card>
+
+      {/* ── Card 2b: Sales Knowledge Base ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <CardTitle className="text-base">Sales Knowledge Base</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => set("ai_sales_knowledge_base", DEFAULT_SALES_KNOWLEDGE_BASE.trim())}
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Ripristina default
+            </Button>
+          </div>
+          <CardDescription>
+            Guida completa per la generazione di email B2B: tecniche di vendita, gestione obiezioni, struttura email, adattamento tono.
+            L'AI segue queste istruzioni per scrivere comunicazioni convincenti come un venditore esperto.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={fields.ai_sales_knowledge_base || DEFAULT_SALES_KNOWLEDGE_BASE.trim()}
+            onChange={e => set("ai_sales_knowledge_base", e.target.value)}
+            className="min-h-[400px] text-xs font-mono leading-relaxed"
           />
         </CardContent>
       </Card>
