@@ -25,11 +25,12 @@ interface CountryGridProps {
   onFilterModeChange?: (mode: FilterKey) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
+  compact?: boolean;
 }
 
 type SortKey = "name" | "partners" | "directory" | "completion";
 
-export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilterModeChange }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilterModeChange, compact = false }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -227,7 +228,10 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
 
       {/* ═══ COUNTRY LIST ═══ */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="flex flex-col gap-1 pr-1">
+        <div className={cn(
+          "gap-1 pr-1",
+          compact ? "flex flex-col" : "grid grid-cols-1 sm:grid-cols-2"
+        )}>
           {filtered.map(c => (
             <CountryCard
               key={c.code}

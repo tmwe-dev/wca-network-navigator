@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Terminal, Download,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export default function Operations() {
     return s !== null ? s === "dark" : true;
   });
   const toggleTheme = () => setIsDark(p => { const n = !p; localStorage.setItem("dl_theme", n ? "dark" : "light"); return n; });
+  const isMobile = useIsMobile();
 
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
@@ -192,7 +194,7 @@ export default function Operations() {
               const missingEmail = contextStats.totalPartners - contextStats.withEmail;
               const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
-                <div className="flex items-center gap-1.5">
+                <div className="hidden md:flex items-center gap-1.5 flex-wrap">
                   <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
@@ -244,11 +246,16 @@ export default function Operations() {
           </TooltipProvider>
 
           {/* ═══ MAIN: Country Grid + Partner List + Detail ═══ */}
-          <div className="flex-1 min-h-0 px-4 pb-3 flex gap-3">
-            {/* LEFT: Country Grid (fixed width) */}
+          <div className={cn(
+            "flex-1 min-h-0 px-4 pb-3 gap-3",
+            isMobile ? "flex flex-col overflow-y-auto" : "flex"
+          )}>
+            {/* LEFT: Country Grid */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
-              hasSelection ? "w-[260px]" : "w-full"
+              isMobile
+                ? (hasSelection ? "max-h-[35vh]" : "")
+                : hasSelection ? "w-[260px]" : "max-w-[520px] mx-auto w-full"
             )}>
               <CountryGrid
                 selected={selectedCountries}
@@ -258,8 +265,9 @@ export default function Operations() {
                 onFilterModeChange={setFilterMode}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
+                compact={hasSelection || isMobile}
               />
-              {(activeJobs.length > 0 || showTerminal) && !hasSelection && (
+              {(activeJobs.length > 0 || showTerminal) && !hasSelection && !isMobile && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <ActiveJobBar />
                   {showTerminal && <DownloadTerminal />}
