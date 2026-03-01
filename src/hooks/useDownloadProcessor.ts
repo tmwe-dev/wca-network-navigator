@@ -231,6 +231,32 @@ export function useDownloadProcessor() {
             continue;
           }
 
+          // 3. Extension error (success: false, no pageLoaded info) → retry queue
+          if (result.success === false) {
+            await appendLog(jobId, "SKIP", `Profilo #${wcaId} errore estensione: ${(result as any).error || "sconosciuto"} — retry queue`);
+            retryQueue.push(wcaId);
+            consecutiveSkipped++;
+            if (consecutiveSkipped >= 3) {
+              await appendLog(jobId, "WARN", "⚠️ 3 errori estensione consecutivi — verifica sessione WCA...");
+              const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+              if (!recheck) {
+                await appendLog(jobId, "WARN", "❌ Sessione WCA irrecuperabile — job in pausa");
+                await supabase.from("download_jobs").update({
+                  status: "paused",
+                  error_message: "⚠️ Sessione WCA scaduta — troppi errori estensione.",
+                }).eq("id", jobId);
+                return;
+              }
+              consecutiveSkipped = 0;
+            }
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
+            await supabase.from("download_jobs").update({
+              current_index: i + 1, processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId, last_contact_result: "retry_queued", contacts_missing_count: contactsMissing,
+            }).eq("id", jobId);
+            continue;
+          }
+
           // Save extracted data
           if (partnerId) {
             const saved = await saveExtractionResult(partnerId, wcaId, result, companyName);
@@ -393,6 +419,21 @@ export function useDownloadProcessor() {
               await appendLog(jobId, "SKIP", `[Retry] #${wcaId} non esiste su WCA — skip permanente`);
               processedSet.add(wcaId);
               contactsMissing++;
+              continue;
+            }
+
+            // 3. Extension error (success: false, no pageLoaded) → failed permanently
+            if (result.success === false) {
+              retryConsecutiveSkipped++;
+              failedIds.push(wcaId);
+              await appendLog(jobId, "FAIL", `[Retry] #${wcaId} errore estensione: ${(result as any).error || "sconosciuto"} — fallito definitivamente`);
+              if (retryConsecutiveSkipped >= 3) {
+                await appendLog(jobId, "WARN", "⚠️ 3 retry consecutivi falliti — interrompo retry");
+                for (let rj = ri + 1; rj < retryQueue.length; rj++) {
+                  if (!processedSet.has(retryQueue[rj])) failedIds.push(retryQueue[rj]);
+                }
+                break;
+              }
               continue;
             }
 
