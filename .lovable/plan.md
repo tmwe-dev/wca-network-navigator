@@ -1,27 +1,40 @@
 
 
-## Piano: Semplificare GoalBar e allargare le textarea
+## Piano: Fix email non salvate nell'activity (non appaiono in Sorting)
 
-### Problemi
-1. Il dropdown "Carica preset..." in alto crea confusione — sembra un duplicato dei selettori Goal/Proposta appena aggiunti
-2. Le textarea sono troppo piccole (`min-h-[56px] max-h-[80px]`) — il testo non si legge
+### Problema
+Il database conferma che tutte le attività pending hanno `email_body = NULL` e `email_subject = NULL`. L'edge function `generate-email` genera correttamente l'email e mostra il toast di successo, ma l'update successivo nel client (`useEmailGenerator.ts` righe 69-76) fallisce silenziosamente perchè non ha gestione errori.
 
-### Modifiche su `src/components/workspace/GoalBar.tsx`
+### Causa probabile
+L'update a riga 69 di `useEmailGenerator.ts` non controlla il risultato. Se l'update fallisce (per qualsiasi motivo: errore RLS, timeout, etc.), il codice continua normalmente e restituisce `result` — l'utente vede "email generata" ma nulla viene scritto nel DB.
 
-**1. Rimuovere la riga preset selector in alto**
-- Eliminare tutto il blocco "Preset selector" (righe 111-147): il Select "Carica preset...", i pulsanti Aggiorna/Elimina e il form di salvataggio
-- Spostare la funzionalità di salvataggio preset dentro i tab come azione secondaria (un piccolo bottone "Salva come preset" in fondo ai tab Goal/Proposta), oppure rimuoverla del tutto se non serve
+### Modifiche
 
-**2. Allargare le textarea**
-- Goal: da `min-h-[56px] max-h-[80px]` a `min-h-[120px] max-h-[200px]`
-- Proposta: stessa cosa — `min-h-[120px] max-h-[200px]`
-- Togliere `resize-none` per permettere il resize manuale se l'utente vuole
+**1. `src/hooks/useEmailGenerator.ts`**
+- Aggiungere gestione errori sull'update dell'activity (righe 69-76): controllare `error` dal risultato Supabase e loggarla/notificarla
+- Aggiungere `as any` per sicurezza sulla tipizzazione
+- Aggiungere un `console.error` se l'update fallisce per poter diagnosticare in futuro
+- Aggiungere anche il salvataggio di `selected_contact_id` se disponibile dall'activity corrente (il Sorting Canvas ne ha bisogno per mostrare l'email del contatto)
 
-**3. Mantenere i selettori Goal/Proposta predefiniti**
-- Restano i dropdown "Seleziona goal predefinito..." e "Seleziona proposta predefinita..." che funzionano correttamente
+**2. `src/pages/Workspace.tsx`** (nel `handleGenerateAll`)
+- Dopo ogni `generate()` riuscito, invalidare la query `sorting-jobs` per aggiornare il Sorting in tempo reale
 
-### Risultato
-- Interfaccia pulita: solo tab con dropdown predefinito + textarea ampia
-- Nessuna confusione tra "preset" e "goal predefinito"
-- Testo leggibile e utilizzabile
+### Fix concreto su `useEmailGenerator.ts`
+
+```typescript
+// Riga 69-76 diventa:
+const { error: updateError } = await supabase
+  .from("activities")
+  .update({
+    email_subject: result.subject,
+    email_body: result.body,
+    scheduled_at: new Date().toISOString(),
+  } as any)
+  .eq("id", params.activity_id);
+
+if (updateError) {
+  console.error("Failed to save email to activity:", updateError);
+  toast({ title: "Email generata ma non salvata", description: updateError.message, variant: "destructive" });
+}
+```
 
