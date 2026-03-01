@@ -1,45 +1,34 @@
 
 
-## Piano: Sales Knowledge Base integrata nel sistema
+## Piano: Pulizia e potenziamento Sales Knowledge Base
 
-### Materiale sorgente (da libreria)
-I file `sales-training.ts` e `bruce-methodology.ts` contengono già:
-- 5 principi vendita, gestione 5 obiezioni, protocollo 5 fasi, valore unico TMWE
-- Metodologia Bruce 5 passi, frasi fiducia, filosofia servizio
+### Sezioni da RIMUOVERE
+- **Sezione 4** (Value Proposition per Servizio) — contenuto generico, duplica la Knowledge Base aziendale
+- **Sezione 5** (Gestione Obiezioni) — 7 obiezioni pensate per dialogo live/telefono, non per email outbound
+- **Sezione 12, sotto-sezione "Filosofia del servizio (da Bruce Methodology)"** — customer service, non vendita
 
-### Cosa creare
+### Sezioni da AGGIUNGERE
 
-#### 1. `src/data/salesKnowledgeBase.ts` (nuovo)
-Costante `SALES_KNOWLEDGE_BASE` — testo markdown strutturato (~4000 parole) che fonde e amplia il materiale trovato:
+**Nuova sezione: "Come usare i dati del partner"**
+Istruzioni operative per l'AI su come combinare i campi disponibili (nome, paese, network, servizi, contatti, rating, note) con le tecniche di vendita per personalizzare ogni email.
 
-**Sezioni:**
-1. Principi fondamentali vendita B2B (dai 5 principi TMWE)
-2. Struttura email efficace — hook, value proposition, CTA, regola 5 righe
-3. Tecniche di apertura — riferimento network, complimento specifico, dato mercato
-4. Value proposition per servizio — air, ocean, project cargo, express, DG, e-commerce
-5. Gestione obiezioni (espanse dalle 5 originali + nuove per B2B internazionale)
-6. Protocollo vendita 5 fasi (dal sales-training, adattato per email)
-7. Adattamento tono per ruolo (CEO vs Ops vs Sales) e area geografica
-8. Tecniche persuasione B2B — social proof, scarcità, reciprocità
-9. Pattern follow-up — timing, escalation, cambio angolo
-10. Oggetto email — pattern efficaci, max 6-8 parole
-11. Call-to-action — una sola, specifica, basso impegno
-12. Frasi fiducia e chiusura (dalla metodologia Bruce)
-13. Errori da evitare — genericità, promesse vaghe, email troppo lunghe
+**Nuova sezione: "Email modello" (3 template completi)**
+1. **Primo contatto** — hook network + value prop + CTA leggera (~100 parole)
+2. **Follow-up** — cambio angolo con dato mercato (~70 parole)
+3. **Proposta operativa** — dopo interesse mostrato, bullet points servizi (~150 parole)
 
-#### 2. `src/components/settings/AIProfileSettings.tsx` (modifica)
-- Aggiungere `ai_sales_knowledge_base` a `AI_KEYS`
-- Nuova Card "Sales Knowledge Base" (icona TrendingUp) tra "Knowledge Base Aziendale" e "Stile di Comunicazione"
-- Textarea grande con il default precompilato
-- Bottone "Ripristina default" per ricaricare il contenuto originale
+### Struttura finale (10 sezioni, rinumerate)
+1. Principi fondamentali (invariata)
+2. Struttura email efficace (invariata)
+3. Tecniche di apertura / Hook (invariata)
+4. **Come usare i dati del partner** (NUOVA)
+5. Protocollo vendita 5 fasi (invariata, era sez. 6)
+6. Adattamento del tono (invariata, era sez. 7)
+7. Tecniche di persuasione B2B (invariata, era sez. 8)
+8. Pattern di follow-up (invariata, era sez. 9)
+9. Oggetto email + CTA + Frasi fiducia + Errori (consolidate, erano sez. 10-13)
+10. **Email modello complete** (NUOVA)
 
-#### 3. `supabase/functions/generate-email/index.ts` (modifica)
-- Leggere `ai_sales_knowledge_base` da settings (già caricata con `ai_%`)
-- Iniettarla nel system prompt come sezione separata: `SALES TECHNIQUES GUIDE:`
-- L'AI la userà come guida per struttura, tono e tecniche di persuasione nelle email
-
-### File da creare/modificare
-1. **Creare** `src/data/salesKnowledgeBase.ts`
-2. **Modificare** `src/components/settings/AIProfileSettings.tsx`
-3. **Modificare** `supabase/functions/generate-email/index.ts`
+### File da modificare
+1. `src/data/salesKnowledgeBase.ts` — riscrittura contenuto della costante
 
