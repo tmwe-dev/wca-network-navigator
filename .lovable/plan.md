@@ -1,28 +1,14 @@
 
 
-## Piano: Fix email non salvate nell'activity (non appaiono in Sorting)
-
-### Problema
-Il database conferma che tutte le attività pending hanno `email_body = NULL` e `email_subject = NULL`. L'edge function `generate-email` genera correttamente l'email e mostra il toast di successo, ma l'update successivo nel client (`useEmailGenerator.ts` righe 69-76) fallisce silenziosamente perchè non ha gestione errori.
-
-### Causa probabile
-L'update a riga 69 di `useEmailGenerator.ts` non controlla il risultato. Se l'update fallisce (per qualsiasi motivo: errore RLS, timeout, etc.), il codice continua normalmente e restituisce `result` — l'utente vede "email generata" ma nulla viene scritto nel DB.
+## Fix: Email non salvate nell'activity
 
 ### Modifiche
 
-**1. `src/hooks/useEmailGenerator.ts`**
-- Aggiungere gestione errori sull'update dell'activity (righe 69-76): controllare `error` dal risultato Supabase e loggarla/notificarla
-- Aggiungere `as any` per sicurezza sulla tipizzazione
-- Aggiungere un `console.error` se l'update fallisce per poter diagnosticare in futuro
-- Aggiungere anche il salvataggio di `selected_contact_id` se disponibile dall'activity corrente (il Sorting Canvas ne ha bisogno per mostrare l'email del contatto)
+**1. `src/hooks/useEmailGenerator.ts` (righe 68-76)**
 
-**2. `src/pages/Workspace.tsx`** (nel `handleGenerateAll`)
-- Dopo ogni `generate()` riuscito, invalidare la query `sorting-jobs` per aggiornare il Sorting in tempo reale
-
-### Fix concreto su `useEmailGenerator.ts`
+Sostituire il blocco update senza error handling con:
 
 ```typescript
-// Riga 69-76 diventa:
 const { error: updateError } = await supabase
   .from("activities")
   .update({
@@ -34,7 +20,20 @@ const { error: updateError } = await supabase
 
 if (updateError) {
   console.error("Failed to save email to activity:", updateError);
-  toast({ title: "Email generata ma non salvata", description: updateError.message, variant: "destructive" });
+  toast({
+    title: "Email generata ma non salvata",
+    description: updateError.message,
+    variant: "destructive",
+  });
 }
 ```
+
+**2. `src/pages/Workspace.tsx`**
+
+- Aggiungere import: `import { useQueryClient } from "@tanstack/react-query";`
+- Nel componente, aggiungere: `const queryClient = useQueryClient();`
+- In `handleGenerateAll`, dopo il ciclo for (riga 137, dopo `setBatchGenerating(false)`), aggiungere:
+  ```typescript
+  queryClient.invalidateQueries({ queryKey: ["sorting-jobs"] });
+  ```
 
