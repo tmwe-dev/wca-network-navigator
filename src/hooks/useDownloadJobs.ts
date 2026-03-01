@@ -24,6 +24,7 @@ export interface DownloadJob {
   contacts_found_count: number;
   contacts_missing_count: number;
   last_contact_result: string | null;
+  failed_ids: number[];
 }
 
 /**
