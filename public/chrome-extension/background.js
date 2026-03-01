@@ -331,9 +331,18 @@ function waitForTabLoad(tabId, ms) {
 function checkPageLoaded() {
   try {
     var len = (document.body && document.body.innerHTML) ? document.body.innerHTML.length : 0;
-    return { length: len, loaded: len > 5000 };
+    // Smart check: if H1 has a real company name (not error/login), page is loaded even if short
+    var h1 = document.querySelector("h1");
+    var h1Text = h1 ? h1.textContent.trim() : "";
+    var h1HasCompanyName = h1Text.length > 3 
+      && !/error/i.test(h1Text) 
+      && !/login/i.test(h1Text) 
+      && !/not found/i.test(h1Text)
+      && !/sign in/i.test(h1Text);
+    var loaded = len > 2000 || (h1HasCompanyName && len > 500);
+    return { length: len, loaded: loaded, h1Text: h1Text };
   } catch (e) {
-    return { length: 0, loaded: false };
+    return { length: 0, loaded: false, h1Text: "" };
   }
 }
 
