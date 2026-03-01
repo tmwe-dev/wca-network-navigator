@@ -1,50 +1,58 @@
 
 
-## Diagnosi: Tutte le estensioni non trovano le credenziali
+## Diagnosi: perche B2C Logistics e altri 20 profili ZA non vengono scaricati
 
-### Il problema esatto
+### Problema trovato
 
-Tutte e tre le Edge Functions per le credenziali (`get-wca-credentials`, `get-linkedin-credentials`, `get-ra-credentials`) hanno un auth check che **blocca le chiamate delle estensioni Chrome**.
+Ho analizzato i dati del database. Su 69 partner South Africa, 48 sono stati scaricati con successo (con HTML, email, contatti). I 21 rimanenti falliscono TUTTI, ripetutamente, con due tipi di errore:
 
-Le estensioni non hanno accesso al JWT dell'utente. Inviano solo l'anon key come Bearer token:
+1. **"member not found"** — il processore pensa che il profilo non esista
+2. **"non caricato"** (pageLoaded: false) — la pagina risulta troppo corta (< 5000 caratteri)
+
+Ma il sessionVerifier conferma che la sessione e attiva (test su profilo 86580). Quindi il problema non e la sessione.
+
+### Causa probabile
+
+Questi 21 profili WCA probabilmente hanno una struttura di pagina diversa dagli altri 48 che funzionano. Possibili scenari:
+- La pagina e piu leggera di 5000 caratteri (soglia troppo rigida in `checkPageLoaded`)
+- L'H1 contiene testo che matcha erroneamente "not found"
+- La pagina usa classi CSS diverse da `profile_label`/`profile_val`/`contactperson_row`
+
+### Il problema VERO: nessun log diagnostico
+
+Non logghiamo MAI il dettaglio della risposta dell'estensione (companyName, lunghezza HTML, numero contatti, errore). Senza questi dati, e impossibile distinguere tra "pagina con formato diverso" e "profilo genuinamente inesistente".
+
+### Piano di fix (3 interventi)
+
+**1. Aggiungere log diagnostici dettagliati** (`src/hooks/useDownloadProcessor.ts`)
+- Per OGNI profilo, loggare nel terminal_log: companyName restituito, lunghezza profileHtml, numero contatti, pageLoaded, error
+- Cosi al prossimo tentativo sappiamo esattamente cosa vede l'estensione
+
+**2. Salvare l'HTML grezzo anche per profili "falliti"** (`src/hooks/useDownloadProcessor.ts`)
+- Se `result.profileHtml` esiste ma il profilo viene marcato come "not found" o "empty", salvare comunque l'HTML nel partner per ispezione post-mortem
+- Aggiungere un campo diagnostico al terminal log con i primi 500 caratteri dell'HTML
+
+**3. Rendere `checkPageLoaded` piu intelligente** (`public/chrome-extension/background.js`)
+- Abbassare la soglia da 5000 a 2000 caratteri
+- Aggiungere un check del titolo/H1: se la pagina ha un H1 con un nome azienda (non "Error", non "Login"), considerarla caricata anche se corta
+- Loggare la lunghezza effettiva nel risultato per diagnostica
+
+### Dettaglio tecnico
+
+```text
+Flusso attuale (rotto):
+  extension apre pagina → checkPageLoaded (>5000?) 
+    NO → return pageLoaded:false → "non caricato" → retry → fail
+    SI → extract → H1 check → "member not found"? → skip permanente
+
+Flusso corretto:
+  extension apre pagina → checkPageLoaded (>2000? OR H1 ha nome azienda?)
+    → extract → log companyName + htmlLength + contacts
+    → salva HTML comunque per diagnostica
+    → isMemberNotFound solo se H1 dice LETTERALMENTE "Member Not Found"
 ```
-Authorization: Bearer <SUPABASE_ANON_KEY>
-```
 
-Ma le Edge Functions tentano di validare quel token come JWT utente:
-- `get-wca-credentials` → `authClient.auth.getUser(token)` — anon key non è un JWT utente → **401 Unauthorized**
-- `get-linkedin-credentials` → `authClient.auth.getClaims(token)` — metodo inesistente → **errore interno → 401**
-- `get-ra-credentials` → `authClient.auth.getClaims(token)` — stessa cosa → **401**
-
-Le funzioni ritornano 401 **prima** di arrivare al fallback `app_settings`, dove le credenziali esistono effettivamente (confermato dai dati di rete: `wca_username: "tmsrlmin"`, `linkedin_email: "luca@tmwe.it"`, `ra_username: "simone@tmwe.it"`).
-
-### Fix
-
-**Per tutte e tre le Edge Functions**, cambiare la logica di autenticazione:
-
-1. Se il token è un JWT utente valido → cercare prima in `user_wca_credentials` (solo per WCA), poi fallback su `app_settings`
-2. Se `getUser` fallisce (= il token è l'anon key, come quando chiama l'estensione) → andare direttamente su `app_settings` invece di tornare 401
-
-Concretamente, in ogni funzione, sostituire il blocco auth rigido:
-```typescript
-const { data: { user }, error } = await authClient.auth.getUser(token)
-if (error || !user) {
-  return Response 401  // ← QUESTO BLOCCA LE ESTENSIONI
-}
-```
-
-Con una logica soft che permette il fallthrough:
-```typescript
-const { data: { user }, error } = await authClient.auth.getUser(token)
-// Se user è valido → cerca credenziali per-user (solo WCA)
-// Se user non è valido → salta a app_settings (le estensioni passano di qui)
-```
-
-### File da modificare
-
-1. **`supabase/functions/get-wca-credentials/index.ts`** — Rendere il getUser soft, permettendo fallback ad app_settings quando chiamato dall'estensione
-2. **`supabase/functions/get-linkedin-credentials/index.ts`** — Sostituire `getClaims` con `getUser` soft + fallback diretto ad app_settings
-3. **`supabase/functions/get-ra-credentials/index.ts`** — Stessa correzione: `getClaims` → `getUser` soft + fallback
-
-Nessuna modifica necessaria alle estensioni Chrome.
+File da modificare:
+1. `public/chrome-extension/background.js` — `checkPageLoaded` piu permissivo + log lunghezza
+2. `src/hooks/useDownloadProcessor.ts` — log diagnostici dettagliati + salvataggio HTML per profili falliti
 
