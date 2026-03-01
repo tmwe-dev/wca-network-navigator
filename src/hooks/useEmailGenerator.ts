@@ -66,14 +66,23 @@ export function useEmailGenerator() {
       setEmail(result);
 
       // Save to activity so it appears in Sorting
-      await supabase
+      const { error: updateError } = await supabase
         .from("activities")
         .update({
           email_subject: result.subject,
           email_body: result.body,
           scheduled_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", params.activity_id);
+
+      if (updateError) {
+        console.error("Failed to save email to activity:", updateError);
+        toast({
+          title: "Email generata ma non salvata",
+          description: updateError.message,
+          variant: "destructive",
+        });
+      }
 
       return result;
     } catch (err: any) {

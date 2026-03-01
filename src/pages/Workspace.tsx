@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
@@ -45,6 +46,7 @@ export default function Workspace() {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
+  const queryClient = useQueryClient();
   const deepSearch = useDeepSearch();
   const { data: activities } = useAllActivities();
   const { generate } = useEmailGenerator();
@@ -138,6 +140,8 @@ export default function Workspace() {
     setBatchGenerating(false);
     setBatchProgress(null);
     setCurrentEmailIndex(0);
+    queryClient.invalidateQueries({ queryKey: ["sorting-jobs"] });
+    queryClient.invalidateQueries({ queryKey: ["all-activities"] });
     toast({ title: `${generated} email generate con successo` });
   };
 
