@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import {
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "@/hooks/use-toast";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem } from "@/data/defaultContentPresets";
 
 interface GoalBarProps {
   goal: string;
@@ -64,6 +66,18 @@ export default function GoalBar({
   const [linkInput, setLinkInput] = useState("");
   const [presetName, setPresetName] = useState("");
   const [showSave, setShowSave] = useState(false);
+
+  const { data: settings } = useAppSettings();
+
+  const goalItems = useMemo<ContentItem[]>(() => {
+    try { return settings?.custom_goals ? JSON.parse(settings.custom_goals) : DEFAULT_GOALS; }
+    catch { return DEFAULT_GOALS; }
+  }, [settings?.custom_goals]);
+
+  const proposalItems = useMemo<ContentItem[]>(() => {
+    try { return settings?.custom_proposals ? JSON.parse(settings.custom_proposals) : DEFAULT_PROPOSALS; }
+    catch { return DEFAULT_PROPOSALS; }
+  }, [settings?.custom_proposals]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,13 +164,33 @@ export default function GoalBar({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="goal" className="mt-2">
+        <TabsContent value="goal" className="mt-2 space-y-1.5">
+          <Select onValueChange={(v) => { const item = goalItems.find((_, i) => String(i) === v); if (item) onGoalChange(item.text); }}>
+            <SelectTrigger className="h-7 text-xs border-border bg-muted/30">
+              <SelectValue placeholder="Seleziona goal predefinito..." />
+            </SelectTrigger>
+            <SelectContent>
+              {goalItems.map((item, i) => (
+                <SelectItem key={i} value={String(i)} className="text-xs">{item.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Textarea value={goal} onChange={(e) => onGoalChange(e.target.value)}
             placeholder="Es. Proporre una collaborazione per spedizioni via mare FCL verso il Far East..."
             className="min-h-[56px] max-h-[80px] text-sm bg-muted/20 border-border resize-none text-foreground placeholder:text-muted-foreground" />
         </TabsContent>
 
-        <TabsContent value="proposal" className="mt-2">
+        <TabsContent value="proposal" className="mt-2 space-y-1.5">
+          <Select onValueChange={(v) => { const item = proposalItems.find((_, i) => String(i) === v); if (item) onBaseProposalChange(item.text); }}>
+            <SelectTrigger className="h-7 text-xs border-border bg-muted/30">
+              <SelectValue placeholder="Seleziona proposta predefinita..." />
+            </SelectTrigger>
+            <SelectContent>
+              {proposalItems.map((item, i) => (
+                <SelectItem key={i} value={String(i)} className="text-xs">{item.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Textarea value={baseProposal} onChange={(e) => onBaseProposalChange(e.target.value)}
             placeholder="Es. Offriamo transit time competitivi di 25 giorni, servizio door-to-door con tracking..."
             className="min-h-[56px] max-h-[80px] text-sm bg-muted/20 border-border resize-none text-foreground placeholder:text-muted-foreground" />
