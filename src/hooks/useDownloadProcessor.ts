@@ -115,6 +115,7 @@ export function useDownloadProcessor() {
       let contactsMissing = job.contacts_missing_count || 0;
       let consecutiveEmpty = 0;
       let consecutiveSkipped = 0;
+      let consecutiveNotFound = 0;
       const retryQueue: number[] = [];
 
       // ═══════════════════════════════════════
@@ -220,13 +221,40 @@ export function useDownloadProcessor() {
             (result as any).error?.toLowerCase().includes("member not found");
 
           if (isMemberNotFound) {
-            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} non esiste più su WCA — saltato definitivamente`);
-            contactsMissing++;
-            processedSet.add(wcaId);
+            consecutiveNotFound++;
+            
+            // If 3+ consecutive "member not found", it's likely a session issue, not genuine
+            if (consecutiveNotFound >= 3) {
+              await appendLog(jobId, "WARN", "⚠️ 3+ profili 'member not found' consecutivi — probabile sessione scaduta, verifico...");
+              const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
+              if (!recheck) {
+                await appendLog(jobId, "WARN", "❌ Sessione WCA scaduta — job in pausa. I profili NON sono stati saltati.");
+                // Put all consecutive not-found profiles back in retry queue
+                await supabase.from("download_jobs").update({
+                  status: "paused",
+                  error_message: "⚠️ Sessione WCA scaduta — 'member not found' era un falso positivo.",
+                }).eq("id", jobId);
+                return;
+              }
+              // Session recovered — put this and previous not-found profiles into retry
+              await appendLog(jobId, "INFO", "✅ Sessione ripristinata — i profili 'not found' erano falsi positivi, aggiunti a retry");
+              retryQueue.push(wcaId);
+              consecutiveNotFound = 0;
+              await supabase.from("download_jobs").update({
+                current_index: i + 1, processed_ids: [...processedSet] as any,
+                last_processed_wca_id: wcaId, last_contact_result: "retry_queued",
+              }).eq("id", jobId);
+              continue;
+            }
+
+            // Single/double not-found: treat as genuine but don't add to processedSet yet,
+            // put in retry queue to re-verify after session is confirmed
+            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} 'member not found' — retry queue (${consecutiveNotFound} consecutivi)`);
+            retryQueue.push(wcaId);
             onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             await supabase.from("download_jobs").update({
-              current_index: processedSet.size, processed_ids: [...processedSet] as any,
-              last_processed_wca_id: wcaId, last_contact_result: "not_found", contacts_missing_count: contactsMissing,
+              current_index: i + 1, processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId, last_contact_result: "retry_queued", contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
             continue;
           }
@@ -311,6 +339,7 @@ export function useDownloadProcessor() {
           consecutiveEmpty = 0;
         }
         consecutiveSkipped = 0; // reset quando un profilo carica correttamente
+        consecutiveNotFound = 0;
 
         // Update counters and log
         const hasAny = hasEmail || hasPhone;
