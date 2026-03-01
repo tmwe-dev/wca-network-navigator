@@ -1,42 +1,75 @@
 
 
-## Piano: Sistema di Livelli di Qualità per la Generazione Email
+## Piano: Pagina "Global" — Download Visuale con Globo 3D + AI Assistant
 
 ### Concetto
-Tre livelli di qualità che controllano **cosa viene incluso nel prompt** e **quale modello viene usato**, riducendo drasticamente i token per le email di routine.
+Una nuova pagina `/global` con layout a due colonne:
+- **Sinistra**: Chat AI (riutilizza logica di `AiAssistantDialog`) integrata inline (non dialog) + sotto la chat, un pannello di stato download live con contatori e bandierine dei paesi completati
+- **Destra**: Globo 3D (riutilizza `CampaignGlobe`) che si muove automaticamente sul paese in fase di download
 
-### I 3 Livelli
+L'utente chiede all'AI in linguaggio naturale cosa scaricare (es. "Scarica tutti i partner USA con più di 10 anni") e l'AI attiva i job tramite il tool `create_download_job` già esistente. Il globo reagisce in tempo reale.
 
-| Livello | Modello | Sales KB | Profilo partner | Docs/Links | Token input stimati | Costo stimato |
-|---|---|---|---|---|---|---|
-| **Rapida** | `gemini-2.5-flash-lite` | Solo sez. 1+5 (~500 parole) | Solo dati base (nome, paese, network) | No | ~2.000 | ~3 crediti |
-| **Standard** | `gemini-3-flash-preview` | Sez. 1-8 (~3.000 parole) | Dati base + descrizione + servizi | Solo se presenti | ~6.000 | ~8 crediti |
-| **Premium** | `gemini-3-flash-preview` | Tutte le 14 sezioni (~7.000 parole) | Tutto + raw_profile_markdown + LinkedIn | Si, con scraping Firecrawl | ~12.000-18.000 | ~15-20 crediti |
+### Architettura
 
-### Modifiche tecniche
+```text
+┌─────────────────────────────────────────────────────┐
+│                    Global Page                       │
+├──────────────────┬──────────────────────────────────┤
+│   AI Chat        │                                  │
+│   (inline)       │         3D Globe                 │
+│                  │    (auto-rotates to active        │
+│   Quick prompts  │     download country)             │
+│                  │                                  │
+├──────────────────┤                                  │
+│  Download Status │                                  │
+│  ┌──┐ ┌──┐ ┌──┐ │                                  │
+│  │🇺🇸│ │🇩🇪│ │🇮🇹│ │                                  │
+│  └──┘ └──┘ └──┘ │                                  │
+│  Live counters   │                                  │
+└──────────────────┴──────────────────────────────────┘
+```
 
-**1. Edge Function `generate-email/index.ts`**
-- Nuovo parametro `quality`: `"fast"` | `"standard"` | `"premium"` (default: `"standard"`)
-- Funzione `getKBSlice(fullKB, quality)` che estrae solo le sezioni rilevanti
-- Selezione modello in base al livello
-- Troncamento profilo partner (0/800/1500 chars) in base al livello
-- Skip Firecrawl e documenti per livello "fast"
+### File da creare/modificare
 
-**2. Hook `useEmailGenerator.ts`**
-- Aggiungere `quality` al tipo parametri di `generate()`
+1. **`src/pages/Global.tsx`** (nuovo) — Layout principale:
+   - Colonna sinistra: chat AI inline (adattamento del codice di `AiAssistantDialog` come componente embedded, non dialog/modal) + pannello stato download sotto
+   - Colonna destra: `CampaignGlobe` con `selectedCountry` pilotato dal job attivo
+   - Sottoscrizione realtime a `download_jobs` per aggiornare contatori e posizione globo
+   - Griglia di bandierine in basso a sinistra per i paesi completati
+   - Quick prompts specifici: "Scarica tutti i partner", "Aggiorna profili mancanti", "Scarica USA", etc.
 
-**3. UI — `EmailCanvas.tsx` e `Workspace.tsx`**
-- Selettore a 3 opzioni (icone: Zap/Sparkles/Crown) accanto al bottone "Genera"
-- Per la generazione batch in Workspace, il livello si applica a tutte le email della sessione
-- Mostrare il costo stimato per livello
+2. **`src/components/global/GlobalChat.tsx`** (nuovo) — Componente chat AI inline:
+   - Riutilizza la logica SSE streaming di `AiAssistantDialog`
+   - Stile space-dark integrato (non dialog floating, ma embedded nel layout)
+   - Quick prompts specifici per download
+   - Mostra `JobCreatedBadge` quando l'AI crea un job
 
-**4. Sales KB `salesKnowledgeBase.ts`**
-- Aggiungere commenti marcatori `<!-- SECTION:N -->` tra le sezioni per permettere il parsing programmatico nella edge function
+3. **`src/components/global/DownloadStatusPanel.tsx`** (nuovo) — Pannello stato:
+   - Sottoscrizione realtime a `download_jobs`
+   - Contatori live: partner processati, email trovate, telefoni trovati
+   - Griglia bandierine paesi completati con animazione di ingresso
+   - Barra progresso per il job attivo
+   - Pulsanti pausa/riprendi/cancella
 
-### File da modificare
-1. `src/data/salesKnowledgeBase.ts` — aggiungere marcatori sezione
-2. `supabase/functions/generate-email/index.ts` — logica quality tiers
-3. `src/hooks/useEmailGenerator.ts` — parametro quality
-4. `src/components/workspace/EmailCanvas.tsx` — selettore qualità singola email
-5. `src/pages/Workspace.tsx` — selettore qualità batch
+4. **`src/App.tsx`** — Aggiungere rotta `/global` nelle protected routes
+
+5. **`src/components/layout/AppSidebar.tsx`** — Aggiungere voce "Global" nella navigazione
+
+### Comportamento del Globo
+- Quando nessun job è attivo: rotazione libera con aerei
+- Quando un job parte: il globo si sposta smoothly sul paese del job attivo (usa `selectedCountry` del `CampaignGlobe`)
+- Quando il job cambia paese: transizione smooth al nuovo paese
+- I paesi completati mostrano un marker verde sul globo
+
+### Interazione AI
+- Utilizza la stessa edge function `ai-assistant` già esistente con il tool `create_download_job`
+- I quick prompts sono orientati al download: "Scarica tutti", "Aggiorna [paese]", "Profili mancanti globali"
+- L'AI può anche rispondere a domande sullo stato ("Quanto manca?", "Quanti partner ho scaricato?")
+
+### Cosa viene riutilizzato (zero duplicazione logica)
+- `CampaignGlobe` — componente intero, solo prop `selectedCountry` pilotata
+- `useDownloadJobs` — hook con realtime già implementato
+- `usePauseResumeJob` — controlli job esistenti
+- `ai-assistant` edge function — con tool `create_download_job` già funzionante
+- Logica SSE streaming — estratta da `AiAssistantDialog`
 
