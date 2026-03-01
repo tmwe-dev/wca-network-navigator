@@ -108,44 +108,6 @@ export default function GoalBar({
 
   return (
     <div className="space-y-2">
-      {/* Preset selector */}
-      <div className="flex items-center gap-2">
-        <Select onValueChange={handlePresetSelect} value={activePresetId || ""}>
-          <SelectTrigger className="h-7 w-44 text-xs border-border bg-muted/30">
-            <SelectValue placeholder="Carica preset..." />
-          </SelectTrigger>
-          <SelectContent>
-            {presets.map((p) => (
-              <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
-            ))}
-            <SelectItem value="__save__" className="text-xs text-primary font-medium">+ Salva come nuovo preset</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {activePresetId && (
-          <>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
-              onClick={() => onSavePreset(presets.find(p => p.id === activePresetId)?.name || "Preset", activePresetId)}>
-              <Save className="w-3 h-3" /> Aggiorna
-            </Button>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={() => { onDeletePreset(activePresetId); toast({ title: "Preset eliminato" }); }}>
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          </>
-        )}
-
-        {showSave && (
-          <div className="flex items-center gap-1.5">
-            <Input value={presetName} onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
-              placeholder="Nome preset..." className="h-7 w-36 text-xs border-border" autoFocus />
-            <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSavePreset}>Salva</Button>
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowSave(false)}><X className="w-3 h-3" /></Button>
-          </div>
-        )}
-      </div>
-
       <Tabs defaultValue="goal" className="w-full">
         <TabsList className="h-8 bg-transparent border-0 rounded-none p-0 gap-1">
           <TabsTrigger value="goal" className="mission-tab h-6 gap-1.5">
@@ -177,7 +139,7 @@ export default function GoalBar({
           </Select>
           <Textarea value={goal} onChange={(e) => onGoalChange(e.target.value)}
             placeholder="Es. Proporre una collaborazione per spedizioni via mare FCL verso il Far East..."
-            className="min-h-[56px] max-h-[80px] text-sm bg-muted/20 border-border resize-none text-foreground placeholder:text-muted-foreground" />
+            className="min-h-[120px] max-h-[200px] text-sm bg-muted/20 border-border text-foreground placeholder:text-muted-foreground" />
         </TabsContent>
 
         <TabsContent value="proposal" className="mt-2 space-y-1.5">
@@ -193,7 +155,7 @@ export default function GoalBar({
           </Select>
           <Textarea value={baseProposal} onChange={(e) => onBaseProposalChange(e.target.value)}
             placeholder="Es. Offriamo transit time competitivi di 25 giorni, servizio door-to-door con tracking..."
-            className="min-h-[56px] max-h-[80px] text-sm bg-muted/20 border-border resize-none text-foreground placeholder:text-muted-foreground" />
+            className="min-h-[120px] max-h-[200px] text-sm bg-muted/20 border-border text-foreground placeholder:text-muted-foreground" />
         </TabsContent>
 
         <TabsContent value="docs" className="mt-2">
