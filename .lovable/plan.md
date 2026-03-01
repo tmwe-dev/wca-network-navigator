@@ -1,35 +1,27 @@
 
 
-## Piano: Aggiungere selettore Goal e Proposte predefiniti nel GoalBar
+## Piano: Semplificare GoalBar e allargare le textarea
 
-### Problema
-Il GoalBar mostra solo textarea vuote per Goal e Proposta. Non c'è nessun selettore per scegliere tra i goal e le proposte predefiniti salvati in `app_settings` (`custom_goals` e `custom_proposals`). L'utente non può riutilizzare i contenuti gia configurati nella sezione Impostazioni > Contenuti.
+### Problemi
+1. Il dropdown "Carica preset..." in alto crea confusione — sembra un duplicato dei selettori Goal/Proposta appena aggiunti
+2. Le textarea sono troppo piccole (`min-h-[56px] max-h-[80px]`) — il testo non si legge
 
-### Soluzione
-Aggiungere un menu a tendina sopra ciascuna textarea (Goal e Proposta) che carica i contenuti da `app_settings` usando `useAppSettings()`, con fallback a `DEFAULT_GOALS` / `DEFAULT_PROPOSALS`.
+### Modifiche su `src/components/workspace/GoalBar.tsx`
 
-### Modifiche
+**1. Rimuovere la riga preset selector in alto**
+- Eliminare tutto il blocco "Preset selector" (righe 111-147): il Select "Carica preset...", i pulsanti Aggiorna/Elimina e il form di salvataggio
+- Spostare la funzionalità di salvataggio preset dentro i tab come azione secondaria (un piccolo bottone "Salva come preset" in fondo ai tab Goal/Proposta), oppure rimuoverla del tutto se non serve
 
-**`src/components/workspace/GoalBar.tsx`**
-- Importare `useAppSettings` e `DEFAULT_GOALS` / `DEFAULT_PROPOSALS`
-- Nel tab "Goal": aggiungere un `Select` sopra la textarea che elenca tutti i goal predefiniti (nome). Al click, popola la textarea con il testo del goal selezionato
-- Nel tab "Proposta": stessa cosa con le proposte predefinite
-- I dati vengono letti da `app_settings.custom_goals` (JSON string) con parse, fallback a `DEFAULT_GOALS` se non presente
-- Il selettore mostra il nome dell'item, il click scrive il testo nella textarea corrispondente
+**2. Allargare le textarea**
+- Goal: da `min-h-[56px] max-h-[80px]` a `min-h-[120px] max-h-[200px]`
+- Proposta: stessa cosa — `min-h-[120px] max-h-[200px]`
+- Togliere `resize-none` per permettere il resize manuale se l'utente vuole
 
-### Layout risultante per ogni tab
-```text
-┌─────────────────────────────────┐
-│ [▼ Seleziona goal predefinito ] │  ← Select dropdown
-├─────────────────────────────────┤
-│                                 │
-│   Textarea (goal text)          │  ← viene popolata al click
-│                                 │
-└─────────────────────────────────┘
-```
+**3. Mantenere i selettori Goal/Proposta predefiniti**
+- Restano i dropdown "Seleziona goal predefinito..." e "Seleziona proposta predefinita..." che funzionano correttamente
 
-### Dati utilizzati
-- `useAppSettings()` → `settings.custom_goals` (JSON array di `{name, text}`)
-- `useAppSettings()` → `settings.custom_proposals` (JSON array di `{name, text}`)
-- Fallback: `DEFAULT_GOALS` e `DEFAULT_PROPOSALS` da `src/data/defaultContentPresets.ts`
+### Risultato
+- Interfaccia pulita: solo tab con dropdown predefinito + textarea ampia
+- Nessuna confusione tra "preset" e "goal predefinito"
+- Testo leggibile e utilizzabile
 
