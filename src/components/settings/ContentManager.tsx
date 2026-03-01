@@ -1,8 +1,10 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspacePresets, WorkspacePreset } from "@/hooks/useWorkspacePresets";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem } from "@/data/defaultContentPresets";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Textarea } from "@/components/ui/textarea";
 import {
   BookOpen, Target, FileText, Link2, Plus, Trash2, Save, Loader2,
-  Upload, ExternalLink, Edit2, X, File, ChevronDown,
+  Upload, ExternalLink, Edit2, X, File, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,84 +27,55 @@ function hostname(url: string) {
 }
 
 /* ═══════════════════════════════════════════ */
-/*  PRESET CARD                                */
+/*  CONTENT ITEM CARD (Goal or Proposal)       */
 /* ═══════════════════════════════════════════ */
-function PresetCard({ preset, onSave, onDelete }: {
-  preset: WorkspacePreset;
-  onSave: (p: WorkspacePreset) => void;
-  onDelete: (id: string) => void;
+function ContentItemCard({ item, onSave, onDelete }: {
+  item: ContentItem;
+  onSave: (updated: ContentItem, original: ContentItem) => void;
+  onDelete: (item: ContentItem) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [goal, setGoal] = useState(preset.goal);
-  const [proposal, setProposal] = useState(preset.base_proposal);
-  const [name, setName] = useState(preset.name);
+  const [name, setName] = useState(item.name);
+  const [text, setText] = useState(item.text);
 
   const handleSave = () => {
-    onSave({ ...preset, name, goal, base_proposal: proposal });
+    onSave({ name, text }, item);
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setName(item.name);
+    setText(item.text);
     setEditing(false);
   };
 
   return (
     <Card>
-      <CardContent className="py-4 px-4 space-y-3">
+      <CardContent className="py-3 px-4 space-y-2">
         <div className="flex items-center justify-between">
           {editing ? (
-            <Input value={name} onChange={e => setName(e.target.value)} className="h-7 text-sm font-medium max-w-[200px]" />
+            <Input value={name} onChange={e => setName(e.target.value)} className="h-7 text-sm font-medium max-w-[280px]" />
           ) : (
-            <p className="font-medium text-sm">{preset.name}</p>
+            <p className="font-medium text-sm">{item.name}</p>
           )}
           <div className="flex items-center gap-1">
             {editing ? (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}><X className="w-3.5 h-3.5" /></Button>
+                <Button size="sm" variant="ghost" onClick={handleCancel}><X className="w-3.5 h-3.5" /></Button>
                 <Button size="sm" variant="default" onClick={handleSave}><Save className="w-3.5 h-3.5" /></Button>
               </>
             ) : (
               <>
                 <Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Edit2 className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onDelete(preset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onDelete(item)}><Trash2 className="w-3.5 h-3.5" /></Button>
               </>
             )}
           </div>
         </div>
-
         {editing ? (
-          <>
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase">Goal</p>
-              <Textarea value={goal} onChange={e => setGoal(e.target.value)} rows={2} className="text-xs" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase">Proposta</p>
-              <Textarea value={proposal} onChange={e => setProposal(e.target.value)} rows={3} className="text-xs" />
-            </div>
-          </>
+          <Textarea value={text} onChange={e => setText(e.target.value)} rows={3} className="text-xs" />
         ) : (
-          <>
-            {preset.goal && (
-              <div>
-                <p className="text-[10px] font-medium text-muted-foreground uppercase mb-0.5">Goal</p>
-                <p className="text-xs text-foreground/80 line-clamp-2">{preset.goal}</p>
-              </div>
-            )}
-            {preset.base_proposal && (
-              <div>
-                <p className="text-[10px] font-medium text-muted-foreground uppercase mb-0.5">Proposta</p>
-                <p className="text-xs text-foreground/80 line-clamp-3">{preset.base_proposal}</p>
-              </div>
-            )}
-          </>
-        )}
-
-        {preset.reference_links?.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {preset.reference_links.map((link, i) => (
-              <Badge key={i} variant="outline" className="text-[10px] gap-1">
-                <Link2 className="w-2.5 h-2.5" />
-                {hostname(link)}
-              </Badge>
-            ))}
-          </div>
+          <p className="text-xs text-muted-foreground line-clamp-3">{item.text}</p>
         )}
       </CardContent>
     </Card>
@@ -110,14 +83,135 @@ function PresetCard({ preset, onSave, onDelete }: {
 }
 
 /* ═══════════════════════════════════════════ */
+/*  CONTENT LIST SECTION                       */
+/* ═══════════════════════════════════════════ */
+function ContentListSection({ 
+  title, icon: Icon, settingKey, defaults, items, onUpdate 
+}: {
+  title: string;
+  icon: React.ElementType;
+  settingKey: string;
+  defaults: ContentItem[];
+  items: ContentItem[];
+  onUpdate: (key: string, items: ContentItem[]) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newText, setNewText] = useState("");
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    const updated = [...items, { name: newName.trim(), text: newText.trim() }];
+    onUpdate(settingKey, updated);
+    setNewName("");
+    setNewText("");
+    setAdding(false);
+    toast.success("Elemento aggiunto");
+  };
+
+  const handleSave = (updated: ContentItem, original: ContentItem) => {
+    const list = items.map(i => i.name === original.name && i.text === original.text ? updated : i);
+    onUpdate(settingKey, list);
+    toast.success("Elemento aggiornato");
+  };
+
+  const handleDelete = (item: ContentItem) => {
+    const list = items.filter(i => !(i.name === item.name && i.text === item.text));
+    onUpdate(settingKey, list);
+    toast.success("Elemento eliminato");
+  };
+
+  const handleLoadDefaults = () => {
+    const existingNames = new Set(items.map(i => i.name));
+    const newDefaults = defaults.filter(d => !existingNames.has(d.name));
+    if (newDefaults.length === 0) {
+      toast.info("Tutti i default sono già presenti");
+      return;
+    }
+    onUpdate(settingKey, [...items, ...newDefaults]);
+    toast.success(`${newDefaults.length} elementi predefiniti aggiunti`);
+  };
+
+  return (
+    <AccordionItem value={settingKey} className="border rounded-lg px-2">
+      <AccordionTrigger className="text-sm font-medium gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4 text-primary" />
+          {title}
+          <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-2 pb-4">
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">Nessun elemento salvato</p>
+        ) : (
+          items.map((item, i) => (
+            <ContentItemCard key={`${item.name}-${i}`} item={item} onSave={handleSave} onDelete={handleDelete} />
+          ))
+        )}
+
+        {adding ? (
+          <Card>
+            <CardContent className="py-3 px-4 space-y-2">
+              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="h-7 text-sm" />
+              <Textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="Descrizione..." rows={3} className="text-xs" />
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Annulla</Button>
+                <Button size="sm" onClick={handleAdd} disabled={!newName.trim()}>Salva</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => setAdding(true)}>
+              <Plus className="w-3.5 h-3.5" /> Aggiungi
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleLoadDefaults}>
+              <RefreshCw className="w-3.5 h-3.5" /> Carica default
+            </Button>
+          </div>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+/* ═══════════════════════════════════════════ */
 /*  MAIN COMPONENT                             */
 /* ═══════════════════════════════════════════ */
 export default function ContentManager() {
-  const { presets, isLoading: loadingPresets, save, remove } = useWorkspacePresets();
+  const { presets, isLoading: loadingPresets } = useWorkspacePresets();
+  const { data: settings, isLoading: loadingSettings } = useAppSettings();
+  const updateSetting = useUpdateSetting();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState("");
+
+  /* ── Parse goals & proposals from app_settings ── */
+  const goals: ContentItem[] = useMemo(() => {
+    if (!settings?.custom_goals) return [];
+    try { return JSON.parse(settings.custom_goals); } catch { return []; }
+  }, [settings]);
+
+  const proposals: ContentItem[] = useMemo(() => {
+    if (!settings?.custom_proposals) return [];
+    try { return JSON.parse(settings.custom_proposals); } catch { return []; }
+  }, [settings]);
+
+  /* ── Auto-load defaults on first visit ── */
+  useEffect(() => {
+    if (loadingSettings || !settings) return;
+    if (!settings.custom_goals && !settings.custom_proposals) {
+      // First time: seed with defaults
+      updateSetting.mutate({ key: "custom_goals", value: JSON.stringify(DEFAULT_GOALS) });
+      updateSetting.mutate({ key: "custom_proposals", value: JSON.stringify(DEFAULT_PROPOSALS) });
+    }
+  }, [loadingSettings, settings]);
+
+  const handleUpdateItems = (key: string, items: ContentItem[]) => {
+    updateSetting.mutate({ key, value: JSON.stringify(items) });
+  };
 
   /* ── Documents from DB ── */
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
@@ -138,25 +232,6 @@ export default function ContentManager() {
     presets.forEach(p => (p.reference_links || []).forEach(l => set.add(l)));
     return Array.from(set);
   }, [presets]);
-
-  /* ── Preset handlers ── */
-  const handleSavePreset = (p: WorkspacePreset) => {
-    save.mutate({
-      id: p.id, name: p.name, goal: p.goal, base_proposal: p.base_proposal,
-      document_ids: p.document_ids, reference_links: p.reference_links,
-    }, { onSuccess: () => toast.success("Preset aggiornato") });
-  };
-
-  const handleDeletePreset = (id: string) => {
-    remove.mutate(id, { onSuccess: () => toast.success("Preset eliminato") });
-  };
-
-  const handleNewPreset = () => {
-    save.mutate({
-      name: `Preset ${presets.length + 1}`, goal: "", base_proposal: "",
-      document_ids: [], reference_links: [],
-    }, { onSuccess: () => toast.success("Nuovo preset creato") });
-  };
 
   /* ── Document upload ── */
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,10 +266,11 @@ export default function ContentManager() {
   };
 
   /* ── Link add (to first preset) ── */
+  const { save } = useWorkspacePresets();
   const handleAddLink = () => {
     if (!newLinkUrl.trim()) return;
     const target = presets[0];
-    if (!target) { toast.error("Crea prima un preset"); return; }
+    if (!target) { toast.error("Crea prima un preset nel Workspace"); return; }
     const links = [...(target.reference_links || []), newLinkUrl.trim()];
     save.mutate({
       id: target.id, name: target.name, goal: target.goal, base_proposal: target.base_proposal,
@@ -202,7 +278,7 @@ export default function ContentManager() {
     }, { onSuccess: () => { setNewLinkUrl(""); toast.success("Link aggiunto"); } });
   };
 
-  const isLoading = loadingPresets || loadingDocs;
+  const isLoading = loadingPresets || loadingDocs || loadingSettings;
 
   return (
     <div className="space-y-4">
@@ -212,39 +288,42 @@ export default function ContentManager() {
           <h2 className="text-lg font-semibold">Contenuti</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">{presets.length} preset</Badge>
+          <Badge variant="secondary">{goals.length} goal</Badge>
+          <Badge variant="secondary">{proposals.length} proposte</Badge>
           <Badge variant="secondary">{documents.length} documenti</Badge>
-          <Badge variant="secondary">{allLinks.length} link</Badge>
         </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
       ) : (
-        <Accordion type="multiple" defaultValue={["presets", "documents", "links"]} className="space-y-2">
-          {/* ═══ PRESETS ═══ */}
-          <AccordionItem value="presets" className="border rounded-lg px-2">
-            <AccordionTrigger className="text-sm font-medium gap-2">
-              <div className="flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Goal e Proposte</div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-2 pb-4">
-              {presets.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nessun preset salvato</p>
-              ) : (
-                presets.map(p => (
-                  <PresetCard key={p.id} preset={p} onSave={handleSavePreset} onDelete={handleDeletePreset} />
-                ))
-              )}
-              <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleNewPreset}>
-                <Plus className="w-3.5 h-3.5" /> Nuovo Preset
-              </Button>
-            </AccordionContent>
-          </AccordionItem>
+        <Accordion type="multiple" defaultValue={["custom_goals", "custom_proposals", "documents", "links"]} className="space-y-2">
+          {/* ═══ GOALS ═══ */}
+          <ContentListSection
+            title="Goal"
+            icon={Target}
+            settingKey="custom_goals"
+            defaults={DEFAULT_GOALS}
+            items={goals}
+            onUpdate={handleUpdateItems}
+          />
+
+          {/* ═══ PROPOSALS ═══ */}
+          <ContentListSection
+            title="Proposte"
+            icon={FileText}
+            settingKey="custom_proposals"
+            defaults={DEFAULT_PROPOSALS}
+            items={proposals}
+            onUpdate={handleUpdateItems}
+          />
 
           {/* ═══ DOCUMENTS ═══ */}
           <AccordionItem value="documents" className="border rounded-lg px-2">
             <AccordionTrigger className="text-sm font-medium gap-2">
-              <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Documenti</div>
+              <div className="flex items-center gap-2"><File className="w-4 h-4 text-primary" /> Documenti
+                <Badge variant="secondary" className="text-[10px]">{documents.length}</Badge>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="space-y-2 pb-4">
               <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload}
@@ -283,7 +362,9 @@ export default function ContentManager() {
           {/* ═══ LINKS ═══ */}
           <AccordionItem value="links" className="border rounded-lg px-2">
             <AccordionTrigger className="text-sm font-medium gap-2">
-              <div className="flex items-center gap-2"><Link2 className="w-4 h-4 text-primary" /> Link di riferimento</div>
+              <div className="flex items-center gap-2"><Link2 className="w-4 h-4 text-primary" /> Link di riferimento
+                <Badge variant="secondary" className="text-[10px]">{allLinks.length}</Badge>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="space-y-2 pb-4">
               <div className="flex gap-2">
@@ -295,7 +376,7 @@ export default function ContentManager() {
               </div>
 
               {allLinks.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nessun link salvato nei preset</p>
+                <p className="text-xs text-muted-foreground text-center py-4">Nessun link salvato</p>
               ) : (
                 <div className="space-y-1">
                   {allLinks.map((link, i) => (
