@@ -7,6 +7,7 @@ import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
 import { Sparkles, Search, Zap, Trash2, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export default function Workspace() {
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [quality, setQuality] = useState<EmailQuality>("standard");
   const { documents, uploading, upload, remove } = useWorkspaceDocuments();
   const { presets, save: savePreset, remove: removePreset } = useWorkspacePresets();
 
@@ -125,7 +127,7 @@ export default function Workspace() {
     for (const activity of toGenerate) {
       setBatchProgress({ current: generated + 1, total: toGenerate.length });
       try {
-        const result = await generate({ activity_id: activity.id, goal, base_proposal: baseProposal, document_ids: documents.map((d) => d.id), reference_urls: referenceLinks });
+        const result = await generate({ activity_id: activity.id, goal, base_proposal: baseProposal, document_ids: documents.map((d) => d.id), reference_urls: referenceLinks, quality });
         if (result) {
           handleEmailGenerated(activity.id, { subject: result.subject, body: result.body, contactEmail: result.contact_email, partnerName: result.partner_name, contactName: result.contact_name, activityId: activity.id });
         }
@@ -192,6 +194,7 @@ export default function Workspace() {
             </div>
           )}
           <div className="flex-1" />
+          <QualitySelector value={quality} onChange={setQuality} disabled={batchGenerating || deepSearch.running} />
 
           {deepSearch.running ? (
             <Button onClick={() => deepSearch.stop()} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">
@@ -269,6 +272,7 @@ export default function Workspace() {
             generatedEmails={generatedEmails} onEmailGenerated={handleEmailGenerated}
             currentEmailIndex={currentEmailIndex} onIndexChange={handleIndexChange}
             totalEmails={emailKeys.length} batchGenerating={batchGenerating} batchProgress={batchProgress}
+            quality={quality}
           />
         </div>
       </div>

@@ -11,6 +11,7 @@ export const DEFAULT_SALES_KNOWLEDGE_BASE = `
 
 ---
 
+<!-- SECTION:1 -->
 ## 1. ISTRUZIONI PER IL SISTEMA AI
 
 Regole generali da applicare PRIMA di ogni generazione email:
@@ -25,6 +26,7 @@ Regole generali da applicare PRIMA di ogni generazione email:
 
 ---
 
+<!-- SECTION:2 -->
 ## 2. FILOSOFIA DEL VENDITORE
 
 ### Identità
@@ -45,6 +47,7 @@ Presentati con calma, sapendo di offrire valore assoluto. Il tuo approccio è qu
 
 ---
 
+<!-- SECTION:3 -->
 ## 3. I 10 COMANDAMENTI DELLA NEGOZIAZIONE
 
 Framework da applicare nella costruzione di ogni messaggio:
@@ -62,6 +65,7 @@ Framework da applicare nella costruzione di ogni messaggio:
 
 ---
 
+<!-- SECTION:4 -->
 ## 4. TECNICHE CHRIS VOSS — METODO BLACK SWAN
 
 Tecniche avanzate di negoziazione adattate per email. Usale per riattivazione, gestione prezzo, ghosting, obiezioni difficili.
@@ -90,6 +94,7 @@ Quando il cliente chiede qualcosa di irragionevole, in email si traduce in: "Mi 
 
 ---
 
+<!-- SECTION:5 -->
 ## 5. STRUTTURA EMAIL EFFICACE
 
 ### La regola delle 5 righe (primo contatto)
@@ -115,6 +120,7 @@ Un'email di primo contatto deve essere leggibile in 30 secondi:
 
 ---
 
+<!-- SECTION:6 -->
 ## 6. TECNICHE DI APERTURA (HOOK)
 
 Ogni email deve iniziare con un motivo per cui il destinatario dovrebbe continuare a leggere.
@@ -145,6 +151,7 @@ Ogni email deve iniziare con un motivo per cui il destinatario dovrebbe continua
 
 ---
 
+<!-- SECTION:7 -->
 ## 7. COME USARE I DATI DEL PARTNER
 
 Quando generi un'email, hai accesso a dati dal database. Usali TUTTI quelli disponibili per personalizzare:
@@ -178,6 +185,7 @@ Se hai: company_name="Global Express Ltd", country="Germany", network="WCA", ser
 
 ---
 
+<!-- SECTION:8 -->
 ## 8. COLD OUTREACH — PRIMO CONTATTO
 
 Principi per il primo contatto con un prospect freddo:
@@ -196,6 +204,7 @@ Principi per il primo contatto con un prospect freddo:
 
 ---
 
+<!-- SECTION:9 -->
 ## 9. ARSENALE STRATEGICO — COSTI OCCULTI E VALORE
 
 Leve argomentative concrete per differenziarsi. Usale per presentazioni, confronti e proposte.
@@ -213,6 +222,7 @@ Non elencare i costi occulti direttamente. Usa domande che li fanno emergere:
 
 ---
 
+<!-- SECTION:10 -->
 ## 10. GESTIONE OBIEZIONI VIA EMAIL
 
 Le obiezioni non sono ostacoli, ma opportunità. Principi: non attaccare, riformula, trasforma, anticipa.
@@ -231,6 +241,7 @@ Risposta email: "Con piacere. Per assicurarmi che arrivi alla persona giusta e c
 
 ---
 
+<!-- SECTION:11 -->
 ## 11. TECNICHE DI CHIUSURA
 
 La chiusura non è mai forzata. Dopo aver mostrato valore reale, si chiude con eleganza.
@@ -252,6 +263,7 @@ La chiusura non è mai forzata. Dopo aver mostrato valore reale, si chiude con e
 
 ---
 
+<!-- SECTION:12 -->
 ## 12. PROTOCOLLO VENDITA 5 FASI + FOLLOW-UP
 
 ### Fase 1 — CONNESSIONE (Email 1)
@@ -301,6 +313,7 @@ La chiusura non è mai forzata. Dopo aver mostrato valore reale, si chiude con e
 
 ---
 
+<!-- SECTION:13 -->
 ## 13. ADATTAMENTO TONO + PERSUASIONE
 
 ### Per ruolo del destinatario
@@ -344,6 +357,7 @@ La chiusura non è mai forzata. Dopo aver mostrato valore reale, si chiude con e
 
 ---
 
+<!-- SECTION:14 -->
 ## 14. LIBRERIA FRASI MODELLO + EMAIL COMPLETE
 
 ### Frasi di Apertura

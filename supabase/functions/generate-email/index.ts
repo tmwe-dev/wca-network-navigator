@@ -7,12 +7,62 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type Quality = "fast" | "standard" | "premium";
+
+/** Extract sections from KB using <!-- SECTION:N --> markers */
+function getKBSlice(fullKB: string, quality: Quality): string {
+  if (!fullKB) return "";
+  
+  const sectionMap: Record<Quality, number[]> = {
+    fast: [1, 5],
+    standard: [1, 2, 3, 4, 5, 6, 7, 8],
+    premium: [], // all sections
+  };
+
+  if (quality === "premium") return fullKB;
+
+  const allowedSections = sectionMap[quality];
+  const sectionRegex = /<!-- SECTION:(\d+) -->/g;
+  const markers: { index: number; section: number }[] = [];
+  let match;
+  while ((match = sectionRegex.exec(fullKB)) !== null) {
+    markers.push({ index: match.index, section: parseInt(match[1]) });
+  }
+  if (markers.length === 0) return fullKB; // no markers, return all
+
+  const parts: string[] = [];
+  for (let i = 0; i < markers.length; i++) {
+    if (allowedSections.includes(markers[i].section)) {
+      const start = markers[i].index;
+      const end = i + 1 < markers.length ? markers[i + 1].index : fullKB.length;
+      parts.push(fullKB.substring(start, end).trim());
+    }
+  }
+  return parts.join("\n\n---\n\n");
+}
+
+function getModel(quality: Quality): string {
+  return quality === "fast" 
+    ? "google/gemini-2.5-flash-lite" 
+    : "google/gemini-3-flash-preview";
+}
+
+function getProfileTruncation(quality: Quality): { description: number; rawProfile: number } {
+  switch (quality) {
+    case "fast": return { description: 0, rawProfile: 0 };
+    case "standard": return { description: 800, rawProfile: 0 };
+    case "premium": return { description: 800, rawProfile: 1500 };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { activity_id, goal, base_proposal, language, document_ids, reference_urls } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality } = await req.json();
     if (!activity_id) throw new Error("activity_id is required");
+
+    const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -61,9 +111,13 @@ serve(async (req) => {
     // Fetch partner networks, services, social links, settings in parallel
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-      supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+      quality !== "fast"
+        ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id)
+        : Promise.resolve({ data: [] }),
       supabase.from("app_settings").select("key, value").like("key", "ai_%"),
-      supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id),
+      quality === "premium"
+        ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id)
+        : Promise.resolve({ data: [] }),
     ]);
 
     const networks = networksRes.data || [];
@@ -73,9 +127,9 @@ serve(async (req) => {
     const settings: Record<string, string> = {};
     (settingsRes.data || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
 
-    // Fetch workspace documents text if document_ids provided
+    // Fetch workspace documents text — skip for "fast"
     let documentsContext = "";
-    if (document_ids && document_ids.length > 0) {
+    if (quality !== "fast" && document_ids && document_ids.length > 0) {
       const { data: docs } = await supabase
         .from("workspace_documents")
         .select("file_name, extracted_text")
@@ -91,9 +145,9 @@ serve(async (req) => {
       }
     }
 
-    // Scrape reference URLs via Firecrawl if provided
+    // Scrape reference URLs via Firecrawl — only for "premium"
     let linksContext = "";
-    if (reference_urls && reference_urls.length > 0) {
+    if (quality === "premium" && reference_urls && reference_urls.length > 0) {
       const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
       if (FIRECRAWL_API_KEY) {
         const urlsToScrape = reference_urls.slice(0, 3);
@@ -127,16 +181,18 @@ serve(async (req) => {
       }
     }
 
-    // LinkedIn context
-    const companyLinkedIn = socialLinks.find((l: any) => l.platform === "linkedin" && !l.contact_id);
-    const contactLinkedIn = contact
-      ? socialLinks.find((l: any) => l.platform === "linkedin" && l.contact_id === contact.id)
-      : null;
+    // LinkedIn context — only for premium
     let linkedinContext = "";
-    if (companyLinkedIn || contactLinkedIn) {
-      linkedinContext = "\nLINKEDIN:\n";
-      if (companyLinkedIn) linkedinContext += `- Azienda: ${companyLinkedIn.url}\n`;
-      if (contactLinkedIn) linkedinContext += `- Contatto: ${contactLinkedIn.url}\n`;
+    if (quality === "premium") {
+      const companyLinkedIn = socialLinks.find((l: any) => l.platform === "linkedin" && !l.contact_id);
+      const contactLinkedIn = contact
+        ? socialLinks.find((l: any) => l.platform === "linkedin" && l.contact_id === contact.id)
+        : null;
+      if (companyLinkedIn || contactLinkedIn) {
+        linkedinContext = "\nLINKEDIN:\n";
+        if (companyLinkedIn) linkedinContext += `- Azienda: ${companyLinkedIn.url}\n`;
+        if (contactLinkedIn) linkedinContext += `- Contatto: ${contactLinkedIn.url}\n`;
+      }
     }
 
     // --- USE ALIASES as primary names ---
@@ -147,18 +203,20 @@ serve(async (req) => {
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
 
-    // Build context
+    // Build context with quality-aware truncation
+    const trunc = getProfileTruncation(quality);
+
     const partnerContext = `
 AZIENDA DESTINATARIA:
 - Nome: ${recipientCompany}${partner.company_name !== recipientCompany ? ` (ragione sociale: ${partner.company_name})` : ""}
 - Città: ${partner.city}, ${partner.country_name} (${partner.country_code})
-- Sito web: ${partner.website || "N/A"}
+${quality !== "fast" ? `- Sito web: ${partner.website || "N/A"}` : ""}
 - Email: ${contactEmail}
-- Rating: ${partner.rating ? `${partner.rating}/5` : "N/A"}
+${quality !== "fast" ? `- Rating: ${partner.rating ? `${partner.rating}/5` : "N/A"}` : ""}
 - Network: ${networks.map((n: any) => n.network_name).join(", ") || "N/A"}
-- Servizi: ${services.map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}
-${partner.profile_description ? `- Descrizione: ${partner.profile_description.substring(0, 800)}` : ""}
-${partner.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner.raw_profile_markdown.substring(0, 1500)}` : ""}
+${quality !== "fast" ? `- Servizi: ${services.map((s: any) => s.service_category.replace(/_/g, " ")).join(", ") || "N/A"}` : ""}
+${trunc.description > 0 && partner.profile_description ? `- Descrizione: ${partner.profile_description.substring(0, trunc.description)}` : ""}
+${trunc.rawProfile > 0 && partner.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner.raw_profile_markdown.substring(0, trunc.rawProfile)}` : ""}
 ${linkedinContext}`;
 
     const contactContext = contact ? `
@@ -166,13 +224,12 @@ CONTATTO DESTINATARIO:
 - Nome da usare nel saluto: ${recipientName} (IMPORTANTE: usa SOLO questo nome, mai il nome completo con cognome)
 - Ruolo: ${contact.title || "N/A"}
 - Email: ${contact.email || contactEmail}
-- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}
+${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
 ` : `Nessun contatto specifico selezionato — indirizzare all'azienda usando il nome "${recipientCompany}".`;
 
     // --- SIGNATURE BLOCK ---
     let signatureBlock = settings.ai_email_signature_block || "";
     if (!signatureBlock.trim()) {
-      // Build automatic signature from profile fields
       const sigParts: string[] = [];
       if (senderAlias) sigParts.push(senderAlias);
       if (settings.ai_contact_role) sigParts.push(settings.ai_contact_role);
@@ -184,19 +241,23 @@ CONTATTO DESTINATARIO:
       }
     }
 
+    // Sales KB — slice based on quality
+    const fullSalesKB = settings.ai_sales_knowledge_base || "";
+    const salesKBSlice = getKBSlice(fullSalesKB, quality);
+
     const senderContext = `
 MITTENTE (TU):
 - Nome da usare: ${senderAlias}
 - Azienda: ${senderCompanyAlias}
 - Ruolo: ${settings.ai_contact_role || "N/A"}
 - Email: ${settings.ai_email_signature || "N/A"}
-- Telefono: ${settings.ai_phone_signature || "N/A"}
+${quality !== "fast" ? `- Telefono: ${settings.ai_phone_signature || "N/A"}` : ""}
 - Settore: ${settings.ai_sector || "freight_forwarding"}
 - Network: ${settings.ai_networks || "N/A"}
 
 KNOWLEDGE BASE:
 ${settings.ai_knowledge_base || "Non configurata"}
-${settings.ai_sales_knowledge_base ? `\nSALES TECHNIQUES GUIDE:\n${settings.ai_sales_knowledge_base}\n` : ""}
+${salesKBSlice ? `\nSALES TECHNIQUES GUIDE:\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
 - Tono: ${settings.ai_tone || "professionale"}
 - Lingua: ${settings.ai_language || "italiano"}
@@ -240,6 +301,8 @@ ${base_proposal || "Proposta generica di collaborazione nel settore freight forw
 
 Genera l'email completa con oggetto e corpo.`;
 
+    const model = getModel(quality);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -247,7 +310,7 @@ Genera l'email completa con oggetto e corpo.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -300,6 +363,8 @@ Genera l'email completa con oggetto e corpo.`;
         contact_email: contactEmail,
         has_contact: !!contact,
         used_partner_email: !contact?.email && !!partner.email,
+        quality,
+        model,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

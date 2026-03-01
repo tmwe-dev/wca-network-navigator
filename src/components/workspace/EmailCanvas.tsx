@@ -46,12 +46,13 @@ interface EmailCanvasProps {
   totalEmails: number;
   batchGenerating: boolean;
   batchProgress: { current: number; total: number } | null;
+  quality?: "fast" | "standard" | "premium";
 }
 
 export default function EmailCanvas({
   activity, goal, baseProposal, documentIds, referenceUrls,
   generatedEmails, onEmailGenerated, currentEmailIndex, onIndexChange,
-  totalEmails, batchGenerating, batchProgress
+  totalEmails, batchGenerating, batchProgress, quality = "standard"
 }: EmailCanvasProps) {
   const { generate, isGenerating } = useEmailGenerator();
   const { data: settings } = useAppSettings();
@@ -77,7 +78,7 @@ export default function EmailCanvas({
     if (!activity) return;
     const result = await generate({
       activity_id: activity.id, goal, base_proposal: baseProposal,
-      document_ids: documentIds, reference_urls: referenceUrls,
+      document_ids: documentIds, reference_urls: referenceUrls, quality,
     });
     if (result) {
       const stored: StoredEmail = {
