@@ -25,14 +25,15 @@ Deno.serve(async (req) => {
     const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     })
-    const { data: claims, error: claimsError } = await authClient.auth.getClaims(token)
-    if (claimsError || !claims?.claims?.sub) {
+    const { data: { user }, error: userError } = await authClient.auth.getUser(token)
+    if (userError || !user) {
+      console.error('get-wca-credentials auth error:', userError?.message)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const userId = claims.claims.sub as string
+    const userId = user.id
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Try user_wca_credentials first (per-user)
