@@ -1,52 +1,50 @@
 
 
-## Diagnosi: Bug "Fallthrough" — Profili persi silenziosamente
+## Diagnosi: Tutte le estensioni non trovano le credenziali
 
 ### Il problema esatto
 
-Il codice in `useDownloadProcessor.ts` ha **tre** controlli in sequenza dopo l'estrazione (linee 190-243):
+Tutte e tre le Edge Functions per le credenziali (`get-wca-credentials`, `get-linkedin-credentials`, `get-ra-credentials`) hanno un auth check che **blocca le chiamate delle estensioni Chrome**.
 
-1. `result.pageLoaded === false` → retry queue
-2. `isMemberNotFound` (solo se pageLoaded) → skip permanente
-3. **Nessun altro controllo** → cade direttamente in `saveExtractionResult`
-
-Quando l'estensione Chrome restituisce un errore di comunicazione (es. "Extension context invalidated", "No response from extension"), il risultato è:
-
-```text
-{ success: false, error: "Extension context invalidated" }
+Le estensioni non hanno accesso al JWT dell'utente. Inviano solo l'anon key come Bearer token:
+```
+Authorization: Bearer <SUPABASE_ANON_KEY>
 ```
 
-Questo oggetto **NON ha** il campo `pageLoaded`. Quindi:
-- `result.pageLoaded === false` → **FALSE** (è `undefined`, non `false`)
-- `isMemberNotFound` → **FALSE** (nessun testo "member not found")
-- Il codice **cade attraverso** fino a `saveExtractionResult` (linea 235)
+Ma le Edge Functions tentano di validare quel token come JWT utente:
+- `get-wca-credentials` → `authClient.auth.getUser(token)` — anon key non è un JWT utente → **401 Unauthorized**
+- `get-linkedin-credentials` → `authClient.auth.getClaims(token)` — metodo inesistente → **errore interno → 401**
+- `get-ra-credentials` → `authClient.auth.getClaims(token)` — stessa cosa → **401**
 
-In `profileSaver.ts` linea 21: `if (result.success && ...)` — siccome `success` è `false`, non salva nulla. Ma il profilo viene comunque aggiunto a `processedSet` (linea 292) e marcato come "completato" per sempre.
-
-**B2C Logistics e gli altri profili vengono persi esattamente così**: l'estensione ha un glitch momentaneo, il bridge non risponde, e il sistema li marca come processati con zero dati.
+Le funzioni ritornano 401 **prima** di arrivare al fallback `app_settings`, dove le credenziali esistono effettivamente (confermato dai dati di rete: `wca_username: "tmsrlmin"`, `linkedin_email: "luca@tmwe.it"`, `ra_username: "simone@tmwe.it"`).
 
 ### Fix
 
-**File: `src/hooks/useDownloadProcessor.ts`**
+**Per tutte e tre le Edge Functions**, cambiare la logica di autenticazione:
 
-Aggiungere un terzo check dopo il blocco "member not found" (dopo linea 232), sia nel Pass 1 che nel Pass 2:
+1. Se il token è un JWT utente valido → cercare prima in `user_wca_credentials` (solo per WCA), poi fallback su `app_settings`
+2. Se `getUser` fallisce (= il token è l'anon key, come quando chiama l'estensione) → andare direttamente su `app_settings` invece di tornare 401
 
+Concretamente, in ogni funzione, sostituire il blocco auth rigido:
 ```typescript
-// 3. Extension error (success: false, no pageLoaded) → retry queue
-if (result.success === false) {
-  await appendLog(jobId, "SKIP", 
-    `Profilo #${wcaId} errore estensione: ${result.error || "sconosciuto"} — retry queue`);
-  retryQueue.push(wcaId);
-  consecutiveSkipped++;
-  if (consecutiveSkipped >= 3) {
-    // stessa guardia sessione esistente
-  }
-  // update DB + continue
-  continue;
+const { data: { user }, error } = await authClient.auth.getUser(token)
+if (error || !user) {
+  return Response 401  // ← QUESTO BLOCCA LE ESTENSIONI
 }
 ```
 
-Nel **Pass 2** (dopo linea 397), lo stesso check ma con `failedIds.push(wcaId)` invece di `retryQueue`.
+Con una logica soft che permette il fallthrough:
+```typescript
+const { data: { user }, error } = await authClient.auth.getUser(token)
+// Se user è valido → cerca credenziali per-user (solo WCA)
+// Se user non è valido → salta a app_settings (le estensioni passano di qui)
+```
 
-Nessun'altra modifica necessaria — il resto del flusso è corretto.
+### File da modificare
+
+1. **`supabase/functions/get-wca-credentials/index.ts`** — Rendere il getUser soft, permettendo fallback ad app_settings quando chiamato dall'estensione
+2. **`supabase/functions/get-linkedin-credentials/index.ts`** — Sostituire `getClaims` con `getUser` soft + fallback diretto ad app_settings
+3. **`supabase/functions/get-ra-credentials/index.ts`** — Stessa correzione: `getClaims` → `getUser` soft + fallback
+
+Nessuna modifica necessaria alle estensioni Chrome.
 
