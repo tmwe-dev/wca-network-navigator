@@ -254,6 +254,18 @@ function checkSessionOnPage() {
       return { authenticated: false, reason: "login_prompt" };
     }
 
+    // Check for "Member Not Found" — means session expired or member doesn't exist
+    var h1 = document.querySelector("h1");
+    var h1Text = h1 ? h1.textContent.trim().toLowerCase() : "";
+    if (h1Text.indexOf("member not found") >= 0 || h1Text.indexOf("not found") >= 0) {
+      return { authenticated: false, reason: "member_not_found_on_test_profile" };
+    }
+
+    // Check for "Members only" text — strong signal of expired session
+    if (/Members\s*only/i.test(bodyText)) {
+      return { authenticated: false, reason: "members_only_visible" };
+    }
+
     var contactRows = document.querySelectorAll("[class*='contactperson_row']");
     if (contactRows.length === 0) {
       var allEls = document.querySelectorAll("*");
@@ -267,7 +279,18 @@ function checkSessionOnPage() {
     }
 
     if (contactRows.length === 0) {
-      return { authenticated: document.body.innerHTML.length > 5000, reason: "no_contact_rows_but_page_loaded" };
+      // Page loaded but no contact rows — NOT enough to confirm auth
+      // Check for profile_label/profile_val pairs with real data (not "Members only")
+      var profileVals = document.querySelectorAll("[class*='profile_val']");
+      var hasRealProfileData = false;
+      for (var pv = 0; pv < profileVals.length; pv++) {
+        var pvText = profileVals[pv].textContent.trim();
+        if (pvText.length > 5 && !/Members\s*only/i.test(pvText) && !/please.*Login/i.test(pvText) && pvText.indexOf("@") >= 0) {
+          hasRealProfileData = true;
+          break;
+        }
+      }
+      return { authenticated: hasRealProfileData, reason: hasRealProfileData ? "profile_has_real_data" : "no_contact_rows_no_real_data" };
     }
 
     var hasRealData = false;
@@ -279,7 +302,7 @@ function checkSessionOnPage() {
       }
     }
 
-    return { authenticated: hasRealData || contactRows.length > 0, reason: hasRealData ? "real_contacts" : "contacts_but_no_email" };
+    return { authenticated: hasRealData, reason: hasRealData ? "real_contacts" : "contacts_but_members_only" };
   } catch (e) {
     return { authenticated: false, reason: "error: " + e.message };
   }
