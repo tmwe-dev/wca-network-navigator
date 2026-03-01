@@ -1,9 +1,8 @@
 /**
- * Sales Knowledge Base — Guida completa per la generazione di email B2B
+ * Sales Knowledge Base — Guida per la generazione di email B2B
  * nel settore freight forwarding / logistica internazionale.
  *
- * Basata su: sales-training.ts (5 principi, 5 obiezioni, protocollo 5 fasi)
- * e bruce-methodology.ts (5 passi servizio, frasi fiducia).
+ * 10 sezioni operative focalizzate su email outbound.
  */
 
 export const DEFAULT_SALES_KNOWLEDGE_BASE = `
@@ -17,7 +16,7 @@ export const DEFAULT_SALES_KNOWLEDGE_BASE = `
 2. **Il cliente compra fiducia, non prezzo**: Nel freight forwarding la merce vale milioni. Il partner vuole sapere che sei affidabile, reattivo e competente. Dimostralo con fatti, non promesse.
 3. **Personalizza sempre**: Un'email generica finisce nel cestino. Cita il nome, la città, il network condiviso, un servizio specifico. Ogni email deve sembrare scritta a mano.
 4. **Ascolta prima di parlare**: Se hai dati sul partner (profilo, servizi, zone), usali per mostrare che hai studiato la loro azienda. Non parlare di te — parla di come puoi aiutare loro.
-5. **Monitoraggio proattivo**: Non aspettare che il cliente ti cerchi. Ogni spedizione va seguita in tempo reale. Comunica aggiornamenti prima che te li chiedano. Questa è la differenza tra un forwarder e un partner.
+5. **Monitoraggio proattivo**: Non aspettare che il cliente ti cerchi. Comunica aggiornamenti prima che te li chiedano. Questa è la differenza tra un forwarder e un partner.
 
 ---
 
@@ -71,79 +70,40 @@ Ogni email deve iniziare con un motivo per cui il destinatario dovrebbe continua
 
 ---
 
-## 4. VALUE PROPOSITION PER SERVIZIO
+## 4. COME USARE I DATI DEL PARTNER
 
-Adatta la proposta al tipo di servizio offerto:
+Quando generi un'email, hai accesso a questi dati dal database. Usali TUTTI quelli disponibili per personalizzare:
 
-### Air Freight
-- Transit time competitivi (cita rotte specifiche)
-- Capacità garantita su rotte ad alta domanda
-- Gestione consolidamenti per ottimizzare costi
-- Tracking in tempo reale con aggiornamenti proattivi
+### Campi disponibili e come usarli
 
-### Ocean Freight (FCL & LCL)
-- Copertura portuale diretta (nomina i porti)
-- Gestione documentale completa (B/L, dogana, certificati)
-- Servizio FCL door-to-door con distribuzione locale
-- LCL con consolidamenti settimanali
+| Campo | Come usarlo nell'email |
+|-------|----------------------|
+| **company_name** | Sempre nel saluto e nel corpo. Mai generico. |
+| **contact name** | Usalo nel "Dear [Nome]". Se assente, usa "Dear [company_name] Team". |
+| **contact title/role** | Adatta il tono (CEO → strategico, Ops Manager → pratico). |
+| **country_name / city** | Riferimento geografico nell'hook. Menziona trade lane rilevanti. |
+| **network_name** | Hook primario: "As fellow [network] members..." |
+| **services** | Collega i TUOI servizi ai LORO. Se fanno air freight, proponi la tua copertura air. |
+| **rating** | Se alto (4-5), menziona la loro reputazione. Se basso o assente, non citarlo. |
+| **profile_description** | Estrai parole chiave per personalizzare la value proposition. |
+| **enrichment_data** | Se presente, usa dati dal sito web per dimostrare che hai studiato l'azienda. |
+| **member_since** | Se di lunga data, valorizza la loro esperienza nel network. |
+| **website** | Se hai dati dal sito, cita qualcosa di specifico che hai notato. |
 
-### Project Cargo & Heavy Lift
-- Esperienza su carichi fuori sagoma (cita tonnellaggi o dimensioni)
-- Studi di fattibilità e route survey
-- Permessi speciali e scorte
-- Assicurazione all-risk
+### Regole di personalizzazione
+1. **Usa almeno 3 campi** in ogni email per renderla unica
+2. **Mai inventare dati** — se un campo è vuoto, omettilo
+3. **Collega i dati alla tua proposta** — non elencarli, integrali nel discorso
+4. **Priorità**: network condiviso > paese/città > servizi > rating > profilo
 
-### Dangerous Goods
-- Certificazione IATA DGR / IMO IMDG
-- Personale formato per classificazione e imballaggio
-- Documentazione DG completa
-- Esperienza con classi specifiche (cita le più rilevanti)
+### Esempio di integrazione dati
+Se hai: company_name="Global Express Ltd", country="Germany", network="WCA", services=["air_freight","ocean_fcl"], rating=4.5
 
-### E-commerce & Express
-- Last-mile delivery in [X] città
-- Gestione resi e logistica inversa
-- Integrazione con piattaforme marketplace
-- Consegna in 24-48h nelle aree principali
-
-### Perishables & Pharma
-- Catena del freddo controllata (GDP, CEIV Pharma)
-- Monitoraggio temperatura real-time
-- Priorità handling e slot dedicati
-- Conformità normativa per import/export alimentare e farmaceutico
+→ "As fellow WCA members, I was pleased to see Global Express Ltd's strong reputation in Germany. With your expertise in air and ocean freight, I believe there's a natural synergy with our [servizio] capabilities on the Italy–Germany corridor."
 
 ---
 
-## 5. GESTIONE OBIEZIONI
-
-### Obiezione 1: "Abbiamo già un partner/forwarder"
-**Non dire**: "Noi siamo meglio"
-**Dire**: "Avere un partner consolidato è ottimo. Molti dei nostri clienti ci usano come seconda opzione per rotte o servizi specifici dove possiamo offrire valore aggiunto. Sarebbe utile confrontarci su [rotta specifica]?"
-
-### Obiezione 2: "I vostri prezzi sono troppo alti"
-**Non dire**: "Possiamo abbassare il prezzo"
-**Dire**: "Il nostro pricing riflette un servizio che include [tracking proattivo / customs clearance dedicata / SLA garantiti]. A parità di servizio, i nostri clienti trovano che il costo totale — inclusi ritardi evitati e problemi prevenuti — è competitivo."
-
-### Obiezione 3: "Non conosciamo la vostra azienda"
-**Non dire**: "Siamo leader nel settore da X anni"
-**Dire**: "Capisco perfettamente. Per questo propongo un primo invio di prova — una spedizione piccola per testare il nostro servizio senza rischi. Potrai valutare la nostra reattività e qualità in prima persona."
-
-### Obiezione 4: "Non abbiamo tempo adesso"
-**Non dire**: "Quando posso richiamare?"
-**Dire**: "Nessun problema. Ti invio un breve profilo della nostra azienda. Quando ci sarà un'esigenza, saprai di avere un partner pronto in [paese/zona]. Posso ricontattarti tra [2-3 settimane]?"
-
-### Obiezione 5: "Devo consultare il mio team/management"
-**Non dire**: "Ok, attendo"
-**Dire**: "Assolutamente, è importante che tutti siano allineati. Posso preparare un breve documento riepilogativo con i punti chiave da condividere con il team? Così avranno tutte le informazioni per valutare."
-
-### Obiezione 6: "Non serviamo quel tipo di merce/rotta"
-**Dire**: "Grazie per la precisazione. Quali sono le rotte e i servizi principali su cui vi concentrate? Potrebbe esserci un'altra area dove possiamo collaborare."
-
-### Obiezione 7: "Abbiamo avuto esperienze negative con partner in [paese]"
-**Dire**: "Mi dispiace sentirlo. Proprio per questo la nostra appartenenza a [network] con protocollo di garanzia è importante — offre una tutela che un rapporto diretto non garantisce. Sarei felice di dimostrarvi il nostro approccio con un primo incarico a basso rischio."
-
----
-
-## 6. PROTOCOLLO DI VENDITA IN 5 FASI (adattato per email)
+## 5. PROTOCOLLO DI VENDITA IN 5 FASI (adattato per email)
 
 ### Fase 1 — CONNESSIONE (Email 1)
 - Obiettivo: Aprire il dialogo
@@ -177,7 +137,7 @@ Adatta la proposta al tipo di servizio offerto:
 
 ---
 
-## 7. ADATTAMENTO DEL TONO
+## 6. ADATTAMENTO DEL TONO
 
 ### Per ruolo del destinatario
 
@@ -227,16 +187,12 @@ Adatta la proposta al tipo di servizio offerto:
 
 ---
 
-## 8. TECNICHE DI PERSUASIONE B2B
+## 7. TECNICHE DI PERSUASIONE B2B
 
 ### Social Proof
 - "Gestiamo oltre [X] spedizioni al mese da/per [paese]"
 - "Siamo membri [network] dal [anno], con rating [X]/5"
 - "I nostri partner in [regione] includono aziende come..."
-
-### Scarcità (usare con moderazione)
-- "Al momento abbiamo capacità dedicata su questa rotta"
-- "Stiamo selezionando un partner esclusivo per [paese/zona]"
 
 ### Reciprocità
 - "Saremo felici di condividere la nostra analisi sulle rotte [zona] senza impegno"
@@ -248,7 +204,7 @@ Adatta la proposta al tipo di servizio offerto:
 
 ---
 
-## 9. PATTERN DI FOLLOW-UP
+## 8. PATTERN DI FOLLOW-UP
 
 ### Timing ottimale
 - Follow-up 1: 3-5 giorni lavorativi dopo la prima email
@@ -270,51 +226,18 @@ Adatta la proposta al tipo di servizio offerto:
 
 ---
 
-## 10. OGGETTO EMAIL — PATTERN EFFICACI
+## 9. OGGETTO EMAIL, CTA, FRASI DI FIDUCIA E ERRORI
 
-### Regole
-- Max 6-8 parole
-- Mai tutto maiuscolo
-- Mai punti esclamativi
+### Oggetto email — Pattern efficaci
+- Max 6-8 parole, mai tutto maiuscolo, mai punti esclamativi
 - Includere un elemento specifico (nome, network, paese, servizio)
+- **Buoni**: "[Network] member — [servizio] in [paese]", "Air freight from [A] to [B]?", "Quick question about [rotta]"
+- **Da evitare**: "Partnership opportunity", "Introduction of our company", "URGENT: [qualsiasi cosa]"
 
-### Pattern che funzionano
-- "[Network] member — [servizio] in [paese]"
-- "Connecting [tua azienda] and [loro azienda]"
-- "Air freight from [paese A] to [paese B]?"
-- "[Network] partnership — [zona] coverage"
-- "Quick question about [servizio/rotta]"
-- "Suggested by [referente] — [servizio]"
-
-### Pattern da evitare
-- "Partnership opportunity" (troppo generico)
-- "Introduction of our company" (centrato su di te)
-- "Best rates for [servizio]" (troppo aggressivo)
-- "URGENT: [qualsiasi cosa]" (spam)
-
----
-
-## 11. CALL-TO-ACTION
-
-### Regole
-- UNA sola CTA per email
-- Specifica e a basso impegno
-- Proponi un passo concreto con tempistica
-
-### CTA efficaci
-- "Would you be open to a 15-minute introductory call next week?"
-- "Can I send you our service profile for [rotta/zona]?"
-- "Would it be helpful if I shared our rate card for [servizio]?"
-- "Shall we schedule a brief video call to explore synergies?"
-
-### CTA da evitare
-- "Let me know if you're interested" (vago)
-- "Feel free to contact me" (passivo)
-- "Please review the attached proposal" (troppo formale, presuntuoso al primo contatto)
-
----
-
-## 12. FRASI DI FIDUCIA E CHIUSURA
+### Call-to-action
+- UNA sola CTA per email, specifica e a basso impegno
+- **Buone**: "Would you be open to a 15-minute call next week?", "Can I send you our service profile?"
+- **Da evitare**: "Let me know if you're interested", "Feel free to contact me"
 
 ### Frasi che costruiscono fiducia
 - "We treat every shipment as if it were our own"
@@ -325,27 +248,77 @@ Adatta la proposta al tipo di servizio offerto:
 ### Chiusure efficaci
 - "I look forward to exploring how we can support each other"
 - "Thank you for your time — I'm confident we can add value to your operations"
-- "I hope we get the chance to work together and demonstrate our commitment"
 
-### Filosofia del servizio (da Bruce Methodology)
-- Ascolta prima, agisci poi
-- Conferma sempre la comprensione del problema prima di proporre soluzioni
-- Ogni interazione è un'opportunità per rafforzare la relazione
-- Segui sempre fino alla risoluzione completa — mai lasciare pending
-- Se c'è un problema, sii il primo a comunicarlo
+### Errori da evitare
+1. **Genericità**: "We are a leading logistics company" → Tutti lo dicono. Sii specifico.
+2. **Email troppo lunghe**: Max 150 parole al primo contatto.
+3. **Promesse vaghe**: "Best service" / "Competitive rates" → Dati concreti.
+4. **Focus su di te**: Il 70% dell'email deve parlare del destinatario.
+5. **Tono supplicante**: "I would really appreciate if you could..." → Sii propositivo.
+6. **Multiple CTA**: Una sola azione per email.
+7. **Nessuna personalizzazione**: Se l'email potrebbe essere inviata a chiunque, è sbagliata.
+8. **Follow-up identici**: Ogni messaggio deve aggiungere qualcosa di nuovo.
+9. **Allegati al primo contatto**: Mai. Red flag per filtri spam.
 
 ---
 
-## 13. ERRORI DA EVITARE
+## 10. EMAIL MODELLO COMPLETE
 
-1. **Genericità**: "We are a leading logistics company" → Tutti lo dicono. Sii specifico.
-2. **Email troppo lunghe**: Se superi le 150 parole al primo contatto, stai perdendo il lettore.
-3. **Promesse vaghe**: "Best service" / "Competitive rates" → Sostituisci con dati concreti.
-4. **Focus su di te**: Il 70% dell'email deve parlare del destinatario e dei suoi bisogni.
-5. **Tono supplicante**: "I would really appreciate if you could..." → Sii professionale e propositivo.
-6. **Multiple CTA**: Una sola azione per email. Mai confondere il destinatario.
-7. **Nessuna personalizzazione**: Se l'email potrebbe essere inviata a chiunque, è sbagliata.
-8. **Follow-up identici**: Ripetere la stessa email è spam. Ogni messaggio deve aggiungere qualcosa.
-9. **Allegati al primo contatto**: Mai. Sono un red flag per i filtri spam e per il destinatario.
-10. **Mancanza di firma professionale**: La firma è il tuo biglietto da visita. Deve essere completa e ordinata.
+### Modello 1 — Primo contatto (~100 parole)
+
+**Subject**: WCA member — ocean freight partnership, Italy–[Country]
+
+Dear [Contact Name],
+
+As fellow WCA members, I came across [Company Name] and was impressed by your [services/reputation/presence in city].
+
+We are [Your Company], based in [Your City], Italy, specializing in [your key services] with strong coverage across the Mediterranean and Europe. I believe there's a natural synergy between our operations, particularly on the [Country]–Italy trade lane.
+
+We currently handle [X] shipments monthly on this corridor with [transit time/differentiator].
+
+Would you be open to a brief call next week to explore how we could support each other?
+
+Best regards,
+[Signature]
+
+---
+
+### Modello 2 — Follow-up (~70 parole)
+
+**Subject**: Re: WCA member — a quick update on [trade lane]
+
+Dear [Contact Name],
+
+Following up on my previous message — I wanted to share that we've recently expanded our [service] capacity on the [A]–[B] route, with [specific improvement: weekly departures / faster transit / new warehouse].
+
+This could be relevant for [Company Name]'s operations in [region]. Happy to share details if useful.
+
+Best regards,
+[Signature]
+
+---
+
+### Modello 3 — Proposta operativa (~150 parole)
+
+**Subject**: [Company Name] + [Your Company] — service overview
+
+Dear [Contact Name],
+
+Thank you for your interest in exploring a partnership. Based on our conversation, here's a summary of how we can support [Company Name]:
+
+**Our capabilities on the [Country]–Italy corridor:**
+- **Ocean FCL**: Weekly departures from [port], transit [X] days, door-to-door
+- **Air freight**: Daily connections via [hub], 48h transit for urgent cargo
+- **Customs clearance**: In-house team, same-day release for standard goods
+- **Warehousing**: [X] sqm facility in [city] for distribution and cross-docking
+
+**What sets us apart:**
+- Proactive tracking with updates before you ask
+- Dedicated point of contact for your account
+- [Network] member since [year], rating [X]/5
+
+I'd suggest we start with a trial shipment to demonstrate our service level. Shall I prepare a spot rate for a specific route?
+
+Best regards,
+[Signature]
 `;
