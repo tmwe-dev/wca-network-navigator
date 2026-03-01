@@ -187,6 +187,21 @@ export function useDownloadProcessor() {
           const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
           markRequestSent();
 
+          // ── DIAGNOSTIC LOG: log every profile's raw result ──
+          const diagHtmlLen = (result as any).profileHtml?.length || 0;
+          const diagCompany = (result as any).companyName || "N/A";
+          const diagContacts = (result as any).contacts?.length || 0;
+          const diagPageLoaded = result.pageLoaded;
+          const diagError = (result as any).error || null;
+          await appendLog(jobId, "INFO", `🔍 #${wcaId} | html=${diagHtmlLen} | name="${diagCompany}" | contacts=${diagContacts} | loaded=${diagPageLoaded} | err=${diagError || "—"}`);
+
+          // Save raw HTML even for failed profiles (for post-mortem analysis)
+          if (partnerId && (result as any).profileHtml && diagHtmlLen > 100) {
+            try {
+              await supabase.from("partners").update({ raw_profile_html: (result as any).profileHtml }).eq("id", partnerId);
+            } catch { /* non-critical */ }
+          }
+
           // ── REORDERED DETECTION (fix false positives) ──
           // 1. Check pageLoaded FIRST — if page didn't load, it's a recoverable skip
           if (result.pageLoaded === false) {
@@ -464,6 +479,19 @@ export function useDownloadProcessor() {
             }
             const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
             markRequestSent();
+
+            // Diagnostic log for retry pass
+            const diagHtmlLen = (result as any).profileHtml?.length || 0;
+            const diagCompany = (result as any).companyName || "N/A";
+            const diagContacts = (result as any).contacts?.length || 0;
+            await appendLog(jobId, "INFO", `🔍 [Retry] #${wcaId} | html=${diagHtmlLen} | name="${diagCompany}" | contacts=${diagContacts} | loaded=${result.pageLoaded}`);
+
+            // Save raw HTML for post-mortem even on retry
+            if (partnerId && (result as any).profileHtml && diagHtmlLen > 100) {
+              try {
+                await supabase.from("partners").update({ raw_profile_html: (result as any).profileHtml }).eq("id", partnerId);
+              } catch { /* non-critical */ }
+            }
 
             if (result.pageLoaded === false) {
               retryConsecutiveSkipped++;
