@@ -1,71 +1,52 @@
 
 
-## Piano: Download Robusto con Coda di Retry e Risultati Falliti
+## Diagnosi: Bug "Fallthrough" — Profili persi silenziosamente
 
-### Problema
-Quando un profilo non viene caricato (timeout, sessione instabile), viene marcato come "processato" e perso. Il sistema non distingue tra "profilo inesistente" e "errore temporaneo", e non offre un secondo tentativo ne visibilita sui fallimenti.
+### Il problema esatto
 
-### Architettura proposta
+Il codice in `useDownloadProcessor.ts` ha **tre** controlli in sequenza dopo l'estrazione (linee 190-243):
+
+1. `result.pageLoaded === false` → retry queue
+2. `isMemberNotFound` (solo se pageLoaded) → skip permanente
+3. **Nessun altro controllo** → cade direttamente in `saveExtractionResult`
+
+Quando l'estensione Chrome restituisce un errore di comunicazione (es. "Extension context invalidated", "No response from extension"), il risultato è:
 
 ```text
-PASS 1 (normale)
-  for each wcaId:
-    → OK           → salva, avanti
-    → pageLoaded=false → sposta in retryQueue, avanti
-    → timeout      → sposta in retryQueue, avanti
-    → "member not found" (SOLO se pageLoaded=true) → skip permanente
-
-PASS 2 (retry, delay +50%)
-  for each wcaId in retryQueue:
-    → OK           → salva
-    → fallito      → aggiungi a failed_ids (definitivo)
-
-RISULTATO FINALE
-  Job completato con failed_ids visibili nell'UI
-  Ogni fallito mostra link diretto al profilo WCA
+{ success: false, error: "Extension context invalidated" }
 ```
 
-### Modifiche tecniche
+Questo oggetto **NON ha** il campo `pageLoaded`. Quindi:
+- `result.pageLoaded === false` → **FALSE** (è `undefined`, non `false`)
+- `isMemberNotFound` → **FALSE** (nessun testo "member not found")
+- Il codice **cade attraverso** fino a `saveExtractionResult` (linea 235)
 
-**1. Database: aggiungere colonna `failed_ids` a `download_jobs`**
-- Migrazione SQL: `ALTER TABLE download_jobs ADD COLUMN failed_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`
-- Conterrà gli WCA ID definitivamente falliti dopo entrambi i pass
+In `profileSaver.ts` linea 21: `if (result.success && ...)` — siccome `success` è `false`, non salva nulla. Ma il profilo viene comunque aggiunto a `processedSet` (linea 292) e marcato come "completato" per sempre.
 
-**2. `src/hooks/useDownloadProcessor.ts` — Ristrutturare il loop**
+**B2C Logistics e gli altri profili vengono persi esattamente così**: l'estensione ha un glitch momentaneo, il bridge non risponde, e il sistema li marca come processati con zero dati.
 
-- Aggiungere array locale `retryQueue: number[]`
-- **Riordinare la detection** (fix falsi positivi):
-  1. Se `pageLoaded === false` → push in `retryQueue`, NON in `processedSet`
-  2. Se `pageLoaded === true` E contiene "member not found" → skip permanente (processedSet)
-  3. Se timeout → push in `retryQueue`
-- Dopo il loop principale, se `retryQueue.length > 0` e non abortito:
-  - Log "Inizio retry pass — N profili da riprovare"
-  - Aumentare il delay del 50% (`job.delay_seconds * 1.5`)
-  - Eseguire un secondo loop identico sui `retryQueue` IDs
-  - I profili che falliscono di nuovo vanno in `failedIds[]`
-- A fine job, salvare `failed_ids` nel database
-- Il contatore `consecutiveSkipped` per la guardia sessione (3 skip) resta attivo in entrambi i pass
+### Fix
 
-**3. `src/hooks/useDownloadJobs.ts` — Aggiungere `failed_ids` all'interfaccia**
-- Aggiungere `failed_ids: number[]` all'interfaccia `DownloadJob`
+**File: `src/hooks/useDownloadProcessor.ts`**
 
-**4. `src/components/download/JobDataViewer.tsx` — Sezione "Profili Falliti"**
+Aggiungere un terzo check dopo il blocco "member not found" (dopo linea 232), sia nel Pass 1 che nel Pass 2:
 
-Dopo la card del partner corrente, se il job ha `failed_ids.length > 0`, mostrare una sezione dedicata:
-- Titolo: "Profili non scaricati (N)"
-- Per ogni WCA ID fallito: mostrare nome dalla directory_cache + link cliccabile `https://members.wcaworld.com/profile/{wcaId}` che apre in nuova tab
-- Badge rosso "Non raggiungibile"
-- Questo permette all'utente di andare direttamente sulla pagina WCA e verificare manualmente
+```typescript
+// 3. Extension error (success: false, no pageLoaded) → retry queue
+if (result.success === false) {
+  await appendLog(jobId, "SKIP", 
+    `Profilo #${wcaId} errore estensione: ${result.error || "sconosciuto"} — retry queue`);
+  retryQueue.push(wcaId);
+  consecutiveSkipped++;
+  if (consecutiveSkipped >= 3) {
+    // stessa guardia sessione esistente
+  }
+  // update DB + continue
+  continue;
+}
+```
 
-**5. `src/components/download/JobMonitor.tsx` — Indicatore falliti**
+Nel **Pass 2** (dopo linea 397), lo stesso check ma con `failedIds.push(wcaId)` invece di `retryQueue`.
 
-Nella card del job completato, se `failed_ids.length > 0`:
-- Mostrare badge arancione "N non scaricati" accanto ai contatori
-- Cliccando apre il JobDataViewer sulla tab dei falliti
-
-### Cosa NON cambia
-- Il checkpoint 15s resta invariato
-- La politica Zero Retry per singola richiesta resta (nessun retry immediato)
-- Il mutex globale e il flusso seriale restano identici
-- La guardia sessione (3 consecutivi) resta attiva
+Nessun'altra modifica necessaria — il resto del flusso è corretto.
 
