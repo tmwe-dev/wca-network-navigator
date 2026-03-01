@@ -15,6 +15,7 @@ const navSections = [
     label: "Operazioni",
     items: [
       { title: "Operations", url: "/", icon: Globe },
+      { title: "Global", url: "/global", icon: Globe },
       { title: "Partner Hub", url: "/partner-hub", icon: Users },
       { title: "Sorting", url: "/sorting", icon: PackageCheck },
     ],
