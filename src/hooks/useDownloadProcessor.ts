@@ -115,9 +115,10 @@ export function useDownloadProcessor() {
       let contactsMissing = job.contacts_missing_count || 0;
       let consecutiveEmpty = 0;
       let consecutiveSkipped = 0;
+      const retryQueue: number[] = [];
 
       // ═══════════════════════════════════════
-      // MAIN LOOP — one profile at a time
+      // MAIN LOOP — one profile at a time (PASS 1)
       // ═══════════════════════════════════════
       for (let i = startIndex; i < wcaIds.length; i++) {
         if (ac.signal.aborted) break;
@@ -184,26 +185,11 @@ export function useDownloadProcessor() {
           const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
           markRequestSent();
 
-          // Detect "Member not found" — stale WCA ID
-          const isMemberNotFound = (result as any).companyName?.toLowerCase().includes("member not found") ||
-            (result as any).error?.toLowerCase().includes("member not found");
-
-          if (isMemberNotFound) {
-            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} non esiste più su WCA — saltato`);
-            contactsMissing++;
-            processedSet.add(wcaId);
-            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
-            await supabase.from("download_jobs").update({
-              current_index: processedSet.size, processed_ids: [...processedSet] as any,
-              last_processed_wca_id: wcaId, last_contact_result: "not_found", contacts_missing_count: contactsMissing,
-            }).eq("id", jobId);
-            continue;
-          }
-
-          // Page didn't load — skip (Zero Retry policy)
+          // ── REORDERED DETECTION (fix false positives) ──
+          // 1. Check pageLoaded FIRST — if page didn't load, it's a recoverable skip
           if (result.pageLoaded === false) {
-            await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — saltato`);
-            contactsMissing++;
+            await appendLog(jobId, "SKIP", `Profilo #${wcaId} non caricato — aggiunto a retry queue`);
+            retryQueue.push(wcaId);
             consecutiveSkipped++;
 
             // Se troppi salti consecutivi → probabile sessione scaduta
@@ -221,11 +207,26 @@ export function useDownloadProcessor() {
               consecutiveSkipped = 0;
             }
 
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
+            await supabase.from("download_jobs").update({
+              current_index: i + 1, processed_ids: [...processedSet] as any,
+              last_processed_wca_id: wcaId, last_contact_result: "retry_queued", contacts_missing_count: contactsMissing,
+            }).eq("id", jobId);
+            continue;
+          }
+
+          // 2. ONLY if pageLoaded === true, check for "Member not found"
+          const isMemberNotFound = (result as any).companyName?.toLowerCase().includes("member not found") ||
+            (result as any).error?.toLowerCase().includes("member not found");
+
+          if (isMemberNotFound) {
+            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} non esiste più su WCA — saltato definitivamente`);
+            contactsMissing++;
             processedSet.add(wcaId);
             onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             await supabase.from("download_jobs").update({
               current_index: processedSet.size, processed_ids: [...processedSet] as any,
-              last_processed_wca_id: wcaId, last_contact_result: "skipped", contacts_missing_count: contactsMissing,
+              last_processed_wca_id: wcaId, last_contact_result: "not_found", contacts_missing_count: contactsMissing,
             }).eq("id", jobId);
             continue;
           }
@@ -242,7 +243,13 @@ export function useDownloadProcessor() {
           }
         } catch (err) {
           markRequestSent();
-          await appendLog(jobId, "ERROR", `Errore #${wcaId}: ${(err as Error).message || err}`);
+          retryQueue.push(wcaId);
+          await appendLog(jobId, "ERROR", `Errore #${wcaId}: ${(err as Error).message || err} — aggiunto a retry queue`);
+          onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
+          await supabase.from("download_jobs").update({
+            current_index: i + 1, last_processed_wca_id: wcaId, last_contact_result: "retry_queued",
+          }).eq("id", jobId);
+          continue;
         }
 
         // ── Consecutive empty detection (session expiry) ──
@@ -321,9 +328,124 @@ export function useDownloadProcessor() {
         }
       }
 
-      // Job complete
+      // ═══════════════════════════════════════
+      // PASS 2 — Retry queue (delay +50%)
+      // ═══════════════════════════════════════
+      const failedIds: number[] = [];
+
+      if (retryQueue.length > 0 && !ac.signal.aborted) {
+        await appendLog(jobId, "INFO", `🔄 Inizio retry pass — ${retryQueue.length} profili da riprovare (delay +50%)`);
+        const retryDelay = Math.ceil(job.delay_seconds * 1.5);
+        let retryConsecutiveSkipped = 0;
+
+        for (let ri = 0; ri < retryQueue.length; ri++) {
+          if (ac.signal.aborted) break;
+
+          const wcaId = retryQueue[ri];
+          if (processedSet.has(wcaId)) continue;
+
+          await appendLog(jobId, "START", `[Retry] Profilo #${wcaId} (${ri + 1}/${retryQueue.length})`);
+
+          const greenOk = await waitForGreenLight(ac.signal, () => {});
+          if (!greenOk || ac.signal.aborted) break;
+
+          // Look up partner
+          const { data: existing } = await supabase
+            .from("partners").select("id, company_name").eq("wca_id", wcaId).maybeSingle();
+          const partnerId = existing?.id || null;
+          const companyName = existing?.company_name || cacheMap.get(wcaId)?.name || `WCA ${wcaId}`;
+
+          let hasEmail = false, hasPhone = false, profileSaved = false;
+          let extractedEmailCount = 0, extractedPhoneCount = 0;
+
+          try {
+            const timeout40s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
+              setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
+            );
+            if (typeof extractContactsRef.current !== 'function') {
+              markRequestSent();
+              failedIds.push(wcaId);
+              await appendLog(jobId, "ERROR", `[Retry] #${wcaId}: Extension bridge non inizializzato — fallito definitivamente`);
+              continue;
+            }
+            const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
+            markRequestSent();
+
+            if (result.pageLoaded === false) {
+              retryConsecutiveSkipped++;
+              failedIds.push(wcaId);
+              await appendLog(jobId, "FAIL", `[Retry] #${wcaId} non caricato — fallito definitivamente`);
+
+              if (retryConsecutiveSkipped >= 3) {
+                await appendLog(jobId, "WARN", "⚠️ 3 retry consecutivi falliti — sessione probabilmente scaduta, interrompo retry");
+                // Add remaining retry items to failed
+                for (let rj = ri + 1; rj < retryQueue.length; rj++) {
+                  if (!processedSet.has(retryQueue[rj])) failedIds.push(retryQueue[rj]);
+                }
+                break;
+              }
+              continue;
+            }
+
+            const isMemberNotFound = (result as any).companyName?.toLowerCase().includes("member not found") ||
+              (result as any).error?.toLowerCase().includes("member not found");
+            if (isMemberNotFound) {
+              await appendLog(jobId, "SKIP", `[Retry] #${wcaId} non esiste su WCA — skip permanente`);
+              processedSet.add(wcaId);
+              contactsMissing++;
+              continue;
+            }
+
+            retryConsecutiveSkipped = 0;
+
+            // Save extracted data
+            if (partnerId) {
+              const saved = await saveExtractionResult(partnerId, wcaId, result, companyName);
+              hasEmail = saved.hasEmail;
+              hasPhone = saved.hasPhone;
+              profileSaved = saved.profileSaved;
+              extractedEmailCount = saved.extractedEmailCount;
+              extractedPhoneCount = saved.extractedPhoneCount;
+            }
+
+            const hasAny = hasEmail || hasPhone;
+            if (hasAny) contactsFound++; else contactsMissing++;
+            processedSet.add(wcaId);
+
+            const indicators = [
+              profileSaved ? "📋 ✓" : "📋 ✗",
+              hasEmail ? `📧 ✓(${extractedEmailCount})` : "📧 ✗",
+              hasPhone ? `📱 ✓(${extractedPhoneCount})` : "📱 ✗",
+            ].join(" ");
+            await appendLog(jobId, hasAny ? "OK" : "WARN", `[Retry] ${companyName} (#${wcaId}) — ${indicators}`);
+          } catch (err) {
+            markRequestSent();
+            failedIds.push(wcaId);
+            await appendLog(jobId, "ERROR", `[Retry] Errore #${wcaId}: ${(err as Error).message || err}`);
+          }
+
+          // Update DB
+          await supabase.from("download_jobs").update({
+            processed_ids: [...processedSet] as any,
+            contacts_found_count: contactsFound,
+            contacts_missing_count: contactsMissing,
+            failed_ids: failedIds as any,
+          }).eq("id", jobId);
+        }
+
+        if (failedIds.length > 0) {
+          await appendLog(jobId, "WARN", `⚠️ ${failedIds.length} profili non scaricati dopo retry`);
+        } else {
+          await appendLog(jobId, "OK", "✅ Tutti i profili del retry completati con successo");
+        }
+      }
+
+      // Job complete — save failed_ids
       if (!ac.signal.aborted) {
-        await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} profili processati`);
+        await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} processati, ${failedIds.length} falliti`);
+        await supabase.from("download_jobs").update({
+          failed_ids: failedIds as any,
+        }).eq("id", jobId);
         try {
           await supabase.functions.invoke("process-download-job", { body: { jobId, action: "complete" } });
         } catch {

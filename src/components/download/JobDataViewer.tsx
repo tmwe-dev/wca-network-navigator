@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
   ChevronLeft, ChevronRight, Mail, Phone, Smartphone, User,
-  CheckCircle, XCircle, Building2, Loader2, MapPin, Radio,
+  CheckCircle, XCircle, Building2, Loader2, MapPin, Radio, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 
@@ -18,6 +18,7 @@ interface JobDataViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   processedIds: number[];
+  failedIds?: number[];
   countryName: string;
   countryCode: string;
   networkName: string;
@@ -47,7 +48,7 @@ interface PartnerWithContacts {
 type AnimPhase = "idle" | "exit" | "enter";
 
 export function JobDataViewer({
-  open, onOpenChange, processedIds, countryName, countryCode, networkName, isDark, jobStatus,
+  open, onOpenChange, processedIds, failedIds = [], countryName, countryCode, networkName, isDark, jobStatus,
 }: JobDataViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liveMode, setLiveMode] = useState(false);
@@ -85,7 +86,26 @@ export function JobDataViewer({
     refetchInterval: liveMode && isJobActive ? 5000 : false,
   });
 
-  // Live mode: animate card flip when new partner arrives
+  // Query failed profile names from directory_cache
+  const { data: failedNames } = useQuery({
+    queryKey: ["failed-ids-names", failedIds],
+    queryFn: async () => {
+      if (!failedIds.length) return new Map<number, string>();
+      const { data: cacheEntries } = await supabase
+        .from("directory_cache").select("members").eq("country_code", countryCode);
+      const nameMap = new Map<number, string>();
+      for (const entry of cacheEntries || []) {
+        for (const m of (entry.members as any[] || [])) {
+          if (m.wca_id && failedIds.includes(m.wca_id)) {
+            nameMap.set(m.wca_id, m.company_name || `WCA ${m.wca_id}`);
+          }
+        }
+      }
+      return nameMap;
+    },
+    enabled: open && failedIds.length > 0,
+  });
+
   useEffect(() => {
     if (!liveMode || !partners) return;
     const newLen = partners.length;
@@ -275,6 +295,38 @@ export function JobDataViewer({
                         </div>
                       )}
                     </div>
+
+                    {/* Failed profiles section */}
+                    {failedIds.length > 0 && (
+                      <div className="mt-4">
+                        <p className={`text-xs font-medium mb-2 ${subColor}`}>
+                          <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-orange-500" />
+                          Profili non scaricati ({failedIds.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {failedIds.map(fid => (
+                            <div key={fid} className={`flex items-center justify-between p-2 rounded-lg border ${cardBg}`}>
+                              <div className="flex items-center gap-2">
+                                <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                                <span className={`text-xs ${bodyColor}`}>
+                                  {failedNames?.get(fid) || `WCA ${fid}`}
+                                </span>
+                                <span className={`text-[10px] font-mono ${dimColor}`}>#{fid}</span>
+                              </div>
+                              <a
+                                href={`https://members.wcaworld.com/profile/${fid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border ${isDark ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10" : "border-sky-500/30 text-sky-600 hover:bg-sky-50"} transition-colors`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Apri su WCA
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </ScrollArea>

@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   Play, Pause, Square, Loader2, Timer, Zap, Activity,
   ArrowRight, Settings2, CheckCircle, List, Mail, Phone, XCircle,
-  ChevronDown, ChevronRight, Trash2,
+  ChevronDown, ChevronRight, Trash2, AlertTriangle,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
@@ -155,6 +155,11 @@ function QueueRow({ job, isDark, th, pauseResume, isPaused, isCompleted }: {
           <Badge className={`text-[10px] px-1.5 py-0 border-0 ${job.status === "completed" ? "bg-emerald-600 text-white" : "bg-slate-500 text-white"}`}>
             {job.status === "completed" ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
           </Badge>
+          {job.status === "completed" && (job.failed_ids as number[])?.length > 0 && (
+            <Badge className="text-[10px] px-1.5 py-0 border-0 bg-orange-500 text-white">
+              <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />{(job.failed_ids as number[]).length}
+            </Badge>
+          )}
           {job.status === "cancelled" && job.current_index < job.total_count && (
             <Button size="sm" variant="ghost" className={`h-5 px-1.5 text-[10px] ${th.btnResume}`}
               onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })}>
@@ -355,6 +360,7 @@ function FeaturedJobCard({ job, pauseResume, updateSpeed }: {
       <JobDataViewer
         open={showViewer} onOpenChange={setShowViewer}
         processedIds={(job.processed_ids as number[]) || []}
+        failedIds={(job.failed_ids as number[]) || []}
         countryName={job.country_name} countryCode={job.country_code}
         networkName={job.network_name} isDark={isDark}
         jobStatus={job.status}

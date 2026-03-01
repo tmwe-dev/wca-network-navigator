@@ -339,6 +339,7 @@ export type Database = {
           current_index: number
           delay_seconds: number
           error_message: string | null
+          failed_ids: Json
           id: string
           job_type: string
           last_contact_result: string | null
@@ -362,6 +363,7 @@ export type Database = {
           current_index?: number
           delay_seconds?: number
           error_message?: string | null
+          failed_ids?: Json
           id?: string
           job_type?: string
           last_contact_result?: string | null
@@ -385,6 +387,7 @@ export type Database = {
           current_index?: number
           delay_seconds?: number
           error_message?: string | null
+          failed_ids?: Json
           id?: string
           job_type?: string
           last_contact_result?: string | null
