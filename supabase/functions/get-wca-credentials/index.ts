@@ -14,49 +14,55 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Auth check
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    const token = authHeader.replace('Bearer ', '')
-    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: { user }, error: userError } = await authClient.auth.getUser(token)
-    if (userError || !user) {
-      console.error('get-wca-credentials auth error:', userError?.message)
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
-    const userId = user.id
+    const token = authHeader.replace('Bearer ', '')
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Try user_wca_credentials first (per-user)
-    const { data: userCreds } = await supabase
-      .from('user_wca_credentials')
-      .select('wca_username, wca_password')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (userCreds?.wca_username && userCreds?.wca_password) {
-      return new Response(JSON.stringify({
-        username: userCreds.wca_username,
-        password: userCreds.wca_password,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Soft auth: try to identify user, but don't block if it fails (extension uses anon key)
+    let userId: string | null = null
+    try {
+      const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: authHeader } },
       })
+      const { data: { user }, error } = await authClient.auth.getUser(token)
+      if (!error && user) {
+        userId = user.id
+      }
+    } catch (e) {
+      console.log('get-wca-credentials: auth check failed (extension call?)', e?.message)
     }
 
-    // Fallback: app_settings (legacy)
-    const { data } = await supabase
+    // If authenticated user, try per-user credentials first
+    if (userId) {
+      const { data: userCreds } = await supabase
+        .from('user_wca_credentials')
+        .select('wca_username, wca_password')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (userCreds?.wca_username && userCreds?.wca_password) {
+        return new Response(JSON.stringify({
+          username: userCreds.wca_username,
+          password: userCreds.wca_password,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // Fallback: app_settings (used by extensions and as legacy fallback)
+    const { data, error } = await supabase
       .from('app_settings')
       .select('key, value')
       .in('key', ['wca_username', 'wca_password'])
+
+    if (error) throw error
 
     const settings: Record<string, string> = {}
     data?.forEach((row: any) => { settings[row.key] = row.value })
