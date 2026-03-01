@@ -304,12 +304,12 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="generale" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="generale" className="flex items-center gap-2">
             <SettingsIcon className="w-4 h-4" /> Generale
           </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-2">
-            <Mail className="w-4 h-4" /> Email
+          <TabsTrigger value="contenuti" className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" /> Contenuti
           </TabsTrigger>
           <TabsTrigger value="wca" className="flex items-center gap-2">
             <Link className="w-4 h-4" /> Connessioni
@@ -317,88 +317,72 @@ export default function Settings() {
           <TabsTrigger value="import-export" className="flex items-center gap-2">
             <Download className="w-4 h-4" /> Import / Export
           </TabsTrigger>
-          <TabsTrigger value="blacklist" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" /> Blacklist
-          </TabsTrigger>
-          {/* Scraping tab removed */}
           <TabsTrigger value="reportaziende" className="flex items-center gap-2">
             <FileText className="w-4 h-4" /> Report Aziende
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Paperclip className="w-4 h-4" /> Template
-          </TabsTrigger>
-          <TabsTrigger value="contenuti" className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4" /> Contenuti
-          </TabsTrigger>
-          <TabsTrigger value="ai-profile" className="flex items-center gap-2">
-            <Brain className="w-4 h-4" /> Profilo AI
           </TabsTrigger>
           <TabsTrigger value="abbonamento" className="flex items-center gap-2">
             <Crown className="w-4 h-4" /> Abbonamento
           </TabsTrigger>
         </TabsList>
 
-        {/* ════════════════ GENERALE ════════════════ */}
         <TabsContent value="generale">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <MessageCircle className="w-5 h-5 text-primary" />
+          <div className="space-y-6">
+            {/* WhatsApp */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <MessageCircle className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Numero WhatsApp</CardTitle>
+                      <CardDescription>Il tuo numero WhatsApp per chiamate e messaggi dal sistema</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-base">Numero WhatsApp</CardTitle>
-                    <CardDescription>Il tuo numero WhatsApp per chiamate e messaggi dal sistema</CardDescription>
+                  {settings?.["whatsapp_number"] ? (
+                    <Badge className="bg-primary/10 text-primary border border-primary/20">
+                      <CheckCircle2 className="w-3 h-3 mr-1" /> Configurato
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Non impostato</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-number">Numero di telefono</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input id="whatsapp-number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+39 333 1234567" className="pl-10" />
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).</p>
                 </div>
-                {settings?.["whatsapp_number"] ? (
-                  <Badge className="bg-primary/10 text-primary border border-primary/20">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Configurato
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Non impostato</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp-number">Numero di telefono</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="whatsapp-number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+39 333 1234567" className="pl-10" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Shield className="w-3.5 h-3.5" /> Salvato nelle impostazioni dell'app
                   </div>
+                  <Button
+                    onClick={async () => {
+                      if (!whatsappNumber.trim()) return;
+                      setSavingWA(true);
+                      try { await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() }); toast.success("Numero WhatsApp salvato"); }
+                      catch { toast.error("Errore nel salvataggio"); }
+                      finally { setSavingWA(false); }
+                    }}
+                    disabled={savingWA || !whatsappNumber.trim()}
+                    variant="outline"
+                  >
+                    {savingWA ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Salva Numero
+                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Shield className="w-3.5 h-3.5" /> Salvato nelle impostazioni dell'app
-                </div>
-                <Button
-                  onClick={async () => {
-                    if (!whatsappNumber.trim()) return;
-                    setSavingWA(true);
-                    try { await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() }); toast.success("Numero WhatsApp salvato"); }
-                    catch { toast.error("Errore nel salvataggio"); }
-                    finally { setSavingWA(false); }
-                  }}
-                  disabled={savingWA || !whatsappNumber.trim()}
-                  variant="outline"
-                >
-                  {savingWA ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Salva Numero
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
 
-        {/* ════════════════ EMAIL ════════════════ */}
-        <TabsContent value="email">
-          <div className="space-y-4">
-            {/* Server SMTP */}
+            {/* Email SMTP */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -434,26 +418,13 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label>Password SMTP</Label>
                   <div className="relative">
-                    <Input
-                      type={showSmtpPass ? "text" : "password"}
-                      value={smtpPass}
-                      onChange={(e) => setSmtpPass(e.target.value)}
-                      placeholder="••••••••"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                      onClick={() => setShowSmtpPass(!showSmtpPass)}
-                    >
+                    <Input type={showSmtpPass ? "text" : "password"} value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} placeholder="••••••••" />
+                    <Button type="button" variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setShowSmtpPass(!showSmtpPass)}>
                       {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>
-
                 <hr className="border-border" />
-
                 <div className="space-y-2">
                   <Label>Email mittente</Label>
                   <Input type="email" value={emailSender} onChange={(e) => setEmailSender(e.target.value)} placeholder="luca@tmwe.it" />
@@ -498,18 +469,9 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Invia email di test a:</Label>
-                  <Input
-                    type="email"
-                    value={testEmailTo}
-                    onChange={(e) => setTestEmailTo(e.target.value)}
-                    placeholder="luca@tmwe.it"
-                  />
+                  <Input type="email" value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} placeholder="luca@tmwe.it" />
                 </div>
-                <Button
-                  onClick={handleTestEmail}
-                  disabled={sendingTest || !testEmailTo.trim() || !emailSender.trim()}
-                  variant="outline"
-                >
+                <Button onClick={handleTestEmail} disabled={sendingTest || !testEmailTo.trim() || !emailSender.trim()} variant="outline">
                   {sendingTest ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                   {sendingTest ? "Invio in corso..." : "Invia Email di Test"}
                 </Button>
@@ -518,8 +480,17 @@ export default function Settings() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Template & Allegati */}
+            <TemplateManager />
+
+            {/* Profilo AI */}
+            <AIProfileSettings />
           </div>
         </TabsContent>
+
+
+
 
         {/* ════════════════ WCA ════════════════ */}
         <TabsContent value="wca">
@@ -782,6 +753,10 @@ export default function Settings() {
                 </Card>
               </div>
             </details>
+            {/* ── Blacklist ── */}
+            <div className="mt-8 pt-6 border-t border-border">
+              <BlacklistManager />
+            </div>
           </div>
         </TabsContent>
 
@@ -854,21 +829,10 @@ export default function Settings() {
             <TabsContent value="wca-download"><WCAScraper /></TabsContent>
           </Tabs>
         </TabsContent>
-        {/* ════════════════ BLACKLIST ════════════════ */}
-        <TabsContent value="blacklist">
-          <BlacklistManager />
-        </TabsContent>
-
-        {/* Scraping tab removed */}
 
         {/* ════════════════ REPORT AZIENDE ════════════════ */}
         <TabsContent value="reportaziende">
           <ReportAziendeSettings settings={settings} updateSetting={updateSetting} />
-        </TabsContent>
-
-        {/* ════════════════ TEMPLATE ════════════════ */}
-        <TabsContent value="templates">
-          <TemplateManager />
         </TabsContent>
 
         {/* ════════════════ CONTENUTI ════════════════ */}
@@ -876,10 +840,6 @@ export default function Settings() {
           <ContentManager />
         </TabsContent>
 
-        {/* ════════════════ PROFILO AI ════════════════ */}
-        <TabsContent value="ai-profile">
-          <AIProfileSettings />
-        </TabsContent>
 
         {/* ════════════════ ABBONAMENTO ════════════════ */}
         <TabsContent value="abbonamento">
