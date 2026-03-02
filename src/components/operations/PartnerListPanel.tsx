@@ -12,7 +12,7 @@ import {
 import {
   Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
-  Zap, FolderDown, RefreshCw, Square, CheckCircle2,
+  Zap, FolderDown, RefreshCw, Square, CheckCircle2, MailX,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -263,6 +263,7 @@ export function PartnerListPanel({
                       <div className="space-y-1">
                         <DownloadChoice selected={dl.downloadMode === "new"} onClick={() => dl.setDownloadMode("new")} isDark={isDark} icon={FolderDown} title="Nuovi" description={`${dl.missingIds.length} da importare`} count={dl.missingIds.length} color="text-sky-400" />
                         <DownloadChoice selected={dl.downloadMode === "no_profile"} onClick={() => dl.setDownloadMode("no_profile")} isDark={isDark} icon={FileText} title="Incompleti" description={`${dl.noProfileInDirectoryCount + dl.missingIds.length} senza profilo`} count={dl.noProfileInDirectoryCount + dl.missingIds.length} color="text-amber-400" />
+                        <DownloadChoice selected={dl.downloadMode === "no_email"} onClick={() => dl.setDownloadMode("no_email")} isDark={isDark} icon={MailX} title="Senza Email" description={`${dl.noEmailIds.length} da riprovare`} count={dl.noEmailIds.length} color="text-orange-400" />
                         <DownloadChoice selected={dl.downloadMode === "all"} onClick={() => dl.setDownloadMode("all")} isDark={isDark} icon={RefreshCw} title="Tutti" description={`Aggiorna ${totalCount} partner`} count={totalCount} color="text-violet-400" />
                       </div>
                       <div className={cn("flex items-center justify-between text-[10px] font-mono px-1", isDark ? "text-slate-500" : "text-slate-400")}>
