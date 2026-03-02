@@ -24,6 +24,7 @@ import Workspace from "./pages/Workspace";
 import Sorting from "./pages/Sorting";
 import Import from "./pages/Import";
 import Global from "./pages/Global";
+import TestDownload from "./pages/TestDownload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/sorting" element={<Sorting />} />
                 <Route path="/import" element={<Import />} />
                 <Route path="/global" element={<Global />} />
+                <Route path="/test-download" element={<TestDownload />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
