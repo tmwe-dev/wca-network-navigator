@@ -103,18 +103,7 @@ export function AppLayout() {
               isOperationsRoute ? "overflow-hidden" : "p-4 overflow-auto"
             }`}
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="h-full"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <Outlet />
           </main>
         </div>
 
