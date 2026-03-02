@@ -40,13 +40,26 @@ import {
 } from "@/hooks/useImportLogs";
 import ExcelJS from "exceljs";
 
-// Parse CSV/Excel file to rows
+// Normalize header key: lowercase, strip accents, collapse spaces/dashes to underscore
+function normalizeKey(key: string): string {
+  return key
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip accents
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_")         // spaces/dashes → underscore
+    .replace(/[^a-z0-9_]/g, "")      // remove special chars
+    .replace(/_+/g, "_")             // collapse multiple underscores
+    .replace(/^_|_$/g, "");           // trim leading/trailing underscores
+}
+
+// Parse CSV/Excel file to rows (keys are normalized)
 async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }> {
   if (file.name.endsWith(".csv")) {
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/['"]/g, ""));
+    const rawHeaders = lines[0].split(",").map((h) => h.trim().replace(/['"]/g, ""));
+    const headers = rawHeaders.map(normalizeKey);
     const rows = lines.slice(1).map((line) => {
       const values: string[] = [];
       let current = "";
@@ -70,12 +83,15 @@ async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }
   const sheet = workbook.worksheets[0];
   if (!sheet) return { headers: [], rows: [] };
 
+  const rawHeaders: string[] = [];
   const headers: string[] = [];
   const rows: any[] = [];
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) {
       row.eachCell((cell) => {
-        headers.push(String(cell.value || "").trim());
+        const raw = String(cell.value || "").trim();
+        rawHeaders.push(raw);
+        headers.push(normalizeKey(raw));
       });
     } else {
       const obj: Record<string, string> = {};
