@@ -70,6 +70,9 @@ export default function PartnerHub() {
   const mergedFilters: PartnerFilters = {
     ...filters,
     search: search.length >= 2 ? search : undefined,
+    countries: viewLevel === "country" && selectedCountry
+      ? [selectedCountry]
+      : filters.countries,
   };
 
   const { data: partners, isLoading } = usePartners(mergedFilters);
