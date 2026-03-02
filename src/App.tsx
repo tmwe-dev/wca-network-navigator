@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPanel";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
-import { Skeleton } from "@/components/ui/skeleton";
+
 
 // ── Lazy-loaded pages (code-split per route) ──
 const Auth = lazy(() => import("./pages/Auth"));
@@ -42,11 +42,7 @@ const queryClient = new QueryClient({
 });
 
 function PageFallback() {
-  return (
-    <div className="flex items-center justify-center h-[60vh]">
-      <Skeleton className="h-8 w-48" />
-    </div>
-  );
+  return <div className="min-h-screen" />;
 }
 
 const App = () => (

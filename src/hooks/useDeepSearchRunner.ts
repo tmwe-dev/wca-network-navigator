@@ -92,6 +92,9 @@ export function useDeepSearchRunner(): DeepSearchState {
         };
         setResults(prev => [...prev, result]);
         if (error) console.error("Deep search error for", id, error);
+
+        // Live update: invalidate partner cache after each partner so cards refresh in real-time
+        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       }
 
       const msg = abortRef.current

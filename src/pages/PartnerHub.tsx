@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useCreateActivities } from "@/hooks/useActivities";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { CardSocialIcons } from "@/components/partners/shared/CardSocialIcons";
 import { getBranchCountries, sortPartners, type SortOption } from "@/lib/partnerUtils";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 export default function PartnerHub() {
   const [search, setSearch] = useState("");
@@ -57,12 +58,11 @@ export default function PartnerHub() {
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
-  const [deepSearching, setDeepSearching] = useState(false);
-  const [deepSearchProgress, setDeepSearchProgress] = useState<{ current: number; total: number } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
-  const deepSearchAbortRef = useRef(false);
+
+  const deepSearch = useDeepSearch();
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -174,39 +174,17 @@ export default function PartnerHub() {
     }
   }, [selectedIds.size, filteredPartners]);
 
-  const handleBulkDeepSearch = useCallback(async () => {
-    const ids = Array.from(selectedIds);
+  const handleBulkDeepSearch = useCallback(() => {
+    const ids = filteredPartners
+      .filter((p: any) => selectedIds.has(p.id))
+      .map((p: any) => p.id);
     if (ids.length === 0) return;
-    deepSearchAbortRef.current = false;
-    setDeepSearching(true);
-    let success = 0, failed = 0;
-
-    for (let i = 0; i < ids.length; i++) {
-      if (deepSearchAbortRef.current) break;
-      setDeepSearchProgress({ current: i + 1, total: ids.length });
-      try {
-        const { error } = await supabase.functions.invoke("deep-search-partner", {
-          body: { partnerId: ids[i] },
-        });
-        if (error) throw error;
-        success++;
-      } catch {
-        failed++;
-      }
-    }
-
-    const stopped = deepSearchAbortRef.current;
-    deepSearchAbortRef.current = false;
-    setDeepSearching(false);
-    setDeepSearchProgress(null);
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
-    toast.success(`Deep Search ${stopped ? "interrotta" : "completata"}: ${success} ok, ${failed} errori`);
-  }, [selectedIds, queryClient]);
+    deepSearch.start(ids);
+  }, [selectedIds, filteredPartners, deepSearch]);
 
   const handleStopDeepSearch = useCallback(() => {
-    deepSearchAbortRef.current = true;
-    toast.info("Interruzione Deep Search in corso...");
-  }, []);
+    deepSearch.stop();
+  }, [deepSearch]);
 
   const handleBulkEmail = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -252,34 +230,11 @@ export default function PartnerHub() {
     navigate("/", { state: { preselectedCountry: countryCode } });
   };
 
-  const handleCountryDeepSearch = useCallback(async (partnerIds: string[]) => {
+  const handleCountryDeepSearch = useCallback((partnerIds: string[]) => {
     if (partnerIds.length === 0) return;
-    deepSearchAbortRef.current = false;
-    setDeepSearching(true);
     setSelectedIds(new Set(partnerIds));
-    let success = 0, failed = 0;
-
-    for (let i = 0; i < partnerIds.length; i++) {
-      if (deepSearchAbortRef.current) break;
-      setDeepSearchProgress({ current: i + 1, total: partnerIds.length });
-      try {
-        const { error } = await supabase.functions.invoke("deep-search-partner", {
-          body: { partnerId: partnerIds[i] },
-        });
-        if (error) throw error;
-        success++;
-      } catch {
-        failed++;
-      }
-    }
-
-    const stopped = deepSearchAbortRef.current;
-    deepSearchAbortRef.current = false;
-    setDeepSearching(false);
-    setDeepSearchProgress(null);
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
-    toast.success(`Deep Search ${stopped ? "interrotta" : "completata"}: ${success} ok, ${failed} errori`);
-  }, [queryClient]);
+    deepSearch.start(partnerIds);
+  }, [deepSearch]);
 
   const handleGenerateAliases = useCallback(async (countryCode: string, type: "company" | "contact") => {
     setAliasGenerating(type);
@@ -299,18 +254,19 @@ export default function PartnerHub() {
 
   // Active events bar
   const renderEventsBar = () => {
-    if (!deepSearching || !deepSearchProgress) return null;
+    if (!deepSearch.running || !deepSearch.current) return null;
+    const { index, total } = deepSearch.current;
     return (
       <div className="px-4 py-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2 text-xs">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
           <span className="font-medium">
-            Deep Search {deepSearchProgress.current}/{deepSearchProgress.total}...
+            Deep Search {index}/{total}...
           </span>
           <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${(deepSearchProgress.current / deepSearchProgress.total) * 100}%` }}
+              style={{ width: `${(index / total) * 100}%` }}
             />
           </div>
         </div>
@@ -445,8 +401,8 @@ export default function PartnerHub() {
           onEmail={handleBulkEmail}
           onSendToWorkspace={handleSendToWorkspace}
           sendingToWorkspace={sendingToWorkspace}
-          deepSearching={deepSearching}
-          deepSearchProgress={deepSearchProgress}
+          deepSearching={deepSearch.running}
+          deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
           partnerIds={Array.from(selectedIds)}
         />
 
