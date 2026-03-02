@@ -1,42 +1,37 @@
 
 
-## Piano: Pagina di Test "Brand New" per Download Profili ZA
+## Problema
 
-### Cosa creo
+Il flusso di download ha un **doppio gate** sulla sessione WCA:
 
-Una pagina `/test-download` completamente indipendente dal processore esistente. Nessun codice condiviso con `useDownloadProcessor`. Comunicazione diretta con l'estensione via `postMessage`.
+1. **Gate pre-download** (`ensureSession()` in `PartnerListPanel.tsx` / `ActionPanel.tsx`) — richiede che l'estensione Chrome risponda al ping E che la sessione sia verificata via estensione
+2. **Gate nel processore** (`verifyWcaSession` in `useDownloadProcessor.ts`) — stessa cosa
 
-### Struttura
+Il Gate 1 blocca tutto prima ancora di creare il job. L'estensione potrebbe essere presente ma il polling a 3 secondi con watchdog a 5 secondi fallisce per timing, contesto invalidato, o dominio preview.
 
-**1 nuovo file:** `src/pages/TestDownload.tsx`
+I log del backend mostrano che il cookie `.ASPXAUTH` e stato salvato con successo pochi minuti fa (`wca_session_status = 'ok'`). La sessione E attiva sul server ma il controllo client-side non riesce a verificarla.
 
-- Un bottone "Avvia Test"
-- Lista hardcoded di WCA ID del Sudafrica: `[62345, 91027, 90991, 118343, 115505]`
-- Per ogni ID, apre la comunicazione diretta con l'estensione (senza passare per `useExtensionBridge` o `enqueueExtraction` -- codice inline puro)
-- Canvas/terminale sotto il bottone che mostra ogni step in tempo reale:
-  - `[HH:MM:SS] START #62345`
-  - `[HH:MM:SS] Extension responded: htmlLength=XXXXX, companyName="...", contacts=N`
-  - `[HH:MM:SS] H1 text: "..."`
-  - `[HH:MM:SS] DONE #62345 in 14.2s`
-- Delay configurabile tra richieste (slider 5s-60s, default 25s)
-- Tenta anche URL alternativo: prima `wcaworld.com`, poi se "not found" riprova con `wcadangerousgoods.com` (per verificare se il dominio fa differenza)
+## Soluzione
 
-**1 modifica:** `src/App.tsx` -- aggiunge route `/test-download`
+Modificare `ensureSession()` per aggiungere un **fallback server-side**: se l'estensione non risponde, controlla `app_settings.wca_session_status` nel database. Se il valore e `ok`, la sessione e considerata attiva e il download parte.
 
-### Approccio tecnico
+Il processore (`useDownloadProcessor`) ha gia il suo controllo sessione indipendente — se l'estensione e davvero morta, il job fallira gracefully durante l'estrazione, senza bloccare tutto a monte.
 
-Il codice di comunicazione con l'estensione e scritto da zero inline nella pagina, senza importare `useExtensionBridge`. Un semplice `window.postMessage` + listener per la risposta. Cosi isoliamo completamente il test dal codice esistente.
+### File da modificare
 
-Per ogni profilo logga:
-- Tempo di risposta
-- `htmlLength` esatto
-- Testo del tag H1
-- Numero contatti trovati
-- Se il profilo contiene "Members only" (indica sessione non autenticata)
-- Confronto tra dominio `wcaworld.com` vs `wcadangerousgoods.com`
+1. **`src/hooks/useWcaSession.ts`** — Aggiungere fallback DB nel Step 1: se l'estensione non risponde dopo i retry, leggere `wca_session_status` da `app_settings`. Se e `ok`, considerare la sessione attiva e ritornare `true` senza richiedere l'estensione per la verifica.
 
-### File coinvolti
+2. **`src/components/operations/PartnerListPanel.tsx`** — Nessuna modifica logica, il fix in `useWcaSession` risolve automaticamente entrambi i punti di chiamata (riga 275 e 521).
 
-1. **`src/pages/TestDownload.tsx`** -- pagina nuova da zero
-2. **`src/App.tsx`** -- aggiunta route
+### Dettaglio tecnico del fallback
+
+```text
+ensureSession() flow:
+  1. Try extension ping (existing logic)
+  2. If extension NOT found:
+     → Query app_settings WHERE key = 'wca_session_status'
+     → If value = 'ok' → return true (session valid server-side)
+     → If value != 'ok' → return false (genuinely expired)
+  3. If extension found → proceed with existing verify logic
+```
 
