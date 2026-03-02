@@ -29,7 +29,7 @@ export function useDirectoryDownload({
   const networks = selectedNetwork === "__all__" ? [] : [selectedNetwork];
   const networkKeys = networks.length > 0 ? networks : [""];
   const [delay, setDelay] = useState(15);
-  type DownloadMode = "new" | "no_profile" | "all";
+  type DownloadMode = "new" | "no_profile" | "no_email" | "all";
   const [downloadMode, setDownloadMode] = useState<DownloadMode>("new");
   const directoryOnly = directoryOnlyProp ?? false;
   const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
@@ -90,6 +90,44 @@ export function useDirectoryDownload({
     enabled: countryCodes.length > 0,
   });
 
+  // Partners with profile but no email (excluding confirmed no-contacts)
+  const { data: noEmailIds = [] } = useQuery({
+    queryKey: ["no-email-wca-ids", countryCodes],
+    queryFn: async () => {
+      if (countryCodes.length === 0) return [];
+      // Get partners with profile but no direct email
+      const { data: candidates } = await supabase
+        .from("partners")
+        .select("id, wca_id")
+        .in("country_code", countryCodes)
+        .not("wca_id", "is", null)
+        .not("raw_profile_html", "is", null)
+        .is("email", null);
+      if (!candidates || candidates.length === 0) return [];
+      // Filter out those with contact emails
+      const candidateIds = candidates.map(c => c.id);
+      const { data: contactsWithEmail } = await supabase
+        .from("partner_contacts")
+        .select("partner_id")
+        .in("partner_id", candidateIds)
+        .not("email", "is", null);
+      const hasContactEmail = new Set((contactsWithEmail || []).map(c => c.partner_id));
+      const noEmailCandidates = candidates.filter(c => !hasContactEmail.has(c.id));
+      // Exclude confirmed no-contacts
+      const { data: noContacts } = await supabase
+        .from("partners_no_contacts")
+        .select("wca_id")
+        .in("country_code", countryCodes)
+        .eq("resolved", false);
+      const noContactsSet = new Set((noContacts || []).map(n => n.wca_id));
+      return noEmailCandidates
+        .filter(c => c.wca_id && !noContactsSet.has(c.wca_id))
+        .map(c => c.wca_id!);
+    },
+    staleTime: 30_000,
+    enabled: countryCodes.length > 0,
+  });
+
   // ── Derived data ──
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
     const members = entry.members as any[];
@@ -110,6 +148,7 @@ export function useDirectoryDownload({
 
   const idsToDownload = useMemo(() => {
     if (downloadMode === "all") return uniqueIds.length > 0 ? uniqueIds : dbPartners.filter(p => p.wca_id).map(p => p.wca_id);
+    if (downloadMode === "no_email") return noEmailIds;
     if (downloadMode === "no_profile") {
       if (uniqueIds.length > 0) {
         const existingNoProfile = uniqueIds.filter(id => noProfileWcaSet.has(id));
@@ -118,16 +157,18 @@ export function useDirectoryDownload({
       return noProfileIds;
     }
     return missingIds;
-  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet, noProfileIds, dbPartners]);
+  }, [downloadMode, uniqueIds, missingIds, noProfileWcaSet, noProfileIds, noEmailIds, dbPartners]);
 
   const totalTime = idsToDownload.length * (delay + 5);
   const estimateLabel = totalTime >= 3600 ? `~${(totalTime / 3600).toFixed(1)} ore` : totalTime >= 60 ? `~${Math.ceil(totalTime / 60)} min` : `~${totalTime}s`;
 
   // ── Auto-switch download mode ──
   useEffect(() => {
-    if (missingIds.length === 0 && noProfileInDirectoryCount > 0 && downloadMode === "new") setDownloadMode("no_profile");
-    if (!hasCache && noProfileIds.length > 0 && downloadMode === "new") setDownloadMode("no_profile");
-  }, [missingIds.length, noProfileInDirectoryCount, downloadMode, hasCache, noProfileIds.length]);
+    if (downloadMode !== "new") return;
+    if (missingIds.length === 0 && noProfileInDirectoryCount > 0) { setDownloadMode("no_profile"); return; }
+    if (!hasCache && noProfileIds.length > 0) { setDownloadMode("no_profile"); return; }
+    if (missingIds.length === 0 && noProfileIds.length === 0 && noEmailIds.length > 0) { setDownloadMode("no_email"); return; }
+  }, [missingIds.length, noProfileInDirectoryCount, downloadMode, hasCache, noProfileIds.length, noEmailIds.length]);
 
   // ── Reset on country change ──
   useEffect(() => {
@@ -258,7 +299,7 @@ export function useDirectoryDownload({
     autoDownloadPending,
     // Derived
     cachedMembers, hasCache, dbPartners, dbWcaSet,
-    uniqueIds, missingIds, noProfileInDirectoryCount, noProfileIds,
+    uniqueIds, missingIds, noProfileInDirectoryCount, noProfileIds, noEmailIds,
     idsToDownload, estimateLabel,
     networks, createJob,
     // Actions
