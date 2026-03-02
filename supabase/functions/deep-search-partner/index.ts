@@ -559,13 +559,21 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
         const scrapeResp = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: websiteUrl, formats: ['links', 'markdown'] }),
+          body: JSON.stringify({ url: websiteUrl, formats: ['branding', 'markdown'] }),
         })
         if (scrapeResp.ok) {
           const scrapeData = await scrapeResp.json()
+          const branding = scrapeData?.data?.branding || scrapeData?.branding || {}
           const metadata = scrapeData?.data?.metadata || scrapeData?.metadata || {}
-          let logoUrl = metadata.ogImage || metadata['og:image'] || null
-          
+
+          // Priority 1: branding logo from Firecrawl
+          let logoUrl = branding?.logo || branding?.images?.logo || null
+
+          // Priority 2: OG image fallback
+          if (!logoUrl) {
+            logoUrl = metadata.ogImage || metadata['og:image'] || null
+          }
+
           // Validate the logo URL with a HEAD request
           if (logoUrl) {
             try {
@@ -574,7 +582,14 @@ If nothing meaningful found, return: {"awards":[],"certifications_extra":[],"rec
             } catch { logoUrl = null }
           }
 
-          // Only save real logos, no favicon fallbacks
+          // Priority 3: Google favicon as last resort
+          if (!logoUrl) {
+            try {
+              const domain = new URL(websiteUrl).hostname
+              logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+            } catch {}
+          }
+
           if (logoUrl) {
             const { error } = await supabase.from('partners').update({ logo_url: logoUrl }).eq('id', partnerId)
             if (!error) logoFound = true
