@@ -1,19 +1,42 @@
 
 
-## ✅ Fix anti-bot WCA — Implementato
+## Piano: Pagina di Test "Brand New" per Download Profili ZA
 
-### Modifiche applicate
+### Cosa creo
 
-1. **`public/chrome-extension/background.js`** — `extractContactsForId` ora include `htmlLength` nella risposta per permettere il rilevamento di pagine template identiche.
+Una pagina `/test-download` completamente indipendente dal processore esistente. Nessun codice condiviso con `useDownloadProcessor`. Comunicazione diretta con l'estensione via `postMessage`.
 
-2. **`src/hooks/useDownloadProcessor.ts`** — Rate-limit detection:
-   - Tracker delle lunghezze HTML delle risposte "not found"
-   - Se 3+ consecutivi hanno html identico (>1000 chars) → trattati come RATE-LIMIT, non "genuinely not found"
-   - Backoff automatico a 30s quando rilevato
-   - NON vengono salvati in `partners_no_contacts`
-   - Pausa automatica dopo 6+ rate-limited consecutivi
-   - Al retry pass, profili rate-limited non vengono marcati come permanenti
+### Struttura
 
-3. **`src/lib/wcaCheckpoint.ts`** — Delay default da 15s → 20s. Nuove funzioni `setGreenZoneDelay()` / `getGreenZoneDelay()` per backoff dinamico a 30s.
+**1 nuovo file:** `src/pages/TestDownload.tsx`
 
-4. **Database** — Tutti i record in `partners_no_contacts` con `country_code = 'ZA'` marcati `resolved = true` per permettere il retry.
+- Un bottone "Avvia Test"
+- Lista hardcoded di WCA ID del Sudafrica: `[62345, 91027, 90991, 118343, 115505]`
+- Per ogni ID, apre la comunicazione diretta con l'estensione (senza passare per `useExtensionBridge` o `enqueueExtraction` -- codice inline puro)
+- Canvas/terminale sotto il bottone che mostra ogni step in tempo reale:
+  - `[HH:MM:SS] START #62345`
+  - `[HH:MM:SS] Extension responded: htmlLength=XXXXX, companyName="...", contacts=N`
+  - `[HH:MM:SS] H1 text: "..."`
+  - `[HH:MM:SS] DONE #62345 in 14.2s`
+- Delay configurabile tra richieste (slider 5s-60s, default 25s)
+- Tenta anche URL alternativo: prima `wcaworld.com`, poi se "not found" riprova con `wcadangerousgoods.com` (per verificare se il dominio fa differenza)
+
+**1 modifica:** `src/App.tsx` -- aggiunge route `/test-download`
+
+### Approccio tecnico
+
+Il codice di comunicazione con l'estensione e scritto da zero inline nella pagina, senza importare `useExtensionBridge`. Un semplice `window.postMessage` + listener per la risposta. Cosi isoliamo completamente il test dal codice esistente.
+
+Per ogni profilo logga:
+- Tempo di risposta
+- `htmlLength` esatto
+- Testo del tag H1
+- Numero contatti trovati
+- Se il profilo contiene "Members only" (indica sessione non autenticata)
+- Confronto tra dominio `wcaworld.com` vs `wcadangerousgoods.com`
+
+### File coinvolti
+
+1. **`src/pages/TestDownload.tsx`** -- pagina nuova da zero
+2. **`src/App.tsx`** -- aggiunta route
+
