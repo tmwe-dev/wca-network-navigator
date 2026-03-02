@@ -307,13 +307,22 @@ export function useDownloadProcessor() {
           const { data: existing } = await supabase.from("partners").select("id, company_name").eq("wca_id", wcaId).maybeSingle();
           const retryCtx: ProcessContext = { ...ctx, extractContacts: extractContactsRef.current, isRetryPass: true };
           const companyName = existing?.company_name || cacheMap.get(wcaId)?.name || `WCA ${wcaId}`;
+
+          // Bug fix: emit progress so canvas shows "extracting..." card during retry
+          onProgressRef.current?.({ partnerId: existing?.id || `wca-${wcaId}`, companyName, countryCode: job.country_code, index: ri + 1, total: retryQueue.length });
+
           const { action, partnerId } = await processOneProfile(wcaId, existing?.id || null, companyName, retryCtx);
 
-          if (action.type === "bridge_missing") { failedIds.push(wcaId); continue; }
+          if (action.type === "bridge_missing") {
+            failedIds.push(wcaId);
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true, error: "bridge_missing" });
+            continue;
+          }
 
           if (action.type === "retry" || action.type === "error") {
             retryConsecutiveSkipped++;
             failedIds.push(wcaId);
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true, error: action.type });
             if (retryConsecutiveSkipped >= 3) {
               await appendLog(jobId, "WARN", "⚠️ 3 retry falliti — interrompo");
               for (let rj = ri + 1; rj < retryQueue.length; rj++) {
@@ -328,10 +337,12 @@ export function useDownloadProcessor() {
             if (rateLimit.detected) {
               await appendLog(jobId, "SKIP", `[Retry] #${wcaId} still rate-limited — fallito`);
               failedIds.push(wcaId);
+              onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true, error: "rate_limited" });
             } else {
               await appendLog(jobId, "SKIP", `[Retry] #${wcaId} non esiste — skip permanente`);
               processedSet.add(wcaId);
               contactsMissing++;
+              onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             }
             continue;
           }
@@ -339,6 +350,7 @@ export function useDownloadProcessor() {
           if (action.type === "skip_permanent") {
             processedSet.add(wcaId);
             contactsMissing++;
+            onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             continue;
           }
 
@@ -348,6 +360,9 @@ export function useDownloadProcessor() {
           const hasAny = s.hasEmail || s.hasPhone;
           if (hasAny) contactsFound++; else contactsMissing++;
           processedSet.add(wcaId);
+
+          // Bug fix: emit result so canvas shows retry successes
+          onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName: s.companyName, countryCode: job.country_code, profileSaved: s.profileSaved, emailCount: s.emailCount, phoneCount: s.phoneCount, contactCount: s.emailCount + s.phoneCount });
 
           const indicators = [s.profileSaved ? "📋 ✓" : "📋 ✗", s.hasEmail ? `📧 ✓(${s.emailCount})` : "📧 ✗", s.hasPhone ? `📱 ✓(${s.phoneCount})` : "📱 ✗"].join(" ");
           await appendLog(jobId, hasAny ? "OK" : "WARN", `[Retry] ${s.companyName} (#${wcaId}) — ${indicators}`);
