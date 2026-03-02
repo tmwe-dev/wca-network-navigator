@@ -1,38 +1,48 @@
 
 
-## Diagnosi: Download Canvas non mostra i risultati in tempo reale
+## Diagnosi: 69 vs 44 partner e problemi post-refactoring
 
-### Bug confermati
+### Bug confermato: limite query di 1000 righe
 
-**Bug 1 — Pass 2 (Retry) non emette risultati alla Canvas**
+Il database contiene **1554 partner attivi**. La query `usePartners({})` in `PartnerHub.tsx` usa `.limit(2000)`, ma il server limita le risposte a **1000 righe** (configurazione PostgREST `max-rows`).
 
-Nel file `useDownloadProcessor.ts`, il Pass 1 (riga 278) emette correttamente i risultati:
+Verifica matematica: 1000/1554 × 69 = **44.4 ≈ 44** — esattamente il numero che vedi.
+
+`CountryCards` usa `useCountryStats()` (funzione SQL server-side, nessun limite) → mostra 69.  
+`CountryWorkbench` filtra client-side dai 1000 partner ricevuti → mostra solo 44 su 69.
+
+La pagina Operations **non ha questo bug** perché `PartnerListPanel` già filtra per paese nella query: `usePartners({ countries: countryCodes })`.
+
+### Correzione
+
+**File: `src/pages/PartnerHub.tsx`**
+
+Aggiungere il filtro paese a `mergedFilters` quando siamo nella vista "country":
+
 ```typescript
-onResultRef.current?.({ partnerId, companyName, ... }); // ✅ Pass 1
+const mergedFilters: PartnerFilters = {
+  ...filters,
+  search: search.length >= 2 ? search : undefined,
+  // Quando in vista paese, filtra server-side per il paese selezionato
+  countries: viewLevel === "country" && selectedCountry
+    ? [selectedCountry]
+    : filters.countries,
+};
 ```
 
-Ma nel **Pass 2** (righe 345-355), dopo un retry con successo, **non c'è nessuna chiamata a `onResultRef.current`**. I profili vengono salvati nel database ma la Canvas non ne sa nulla. Se molti profili finiscono nella retry queue (rate-limit, page not loaded, extension error), l'utente vede il canvas vuoto nonostante il processore stia salvando dati.
+Questo riduce la query da 1554 a ~69 righe per ZA, ben sotto qualsiasi limite.
 
-**Bug 2 — Pass 2 non emette progress alla Canvas**
+### Stato dei pulsanti (Deep Search, Workspace, Email)
 
-Sempre nel Pass 2, non c'è nessuna chiamata a `onProgressRef.current`. L'utente non vede la card "Estrazione in corso..." durante il retry, quindi sembra che il download sia fermo.
+I pulsanti nella `BulkActionBar` del Partner Hub sono correttamente collegati. Non sono stati toccati dal refactoring — le funzioni `handleBulkDeepSearch`, `handleSendToWorkspace`, `handleBulkEmail` sono tutte presenti e funzionanti. Posso verificare con un test dopo la correzione.
 
-**Bug 3 — Skip/Error nel Pass 1 non emettono risultati completi**
+### Canvas
 
-Quando un profilo va in `rate_limited` o `retry`, viene emesso `emitSkip()` (riga 160, 180, 230, 237) che mostra il profilo come "skipped" nella canvas. Ma se poi il Pass 2 lo recupera con successo, il risultato positivo non viene mai aggiunto — l'utente vede solo lo skip iniziale.
+I Canvas (Download e Deep Search) esistono **solo nella pagina Operations**, non nel Partner Hub. Nel Partner Hub la Deep Search usa un loop locale senza canvas visuale — questo è il design originale, non un bug del refactoring.
 
-### Correzioni
+### Riepilogo modifiche
 
-**File: `src/hooks/useDownloadProcessor.ts`**
-
-1. **Pass 2 — Aggiungere `onProgressRef` prima dell'estrazione** (dopo riga 303):
-   - Emettere progress con index e total della retry queue
-
-2. **Pass 2 — Aggiungere `onResultRef` dopo il successo** (dopo riga 353):
-   - Emettere il risultato con `profileSaved`, `emailCount`, `phoneCount`, `contactCount`
-
-3. **Pass 2 — Emettere skip/fail** per i profili che falliscono anche il retry (righe 312, 314, 329-336):
-   - Emettere `onResultRef` con `skipped: true` o `error`
-
-Nessuna modifica alla pagina Campagne.
+| File | Modifica |
+|------|----------|
+| `src/pages/PartnerHub.tsx` | Aggiungere filtro paese a `mergedFilters` (1 riga) |
 
