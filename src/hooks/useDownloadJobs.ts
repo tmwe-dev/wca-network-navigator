@@ -108,6 +108,27 @@ export function useCreateDownloadJob() {
       wca_ids: number[];
       delay_seconds: number;
     }) => {
+      // ── Filter out WCA IDs already confirmed as non-existent ──
+      const { data: deadIds } = await supabase
+        .from("partners_no_contacts")
+        .select("wca_id")
+        .in("wca_id", params.wca_ids)
+        .eq("resolved", false);
+
+      const deadSet = new Set((deadIds || []).map(r => r.wca_id));
+      const filteredIds = params.wca_ids.filter(id => !deadSet.has(id));
+      const skippedCount = params.wca_ids.length - filteredIds.length;
+
+      if (skippedCount > 0) {
+        console.log(`[CreateJob] Filtered out ${skippedCount} stale WCA IDs (already in partners_no_contacts)`);
+        toast({ title: "Filtro applicato", description: `${skippedCount} profili non più presenti su WCA esclusi` });
+      }
+
+      if (filteredIds.length === 0) {
+        toast({ title: "Nessun profilo da scaricare", description: "Tutti i profili risultano già rimossi da WCA", variant: "destructive" });
+        return null;
+      }
+
       // Guard anti-duplicato
       const { data: existing } = await supabase
         .from("download_jobs")
@@ -128,8 +149,8 @@ export function useCreateDownloadJob() {
           country_code: params.country_code,
           country_name: params.country_name,
           network_name: params.network_name,
-          wca_ids: params.wca_ids as any,
-          total_count: params.wca_ids.length,
+          wca_ids: filteredIds as any,
+          total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",
         })
