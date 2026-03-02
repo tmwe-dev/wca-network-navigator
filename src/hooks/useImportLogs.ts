@@ -1,6 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { resolveCountryCode } from "@/lib/countries";
+
+// Find a field value from a row using multiple possible aliases
+function findField(row: Record<string, any>, aliases: string[]): string | null {
+  for (const alias of aliases) {
+    if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
+      return String(row[alias]).trim();
+    }
+  }
+  return null;
+}
+
+const FIELD_ALIASES: Record<string, string[]> = {
+  company_name: ["company_name", "ragione_sociale", "azienda", "company", "societa", "ditta", "denominazione"],
+  name: ["name", "nome", "contatto", "referente", "contact", "nome_contatto", "nome_referente"],
+  email: ["email", "e_mail", "mail", "email_address", "posta_elettronica"],
+  phone: ["phone", "telefono", "tel", "phone_number", "numero_telefono"],
+  mobile: ["mobile", "cellulare", "cell", "mobile_phone", "cell_phone"],
+  country: ["country", "paese", "nazione", "stato", "country_name"],
+  city: ["city", "citta", "localita", "comune"],
+  address: ["address", "indirizzo", "via", "sede"],
+  zip_code: ["zip_code", "cap", "postal_code", "codice_postale"],
+  note: ["note", "notes", "annotazioni", "commenti", "osservazioni"],
+  origin: ["origin", "origine", "provenienza", "fonte", "source"],
+};
 
 export interface ImportLog {
   id: string;
@@ -168,17 +193,17 @@ export function useCreateImport() {
       const contacts = rows.map((row, index) => ({
         import_log_id: importLog.id,
         row_number: index + 1,
-        company_name: row.company_name || row.ragione_sociale || row.azienda || null,
-        name: row.name || row.nome || row.contatto || null,
-        email: row.email || row.mail || null,
-        phone: row.phone || row.telefono || row.tel || null,
-        mobile: row.mobile || row.cellulare || row.cell || null,
-        country: row.country || row.paese || row.nazione || null,
-        city: row.city || row.citta || row.città || null,
-        address: row.address || row.indirizzo || null,
-        zip_code: row.zip_code || row.cap || null,
-        note: row.note || row.notes || null,
-        origin: row.origin || row.origine || null,
+        company_name: findField(row, FIELD_ALIASES.company_name),
+        name: findField(row, FIELD_ALIASES.name),
+        email: findField(row, FIELD_ALIASES.email),
+        phone: findField(row, FIELD_ALIASES.phone),
+        mobile: findField(row, FIELD_ALIASES.mobile),
+        country: findField(row, FIELD_ALIASES.country),
+        city: findField(row, FIELD_ALIASES.city),
+        address: findField(row, FIELD_ALIASES.address),
+        zip_code: findField(row, FIELD_ALIASES.zip_code),
+        note: findField(row, FIELD_ALIASES.note),
+        origin: findField(row, FIELD_ALIASES.origin),
         raw_data: row,
       }));
 
@@ -256,7 +281,7 @@ export function useTransferToPartners() {
           .from("partners")
           .insert({
             company_name: c.company_name || "Unknown",
-            country_code: (c.country || "XX").substring(0, 2).toUpperCase(),
+            country_code: resolveCountryCode(c.country || "") || "XX",
             country_name: c.country || "Unknown",
             city: c.city || "Unknown",
             address: c.address,
@@ -326,7 +351,7 @@ export function useCreateActivitiesFromImport() {
           .from("partners")
           .insert({
             company_name: c.company_name || "Unknown",
-            country_code: (c.country || "XX").substring(0, 2).toUpperCase(),
+            country_code: resolveCountryCode(c.country || "") || "XX",
             country_name: c.country || "Unknown",
             city: c.city || "Unknown",
             phone: c.phone,
