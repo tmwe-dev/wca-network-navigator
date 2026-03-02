@@ -1,37 +1,99 @@
 
 
-## Problema
+## Piano di Refactoring: PartnerListPanel + useDownloadProcessor
 
-Il flusso di download ha un **doppio gate** sulla sessione WCA:
+### Analisi
 
-1. **Gate pre-download** (`ensureSession()` in `PartnerListPanel.tsx` / `ActionPanel.tsx`) — richiede che l'estensione Chrome risponda al ping E che la sessione sia verificata via estensione
-2. **Gate nel processore** (`verifyWcaSession` in `useDownloadProcessor.ts`) — stessa cosa
+**PartnerListPanel (941 righe)** mescola 4 responsabilità distinte:
+- Logica download/scan directory (righe 77-297) — state, query, scan, cache, cleanup
+- Calcolo stats/progress (righe 299-420) — aggregazione server-side, filtri, wizard step
+- JSX principale (righe 423-768) — header, wizard, lista partner
+- 5 sotto-componenti presentazionali (righe 771-941) — IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar
 
-Il Gate 1 blocca tutto prima ancora di creare il job. L'estensione potrebbe essere presente ma il polling a 3 secondi con watchdog a 5 secondi fallisce per timing, contesto invalidato, o dominio preview.
+**useDownloadProcessor (722 righe)** ha un singolo `startJob` callback di ~600 righe con:
+- Logica di processing per singolo profilo ripetuta quasi identica tra Pass 1 e Pass 2
+- Rate-limit detection inline con stato mutabile sparso
+- Job progress update duplicato in 12+ punti
+- Auto-start/orphan recovery separabile
 
-I log del backend mostrano che il cookie `.ASPXAUTH` e stato salvato con successo pochi minuti fa (`wca_session_status = 'ok'`). La sessione E attiva sul server ma il controllo client-side non riesce a verificarla.
+### File da creare/modificare
 
-## Soluzione
+#### 1. `src/hooks/useDirectoryDownload.ts` (NUOVO)
+Estrae da PartnerListPanel tutta la logica download/directory:
+- State: selectedNetwork, delay, downloadMode, directoryOnly, scanState, scannedMembers
+- Query: directory-cache, db-partners-for-countries, no-profile-wca-ids
+- Funzioni: handleStartScan, saveScanToCache, handleStartDownload, executeDownload
+- Cleanup automatico post-scan (autoDownloadPending)
+- Ritorna: idsToDownload, estimateLabel, isScanning, scanComplete, handleStartScan, handleStartDownload, tutte le variabili di stato necessarie
 
-Modificare `ensureSession()` per aggiungere un **fallback server-side**: se l'estensione non risponde, controlla `app_settings.wca_session_status` nel database. Se il valore e `ok`, la sessione e considerata attiva e il download parte.
+#### 2. `src/hooks/usePartnerListStats.ts` (NUOVO)
+Estrae il calcolo stats e verified:
+- Aggregazione serverStats da useCountryStats
+- Calcolo stats locali (fallback)
+- Logica tri-state verified (email, phone, deep, alias)
+- Wizard step derivato
+- Ritorna: stats, verified, wizardStep, missingProfiles, missingDeep, etc.
 
-Il processore (`useDownloadProcessor`) ha gia il suo controllo sessione indipendente — se l'estensione e davvero morta, il job fallira gracefully durante l'estrazione, senza bloccare tutto a monte.
+#### 3. `src/components/operations/partner-list/SubComponents.tsx` (NUOVO)
+Sposta i 5 componenti presentazionali:
+- IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar
 
-### File da modificare
+#### 4. `src/components/operations/PartnerListPanel.tsx` (MODIFICA)
+Diventa orchestratore ~300 righe:
+- Importa useDirectoryDownload, usePartnerListStats, SubComponents
+- Mantiene solo: search, sortBy, progressFilter, emailTarget, filteredPartners, JSX
 
-1. **`src/hooks/useWcaSession.ts`** — Aggiungere fallback DB nel Step 1: se l'estensione non risponde dopo i retry, leggere `wca_session_status` da `app_settings`. Se e `ok`, considerare la sessione attiva e ritornare `true` senza richiedere l'estensione per la verifica.
-
-2. **`src/components/operations/PartnerListPanel.tsx`** — Nessuna modifica logica, il fix in `useWcaSession` risolve automaticamente entrambi i punti di chiamata (riga 275 e 521).
-
-### Dettaglio tecnico del fallback
-
+#### 5. `src/lib/download/processProfile.ts` (NUOVO)
+Funzione pura per processare un singolo profilo WCA:
 ```text
-ensureSession() flow:
-  1. Try extension ping (existing logic)
-  2. If extension NOT found:
-     → Query app_settings WHERE key = 'wca_session_status'
-     → If value = 'ok' → return true (session valid server-side)
-     → If value != 'ok' → return false (genuinely expired)
-  3. If extension found → proceed with existing verify logic
+processOneProfile(wcaId, jobId, context) → { result, action }
 ```
+- Ensure partner exists
+- Extract via extension
+- Diagnostic log
+- Detect: pageNotLoaded, memberNotFound, extensionError, success
+- Save extraction result
+- Ritorna un oggetto strutturato con l'azione da intraprendere (retry, skip_permanent, success, pause_job)
+
+#### 6. `src/lib/download/rateLimitDetector.ts` (NUOVO)
+Classe stateful per il rilevamento rate-limit:
+```text
+class RateLimitDetector {
+  recordNotFound(htmlLength): void
+  isRateLimited(): boolean
+  reset(): void
+}
+```
+
+#### 7. `src/lib/download/jobUpdater.ts` (NUOVO)
+Helper per gli aggiornamenti DB del job — elimina le 12+ duplicazioni:
+```text
+updateJobProgress(jobId, { processedSet, wcaId, contactResult, contactsFound, contactsMissing })
+```
+
+#### 8. `src/hooks/useDownloadProcessor.ts` (MODIFICA)
+Diventa ~250 righe:
+- Pass 1: loop che chiama `processOneProfile` e gestisce l'azione ritornata
+- Pass 2: stesso loop con delay +50%, usa stessa `processOneProfile`
+- Rate-limit gestito da `RateLimitDetector`
+- DB updates tramite `jobUpdater`
+- Auto-start/orphan recovery resta inline (piccolo)
+
+### Ordine di esecuzione
+
+1. Creare i moduli utility (`rateLimitDetector`, `jobUpdater`, `processProfile`) — zero impatto, non importati ancora
+2. Refactorare `useDownloadProcessor` per usarli — testare che il download funzioni
+3. Creare `useDirectoryDownload` e `usePartnerListStats` — zero impatto
+4. Estrarre SubComponents
+5. Refactorare `PartnerListPanel` per usare i nuovi hook e componenti
+
+### Risultato atteso
+
+| File | Prima | Dopo |
+|------|-------|------|
+| PartnerListPanel.tsx | 941 | ~300 |
+| useDownloadProcessor.ts | 722 | ~250 |
+| Nuovi file | 0 | 6 moduli specializzati |
+
+Nessuna modifica alla pagina Campagne.
 
