@@ -22,8 +22,21 @@ function getState(): CheckpointState {
   return (window as any)[CHECKPOINT_KEY];
 }
 
-/** Green zone threshold in seconds */
-const GREEN_ZONE_SECONDS = 15;
+/** Green zone threshold in seconds (raised from 15 to 20 to reduce WCA anti-bot triggers) */
+let GREEN_ZONE_SECONDS = 20;
+
+/**
+ * Dynamically increase the checkpoint delay when rate-limiting is detected.
+ * Call with seconds=30 to activate backoff, or seconds=20 to reset.
+ */
+export function setGreenZoneDelay(seconds: number): void {
+  GREEN_ZONE_SECONDS = Math.max(15, Math.min(60, seconds));
+  console.log(`[wcaCheckpoint] GREEN_ZONE_SECONDS set to ${GREEN_ZONE_SECONDS}s`);
+}
+
+export function getGreenZoneDelay(): number {
+  return GREEN_ZONE_SECONDS;
+}
 
 /**
  * Returns seconds elapsed since the last WCA request.
