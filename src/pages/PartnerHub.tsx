@@ -238,15 +238,16 @@ export default function PartnerHub() {
 
   const handleGenerateAliases = useCallback(async (countryCode: string, type: "company" | "contact") => {
     setAliasGenerating(type);
+    const toastId = toast.loading("Generazione alias in corso...");
     try {
       const { error } = await supabase.functions.invoke("generate-aliases", {
         body: { countryCode, type },
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["partners"] });
-      toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`);
+      toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`, { id: toastId });
     } catch (e: any) {
-      toast.error(`Errore generazione alias: ${e.message || "sconosciuto"}`);
+      toast.error(`Errore generazione alias: ${e.message || "sconosciuto"}`, { id: toastId });
     } finally {
       setAliasGenerating(null);
     }

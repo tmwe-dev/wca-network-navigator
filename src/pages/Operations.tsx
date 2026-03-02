@@ -130,18 +130,19 @@ export default function Operations() {
   const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
     if (aliasGenerating) return;
     setAliasGenerating(true);
+    const toastId = toast.loading("Generazione alias in corso...");
     try {
       const { data, error } = await supabase.functions.invoke("generate-aliases", { body: { countryCodes: codes } });
       if (error) throw error;
       if (data?.success) {
-        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`);
+        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
         queryClient.invalidateQueries({ queryKey: ["partners"] });
         queryClient.invalidateQueries({ queryKey: ["country-stats"] });
       } else {
-        toast.error(data?.error || "Errore generazione alias");
+        toast.error(data?.error || "Errore generazione alias", { id: toastId });
       }
     } catch (e: any) {
-      toast.error(e?.message || "Errore");
+      toast.error(e?.message || "Errore", { id: toastId });
     } finally {
       setAliasGenerating(false);
     }
