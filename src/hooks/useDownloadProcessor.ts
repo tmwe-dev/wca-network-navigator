@@ -170,9 +170,6 @@ export function useDownloadProcessor() {
         let extractedEmailCount = 0, extractedPhoneCount = 0;
 
         try {
-          const timeout40s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
-            setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
-          );
           if (typeof extractContactsRef.current !== 'function') {
             markRequestSent();
             await appendLog(jobId, "ERROR", `Errore #${wcaId}: Extension bridge non inizializzato — saltato`);
@@ -184,7 +181,7 @@ export function useDownloadProcessor() {
             }).eq("id", jobId);
             continue;
           }
-          const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
+          const result = await extractContactsRef.current(wcaId);
           markRequestSent();
 
           // ── DIAGNOSTIC LOG: log every profile's raw result ──
@@ -468,16 +465,13 @@ export function useDownloadProcessor() {
           let extractedEmailCount = 0, extractedPhoneCount = 0;
 
           try {
-            const timeout40s = new Promise<{ success: false; error: string; pageLoaded: false }>((r) =>
-              setTimeout(() => r({ success: false, error: "Timeout 40s", pageLoaded: false }), 40000)
-            );
             if (typeof extractContactsRef.current !== 'function') {
               markRequestSent();
               failedIds.push(wcaId);
               await appendLog(jobId, "ERROR", `[Retry] #${wcaId}: Extension bridge non inizializzato — fallito definitivamente`);
               continue;
             }
-            const result = await Promise.race([extractContactsRef.current(wcaId), timeout40s]);
+            const result = await extractContactsRef.current(wcaId);
             markRequestSent();
 
             // Diagnostic log for retry pass
