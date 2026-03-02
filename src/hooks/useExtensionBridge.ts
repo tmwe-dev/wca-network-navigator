@@ -247,7 +247,7 @@ export function useExtensionBridge() {
   // Extract contacts for a WCA ID — serialized via global queue
   const extractContacts = useCallback(
     async (wcaId: number): Promise<ExtensionResponse> => {
-      return enqueueExtraction(() => sendMessage("extractContacts", { wcaId }, 60000));
+      return enqueueExtraction(() => sendMessage("extractContacts", { wcaId }, 90000));
     },
     [sendMessage]
   );
