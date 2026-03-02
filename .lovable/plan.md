@@ -1,48 +1,33 @@
 
 
-## Diagnosi: 69 vs 44 partner e problemi post-refactoring
+## Piano: Deep Search persistente in background
 
-### Bug confermato: limite query di 1000 righe
+### Problema
+Il Partner Hub usa una propria implementazione locale della Deep Search (`handleBulkDeepSearch`, `handleCountryDeepSearch`) con stato locale (`deepSearching`, `deepSearchProgress`, `deepSearchAbortRef`). Quando l'utente naviga via dalla pagina, il componente si smonta e il processo si interrompe.
 
-Il database contiene **1554 partner attivi**. La query `usePartners({})` in `PartnerHub.tsx` usa `.limit(2000)`, ma il server limita le risposte a **1000 righe** (configurazione PostgREST `max-rows`).
+Esiste già un sistema globale (`useDeepSearchRunner` montato in `AppLayout` → `DeepSearchContext`) che sopravvive alla navigazione, ma il Partner Hub non lo usa.
 
-Verifica matematica: 1000/1554 × 69 = **44.4 ≈ 44** — esattamente il numero che vedi.
+### Soluzione
 
-`CountryCards` usa `useCountryStats()` (funzione SQL server-side, nessun limite) → mostra 69.  
-`CountryWorkbench` filtra client-side dai 1000 partner ricevuti → mostra solo 44 su 69.
+**1. Partner Hub → usa il context globale** (`src/pages/PartnerHub.tsx`)
+- Rimuovere tutto lo stato locale della Deep Search: `deepSearching`, `deepSearchProgress`, `deepSearchAbortRef`, `handleBulkDeepSearch`, `handleCountryDeepSearch`, `handleStopDeepSearch`
+- Importare `useDeepSearch()` dal context globale
+- Collegare `BulkActionBar` e `CountryWorkbench` allo stato globale: `deepSearch.running`, `deepSearch.start(ids)`, `deepSearch.stop()`
+- Derivare `deepSearchProgress` da `deepSearch.current` (ha `index` e `total`)
+- Passare i partner nell'ordine della lista visibile a `deepSearch.start()`
 
-La pagina Operations **non ha questo bug** perché `PartnerListPanel` già filtra per paese nella query: `usePartners({ countries: countryCodes })`.
+**2. Aggiornamento live per-partner nel runner globale** (`src/hooks/useDeepSearchRunner.ts`)
+- Dopo ogni partner completato con successo, aggiungere `queryClient.invalidateQueries({ queryKey: ["partners"] })` dentro il loop, così le card nel Partner Hub si aggiornano in tempo reale
+- Auto-selezionare il partner corrente non è possibile dal runner globale (non ha accesso a `setSelectedId`), ma il refresh della cache farà "prendere vita" le card man mano
 
-### Correzione
+**3. Fix PageFallback** (`src/App.tsx`)
+- Sostituire lo `Skeleton` visibile con un `div` vuoto e trasparente per eliminare il flash di caricamento
 
-**File: `src/pages/PartnerHub.tsx`**
-
-Aggiungere il filtro paese a `mergedFilters` quando siamo nella vista "country":
-
-```typescript
-const mergedFilters: PartnerFilters = {
-  ...filters,
-  search: search.length >= 2 ? search : undefined,
-  // Quando in vista paese, filtra server-side per il paese selezionato
-  countries: viewLevel === "country" && selectedCountry
-    ? [selectedCountry]
-    : filters.countries,
-};
-```
-
-Questo riduce la query da 1554 a ~69 righe per ZA, ben sotto qualsiasi limite.
-
-### Stato dei pulsanti (Deep Search, Workspace, Email)
-
-I pulsanti nella `BulkActionBar` del Partner Hub sono correttamente collegati. Non sono stati toccati dal refactoring — le funzioni `handleBulkDeepSearch`, `handleSendToWorkspace`, `handleBulkEmail` sono tutte presenti e funzionanti. Posso verificare con un test dopo la correzione.
-
-### Canvas
-
-I Canvas (Download e Deep Search) esistono **solo nella pagina Operations**, non nel Partner Hub. Nel Partner Hub la Deep Search usa un loop locale senza canvas visuale — questo è il design originale, non un bug del refactoring.
-
-### Riepilogo modifiche
+### Riepilogo file
 
 | File | Modifica |
 |------|----------|
-| `src/pages/PartnerHub.tsx` | Aggiungere filtro paese a `mergedFilters` (1 riga) |
+| `src/pages/PartnerHub.tsx` | Rimuovere stato/logica locale Deep Search, usare `useDeepSearch()` dal context globale |
+| `src/hooks/useDeepSearchRunner.ts` | Aggiungere `queryClient.invalidateQueries` dopo ogni partner nel loop per aggiornamento live |
+| `src/App.tsx` | Sostituire `PageFallback` con div vuoto trasparente |
 
