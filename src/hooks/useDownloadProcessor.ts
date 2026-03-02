@@ -2,7 +2,7 @@ import { useRef, useCallback, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
-import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
+import { waitForGreenLight, markRequestSent, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
 import { appendLog } from "@/lib/download/terminalLog";
 import { verifyWcaSession } from "@/lib/download/sessionVerifier";
 import { saveExtractionResult } from "@/lib/download/profileSaver";
@@ -116,8 +116,12 @@ export function useDownloadProcessor() {
       let consecutiveEmpty = 0;
       let consecutiveSkipped = 0;
       let consecutiveNotFound = 0;
-      let sessionVerifiedActive = false; // After session check passes, treat "not found" as genuine
+      let sessionVerifiedActive = false;
       const retryQueue: number[] = [];
+      
+      // ── Rate-limit detection: track HTML lengths of "not found" pages ──
+      const notFoundHtmlLengths: number[] = []; // last N html lengths for "not found" responses
+      let rateLimitDetected = false;
 
       // ═══════════════════════════════════════
       // MAIN LOOP — one profile at a time (PASS 1)
@@ -234,13 +238,53 @@ export function useDownloadProcessor() {
             (result as any).error?.toLowerCase().includes("member not found");
 
           if (isMemberNotFound) {
-            // If session was already verified as active, this is a GENUINE "not found"
+            const htmlLen = (result as any).htmlLength || (result as any).profileHtml?.length || 0;
+            notFoundHtmlLengths.push(htmlLen);
+            
+            // ── RATE-LIMIT DETECTION ──
+            // If 3+ consecutive "not found" with identical HTML length → anti-bot page, NOT genuine
+            if (notFoundHtmlLengths.length >= 3) {
+              const last3 = notFoundHtmlLengths.slice(-3);
+              const allSameLength = last3.every(l => l === last3[0] && l > 1000);
+              
+              if (allSameLength && !rateLimitDetected) {
+                rateLimitDetected = true;
+                setGreenZoneDelay(30); // backoff to 30s
+                await appendLog(jobId, "WARN", `🛡️ RATE-LIMIT RILEVATO — 3+ profili 'not found' con html identico (${last3[0]} chars). Delay aumentato a 30s.`);
+              }
+            }
+            
+            if (rateLimitDetected) {
+              // Treat as temporary error — DO NOT save to partners_no_contacts
+              await appendLog(jobId, "SKIP", `⚠️ #${wcaId} rate-limited (html=${htmlLen}) — retry queue (NON marcato come inesistente)`);
+              retryQueue.push(wcaId);
+              consecutiveNotFound++;
+              
+              // If too many rate-limited, pause job
+              if (consecutiveNotFound >= 6) {
+                await appendLog(jobId, "WARN", "❌ 6+ profili rate-limited consecutivi — job in pausa. Riprova più tardi.");
+                await supabase.from("download_jobs").update({
+                  status: "paused",
+                  error_message: "⚠️ WCA rate-limit attivo — troppi blocchi consecutivi. Riprova tra qualche minuto.",
+                }).eq("id", jobId);
+                setGreenZoneDelay(20); // reset
+                return;
+              }
+              
+              onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
+              await supabase.from("download_jobs").update({
+                current_index: i + 1, processed_ids: [...processedSet] as any,
+                last_processed_wca_id: wcaId, last_contact_result: "rate_limited", contacts_missing_count: contactsMissing,
+              }).eq("id", jobId);
+              continue;
+            }
+            
+            // ── Original logic for non-rate-limited "not found" ──
             if (sessionVerifiedActive) {
               await appendLog(jobId, "SKIP", `Profilo #${wcaId} non esiste su WCA — skip permanente (sessione verificata)`);
               processedSet.add(wcaId);
               contactsMissing++;
               
-              // Track in partners_no_contacts
               try {
                 await supabase.from("partners_no_contacts").upsert({
                   wca_id: wcaId,
@@ -260,7 +304,6 @@ export function useDownloadProcessor() {
             
             consecutiveNotFound++;
             
-            // If 3+ consecutive "member not found", verify session to distinguish real vs expired
             if (consecutiveNotFound >= 3) {
               await appendLog(jobId, "WARN", "⚠️ 3+ profili 'member not found' consecutivi — verifico sessione...");
               const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
@@ -272,11 +315,27 @@ export function useDownloadProcessor() {
                 }).eq("id", jobId);
                 return;
               }
-              // Session is active → these profiles genuinely don't exist
+              // Session is active but ALSO check for rate-limit pattern
+              const recentLens = notFoundHtmlLengths.slice(-3);
+              const sameLen = recentLens.every(l => l === recentLens[0] && l > 1000);
+              if (sameLen) {
+                // Session active BUT identical html = rate limit even with valid session
+                rateLimitDetected = true;
+                setGreenZoneDelay(30);
+                await appendLog(jobId, "WARN", `🛡️ Sessione attiva MA html identico (${recentLens[0]} chars) = RATE LIMIT. Delay 30s, profili in retry.`);
+                // Move all queued not-found back to retry (don't mark permanent)
+                consecutiveNotFound = 0;
+                await supabase.from("download_jobs").update({
+                  current_index: i + 1, processed_ids: [...processedSet] as any,
+                  last_processed_wca_id: wcaId, last_contact_result: "rate_limited", contacts_missing_count: contactsMissing,
+                }).eq("id", jobId);
+                continue;
+              }
+              
+              // Session active + different html lengths = genuinely not found
               sessionVerifiedActive = true;
               await appendLog(jobId, "INFO", "✅ Sessione attiva — i profili 'not found' sono genuini, skip permanente");
               
-              // Mark current + all retry queue not-found as permanently skipped
               const notFoundIds = [...retryQueue.splice(0), wcaId];
               for (const nfId of notFoundIds) {
                 processedSet.add(nfId);
@@ -298,8 +357,7 @@ export function useDownloadProcessor() {
               continue;
             }
 
-            // Single/double not-found: add to retry queue for now, wait for session verification
-            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} 'member not found' — retry queue (${consecutiveNotFound} consecutivi)`);
+            await appendLog(jobId, "SKIP", `⚠️ Profilo #${wcaId} 'member not found' (html=${htmlLen}) — retry queue (${consecutiveNotFound} consecutivi)`);
             retryQueue.push(wcaId);
             onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName, countryCode: job.country_code, profileSaved: false, emailCount: 0, phoneCount: 0, contactCount: 0, skipped: true });
             await supabase.from("download_jobs").update({
@@ -506,6 +564,13 @@ export function useDownloadProcessor() {
             const isMemberNotFound = (result as any).companyName?.toLowerCase().includes("member not found") ||
               (result as any).error?.toLowerCase().includes("member not found");
             if (isMemberNotFound) {
+              const htmlLen = (result as any).htmlLength || (result as any).profileHtml?.length || 0;
+              // In retry pass, if rate-limit was detected earlier, don't mark permanent
+              if (rateLimitDetected) {
+                await appendLog(jobId, "SKIP", `[Retry] #${wcaId} still rate-limited (html=${htmlLen}) — fallito`);
+                failedIds.push(wcaId);
+                continue;
+              }
               await appendLog(jobId, "SKIP", `[Retry] #${wcaId} non esiste su WCA — skip permanente`);
               processedSet.add(wcaId);
               contactsMissing++;
@@ -587,6 +652,7 @@ export function useDownloadProcessor() {
       }
     } finally {
       console.log("[Processor] startJob END:", jobId);
+      setGreenZoneDelay(20); // reset delay to default after job ends
       processingRef.current = false;
       setIsProcessing(false);
       abortRef.current = null;

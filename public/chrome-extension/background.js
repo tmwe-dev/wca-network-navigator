@@ -366,8 +366,9 @@ async function extractContactsForId(wcaId) {
     var pageLoaded = pageLoadResult && pageLoadResult.loaded;
 
     if (!pageLoaded) {
-      console.log("[WCA Extension] Page not loaded for " + wcaId + " (length=" + (pageLoadResult ? pageLoadResult.length : 0) + "), skipping.");
-      return { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: false, error: "Page not loaded" };
+      var notLoadedHtmlLen = pageLoadResult ? pageLoadResult.length : 0;
+      console.log("[WCA Extension] Page not loaded for " + wcaId + " (length=" + notLoadedHtmlLen + "), skipping.");
+      return { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: false, error: "Page not loaded", htmlLength: notLoadedHtmlLen };
     }
 
     // Use the new full-profile extraction function
@@ -380,9 +381,10 @@ async function extractContactsForId(wcaId) {
     if (pageData) {
       pageData.wcaId = wcaId;
       pageData.pageLoaded = true;
+      pageData.htmlLength = pageData.profileHtml ? pageData.profileHtml.length : 0;
     }
 
-    return pageData || { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: true, error: "No data" };
+    return pageData || { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: true, error: "No data", htmlLength: 0 };
   } catch (err) {
     return { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: false, error: err.message };
   } finally {
