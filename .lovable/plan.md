@@ -1,33 +1,32 @@
 
 
-## Piano: Deep Search persistente in background
+## Piano: Feedback visivo durante la generazione alias
 
 ### Problema
-Il Partner Hub usa una propria implementazione locale della Deep Search (`handleBulkDeepSearch`, `handleCountryDeepSearch`) con stato locale (`deepSearching`, `deepSearchProgress`, `deepSearchAbortRef`). Quando l'utente naviga via dalla pagina, il componente si smonta e il processo si interrompe.
-
-Esiste già un sistema globale (`useDeepSearchRunner` montato in `AppLayout` → `DeepSearchContext`) che sopravvive alla navigazione, ma il Partner Hub non lo usa.
+Quando si lancia "Genera Alias", la funzione edge viene chiamata e al termine appare un toast di successo/errore. Ma durante l'esecuzione (che può durare diversi secondi) non c'è nessun feedback visivo — l'utente non sa se il sistema sta lavorando o si è bloccato.
 
 ### Soluzione
+Aggiungere un **toast persistente** di tipo "loading" che appare immediatamente quando parte la generazione e si aggiorna al completamento. Questo approccio è leggero, non richiede nuovi componenti, e funziona sia in Operations che in Partner Hub.
 
-**1. Partner Hub → usa il context globale** (`src/pages/PartnerHub.tsx`)
-- Rimuovere tutto lo stato locale della Deep Search: `deepSearching`, `deepSearchProgress`, `deepSearchAbortRef`, `handleBulkDeepSearch`, `handleCountryDeepSearch`, `handleStopDeepSearch`
-- Importare `useDeepSearch()` dal context globale
-- Collegare `BulkActionBar` e `CountryWorkbench` allo stato globale: `deepSearch.running`, `deepSearch.start(ids)`, `deepSearch.stop()`
-- Derivare `deepSearchProgress` da `deepSearch.current` (ha `index` e `total`)
-- Passare i partner nell'ordine della lista visibile a `deepSearch.start()`
+### Modifiche
 
-**2. Aggiornamento live per-partner nel runner globale** (`src/hooks/useDeepSearchRunner.ts`)
-- Dopo ogni partner completato con successo, aggiungere `queryClient.invalidateQueries({ queryKey: ["partners"] })` dentro il loop, così le card nel Partner Hub si aggiornano in tempo reale
-- Auto-selezionare il partner corrente non è possibile dal runner globale (non ha accesso a `setSelectedId`), ma il refresh della cache farà "prendere vita" le card man mano
+**File: `src/pages/Operations.tsx`** — `handleGenerateAliases`
+- Mostrare subito un `toast.loading("Generazione alias in corso...")` con un ID fisso
+- Al completamento, sostituirlo con `toast.success(...)` o `toast.error(...)` usando lo stesso ID
 
-**3. Fix PageFallback** (`src/App.tsx`)
-- Sostituire lo `Skeleton` visibile con un `div` vuoto e trasparente per eliminare il flash di caricamento
+**File: `src/pages/PartnerHub.tsx`** — `handleGenerateAliases`
+- Stesso pattern: toast loading immediato, poi success/error con lo stesso ID
 
-### Riepilogo file
+### Dettaglio tecnico
+```typescript
+const toastId = toast.loading("Generazione alias in corso...");
+try {
+  // ... invoke edge function ...
+  toast.success("Alias generati: ...", { id: toastId });
+} catch {
+  toast.error("Errore generazione alias", { id: toastId });
+}
+```
 
-| File | Modifica |
-|------|----------|
-| `src/pages/PartnerHub.tsx` | Rimuovere stato/logica locale Deep Search, usare `useDeepSearch()` dal context globale |
-| `src/hooks/useDeepSearchRunner.ts` | Aggiungere `queryClient.invalidateQueries` dopo ogni partner nel loop per aggiornamento live |
-| `src/App.tsx` | Sostituire `PageFallback` con div vuoto trasparente |
+Sonner supporta nativamente `toast.loading()` e la sostituzione tramite `{ id }` — zero dipendenze aggiuntive.
 
