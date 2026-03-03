@@ -1,86 +1,48 @@
 
 
-## Redesign Import: AI solo per il mapping, trasformazione locale
+## Diagnosi del bug di mapping
 
-### Problema attuale
-Il sistema attuale usa **2 chiamate AI**: una per analizzare il mapping (50 righe campione) e poi una **per ogni batch di 25 righe** per "normalizzare". Su 13.000 righe = 521 chiamate AI. Costo insostenibile.
+Il problema è nel `handleConfirmMapping` (riga 265-273 di Import.tsx). Ecco cosa succede:
 
-### Nuovo approccio: "1 chiamata AI, tutto il resto locale"
+1. `parseFile()` legge il file e normalizza le chiavi delle colonne (es. "Nome Contatto" → `nome_contatto`)
+2. Le righe campione con queste chiavi normalizzate vengono inviate all'AI
+3. L'AI restituisce un `column_mapping` tipo `{"nome": "name", "azienda": "company_name"}`
+4. **Il bug**: quando si applica il mapping a TUTTE le righe con `row[src]`, le chiavi `src` restituite dall'AI potrebbero non corrispondere esattamente alle chiavi nelle righe. L'AI potrebbe restituire chiavi leggermente diverse (maiuscole, accenti, spazi) rispetto a quelle normalizzate da `parseFile()`
 
-```text
-File importato (CSV/Excel/TXT)
-    │
-    ▼
-parseFile() — lettura locale, auto-detect delimitatore
-    │
-    ▼
-Campionamento 50 righe distribuite nel file
-    │
-    ▼
-1 SOLA chiamata AI → analyze-import-structure
-    │  Restituisce: column_mapping + data_quality report
-    │
-    ▼
-Applicazione mapping LOCALE a TUTTE le righe (zero AI)
-    │  + salvataggio raw_data originali per recovery
-    │
-    ▼
-Inserimento in imported_contacts (già mappati)
-    │
-    ▼
-Report qualità: "X righe con company_name vuoto, Y email invalide"
-    │
-    ├── Dati OK → Pronti per trasferimento
-    └── Dati con problemi → 3 opzioni:
-         a) Importa comunque e correggi dopo
-         b) Scarica file con foglio aggiuntivo "formato corretto"
-         c) Normalizza con AI solo le righe problematiche
-```
+Risultato: `row[src]` restituisce `undefined` per ogni campo → tutti i 13.032 record vengono salvati vuoti.
 
-### Modifiche concrete
+## Piano di fix
 
-**1. `src/pages/Import.tsx` — Refactor del flusso**
-- Campionamento intelligente: 50 righe distribuite equamente nel file (non solo le prime 30)
-- Dopo conferma mapping, applicare il mapping **localmente** a tutte le righe (già funziona così, ma salvare anche `raw_data` con i dati originali)
-- Rimuovere il bottone "Normalizza con AI" come azione di default
-- Aggiungere report di qualità post-mapping: contare righe con `company_name` null, email invalide, country mancante
-- Aggiungere opzione "Esporta file corretto": genera un Excel con un foglio "Dati Mappati" + un foglio "Formato Richiesto" come guida
-- Il normalizzatore AI diventa opzione esplicita solo per le righe problematiche, con stima preventiva del costo
+### 1. Mapping robusto con validazione chiavi (`src/pages/Import.tsx`)
 
-**2. `src/hooks/useImportLogs.ts` — Fix mapping + export**
-- Fix `useCreateImportFromParsedRows`: salvare i dati originali della riga in `raw_data` (non i dati mappati)
-- Aggiungere hook `useExportCorrectedFile`: genera Excel con mapping applicato + foglio template
-- Modificare `useProcessImport` per processare solo righe con problemi (non tutte)
+Sostituire il mapping diretto `row[src]` con un sistema a 3 livelli:
+- **Livello 1**: match esatto `row[src]`
+- **Livello 2**: match normalizzato (entrambe le chiavi passate attraverso `normalizeKey`)
+- **Livello 3**: match fuzzy (una chiave contiene l'altra)
 
-**3. `src/pages/Import.tsx` — Supporto TXT**
-- Aggiungere `.txt` ai formati accettati
-- Per file TXT: leggere come testo, tentare parsing come CSV (auto-detect delimitatore)
-- Se non strutturato, usare la modalità "paste" (analisi AI testo libero)
+Aggiungere una funzione `applyMappingToRow(row, columnMapping)` che:
+- Pre-calcola una lookup table `normalizedRowKeys → originalKey` per tutte le chiavi del primo row
+- Per ogni entry del mapping AI, trova la chiave corretta nel row usando i 3 livelli
+- Logga un warning se nessuna chiave corrisponde
 
-**4. `supabase/functions/analyze-import-structure/index.ts` — Miglioramento report**
-- Aggiungere nel response un campo `data_quality`: conteggio righe con campi critici vuoti nel campione
-- Aggiungere `unmapped_columns`: lista colonne del file non mappate (per informare l'utente)
+### 2. Anteprima reale prima del salvataggio (`src/pages/Import.tsx`)
 
-### Dettaglio costi
+Il preview attuale mostra `aiMapping.parsed_rows` (i dati trasformati dall'AI sulle 50 righe campione). Ma l'import reale applica il mapping localmente. Aggiungere un'anteprima che mostri il risultato della trasformazione locale sulle prime 5 righe di `pendingRows`, così l'utente vede esattamente cosa verrà salvato.
 
-| Scenario | Prima | Dopo |
-|----------|-------|------|
-| 13.000 righe | 1 AI mapping + 521 AI normalize = **522 chiamate** | **1 sola chiamata AI** |
-| Costo stimato | ~€1-2 | ~€0.002 |
-| Righe problematiche (es. 200) | — | 8 chiamate AI (opzionale) |
+### 3. Validazione pre-import con abort (`src/pages/Import.tsx`)
 
-### UX del normalizzatore "intelligente"
+Prima di inserire nel database, verificare che almeno il 10% delle righe abbia almeno un campo non vuoto. Se il mapping produce tutti record vuoti, mostrare un errore e bloccare l'import (invece di salvare 13.000 righe vuote).
 
-Il bottone "Normalizza con AI" viene sostituito da un pannello informativo:
-- Mostra: "3.200 righe con company_name · 12.800 con email · 150 righe con problemi"
-- Se ci sono righe problematiche: "150 righe hanno dati incompleti. Vuoi:"
-  - "Correggi con AI (~6 chiamate, ~€0.01)" 
-  - "Esporta Excel con template per correzione manuale"
-  - "Importa comunque"
+### 4. Debug log nel mapping AI (`src/pages/Import.tsx`)
+
+Aggiungere un `console.log` nel mapping che mostra:
+- Chiavi presenti nel row: `Object.keys(pendingRows[0])`
+- Chiavi nel mapping AI: `Object.keys(aiMapping.column_mapping)`
+- Chiavi non trovate nel row
+
+### File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Import.tsx` | Campionamento 50 righe, report qualità, export Excel, normalizzatore solo su problemi |
-| `src/hooks/useImportLogs.ts` | Fix raw_data, hook export Excel, processo selettivo |
-| `supabase/functions/analyze-import-structure/index.ts` | Aggiungere data_quality e unmapped_columns al response |
+| `src/pages/Import.tsx` | Mapping robusto a 3 livelli, anteprima reale, validazione pre-import, debug log |
 
