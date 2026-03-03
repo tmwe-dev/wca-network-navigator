@@ -5,7 +5,8 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Star, Linkedin, ClipboardList, Coins,
+  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Linkedin, ClipboardList, Coins,
+  Globe, Send,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -13,7 +14,6 @@ import {
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
-import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
 import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { format } from "date-fns";
@@ -39,7 +39,6 @@ const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
   with_services: hasServices,
 };
 
-/* ── Props ── */
 interface CountryWorkbenchProps {
   countryCode: string;
   partners: any[];
@@ -51,9 +50,6 @@ interface CountryWorkbenchProps {
   onSelectAllFiltered: (ids: string[]) => void;
 }
 
-/* ══════════════════════════════════════ */
-/*           MAIN COMPONENT              */
-/* ══════════════════════════════════════ */
 export function CountryWorkbench({
   countryCode, partners, onBack, onSelectPartner,
   selectedId, selectedIds, onToggleSelection, onSelectAllFiltered,
@@ -76,7 +72,6 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  /* ── Aggregate AI credits consumed ── */
   const totalAiCredits = useMemo(() => {
     return countryPartners.reduce((sum: number, p: any) => {
       const credits = (p.enrichment_data as any)?.tokens_used?.credits_consumed || 0;
@@ -84,7 +79,6 @@ export function CountryWorkbench({
     }, 0);
   }, [countryPartners]);
 
-  /* ── LinkedIn links for all country partners ── */
   const partnerIds = useMemo(() => countryPartners.map((p: any) => p.id), [countryPartners]);
   const { data: linkedinMap } = useQuery({
     queryKey: ["linkedin-links-hub", countryCode, partnerIds],
@@ -104,7 +98,6 @@ export function CountryWorkbench({
     staleTime: 30_000,
   });
 
-  /* ── Activity counts per partner ── */
   const { data: activityPartnerIds } = useQuery({
     queryKey: ["activity-partner-ids", countryCode, partnerIds],
     queryFn: async () => {
@@ -120,7 +113,6 @@ export function CountryWorkbench({
     staleTime: 30_000,
   });
 
-  /* ── Dynamic filter counts ── */
   const dynamicCounts = useMemo(() => {
     const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
       let list = countryPartners;
@@ -151,32 +143,31 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  /* ── Filter chips config ── */
-  const filterChips: { key: FilterTag; label: string; count: number }[] = [
-    { key: "with_phone", label: "Con Tel", count: dynamicCounts.with_phone },
-    { key: "with_email", label: "Con Email", count: dynamicCounts.with_email },
-    { key: "deep_search", label: "Deep Search", count: dynamicCounts.deep_search },
-    { key: "rating_3", label: "Rating 3+", count: dynamicCounts.rating_3 },
-    { key: "with_services", label: "Con Servizi", count: dynamicCounts.with_services },
+  const filterChips: { key: FilterTag; label: string; icon: string; count: number }[] = [
+    { key: "with_phone", label: "Tel", icon: "📞", count: dynamicCounts.with_phone },
+    { key: "with_email", label: "Email", icon: "✉️", count: dynamicCounts.with_email },
+    { key: "deep_search", label: "Deep", icon: "🔍", count: dynamicCounts.deep_search },
+    { key: "rating_3", label: "★ 3+", icon: "", count: dynamicCounts.rating_3 },
+    { key: "with_services", label: "Servizi", icon: "📦", count: dynamicCounts.with_services },
   ];
 
   return (
     <div className="flex flex-col h-full">
       {/* ═══ HEADER ═══ */}
-      <div className="px-3 py-2 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+      <div className="px-4 py-3 border-b border-border/40 bg-card/30">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-xl">{flag}</span>
+          <span className="text-2xl">{flag}</span>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
-            <div className="flex items-center gap-2">
-              <p className="text-[10px] text-muted-foreground">{countryPartners.length} partner</p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-[11px] text-muted-foreground font-medium">{countryPartners.length} partner</span>
               {totalAiCredits > 0 && (
-                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Coins className="w-3 h-3 text-amber-500" />
-                  {totalAiCredits} crediti AI
+                  {totalAiCredits}
                 </span>
               )}
             </div>
@@ -185,30 +176,39 @@ export function CountryWorkbench({
       </div>
 
       {/* ═══ FILTER CHIPS ═══ */}
-      <div className="px-3 py-1.5 border-b border-border/50">
-        <div className="flex flex-wrap items-center gap-1">
+      <div className="px-4 py-2 border-b border-border/30">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {filterChips.map((f) => (
             <button key={f.key} onClick={() => toggleFilter(f.key)}
-              className={cn("text-xs px-2 py-1 rounded-md border transition-all",
-                activeFilters.has(f.key) ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-muted border-border text-muted-foreground hover:bg-accent")}>
-              {f.label} <span className="font-semibold ml-0.5">{f.count}</span>
+              className={cn(
+                "text-[11px] px-2.5 py-1 rounded-full border transition-all whitespace-nowrap font-medium",
+                activeFilters.has(f.key)
+                  ? "bg-primary/15 border-primary/30 text-primary shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
+                  : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}>
+              {f.icon && <span className="mr-0.5">{f.icon}</span>}
+              {f.label} <span className="font-bold ml-0.5 opacity-70">{f.count}</span>
             </button>
           ))}
           {activeFilters.size > 0 && (
             <button onClick={() => setActiveFilters(new Set())}
-              className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:bg-accent">
-              Reset
+              className="text-[10px] px-2 py-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all">
+              ✕
             </button>
           )}
         </div>
       </div>
 
       {/* ═══ LIST HEADER ═══ */}
-      <div className="px-4 py-2 flex items-center justify-between border-b border-border/50">
-        <span className="text-xs text-muted-foreground">{filteredPartners.length} partner</span>
+      <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/20">
+        <span className="text-[11px] text-muted-foreground font-medium">{filteredPartners.length} risultati</span>
         <button onClick={handleSelectAll}
-          className={cn("flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all",
-            allSelected ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground hover:bg-accent")}>
+          className={cn(
+            "flex items-center gap-1 text-[11px] px-2 py-1 rounded-full transition-all font-medium",
+            allSelected
+              ? "bg-primary/15 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          )}>
           <CheckSquare className="w-3 h-3" />
           {allSelected ? "Deseleziona" : "Sel. tutti"}
         </button>
@@ -216,7 +216,7 @@ export function CountryWorkbench({
 
       {/* ═══ PARTNER LIST ═══ */}
       <ScrollArea className="flex-1">
-        <div className="divide-y divide-border/50">
+        <div className="py-1">
           {filteredPartners.map((partner: any) => {
             const isSelected = selectedIds.has(partner.id);
             const years = getYearsMember(partner.member_since);
@@ -224,71 +224,90 @@ export function CountryWorkbench({
             const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
             const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
             const networks = partner.partner_networks || [];
-
             const linkedinUrl = linkedinMap?.[partner.id];
             const hasActivity = activityPartnerIds?.has(partner.id);
+            const primaryContact = (partner.partner_contacts || []).find((c: any) => c.is_primary) || (partner.partner_contacts || [])[0];
+            const contactEmail = primaryContact?.email;
+            const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
 
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
                 className={cn(
-                  "px-4 py-2.5 cursor-pointer transition-colors flex items-start gap-2.5",
-                  "hover:bg-accent/50",
-                  selectedId === partner.id && "bg-accent",
-                  isSelected && "bg-primary/5",
-                  hasActivity && "border-l-2 border-l-violet-500",
+                  "mx-2 mb-1 px-3 py-2.5 cursor-pointer transition-all rounded-xl flex items-start gap-2.5 group/item",
+                  "hover:bg-accent/40",
+                  selectedId === partner.id && "bg-accent/60 shadow-sm",
+                  isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
+                  hasActivity && "border-l-[3px] border-l-violet-500/70",
                 )}>
-                <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1">
-                  <Checkbox checked={isSelected} />
+                {/* Checkbox */}
+                <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1.5">
+                  <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                 </div>
-                <div className="w-8 h-8 shrink-0 mt-0.5 rounded overflow-hidden bg-muted/50">
-                  {getRealLogoUrl(partner.logo_url) ? (
-                    <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain" />
-                  ) : null}
-                </div>
-                <div className="flex-1 min-w-0">
-                  {/* Name + Rating */}
-                   <div className="flex items-center gap-2">
-                     <p className="text-sm font-medium truncate">{partner.company_name}</p>
-                     {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                      {linkedinUrl && (
-                        <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()} title="LinkedIn">
-                          <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
-                        </a>
-                      )}
-                      {hasActivity && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <ClipboardList className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent>Ha attività assegnate</TooltipContent>
-                        </Tooltip>
-                      )}
-                  </div>
 
-                  {/* City + Deep Search badge */}
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{partner.city}</span>
+                {/* Logo */}
+                <div className="w-9 h-9 shrink-0 mt-0.5 rounded-lg overflow-hidden bg-muted/30 border border-border/30 flex items-center justify-center">
+                  {getRealLogoUrl(partner.logo_url) ? (
+                    <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
+                  ) : (
+                    <span className="text-lg opacity-50">{flag}</span>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  {/* Row 1: Name + badges */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-[13px] font-semibold truncate leading-tight">{partner.company_name}</p>
+                    {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
                     {hasDeepSearch(partner) && (
                       <Tooltip>
                         <TooltipTrigger>
-                          <span className="w-4 h-4 bg-sky-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">D</span>
+                          <span className="w-[18px] h-[18px] bg-sky-500/20 text-sky-400 text-[8px] font-bold rounded flex items-center justify-center shrink-0">D</span>
                         </TooltipTrigger>
                         <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
                       </Tooltip>
                     )}
+                    {hasActivity && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <ClipboardList className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>Ha attività assegnate</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+
+                  {/* Row 2: City + years */}
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                    <span className="flex items-center gap-0.5 truncate">
+                      <MapPin className="w-3 h-3 shrink-0 opacity-50" />{partner.city}
+                    </span>
                     {years > 0 && <TrophyRow years={years} />}
                   </div>
 
-                  {/* Transport service icons */}
-                  {transportServices.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      {transportServices.map((s: any, i: number) => {
+                  {/* Row 3: Service icons */}
+                  {(transportServices.length > 0 || specialtyServices.length > 0) && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      {transportServices.slice(0, 5).map((s: any, i: number) => {
                         const Icon = getServiceIcon(s.service_category);
                         return (
-                          <Tooltip key={i}>
+                          <Tooltip key={`t${i}`}>
                             <TooltipTrigger>
-                              <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
+                              <Icon className="w-3.5 h-3.5 text-sky-500/70" strokeWidth={1.5} />
+                            </TooltipTrigger>
+                            <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                      {specialtyServices.length > 0 && transportServices.length > 0 && (
+                        <span className="w-px h-3 bg-border/50" />
+                      )}
+                      {specialtyServices.slice(0, 3).map((s: any, i: number) => {
+                        const Icon = getServiceIcon(s.service_category);
+                        return (
+                          <Tooltip key={`s${i}`}>
+                            <TooltipTrigger>
+                              <Icon className="w-3.5 h-3.5 text-violet-400/70" strokeWidth={1.5} />
                             </TooltipTrigger>
                             <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                           </Tooltip>
@@ -297,41 +316,48 @@ export function CountryWorkbench({
                     </div>
                   )}
 
-                  {/* Specialty service icons */}
-                  {specialtyServices.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      {specialtyServices.map((s: any, i: number) => {
-                        const Icon = getServiceIcon(s.service_category);
-                        return (
-                          <Tooltip key={i}>
-                            <TooltipTrigger>
-                              <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
-                            </TooltipTrigger>
-                            <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Network badges */}
+                  {/* Row 4: Networks (compact) */}
                   {networks.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      {networks.slice(0, 4).map((n: any) => (
-                        <Tooltip key={n.id}>
-                          <TooltipTrigger>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
-                              {n.network_name.replace("WCA ", "").substring(0, 12)}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>{n.network_name}</TooltipContent>
-                        </Tooltip>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      {networks.slice(0, 3).map((n: any) => (
+                        <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
+                          {n.network_name.replace("WCA ", "").substring(0, 10)}
+                        </span>
                       ))}
-                      {networks.length > 4 && (
-                        <span className="text-[9px] text-muted-foreground">+{networks.length - 4}</span>
+                      {networks.length > 3 && (
+                        <span className="text-[9px] text-muted-foreground/60">+{networks.length - 3}</span>
                       )}
                     </div>
                   )}
+
+                  {/* Row 5: QUICK ACTIONS — inline */}
+                  <div className="flex items-center gap-1 mt-2 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                    {contactEmail && (
+                      <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors">
+                        <Mail className="w-3 h-3" /> Email
+                      </a>
+                    )}
+                    {contactPhone && (
+                      <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors">
+                        <Phone className="w-3 h-3" /> Chiama
+                      </a>
+                    )}
+                    {linkedinUrl && (
+                      <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors">
+                        <Linkedin className="w-3 h-3" /> LinkedIn
+                      </a>
+                    )}
+                    {partner.website && (
+                      <a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`}
+                        target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground hover:bg-accent/50 transition-colors">
+                        <Globe className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             );
