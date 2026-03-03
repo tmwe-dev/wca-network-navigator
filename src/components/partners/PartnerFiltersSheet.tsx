@@ -1,62 +1,32 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Star,
-  ChevronDown,
-  Filter,
-  X,
-  Check,
-  ChevronsUpDown,
-  Globe,
-  Network,
-  ShieldCheck,
-  Clock,
-  Building2,
-  Trophy,
-  CalendarClock,
-  Package,
+  Star, ChevronDown, Filter, X, Check, ChevronsUpDown,
+  Globe, Network, ShieldCheck, Building2, Trophy, CalendarClock, Phone, Mail, Sparkles,
 } from "lucide-react";
 import { PartnerFilters } from "@/hooks/usePartners";
-import { getCountryFlag } from "@/lib/countries";
-import { formatServiceCategory } from "@/lib/countries";
+import { getCountryFlag, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 
 const PARTNER_TYPES = [
   { value: "freight_forwarder", label: "Freight Forwarder" },
@@ -68,29 +38,16 @@ const PARTNER_TYPES = [
 ];
 
 const SERVICES = [
-  "air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight",
-  "project_cargo", "dangerous_goods", "perishables", "pharma", "ecommerce",
-  "relocations", "customs_broker", "warehousing", "nvocc",
+  ...TRANSPORT_SERVICES,
+  ...SPECIALTY_SERVICES,
 ];
 
 const WCA_NETWORKS = [
-  "WCA Inter Global",
-  "WCA First",
-  "WCA Advanced Professionals",
-  "WCA China Global",
-  "WCA Projects",
-  "WCA Dangerous Goods",
-  "WCA Perishables",
-  "WCA Time Critical",
-  "WCA Pharma",
-  "WCA eCommerce",
-  "WCA eCommerce Solutions",
-  "WCA Relocations",
-  "WCA Live Events & Expo",
-  "Global Affinity Alliance",
-  "Lognet Global",
-  "Infinite Connection",
-  "Elite Global Logistics Network",
+  "WCA Inter Global", "WCA First", "WCA Advanced Professionals", "WCA China Global",
+  "WCA Projects", "WCA Dangerous Goods", "WCA Perishables", "WCA Time Critical",
+  "WCA Pharma", "WCA eCommerce", "WCA eCommerce Solutions", "WCA Relocations",
+  "WCA Live Events & Expo", "Global Affinity Alliance", "Lognet Global",
+  "Infinite Connection", "Elite Global Logistics Network",
 ];
 
 const CERTIFICATIONS = ["IATA", "ISO", "AEO", "C-TPAT", "BASC"] as const;
@@ -102,12 +59,7 @@ const EXPIRATION_OPTIONS = [
   { value: "active", label: "Attiva (non scaduta)" },
 ];
 
-interface CountryOption {
-  code: string;
-  name: string;
-  flag: string;
-  count: number;
-}
+interface CountryOption { code: string; name: string; flag: string; count: number; }
 
 interface PartnerFiltersSheetProps {
   filters: PartnerFilters;
@@ -116,67 +68,60 @@ interface PartnerFiltersSheetProps {
   activeFilterCount: number;
 }
 
+/* ── Chip toggle for service/network/cert filters ── */
+function FilterChip({ active, icon: Icon, label, onClick, color = "sky" }: {
+  active: boolean;
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  color?: "sky" | "violet" | "emerald" | "amber" | "rose";
+}) {
+  const colors: Record<string, string> = {
+    sky: active ? "border-sky-500/40 bg-sky-500/10 text-sky-400" : "border-border text-muted-foreground",
+    violet: active ? "border-violet-500/40 bg-violet-500/10 text-violet-400" : "border-border text-muted-foreground",
+    emerald: active ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" : "border-border text-muted-foreground",
+    amber: active ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : "border-border text-muted-foreground",
+    rose: active ? "border-rose-500/40 bg-rose-500/10 text-rose-400" : "border-border text-muted-foreground",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-all hover:shadow-sm",
+        colors[color],
+      )}
+    >
+      <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
 export default function PartnerFiltersSheet({
-  filters,
-  setFilters,
-  countries,
-  activeFilterCount,
+  filters, setFilters, countries, activeFilterCount,
 }: PartnerFiltersSheetProps) {
   const [countryOpen, setCountryOpen] = useState(false);
 
   const sortedCountries = useMemo(
     () => [...countries].sort((a, b) => a.name.localeCompare(b.name)),
-    [countries]
+    [countries],
   );
-
-  const selectedCountries = sortedCountries.filter(
-    (c) => filters.countries?.includes(c.code)
-  );
+  const selectedCountries = sortedCountries.filter((c) => filters.countries?.includes(c.code));
 
   const handleCountryToggle = (code: string) => {
     setFilters((prev) => {
       const current = prev.countries || [];
-      const next = current.includes(code)
-        ? current.filter((c) => c !== code)
-        : [...current, code];
+      const next = current.includes(code) ? current.filter((c) => c !== code) : [...current, code];
       return { ...prev, countries: next.length > 0 ? next : undefined };
     });
   };
 
-  const handleTypeFilter = (type: string, checked: boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      partnerTypes: checked
-        ? [...(prev.partnerTypes || []), type]
-        : (prev.partnerTypes || []).filter((t) => t !== type),
-    }));
-  };
-
-  const handleServiceFilter = (service: string, checked: boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      services: checked
-        ? [...(prev.services || []), service]
-        : (prev.services || []).filter((s) => s !== service),
-    }));
-  };
-
-  const handleNetworkFilter = (network: string, checked: boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      networks: checked
-        ? [...(prev.networks || []), network]
-        : (prev.networks || []).filter((n) => n !== network),
-    }));
-  };
-
-  const handleCertFilter = (cert: string, checked: boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      certifications: checked
-        ? [...(prev.certifications || []), cert]
-        : (prev.certifications || []).filter((c) => c !== cert),
-    }));
+  const toggle = (field: "partnerTypes" | "services" | "networks" | "certifications", value: string) => {
+    setFilters((prev) => {
+      const current = (prev[field] || []) as string[];
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: next.length > 0 ? next : undefined };
+    });
   };
 
   const clearFilters = () => setFilters({});
@@ -199,18 +144,17 @@ export default function PartnerFiltersSheet({
             <SheetTitle>Filtri Avanzati</SheetTitle>
             {activeFilterCount > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="w-4 h-4 mr-1" />
-                Pulisci
+                <X className="w-4 h-4 mr-1" /> Pulisci
               </Button>
             )}
           </div>
         </SheetHeader>
 
         <div className="space-y-5 mt-6">
-          {/* ── Countries (multi-select) ── */}
+          {/* ── Countries ── */}
           <Collapsible defaultOpen>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Paesi</span>
+              <span className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" strokeWidth={1.5} /> Paesi</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
@@ -218,8 +162,7 @@ export default function PartnerFiltersSheet({
                 <div className="flex flex-wrap gap-1 mb-2">
                   {selectedCountries.map((c) => (
                     <Badge key={c.code} variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => handleCountryToggle(c.code)}>
-                      {c.flag} {c.name}
-                      <X className="w-3 h-3" />
+                      {c.flag} {c.name} <X className="w-3 h-3" />
                     </Badge>
                   ))}
                 </div>
@@ -227,9 +170,7 @@ export default function PartnerFiltersSheet({
               <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between text-sm">
-                    {selectedCountries.length > 0
-                      ? `${selectedCountries.length} selezionati`
-                      : "Tutti i paesi"}
+                    {selectedCountries.length > 0 ? `${selectedCountries.length} selezionati` : "Tutti i paesi"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -253,105 +194,21 @@ export default function PartnerFiltersSheet({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* ── Favorites ── */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="favorites"
-              checked={filters.favorites || false}
-              onCheckedChange={(checked) =>
-                setFilters((prev) => ({ ...prev, favorites: checked === true }))
-              }
+          {/* ── Quick Filters (favorites, deep search) ── */}
+          <div className="space-y-2">
+            <FilterChip
+              active={filters.favorites || false}
+              icon={Star}
+              label="Solo preferiti"
+              onClick={() => setFilters((p) => ({ ...p, favorites: !p.favorites || undefined }))}
+              color="amber"
             />
-            <Label htmlFor="favorites" className="flex items-center gap-1 cursor-pointer">
-              <Star className="w-4 h-4 text-amber-500" />
-              Solo preferiti
-            </Label>
           </div>
 
-          {/* ── Partner Type ── */}
-          <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" /> Tipo Partner</span>
-              <ChevronDown className="w-4 h-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 space-y-2">
-              {PARTNER_TYPES.map((type) => (
-                <div key={type.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`sheet-${type.value}`}
-                    checked={(filters.partnerTypes || []).includes(type.value)}
-                    onCheckedChange={(checked) => handleTypeFilter(type.value, checked === true)}
-                  />
-                  <Label htmlFor={`sheet-${type.value}`} className="text-sm cursor-pointer">{type.label}</Label>
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* ── Services ── */}
-          <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Package className="w-4 h-4 text-primary" /> Servizi</span>
-              <ChevronDown className="w-4 h-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 space-y-2 max-h-48 overflow-y-auto">
-              {SERVICES.map((service) => (
-                <div key={service} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`sheet-${service}`}
-                    checked={(filters.services || []).includes(service)}
-                    onCheckedChange={(checked) => handleServiceFilter(service, checked === true)}
-                  />
-                  <Label htmlFor={`sheet-${service}`} className="text-sm cursor-pointer">{formatServiceCategory(service)}</Label>
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* ── WCA Networks ── */}
+          {/* ── Rating ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Network className="w-4 h-4 text-primary" /> Network WCA</span>
-              <ChevronDown className="w-4 h-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 space-y-2 max-h-56 overflow-y-auto">
-              {WCA_NETWORKS.map((network) => (
-                <div key={network} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`net-${network}`}
-                    checked={(filters.networks || []).includes(network)}
-                    onCheckedChange={(checked) => handleNetworkFilter(network, checked === true)}
-                  />
-                  <Label htmlFor={`net-${network}`} className="text-sm cursor-pointer">{network}</Label>
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* ── Certifications ── */}
-          <Collapsible>
-            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /> Certificazioni</span>
-              <ChevronDown className="w-4 h-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 space-y-2">
-              {CERTIFICATIONS.map((cert) => (
-                <div key={cert} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`cert-${cert}`}
-                    checked={(filters.certifications || []).includes(cert)}
-                    onCheckedChange={(checked) => handleCertFilter(cert, checked === true)}
-                  />
-                  <Label htmlFor={`cert-${cert}`} className="text-sm cursor-pointer">{cert}</Label>
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* ── Min Rating ── */}
-          <Collapsible>
-            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Star className="w-4 h-4 text-primary" /> Rating minimo</span>
+              <span className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500" strokeWidth={1.5} /> Rating minimo</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 space-y-2">
@@ -372,10 +229,126 @@ export default function PartnerFiltersSheet({
             </CollapsibleContent>
           </Collapsible>
 
+          {/* ── Partner Type ── */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
+              <span className="flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" strokeWidth={1.5} /> Tipo Partner</span>
+              <ChevronDown className="w-4 h-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="flex flex-wrap gap-1.5">
+                {PARTNER_TYPES.map((type) => (
+                  <FilterChip
+                    key={type.value}
+                    active={(filters.partnerTypes || []).includes(type.value)}
+                    icon={Building2}
+                    label={type.label}
+                    onClick={() => toggle("partnerTypes", type.value)}
+                    color="sky"
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Transport Services ── */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
+              <span className="flex items-center gap-2 text-sky-500">✈️ Trasporto</span>
+              <ChevronDown className="w-4 h-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="flex flex-wrap gap-1.5">
+                {TRANSPORT_SERVICES.map((service) => {
+                  const Icon = getServiceIcon(service);
+                  return (
+                    <FilterChip
+                      key={service}
+                      active={(filters.services || []).includes(service)}
+                      icon={Icon}
+                      label={formatServiceCategory(service)}
+                      onClick={() => toggle("services", service)}
+                      color="sky"
+                    />
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Specialty Services ── */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
+              <span className="flex items-center gap-2 text-violet-400">⚡ Specialità</span>
+              <ChevronDown className="w-4 h-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="flex flex-wrap gap-1.5">
+                {SPECIALTY_SERVICES.map((service) => {
+                  const Icon = getServiceIcon(service);
+                  return (
+                    <FilterChip
+                      key={service}
+                      active={(filters.services || []).includes(service)}
+                      icon={Icon}
+                      label={formatServiceCategory(service)}
+                      onClick={() => toggle("services", service)}
+                      color="violet"
+                    />
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── WCA Networks ── */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
+              <span className="flex items-center gap-2"><Network className="w-4 h-4 text-primary" strokeWidth={1.5} /> Network WCA</span>
+              <ChevronDown className="w-4 h-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto">
+                {WCA_NETWORKS.map((network) => (
+                  <FilterChip
+                    key={network}
+                    active={(filters.networks || []).includes(network)}
+                    icon={Globe}
+                    label={network.replace("WCA ", "")}
+                    onClick={() => toggle("networks", network)}
+                    color="emerald"
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Certifications ── */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
+              <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-emerald-500" strokeWidth={1.5} /> Certificazioni</span>
+              <ChevronDown className="w-4 h-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <div className="flex flex-wrap gap-1.5">
+                {CERTIFICATIONS.map((cert) => (
+                  <FilterChip
+                    key={cert}
+                    active={(filters.certifications || []).includes(cert)}
+                    icon={ShieldCheck}
+                    label={cert}
+                    onClick={() => toggle("certifications", cert)}
+                    color="emerald"
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* ── Min Years WCA ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" /> Anni in WCA</span>
+              <span className="flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" strokeWidth={1.5} /> Anni in WCA</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 space-y-2">
@@ -390,16 +363,13 @@ export default function PartnerFiltersSheet({
                 onValueChange={([v]) => setFilters((p) => ({ ...p, minYearsMember: v > 0 ? v : undefined }))}
                 min={0} max={30} step={1}
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span>
-              </div>
             </CollapsibleContent>
           </Collapsible>
 
           {/* ── Expiration ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full text-sm font-medium">
-              <span className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-primary" /> Scadenza WCA</span>
+              <span className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-primary" strokeWidth={1.5} /> Scadenza WCA</span>
               <ChevronDown className="w-4 h-4" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
@@ -426,15 +396,12 @@ export default function PartnerFiltersSheet({
           {/* ── Has Branches ── */}
           <div className="flex items-center justify-between">
             <Label htmlFor="has-branches" className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-              <Building2 className="w-4 h-4 text-primary" />
-              Ha filiali
+              <Building2 className="w-4 h-4 text-primary" strokeWidth={1.5} /> Ha filiali
             </Label>
             <Switch
               id="has-branches"
               checked={filters.hasBranches || false}
-              onCheckedChange={(checked) =>
-                setFilters((p) => ({ ...p, hasBranches: checked || undefined }))
-              }
+              onCheckedChange={(checked) => setFilters((p) => ({ ...p, hasBranches: checked || undefined }))}
             />
           </div>
         </div>
