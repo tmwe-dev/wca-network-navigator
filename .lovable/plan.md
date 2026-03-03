@@ -1,65 +1,42 @@
 
 
-## Analisi Deep Search: Logo e Background
+## Analisi completa: Loghi nel Partner Hub
 
-### Problema 1: I loghi non vengono mostrati nelle card
+### Stato attuale del codice
 
-La Deep Search **salva correttamente** il logo nel campo `logo_url` del partner (riga 593-595 della edge function). La strategia a 3 livelli (branding → OG image → Google favicon) funziona.
+Il codice in `PartnerCard.tsx` (righe 81-97) **e gia corretto**. La logica a 3 livelli funziona:
 
-**Ma la PartnerCard lo ignora completamente.** In `src/components/partners/PartnerCard.tsx` (righe 79-96), il logo viene SEMPRE preso dal Google Favicon API basato sul dominio:
+1. `partner.logo_url` → logo branding (priorita)
+2. Google Favicon → fallback se no logo_url
+3. Bandiera paese → fallback finale
 
-```text
-src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-```
+La query in `usePartners.ts` usa `select(*)` che include `logo_url`. Nessun bug nel rendering.
 
-Non c'è nessun riferimento a `partner.logo_url`. Quindi anche se la Deep Search trova un bel logo branding e lo salva nel database, la card non lo usa mai.
+### Stato dei dati nel database
 
-**Soluzione**: Modificare la logica del logo nella PartnerCard con priorità:
-1. Se `partner.logo_url` esiste → usalo (è il logo trovato dalla Deep Search)
-2. Se ha un sito web ma no logo_url → usa Google favicon (come adesso)
-3. Altrimenti → bandiera del paese
-
-### Problema 2: Background execution — già funziona
-
-La Deep Search **già funziona in background**. L'hook `useDeepSearchRunner` è montato in `AppLayout` (riga 16) e fornito tramite `DeepSearchContext.Provider` (riga 38). Poiché `AppLayout` è il layout root, il processo continua anche quando navighi tra le pagine. Questo è già corretto e non richiede modifiche.
-
-### File da modificare
-
-| File | Modifica |
+| Metrica | Conteggio |
 |---|---|
-| `src/components/partners/PartnerCard.tsx` | Righe 79-96: aggiungere priorità `partner.logo_url` prima del Google favicon |
+| Partner totali | 1554 |
+| Con logo_url | 574 (37%) |
+| — di cui logo reali (branding) | 309 |
+| — di cui Google favicon salvati | 265 |
+| **Senza logo_url** | **980 (63%)** |
 
-### Codice della modifica
+### Il vero problema
 
-```tsx
-{/* Logo / Favicon — Priority: logo_url > Google favicon > flag */}
-<div className="flex-shrink-0 w-11 h-11 rounded-lg bg-muted/50 border flex items-center justify-center overflow-hidden">
-  {partner.logo_url ? (
-    <img
-      src={partner.logo_url}
-      alt=""
-      className="w-8 h-8 object-contain"
-      onError={() => setFaviconError(true)}  // fallback al favicon
-    />
-  ) : hasWebsite && !faviconError ? (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-      alt=""
-      className="w-8 h-8 object-contain"
-      onError={() => setFaviconError(true)}
-    />
-  ) : hasWebsite && faviconError ? (
-    <span className="text-2xl">{getCountryFlag(partner.country_code)}</span>
-  ) : (
-    <Tooltip>
-      <TooltipTrigger>
-        <GlobeIcon className="w-5 h-5 text-destructive/60" />
-      </TooltipTrigger>
-      <TooltipContent>Nessun sito web</TooltipContent>
-    </Tooltip>
-  )}
-</div>
-```
+Il 63% dei partner non ha un `logo_url` perche **non hanno ancora avuto una Deep Search**. Per quei partner:
+- Se hanno un sito web → mostrano il favicon di Google (iconcina piccola)
+- Se non hanno sito web → mostrano la bandiera del paese
 
-Serve anche gestire il fallback: se `logo_url` fallisce (immagine rotta), ricadere sul favicon. Per questo serve un secondo stato (`logoError`) separato da `faviconError`.
+I loghi branding vengono salvati dalla Deep Search (riga 553-596 della edge function). **Senza eseguire la Deep Search su un partner, il logo branding non esiste nel database.**
+
+I 265 logo salvati come "Google favicon" sono il risultato del fallback a riga 586-591 della edge function: quando il sito non ha un branding logo ne un OG image, salva il favicon come ultima risorsa.
+
+### Cosa non va
+
+Niente e rotto — il sistema funziona come progettato. Per vedere loghi branding, serve eseguire la Deep Search sui partner. Quelli gia processati (574) mostrano il loro logo. Quelli non processati (980) mostrano favicon o bandiera.
+
+### Nessuna modifica necessaria
+
+Il codice e gia corretto. Non servono modifiche al frontend ne al backend.
 
