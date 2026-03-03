@@ -1,33 +1,34 @@
 
 
-## Piano: Processi Attivi in Alto a Sinistra (sempre visibili)
+## Piano: Import Intelligente Universale
 
-### Problema attuale
-L'`ActiveProcessIndicator` e posizionato a **destra** nell'header, e traccia solo i download jobs. Non traccia Deep Search, sorting/alias, o email queue. L'utente vuole visibilita immediata e costante a **sinistra**, vicino al menu.
+### Problema
+Il parser CSV splitta solo per virgola (il file TMW usa `;`), il campione AI è solo 5 righe (troppo poche per certezza), e la modalità "File Standard" bypassa l'AI causando import vuoti quando le colonne non matchano esattamente.
 
 ### Modifiche
 
-**1. Espandere `useActiveProcesses` per tracciare tutti i processi**
-- **Deep Search**: leggere lo stato dal `DeepSearchContext` (running, current partner, progress count)
-- **Download jobs**: gia implementato
-- **Email queue**: query globale su `email_campaign_queue` con status `pending` o `sending` (senza richiedere un draftId specifico)
-- Aggiungere contatore totale e progresso per ogni tipo
+**1. `src/pages/Import.tsx` — Parser e UI**
+- **Auto-detect delimitatore**: contare `;`, `,`, `\t` nella prima riga e usare il più frequente
+- **Gestione colonne duplicate**: quando due header hanno lo stesso nome normalizzato, aggiungere suffisso `_2`, `_3` ecc.
+- **Rimuovere la modalità "File Standard"**: resta solo "Incolla Testo" e "File + Mapping AI"
+- **Aumentare il campione AI da 5 a 30 righe** per maggiore affidabilità
+- **Aggiungere bottone "Esporta errori CSV"** nel tab errori per scaricare le righe fallite
 
-**2. Spostare `ActiveProcessIndicator` a sinistra nell'header**
-- In `AppLayout.tsx`: spostare il componente dal blocco destro al blocco sinistro, subito dopo il bottone menu hamburger
-- Il dropdown si apre verso il basso-sinistra invece che destra
+**2. `src/hooks/useImportLogs.ts` — Alias TMW**
+- Aggiungere alias mancanti: `cell` → mobile, `position` → note, `Address` → address, `company_alias` → company_alias, `contact_alias` → contact_alias
+- Usare `FIELD_ALIASES` anche nel path AI come fallback
 
-**3. Migliorare il componente visivo**
-- Quando ci sono processi attivi: mostrare un chip animato con pallino pulsante verde, icona del processo principale, contatore
-- Aggiungere una mini progress bar orizzontale sotto il chip che mostra il progresso complessivo
-- Il dropdown espanso mostra tutti i processi raggruppati per tipo con dettagli
-- Quando non ci sono processi: mostrare comunque un'icona discreta (grigia, senza pulsazione) con "Nessun processo" al tooltip, cosi l'utente sa sempre dove guardare
+**3. `supabase/functions/analyze-import-structure/index.ts` — Prompt migliorato**
+- Aggiungere `company_alias` e `contact_alias` alle colonne target
+- Istruire l'AI a gestire strutture a doppia entità (contatto + azienda nella stessa riga, colonne duplicate con suffisso)
 
 ### File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/hooks/useActiveProcesses.ts` | Aggiungere deep search e email queue come sorgenti |
-| `src/components/layout/ActiveProcessIndicator.tsx` | Spostare dropdown a sinistra, migliorare UI, mostrare sempre |
-| `src/components/layout/AppLayout.tsx` | Spostare `ActiveProcessIndicator` nel blocco sinistro dopo il menu |
+| `src/pages/Import.tsx` | Auto-detect delimitatore, rimuovere "Standard", campione 30 righe, colonne duplicate |
+| `src/hooks/useImportLogs.ts` | Alias TMW aggiuntivi |
+| `supabase/functions/analyze-import-structure/index.ts` | Aggiungere company_alias/contact_alias, prompt doppia entità |
+
+Nessun file eliminato. Le modifiche sono retrocompatibili con tutti i formati CSV/Excel esistenti.
 
