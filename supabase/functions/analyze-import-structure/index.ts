@@ -6,11 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const TARGET_COLUMNS = [
-  "company_name", "name", "email", "phone", "mobile",
-  "country", "city", "address", "zip_code", "note", "origin",
-  "company_alias", "contact_alias",
-];
+// Exact target schema — these are the ONLY columns in our imported_contacts table
+const TARGET_SCHEMA = {
+  company_name: "Nome dell'azienda (es. 'Global Logistics Srl')",
+  name: "Nome del contatto/persona (es. 'Mario Rossi')",
+  email: "Indirizzo email",
+  phone: "Numero di telefono fisso",
+  mobile: "Numero di cellulare",
+  country: "Paese (es. 'Italy', 'Germany')",
+  city: "Città",
+  address: "Indirizzo completo",
+  zip_code: "Codice postale / CAP",
+  note: "Note, commenti, ruolo/posizione del contatto",
+  origin: "Origine/provenienza del contatto",
+  company_alias: "Alias/codice alternativo dell'azienda",
+  contact_alias: "Alias/codice alternativo del contatto",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -24,56 +35,59 @@ serve(async (req) => {
     let prompt: string;
     let userContent: string;
 
+    const schemaDescription = Object.entries(TARGET_SCHEMA)
+      .map(([col, desc]) => `  - "${col}": ${desc}`)
+      .join("\n");
+
     if (input_type === "paste") {
       prompt = `Sei un assistente specializzato nell'estrazione di dati strutturati da testo libero.
-Il testo può contenere elenchi di aziende, tabelle copiate, email con contatti, ecc.
 
-Estrai i dati e strutturali come array di oggetti con queste colonne destinazione:
-${TARGET_COLUMNS.join(", ")}
+Il testo può contenere elenchi di aziende, tabelle copiate, email con contatti, biglietti da visita, ecc.
+
+La tabella di destinazione ha ESATTAMENTE queste colonne:
+${schemaDescription}
 
 Analizza il testo e:
 1. Identifica ogni riga/entità (azienda o contatto)
 2. Mappa i dati trovati alle colonne destinazione
 3. Se un campo non è presente, usa null
 4. Genera un column_mapping vuoto (non applicabile per testo libero)
-5. Valuta la confidence (0-1) basata su quanto i dati sono chiari`;
+5. Valuta la confidence (0-1) basata su quanto i dati sono chiari e completi`;
 
       userContent = raw_text || "";
     } else {
-      prompt = `Sei un assistente specializzato nel mapping di colonne CSV/Excel verso un formato standard CRM per spedizionieri.
+      prompt = `Sei un assistente specializzato nel mapping di colonne da file CSV/Excel verso il nostro database CRM per spedizionieri.
 
-Le colonne destinazione sono: ${TARGET_COLUMNS.join(", ")}
+## SCHEMA TABELLA DESTINAZIONE
+La tabella "imported_contacts" ha ESATTAMENTE queste colonne:
+${schemaDescription}
 
-Ricevi un campione di righe dal file dell'utente. Ogni riga è un oggetto con le chiavi originali del file (già normalizzate in lowercase con underscore). Le chiavi possono avere suffissi numerici (_2, _3) quando nel file originale c'erano colonne duplicate.
+## DATI IN INPUT
+Ricevi un campione di righe dal file dell'utente. Ogni riga è un oggetto JSON con le chiavi originali del file (già normalizzate in lowercase con underscore). Le chiavi possono avere suffissi numerici (_2, _3) quando nel file originale c'erano colonne duplicate con lo stesso nome.
 
-REGOLE IMPORTANTI per strutture a doppia entità (es. file TMW con contatto + azienda nella stessa riga):
-- Se trovi chiavi come "name" e "name_2", la prima "name" è il CONTATTO (→ name), la seconda "name_2" è l'AZIENDA (→ company_name)
-- Se trovi "alias" e "alias_2", la prima è contact_alias, la seconda è company_alias
-- "cell" → mobile
-- "position" → note (ruolo/posizione del contatto)
-- Se c'è solo una colonna "country" e due entità, usa quella per il campo country
+## ISTRUZIONI
+Devi creare un mapping COMPLETO: per ogni chiave del file sorgente che contiene dati utili, indica a quale colonna destinazione corrisponde.
 
-Devi:
-1. Analizzare le chiavi del file sorgente e i valori di esempio
-2. Creare un mapping: chiave_sorgente → colonna_destinazione (una chiave sorgente può mappare a una sola destinazione)
-3. Applicare il mapping alle righe campione per generare parsed_rows
-4. Valutare la confidence (0-1) del mapping
-5. Segnalare warnings per colonne non mappabili
+REGOLE CRITICHE:
+1. Analizza ATTENTAMENTE sia i nomi delle chiavi che i VALORI di esempio nelle righe
+2. Se una chiave del file si chiama come una colonna destinazione (es. "email" → "email"), mappala direttamente
+3. Se i nomi sono diversi ma i valori suggeriscono la corrispondenza, usa il contenuto per decidere
+4. Per strutture con entità doppie (contatto + azienda nella stessa riga):
+   - "name" = nome persona → "name"
+   - "name_2" = nome azienda → "company_name" 
+   - "alias" → "contact_alias"
+   - "alias_2" → "company_alias"
+5. "cell" / "cellulare" → "mobile"
+6. "position" / "ruolo" / "posizione" → "note"
+7. "tel" / "telefono" → "phone"
+8. "paese" / "nazione" / "stato" (quando contiene nomi di paesi) → "country"
+9. "cap" → "zip_code"
+10. Chiavi che non corrispondono a nessuna colonna (es. "id", "created_at", "status", campi meta) devono andare in unmapped_columns
+11. La confidence deve riflettere quante colonne importanti (company_name, name, email) sono state trovate
 
-Esempi di mapping comuni:
-- "ragione_sociale" / "azienda" / "company" → company_name
-- "nome" / "contatto" / "referente" → name
-- "mail" / "e_mail" / "email_address" → email
-- "telefono" / "tel" / "phone_number" → phone
-- "cellulare" / "cell" / "mobile_phone" → mobile
-- "paese" / "nazione" / "country" → country
-- "citta" / "città" / "city" → city
-- "indirizzo" / "via" / "address" → address
-- "cap" / "zip" / "postal_code" → zip_code
-- "company_alias" / "alias_2" → company_alias
-- "contact_alias" / "alias" → contact_alias`;
+IMPORTANTE: Non lasciare MAI il column_mapping vuoto se ci sono chiavi mappabili. Analizza ogni singola chiave.`;
 
-      userContent = JSON.stringify(sample_rows || []);
+      userContent = JSON.stringify(sample_rows || [], null, 2);
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -93,65 +107,53 @@ Esempi di mapping comuni:
             type: "function",
             function: {
               name: "return_import_structure",
-              description: "Returns the analyzed import structure with column mapping, parsed rows, and data quality report",
+              description: "Returns the analyzed import structure with column mapping and parsed sample rows",
               parameters: {
                 type: "object",
                 properties: {
                   column_mapping: {
                     type: "object",
-                    description: "Mapping from source column names to target column names",
+                    description: "Mapping from EVERY mappable source column name to ONE target column name. Keys are source column names exactly as they appear in the data, values are target column names from the schema.",
                     additionalProperties: { type: "string" },
                   },
                   parsed_rows: {
                     type: "array",
-                    description: "Parsed rows with target column names",
+                    description: "The sample rows transformed using the column_mapping. Each row should have target column names as keys.",
                     items: {
                       type: "object",
                       properties: {
-                        company_name: { type: "string" },
-                        name: { type: "string" },
-                        email: { type: "string" },
-                        phone: { type: "string" },
-                        mobile: { type: "string" },
-                        country: { type: "string" },
-                        city: { type: "string" },
-                        address: { type: "string" },
-                        zip_code: { type: "string" },
-                        note: { type: "string" },
-                        origin: { type: "string" },
-                        company_alias: { type: "string" },
-                        contact_alias: { type: "string" },
+                        company_name: { type: "string", nullable: true },
+                        name: { type: "string", nullable: true },
+                        email: { type: "string", nullable: true },
+                        phone: { type: "string", nullable: true },
+                        mobile: { type: "string", nullable: true },
+                        country: { type: "string", nullable: true },
+                        city: { type: "string", nullable: true },
+                        address: { type: "string", nullable: true },
+                        zip_code: { type: "string", nullable: true },
+                        note: { type: "string", nullable: true },
+                        origin: { type: "string", nullable: true },
+                        company_alias: { type: "string", nullable: true },
+                        contact_alias: { type: "string", nullable: true },
                       },
                     },
                   },
                   confidence: {
                     type: "number",
-                    description: "Confidence score 0-1",
+                    description: "Confidence score 0-1. 0.9+ if key columns found, 0.5-0.8 if partial, below 0.5 if poor match",
                   },
                   warnings: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Warnings about unmapped columns or issues",
+                    description: "Warnings about ambiguous mappings or data quality issues",
                   },
                   unmapped_columns: {
                     type: "array",
                     items: { type: "string" },
-                    description: "List of source columns that could not be mapped to any target column",
-                  },
-                  data_quality: {
-                    type: "object",
-                    description: "Quality report based on the sample rows",
-                    properties: {
-                      sample_size: { type: "number" },
-                      with_company_name: { type: "number" },
-                      with_name: { type: "number" },
-                      with_email: { type: "number" },
-                      with_phone: { type: "number" },
-                      with_country: { type: "number" },
-                    },
+                    description: "Source columns that could NOT be mapped to any target column (meta fields, IDs, etc.)",
                   },
                 },
-                required: ["column_mapping", "parsed_rows", "confidence", "warnings", "unmapped_columns", "data_quality"],
+                required: ["column_mapping", "parsed_rows", "confidence", "warnings", "unmapped_columns"],
                 additionalProperties: false,
               },
             },
@@ -181,6 +183,11 @@ Esempi di mapping comuni:
     if (!toolCall) throw new Error("No tool call in AI response");
 
     const result = JSON.parse(toolCall.function.arguments);
+    
+    // Log for debugging
+    console.log("[analyze-import-structure] column_mapping keys:", Object.keys(result.column_mapping || {}));
+    console.log("[analyze-import-structure] confidence:", result.confidence);
+    console.log("[analyze-import-structure] unmapped:", result.unmapped_columns);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
