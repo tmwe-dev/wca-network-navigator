@@ -713,6 +713,40 @@ export default function Import() {
                                     <Wand2 className="w-3.5 h-3.5 mr-1" />
                                     Correggi con AI (~{Math.ceil(problemRows / 25)} chiamate)
                                   </Button>
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    const incomplete = contacts.filter(c => !c.company_name && !c.name);
+                                    if (incomplete.length === 0) return;
+                                    const headers = ["row_number","company_name","name","email","phone","mobile","country","city","address","zip_code","note","origin","raw_data"];
+                                    const csvRows = [headers.join(",")];
+                                    for (const c of incomplete) {
+                                      csvRows.push([
+                                        c.row_number,
+                                        `"${(c.company_name || "").replace(/"/g, '""')}"`,
+                                        `"${(c.name || "").replace(/"/g, '""')}"`,
+                                        `"${(c.email || "").replace(/"/g, '""')}"`,
+                                        `"${(c.phone || "").replace(/"/g, '""')}"`,
+                                        `"${(c.mobile || "").replace(/"/g, '""')}"`,
+                                        `"${(c.country || "").replace(/"/g, '""')}"`,
+                                        `"${(c.city || "").replace(/"/g, '""')}"`,
+                                        `"${(c.address || "").replace(/"/g, '""')}"`,
+                                        `"${(c.zip_code || "").replace(/"/g, '""')}"`,
+                                        `"${(c.note || "").replace(/"/g, '""')}"`,
+                                        `"${(c.origin || "").replace(/"/g, '""')}"`,
+                                        `"${(c.raw_data ? JSON.stringify(c.raw_data).replace(/"/g, '""') : "").slice(0, 500)}"`,
+                                      ].join(","));
+                                    }
+                                    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url;
+                                    link.download = `record_incompleti_${Date.now()}.csv`;
+                                    link.click();
+                                    URL.revokeObjectURL(url);
+                                    toast({ title: `${incomplete.length} record incompleti esportati` });
+                                  }}>
+                                    <Download className="w-3.5 h-3.5 mr-1" />
+                                    Esporta CSV incompleti ({problemRows})
+                                  </Button>
                                 </div>
                               </AlertDescription>
                             </Alert>
