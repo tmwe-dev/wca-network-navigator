@@ -416,36 +416,111 @@ export default function Import() {
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
         const rowKeys = Object.keys(pendingRows[0] || {});
-        const mappingKeys = Object.keys(aiMapping.column_mapping);
+        const mappingKeys = Object.keys(aiMapping.column_mapping || {});
         console.log("[Import Debug] Row keys:", rowKeys);
         console.log("[Import Debug] AI mapping keys:", mappingKeys);
-        const unmatchedKeys = mappingKeys.filter(k => !findRowKey(rowKeys, k));
-        if (unmatchedKeys.length > 0) {
-          console.warn("[Import Debug] Unmatched AI keys:", unmatchedKeys);
+
+        let finalRows: Record<string, any>[];
+
+        if (mappingKeys.length === 0) {
+          // AI returned empty column_mapping — fallback to parsed_rows
+          console.log("[Import Debug] Empty column_mapping, using parsed_rows as fallback");
+          
+          // If parsed_rows have data, use them; otherwise try direct key matching
+          const parsedNonEmpty = aiMapping.parsed_rows.filter((r: any) =>
+            TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+          ).length;
+
+          if (parsedNonEmpty > 0) {
+            // AI parsed_rows have data — apply them to ALL rows by building mapping from parsed sample
+            // Build column_mapping from row keys that match target columns directly
+            const autoMapping: Record<string, string> = {};
+            for (const rk of rowKeys) {
+              const nrk = normalizeKey(rk);
+              for (const tc of TARGET_COLUMNS) {
+                if (nrk === tc || nrk === normalizeKey(tc)) {
+                  autoMapping[rk] = tc;
+                  break;
+                }
+              }
+            }
+            // Also try common aliases
+            const ALIASES: Record<string, string> = {
+              "name_2": "company_name", "alias": "contact_alias", "alias_2": "company_alias",
+              "cell": "mobile", "position": "note",
+            };
+            for (const rk of rowKeys) {
+              const nrk = normalizeKey(rk);
+              if (ALIASES[nrk] && !Object.values(autoMapping).includes(ALIASES[nrk])) {
+                autoMapping[rk] = ALIASES[nrk];
+              }
+            }
+
+            console.log("[Import Debug] Auto-built mapping:", autoMapping);
+
+            if (Object.keys(autoMapping).length > 0) {
+              finalRows = pendingRows.map((row) => {
+                const mapped = applyMappingToRow(row, autoMapping, rowKeys);
+                return { ...mapped, _raw: row };
+              });
+            } else {
+              // Last resort: use parsed_rows directly (only covers sample)
+              finalRows = aiMapping.parsed_rows.map((r: any) => ({ ...r, _raw: r }));
+            }
+          } else {
+            // Both empty — try direct key matching as last resort
+            const autoMapping: Record<string, string> = {};
+            for (const rk of rowKeys) {
+              const nrk = normalizeKey(rk);
+              for (const tc of TARGET_COLUMNS) {
+                if (nrk === tc) { autoMapping[rk] = tc; break; }
+              }
+            }
+            if (Object.keys(autoMapping).length > 0) {
+              finalRows = pendingRows.map((row) => {
+                const mapped = applyMappingToRow(row, autoMapping, rowKeys);
+                return { ...mapped, _raw: row };
+              });
+            } else {
+              toast({
+                title: "Mapping fallito",
+                description: "Impossibile mappare le colonne del file. Verifica il formato.",
+                variant: "destructive",
+              });
+              setUploading(false);
+              return;
+            }
+          }
+        } else {
+          // Normal flow: apply AI column_mapping
+          const unmatchedKeys = mappingKeys.filter(k => !findRowKey(rowKeys, k));
+          if (unmatchedKeys.length > 0) {
+            console.warn("[Import Debug] Unmatched AI keys:", unmatchedKeys);
+          }
+
+          finalRows = pendingRows.map((row) => {
+            const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
+            return { ...mapped, _raw: row };
+          });
         }
 
-        const mappedRows = pendingRows.map((row) => {
-          const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
-          return { ...mapped, _raw: row };
-        });
-
-        const nonEmptyCount = mappedRows.filter(r =>
+        const nonEmptyCount = finalRows.filter(r =>
           TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
         ).length;
-        const fillRate = nonEmptyCount / mappedRows.length;
-        console.log(`[Import Debug] Fill rate: ${(fillRate * 100).toFixed(1)}% (${nonEmptyCount}/${mappedRows.length})`);
+        const fillRate = nonEmptyCount / finalRows.length;
+        console.log(`[Import Debug] Fill rate: ${(fillRate * 100).toFixed(1)}% (${nonEmptyCount}/${finalRows.length})`);
 
         if (fillRate < 0.1) {
           toast({
             title: "Mapping fallito",
-            description: `Solo ${nonEmptyCount} righe su ${mappedRows.length} hanno dati. Il mapping AI non corrisponde alle colonne del file. Riprova.`,
+            description: `Solo ${nonEmptyCount} righe su ${finalRows.length} hanno dati. Riprova.`,
             variant: "destructive",
           });
           setUploading(false);
           return;
         }
 
-        log = await createFromParsed.mutateAsync({ rows: mappedRows, userId: user.id, fileName });
+        log = await createFromParsed.mutateAsync({ rows: finalRows, userId: user.id, fileName });
       } else {
         log = await createFromParsed.mutateAsync({ rows: aiMapping.parsed_rows, userId: user.id, fileName });
       }
