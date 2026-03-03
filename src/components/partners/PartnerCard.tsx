@@ -92,15 +92,8 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                 className="w-8 h-8 object-contain"
                 onError={() => setFaviconError(true)}
               />
-            ) : hasWebsite ? (
-              <span className="text-2xl">{getCountryFlag(partner.country_code)}</span>
             ) : (
-              <Tooltip>
-                <TooltipTrigger>
-                  <GlobeIcon className="w-5 h-5 text-destructive/60" />
-                </TooltipTrigger>
-                <TooltipContent>Nessun sito web</TooltipContent>
-              </Tooltip>
+              <span className="text-2xl">{getCountryFlag(partner.country_code)}</span>
             )}
           </div>
 
