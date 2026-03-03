@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
   ArrowLeft, Phone, Mail, CheckSquare, MapPin, Linkedin, ClipboardList, Coins,
-  Globe, Send,
+  Globe, Send, Star, Package, X,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -143,12 +143,12 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const filterChips: { key: FilterTag; label: string; icon: string; count: number }[] = [
-    { key: "with_phone", label: "Tel", icon: "📞", count: dynamicCounts.with_phone },
-    { key: "with_email", label: "Email", icon: "✉️", count: dynamicCounts.with_email },
-    { key: "deep_search", label: "Deep", icon: "🔍", count: dynamicCounts.deep_search },
-    { key: "rating_3", label: "★ 3+", icon: "", count: dynamicCounts.rating_3 },
-    { key: "with_services", label: "Servizi", icon: "📦", count: dynamicCounts.with_services },
+  const filterChips: { key: FilterTag; label: string; icon: typeof Phone; color: string; activeColor: string; count: number }[] = [
+    { key: "with_phone", label: "Telefono", icon: Phone, color: "text-emerald-500", activeColor: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_hsl(142_71%_45%/0.12)]", count: dynamicCounts.with_phone },
+    { key: "with_email", label: "Email", icon: Mail, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400 shadow-[0_0_10px_hsl(199_89%_48%/0.12)]", count: dynamicCounts.with_email },
+    { key: "deep_search", label: "Deep Search", icon: Send, color: "text-violet-500", activeColor: "bg-violet-500/15 border-violet-500/40 text-violet-400 shadow-[0_0_10px_hsl(258_90%_66%/0.12)]", count: dynamicCounts.deep_search },
+    { key: "rating_3", label: "Rating 3+", icon: Star, color: "text-amber-500", activeColor: "bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_10px_hsl(38_92%_50%/0.12)]", count: dynamicCounts.rating_3 },
+    { key: "with_services", label: "Servizi", icon: Package, color: "text-primary", activeColor: "bg-primary/15 border-primary/40 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.12)]", count: dynamicCounts.with_services },
   ];
 
   return (
@@ -178,22 +178,33 @@ export function CountryWorkbench({
       {/* ═══ FILTER CHIPS ═══ */}
       <div className="px-4 py-2 border-b border-border/30">
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          {filterChips.map((f) => (
-            <button key={f.key} onClick={() => toggleFilter(f.key)}
-              className={cn(
-                "text-[11px] px-2.5 py-1 rounded-full border transition-all whitespace-nowrap font-medium",
-                activeFilters.has(f.key)
-                  ? "bg-primary/15 border-primary/30 text-primary shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
-                  : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              )}>
-              {f.icon && <span className="mr-0.5">{f.icon}</span>}
-              {f.label} <span className="font-bold ml-0.5 opacity-70">{f.count}</span>
-            </button>
-          ))}
+          {filterChips.map((f) => {
+            const Icon = f.icon;
+            return (
+              <button key={f.key} onClick={() => toggleFilter(f.key)}
+                className={cn(
+                  "flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full border transition-all whitespace-nowrap font-medium",
+                  activeFilters.has(f.key)
+                    ? f.activeColor
+                    : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}>
+                <Icon className={cn("w-3.5 h-3.5", activeFilters.has(f.key) ? "" : f.color)} strokeWidth={1.8} />
+                {f.label}
+                <span className={cn(
+                  "min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
+                  activeFilters.has(f.key)
+                    ? "bg-white/10"
+                    : "bg-muted-foreground/10"
+                )}>
+                  {f.count}
+                </span>
+              </button>
+            );
+          })}
           {activeFilters.size > 0 && (
             <button onClick={() => setActiveFilters(new Set())}
-              className="text-[10px] px-2 py-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all">
-              ✕
+              className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+              <X className="w-3 h-3" /> Reset
             </button>
           )}
         </div>
