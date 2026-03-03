@@ -227,43 +227,69 @@ export default function Import() {
   const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
     setUploading(true);
     try {
-      // Find the _import_id column
-      const idKey = headers.find(h => normalizeKey(h) === "_import_id" || normalizeKey(h) === "import_id") || "_import_id";
+      // Find the _import_id column key in the row objects
+      const idKey = headers.find(h => {
+        const n = normalizeKey(h);
+        return n === "_import_id" || n === "import_id";
+      });
+      if (!idKey) {
+        toast({ title: "Colonna _import_id non trovata", variant: "destructive" });
+        setUploading(false);
+        return;
+      }
+
+      // Pre-compute mapping: target column → actual row key (excluding meta columns)
+      const metaColumns = new Set(["_import_id", "import_id", "motivo_errore"]);
+      const dataHeaders = headers.filter(h => !metaColumns.has(normalizeKey(h)));
+      const columnKeyMap: Record<string, string> = {};
+      for (const col of TARGET_COLUMNS) {
+        const key = findRowKey(dataHeaders, col);
+        if (key) columnKeyMap[col] = key;
+      }
+
+      console.log("[Re-import] ID key:", idKey, "| Column map:", columnKeyMap);
+
       let updatedCount = 0;
+      let errorCount = 0;
 
-      for (const row of rows) {
-        const importId = row[idKey];
-        if (!importId) continue;
+      // Process in batches of 50 to avoid too many sequential requests
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+        const promises = batch.map(async (row) => {
+          const importId = row[idKey];
+          if (!importId || !String(importId).trim()) return false;
 
-        const updateData: Record<string, string | null> = {};
-        for (const col of TARGET_COLUMNS) {
-          const key = findRowKey(headers, col);
-          if (key && row[key] && String(row[key]).trim()) {
-            updateData[col] = String(row[key]).trim();
+          const updateData: Record<string, string | null> = {};
+          for (const [col, rowKey] of Object.entries(columnKeyMap)) {
+            const val = row[rowKey];
+            if (val && String(val).trim()) {
+              updateData[col] = String(val).trim();
+            }
           }
-        }
 
-        if (Object.keys(updateData).length === 0) continue;
+          if (Object.keys(updateData).length === 0) return false;
 
-        const { error } = await supabase
-          .from("imported_contacts")
-          .update(updateData)
-          .eq("id", importId);
+          const { error } = await supabase
+            .from("imported_contacts")
+            .update(updateData)
+            .eq("id", String(importId).trim());
 
-        if (!error) updatedCount++;
+          return !error;
+        });
+
+        const results = await Promise.all(promises);
+        updatedCount += results.filter(Boolean).length;
+        errorCount += results.filter(r => r === false).length;
       }
 
-      toast({ title: `${updatedCount} record aggiornati con successo` });
-      // Refresh contacts list
-      if (activeLogId) {
-        // Invalidation happens via react-query
-      }
+      toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
     } catch (err) {
       toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
-  }, [activeLogId]);
+  }, []);
 
   // === Process a file (handles both new import and re-import correction) ===
   const processFile = useCallback(async (file: File) => {
