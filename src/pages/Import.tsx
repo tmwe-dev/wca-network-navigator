@@ -21,8 +21,12 @@ import {
 import {
   Upload, FileText, Loader2, CheckCircle2, AlertCircle,
   Sparkles, Users, Mail, Phone, ArrowRight, ClipboardPaste,
-  FileSearch, Download, Wand2, ArrowLeftRight, FolderOpen,
+  FileSearch, Download, Wand2, ArrowLeftRight, FolderOpen, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ImportErrorMonitor } from "@/components/import/ImportErrorMonitor";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -296,7 +300,22 @@ export default function Import() {
     }
   }, [queryClient]);
 
-  // === Process a file (handles both new import and re-import correction) ===
+  // === Delete an import log and its contacts/errors ===
+  const handleDeleteImport = useCallback(async (logId: string) => {
+    try {
+      // Delete related records first, then the log
+      await supabase.from("import_errors").delete().eq("import_log_id", logId);
+      await supabase.from("imported_contacts").delete().eq("import_log_id", logId);
+      await supabase.from("import_logs").delete().eq("id", logId);
+      if (activeLogId === logId) setActiveLogId(null);
+      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      toast({ title: "Import eliminato" });
+    } catch (err) {
+      toast({ title: "Errore eliminazione", description: String(err), variant: "destructive" });
+    }
+  }, [activeLogId, queryClient]);
+
   const processFile = useCallback(async (file: File) => {
     if (!file.name.match(/\.(csv|xlsx?|txt)$/i)) {
       toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx) o TXT", variant: "destructive" });
@@ -620,21 +639,49 @@ export default function Import() {
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-1">
                 {logs.map((log) => (
-                  <button
+                  <div
                     key={log.id}
-                    onClick={() => { setActiveLogId(log.id); setTab("contacts"); }}
-                    className={`w-full text-left p-2 rounded-md text-xs transition-colors ${
+                    className={`group relative w-full text-left p-2 rounded-md text-xs transition-colors cursor-pointer ${
                       activeLogId === log.id ? "bg-accent" : "hover:bg-accent/50"
                     }`}
+                    onClick={() => { setActiveLogId(log.id); setTab("contacts"); }}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium truncate">{log.file_name}</span>
-                      {statusBadge(log.status)}
+                      <div className="flex items-center gap-1">
+                        {statusBadge(log.status)}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Elimina import</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Eliminare "{log.file_name}" e tutti i {log.total_rows} contatti importati? Questa azione è irreversibile.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annulla</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDeleteImport(log.id)}
+                              >Elimina</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     <div className="text-muted-foreground mt-0.5">
                       {log.total_rows} righe · {new Date(log.created_at).toLocaleDateString("it")}
                     </div>
-                  </button>
+                  </div>
                 ))}
                 {logs.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-8">Nessun import</p>
