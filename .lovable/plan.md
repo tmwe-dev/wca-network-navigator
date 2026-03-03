@@ -1,48 +1,59 @@
 
 
-## Diagnosi del bug di mapping
+## Diagnosi dello stato attuale
 
-Il problema è nel `handleConfirmMapping` (riga 265-273 di Import.tsx). Ecco cosa succede:
+Il problema fondamentale è nel **prompt dell'edge function `analyze-import-structure`**. Contiene regole hardcoded specifiche (es. "name_2 → company_name", "alias_2 → company_alias", "cell → mobile") che sono handcode mascherato da istruzioni AI. Questo approccio fallisce perché:
 
-1. `parseFile()` legge il file e normalizza le chiavi delle colonne (es. "Nome Contatto" → `nome_contatto`)
-2. Le righe campione con queste chiavi normalizzate vengono inviate all'AI
-3. L'AI restituisce un `column_mapping` tipo `{"nome": "name", "azienda": "company_name"}`
-4. **Il bug**: quando si applica il mapping a TUTTE le righe con `row[src]`, le chiavi `src` restituite dall'AI potrebbero non corrispondere esattamente alle chiavi nelle righe. L'AI potrebbe restituire chiavi leggermente diverse (maiuscole, accenti, spazi) rispetto a quelle normalizzate da `parseFile()`
+1. Il prompt cerca di anticipare ogni possibile formato di file con regole rigide
+2. L'AI si confonde tra le regole specifiche e l'analisi reale dei dati
+3. Il `column_mapping` viene restituito vuoto nonostante confidence alta
 
-Risultato: `row[src]` restituisce `undefined` per ogni campo → tutti i 13.032 record vengono salvati vuoti.
+L'utente vuole un approccio completamente diverso: **l'AI deve ragionare autonomamente** sul contesto (CRM per spedizionieri, rubrica commerciale) e decidere il mapping analizzando i VALORI nelle righe, non seguendo regole hardcoded.
 
-## Piano di fix
+## Piano
 
-### 1. Mapping robusto con validazione chiavi (`src/pages/Import.tsx`)
+### 1. Riscrivere il prompt dell'edge function (`supabase/functions/analyze-import-structure/index.ts`)
 
-Sostituire il mapping diretto `row[src]` con un sistema a 3 livelli:
-- **Livello 1**: match esatto `row[src]`
-- **Livello 2**: match normalizzato (entrambe le chiavi passate attraverso `normalizeKey`)
-- **Livello 3**: match fuzzy (una chiave contiene l'altra)
+Eliminare tutte le regole di mapping hardcoded e sostituirle con un prompt contestuale che spiega:
 
-Aggiungere una funzione `applyMappingToRow(row, columnMapping)` che:
-- Pre-calcola una lookup table `normalizedRowKeys → originalKey` per tutte le chiavi del primo row
-- Per ogni entry del mapping AI, trova la chiave corretta nel row usando i 3 livelli
-- Logga un warning se nessuna chiave corrisponde
+- **Chi siamo**: Una piattaforma CRM per spedizionieri/freight forwarder che gestisce contatti commerciali
+- **Cosa facciamo**: Le aziende caricano file con rubriche di contatti per attività commerciali (email, telefono, WhatsApp)
+- **La nostra tabella**: Schema esatto di `imported_contacts` con descrizioni chiare di ogni campo
+- **Il compito**: "Ti do 50 righe campione da un file in formato sconosciuto. Analizza i VALORI, capisci cosa contengono, e dimmi in quale delle nostre colonne metteresti ogni campo"
+- **Dubbi**: Se ci sono campi ambigui, segnalarli nei warnings con la propria ipotesi
 
-### 2. Anteprima reale prima del salvataggio (`src/pages/Import.tsx`)
+Nessuna regola tipo "name_2 → company_name". L'AI deve guardare i valori e dedurre: "questa colonna contiene nomi di aziende, quindi va in company_name".
 
-Il preview attuale mostra `aiMapping.parsed_rows` (i dati trasformati dall'AI sulle 50 righe campione). Ma l'import reale applica il mapping localmente. Aggiungere un'anteprima che mostri il risultato della trasformazione locale sulle prime 5 righe di `pendingRows`, così l'utente vede esattamente cosa verrà salvato.
+### 2. Semplificare il frontend (`src/pages/Import.tsx`)
 
-### 3. Validazione pre-import con abort (`src/pages/Import.tsx`)
+- Rimuovere il fallback `hasParsedRows` che usa `parsed_rows` direttamente — il sistema deve usare SOLO `column_mapping`
+- Se `column_mapping` è vuoto, mostrare errore e chiedere di riprovare, non tentare workaround
+- Nell'anteprima, mostrare chiaramente il mapping proposto e i campi su cui l'AI ha dubbi (da `warnings`)
+- Mantenere la preview reale (trasformazione locale delle prime 5 righe) per conferma visiva
 
-Prima di inserire nel database, verificare che almeno il 10% delle righe abbia almeno un campo non vuoto. Se il mapping produce tutti record vuoti, mostrare un errore e bloccare l'import (invece di salvare 13.000 righe vuote).
+### 3. Struttura del nuovo prompt
 
-### 4. Debug log nel mapping AI (`src/pages/Import.tsx`)
+```text
+CONTESTO: Sei un analista dati per una piattaforma CRM nel settore spedizioni/logistica.
+Le aziende caricano file (CSV, Excel) contenenti rubriche di contatti commerciali
+(clienti, fornitori, partner) per attività di marketing via email, telefono, WhatsApp.
 
-Aggiungere un `console.log` nel mapping che mostra:
-- Chiavi presenti nel row: `Object.keys(pendingRows[0])`
-- Chiavi nel mapping AI: `Object.keys(aiMapping.column_mapping)`
-- Chiavi non trovate nel row
+IL NOSTRO DATABASE ha questa tabella "imported_contacts":
+[schema con descrizioni]
+
+IL TUO COMPITO:
+1. Ricevi ~50 righe campione da un file di formato sconosciuto
+2. Analizza sia i NOMI delle colonne che i VALORI contenuti
+3. Per ogni colonna sorgente, decidi in quale campo del nostro database inseriresti quei dati
+4. Restituisci il column_mapping (OBBLIGATORIO, mai vuoto se ci sono dati utili)
+5. Se hai dubbi su un campo, mettilo comunque nel mapping con la tua migliore ipotesi
+   e aggiungi un warning spiegando il dubbio
+```
 
 ### File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Import.tsx` | Mapping robusto a 3 livelli, anteprima reale, validazione pre-import, debug log |
+| `supabase/functions/analyze-import-structure/index.ts` | Prompt riscritto da zero: contesto CRM, nessun handcode, ragionamento sui valori |
+| `src/pages/Import.tsx` | Rimuovere fallback parsed_rows, usare solo column_mapping, gestione errori pulita |
 
