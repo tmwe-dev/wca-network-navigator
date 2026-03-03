@@ -518,24 +518,29 @@ export function useCreateImportFromParsedRows() {
         .single();
       if (logError) throw logError;
 
-      const contacts = rows.map((row, index) => ({
-        import_log_id: importLog.id,
-        row_number: index + 1,
-        company_name: row.company_name || null,
-        name: row.name || null,
-        email: row.email || null,
-        phone: row.phone || null,
-        mobile: row.mobile || null,
-        country: row.country || null,
-        city: row.city || null,
-        address: row.address || null,
-        zip_code: row.zip_code || null,
-        note: row.note || null,
-        origin: row.origin || null,
-        company_alias: row.company_alias || null,
-        contact_alias: row.contact_alias || null,
-        raw_data: row,
-      }));
+      const contacts = rows.map((row, index) => {
+        // If _raw is present, use it as raw_data (original file row before mapping)
+        const rawData = row._raw || row;
+        const { _raw, ...mapped } = row;
+        return {
+          import_log_id: importLog.id,
+          row_number: index + 1,
+          company_name: mapped.company_name || null,
+          name: mapped.name || null,
+          email: mapped.email || null,
+          phone: mapped.phone || null,
+          mobile: mapped.mobile || null,
+          country: mapped.country || null,
+          city: mapped.city || null,
+          address: mapped.address || null,
+          zip_code: mapped.zip_code || null,
+          note: mapped.note || null,
+          origin: mapped.origin || null,
+          company_alias: mapped.company_alias || null,
+          contact_alias: mapped.contact_alias || null,
+          raw_data: rawData,
+        };
+      });
 
       for (let i = 0; i < contacts.length; i += 100) {
         const batch = contacts.slice(i, i + 100);

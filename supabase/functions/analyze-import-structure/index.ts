@@ -93,7 +93,7 @@ Esempi di mapping comuni:
             type: "function",
             function: {
               name: "return_import_structure",
-              description: "Returns the analyzed import structure with column mapping and parsed rows",
+              description: "Returns the analyzed import structure with column mapping, parsed rows, and data quality report",
               parameters: {
                 type: "object",
                 properties: {
@@ -133,8 +133,25 @@ Esempi di mapping comuni:
                     items: { type: "string" },
                     description: "Warnings about unmapped columns or issues",
                   },
+                  unmapped_columns: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of source columns that could not be mapped to any target column",
+                  },
+                  data_quality: {
+                    type: "object",
+                    description: "Quality report based on the sample rows",
+                    properties: {
+                      sample_size: { type: "number" },
+                      with_company_name: { type: "number" },
+                      with_name: { type: "number" },
+                      with_email: { type: "number" },
+                      with_phone: { type: "number" },
+                      with_country: { type: "number" },
+                    },
+                  },
                 },
-                required: ["column_mapping", "parsed_rows", "confidence", "warnings"],
+                required: ["column_mapping", "parsed_rows", "confidence", "warnings", "unmapped_columns", "data_quality"],
                 additionalProperties: false,
               },
             },
