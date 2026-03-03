@@ -9,6 +9,7 @@ const corsHeaders = {
 const TARGET_COLUMNS = [
   "company_name", "name", "email", "phone", "mobile",
   "country", "city", "address", "zip_code", "note", "origin",
+  "company_alias", "contact_alias",
 ];
 
 serve(async (req) => {
@@ -43,25 +44,34 @@ Analizza il testo e:
 
 Le colonne destinazione sono: ${TARGET_COLUMNS.join(", ")}
 
-Ricevi un campione di righe dal file dell'utente. Ogni riga è un oggetto con le chiavi originali del file.
+Ricevi un campione di righe dal file dell'utente. Ogni riga è un oggetto con le chiavi originali del file (già normalizzate in lowercase con underscore). Le chiavi possono avere suffissi numerici (_2, _3) quando nel file originale c'erano colonne duplicate.
+
+REGOLE IMPORTANTI per strutture a doppia entità (es. file TMW con contatto + azienda nella stessa riga):
+- Se trovi chiavi come "name" e "name_2", la prima "name" è il CONTATTO (→ name), la seconda "name_2" è l'AZIENDA (→ company_name)
+- Se trovi "alias" e "alias_2", la prima è contact_alias, la seconda è company_alias
+- "cell" → mobile
+- "position" → note (ruolo/posizione del contatto)
+- Se c'è solo una colonna "country" e due entità, usa quella per il campo country
 
 Devi:
 1. Analizzare le chiavi del file sorgente e i valori di esempio
-2. Creare un mapping: chiave_sorgente → colonna_destinazione
+2. Creare un mapping: chiave_sorgente → colonna_destinazione (una chiave sorgente può mappare a una sola destinazione)
 3. Applicare il mapping alle righe campione per generare parsed_rows
 4. Valutare la confidence (0-1) del mapping
 5. Segnalare warnings per colonne non mappabili
 
 Esempi di mapping comuni:
-- "ragione sociale" / "azienda" / "company" → company_name
+- "ragione_sociale" / "azienda" / "company" → company_name
 - "nome" / "contatto" / "referente" → name
-- "mail" / "e-mail" / "email address" → email
-- "telefono" / "tel" / "phone number" → phone
-- "cellulare" / "cell" / "mobile phone" → mobile
+- "mail" / "e_mail" / "email_address" → email
+- "telefono" / "tel" / "phone_number" → phone
+- "cellulare" / "cell" / "mobile_phone" → mobile
 - "paese" / "nazione" / "country" → country
 - "citta" / "città" / "city" → city
 - "indirizzo" / "via" / "address" → address
-- "cap" / "zip" / "postal code" → zip_code`;
+- "cap" / "zip" / "postal_code" → zip_code
+- "company_alias" / "alias_2" → company_alias
+- "contact_alias" / "alias" → contact_alias`;
 
       userContent = JSON.stringify(sample_rows || []);
     }
@@ -109,6 +119,8 @@ Esempi di mapping comuni:
                         zip_code: { type: "string" },
                         note: { type: "string" },
                         origin: { type: "string" },
+                        company_alias: { type: "string" },
+                        contact_alias: { type: "string" },
                       },
                     },
                   },

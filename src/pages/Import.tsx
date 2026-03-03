@@ -52,21 +52,55 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");           // trim leading/trailing underscores
 }
 
-// Parse CSV/Excel file to rows (keys are normalized)
+// Auto-detect CSV delimiter by counting occurrences in the first line
+function detectDelimiter(firstLine: string): string {
+  const candidates = [",", ";", "\t"];
+  let best = ",";
+  let bestCount = 0;
+  for (const d of candidates) {
+    const count = firstLine.split(d).length - 1;
+    if (count > bestCount) {
+      bestCount = count;
+      best = d;
+    }
+  }
+  return best;
+}
+
+// Handle duplicate headers by appending _2, _3 etc.
+function deduplicateHeaders(headers: string[]): string[] {
+  const counts: Record<string, number> = {};
+  return headers.map((h) => {
+    if (!counts[h]) {
+      counts[h] = 1;
+      return h;
+    }
+    counts[h]++;
+    return `${h}_${counts[h]}`;
+  });
+}
+
+// Parse CSV/Excel file to rows (keys are normalized, delimiters auto-detected, duplicate headers handled)
 async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }> {
   if (file.name.endsWith(".csv")) {
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
-    const rawHeaders = lines[0].split(",").map((h) => h.trim().replace(/['"]/g, ""));
-    const headers = rawHeaders.map(normalizeKey);
+
+    // Auto-detect delimiter
+    const delimiter = detectDelimiter(lines[0]);
+
+    const rawHeaders = lines[0].split(delimiter).map((h) => h.trim().replace(/['"]/g, ""));
+    const normalizedHeaders = rawHeaders.map(normalizeKey);
+    const headers = deduplicateHeaders(normalizedHeaders);
+
     const rows = lines.slice(1).map((line) => {
       const values: string[] = [];
       let current = "";
       let inQuotes = false;
       for (const ch of line) {
         if (ch === '"') { inQuotes = !inQuotes; continue; }
-        if (ch === "," && !inQuotes) { values.push(current.trim()); current = ""; continue; }
+        if (ch === delimiter && !inQuotes) { values.push(current.trim()); current = ""; continue; }
         current += ch;
       }
       values.push(current.trim());
@@ -83,25 +117,28 @@ async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }
   const sheet = workbook.worksheets[0];
   if (!sheet) return { headers: [], rows: [] };
 
-  const rawHeaders: string[] = [];
-  const headers: string[] = [];
+  const rawNormalized: string[] = [];
   const rows: any[] = [];
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) {
       row.eachCell((cell) => {
-        const raw = String(cell.value || "").trim();
-        rawHeaders.push(raw);
-        headers.push(normalizeKey(raw));
+        rawNormalized.push(normalizeKey(String(cell.value || "").trim()));
       });
-    } else {
-      const obj: Record<string, string> = {};
-      row.eachCell((cell, colNumber) => {
-        const key = headers[colNumber - 1];
-        if (key) obj[key] = String(cell.value || "").trim();
-      });
-      if (Object.values(obj).some((v) => v)) rows.push(obj);
     }
   });
+
+  const headers = deduplicateHeaders(rawNormalized);
+
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const obj: Record<string, string> = {};
+    row.eachCell((cell, colNumber) => {
+      const key = headers[colNumber - 1];
+      if (key) obj[key] = String(cell.value || "").trim();
+    });
+    if (Object.values(obj).some((v) => v)) rows.push(obj);
+  });
+
   return { headers, rows };
 }
 
@@ -119,12 +156,13 @@ function statusBadge(status: string) {
 const TARGET_COLUMNS = [
   "company_name", "name", "email", "phone", "mobile",
   "country", "city", "address", "zip_code", "note", "origin",
+  "company_alias", "contact_alias",
 ];
 
 export default function Import() {
   const [activeLogId, setActiveLogId] = useState<string | null>(null);
   const [tab, setTab] = useState("upload");
-  const [uploadMode, setUploadMode] = useState<"paste" | "file" | "standard">("file");
+  const [uploadMode, setUploadMode] = useState<"paste" | "file">("file");
 
   // Paste state
   const [pasteText, setPasteText] = useState("");
@@ -168,7 +206,7 @@ export default function Import() {
     } catch {}
   }, [pasteText, analyzeStructure]);
 
-  // === FILE: Analyze with AI mapping ===
+  // === FILE: Analyze with AI mapping (sample 30 rows) ===
   const handleFileForAiMapping = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -187,14 +225,14 @@ export default function Import() {
       setPendingFile(file);
       setPendingRows(rows);
 
-      // Send first 5 rows to AI for mapping
-      const sample = rows.slice(0, 5);
+      // Send first 30 rows to AI for mapping (increased from 5)
+      const sample = rows.slice(0, 30);
       const result = await analyzeStructure.mutateAsync({
         inputType: "file",
         sampleRows: sample,
       });
       setAiMapping(result);
-      toast({ title: `Mapping AI generato (confidence: ${Math.round(result.confidence * 100)}%)` });
+      toast({ title: `Mapping AI generato (confidence: ${Math.round(result.confidence * 100)}%) — ${rows.length} righe totali` });
     } catch (err) {
       console.error(err);
     } finally {
@@ -214,7 +252,6 @@ export default function Import() {
         ? `testo_incollato_${new Date().toISOString().slice(0, 10)}`
         : pendingFile?.name || "file_importato";
 
-      // If we have a pending file, use createImport (saves to storage). Otherwise use createFromParsed.
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
         // Apply AI mapping to ALL rows (not just sample)
@@ -238,38 +275,13 @@ export default function Import() {
       setPasteText("");
       setPendingFile(null);
       setPendingRows([]);
-      toast({ title: "Importazione completata", description: `${aiMapping.parsed_rows.length || pendingRows.length} righe nello staging` });
+      toast({ title: "Importazione completata", description: `${uploadMode === "file" ? pendingRows.length : aiMapping.parsed_rows.length} righe nello staging` });
     } catch (err) {
       toast({ title: "Errore", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
   }, [aiMapping, uploadMode, pendingFile, pendingRows, createFromParsed]);
-
-  // === Standard file upload (existing logic) ===
-  const handleStandardUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.match(/\.(csv|xlsx?)$/i)) {
-      toast({ title: "Formato non supportato", variant: "destructive" });
-      return;
-    }
-    setUploading(true);
-    try {
-      const { rows } = await parseFile(file);
-      if (rows.length === 0) { toast({ title: "File vuoto", variant: "destructive" }); return; }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non autenticato");
-      const log = await createImport.mutateAsync({ file, rows, userId: user.id });
-      setActiveLogId(log.id);
-      setTab("contacts");
-      toast({ title: "File caricato", description: `${rows.length} righe importate` });
-    } catch (err) {
-      toast({ title: "Errore upload", description: String(err), variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  }, [createImport]);
 
   const handleProcess = useCallback(() => {
     if (!activeLogId) return;
@@ -308,7 +320,7 @@ export default function Import() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Import Contatti</h1>
-          <p className="text-sm text-muted-foreground">Carica, incolla testo libero o file con formato personalizzato</p>
+          <p className="text-sm text-muted-foreground">Carica file o incolla testo — l'AI analizza e mappa automaticamente</p>
         </div>
       </div>
 
@@ -363,7 +375,7 @@ export default function Import() {
 
             {/* ====== UPLOAD TAB ====== */}
             <TabsContent value="upload" className="mt-4 space-y-4">
-              {/* Sub-mode selector */}
+              {/* Sub-mode selector — only Paste and File+AI */}
               <div className="flex gap-2">
                 <Button
                   variant={uploadMode === "paste" ? "default" : "outline"}
@@ -378,13 +390,6 @@ export default function Import() {
                   onClick={() => { setUploadMode("file"); setAiMapping(null); }}
                 >
                   <FileSearch className="w-3.5 h-3.5 mr-1.5" />File + Mapping AI
-                </Button>
-                <Button
-                  variant={uploadMode === "standard" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => { setUploadMode("standard"); setAiMapping(null); }}
-                >
-                  <FileText className="w-3.5 h-3.5 mr-1.5" />File Standard
                 </Button>
               </div>
 
@@ -426,10 +431,10 @@ export default function Import() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <FileSearch className="w-5 h-5" />File con Mapping AI
+                      <FileSearch className="w-5 h-5" />File con Mapping AI Intelligente
                     </CardTitle>
                     <CardDescription>
-                      Carica un file con qualsiasi formato colonne. L'AI campionerà le prime 5 righe e proporrà il mapping.
+                      Carica qualsiasi file CSV/Excel. Il sistema auto-rileva il delimitatore, analizza 30 righe campione e propone il mapping ottimale.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -445,46 +450,9 @@ export default function Import() {
                     {(uploading || analyzeStructure.isPending) && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {analyzeStructure.isPending ? "Analisi AI in corso…" : "Lettura file…"}
+                        {analyzeStructure.isPending ? "Analisi AI in corso (30 righe campione)…" : "Lettura file e auto-detect formato…"}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* STANDARD MODE */}
-              {uploadMode === "standard" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="w-5 h-5" />File Standard
-                    </CardTitle>
-                    <CardDescription>
-                      CSV o Excel con colonne già nel formato atteso. Mapping statico automatico.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <Label>File CSV / Excel</Label>
-                      <Input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={handleStandardUpload}
-                        disabled={uploading}
-                      />
-                    </div>
-                    {uploading && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />Caricamento…
-                      </div>
-                    )}
-                    <Alert>
-                      <FileText className="w-4 h-4" />
-                      <AlertTitle>Colonne supportate</AlertTitle>
-                      <AlertDescription className="text-xs">
-                        company_name, name, email, phone, mobile, country, city, address, zip_code, note, origin
-                      </AlertDescription>
-                    </Alert>
                   </CardContent>
                 </Card>
               )}
@@ -574,7 +542,7 @@ export default function Import() {
                     <div className="flex gap-2">
                       <Button onClick={handleConfirmMapping} disabled={uploading}>
                         {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
-                        Conferma e Importa
+                        Conferma e Importa ({uploadMode === "file" ? pendingRows.length : aiMapping.parsed_rows.length} righe)
                       </Button>
                       <Button variant="outline" onClick={() => setAiMapping(null)}>
                         Annulla
