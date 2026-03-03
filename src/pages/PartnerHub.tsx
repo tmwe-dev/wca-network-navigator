@@ -548,20 +548,21 @@ export default function PartnerHub() {
                               );
                             })()}
                           </div>
-                          {/* Service icons */}
+                          {/* Service icons - transport (outline, left) + specialty (outline, right) */}
                           {(() => {
                             const transport = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
                             const specialty = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+                            if (transport.length === 0 && specialty.length === 0) return null;
                             return (
-                              <>
+                              <div className="flex items-start gap-3 mt-1.5">
                                 {transport.length > 0 && (
-                                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                  <div className="flex items-center gap-1 flex-wrap">
                                     {transport.map((s: any, i: number) => {
                                       const Icon = getServiceIcon(s.service_category);
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
+                                            <Icon className="w-4 h-4 text-sky-500" strokeWidth={1.5} />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
@@ -569,38 +570,25 @@ export default function PartnerHub() {
                                     })}
                                   </div>
                                 )}
+                                {transport.length > 0 && specialty.length > 0 && (
+                                  <span className="text-border">│</span>
+                                )}
                                 {specialty.length > 0 && (
-                                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  <div className="flex items-center gap-1 flex-wrap">
                                     {specialty.map((s: any, i: number) => {
                                       const Icon = getServiceIcon(s.service_category);
                                       return (
                                         <Tooltip key={i}>
                                           <TooltipTrigger>
-                                            <Icon className={cn("w-4 h-4", getServiceIconColor(s.service_category))} />
+                                            <Icon className="w-4 h-4 text-violet-400" strokeWidth={1.5} />
                                           </TooltipTrigger>
                                           <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
                                         </Tooltip>
                                       );
                                     })}
-                                    {partner.partner_type === "courier" && (
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <span className="w-4 h-4 rounded bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center">XP</span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Corriere Espresso</TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                    {(partner.enrichment_data as any)?.has_technology && (
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Cpu className="w-4 h-4 text-slate-500 fill-slate-500" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>Capacità Tecnologiche</TooltipContent>
-                                      </Tooltip>
-                                    )}
                                   </div>
                                 )}
-                              </>
+                              </div>
                             );
                           })()}
                           {/* Social */}
