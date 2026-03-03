@@ -83,7 +83,7 @@ function deduplicateHeaders(headers: string[]): string[] {
 
 // Parse CSV/Excel file to rows (keys are normalized, delimiters auto-detected, duplicate headers handled)
 async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }> {
-  if (file.name.endsWith(".csv")) {
+  if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
@@ -207,12 +207,12 @@ export default function Import() {
     } catch {}
   }, [pasteText, analyzeStructure]);
 
-  // === FILE: Analyze with AI mapping (sample 30 rows) ===
+  // === FILE: Analyze with AI mapping (distributed 50-row sample) ===
   const handleFileForAiMapping = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.name.match(/\.(csv|xlsx?)$/i)) {
-      toast({ title: "Formato non supportato", description: "Usa CSV o Excel (.xlsx)", variant: "destructive" });
+    if (!file.name.match(/\.(csv|xlsx?|txt)$/i)) {
+      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx) o TXT", variant: "destructive" });
       return;
     }
 
@@ -226,8 +226,14 @@ export default function Import() {
       setPendingFile(file);
       setPendingRows(rows);
 
-      // Send first 30 rows to AI for mapping (increased from 5)
-      const sample = rows.slice(0, 30);
+      // Distributed sampling: pick 50 rows spread evenly across the file
+      const sampleSize = Math.min(50, rows.length);
+      const step = rows.length / sampleSize;
+      const sample: any[] = [];
+      for (let i = 0; i < sampleSize; i++) {
+        sample.push(rows[Math.floor(i * step)]);
+      }
+
       const result = await analyzeStructure.mutateAsync({
         inputType: "file",
         sampleRows: sample,
@@ -241,7 +247,7 @@ export default function Import() {
     }
   }, [analyzeStructure]);
 
-  // === Confirm AI mapping and import ===
+  // === Confirm AI mapping and import (local transformation, raw_data preserved) ===
   const handleConfirmMapping = useCallback(async () => {
     if (!aiMapping || aiMapping.parsed_rows.length === 0) return;
     setUploading(true);
@@ -255,7 +261,7 @@ export default function Import() {
 
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
-        // Apply AI mapping to ALL rows (not just sample)
+        // Apply AI mapping LOCALLY to ALL rows, preserve original row as raw_data
         const mappedRows = pendingRows.map((row) => {
           const mapped: Record<string, string | null> = {};
           for (const [src, dst] of Object.entries(aiMapping.column_mapping)) {
@@ -263,7 +269,7 @@ export default function Import() {
               mapped[dst] = row[src] || null;
             }
           }
-          return mapped;
+          return { ...mapped, _raw: row }; // _raw carries original data
         });
         log = await createFromParsed.mutateAsync({ rows: mappedRows, userId: user.id, fileName });
       } else {
@@ -435,7 +441,7 @@ export default function Import() {
                       <FileSearch className="w-5 h-5" />File con Mapping AI Intelligente
                     </CardTitle>
                     <CardDescription>
-                      Carica qualsiasi file CSV/Excel. Il sistema auto-rileva il delimitatore, analizza 30 righe campione e propone il mapping ottimale.
+                      Carica qualsiasi file CSV/Excel/TXT. Il sistema auto-rileva il formato, campiona 50 righe distribuite e propone il mapping ottimale con 1 sola chiamata AI.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -443,7 +449,7 @@ export default function Import() {
                       <Label>File CSV / Excel</Label>
                       <Input
                         type="file"
-                        accept=".csv,.xlsx,.xls"
+                        accept=".csv,.xlsx,.xls,.txt"
                         onChange={handleFileForAiMapping}
                         disabled={uploading || analyzeStructure.isPending}
                       />
@@ -451,7 +457,7 @@ export default function Import() {
                     {(uploading || analyzeStructure.isPending) && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {analyzeStructure.isPending ? "Analisi AI in corso (30 righe campione)…" : "Lettura file e auto-detect formato…"}
+                        {analyzeStructure.isPending ? "Analisi AI in corso (50 righe campione distribuite)…" : "Lettura file e auto-detect formato…"}
                       </div>
                     )}
                   </CardContent>
@@ -557,26 +563,97 @@ export default function Import() {
             {/* ====== CONTACTS TAB ====== */}
             <TabsContent value="contacts" className="mt-4 space-y-4">
               {activeLog && (
-                <Card>
-                  <CardContent className="py-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {statusBadge(activeLog.status)}
-                        <span className="text-sm">
-                          {activeLog.imported_rows}/{activeLog.total_rows} elaborati
-                          {activeLog.error_rows > 0 && ` · ${activeLog.error_rows} errori`}
-                        </span>
+                <>
+                  {/* Quality Report */}
+                  <Card>
+                    <CardContent className="py-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {statusBadge(activeLog.status)}
+                          <span className="text-sm">
+                            {activeLog.total_rows} righe importate
+                            {activeLog.error_rows > 0 && ` · ${activeLog.error_rows} errori`}
+                          </span>
+                        </div>
                       </div>
-                      {activeLog.status === "pending" && (
-                        <Button size="sm" onClick={handleProcess} disabled={processImport.isPending}>
-                          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                          {processImport.isPending ? "Avvio…" : "Normalizza con AI"}
-                        </Button>
-                      )}
-                    </div>
-                    {activeLog.status === "processing" && <Progress value={progress} className="h-1.5" />}
-                  </CardContent>
-                </Card>
+                      {activeLog.status === "processing" && <Progress value={progress} className="h-1.5" />}
+                    </CardContent>
+                  </Card>
+
+                  {/* Data Quality Dashboard */}
+                  {contacts.length > 0 && (() => {
+                    const withCompany = contacts.filter(c => c.company_name).length;
+                    const withName = contacts.filter(c => c.name).length;
+                    const withEmail = contacts.filter(c => c.email).length;
+                    const withPhone = contacts.filter(c => c.phone || c.mobile).length;
+                    const withCountry = contacts.filter(c => c.country).length;
+                    const allEmpty = contacts.filter(c => !c.company_name && !c.name && !c.email).length;
+                    const problemRows = contacts.filter(c => !c.company_name && !c.name).length;
+                    const total = contacts.length;
+
+                    return (
+                      <Card className={allEmpty === total ? "border-destructive" : ""}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <FileSearch className="w-4 h-4" />
+                            Report Qualità Dati
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                            <div className="p-2 rounded bg-muted">
+                              <div className="font-medium">{withCompany}/{total}</div>
+                              <div className="text-muted-foreground">con Azienda</div>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <div className="font-medium">{withName}/{total}</div>
+                              <div className="text-muted-foreground">con Nome</div>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <div className="font-medium">{withEmail}/{total}</div>
+                              <div className="text-muted-foreground">con Email</div>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <div className="font-medium">{withPhone}/{total}</div>
+                              <div className="text-muted-foreground">con Telefono</div>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <div className="font-medium">{withCountry}/{total}</div>
+                              <div className="text-muted-foreground">con Paese</div>
+                            </div>
+                          </div>
+
+                          {allEmpty === total && (
+                            <Alert variant="destructive">
+                              <AlertCircle className="w-4 h-4" />
+                              <AlertTitle>Mapping fallito</AlertTitle>
+                              <AlertDescription>
+                                Tutti i {total} record sono vuoti. Il mapping AI non ha trovato corrispondenze con le colonne del file.
+                                Elimina questo import e riprova con un file diverso.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+
+                          {allEmpty < total && problemRows > 0 && (
+                            <Alert>
+                              <AlertCircle className="w-4 h-4" />
+                              <AlertTitle>{problemRows} righe incomplete</AlertTitle>
+                              <AlertDescription className="space-y-2">
+                                <p>Queste righe non hanno né azienda né nome. Puoi:</p>
+                                <div className="flex gap-2 flex-wrap">
+                                  <Button size="sm" variant="outline" onClick={handleProcess} disabled={processImport.isPending || allEmpty === total}>
+                                    <Wand2 className="w-3.5 h-3.5 mr-1" />
+                                    Correggi con AI (~{Math.ceil(problemRows / 25)} chiamate)
+                                  </Button>
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+                </>
               )}
 
               {selectedContacts.length > 0 && (
