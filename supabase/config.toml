@@ -81,3 +81,9 @@ verify_jwt = false
 
 [functions.analyze-import-structure]
 verify_jwt = false
+
+[functions.deduplicate-partners]
+verify_jwt = false
+
+[functions.import-assistant]
+verify_jwt = false
