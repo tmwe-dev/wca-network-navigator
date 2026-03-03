@@ -10,7 +10,7 @@ export interface DeepSearchState {
   canvasOpen: boolean;
   results: DeepSearchResult[];
   current: DeepSearchCurrent | null;
-  start: (partnerIds: string[]) => void;
+  start: (partnerIds: string[], force?: boolean) => void;
   stop: () => void;
   setCanvasOpen: (v: boolean) => void;
 }
@@ -31,8 +31,31 @@ export function useDeepSearchRunner(): DeepSearchState {
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
 
-  const start = useCallback(async (partnerIds: string[]) => {
+  const start = useCallback(async (partnerIds: string[], force = false) => {
     if (running || partnerIds.length === 0) return;
+
+    // Smart filter: check which partners already have deep_search_at
+    let toProcess = partnerIds;
+    if (!force) {
+      const { data: alreadyDone } = await supabase
+        .from("partners")
+        .select("id")
+        .in("id", partnerIds)
+        .not("enrichment_data->deep_search_at", "is", null);
+
+      const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
+      toProcess = partnerIds.filter(id => !doneSet.has(id));
+      const skipped = partnerIds.length - toProcess.length;
+
+      if (toProcess.length === 0) {
+        toast.info(`Tutti i ${partnerIds.length} partner hanno già la Deep Search`, { id: "deep-search-global" });
+        return;
+      }
+      if (skipped > 0) {
+        toast.info(`${skipped} già arricchiti, ${toProcess.length} da processare`, { id: "deep-search-global" });
+      }
+    }
+
     setRunning(true);
     setResults([]);
     setCanvasOpen(true);
@@ -40,7 +63,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     let done = 0;
 
     try {
-      for (const id of partnerIds) {
+      for (const id of toProcess) {
         if (abortRef.current) break;
         done++;
 
@@ -68,10 +91,10 @@ export function useDeepSearchRunner(): DeepSearchState {
           countryCode: cached?.country_code,
           logoUrl: cached?.logo_url,
           index: done,
-          total: partnerIds.length,
+          total: toProcess.length,
         });
 
-        toast.loading(`Deep Search ${done}/${partnerIds.length}...`, { id: "deep-search-global" });
+        toast.loading(`Deep Search ${done}/${toProcess.length}...`, { id: "deep-search-global" });
 
         const { data, error } = await supabase.functions.invoke("deep-search-partner", {
           body: { partnerId: id },
