@@ -61,6 +61,53 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");
 }
 
+// Comprehensive alias map for common CRM/TMW column names → target
+const COLUMN_ALIASES: Record<string, string> = {
+  "ragione_sociale": "company_name", "azienda": "company_name", "company": "company_name",
+  "societa": "company_name", "ditta": "company_name", "nome_azienda": "company_name",
+  "name_2": "company_name",
+  "nome": "name", "contatto": "name", "referente": "name", "nome_contatto": "name",
+  "mail": "email", "e_mail": "email", "email_address": "email", "posta": "email",
+  "telefono": "phone", "tel": "phone", "phone_number": "phone", "fisso": "phone",
+  "cellulare": "mobile", "cell": "mobile", "mobile_phone": "mobile", "cel": "mobile",
+  "paese": "country", "nazione": "country",
+  "citta": "city", "localita": "city",
+  "indirizzo": "address", "via": "address",
+  "cap": "zip_code", "zip": "zip_code", "postal_code": "zip_code", "codice_postale": "zip_code",
+  "notes": "note", "position": "note", "posizione": "note", "ruolo": "note",
+  "origine": "origin", "provenienza": "origin", "fonte": "origin",
+  "alias": "contact_alias",
+  "alias_2": "company_alias",
+};
+
+// Build local column mapping from row keys using direct match + aliases
+function buildLocalMapping(rowKeys: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const usedTargets = new Set<string>();
+
+  // Pass 1: exact match with TARGET_COLUMNS
+  for (const rk of rowKeys) {
+    const nrk = normalizeKey(rk);
+    if (TARGET_COLUMNS.includes(nrk) && !usedTargets.has(nrk)) {
+      mapping[rk] = nrk;
+      usedTargets.add(nrk);
+    }
+  }
+
+  // Pass 2: alias matching for unmapped keys
+  for (const rk of rowKeys) {
+    if (mapping[rk]) continue;
+    const nrk = normalizeKey(rk);
+    const target = COLUMN_ALIASES[nrk];
+    if (target && !usedTargets.has(target)) {
+      mapping[rk] = target;
+      usedTargets.add(target);
+    }
+  }
+
+  return mapping;
+}
+
 // Robust 3-tier key matching: exact → normalized → fuzzy
 function findRowKey(rowKeys: string[], srcKey: string): string | null {
   if (rowKeys.includes(srcKey)) return srcKey;
@@ -77,7 +124,7 @@ function findRowKey(rowKeys: string[], srcKey: string): string | null {
   return null;
 }
 
-// Apply AI column_mapping to a single row using robust key matching
+// Apply column_mapping to a single row
 function applyMappingToRow(
   row: Record<string, any>,
   columnMapping: Record<string, string>,
@@ -207,6 +254,8 @@ export default function Import() {
     parsed_rows: any[];
     confidence: number;
     warnings: string[];
+    unmapped_columns?: string[];
+    data_quality?: any;
   } | null>(null);
 
   // Drag state
@@ -339,9 +388,14 @@ export default function Import() {
         return;
       }
 
-      // Normal flow: AI mapping
+      // Normal flow: build local mapping first, then try AI
       setPendingFile(file);
       setPendingRows(rows);
+
+      const rowKeys = Object.keys(rows[0] || {});
+      const localMapping = buildLocalMapping(rowKeys);
+      const localMappedCount = Object.keys(localMapping).length;
+      console.log("[Import] Local mapping found:", localMappedCount, "columns:", localMapping);
 
       const sampleSize = Math.min(50, rows.length);
       const step = rows.length / sampleSize;
@@ -350,12 +404,67 @@ export default function Import() {
         sample.push(rows[Math.floor(i * step)]);
       }
 
-      const result = await analyzeStructure.mutateAsync({
-        inputType: "file",
-        sampleRows: sample,
-      });
-      setAiMapping(result);
-      toast({ title: `Mapping AI generato (confidence: ${Math.round(result.confidence * 100)}%) — ${rows.length} righe totali` });
+      try {
+        const result = await analyzeStructure.mutateAsync({
+          inputType: "file",
+          sampleRows: sample,
+        });
+        
+        const aiMappingKeys = Object.keys(result.column_mapping || {});
+        
+        // If AI mapping is good (confidence >= 0.3 and has keys), use it
+        if (result.confidence >= 0.3 && aiMappingKeys.length > 0) {
+          setAiMapping(result);
+          toast({ title: `Mapping AI (confidence: ${Math.round(result.confidence * 100)}%) — ${rows.length} righe` });
+        } else {
+          // AI failed — use local mapping as fallback
+          console.log("[Import] AI confidence too low or empty, using local mapping");
+          if (localMappedCount >= 2) {
+            // Use local mapping — create a synthetic aiMapping result
+            const localParsedSample = sample.slice(0, 5).map(row => {
+              const mapped: Record<string, any> = {};
+              for (const [src, dst] of Object.entries(localMapping)) {
+                mapped[dst] = row[src] ? String(row[src]).trim() || null : null;
+              }
+              return mapped;
+            });
+            setAiMapping({
+              column_mapping: localMapping,
+              parsed_rows: localParsedSample,
+              confidence: 0.8,
+              warnings: ["Mapping generato localmente (AI non disponibile)"],
+              unmapped_columns: rowKeys.filter(k => !localMapping[k]),
+              data_quality: (result as any).data_quality || { sample_size: sample.length, with_company_name: 0, with_name: 0, with_email: 0, with_phone: 0, with_country: 0 },
+            });
+            toast({ title: `Mapping locale generato — ${Object.keys(localMapping).length} colonne mappate su ${rows.length} righe` });
+          } else {
+            setAiMapping(result);
+            toast({ title: `Mapping AI con bassa confidence (${Math.round(result.confidence * 100)}%)`, variant: "destructive" });
+          }
+        }
+      } catch (err) {
+        console.error("[Import] AI analysis failed, using local mapping:", err);
+        if (localMappedCount >= 2) {
+          const localParsedSample = sample.slice(0, 5).map(row => {
+            const mapped: Record<string, any> = {};
+            for (const [src, dst] of Object.entries(localMapping)) {
+              mapped[dst] = row[src] ? String(row[src]).trim() || null : null;
+            }
+            return mapped;
+          });
+          setAiMapping({
+            column_mapping: localMapping,
+            parsed_rows: localParsedSample,
+            confidence: 0.8,
+            warnings: ["Mapping generato localmente (errore AI)"],
+            unmapped_columns: rowKeys.filter(k => !localMapping[k]),
+            data_quality: { sample_size: sample.length, with_company_name: 0, with_name: 0, with_email: 0, with_phone: 0, with_country: 0 },
+          });
+          toast({ title: `Mapping locale generato — ${Object.keys(localMapping).length} colonne mappate` });
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -418,91 +527,12 @@ export default function Import() {
         const rowKeys = Object.keys(pendingRows[0] || {});
         const mappingKeys = Object.keys(aiMapping.column_mapping || {});
         console.log("[Import Debug] Row keys:", rowKeys);
-        console.log("[Import Debug] AI mapping keys:", mappingKeys);
+        console.log("[Import Debug] Mapping keys:", mappingKeys);
 
-        let finalRows: Record<string, any>[];
-
-        if (mappingKeys.length === 0) {
-          // AI returned empty column_mapping — fallback to parsed_rows
-          console.log("[Import Debug] Empty column_mapping, using parsed_rows as fallback");
-          
-          // If parsed_rows have data, use them; otherwise try direct key matching
-          const parsedNonEmpty = aiMapping.parsed_rows.filter((r: any) =>
-            TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
-          ).length;
-
-          if (parsedNonEmpty > 0) {
-            // AI parsed_rows have data — apply them to ALL rows by building mapping from parsed sample
-            // Build column_mapping from row keys that match target columns directly
-            const autoMapping: Record<string, string> = {};
-            for (const rk of rowKeys) {
-              const nrk = normalizeKey(rk);
-              for (const tc of TARGET_COLUMNS) {
-                if (nrk === tc || nrk === normalizeKey(tc)) {
-                  autoMapping[rk] = tc;
-                  break;
-                }
-              }
-            }
-            // Also try common aliases
-            const ALIASES: Record<string, string> = {
-              "name_2": "company_name", "alias": "contact_alias", "alias_2": "company_alias",
-              "cell": "mobile", "position": "note",
-            };
-            for (const rk of rowKeys) {
-              const nrk = normalizeKey(rk);
-              if (ALIASES[nrk] && !Object.values(autoMapping).includes(ALIASES[nrk])) {
-                autoMapping[rk] = ALIASES[nrk];
-              }
-            }
-
-            console.log("[Import Debug] Auto-built mapping:", autoMapping);
-
-            if (Object.keys(autoMapping).length > 0) {
-              finalRows = pendingRows.map((row) => {
-                const mapped = applyMappingToRow(row, autoMapping, rowKeys);
-                return { ...mapped, _raw: row };
-              });
-            } else {
-              // Last resort: use parsed_rows directly (only covers sample)
-              finalRows = aiMapping.parsed_rows.map((r: any) => ({ ...r, _raw: r }));
-            }
-          } else {
-            // Both empty — try direct key matching as last resort
-            const autoMapping: Record<string, string> = {};
-            for (const rk of rowKeys) {
-              const nrk = normalizeKey(rk);
-              for (const tc of TARGET_COLUMNS) {
-                if (nrk === tc) { autoMapping[rk] = tc; break; }
-              }
-            }
-            if (Object.keys(autoMapping).length > 0) {
-              finalRows = pendingRows.map((row) => {
-                const mapped = applyMappingToRow(row, autoMapping, rowKeys);
-                return { ...mapped, _raw: row };
-              });
-            } else {
-              toast({
-                title: "Mapping fallito",
-                description: "Impossibile mappare le colonne del file. Verifica il formato.",
-                variant: "destructive",
-              });
-              setUploading(false);
-              return;
-            }
-          }
-        } else {
-          // Normal flow: apply AI column_mapping
-          const unmatchedKeys = mappingKeys.filter(k => !findRowKey(rowKeys, k));
-          if (unmatchedKeys.length > 0) {
-            console.warn("[Import Debug] Unmatched AI keys:", unmatchedKeys);
-          }
-
-          finalRows = pendingRows.map((row) => {
-            const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
-            return { ...mapped, _raw: row };
-          });
-        }
+        const finalRows = pendingRows.map((row) => {
+          const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
+          return { ...mapped, _raw: row };
+        });
 
         const nonEmptyCount = finalRows.filter(r =>
           TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
