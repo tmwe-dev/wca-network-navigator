@@ -14,7 +14,7 @@ function findField(row: Record<string, any>, aliases: string[]): string | null {
 }
 
 const FIELD_ALIASES: Record<string, string[]> = {
-  company_name: ["company_name", "ragione_sociale", "azienda", "company", "societa", "ditta", "denominazione"],
+  company_name: ["company_name", "ragione_sociale", "azienda", "company", "societa", "ditta", "denominazione", "name_2"],
   name: ["name", "nome", "contatto", "referente", "contact", "nome_contatto", "nome_referente"],
   email: ["email", "e_mail", "mail", "email_address", "posta_elettronica"],
   phone: ["phone", "telefono", "tel", "phone_number", "numero_telefono"],
@@ -23,8 +23,10 @@ const FIELD_ALIASES: Record<string, string[]> = {
   city: ["city", "citta", "localita", "comune"],
   address: ["address", "indirizzo", "via", "sede"],
   zip_code: ["zip_code", "cap", "postal_code", "codice_postale"],
-  note: ["note", "notes", "annotazioni", "commenti", "osservazioni"],
+  note: ["note", "notes", "annotazioni", "commenti", "osservazioni", "position"],
   origin: ["origin", "origine", "provenienza", "fonte", "source"],
+  company_alias: ["company_alias", "alias_azienda", "alias_2"],
+  contact_alias: ["contact_alias", "alias", "alias_contatto"],
 };
 
 export interface ImportLog {
@@ -530,6 +532,8 @@ export function useCreateImportFromParsedRows() {
         zip_code: row.zip_code || null,
         note: row.note || null,
         origin: row.origin || null,
+        company_alias: row.company_alias || null,
+        contact_alias: row.contact_alias || null,
         raw_data: row,
       }));
 
