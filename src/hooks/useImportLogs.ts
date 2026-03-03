@@ -434,6 +434,7 @@ export function useAnalyzeImportStructure() {
         parsed_rows: any[];
         confidence: number;
         warnings: string[];
+        unmapped_columns?: string[];
       };
     },
     onError: (err) => {

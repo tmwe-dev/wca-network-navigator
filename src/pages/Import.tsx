@@ -49,6 +49,12 @@ import {
 } from "@/hooks/useImportLogs";
 import ExcelJS from "exceljs";
 
+const TARGET_COLUMNS = [
+  "company_name", "name", "email", "phone", "mobile",
+  "country", "city", "address", "zip_code", "note", "origin",
+  "company_alias", "contact_alias",
+];
+
 // Normalize header key: lowercase, strip accents, collapse spaces/dashes to underscore
 function normalizeKey(key: string): string {
   return key
@@ -59,84 +65,6 @@ function normalizeKey(key: string): string {
     .replace(/[^a-z0-9_]/g, "")
     .replace(/_+/g, "_")
     .replace(/^_|_$/g, "");
-}
-
-// Comprehensive alias map for common CRM/TMW column names → target
-const COLUMN_ALIASES: Record<string, string> = {
-  "ragione_sociale": "company_name", "azienda": "company_name", "company": "company_name",
-  "societa": "company_name", "ditta": "company_name", "nome_azienda": "company_name",
-  "name_2": "company_name",
-  "nome": "name", "contatto": "name", "referente": "name", "nome_contatto": "name",
-  "mail": "email", "e_mail": "email", "email_address": "email", "posta": "email",
-  "telefono": "phone", "tel": "phone", "phone_number": "phone", "fisso": "phone",
-  "cellulare": "mobile", "cell": "mobile", "mobile_phone": "mobile", "cel": "mobile",
-  "paese": "country", "nazione": "country",
-  "citta": "city", "localita": "city",
-  "indirizzo": "address", "via": "address",
-  "cap": "zip_code", "zip": "zip_code", "postal_code": "zip_code", "codice_postale": "zip_code",
-  "notes": "note", "position": "note", "posizione": "note", "ruolo": "note",
-  "origine": "origin", "provenienza": "origin", "fonte": "origin",
-  "alias": "contact_alias",
-  "alias_2": "company_alias",
-};
-
-// Build local column mapping from row keys using direct match + aliases
-function buildLocalMapping(rowKeys: string[]): Record<string, string> {
-  const mapping: Record<string, string> = {};
-  const usedTargets = new Set<string>();
-
-  // Pass 1: exact match with TARGET_COLUMNS
-  for (const rk of rowKeys) {
-    const nrk = normalizeKey(rk);
-    if (TARGET_COLUMNS.includes(nrk) && !usedTargets.has(nrk)) {
-      mapping[rk] = nrk;
-      usedTargets.add(nrk);
-    }
-  }
-
-  // Pass 2: alias matching for unmapped keys
-  for (const rk of rowKeys) {
-    if (mapping[rk]) continue;
-    const nrk = normalizeKey(rk);
-    const target = COLUMN_ALIASES[nrk];
-    if (target && !usedTargets.has(target)) {
-      mapping[rk] = target;
-      usedTargets.add(target);
-    }
-  }
-
-  return mapping;
-}
-
-// Robust 3-tier key matching: exact → normalized → fuzzy
-function findRowKey(rowKeys: string[], srcKey: string): string | null {
-  if (rowKeys.includes(srcKey)) return srcKey;
-  const normalizedSrc = normalizeKey(srcKey);
-  for (const rk of rowKeys) {
-    if (normalizeKey(rk) === normalizedSrc) return rk;
-  }
-  if (normalizedSrc.length >= 3) {
-    for (const rk of rowKeys) {
-      const nrk = normalizeKey(rk);
-      if (nrk.length >= 3 && (nrk.includes(normalizedSrc) || normalizedSrc.includes(nrk))) return rk;
-    }
-  }
-  return null;
-}
-
-// Apply column_mapping to a single row
-function applyMappingToRow(
-  row: Record<string, any>,
-  columnMapping: Record<string, string>,
-  rowKeys: string[],
-): Record<string, string | null> {
-  const mapped: Record<string, string | null> = {};
-  for (const [src, dst] of Object.entries(columnMapping)) {
-    if (!TARGET_COLUMNS.includes(dst)) continue;
-    const actualKey = findRowKey(rowKeys, src);
-    mapped[dst] = actualKey && row[actualKey] ? String(row[actualKey]).trim() || null : null;
-  }
-  return mapped;
 }
 
 // Auto-detect CSV delimiter
@@ -161,7 +89,7 @@ function deduplicateHeaders(headers: string[]): string[] {
   });
 }
 
-// Parse CSV/Excel file to rows
+// Parse CSV/Excel file to rows — headers normalizzati per uniformità
 async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }> {
   if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
     const text = await file.text();
@@ -213,10 +141,21 @@ async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }
   return { headers, rows };
 }
 
-// Detect if a file is a re-import correction (exported incomplete CSV)
+// Detect if a file is a re-import correction (exported incomplete/error CSV)
 function isReimportCorrection(headers: string[]): boolean {
   const normalized = headers.map(normalizeKey);
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
+}
+
+// Apply AI column_mapping to a single row
+function applyMapping(row: Record<string, any>, mapping: Record<string, string>): Record<string, string | null> {
+  const result: Record<string, string | null> = {};
+  for (const [srcKey, dstCol] of Object.entries(mapping)) {
+    if (!TARGET_COLUMNS.includes(dstCol)) continue;
+    const val = row[srcKey];
+    result[dstCol] = val && String(val).trim() ? String(val).trim() : null;
+  }
+  return result;
 }
 
 function statusBadge(status: string) {
@@ -229,12 +168,6 @@ function statusBadge(status: string) {
   const s = map[status] || { variant: "outline" as const, label: status };
   return <Badge variant={s.variant}>{s.label}</Badge>;
 }
-
-const TARGET_COLUMNS = [
-  "company_name", "name", "email", "phone", "mobile",
-  "country", "city", "address", "zip_code", "note", "origin",
-  "company_alias", "contact_alias",
-];
 
 export default function Import() {
   const queryClient = useQueryClient();
@@ -298,8 +231,8 @@ export default function Import() {
       const dataHeaders = headers.filter(h => !metaColumns.has(normalizeKey(h)));
       const columnKeyMap: Record<string, string> = {};
       for (const col of TARGET_COLUMNS) {
-        const key = findRowKey(dataHeaders, col);
-        if (key) columnKeyMap[col] = key;
+        const match = dataHeaders.find(h => normalizeKey(h) === col);
+        if (match) columnKeyMap[col] = match;
       }
 
       console.log("[Re-import] ID key:", idKey, "| Column map:", columnKeyMap);
@@ -388,14 +321,9 @@ export default function Import() {
         return;
       }
 
-      // Normal flow: build local mapping first, then try AI
+      // Send to AI for mapping — AI knows our exact table schema
       setPendingFile(file);
       setPendingRows(rows);
-
-      const rowKeys = Object.keys(rows[0] || {});
-      const localMapping = buildLocalMapping(rowKeys);
-      const localMappedCount = Object.keys(localMapping).length;
-      console.log("[Import] Local mapping found:", localMappedCount, "columns:", localMapping);
 
       const sampleSize = Math.min(50, rows.length);
       const step = rows.length / sampleSize;
@@ -404,69 +332,22 @@ export default function Import() {
         sample.push(rows[Math.floor(i * step)]);
       }
 
-      try {
-        const result = await analyzeStructure.mutateAsync({
-          inputType: "file",
-          sampleRows: sample,
-        });
-        
-        const aiMappingKeys = Object.keys(result.column_mapping || {});
-        
-        // If AI mapping is good (confidence >= 0.3 and has keys), use it
-        if (result.confidence >= 0.3 && aiMappingKeys.length > 0) {
-          setAiMapping(result);
-          toast({ title: `Mapping AI (confidence: ${Math.round(result.confidence * 100)}%) — ${rows.length} righe` });
-        } else {
-          // AI failed — use local mapping as fallback
-          console.log("[Import] AI confidence too low or empty, using local mapping");
-          if (localMappedCount >= 2) {
-            // Use local mapping — create a synthetic aiMapping result
-            const localParsedSample = sample.slice(0, 5).map(row => {
-              const mapped: Record<string, any> = {};
-              for (const [src, dst] of Object.entries(localMapping)) {
-                mapped[dst] = row[src] ? String(row[src]).trim() || null : null;
-              }
-              return mapped;
-            });
-            setAiMapping({
-              column_mapping: localMapping,
-              parsed_rows: localParsedSample,
-              confidence: 0.8,
-              warnings: ["Mapping generato localmente (AI non disponibile)"],
-              unmapped_columns: rowKeys.filter(k => !localMapping[k]),
-              data_quality: (result as any).data_quality || { sample_size: sample.length, with_company_name: 0, with_name: 0, with_email: 0, with_phone: 0, with_country: 0 },
-            });
-            toast({ title: `Mapping locale generato — ${Object.keys(localMapping).length} colonne mappate su ${rows.length} righe` });
-          } else {
-            setAiMapping(result);
-            toast({ title: `Mapping AI con bassa confidence (${Math.round(result.confidence * 100)}%)`, variant: "destructive" });
-          }
-        }
-      } catch (err) {
-        console.error("[Import] AI analysis failed, using local mapping:", err);
-        if (localMappedCount >= 2) {
-          const localParsedSample = sample.slice(0, 5).map(row => {
-            const mapped: Record<string, any> = {};
-            for (const [src, dst] of Object.entries(localMapping)) {
-              mapped[dst] = row[src] ? String(row[src]).trim() || null : null;
-            }
-            return mapped;
-          });
-          setAiMapping({
-            column_mapping: localMapping,
-            parsed_rows: localParsedSample,
-            confidence: 0.8,
-            warnings: ["Mapping generato localmente (errore AI)"],
-            unmapped_columns: rowKeys.filter(k => !localMapping[k]),
-            data_quality: { sample_size: sample.length, with_company_name: 0, with_name: 0, with_email: 0, with_phone: 0, with_country: 0 },
-          });
-          toast({ title: `Mapping locale generato — ${Object.keys(localMapping).length} colonne mappate` });
-        } else {
-          throw err;
-        }
-      }
+      const result = await analyzeStructure.mutateAsync({
+        inputType: "file",
+        sampleRows: sample,
+      });
+
+      setAiMapping(result);
+      const mappedCount = Object.keys(result.column_mapping || {}).length;
+      toast({
+        title: mappedCount > 0
+          ? `Mapping AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rows.length} righe`
+          : "L'AI non ha trovato colonne mappabili. Verifica il file.",
+        variant: mappedCount > 0 ? undefined : "destructive",
+      });
     } catch (err) {
       console.error(err);
+      toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -530,7 +411,7 @@ export default function Import() {
         console.log("[Import Debug] Mapping keys:", mappingKeys);
 
         const finalRows = pendingRows.map((row) => {
-          const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
+          const mapped = applyMapping(row, aiMapping.column_mapping);
           return { ...mapped, _raw: row };
         });
 
@@ -877,14 +758,23 @@ export default function Import() {
                       </Alert>
                     )}
 
+                    {aiMapping.unmapped_columns && aiMapping.unmapped_columns.length > 0 && (
+                      <Alert>
+                        <AlertCircle className="w-4 h-4" />
+                        <AlertTitle className="text-xs">Colonne non mappate ({aiMapping.unmapped_columns.length})</AlertTitle>
+                        <AlertDescription className="text-xs">
+                          <span className="text-muted-foreground">
+                            {aiMapping.unmapped_columns.join(", ")}
+                          </span>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     {/* Preview: show REAL local transformation for file mode */}
                     <div>
                       {(() => {
                         const previewRows = pendingFile && pendingRows.length > 0
-                          ? (() => {
-                              const rowKeys = Object.keys(pendingRows[0] || {});
-                              return pendingRows.slice(0, 5).map(row => applyMappingToRow(row, aiMapping.column_mapping, rowKeys));
-                            })()
+                          ? pendingRows.slice(0, 5).map(row => applyMapping(row, aiMapping.column_mapping))
                           : aiMapping.parsed_rows.slice(0, 5);
                         const totalRows = pendingFile ? pendingRows.length : aiMapping.parsed_rows.length;
                         const activeCols = TARGET_COLUMNS.filter(col => previewRows.some(r => r[col]));
