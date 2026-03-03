@@ -48,6 +48,7 @@ interface PartnerCardProps {
 }
 
 export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardProps) {
+  const [logoError, setLogoError] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
   const hasWebsite = !!partner.website;
   const yearsM = partner.member_since ? getYearsMember(partner.member_since) : null;
@@ -77,14 +78,21 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         <div className="flex items-start gap-3">
           {/* Logo / Favicon */}
           <div className="flex-shrink-0 w-11 h-11 rounded-lg bg-muted/50 border flex items-center justify-center overflow-hidden">
-            {hasWebsite && !faviconError ? (
+            {partner.logo_url && !logoError ? (
+              <img
+                src={partner.logo_url}
+                alt=""
+                className="w-8 h-8 object-contain"
+                onError={() => setLogoError(true)}
+              />
+            ) : hasWebsite && !faviconError ? (
               <img
                 src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
                 alt=""
                 className="w-8 h-8 object-contain"
                 onError={() => setFaviconError(true)}
               />
-            ) : hasWebsite && faviconError ? (
+            ) : hasWebsite ? (
               <span className="text-2xl">{getCountryFlag(partner.country_code)}</span>
             ) : (
               <Tooltip>
