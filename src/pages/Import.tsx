@@ -339,14 +339,17 @@ export default function Import() {
 
       setAiMapping(result);
       const mappedCount = Object.keys(result.column_mapping || {}).length;
-      const parsedCount = (result.parsed_rows || []).length;
-      const hasData = mappedCount > 0 || parsedCount > 0;
-      toast({
-        title: hasData
-          ? `Analisi AI: ${mappedCount > 0 ? `${mappedCount} colonne mappate` : `${parsedCount} righe analizzate`} (confidence ${Math.round(result.confidence * 100)}%) — ${rows.length} righe totali`
-          : "L'AI non ha trovato colonne mappabili. Verifica il file.",
-        variant: hasData ? undefined : "destructive",
-      });
+      if (mappedCount > 0) {
+        toast({
+          title: `Analisi AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rows.length} righe totali`,
+        });
+      } else {
+        toast({
+          title: "L'AI non ha trovato colonne mappabili",
+          description: "Verifica che il file contenga dati di contatti (email, telefono, nomi aziende). Riprova.",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
       console.error(err);
       toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
@@ -394,7 +397,7 @@ export default function Import() {
 
   // === Confirm AI mapping and import ===
   const handleConfirmMapping = useCallback(async () => {
-    if (!aiMapping || aiMapping.parsed_rows.length === 0) return;
+    if (!aiMapping) return;
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -408,33 +411,18 @@ export default function Import() {
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
         const mappingKeys = Object.keys(aiMapping.column_mapping || {});
-        const hasParsedRows = aiMapping.parsed_rows && aiMapping.parsed_rows.length > 0;
-        const hasMapping = mappingKeys.length > 0;
 
-        let finalRows: any[];
-
-        if (hasMapping) {
-          // AI returned a column_mapping — apply it to raw rows
-          console.log("[Import] Using column_mapping:", mappingKeys);
-          finalRows = pendingRows.map((row) => {
-            const mapped = applyMapping(row, aiMapping.column_mapping);
-            return { ...mapped, _raw: row };
-          });
-        } else if (hasParsedRows) {
-          // AI returned empty column_mapping but populated parsed_rows — use them directly
-          console.log("[Import] column_mapping empty, using parsed_rows directly:", aiMapping.parsed_rows.length);
-          finalRows = aiMapping.parsed_rows.map((pr: any, idx: number) => {
-            const cleaned: Record<string, string | null> = {};
-            for (const col of TARGET_COLUMNS) {
-              cleaned[col] = pr[col] && String(pr[col]).trim() ? String(pr[col]).trim() : null;
-            }
-            return { ...cleaned, _raw: pendingRows[idx] || pr };
-          });
-        } else {
-          toast({ title: "Nessun dato mappabile trovato", variant: "destructive" });
+        if (mappingKeys.length === 0) {
+          toast({ title: "Nessun mapping disponibile. Riprova l'analisi.", variant: "destructive" });
           setUploading(false);
           return;
         }
+
+        console.log("[Import] Using column_mapping:", mappingKeys);
+        const finalRows = pendingRows.map((row) => {
+          const mapped = applyMapping(row, aiMapping.column_mapping);
+          return { ...mapped, _raw: row };
+        });
 
         const nonEmptyCount = finalRows.filter(r =>
           TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
