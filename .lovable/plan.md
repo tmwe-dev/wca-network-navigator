@@ -1,34 +1,42 @@
 
 
-## Piano: Import Intelligente Universale
+## Diagnosi: Deep Search NON è intelligente
 
-### Problema
-Il parser CSV splitta solo per virgola (il file TMW usa `;`), il campione AI è solo 5 righe (troppo poche per certezza), e la modalità "File Standard" bypassa l'AI causando import vuoti quando le colonne non matchano esattamente.
+### Problema riscontrato
+Il runner `useDeepSearchRunner.ts` invia **tutti** i partner selezionati alla edge function `deep-search-partner` senza alcun controllo. La edge function a sua volta non verifica se `enrichment_data.deep_search_at` è già presente.
 
-### Modifiche
+**Thailandia**: 178/178 partner hanno già la deep search completata. Se stai eseguendo la deep search su TH in questo momento, stai ripetendo il 100% delle operazioni.
 
-**1. `src/pages/Import.tsx` — Parser e UI**
-- **Auto-detect delimitatore**: contare `;`, `,`, `\t` nella prima riga e usare il più frequente
-- **Gestione colonne duplicate**: quando due header hanno lo stesso nome normalizzato, aggiungere suffisso `_2`, `_3` ecc.
-- **Rimuovere la modalità "File Standard"**: resta solo "Incolla Testo" e "File + Mapping AI"
-- **Aumentare il campione AI da 5 a 30 righe** per maggiore affidabilità
-- **Aggiungere bottone "Esporta errori CSV"** nel tab errori per scaricare le righe fallite
+### Soluzione
+Aggiungere un filtro intelligente nel runner prima di inviare i partner alla edge function.
 
-**2. `src/hooks/useImportLogs.ts` — Alias TMW**
-- Aggiungere alias mancanti: `cell` → mobile, `position` → note, `Address` → address, `company_alias` → company_alias, `contact_alias` → contact_alias
-- Usare `FIELD_ALIASES` anche nel path AI come fallback
+**File: `src/hooks/useDeepSearchRunner.ts`**
+- Prima del loop, query il database per verificare quali partner hanno già `enrichment_data->>'deep_search_at' IS NOT NULL`
+- Filtrare la lista `partnerIds` rimuovendo quelli già arricchiti
+- Mostrare un toast informativo: "X partner già arricchiti, Y da processare"
+- Se tutti sono già arricchiti, mostrare "Tutti i partner selezionati hanno già la Deep Search" e non avviare il processo
+- Aggiungere un parametro opzionale `force?: boolean` per forzare il re-processing quando esplicitamente richiesto
 
-**3. `supabase/functions/analyze-import-structure/index.ts` — Prompt migliorato**
-- Aggiungere `company_alias` e `contact_alias` alle colonne target
-- Istruire l'AI a gestire strutture a doppia entità (contatto + azienda nella stessa riga, colonne duplicate con suffisso)
+### Dettagli tecnici
 
-### File coinvolti
+```text
+partnerIds (input)
+    │
+    ▼
+Query DB: SELECT id FROM partners 
+  WHERE id IN (...) 
+  AND enrichment_data->>'deep_search_at' IS NOT NULL
+    │
+    ▼
+toProcess = partnerIds - alreadyDone
+    │
+    ├── toProcess.length === 0 → toast.info("Tutti già arricchiti") → return
+    └── toProcess.length > 0  → toast.info("X già fatti, Y da processare") → loop normale
+```
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Import.tsx` | Auto-detect delimitatore, rimuovere "Standard", campione 30 righe, colonne duplicate |
-| `src/hooks/useImportLogs.ts` | Alias TMW aggiuntivi |
-| `supabase/functions/analyze-import-structure/index.ts` | Aggiungere company_alias/contact_alias, prompt doppia entità |
+| `src/hooks/useDeepSearchRunner.ts` | Aggiungere filtro pre-loop con query DB + parametro `force` |
 
-Nessun file eliminato. Le modifiche sono retrocompatibili con tutti i formati CSV/Excel esistenti.
+Una modifica singola, nessun file nuovo, retrocompatibile.
 
