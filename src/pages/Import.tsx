@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ImportAssistant } from "@/components/import/ImportAssistant";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,6 +186,7 @@ const TARGET_COLUMNS = [
 ];
 
 export default function Import() {
+  const queryClient = useQueryClient();
   const [activeLogId, setActiveLogId] = useState<string | null>(null);
   const [tab, setTab] = useState("upload");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -284,12 +286,15 @@ export default function Import() {
       }
 
       toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
+      // Invalidate cache to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["import-logs"] });
     } catch (err) {
       toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
-  }, []);
+  }, [queryClient]);
 
   // === Process a file (handles both new import and re-import correction) ===
   const processFile = useCallback(async (file: File) => {
