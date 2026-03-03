@@ -1,5 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useContext } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 
 export interface ActiveProcess {
   id: string;
@@ -12,13 +15,45 @@ export interface ActiveProcess {
 
 /**
  * Centralized hook to track all active background processes.
- * Used by the global header indicator.
+ * Sources: download jobs, deep search, email queue.
  */
 export function useActiveProcesses() {
   const { data: downloadJobs } = useDownloadJobs();
+  const deepSearch = useContext(DeepSearchContext);
+
+  // Global email queue count (pending + sending)
+  const { data: emailQueueCounts } = useQuery({
+    queryKey: ["email-queue-global-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_campaign_queue")
+        .select("status", { count: "exact", head: false })
+        .in("status", ["pending", "sending"]);
+      if (error) return { pending: 0, sending: 0, total: 0 };
+      const pending = (data || []).filter((r: any) => r.status === "pending").length;
+      const sending = (data || []).filter((r: any) => r.status === "sending").length;
+      return { pending, sending, total: pending + sending };
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
 
   const processes = useMemo<ActiveProcess[]>(() => {
     const result: ActiveProcess[] = [];
+
+    // Deep Search
+    if (deepSearch?.running && deepSearch.current) {
+      const { index, total } = deepSearch.current;
+      const progress = total > 0 ? Math.round((index / total) * 100) : 0;
+      result.push({
+        id: "deep-search",
+        type: "deep_search",
+        label: `Deep Search: ${deepSearch.current.companyName}`,
+        status: "running",
+        progress,
+        detail: `${index}/${total}`,
+      });
+    }
 
     // Download jobs
     (downloadJobs || []).forEach((job) => {
@@ -35,12 +70,30 @@ export function useActiveProcesses() {
       }
     });
 
+    // Email queue
+    if (emailQueueCounts && emailQueueCounts.total > 0) {
+      result.push({
+        id: "email-queue",
+        type: "email_queue",
+        label: `Email in coda`,
+        status: emailQueueCounts.sending > 0 ? "running" : "pending",
+        detail: `${emailQueueCounts.sending} invio / ${emailQueueCounts.pending} attesa`,
+      });
+    }
+
     return result;
-  }, [downloadJobs]);
+  }, [downloadJobs, deepSearch?.running, deepSearch?.current, emailQueueCounts]);
 
   const hasActive = processes.length > 0;
   const runningCount = processes.filter((p) => p.status === "running").length;
   const totalCount = processes.length;
 
-  return { processes, hasActive, runningCount, totalCount };
+  // Overall progress (average of processes with progress)
+  const overallProgress = useMemo(() => {
+    const withProgress = processes.filter((p) => p.progress !== undefined);
+    if (withProgress.length === 0) return undefined;
+    return Math.round(withProgress.reduce((sum, p) => sum + (p.progress || 0), 0) / withProgress.length);
+  }, [processes]);
+
+  return { processes, hasActive, runningCount, totalCount, overallProgress };
 }

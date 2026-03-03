@@ -63,10 +63,10 @@ export function AppLayout() {
                 >
                   <Menu className="w-4 h-4" />
                 </Button>
+                <ActiveProcessIndicator />
                 <div id="campaign-header-controls" className="flex items-center gap-3 flex-1 min-w-0" />
               </div>
               <div className="flex items-center gap-2">
-                <ActiveProcessIndicator />
                 <CreditCounter />
                 {!isCampaignsPage && (
                   <button

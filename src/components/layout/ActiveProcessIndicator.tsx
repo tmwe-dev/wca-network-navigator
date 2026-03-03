@@ -13,53 +13,75 @@ const typeIcons: Record<ActiveProcess["type"], typeof Download> = {
 };
 
 export function ActiveProcessIndicator() {
-  const { processes, hasActive, runningCount, totalCount } = useActiveProcesses();
+  const { processes, hasActive, runningCount, totalCount, overallProgress } = useActiveProcesses();
   const [expanded, setExpanded] = useState(false);
 
-  if (!hasActive) return null;
-
-  const mainProcess = processes[0];
-  const Icon = typeIcons[mainProcess.type] || Activity;
+  const mainProcess = hasActive ? processes[0] : null;
+  const Icon = mainProcess ? (typeIcons[mainProcess.type] || Activity) : Activity;
 
   return (
     <div className="relative">
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => hasActive && setExpanded((v) => !v)}
             className={cn(
-              "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all",
-              "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+              "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all relative overflow-hidden",
+              hasActive
+                ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
+                : "border-border bg-muted/30 text-muted-foreground cursor-default"
             )}
           >
             <span className="relative flex-shrink-0">
               <Icon className="w-3.5 h-3.5" />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+              {hasActive && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
             </span>
-            <span className="tabular-nums">
-              {runningCount > 0 ? `${runningCount} attivo` : `${totalCount} in coda`}
-            </span>
-            {mainProcess.progress !== undefined && mainProcess.progress > 0 && (
-              <span className="tabular-nums text-primary/70">{mainProcess.progress}%</span>
+            {hasActive ? (
+              <>
+                <span className="tabular-nums">
+                  {runningCount > 0 ? `${runningCount} attivo` : `${totalCount} in coda`}
+                </span>
+                {mainProcess?.progress !== undefined && mainProcess.progress > 0 && (
+                  <span className="tabular-nums text-primary/70">{mainProcess.progress}%</span>
+                )}
+                {processes.length > 1 && (
+                  expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                )}
+              </>
+            ) : (
+              <span className="hidden sm:inline">Idle</span>
             )}
-            {processes.length > 1 && (
-              expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+
+            {/* Mini progress bar at bottom */}
+            {hasActive && overallProgress !== undefined && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/10">
+                <motion.div
+                  className="h-full bg-primary/60 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${overallProgress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
             )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">
-          {processes.length} processo/i attivo/i — clicca per dettagli
+          {hasActive
+            ? `${processes.length} processo/i attivo/i — clicca per dettagli`
+            : "Nessun processo attivo"}
         </TooltipContent>
       </Tooltip>
 
       <AnimatePresence>
-        {expanded && (
+        {expanded && hasActive && (
           <motion.div
             initial={{ opacity: 0, y: -4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-1 z-50 w-72 rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
+            className="absolute top-full left-0 mt-1 z-50 w-72 rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
           >
             <div className="px-3 py-2 border-b border-border bg-muted/50">
               <span className="text-[11px] font-semibold text-foreground">Processi Attivi</span>
