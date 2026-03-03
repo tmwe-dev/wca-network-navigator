@@ -65,27 +65,31 @@ ${schemaDescription}
 ## DATI IN INPUT
 Ricevi un campione di righe dal file dell'utente. Ogni riga è un oggetto JSON con le chiavi originali del file (già normalizzate in lowercase con underscore). Le chiavi possono avere suffissi numerici (_2, _3) quando nel file originale c'erano colonne duplicate con lo stesso nome.
 
-## ISTRUZIONI
-Devi creare un mapping COMPLETO: per ogni chiave del file sorgente che contiene dati utili, indica a quale colonna destinazione corrisponde.
+## OBIETTIVO PRINCIPALE
+IL TUO COMPITO PRIMARIO è popolare "column_mapping". Questo dizionario è OBBLIGATORIO e NON DEVE MAI essere vuoto.
+Per OGNI chiave sorgente che contiene dati utili, DEVI inserire un'entry nel column_mapping con:
+- chiave = nome esatto della colonna sorgente (come appare nei dati JSON)
+- valore = nome della colonna destinazione dallo schema
 
-REGOLE CRITICHE:
+## REGOLE DI MAPPING
 1. Analizza ATTENTAMENTE sia i nomi delle chiavi che i VALORI di esempio nelle righe
-2. Se una chiave del file si chiama come una colonna destinazione (es. "email" → "email"), mappala direttamente
-3. Se i nomi sono diversi ma i valori suggeriscono la corrispondenza, usa il contenuto per decidere
-4. Per strutture con entità doppie (contatto + azienda nella stessa riga):
-   - "name" = nome persona → "name"
-   - "name_2" = nome azienda → "company_name" 
+2. Match diretto: "email" → "email", "phone" → "phone", "country" → "country", "city" → "city", "address" → "address", "origin" → "origin"
+3. Per strutture con entità doppie (contatto + azienda nella stessa riga):
+   - "name" (nome persona) → "name"
+   - "name_2" (nome azienda) → "company_name" 
    - "alias" → "contact_alias"
    - "alias_2" → "company_alias"
-5. "cell" / "cellulare" → "mobile"
-6. "position" / "ruolo" / "posizione" → "note"
-7. "tel" / "telefono" → "phone"
-8. "paese" / "nazione" / "stato" (quando contiene nomi di paesi) → "country"
-9. "cap" → "zip_code"
-10. Chiavi che non corrispondono a nessuna colonna (es. "id", "created_at", "status", campi meta) devono andare in unmapped_columns
-11. La confidence deve riflettere quante colonne importanti (company_name, name, email) sono state trovate
+   - "company_alias" → "company_alias"
+4. "cell" / "cellulare" / "mobile" → "mobile"
+5. "position" / "ruolo" / "posizione" / "title" → "note" (concatena ruolo/posizione nelle note)
+6. "tel" / "telefono" / "phone" → "phone"
+7. Quando "country" e "country_2" esistono entrambi, mappa "country" → "country" (sono lo stesso paese)
+8. "cap" / "zip_code" → "zip_code"
+9. Chiavi non mappabili (es. "id", "created_at", "status", "stato", campi "meta_*", "agent_id", "completed", "scheduled_contact", "has_actions", suffissi _2 ridondanti) vanno in unmapped_columns
 
-IMPORTANTE: Non lasciare MAI il column_mapping vuoto se ci sono chiavi mappabili. Analizza ogni singola chiave.`;
+## REGOLA CRITICA
+NON lasciare MAI column_mapping vuoto. Se nel file ci sono colonne come "name", "email", "phone", "country", "city", "address", "origin", "alias", "name_2", queste DEVONO apparire nel column_mapping.
+parsed_rows è SECONDARIO — serve solo come anteprima. Il column_mapping è ciò che il sistema usa per trasformare TUTTE le righe del file.`;
 
       userContent = JSON.stringify(sample_rows || [], null, 2);
     }
