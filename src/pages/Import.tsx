@@ -53,6 +53,40 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");           // trim leading/trailing underscores
 }
 
+// Robust 3-tier key matching: exact → normalized → fuzzy
+function findRowKey(rowKeys: string[], srcKey: string): string | null {
+  // Level 1: exact match
+  if (rowKeys.includes(srcKey)) return srcKey;
+  // Level 2: normalized match
+  const normalizedSrc = normalizeKey(srcKey);
+  for (const rk of rowKeys) {
+    if (normalizeKey(rk) === normalizedSrc) return rk;
+  }
+  // Level 3: fuzzy — one contains the other (min 3 chars)
+  if (normalizedSrc.length >= 3) {
+    for (const rk of rowKeys) {
+      const nrk = normalizeKey(rk);
+      if (nrk.length >= 3 && (nrk.includes(normalizedSrc) || normalizedSrc.includes(nrk))) return rk;
+    }
+  }
+  return null;
+}
+
+// Apply AI column_mapping to a single row using robust key matching
+function applyMappingToRow(
+  row: Record<string, any>,
+  columnMapping: Record<string, string>,
+  rowKeys: string[],
+): Record<string, string | null> {
+  const mapped: Record<string, string | null> = {};
+  for (const [src, dst] of Object.entries(columnMapping)) {
+    if (!TARGET_COLUMNS.includes(dst)) continue;
+    const actualKey = findRowKey(rowKeys, src);
+    mapped[dst] = actualKey && row[actualKey] ? String(row[actualKey]).trim() || null : null;
+  }
+  return mapped;
+}
+
 // Auto-detect CSV delimiter by counting occurrences in the first line
 function detectDelimiter(firstLine: string): string {
   const candidates = [",", ";", "\t"];
@@ -261,16 +295,39 @@ export default function Import() {
 
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
-        // Apply AI mapping LOCALLY to ALL rows, preserve original row as raw_data
+        // Debug: log key comparison
+        const rowKeys = Object.keys(pendingRows[0] || {});
+        const mappingKeys = Object.keys(aiMapping.column_mapping);
+        console.log("[Import Debug] Row keys:", rowKeys);
+        console.log("[Import Debug] AI mapping keys:", mappingKeys);
+        const unmatchedKeys = mappingKeys.filter(k => !findRowKey(rowKeys, k));
+        if (unmatchedKeys.length > 0) {
+          console.warn("[Import Debug] Unmatched AI keys:", unmatchedKeys);
+        }
+
+        // Apply AI mapping LOCALLY to ALL rows using robust 3-tier matching
         const mappedRows = pendingRows.map((row) => {
-          const mapped: Record<string, string | null> = {};
-          for (const [src, dst] of Object.entries(aiMapping.column_mapping)) {
-            if (TARGET_COLUMNS.includes(dst)) {
-              mapped[dst] = row[src] || null;
-            }
-          }
-          return { ...mapped, _raw: row }; // _raw carries original data
+          const mapped = applyMappingToRow(row, aiMapping.column_mapping, rowKeys);
+          return { ...mapped, _raw: row };
         });
+
+        // Pre-import validation: abort if >90% rows are completely empty
+        const nonEmptyCount = mappedRows.filter(r => 
+          TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+        ).length;
+        const fillRate = nonEmptyCount / mappedRows.length;
+        console.log(`[Import Debug] Fill rate: ${(fillRate * 100).toFixed(1)}% (${nonEmptyCount}/${mappedRows.length})`);
+        
+        if (fillRate < 0.1) {
+          toast({
+            title: "Mapping fallito",
+            description: `Solo ${nonEmptyCount} righe su ${mappedRows.length} hanno dati. Il mapping AI non corrisponde alle colonne del file. Riprova.`,
+            variant: "destructive",
+          });
+          setUploading(false);
+          return;
+        }
+
         log = await createFromParsed.mutateAsync({ rows: mappedRows, userId: user.id, fileName });
       } else {
         log = await createFromParsed.mutateAsync({ rows: aiMapping.parsed_rows, userId: user.id, fileName });
@@ -513,37 +570,48 @@ export default function Import() {
                       </Alert>
                     )}
 
-                    {/* Preview of parsed rows (max 5) */}
+                    {/* Preview: show REAL local transformation for file mode */}
                     <div>
-                      <h4 className="text-sm font-medium mb-2">
-                        Anteprima ({Math.min(aiMapping.parsed_rows.length, 5)} di {uploadMode === "file" ? pendingRows.length : aiMapping.parsed_rows.length} righe)
-                      </h4>
-                      <ScrollArea className="max-h-[240px]">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {TARGET_COLUMNS.filter((col) =>
-                                aiMapping.parsed_rows.some((r) => r[col])
-                              ).map((col) => (
-                                <TableHead key={col} className="text-[10px] whitespace-nowrap">{col}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {aiMapping.parsed_rows.slice(0, 5).map((row, i) => (
-                              <TableRow key={i}>
-                                {TARGET_COLUMNS.filter((col) =>
-                                  aiMapping!.parsed_rows.some((r) => r[col])
-                                ).map((col) => (
-                                  <TableCell key={col} className="text-[10px] truncate max-w-[120px]">
-                                    {row[col] || "—"}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </ScrollArea>
+                      {(() => {
+                        // For file mode, show locally-transformed rows; for paste, show AI rows
+                        const previewRows = uploadMode === "file" && pendingRows.length > 0
+                          ? (() => {
+                              const rowKeys = Object.keys(pendingRows[0] || {});
+                              return pendingRows.slice(0, 5).map(row => applyMappingToRow(row, aiMapping.column_mapping, rowKeys));
+                            })()
+                          : aiMapping.parsed_rows.slice(0, 5);
+                        const totalRows = uploadMode === "file" ? pendingRows.length : aiMapping.parsed_rows.length;
+                        const activeCols = TARGET_COLUMNS.filter(col => previewRows.some(r => r[col]));
+                        return (
+                          <>
+                            <h4 className="text-sm font-medium mb-2">
+                              Anteprima Trasformazione Reale ({Math.min(5, totalRows)} di {totalRows} righe)
+                            </h4>
+                            <ScrollArea className="max-h-[240px]">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    {activeCols.map(col => (
+                                      <TableHead key={col} className="text-[10px] whitespace-nowrap">{col}</TableHead>
+                                    ))}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {previewRows.map((row, i) => (
+                                    <TableRow key={i}>
+                                      {activeCols.map(col => (
+                                        <TableCell key={col} className="text-[10px] truncate max-w-[120px]">
+                                          {row[col] || "—"}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </ScrollArea>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex gap-2">
