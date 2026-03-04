@@ -1,37 +1,24 @@
 
 
-## Piano: Sample data e eliminazione righe nel mapping
+## Problema identificato
 
-### Modifiche a `src/pages/Import.tsx`
+In `useCreateImportFromParsedRows` (riga 520-564 di `useImportLogs.ts`), il log di importazione viene creato con `status: "pending"` ma **non viene mai aggiornato a `"completed"`** dopo che tutti i batch di contatti sono stati inseriti nel database. La UI mostra "Elaborazione..." perché lo status rimane bloccato.
 
-**1. Aggiungere esempio dati nella tabella di mapping (righe 790-826)**
+## Soluzione
 
-Nella tabella di confronto colonne, aggiungere una quarta colonna "Esempio" che mostra il primo valore non-vuoto trovato in `pendingRows` per quella colonna sorgente. Questo permette all'utente di capire cosa contiene ogni campo prima di decidere il mapping.
+Aggiungere un `UPDATE` dello status a `"completed"` alla fine del ciclo di inserimento batch in `useCreateImportFromParsedRows`:
 
-La tabella diventerà:
-```
-| Colonna Sorgente | Esempio dato | → | Colonna Destinazione | ✕ |
-```
+**File: `src/hooks/useImportLogs.ts`** (dopo riga 562, dopo il ciclo `for` dei batch)
 
-Per ogni riga `src`, il valore di esempio sarà:
 ```typescript
-const sampleValue = pendingRows.find(r => r[src]?.toString().trim())?.[src] || "—";
-```
-Mostrato troncato a ~40 caratteri con `text-muted-foreground`.
-
-**2. Aggiungere pulsante elimina riga**
-
-Aggiungere una quinta colonna con un'icona `Trash2` che rimuove la entry dal `column_mapping`. Al click:
-```typescript
-const newMapping = { ...aiMapping.column_mapping };
-delete newMapping[src];
-setAiMapping({ ...aiMapping, column_mapping: newMapping });
+// After all batches inserted, mark as completed
+await supabase
+  .from("import_logs")
+  .update({ status: "completed", processing_batch: Math.ceil(contacts.length / 100), total_batches: Math.ceil(contacts.length / 100) })
+  .eq("id", importLog.id);
 ```
 
-La colonna rimossa verrà automaticamente mostrata nella sezione "Colonne non mappate" già esistente (righe 840-849), dato che non sarà più presente nel mapping.
-
-### Risultato
-- L'utente vede un esempio concreto dei dati per ogni campo, facilitando la decisione
-- L'utente può eliminare righe di mapping che non vuole importare
-- Le colonne eliminate appaiono nella sezione "non mappate" come feedback visivo
+Questo farà sì che:
+- Il badge mostri "Completato" invece di "Elaborazione..."
+- La progress bar scompaia (visibile solo quando `status === "processing"`)
 
