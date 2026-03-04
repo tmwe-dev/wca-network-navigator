@@ -321,6 +321,7 @@ export function useTransferToPartners() {
             direct_phone: c.phone,
             mobile: c.mobile,
             contact_alias: c.contact_alias,
+            title: (c as any).position || null,
             is_primary: true,
           });
         }

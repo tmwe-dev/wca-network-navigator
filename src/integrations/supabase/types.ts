@@ -714,6 +714,7 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
+          external_id: string | null
           id: string
           import_log_id: string
           is_selected: boolean
@@ -723,6 +724,7 @@ export type Database = {
           note: string | null
           origin: string | null
           phone: string | null
+          position: string | null
           raw_data: Json | null
           row_number: number
           zip_code: string | null
@@ -736,6 +738,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          external_id?: string | null
           id?: string
           import_log_id: string
           is_selected?: boolean
@@ -745,6 +748,7 @@ export type Database = {
           note?: string | null
           origin?: string | null
           phone?: string | null
+          position?: string | null
           raw_data?: Json | null
           row_number?: number
           zip_code?: string | null
@@ -758,6 +762,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          external_id?: string | null
           id?: string
           import_log_id?: string
           is_selected?: boolean
@@ -767,6 +772,7 @@ export type Database = {
           note?: string | null
           origin?: string | null
           phone?: string | null
+          position?: string | null
           raw_data?: Json | null
           row_number?: number
           zip_code?: string | null
