@@ -1113,6 +1113,7 @@ export type Database = {
           city: string
           company_alias: string | null
           company_name: string
+          converted_at: string | null
           country_code: string
           country_name: string
           created_at: string | null
@@ -1123,8 +1124,11 @@ export type Database = {
           fax: string | null
           has_branches: boolean | null
           id: string
+          interaction_count: number
           is_active: boolean | null
           is_favorite: boolean | null
+          last_interaction_at: string | null
+          lead_status: string
           logo_url: string | null
           member_since: string | null
           membership_expires: string | null
@@ -1148,6 +1152,7 @@ export type Database = {
           city: string
           company_alias?: string | null
           company_name: string
+          converted_at?: string | null
           country_code: string
           country_name: string
           created_at?: string | null
@@ -1158,8 +1163,11 @@ export type Database = {
           fax?: string | null
           has_branches?: boolean | null
           id?: string
+          interaction_count?: number
           is_active?: boolean | null
           is_favorite?: boolean | null
+          last_interaction_at?: string | null
+          lead_status?: string
           logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
@@ -1183,6 +1191,7 @@ export type Database = {
           city?: string
           company_alias?: string | null
           company_name?: string
+          converted_at?: string | null
           country_code?: string
           country_name?: string
           created_at?: string | null
@@ -1193,8 +1202,11 @@ export type Database = {
           fax?: string | null
           has_branches?: boolean | null
           id?: string
+          interaction_count?: number
           is_active?: boolean | null
           is_favorite?: boolean | null
+          last_interaction_at?: string | null
+          lead_status?: string
           logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
@@ -1332,6 +1344,47 @@ export type Database = {
           },
         ]
       }
+      prospect_interactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          interaction_type: string
+          outcome: string | null
+          prospect_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interaction_type: string
+          outcome?: string | null
+          prospect_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interaction_type?: string
+          outcome?: string | null
+          prospect_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_interactions_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_social_links: {
         Row: {
           contact_id: string | null
@@ -1383,6 +1436,7 @@ export type Database = {
           codice_ateco: string | null
           codice_fiscale: string | null
           company_name: string
+          converted_at: string | null
           created_at: string
           credit_score: number | null
           data_costituzione: string | null
@@ -1393,6 +1447,9 @@ export type Database = {
           fatturato: number | null
           forma_giuridica: string | null
           id: string
+          interaction_count: number
+          last_interaction_at: string | null
+          lead_status: string
           partita_iva: string | null
           pec: string | null
           phone: string | null
@@ -1413,6 +1470,7 @@ export type Database = {
           codice_ateco?: string | null
           codice_fiscale?: string | null
           company_name: string
+          converted_at?: string | null
           created_at?: string
           credit_score?: number | null
           data_costituzione?: string | null
@@ -1423,6 +1481,9 @@ export type Database = {
           fatturato?: number | null
           forma_giuridica?: string | null
           id?: string
+          interaction_count?: number
+          last_interaction_at?: string | null
+          lead_status?: string
           partita_iva?: string | null
           pec?: string | null
           phone?: string | null
@@ -1443,6 +1504,7 @@ export type Database = {
           codice_ateco?: string | null
           codice_fiscale?: string | null
           company_name?: string
+          converted_at?: string | null
           created_at?: string
           credit_score?: number | null
           data_costituzione?: string | null
@@ -1453,6 +1515,9 @@ export type Database = {
           fatturato?: number | null
           forma_giuridica?: string | null
           id?: string
+          interaction_count?: number
+          last_interaction_at?: string | null
+          lead_status?: string
           partita_iva?: string | null
           pec?: string | null
           phone?: string | null
