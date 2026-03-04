@@ -1,59 +1,96 @@
 
 
-## Diagnosi del problema
+## Analisi TMW Engine — Cosa ho trovato
 
-Dai log dell'edge function il quadro è chiaro:
+Ho letto in profondità 3 pagine e 6 componenti dal progetto TMW Engine. Ecco il confronto con il nostro sistema attuale.
 
-```
-column_mapping keys: []     ← VUOTO
-confidence: 0.9             ← ALTA
-unmapped: [36 colonne metadata]
-```
+### Cosa fa TMW Engine che noi NON abbiamo
 
-L'AI restituisce confidence 0.9 ma `column_mapping` è vuoto. Le colonne contatto (name, email, phone, city ecc.) non compaiono né nel mapping né nell'unmapped — significa che l'AI le riconosce e le usa per generare `parsed_rows`, ma **non popola `column_mapping`**.
+**1. Pagina "Record Importati" dedicata** (`RecordImportati.tsx`)
+Una pagina full-page per navigare i contatti importati con:
+- **Griglia di card compatte** (`CompactContactCard`) — 4 colonne desktop, con checkbox, bandiera paese, contatto, badge origine, e icone azione rapida (crea attività, email, telefono)
+- **Filtri avanzati** — ricerca testo, filtro per origine, paese, "nascondi contatti con attività completate oggi" (switch), "solo con note" (checkbox)
+- **Ordinamento per colonna** con click sugli header
+- **Paginazione robusta** con 25/50/100/250/500 record per pagina
+- **Azioni bulk dalla selezione** — genera alias AI, crea attività multiple
+- **Toggle colonne visibili** — base / dettagli commerciali / metadata
 
-**Causa tecnica**: lo schema del tool definisce `column_mapping` come `{ additionalProperties: { type: "string" } }` (oggetto con chiavi dinamiche). Gemini Flash ha difficoltà con questo pattern e restituisce `{}` anziché le coppie chiave-valore.
+**2. Form Attività Avanzato** (`AdvancedMultipleActivityForm.tsx`)
+Un form a tab (Email / Chiamata) con:
+- Lista dei contatti selezionati con info (azienda, email, telefono)
+- Tab Email: oggetto, corpo, template email, allegati drag-and-drop, editor fullscreen
+- Tab Chiamata: note, programmazione futura con data/ora
+- Conferma invio: "Invia ora" vs "Programma per dopo"
+- Supporto allegati esistenti dalla memoria
 
-Il frontend poi blocca tutto perché `mappingKeys.length === 0`.
+**3. Dialog Gestione Attività** (`GestisciAttivitaDialog.tsx`)
+Dialog per modificare un'attività esistente con:
+- Tab Dettagli (stato, priorità, scadenza con calendar picker + time, descrizione)
+- Tab Email (composizione con template e allegati)
+- Tab Altro (note, storico modifiche)
+- Propagazione modifiche telefono al contatto rubrica
 
-## Piano di fix
+### Cosa abbiamo noi che loro NON hanno
+- AI mapping delle colonne con drag-and-drop per correzione
+- Import assistant conversazionale
+- Re-import correction workflow
+- Data quality dashboard post-import
+- Trasferimento a Partner (loro hanno "rubrica", noi "partners")
 
-### 1. Edge function: derivare il mapping server-side se l'AI lo lascia vuoto
+### Piano di implementazione
 
-Dopo aver ricevuto la risposta AI, se `column_mapping` è vuoto MA `parsed_rows` ha dati, **ricostruire il mapping** confrontando le chiavi sorgente (dal campione inviato) con i valori nelle parsed_rows. Logica:
+Adatteremo le 3 maschere principali di TMW Engine al nostro schema dati (`imported_contacts`, `activities`, `partners`).
 
-- Per ogni campo target che ha un valore in parsed_rows, cercare quale chiave sorgente contiene quel valore esatto
-- Costruire il mapping `source_key → target_field`
+#### Task 1: Pagina Record Importati con Card Grid
 
-Questo è un fallback meccanico, non handcode: non ci sono regole "name_2 = company_name", ma un confronto valore-per-valore.
+Creare una nuova visualizzazione nella pagina Import (tab "Contatti") che sostituisce la lista piatta attuale con:
 
-### 2. Cambiare lo schema del tool: array invece di oggetto dinamico
+- **Card compatte a griglia** (1-4 colonne responsive) per ogni contatto importato
+- Ogni card mostra: checkbox, company_name, name, country flag, city, origin badge
+- Icone azione rapida: crea attività (email/call), visualizza dettaglio
+- **Filtri**: ricerca testo (company_name, name, city), filtro per origin, country (Select), records per pagina
+- **Paginazione** client-side (25/50/100/250)
+- **Selezione multipla** con "seleziona tutti della pagina"
+- **Barra azioni bulk** quando ci sono selezioni: "Crea Attività" (apre il form avanzato), "Trasferisci a Partner"
 
-Sostituire `column_mapping` da oggetto con chiavi dinamiche ad array di coppie esplicite:
+File coinvolti:
+- `src/components/import/CompactContactCard.tsx` (nuovo — adattato da TMW)
+- `src/pages/Import.tsx` (modifica tab Contatti)
 
-```json
-"column_mapping": {
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "source": { "type": "string" },
-      "target": { "type": "string" }
-    },
-    "required": ["source", "target"]
-  }
-}
-```
+#### Task 2: Form Attività Multiplo Avanzato
 
-I modelli AI gestiscono molto meglio array di oggetti tipizzati rispetto a oggetti con chiavi arbitrarie. Dopo la risposta, l'edge function converte l'array in un dizionario prima di restituirlo al frontend.
+Sostituire il semplice `AssignActivityDialog` con un form a tab ispirato a TMW:
 
-### 3. Frontend: nessuna modifica alla logica
+- **Tab Email**: oggetto, corpo email con textarea espandibile, selezione template esistenti
+- **Tab Chiamata/Follow-up**: note, programmazione con data+ora
+- Lista contatti selezionati visibile in alto con info
+- Scelta "Invia subito" vs "Programma" per le email
+- Priorità e assegnazione
 
-Il frontend continua a ricevere `column_mapping` come dizionario `{ source: target }` — la conversione avviene server-side. Nessun fallback `parsed_rows` nel frontend.
+File coinvolti:
+- `src/components/import/AdvancedActivityForm.tsx` (nuovo — adattato da TMW)
+- `src/pages/Import.tsx` (integrazione nel tab Contatti)
 
-### File modificati
+#### Task 3: Dialog Gestione Attività Singola
 
-| File | Modifica |
-|------|----------|
-| `supabase/functions/analyze-import-structure/index.ts` | Schema tool: array di coppie; fallback server-side da parsed_rows; conversione array→dizionario |
+Creare un dialog per visualizzare/modificare un'attività esistente associata a un contatto:
+
+- Tab Dettagli: stato, priorità, scadenza (calendar + time picker), descrizione
+- Tab Email: composizione/modifica email
+- Storico modifiche
+- Accessibile cliccando sul nome azienda nella card o dall'icona attività
+
+File coinvolti:
+- `src/components/import/ManageActivityDialog.tsx` (nuovo)
+
+### Mappatura schema TMW → Nostro sistema
+
+| TMW Engine | Nostro sistema |
+|---|---|
+| `imported_contacts` (company_name, name, email, phone, cell, country, city, origin, alias, company_alias) | `imported_contacts` (company_name, name, email, phone, mobile, country, city, origin, contact_alias, company_alias) |
+| `rubrica` (nome, azienda, email, telefono, cellulare) | `partners` + `partner_contacts` |
+| `attivita` (tipo, descrizione, stato, scadenza, priorita, rubrica_id) | `activities` (activity_type, title, description, status, due_date, priority, partner_id) |
+| `email_templates` (nome, oggetto, contenuto) | `email_templates` (name, file_url) — struttura diversa |
+
+Nessuna modifica al database necessaria. Tutto si adatta alle tabelle esistenti.
 
