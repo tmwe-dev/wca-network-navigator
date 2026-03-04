@@ -791,37 +791,59 @@ export default function Import() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="text-xs">Colonna Sorgente</TableHead>
+                              <TableHead className="text-xs">Esempio</TableHead>
                               <TableHead className="text-xs w-8">→</TableHead>
                               <TableHead className="text-xs">Colonna Destinazione</TableHead>
+                              <TableHead className="text-xs w-8"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {Object.entries(aiMapping.column_mapping).map(([src, dst]) => (
-                              <TableRow
-                                key={src}
-                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("bg-primary/10"); }}
-                                onDragLeave={(e) => { e.currentTarget.classList.remove("bg-primary/10"); }}
-                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("bg-primary/10"); handleMappingDrop(src); }}
-                              >
-                                <TableCell className="text-xs font-mono">{src}</TableCell>
-                                <TableCell className="text-xs text-muted-foreground">→</TableCell>
-                                <TableCell className="text-xs p-1">
-                                  <div
-                                    draggable
-                                    onDragStart={() => setDraggedTarget(dst)}
-                                    onDragEnd={() => setDraggedTarget(null)}
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md cursor-grab active:cursor-grabbing border transition-all select-none ${
-                                      draggedTarget === dst
-                                        ? "border-primary bg-primary/15 shadow-sm"
-                                        : "border-border bg-muted hover:border-primary/50 hover:bg-accent"
-                                    }`}
-                                  >
-                                    <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-                                    <span className="font-medium text-xs">{dst}</span>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {Object.entries(aiMapping.column_mapping).map(([src, dst]) => {
+                              const sampleValue = pendingRows.find(r => r[src]?.toString().trim())?.[src]?.toString() || "—";
+                              const truncated = sampleValue.length > 40 ? sampleValue.slice(0, 40) + "…" : sampleValue;
+                              return (
+                                <TableRow
+                                  key={src}
+                                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("bg-primary/10"); }}
+                                  onDragLeave={(e) => { e.currentTarget.classList.remove("bg-primary/10"); }}
+                                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("bg-primary/10"); handleMappingDrop(src); }}
+                                >
+                                  <TableCell className="text-xs font-mono">{src}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={sampleValue}>{truncated}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">→</TableCell>
+                                  <TableCell className="text-xs p-1">
+                                    <div
+                                      draggable
+                                      onDragStart={() => setDraggedTarget(dst)}
+                                      onDragEnd={() => setDraggedTarget(null)}
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md cursor-grab active:cursor-grabbing border transition-all select-none ${
+                                        draggedTarget === dst
+                                          ? "border-primary bg-primary/15 shadow-sm"
+                                          : "border-border bg-muted hover:border-primary/50 hover:bg-accent"
+                                      }`}
+                                    >
+                                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
+                                      <span className="font-medium text-xs">{dst}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs p-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                      onClick={() => {
+                                        const newMapping = { ...aiMapping.column_mapping };
+                                        delete newMapping[src];
+                                        const newUnmapped = [...(aiMapping.unmapped_columns || []), src];
+                                        setAiMapping({ ...aiMapping, column_mapping: newMapping, unmapped_columns: newUnmapped });
+                                      }}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
