@@ -561,6 +561,12 @@ export function useCreateImportFromParsedRows() {
         if (insertError) throw insertError;
       }
 
+      const totalBatches = Math.ceil(contacts.length / 100);
+      await supabase
+        .from("import_logs")
+        .update({ status: "completed", imported_rows: contacts.length, processing_batch: totalBatches, total_batches: totalBatches })
+        .eq("id", importLog.id);
+
       return importLog as ImportLog;
     },
     onSuccess: () => {
