@@ -3,8 +3,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 
-const STATUSES: { value: LeadStatus | ""; label: string }[] = [
-  { value: "", label: "Tutti" },
+const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
+  { value: "all", label: "Tutti" },
   { value: "new", label: "Nuovo" },
   { value: "contacted", label: "Contattato" },
   { value: "in_progress", label: "In corso" },
@@ -42,12 +42,12 @@ export function ContactFiltersBar({ filters, onChange, countries, origins }: Pro
       </div>
 
       {/* Country */}
-      <Select value={filters.country ?? ""} onValueChange={(v) => onChange({ country: v || undefined })}>
+      <Select value={filters.country ?? "all"} onValueChange={(v) => onChange({ country: v === "all" ? undefined : v })}>
         <SelectTrigger className="h-7 w-[120px] text-xs">
           <SelectValue placeholder="Paese" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Tutti</SelectItem>
+          <SelectItem value="all">Tutti</SelectItem>
           {countries.map((c) => (
             <SelectItem key={c} value={c}>{c}</SelectItem>
           ))}
@@ -55,12 +55,12 @@ export function ContactFiltersBar({ filters, onChange, countries, origins }: Pro
       </Select>
 
       {/* Origin */}
-      <Select value={filters.origin ?? ""} onValueChange={(v) => onChange({ origin: v || undefined })}>
+      <Select value={filters.origin ?? "all"} onValueChange={(v) => onChange({ origin: v === "all" ? undefined : v })}>
         <SelectTrigger className="h-7 w-[120px] text-xs">
           <SelectValue placeholder="Origine" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Tutte</SelectItem>
+          <SelectItem value="all">Tutte</SelectItem>
           {origins.map((o) => (
             <SelectItem key={o} value={o}>{o}</SelectItem>
           ))}
@@ -69,8 +69,8 @@ export function ContactFiltersBar({ filters, onChange, countries, origins }: Pro
 
       {/* Status */}
       <Select
-        value={filters.leadStatus ?? ""}
-        onValueChange={(v) => onChange({ leadStatus: (v || undefined) as LeadStatus | undefined })}
+        value={filters.leadStatus ?? "all"}
+        onValueChange={(v) => onChange({ leadStatus: v === "all" ? undefined : v as LeadStatus })}
       >
         <SelectTrigger className="h-7 w-[120px] text-xs">
           <SelectValue placeholder="Status" />
