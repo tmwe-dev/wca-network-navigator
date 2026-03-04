@@ -1,23 +1,37 @@
 
 
-## Piano: Esportazione errori con dati originali
+## Piano: Sample data e eliminazione righe nel mapping
 
-### Problema
-L'export dei record incompleti (riga 504-536 di `Import.tsx`) esporta i campi mappati (`company_name`, `name`, etc.) che per questi record sono vuoti. Il campo `raw_data` (JSON con la riga originale del file sorgente) è salvato in database ma non viene utilizzato nell'export.
+### Modifiche a `src/pages/Import.tsx`
 
-### Soluzione
-Modificare `handleExportIncomplete` per:
+**1. Aggiungere esempio dati nella tabella di mapping (righe 790-826)**
 
-1. **Ricostruire le colonne dal `raw_data`**: leggere le chiavi del primo record `raw_data` disponibile per ottenere gli header originali del file sorgente
-2. **Esportare nel formato originale**: usare i valori da `raw_data` invece dei campi mappati vuoti
-3. **Aggiungere le colonne meta**: `_import_id` e `motivo_errore` come prima e ultima colonna (per consentire il re-import)
+Nella tabella di confronto colonne, aggiungere una quarta colonna "Esempio" che mostra il primo valore non-vuoto trovato in `pendingRows` per quella colonna sorgente. Questo permette all'utente di capire cosa contiene ogni campo prima di decidere il mapping.
 
-### Risultato atteso
-Il CSV esportato avrà:
-- `_import_id` (primo campo, per il re-import)
-- Tutte le colonne originali del file sorgente (con i dati originali)
-- `motivo_errore` (ultimo campo)
+La tabella diventerà:
+```
+| Colonna Sorgente | Esempio dato | → | Colonna Destinazione | ✕ |
+```
 
-### File coinvolto
-- `src/pages/Import.tsx` — funzione `handleExportIncomplete` (righe ~504-536)
+Per ogni riga `src`, il valore di esempio sarà:
+```typescript
+const sampleValue = pendingRows.find(r => r[src]?.toString().trim())?.[src] || "—";
+```
+Mostrato troncato a ~40 caratteri con `text-muted-foreground`.
+
+**2. Aggiungere pulsante elimina riga**
+
+Aggiungere una quinta colonna con un'icona `Trash2` che rimuove la entry dal `column_mapping`. Al click:
+```typescript
+const newMapping = { ...aiMapping.column_mapping };
+delete newMapping[src];
+setAiMapping({ ...aiMapping, column_mapping: newMapping });
+```
+
+La colonna rimossa verrà automaticamente mostrata nella sezione "Colonne non mappate" già esistente (righe 840-849), dato che non sarà più presente nel mapping.
+
+### Risultato
+- L'utente vede un esempio concreto dei dati per ogni campo, facilitando la decisione
+- L'utente può eliminare righe di mapping che non vuole importare
+- Le colonne eliminate appaiono nella sezione "non mappate" come feedback visivo
 
