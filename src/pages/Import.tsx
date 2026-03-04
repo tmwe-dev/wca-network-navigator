@@ -504,26 +504,27 @@ export default function Import() {
   const handleExportIncomplete = useCallback(() => {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
-    const headers = ["_import_id", "row_number", "company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code", "note", "origin", "motivo_errore"];
+
+    // Collect original headers from raw_data
+    const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
+    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+
+    const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
+    const escapeCSV = (val: any) => {
+      const s = val === null || val === undefined ? "" : String(val);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+
     const csvRows = [headers.join(",")];
     for (const c of incomplete) {
       const motivo = !c.company_name && !c.name ? "azienda e nome mancanti" : !c.company_name ? "azienda mancante" : "nome mancante";
-      csvRows.push([
-        `"${c.id}"`,
-        c.row_number,
-        `"${(c.company_name || "").replace(/"/g, '""')}"`,
-        `"${(c.name || "").replace(/"/g, '""')}"`,
-        `"${(c.email || "").replace(/"/g, '""')}"`,
-        `"${(c.phone || "").replace(/"/g, '""')}"`,
-        `"${(c.mobile || "").replace(/"/g, '""')}"`,
-        `"${(c.country || "").replace(/"/g, '""')}"`,
-        `"${(c.city || "").replace(/"/g, '""')}"`,
-        `"${(c.address || "").replace(/"/g, '""')}"`,
-        `"${(c.zip_code || "").replace(/"/g, '""')}"`,
-        `"${(c.note || "").replace(/"/g, '""')}"`,
-        `"${(c.origin || "").replace(/"/g, '""')}"`,
-        `"${motivo}"`,
-      ].join(","));
+      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
+      const values = [
+        escapeCSV(c.id),
+        ...originalHeaders.map(h => escapeCSV(raw[h])),
+        escapeCSV(motivo),
+      ];
+      csvRows.push(values.join(","));
     }
     const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
