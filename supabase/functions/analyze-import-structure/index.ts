@@ -22,6 +22,8 @@ const TARGET_SCHEMA = {
   contact_alias: "Codice identificativo alternativo del contatto/persona",
 };
 
+const TARGET_FIELDS = Object.keys(TARGET_SCHEMA);
+
 const CONTEXT_PROMPT = `## CHI SIAMO
 Sei un analista dati che lavora per una piattaforma CRM specializzata nel settore spedizioni e logistica (freight forwarding).
 Le aziende di spedizioni usano questa piattaforma per gestire la propria rubrica di contatti commerciali: clienti, fornitori, partner, agenti.
@@ -45,7 +47,7 @@ Ricevi un campione di ~50 righe da un file di formato sconosciuto. Ogni riga è 
 Devi:
 1. LEGGERE attentamente i VALORI contenuti nelle righe, non solo i nomi delle chiavi
 2. Per ogni chiave sorgente, decidere in quale campo della nostra tabella inseriresti quei dati
-3. Restituire il column_mapping: un dizionario dove la chiave è il nome della colonna sorgente e il valore è il nome del campo destinazione
+3. Restituire il column_mapping come ARRAY di coppie {source, target}
 4. Se una colonna sorgente non corrisponde a nessun campo della nostra tabella, inserirla in unmapped_columns
 5. Se hai dubbi su dove mettere un campo, usa la tua migliore ipotesi e aggiungi un warning
 
@@ -78,6 +80,62 @@ ${Object.entries(TARGET_SCHEMA).map(([col, desc]) => `  - "${col}": ${desc}`).jo
 ## IL TUO COMPITO
 Analizza il testo, identifica ogni entità (azienda o contatto), e mappa i dati trovati ai campi della nostra tabella.
 Genera un column_mapping vuoto (non applicabile per testo libero) e popola parsed_rows con i dati estratti.`;
+
+// Convert array of {source, target} to dict {source: target}
+function arrayMappingToDict(arr: unknown): Record<string, string> {
+  const dict: Record<string, string> = {};
+  if (!Array.isArray(arr)) return dict;
+  for (const item of arr) {
+    if (item && typeof item === "object" && typeof item.source === "string" && typeof item.target === "string") {
+      if (TARGET_FIELDS.includes(item.target)) {
+        dict[item.source] = item.target;
+      }
+    }
+  }
+  return dict;
+}
+
+// Fallback: derive mapping from parsed_rows by matching values against source sample
+function deriveMappingFromParsedRows(
+  sampleRows: Record<string, unknown>[],
+  parsedRows: Record<string, unknown>[]
+): Record<string, string> {
+  const dict: Record<string, string> = {};
+  if (!sampleRows?.length || !parsedRows?.length) return dict;
+
+  const sourceKeys = Object.keys(sampleRows[0] || {});
+
+  for (const targetField of TARGET_FIELDS) {
+    if (dict[targetField]) continue; // already found via another source key
+
+    // Collect non-empty values for this target field across parsed rows
+    const targetValues: string[] = [];
+    for (const pr of parsedRows.slice(0, 5)) {
+      const v = pr[targetField];
+      if (v && typeof v === "string" && v.trim()) targetValues.push(v.trim());
+    }
+    if (!targetValues.length) continue;
+
+    // Find which source key contains these values
+    for (const srcKey of sourceKeys) {
+      // Check if already mapped
+      if (Object.values(dict).includes(targetField)) break;
+      if (dict[srcKey]) continue;
+
+      let matches = 0;
+      for (let i = 0; i < Math.min(sampleRows.length, parsedRows.length, 5); i++) {
+        const srcVal = String(sampleRows[i]?.[srcKey] ?? "").trim();
+        const tgtVal = String(parsedRows[i]?.[targetField] ?? "").trim();
+        if (srcVal && tgtVal && srcVal === tgtVal) matches++;
+      }
+      if (matches >= 1) {
+        dict[srcKey] = targetField;
+        break;
+      }
+    }
+  }
+  return dict;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -114,9 +172,16 @@ serve(async (req) => {
                 type: "object",
                 properties: {
                   column_mapping: {
-                    type: "object",
-                    description: "Mapping from source column name to target column name. Keys = exact source keys from the data, values = one of our target fields. MUST NOT be empty for file imports.",
-                    additionalProperties: { type: "string" },
+                    type: "array",
+                    description: "Array of mappings from source column to target column. Each item has 'source' (original header) and 'target' (one of our imported_contacts fields). MUST NOT be empty for file imports.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        source: { type: "string", description: "Exact key name from the source data" },
+                        target: { type: "string", description: "Target field name in imported_contacts table" },
+                      },
+                      required: ["source", "target"],
+                    },
                   },
                   parsed_rows: {
                     type: "array",
@@ -186,12 +251,31 @@ serve(async (req) => {
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    console.log("[analyze-import-structure] column_mapping:", JSON.stringify(result.column_mapping || {}));
-    console.log("[analyze-import-structure] confidence:", result.confidence);
-    console.log("[analyze-import-structure] warnings:", result.warnings);
-    console.log("[analyze-import-structure] unmapped:", result.unmapped_columns);
+    // Convert array mapping to dict
+    let columnMappingDict = arrayMappingToDict(result.column_mapping);
 
-    return new Response(JSON.stringify(result), {
+    console.log("[analyze-import-structure] AI returned column_mapping entries:", Array.isArray(result.column_mapping) ? result.column_mapping.length : "not-array");
+    console.log("[analyze-import-structure] Converted dict keys:", Object.keys(columnMappingDict));
+
+    // Fallback: if dict is empty but parsed_rows has data, derive mapping
+    if (Object.keys(columnMappingDict).length === 0 && result.parsed_rows?.length > 0 && !isPaste) {
+      console.log("[analyze-import-structure] column_mapping empty, deriving from parsed_rows...");
+      columnMappingDict = deriveMappingFromParsedRows(sample_rows || [], result.parsed_rows);
+      console.log("[analyze-import-structure] Derived mapping keys:", Object.keys(columnMappingDict));
+    }
+
+    const finalResult = {
+      column_mapping: columnMappingDict,
+      parsed_rows: result.parsed_rows || [],
+      confidence: result.confidence ?? 0.5,
+      warnings: result.warnings || [],
+      unmapped_columns: result.unmapped_columns || [],
+    };
+
+    console.log("[analyze-import-structure] Final mapping:", JSON.stringify(finalResult.column_mapping));
+    console.log("[analyze-import-structure] confidence:", finalResult.confidence);
+
+    return new Response(JSON.stringify(finalResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
