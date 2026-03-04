@@ -1,96 +1,52 @@
 
 
-## Analisi TMW Engine — Cosa ho trovato
+## Piano: Miglioramento Schema e Regole AI per Import
 
-Ho letto in profondità 3 pagine e 6 componenti dal progetto TMW Engine. Ecco il confronto con il nostro sistema attuale.
+### Cosa hai chiesto (riepilogo)
 
-### Cosa fa TMW Engine che noi NON abbiamo
+1. **Nuovo campo `position`** nella tabella `imported_contacts` — ruolo/responsabilità della persona (es. "Sales Manager", "Director")
+2. **Nuovo campo `external_id`** — codice cliente esterno / ID anagrafica commerciale, NON è un alias
+3. **Regole AI aggiornate**:
+   - `company_alias` è prodotto internamente dal sistema, MAI mappato da ID esterni o codici
+   - Il primo "alias" trovato → `company_alias` (abbreviazione colloquiale dell'azienda)
+   - Il secondo "alias" → `contact_alias`
+   - **No duplicati**: ogni campo target può essere mappato UNA sola volta; i duplicati vanno in `note`
+   - Gli ID numerici/alfanumerici non vanno mai in `company_alias` ma in `external_id` o `note`
+   - Campi prioritari: `company_name`, `name`, `email`, `phone`, `country`, `city`, `position`
+   - Campi secondari (opzionali): `address`, `zip_code`, `mobile`, `origin`, `external_id`
+   - Campi generati internamente (mai importati): `company_alias`, `contact_alias` (a meno che esplicitamente presenti come alias testuali)
 
-**1. Pagina "Record Importati" dedicata** (`RecordImportati.tsx`)
-Una pagina full-page per navigare i contatti importati con:
-- **Griglia di card compatte** (`CompactContactCard`) — 4 colonne desktop, con checkbox, bandiera paese, contatto, badge origine, e icone azione rapida (crea attività, email, telefono)
-- **Filtri avanzati** — ricerca testo, filtro per origine, paese, "nascondi contatti con attività completate oggi" (switch), "solo con note" (checkbox)
-- **Ordinamento per colonna** con click sugli header
-- **Paginazione robusta** con 25/50/100/250/500 record per pagina
-- **Azioni bulk dalla selezione** — genera alias AI, crea attività multiple
-- **Toggle colonne visibili** — base / dettagli commerciali / metadata
+### Modifiche tecniche
 
-**2. Form Attività Avanzato** (`AdvancedMultipleActivityForm.tsx`)
-Un form a tab (Email / Chiamata) con:
-- Lista dei contatti selezionati con info (azienda, email, telefono)
-- Tab Email: oggetto, corpo, template email, allegati drag-and-drop, editor fullscreen
-- Tab Chiamata: note, programmazione futura con data/ora
-- Conferma invio: "Invia ora" vs "Programma per dopo"
-- Supporto allegati esistenti dalla memoria
+#### 1. Migrazione database
+Aggiungere 2 colonne a `imported_contacts`:
+```sql
+ALTER TABLE imported_contacts ADD COLUMN position text;
+ALTER TABLE imported_contacts ADD COLUMN external_id text;
+```
 
-**3. Dialog Gestione Attività** (`GestisciAttivitaDialog.tsx`)
-Dialog per modificare un'attività esistente con:
-- Tab Dettagli (stato, priorità, scadenza con calendar picker + time, descrizione)
-- Tab Email (composizione con template e allegati)
-- Tab Altro (note, storico modifiche)
-- Propagazione modifiche telefono al contatto rubrica
+#### 2. Edge Function `analyze-import-structure`
+Aggiornare `TARGET_SCHEMA` con i nuovi campi e le descrizioni corrette:
+- `position`: "Ruolo/posizione/responsabilità della persona in azienda (es. 'Sales Manager', 'Director', 'Responsabile Commerciale')"
+- `external_id`: "Codice identificativo esterno del cliente/contatto nel sistema sorgente (es. ID anagrafica, codice CRM, numero cliente). NON è un alias."
+- `company_alias`: ridescritto come "Abbreviazione colloquiale del nome azienda, generata internamente. NON mappare da ID, codici numerici o identificativi esterni."
+- `contact_alias`: ridescritto come "Abbreviazione colloquiale del nome contatto, generata internamente."
 
-### Cosa abbiamo noi che loro NON hanno
-- AI mapping delle colonne con drag-and-drop per correzione
-- Import assistant conversazionale
-- Re-import correction workflow
-- Data quality dashboard post-import
-- Trasferimento a Partner (loro hanno "rubrica", noi "partners")
+Aggiornare `CONTEXT_PROMPT` con regole esplicite:
+- Sezione "REGOLE ANTI-DUPLICATO": ogni campo target mappato al massimo una volta; eventuali colonne sorgente in eccesso vanno in `note`
+- Sezione "REGOLE ALIAS": company_alias e contact_alias sono generati internamente, non importarli da file esterni a meno che non siano chiaramente nomi abbreviati testuali
+- Sezione "REGOLE ID": qualsiasi colonna con valori tipo ID numerico/alfanumerico → `external_id`, mai `company_alias`
+- Sezione "PRIORITA CAMPI": indicare quali sono essenziali vs opzionali
 
-### Piano di implementazione
+#### 3. Componenti UI (Import.tsx, ContactsGridTab, CompactContactCard)
+Aggiungere visualizzazione del campo `position` nelle card dei contatti importati (sotto il nome, come badge o testo secondario).
 
-Adatteremo le 3 maschere principali di TMW Engine al nostro schema dati (`imported_contacts`, `activities`, `partners`).
+#### 4. Trasferimento a Partner
+Quando si trasferisce un contatto importato a `partner_contacts`, mappare `position` → `title`.
 
-#### Task 1: Pagina Record Importati con Card Grid
-
-Creare una nuova visualizzazione nella pagina Import (tab "Contatti") che sostituisce la lista piatta attuale con:
-
-- **Card compatte a griglia** (1-4 colonne responsive) per ogni contatto importato
-- Ogni card mostra: checkbox, company_name, name, country flag, city, origin badge
-- Icone azione rapida: crea attività (email/call), visualizza dettaglio
-- **Filtri**: ricerca testo (company_name, name, city), filtro per origin, country (Select), records per pagina
-- **Paginazione** client-side (25/50/100/250)
-- **Selezione multipla** con "seleziona tutti della pagina"
-- **Barra azioni bulk** quando ci sono selezioni: "Crea Attività" (apre il form avanzato), "Trasferisci a Partner"
-
-File coinvolti:
-- `src/components/import/CompactContactCard.tsx` (nuovo — adattato da TMW)
-- `src/pages/Import.tsx` (modifica tab Contatti)
-
-#### Task 2: Form Attività Multiplo Avanzato
-
-Sostituire il semplice `AssignActivityDialog` con un form a tab ispirato a TMW:
-
-- **Tab Email**: oggetto, corpo email con textarea espandibile, selezione template esistenti
-- **Tab Chiamata/Follow-up**: note, programmazione con data+ora
-- Lista contatti selezionati visibile in alto con info
-- Scelta "Invia subito" vs "Programma" per le email
-- Priorità e assegnazione
-
-File coinvolti:
-- `src/components/import/AdvancedActivityForm.tsx` (nuovo — adattato da TMW)
-- `src/pages/Import.tsx` (integrazione nel tab Contatti)
-
-#### Task 3: Dialog Gestione Attività Singola
-
-Creare un dialog per visualizzare/modificare un'attività esistente associata a un contatto:
-
-- Tab Dettagli: stato, priorità, scadenza (calendar + time picker), descrizione
-- Tab Email: composizione/modifica email
-- Storico modifiche
-- Accessibile cliccando sul nome azienda nella card o dall'icona attività
-
-File coinvolti:
-- `src/components/import/ManageActivityDialog.tsx` (nuovo)
-
-### Mappatura schema TMW → Nostro sistema
-
-| TMW Engine | Nostro sistema |
-|---|---|
-| `imported_contacts` (company_name, name, email, phone, cell, country, city, origin, alias, company_alias) | `imported_contacts` (company_name, name, email, phone, mobile, country, city, origin, contact_alias, company_alias) |
-| `rubrica` (nome, azienda, email, telefono, cellulare) | `partners` + `partner_contacts` |
-| `attivita` (tipo, descrizione, stato, scadenza, priorita, rubrica_id) | `activities` (activity_type, title, description, status, due_date, priority, partner_id) |
-| `email_templates` (nome, oggetto, contenuto) | `email_templates` (name, file_url) — struttura diversa |
-
-Nessuna modifica al database necessaria. Tutto si adatta alle tabelle esistenti.
+### File coinvolti
+- **Migrazione DB**: nuovo SQL per `imported_contacts` (+2 colonne)
+- **`supabase/functions/analyze-import-structure/index.ts`**: schema + prompt aggiornati
+- **`src/components/import/CompactContactCard.tsx`**: mostrare `position`
+- **`src/pages/Import.tsx`**: passare `position` nel trasferimento a partner
 
