@@ -22,6 +22,7 @@ import {
   Upload, FileText, Loader2, CheckCircle2, AlertCircle,
   Sparkles, Users, Mail, Phone, ArrowRight, ClipboardPaste,
   FileSearch, Download, Wand2, ArrowLeftRight, FolderOpen, Trash2,
+  GripVertical,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -191,8 +192,10 @@ export default function Import() {
     data_quality?: any;
   } | null>(null);
 
-  // Drag state
+  // Drag state (file drop zone)
   const [isDragging, setIsDragging] = useState(false);
+  // Drag state (mapping column reassignment)
+  const [draggedTarget, setDraggedTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: logs = [] } = useImportLogs();
@@ -458,6 +461,26 @@ export default function Import() {
       setUploading(false);
     }
   }, [aiMapping, pendingFile, pendingRows, createFromParsed]);
+
+  // Swap mapping targets via drag-and-drop
+  const handleMappingDrop = useCallback((targetSrcKey: string) => {
+    if (!draggedTarget || !aiMapping) return;
+    // Find which source key currently maps to draggedTarget
+    const draggedSrcKey = Object.entries(aiMapping.column_mapping).find(
+      ([, dst]) => dst === draggedTarget
+    )?.[0];
+    if (!draggedSrcKey || draggedSrcKey === targetSrcKey) {
+      setDraggedTarget(null);
+      return;
+    }
+    // Swap the two destination values
+    const newMapping = { ...aiMapping.column_mapping };
+    const oldTargetDst = newMapping[targetSrcKey];
+    newMapping[targetSrcKey] = draggedTarget;
+    newMapping[draggedSrcKey] = oldTargetDst;
+    setAiMapping({ ...aiMapping, column_mapping: newMapping });
+    setDraggedTarget(null);
+  }, [draggedTarget, aiMapping]);
 
   const handleProcess = useCallback(() => {
     if (!activeLogId) return;
@@ -735,21 +758,45 @@ export default function Import() {
                   <CardContent className="space-y-4">
                     {Object.keys(aiMapping.column_mapping).length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium mb-2">Mapping Colonne</h4>
+                        <h4 className="text-sm font-medium mb-2">
+                          Mapping Colonne
+                          <span className="text-muted-foreground font-normal ml-2 text-xs">
+                            Trascina le destinazioni per correggere il mapping
+                          </span>
+                        </h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead className="text-xs">Colonna Sorgente</TableHead>
-                              <TableHead className="text-xs">→</TableHead>
+                              <TableHead className="text-xs w-8">→</TableHead>
                               <TableHead className="text-xs">Colonna Destinazione</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {Object.entries(aiMapping.column_mapping).map(([src, dst]) => (
-                              <TableRow key={src}>
+                              <TableRow
+                                key={src}
+                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("bg-primary/10"); }}
+                                onDragLeave={(e) => { e.currentTarget.classList.remove("bg-primary/10"); }}
+                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("bg-primary/10"); handleMappingDrop(src); }}
+                              >
                                 <TableCell className="text-xs font-mono">{src}</TableCell>
-                                <TableCell className="text-xs">→</TableCell>
-                                <TableCell className="text-xs font-medium">{dst}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">→</TableCell>
+                                <TableCell className="text-xs p-1">
+                                  <div
+                                    draggable
+                                    onDragStart={() => setDraggedTarget(dst)}
+                                    onDragEnd={() => setDraggedTarget(null)}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md cursor-grab active:cursor-grabbing border transition-all select-none ${
+                                      draggedTarget === dst
+                                        ? "border-primary bg-primary/15 shadow-sm"
+                                        : "border-border bg-muted hover:border-primary/50 hover:bg-accent"
+                                    }`}
+                                  >
+                                    <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
+                                    <span className="font-medium text-xs">{dst}</span>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
