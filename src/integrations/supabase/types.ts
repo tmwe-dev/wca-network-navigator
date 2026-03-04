@@ -262,6 +262,47 @@ export type Database = {
           },
         ]
       }
+      contact_interactions: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          interaction_type: string
+          outcome: string | null
+          title: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interaction_type: string
+          outcome?: string | null
+          title: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interaction_type?: string
+          outcome?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "imported_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -711,14 +752,19 @@ export type Database = {
           company_alias: string | null
           company_name: string | null
           contact_alias: string | null
+          converted_at: string | null
           country: string | null
           created_at: string
+          deep_search_at: string | null
           email: string | null
           external_id: string | null
           id: string
           import_log_id: string
+          interaction_count: number
           is_selected: boolean
           is_transferred: boolean
+          last_interaction_at: string | null
+          lead_status: string
           mobile: string | null
           name: string | null
           note: string | null
@@ -735,14 +781,19 @@ export type Database = {
           company_alias?: string | null
           company_name?: string | null
           contact_alias?: string | null
+          converted_at?: string | null
           country?: string | null
           created_at?: string
+          deep_search_at?: string | null
           email?: string | null
           external_id?: string | null
           id?: string
           import_log_id: string
+          interaction_count?: number
           is_selected?: boolean
           is_transferred?: boolean
+          last_interaction_at?: string | null
+          lead_status?: string
           mobile?: string | null
           name?: string | null
           note?: string | null
@@ -759,14 +810,19 @@ export type Database = {
           company_alias?: string | null
           company_name?: string | null
           contact_alias?: string | null
+          converted_at?: string | null
           country?: string | null
           created_at?: string
+          deep_search_at?: string | null
           email?: string | null
           external_id?: string | null
           id?: string
           import_log_id?: string
+          interaction_count?: number
           is_selected?: boolean
           is_transferred?: boolean
+          last_interaction_at?: string | null
+          lead_status?: string
           mobile?: string | null
           name?: string | null
           note?: string | null
