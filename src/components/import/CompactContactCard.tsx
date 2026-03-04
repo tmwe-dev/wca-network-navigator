@@ -58,9 +58,14 @@ export function CompactContactCard({
             </span>
           </div>
 
-          {/* Row 2: Contact name */}
+          {/* Row 2: Contact name + position */}
           {c.name && (
-            <div className="text-muted-foreground truncate">{c.name}</div>
+            <div className="text-muted-foreground truncate">
+              {c.name}
+              {(c as any).position && (
+                <span className="ml-1 text-[10px] text-primary/70">• {(c as any).position}</span>
+              )}
+            </div>
           )}
 
           {/* Row 3: Location */}

@@ -53,8 +53,8 @@ import ExcelJS from "exceljs";
 
 const TARGET_COLUMNS = [
   "company_name", "name", "email", "phone", "mobile",
-  "country", "city", "address", "zip_code", "note", "origin",
-  "company_alias", "contact_alias",
+  "country", "city", "address", "zip_code", "position", "note", "origin",
+  "external_id", "company_alias", "contact_alias",
 ];
 
 // Normalize header key: lowercase, strip accents, collapse spaces/dashes to underscore

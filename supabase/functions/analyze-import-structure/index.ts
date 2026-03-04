@@ -16,10 +16,12 @@ const TARGET_SCHEMA = {
   city: "Città (es. 'Milano', 'Hamburg', 'New York')",
   address: "Indirizzo stradale completo",
   zip_code: "Codice postale / CAP (es. '20100', '10115')",
-  note: "Qualsiasi informazione aggiuntiva: ruolo/posizione della persona, commenti, note varie",
+  position: "Ruolo/posizione/responsabilità della persona in azienda (es. 'Sales Manager', 'Director', 'Responsabile Commerciale')",
+  note: "Qualsiasi informazione aggiuntiva: commenti, note varie, campi duplicati che non trovano altra collocazione",
   origin: "Origine/provenienza del contatto (es. nome di un network, fiera, segnalazione)",
-  company_alias: "Codice identificativo alternativo dell'azienda (es. codice interno, ID network)",
-  contact_alias: "Codice identificativo alternativo del contatto/persona",
+  external_id: "Codice identificativo esterno del cliente/contatto nel sistema sorgente (es. ID anagrafica, codice CRM, numero cliente). NON è un alias.",
+  company_alias: "Abbreviazione colloquiale del nome azienda (es. 'DHL' per 'DHL Express'). Generata internamente dal sistema. NON mappare da ID, codici numerici o identificativi esterni.",
+  contact_alias: "Abbreviazione colloquiale del nome contatto (es. 'Mario' per 'Mario Rossi'). Generata internamente dal sistema.",
 };
 
 const TARGET_FIELDS = Object.keys(TARGET_SCHEMA);
@@ -58,13 +60,34 @@ Devi:
 - Se contiene "Srl", "GmbH", "Ltd", "Inc" → è un nome azienda
 - Se contiene "Mario Rossi", "John Smith" → è un nome persona
 - Se contiene "IT", "DE", "US" o "Italy", "Germany" → è un paese
-- Se contiene "Sales Manager", "Director", "Responsabile" → è un ruolo, va in "note"
-- Se contiene un codice numerico o alfanumerico che sembra un ID → potrebbe essere company_alias o contact_alias
+- Se contiene "Sales Manager", "Director", "Responsabile" → è un ruolo, va in "position"
+- Se contiene un codice numerico o alfanumerico che sembra un ID → va in "external_id", MAI in "company_alias"
 - Se più colonne sorgente contengono lo stesso tipo di dato (es. due colonne con nomi), usa il contesto per distinguere persona vs azienda
 
-## REGOLE
+## PRIORITÀ CAMPI
+Campi ESSENZIALI (mappa sempre se presenti): company_name, name, email, phone, country, city, position
+Campi SECONDARI (opzionali): address, zip_code, mobile, origin, external_id
+Campi GENERATI INTERNAMENTE (NON importare da file esterni): company_alias, contact_alias
+
+## REGOLE ANTI-DUPLICATO
+- Ogni campo target può essere mappato da AL MASSIMO UNA colonna sorgente
+- Se trovi più colonne sorgente che potrebbero andare nello stesso target (es. due colonne "nome"), mappa la PRIMA al campo target e accoda le successive nel campo "note"
+- Esempio: se hai "name" e "name_2", mappa "name" → name, "name_2" → note
+- Esempio: se hai "country" e "country_2", mappa "country" → country, "country_2" → note
+
+## REGOLE ID
+- Qualsiasi colonna con valori che sembrano ID numerici o alfanumerici (es. "12345", "CL-0042", "ANA-789") → mappa a "external_id"
+- Se ci sono più colonne con ID, mappa la PRIMA a "external_id" e le successive a "note"
+- MAI mappare un ID a "company_alias" o "contact_alias"
+
+## REGOLE ALIAS
+- "company_alias" e "contact_alias" sono generati INTERNAMENTE dal nostro sistema per rendere colloquiali le comunicazioni
+- NON mapparli da file esterni, A MENO CHE la colonna sorgente contenga chiaramente nomi abbreviati testuali (es. "DHL" per "DHL Express")
+- Se una colonna si chiama "alias" e contiene nomi abbreviati testuali: il PRIMO alias → company_alias, il SECONDO alias → contact_alias
+- Se una colonna si chiama "alias" ma contiene codici/numeri → va in "external_id"
+
+## REGOLE GENERALI
 - Il column_mapping NON DEVE MAI essere vuoto se il file contiene dati utili
-- Ogni campo destinazione può essere mappato da AL MASSIMO una colonna sorgente
 - Se hai dubbi, mappa comunque e segnala nei warnings
 - La confidence deve riflettere quanto sei sicuro del mapping complessivo`;
 
@@ -79,7 +102,8 @@ ${Object.entries(TARGET_SCHEMA).map(([col, desc]) => `  - "${col}": ${desc}`).jo
 
 ## IL TUO COMPITO
 Analizza il testo, identifica ogni entità (azienda o contatto), e mappa i dati trovati ai campi della nostra tabella.
-Genera un column_mapping vuoto (non applicabile per testo libero) e popola parsed_rows con i dati estratti.`;
+Genera un column_mapping vuoto (non applicabile per testo libero) e popola parsed_rows con i dati estratti.
+Ricorda: i ruoli/posizioni vanno in "position", gli ID numerici in "external_id", MAI in "company_alias".`;
 
 // Convert array of {source, target} to dict {source: target}
 function arrayMappingToDict(arr: unknown): Record<string, string> {
@@ -198,8 +222,10 @@ serve(async (req) => {
                         city: { type: "string", nullable: true },
                         address: { type: "string", nullable: true },
                         zip_code: { type: "string", nullable: true },
+                        position: { type: "string", nullable: true },
                         note: { type: "string", nullable: true },
                         origin: { type: "string", nullable: true },
+                        external_id: { type: "string", nullable: true },
                         company_alias: { type: "string", nullable: true },
                         contact_alias: { type: "string", nullable: true },
                       },
