@@ -165,7 +165,7 @@ export function ManageActivityDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dueDate} onSelect={setDueDate} locale={it} />
+                    <Calendar mode="single" selected={dueDate} onSelect={setDueDate} locale={it} className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
                 {dueDate && (
