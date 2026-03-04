@@ -501,40 +501,76 @@ export default function Import() {
   const dismissedErrors = errors.filter((e) => e.status === "dismissed");
 
   // Export incomplete contacts CSV with _import_id for re-import
-  const handleExportIncomplete = useCallback(() => {
+  const handleExportIncomplete = useCallback(async () => {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
 
-    // Collect original headers from raw_data
-    const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
-    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+    // Build a set of row_numbers for fast lookup
+    const incompleteMap = new Map(incomplete.map(c => [c.row_number, c]));
 
-    const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
-    const escapeCSV = (val: any) => {
-      const s = val === null || val === undefined ? "" : String(val);
-      return `"${s.replace(/"/g, '""')}"`;
-    };
-
-    const csvRows = [headers.join(",")];
-    for (const c of incomplete) {
-      const motivo = !c.company_name && !c.name ? "azienda e nome mancanti" : !c.company_name ? "azienda mancante" : "nome mancante";
-      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
-      const values = [
-        escapeCSV(c.id),
-        ...originalHeaders.map(h => escapeCSV(raw[h])),
-        escapeCSV(motivo),
-      ];
-      csvRows.push(values.join(","));
+    // Try to download original file from storage
+    let originalLines: string[] | null = null;
+    if (activeLog?.file_url) {
+      try {
+        const resp = await fetch(activeLog.file_url);
+        if (resp.ok) {
+          const text = await resp.text();
+          originalLines = text.split(/\r?\n/);
+        }
+      } catch { /* fallback below */ }
     }
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `record_incompleti_${Date.now()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast({ title: `${incomplete.length} record incompleti esportati` });
-  }, [contacts]);
+
+    if (originalLines && originalLines.length > 1) {
+      // Use the original file: keep header + matching rows, append _import_id + motivo_errore
+      const headerLine = originalLines[0];
+      const delimiter = detectDelimiter(headerLine);
+      const dataLines = originalLines.slice(1).filter(l => l.trim());
+
+      const csvRows = [`_import_id${delimiter}${headerLine}${delimiter}motivo_errore`];
+      dataLines.forEach((line, idx) => {
+        const rowNum = idx + 1;
+        const contact = incompleteMap.get(rowNum);
+        if (contact) {
+          const motivo = !contact.company_name && !contact.name
+            ? "azienda e nome mancanti"
+            : !contact.company_name ? "azienda mancante" : "nome mancante";
+          csvRows.push(`"${contact.id}"${delimiter}${line}${delimiter}"${motivo}"`);
+        }
+      });
+
+      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `record_incompleti_${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: `${incomplete.length} record incompleti esportati dal file originale` });
+    } else {
+      // Fallback: use raw_data
+      const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
+      const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+      const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
+      const escapeCSV = (val: any) => {
+        const s = val === null || val === undefined ? "" : String(val);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const csvRows = [headers.join(",")];
+      for (const c of incomplete) {
+        const motivo = !c.company_name && !c.name ? "azienda e nome mancanti" : !c.company_name ? "azienda mancante" : "nome mancante";
+        const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
+        csvRows.push([escapeCSV(c.id), ...originalHeaders.map(h => escapeCSV(raw[h])), escapeCSV(motivo)].join(","));
+      }
+      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `record_incompleti_${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: `${incomplete.length} record incompleti esportati` });
+    }
+  }, [contacts, activeLog]);
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
