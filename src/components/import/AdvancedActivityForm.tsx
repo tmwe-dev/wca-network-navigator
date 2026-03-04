@@ -200,6 +200,7 @@ export function AdvancedActivityForm({
                   selected={scheduleDate}
                   onSelect={setScheduleDate}
                   locale={it}
+                  className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
