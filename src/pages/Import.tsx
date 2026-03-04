@@ -29,6 +29,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ImportErrorMonitor } from "@/components/import/ImportErrorMonitor";
+import { ContactsGridTab } from "@/components/import/ContactsGridTab";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -487,22 +488,7 @@ export default function Import() {
     processImport.mutate(activeLogId);
   }, [activeLogId, processImport]);
 
-  const selectedContacts = contacts.filter((c) => c.is_selected && !c.is_transferred);
-
-  const handleTransfer = useCallback(() => {
-    if (selectedContacts.length === 0) return;
-    transferToPartners.mutate(selectedContacts);
-  }, [selectedContacts, transferToPartners]);
-
-  const handleCreateActivities = useCallback((type: "send_email" | "phone_call") => {
-    if (selectedContacts.length === 0) return;
-    const batchId = `import_${Date.now()}`;
-    createActivities.mutate({ contacts: selectedContacts, activityType: type, campaignBatchId: batchId });
-  }, [selectedContacts, createActivities]);
-
-  const toggleAll = useCallback((selected: boolean) => {
-    contacts.filter((c) => !c.is_transferred).forEach((c) => toggleSelection.mutate({ id: c.id, selected }));
-  }, [contacts, toggleSelection]);
+  // selectedContacts, handleTransfer, handleCreateActivities, toggleAll removed — now in ContactsGridTab
 
   const progress = activeLog
     ? activeLog.total_batches > 0
@@ -979,63 +965,7 @@ export default function Import() {
                 </>
               )}
 
-              {selectedContacts.length > 0 && (
-                <Card>
-                  <CardContent className="py-2 flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium">{selectedContacts.length} selezionati</span>
-                    <Button size="sm" variant="outline" onClick={handleTransfer}>
-                      <ArrowRight className="w-3.5 h-3.5 mr-1" />Trasferisci a Partner
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleCreateActivities("send_email")}>
-                      <Mail className="w-3.5 h-3.5 mr-1" />Crea Attività Email
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleCreateActivities("phone_call")}>
-                      <Phone className="w-3.5 h-3.5 mr-1" />Crea Attività Chiamata
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-2 px-3 py-2 border-b">
-                    <Checkbox
-                      checked={contacts.filter((c) => !c.is_transferred).length > 0 &&
-                        contacts.filter((c) => !c.is_transferred).every((c) => c.is_selected)}
-                      onCheckedChange={(v) => toggleAll(!!v)}
-                    />
-                    <span className="text-xs text-muted-foreground">Seleziona tutto</span>
-                  </div>
-                  <ScrollArea className="h-[calc(100vh-420px)]">
-                    <div className="divide-y">
-                      {contacts.map((c) => (
-                        <div
-                          key={c.id}
-                          className={`flex items-center gap-3 px-3 py-2 text-sm ${c.is_transferred ? "opacity-50" : ""}`}
-                        >
-                          <Checkbox
-                            checked={c.is_selected}
-                            disabled={c.is_transferred}
-                            onCheckedChange={(v) => toggleSelection.mutate({ id: c.id, selected: !!v })}
-                          />
-                          <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-0.5">
-                            <span className="font-medium truncate">{c.company_name || "—"}</span>
-                            <span className="truncate text-muted-foreground">{c.name || "—"}</span>
-                            <span className="truncate text-muted-foreground">{c.email || "—"}</span>
-                            <span className="truncate text-muted-foreground">
-                              {c.city}{c.country ? `, ${c.country}` : ""}
-                            </span>
-                          </div>
-                          {c.is_transferred && <Badge variant="secondary" className="text-[10px]">Trasferito</Badge>}
-                        </div>
-                      ))}
-                      {contacts.length === 0 && (
-                        <p className="text-center text-sm text-muted-foreground py-12">Nessun contatto nello staging</p>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              <ContactsGridTab contacts={contacts} activeLogId={activeLogId} />
             </TabsContent>
 
             {/* ====== ERRORS TAB ====== */}
