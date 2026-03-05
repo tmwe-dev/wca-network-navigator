@@ -1,70 +1,78 @@
 
 
-## Diagnosi e Piano di Ristrutturazione Contatti
+## Diagnosi: Perché l'AI mappa male i dati
 
-### Analisi del record "ADAMO PARFUM SRL"
+### Il problema nel file sorgente
 
-Ho trovato il record. Ecco il confronto:
+Il file dell'utente ha una struttura ingannevole:
 
-| Campo | Valore salvato | Valore nel raw_data |
-|-------|---------------|---------------------|
-| `company_name` | ADAMO PARFUM SRL | `alias_2`: "ADAMO PARFUM SRL", `name_2`: "ADAMO PARFUM SRL" |
-| `name` | **"Cliente"** ← ERRATO | `alias`: "Cliente", `name`: "Cliente" |
-| `email` | info@adamoparfum.com | ✓ corretto |
-| `phone` | NULL | `phone`: "NULL" (stringa) |
-| `address` | NULL | `address`: "Via dell'Industria, 58A 20037 Paderno Dugnano (Milan)" |
+| Colonna sorgente | Valore tipico | Cosa sembra | Cosa è realmente |
+|---|---|---|---|
+| `name` | "Cliente", "Nuovo utente", "log" | Nome persona | **Etichetta di categoria** (ripetuta identica su centinaia di righe) |
+| `name_2` | "ADAMO PARFUM SRL", "SAP Italia S.r.l." | Secondo nome | **Il vero nome azienda** |
+| `alias` | "Cliente" | Alias contatto | **Stessa etichetta di categoria** |
+| `alias_2` | "Costruzioni Munaretto s.r.l." | Alias azienda | **Duplicato del nome azienda** |
 
-**Problema principale**: il campo sorgente `name` / `alias` contiene etichette generiche come "Cliente", "log", "Nuovo utente" — **non** nomi di persone. Questi sono stati mappati nel campo `name` della tabella. Numeri:
-- **721 record** con `name` = "Cliente"
-- **269 record** con `name` = "log"
-- **112 record** con `name` = "Nuovo utente"
+L'AI vede `name` → lo mappa a `name` (persona). Vede `name_2` → lo mappa a `company_name`. Ma `name` contiene solo etichette ripetitive, non nomi di persone reali.
 
-Inoltre, il campo `address` dal file sorgente non è stato mappato correttamente e molti `phone` con valore stringa "NULL" non sono stati puliti.
+### 3 problemi nel codice
+
+**Problema 1 — Prompt AI insufficiente**: il prompt non dice all'AI di controllare la **diversità dei valori**. Se una colonna ha solo 3-4 valori unici su 50 campioni, è una categoria/etichetta, non un dato anagrafico.
+
+**Problema 2 — Campi mancanti nel salvataggio**: `useCreateImportFromParsedRows` non salva `position` e `external_id` anche se il mapping li prevede.
+
+**Problema 3 — Nessun group_name**: durante l'import non viene chiesto/salvato il `group_name` nell'import_log.
 
 ---
 
-### Piano: Ristrutturazione completa della sezione Contatti
+### Piano di correzione
 
-#### 1. Pulizia dati (migrazione SQL)
+#### 1. Migliorare il prompt AI (`analyze-import-structure`)
 
-- Convertire `name` = "Cliente" / "log" / "Nuovo utente" in `NULL` (non sono nomi reali)
-- Recuperare `address` e `city` dal `raw_data` dove mancano
-- Pulire `phone` con valore stringa "NULL"
+Aggiungere al `CONTEXT_PROMPT` una nuova sezione:
 
-#### 2. Concetto di "Gruppo di carico"
+```
+## REGOLE ANTI-ETICHETTA (CRITICO)
+- PRIMA di mappare una colonna, conta i valori UNICI nel campione
+- Se una colonna ha ≤5 valori unici su 50 righe (es. "Cliente" ripetuto 40 volte),
+  NON è un dato anagrafico — è una ETICHETTA/CATEGORIA
+- Etichette comuni da riconoscere: "Cliente", "Nuovo utente", "log", "Fornitore",
+  "Agente", "Partner" — queste vanno in "note" o ignorate, MAI in "name"
+- Il campo "name" deve contenere nomi DIVERSI su ogni riga (es. "Mario Rossi",
+  "Anna Bianchi", "John Smith")
+- Se NESSUNA colonna contiene nomi di persona diversi, lascia "name" non mappato
 
-Aggiungere `group_name` alla tabella `import_logs` — è il nome logico che l'utente assegna al batch di contatti al momento dell'upload (es. "Global", "Cosmoprof 2024", "Pitti Uomo"). In alternativa, si può usare il campo `origin` già presente sui contatti come raggruppatore naturale.
+## REGOLE COLONNE DUPLICATE (name, name_2, alias, alias_2)
+- Se il file ha "name" e "name_2": confronta i VALORI
+  - Se "name" ha pochi valori unici (etichetta) e "name_2" ha valori diversi → 
+    "name_2" è il dato reale
+  - Se "name_2" contiene suffissi aziendali (Srl, SpA, GmbH, Ltd) → è company_name
+  - Se "name_2" contiene nomi di persona → è name
+- Stessa logica per "alias" e "alias_2"
+```
 
-**Scelta proposta**: aggiungere colonna `group_name text` su `import_logs` e propagare il valore come filtro. Durante l'import, l'utente potrà dare un nome al gruppo. Per i dati esistenti, il `file_name` diventa il gruppo di default.
+#### 2. Fix salvataggio campi mancanti (`useImportLogs.ts`)
 
-#### 3. Pagina Contatti ridisegnata
+Aggiungere `position` e `external_id` nel mapping di salvataggio di `useCreateImportFromParsedRows`.
 
-La pagina `/contacts` diventa un browser di gruppi di carico:
-- **Barra superiore**: selettore del gruppo di carico (dropdown con nome gruppo + conteggio record)
-- **Filtri secondari**: paese, origine, ricerca
-- **Lista contatti**: raggruppati per paese/origine all'interno del gruppo selezionato
-- I contatti qui sono in fase "pre-circuito" — non hanno ancora avuto interazioni reali
+#### 3. Aggiungere input group_name all'import (`Import.tsx`)
 
-#### 4. Nuova pagina "Circuito di Attesa" (`/holding-pattern`)
+Aggiungere un campo di testo "Nome gruppo" nel dialog di upload, che viene salvato come `group_name` nell'`import_logs`.
 
-Una dashboard separata che mostra SOLO i contatti che hanno ricevuto almeno un'interazione reale (email, chiamata, WhatsApp, meeting). Include:
-- Tabella con colonne: Azienda, Contatto, Data 1° contatto, Data ultimo contatto, N° interazioni, Note, Status
-- Filtri per status (contacted, in_progress, negotiation, converted, lost)
-- Timeline espandibile per ogni riga
-- KPI in alto: totali per fase del circuito
+#### 4. Eliminare tutti i dati importati (SQL)
 
-Un contatto passa dalla pagina Contatti al Circuito di Attesa quando viene registrata la prima interazione reale.
+```sql
+DELETE FROM import_errors;
+DELETE FROM imported_contacts;
+DELETE FROM import_logs;
+```
 
-#### 5. File da creare/modificare
+### File da modificare
 
-| File | Azione |
-|------|--------|
-| Migrazione SQL | Pulizia "Cliente"/"log", aggiunta `group_name` a `import_logs` |
-| `src/hooks/useContacts.ts` | Aggiungere filtro per `import_log_id` / gruppo |
-| `src/components/contacts/ContactFiltersBar.tsx` | Aggiungere selettore gruppo di carico |
-| `src/components/contacts/ContactListPanel.tsx` | Adattare alla selezione per gruppo |
-| `src/pages/HoldingPattern.tsx` | **Nuovo** — Dashboard circuito di attesa |
-| `src/components/holding/HoldingDashboard.tsx` | **Nuovo** — Tabella + KPI |
-| `src/App.tsx` | Aggiungere rotta `/holding-pattern` |
-| `src/components/layout/AppSidebar.tsx` | Aggiungere voce "Circuito di Attesa" |
+| File | Modifica |
+|---|---|
+| `supabase/functions/analyze-import-structure/index.ts` | Aggiungere regole anti-etichetta e colonne duplicate al prompt |
+| `src/hooks/useImportLogs.ts` | Aggiungere `position`, `external_id` al salvataggio + `group_name` all'insert di import_logs |
+| `src/pages/Import.tsx` | Aggiungere campo "Nome gruppo" nel dialog di upload |
+| SQL (insert tool) | Eliminare tutti i dati da `imported_contacts`, `import_errors`, `import_logs` |
 
