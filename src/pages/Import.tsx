@@ -507,71 +507,49 @@ export default function Import() {
     const incomplete = contacts.filter(c => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
 
-    // Build a set of row_numbers for fast lookup
-    const incompleteMap = new Map(incomplete.map(c => [c.row_number, c]));
-
-    // Try to download original file from storage
-    let originalLines: string[] | null = null;
-    if (activeLog?.file_url) {
-      try {
-        const resp = await fetch(activeLog.file_url);
-        if (resp.ok) {
-          const text = await resp.text();
-          originalLines = text.split(/\r?\n/);
-        }
-      } catch { /* fallback below */ }
-    }
-
-    if (originalLines && originalLines.length > 1) {
-      // Use the original file: keep header + matching rows, append _import_id + motivo_errore
-      const headerLine = originalLines[0];
-      const delimiter = detectDelimiter(headerLine);
-      const dataLines = originalLines.slice(1).filter(l => l.trim());
-
-      const csvRows = [`_import_id${delimiter}${headerLine}${delimiter}motivo_errore`];
-      dataLines.forEach((line, idx) => {
-        const rowNum = idx + 1;
-        const contact = incompleteMap.get(rowNum);
-        if (contact) {
-          const motivo = !contact.company_name && !contact.name
-            ? "azienda e nome mancanti"
-            : !contact.company_name ? "azienda mancante" : "nome mancante";
-          csvRows.push(`"${contact.id}"${delimiter}${line}${delimiter}"${motivo}"`);
-        }
-      });
-
-      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `record_incompleti_${Date.now()}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast({ title: `${incomplete.length} record incompleti esportati dal file originale` });
-    } else {
-      // Fallback: use raw_data
-      const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
-      const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
-      const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
-      const escapeCSV = (val: any) => {
-        const s = val === null || val === undefined ? "" : String(val);
-        return `"${s.replace(/"/g, '""')}"`;
-      };
-      const csvRows = [headers.join(",")];
-      for (const c of incomplete) {
-        const motivo = !c.company_name && !c.name ? "azienda e nome mancanti" : !c.company_name ? "azienda mancante" : "nome mancante";
-        const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
-        csvRows.push([escapeCSV(c.id), ...originalHeaders.map(h => escapeCSV(raw[h])), escapeCSV(motivo)].join(","));
+    const SEP = ";";
+    const escapeCell = (val: any) => {
+      if (val === null || val === undefined) return "";
+      const s = String(val).replace(/"/g, '""');
+      // Quote if contains separator, quotes, or newlines
+      if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s}"`;
       }
-      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `record_incompleti_${Date.now()}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast({ title: `${incomplete.length} record incompleti esportati` });
+      return s;
+    };
+
+    // Build from raw_data (most reliable — always available)
+    const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
+    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [
+      "company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code"
+    ];
+
+    const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
+    const csvRows = [headers.map(escapeCell).join(SEP)];
+
+    for (const c of incomplete) {
+      const motivo = !c.company_name && !c.name
+        ? "azienda e nome mancanti"
+        : !c.company_name ? "azienda mancante" : "nome mancante";
+      const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, any>;
+      const row = [
+        escapeCell(c.id),
+        ...originalHeaders.map(h => escapeCell(raw[h])),
+        escapeCell(motivo),
+      ];
+      csvRows.push(row.join(SEP));
     }
+
+    // BOM for Excel UTF-8 recognition
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `record_incompleti_${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `${incomplete.length} record incompleti esportati` });
   }, [contacts, activeLog]);
 
   return (
