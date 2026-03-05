@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, Eye, Search, Megaphone, RefreshCw } from "lucide-react";
+import { Mail, Phone, Search, Megaphone, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
 import { useContacts, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
@@ -43,7 +43,7 @@ function groupContacts(contacts: any[], groupBy: string): Group[] {
         key = c.created_at ? format(new Date(c.created_at), "yyyy-MM") : "nd";
         label = key === "nd" ? "Senza data" : format(new Date(c.created_at), "MMMM yyyy");
         break;
-      default: // country
+      default:
         key = c.country || "??";
         label = c.country || "Sconosciuto";
     }
@@ -55,14 +55,30 @@ function groupContacts(contacts: any[], groupBy: string): Group[] {
   return Object.values(map).sort((a, b) => b.items.length - a.items.length);
 }
 
+/** Returns a quality level for the contact record */
+function getContactQuality(c: any): "good" | "partial" | "poor" {
+  const has = (v: any) => !!v;
+  const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
+  const filled = fields.filter(Boolean).length;
+  if (filled >= 4) return "good";
+  if (filled >= 2) return "partial";
+  return "poor";
+}
+
 interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
-  const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country" });
-  const { data: contacts = [], isLoading } = useContacts(filters);
+  const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country", page: 0 });
+  const { data, isLoading } = useContacts(filters);
+  const contacts = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const page = data?.page ?? 0;
+  const pageSize = data?.pageSize ?? 200;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
   const selection = useSelection(contacts);
 
   const countries = useMemo(() => [...new Set(contacts.map((c: any) => c.country).filter(Boolean))].sort() as string[], [contacts]);
@@ -71,7 +87,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const groups = useMemo(() => groupContacts(contacts, filters.groupBy || "country"), [contacts, filters.groupBy]);
 
   const handleFilterChange = (partial: Partial<ContactFilters>) => {
-    setFilters((prev) => ({ ...prev, ...partial }));
+    setFilters((prev) => ({ ...prev, ...partial, page: 0 }));
+  };
+
+  const goToPage = (p: number) => {
+    setFilters((prev) => ({ ...prev, page: p }));
   };
 
   return (
@@ -131,6 +151,10 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               <div className="p-2 space-y-1">
                 {group.items.map((c: any) => {
                   const isActive = selectedId === c.id;
+                  const quality = getContactQuality(c);
+                  const displayName = c.company_name || c.name || c.email || "Senza nome";
+                  const isAnonymous = !c.company_name && !c.name;
+
                   return (
                     <div
                       key={c.id}
@@ -155,11 +179,14 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                             {filters.groupBy !== "country" && (
                               <span className="text-sm">{countryFlag(c.country)}</span>
                             )}
-                            <span className="font-semibold truncate text-foreground">
-                              {c.company_name || "—"}
+                            <span className={`font-semibold truncate ${isAnonymous ? "text-muted-foreground italic" : "text-foreground"}`}>
+                              {displayName}
                             </span>
+                            {quality === "poor" && (
+                              <span title="Dati incompleti"><AlertTriangle className="w-3 h-3 text-destructive shrink-0" /></span>
+                            )}
                           </div>
-                          {c.name && (
+                          {c.company_name && c.name && (
                             <div className="text-muted-foreground truncate">
                               {c.name}
                               {c.position && <span className="ml-1 text-[10px] text-primary/70">• {c.position}</span>}
@@ -195,9 +222,32 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         )}
       </div>
 
-      {/* Footer count */}
-      <div className="px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground">
-        {contacts.length} contatti • {groups.length} gruppi
+      {/* Footer with pagination */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground">
+        <span>{totalCount} contatti • {groups.length} gruppi</span>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              disabled={page === 0}
+              onClick={() => goToPage(page - 1)}
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </Button>
+            <span className="text-[10px]">{page + 1}/{totalPages}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              disabled={page >= totalPages - 1}
+              onClick={() => goToPage(page + 1)}
+            >
+              <ChevronRight className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

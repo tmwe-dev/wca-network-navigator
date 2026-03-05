@@ -5,7 +5,8 @@ import { useContacts } from "@/hooks/useContacts";
 
 export default function Contacts() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: contacts = [] } = useContacts();
+  const { data } = useContacts();
+  const contacts = data?.items ?? [];
 
   const selectedContact = useMemo(
     () => (selectedId ? contacts.find((c: any) => c.id === selectedId) : null),
