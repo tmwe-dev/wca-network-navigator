@@ -1,57 +1,53 @@
 
 
-## Redesign Filtri Contatti — Chiaro, Iconico, Intuitivo
+## Diagnosi: Perché l'importazione mappa i dati nelle colonne sbagliate
 
-### Problema attuale
-I filtri sono una fila piatta di dropdown senza etichette visibili. Non è chiaro cosa ciascun selettore controlla. Mancano icone esplicative e separazione visiva.
+### Bug identificato
 
-### Soluzione
-Ristrutturare `ContactFiltersBar.tsx` con un layout a blocchi etichettati, dove ogni filtro ha:
-- **Icona** a sinistra che identifica immediatamente la funzione
-- **Etichetta** sopra il campo (label piccola, sempre visibile)
-- **Raggruppamento visivo** chiaro: ricerca in alto, poi filtri in blocchi separati
+Il problema critico è nella funzione `applyMapping` (riga 153 di `Import.tsx`). Questa funzione fa un lookup diretto `row[srcKey]` dove `srcKey` è la chiave restituita dall'AI. **Se l'AI restituisce una chiave anche minimamente diversa da quella normalizzata nel file** (es. `nome` vs `name`, `paese` vs `country`, `citta` vs `city`), il valore non viene trovato e il campo resta `null`.
 
-### Layout proposto
+**Il flusso attuale:**
+1. Il file viene parsato e le intestazioni vengono normalizzate (`normalizeKey`)
+2. Un campione di ~50 righe con chiavi normalizzate viene inviato all'AI
+3. L'AI restituisce un `column_mapping` con coppie `{source → target}`
+4. `applyMapping` cerca `row[source]` — **senza alcun matching fuzzy**
+
+**Cosa va storto:**
+- L'AI potrebbe restituire `source` con variazioni minime (spazi, underscore diversi, accenti rimossi in modo diverso)
+- Non esiste nessuna funzione `findRowKey` con matching a 3 livelli — era documentata nei memory ma **mai implementata**
+- Il risultato: molti campi mappati come `null` anche se i dati esistono nel file
+- I campi `origin`, `position`, `external_id` sono i più colpiti perché hanno nomi meno standard
+
+### Piano di correzione
+
+#### 1. Aggiungere `findRowKey` con matching fuzzy in `Import.tsx`
+
+Implementare una funzione che cerca la chiave nel row con 3 strategie:
+- **Esatto**: `row[srcKey]`  
+- **Normalizzato**: confronta `normalizeKey(srcKey)` con `normalizeKey(rowKey)` per ogni chiave del row
+- **Fuzzy**: controlla se una chiave contiene l'altra (substring match)
+
+#### 2. Riscrivere `applyMapping` per usare `findRowKey`
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ 📁 Gruppo di carico                             │
-│ [  Tutti i gruppi  ▼ ]                          │
-├─────────────────────────────────────────────────┤
-│ 🔍 [ Cerca azienda, nome, email...          ]   │
-├─────────────────────────────────────────────────┤
-│ 🌍 Paese      📌 Origine    🏷 Status    📊 Vista│
-│ [ Tutti ▼ ]  [ Tutte ▼ ]  [ Tutti ▼ ] [Paese▼] │
-├─────────────────────────────────────────────────┤
-│ 📅 Periodo                                      │
-│ [ Da... ]  →  [ A... ]                          │
-└─────────────────────────────────────────────────┘
+Per ogni (srcKey → dstCol) nel mapping:
+  1. Prova row[srcKey] direttamente
+  2. Se undefined, cerca tra le chiavi del row con normalizzazione
+  3. Se ancora undefined, cerca con substring match
+  → Assegna il primo valore trovato al campo target
 ```
 
-### Dettagli implementativi
+#### 3. Aggiungere logging diagnostico nel mapping
 
-Ogni filtro avvolto in un mini-blocco con:
-```tsx
-<div className="space-y-1">
-  <label className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-    <Globe className="w-3 h-3" /> Paese
-  </label>
-  <Select ...>
-</div>
-```
+Loggare le chiavi del mapping AI vs le chiavi effettive del row per debugging futuro. Questo aiuterà a capire se l'AI restituisce chiavi inaspettate.
 
-Icone per ogni filtro:
-- Gruppo: `FolderOpen`
-- Ricerca: `Search`  
-- Paese: `Globe`
-- Origine: `MapPin`
-- Status: `Tag`
-- Raggruppa per: `LayoutGrid`
-- Periodo: `Calendar`
+#### 4. Validazione post-mapping con conteggio campi
+
+Dopo l'`applyMapping`, contare quanti campi sono stati effettivamente popolati e loggare un warning se troppi campi restano vuoti nonostante il row abbia dati.
 
 ### File da modificare
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactFiltersBar.tsx` | Redesign completo con label + icone + layout a blocchi |
+| `src/pages/Import.tsx` | Aggiungere `findRowKey`, riscrivere `applyMapping` con matching fuzzy, aggiungere log diagnostici |
 
