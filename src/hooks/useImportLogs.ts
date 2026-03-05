@@ -482,20 +482,36 @@ export function useFixImportErrors() {
 }
 
 export function exportErrorsToCSV(errors: ImportError[]) {
-  const headers = ["row_number", "error_type", "error_message", "raw_data"];
-  const csvRows = [headers.join(",")];
+  const SEP = ";";
+  const escapeCell = (val: any) => {
+    if (val === null || val === undefined) return "";
+    const s = String(val).replace(/"/g, '""');
+    if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+      return `"${s}"`;
+    }
+    return s;
+  };
+
+  // Extract raw_data fields as separate columns
+  const firstWithRaw = errors.find(e => e.raw_data && typeof e.raw_data === "object");
+  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+
+  const headers = ["riga", "tipo_errore", "messaggio", ...rawKeys];
+  const csvRows = [headers.map(escapeCell).join(SEP)];
 
   for (const err of errors) {
-    const raw = err.raw_data ? JSON.stringify(err.raw_data).replace(/"/g, '""') : "";
-    csvRows.push([
-      err.row_number,
-      err.error_type,
-      `"${(err.error_message || "").replace(/"/g, '""')}"`,
-      `"${raw}"`,
-    ].join(","));
+    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, any>;
+    const row = [
+      escapeCell(err.row_number),
+      escapeCell(err.error_type),
+      escapeCell(err.error_message),
+      ...rawKeys.map(k => escapeCell(raw[k])),
+    ];
+    csvRows.push(row.join(SEP));
   }
 
-  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
