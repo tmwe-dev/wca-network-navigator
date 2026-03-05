@@ -702,6 +702,7 @@ export type Database = {
           file_name: string
           file_size: number
           file_url: string | null
+          group_name: string | null
           id: string
           imported_rows: number
           normalization_method: string
@@ -718,6 +719,7 @@ export type Database = {
           file_name: string
           file_size?: number
           file_url?: string | null
+          group_name?: string | null
           id?: string
           imported_rows?: number
           normalization_method?: string
@@ -734,6 +736,7 @@ export type Database = {
           file_name?: string
           file_size?: number
           file_url?: string | null
+          group_name?: string | null
           id?: string
           imported_rows?: number
           normalization_method?: string
