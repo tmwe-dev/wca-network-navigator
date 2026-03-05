@@ -149,13 +149,44 @@ function isReimportCorrection(headers: string[]): boolean {
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
 }
 
-// Apply AI column_mapping to a single row
-function applyMapping(row: Record<string, any>, mapping: Record<string, string>): Record<string, string | null> {
+// 3-tier key lookup: exact → normalized → fuzzy substring
+function findRowKey(row: Record<string, any>, targetKey: string): string | undefined {
+  const keys = Object.keys(row);
+  // 1. Exact match
+  if (row[targetKey] !== undefined) return targetKey;
+  // 2. Normalized match
+  const normTarget = normalizeKey(targetKey);
+  const foundNorm = keys.find(k => normalizeKey(k) === normTarget);
+  if (foundNorm) return foundNorm;
+  // 3. Fuzzy substring (both directions)
+  const tLower = normTarget.replace(/_/g, "");
+  const foundFuzzy = keys.find(k => {
+    const kNorm = normalizeKey(k).replace(/_/g, "");
+    return kNorm.length > 2 && tLower.length > 2 && (kNorm.includes(tLower) || tLower.includes(kNorm));
+  });
+  return foundFuzzy;
+}
+
+// Apply AI column_mapping to a single row with fuzzy key matching
+function applyMapping(row: Record<string, any>, mapping: Record<string, string>, logFirst = false): Record<string, string | null> {
   const result: Record<string, string | null> = {};
   for (const [srcKey, dstCol] of Object.entries(mapping)) {
     if (!TARGET_COLUMNS.includes(dstCol)) continue;
-    const val = row[srcKey];
+    const actualKey = findRowKey(row, srcKey);
+    const val = actualKey !== undefined ? row[actualKey] : undefined;
     result[dstCol] = val && String(val).trim() ? String(val).trim() : null;
+    if (logFirst && actualKey !== srcKey) {
+      console.log(`[Import Mapping] "${srcKey}" → resolved to "${actualKey}" for target "${dstCol}", value: ${result[dstCol]}`);
+    }
+  }
+  // Post-mapping diagnostics
+  if (logFirst) {
+    const populated = Object.values(result).filter(v => v !== null).length;
+    const rowDataCount = Object.values(row).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
+    console.log(`[Import Mapping] Populated ${populated}/${Object.keys(result).length} fields from row with ${rowDataCount} non-empty values`);
+    if (populated < rowDataCount * 0.3) {
+      console.warn(`[Import Mapping] ⚠️ Low mapping rate — AI keys: [${Object.keys(mapping).join(", ")}] vs Row keys: [${Object.keys(row).join(", ")}]`);
+    }
   }
   return result;
 }
@@ -424,8 +455,8 @@ export default function Import() {
         }
 
         console.log("[Import] Using column_mapping:", mappingKeys);
-        const finalRows = pendingRows.map((row) => {
-          const mapped = applyMapping(row, aiMapping.column_mapping);
+        const finalRows = pendingRows.map((row, idx) => {
+          const mapped = applyMapping(row, aiMapping.column_mapping, idx === 0);
           return { ...mapped, _raw: row };
         });
 
