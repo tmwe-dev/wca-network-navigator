@@ -242,7 +242,8 @@ export default function Import() {
     setUploadDialogOpen(false);
     setTab("upload");
     try {
-      const { headers, rows } = await parseFile(file);
+      const { parsed } = await parseFile(file);
+      const { headers, rows } = parsed;
       if (rows.length === 0) {
         toast({ title: "File vuoto", variant: "destructive" });
         setUploading(false);
