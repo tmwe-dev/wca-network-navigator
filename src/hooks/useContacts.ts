@@ -13,6 +13,8 @@ export interface ContactFilters {
   hasDeepSearch?: boolean;
   hasAlias?: boolean;
   groupBy?: "country" | "origin" | "status" | "date";
+  page?: number;
+  pageSize?: number;
 }
 
 export interface ContactInteraction {
@@ -29,14 +31,22 @@ export interface ContactInteraction {
 const CONTACTS_KEY = ["contacts"] as const;
 const INTERACTIONS_KEY = (id: string) => ["contact-interactions", id] as const;
 
+const DEFAULT_PAGE_SIZE = 200;
+
 export function useContacts(filters: ContactFilters = {}) {
+  const page = filters.page ?? 0;
+  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
+
   return useQuery({
     queryKey: [...CONTACTS_KEY, filters],
     queryFn: async () => {
       let q = supabase
         .from("imported_contacts")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false });
+
+      // Quality filter: at least company_name or name or email must exist
+      q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
       if (filters.search) {
         q = q.or(
@@ -52,9 +62,13 @@ export function useContacts(filters: ContactFilters = {}) {
       if (filters.hasDeepSearch === false) q = q.is("deep_search_at", null);
       if (filters.hasAlias === true) q = q.not("company_alias", "is", null);
 
-      const { data, error } = await q;
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      q = q.range(from, to);
+
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data ?? [];
+      return { items: data ?? [], totalCount: count ?? 0, page, pageSize };
     },
   });
 }
