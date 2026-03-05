@@ -22,7 +22,6 @@ import {
   Upload, FileText, Loader2, CheckCircle2, AlertCircle,
   Sparkles, Users, Mail, Phone, ArrowRight, ClipboardPaste,
   FileSearch, Download, Wand2, ArrowLeftRight, FolderOpen, Trash2,
-  GripVertical,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -55,7 +54,11 @@ import {
   mappingsToDict,
   transformRow,
   TARGET_COLUMNS,
+  TARGET_SCHEMA,
 } from "@/lib/import";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 // Normalize header key: lowercase, strip accents, collapse spaces/dashes to underscore
 function normalizeKey(key: string): string {
@@ -126,7 +129,6 @@ export default function Import() {
   // Drag state (file drop zone)
   const [isDragging, setIsDragging] = useState(false);
   // Drag state (mapping column reassignment)
-  const [draggedTarget, setDraggedTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: logs = [] } = useImportLogs();
@@ -243,28 +245,35 @@ export default function Import() {
     setTab("upload");
     try {
       const { parsed } = await parseFile(file);
-      const { headers, rows } = parsed;
-      if (rows.length === 0) {
+      const { headers, rows: rawRows } = parsed;
+      if (rawRows.length === 0) {
         toast({ title: "File vuoto", variant: "destructive" });
         setUploading(false);
         return;
       }
 
+      // Convert string[][] → Record<string, string>[] so mapping keys work
+      const rowObjects = rawRows.map(row => {
+        const obj: Record<string, string> = {};
+        headers.forEach((h, idx) => { obj[h] = row[idx] || ""; });
+        return obj;
+      });
+
       // Detect re-import correction
       if (isReimportCorrection(headers)) {
-        await handleReimportCorrection(rows, headers);
+        await handleReimportCorrection(rowObjects, headers);
         return;
       }
 
       // Send to AI for mapping — AI knows our exact table schema
       setPendingFile(file);
-      setPendingRows(rows);
+      setPendingRows(rowObjects);
 
-      const sampleSize = Math.min(50, rows.length);
-      const step = rows.length / sampleSize;
+      const sampleSize = Math.min(50, rowObjects.length);
+      const step = rowObjects.length / sampleSize;
       const sample: any[] = [];
       for (let i = 0; i < sampleSize; i++) {
-        sample.push(rows[Math.floor(i * step)]);
+        sample.push(rowObjects[Math.floor(i * step)]);
       }
 
       const result = await analyzeStructure.mutateAsync({
@@ -276,7 +285,7 @@ export default function Import() {
       const mappedCount = Object.keys(result.column_mapping || {}).length;
       if (mappedCount > 0) {
         toast({
-          title: `Analisi AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rows.length} righe totali`,
+          title: `Analisi AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rowObjects.length} righe totali`,
         });
       } else {
         toast({
@@ -395,25 +404,33 @@ export default function Import() {
     }
   }, [aiMapping, pendingFile, pendingRows, createFromParsed]);
 
-  // Swap mapping targets via drag-and-drop
-  const handleMappingDrop = useCallback((targetSrcKey: string) => {
-    if (!draggedTarget || !aiMapping) return;
-    // Find which source key currently maps to draggedTarget
-    const draggedSrcKey = Object.entries(aiMapping.column_mapping).find(
-      ([, dst]) => dst === draggedTarget
-    )?.[0];
-    if (!draggedSrcKey || draggedSrcKey === targetSrcKey) {
-      setDraggedTarget(null);
+  // Change mapping target via Select dropdown (with duplicate prevention)
+  const handleMappingTargetChange = useCallback((srcKey: string, newTarget: string) => {
+    if (!aiMapping) return;
+    const newMapping = { ...aiMapping.column_mapping };
+
+    if (newTarget === "__unmapped__") {
+      // Remove this mapping entirely
+      delete newMapping[srcKey];
+      const newUnmapped = [...(aiMapping.unmapped_columns || []), srcKey];
+      setAiMapping({ ...aiMapping, column_mapping: newMapping, unmapped_columns: newUnmapped });
       return;
     }
-    // Swap the two destination values
-    const newMapping = { ...aiMapping.column_mapping };
-    const oldTargetDst = newMapping[targetSrcKey];
-    newMapping[targetSrcKey] = draggedTarget;
-    newMapping[draggedSrcKey] = oldTargetDst;
-    setAiMapping({ ...aiMapping, column_mapping: newMapping });
-    setDraggedTarget(null);
-  }, [draggedTarget, aiMapping]);
+
+    // If newTarget is already used by another source, free it
+    const existingEntry = Object.entries(newMapping).find(
+      ([key, val]) => val === newTarget && key !== srcKey
+    );
+    if (existingEntry) {
+      delete newMapping[existingEntry[0]];
+      const newUnmapped = [...(aiMapping.unmapped_columns || []), existingEntry[0]];
+      toast({ title: `"${existingEntry[0]}" rimossa dal mapping (${newTarget} era già assegnata)` });
+      setAiMapping({ ...aiMapping, column_mapping: { ...newMapping, [srcKey]: newTarget }, unmapped_columns: newUnmapped });
+    } else {
+      newMapping[srcKey] = newTarget;
+      setAiMapping({ ...aiMapping, column_mapping: newMapping });
+    }
+  }, [aiMapping, toast]);
 
   const handleProcess = useCallback(() => {
     if (!activeLogId) return;
@@ -694,7 +711,7 @@ export default function Import() {
                         <h4 className="text-sm font-medium mb-2">
                           Mapping Colonne
                           <span className="text-muted-foreground font-normal ml-2 text-xs">
-                            Trascina le destinazioni per correggere il mapping
+                            Usa i menu a tendina per cambiare la destinazione
                           </span>
                         </h4>
                         <Table>
@@ -712,41 +729,36 @@ export default function Import() {
                               const sampleValue = pendingRows.find(r => r[src]?.toString().trim())?.[src]?.toString() || "—";
                               const truncated = sampleValue.length > 40 ? sampleValue.slice(0, 40) + "…" : sampleValue;
                               return (
-                                <TableRow
-                                  key={src}
-                                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("bg-primary/10"); }}
-                                  onDragLeave={(e) => { e.currentTarget.classList.remove("bg-primary/10"); }}
-                                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("bg-primary/10"); handleMappingDrop(src); }}
-                                >
+                                <TableRow key={src}>
                                   <TableCell className="text-xs font-mono">{src}</TableCell>
                                   <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={sampleValue}>{truncated}</TableCell>
                                   <TableCell className="text-xs text-muted-foreground">→</TableCell>
                                   <TableCell className="text-xs p-1">
-                                    <div
-                                      draggable
-                                      onDragStart={() => setDraggedTarget(dst)}
-                                      onDragEnd={() => setDraggedTarget(null)}
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md cursor-grab active:cursor-grabbing border transition-all select-none ${
-                                        draggedTarget === dst
-                                          ? "border-primary bg-primary/15 shadow-sm"
-                                          : "border-border bg-muted hover:border-primary/50 hover:bg-accent"
-                                      }`}
+                                    <Select
+                                      value={dst}
+                                      onValueChange={(val) => handleMappingTargetChange(src, val)}
                                     >
-                                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-                                      <span className="font-medium text-xs">{dst}</span>
-                                    </div>
+                                      <SelectTrigger className="h-8 text-xs w-[180px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__unmapped__" className="text-xs text-muted-foreground">
+                                          — Non mappare —
+                                        </SelectItem>
+                                        {TARGET_SCHEMA.map(t => (
+                                          <SelectItem key={t.key} value={t.key} className="text-xs">
+                                            {t.label} ({t.key})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </TableCell>
                                   <TableCell className="text-xs p-1">
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                      onClick={() => {
-                                        const newMapping = { ...aiMapping.column_mapping };
-                                        delete newMapping[src];
-                                        const newUnmapped = [...(aiMapping.unmapped_columns || []), src];
-                                        setAiMapping({ ...aiMapping, column_mapping: newMapping, unmapped_columns: newUnmapped });
-                                      }}
+                                      onClick={() => handleMappingTargetChange(src, "__unmapped__")}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </Button>
