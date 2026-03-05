@@ -1755,6 +1755,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_contact_filter_options: {
+        Args: never
+        Returns: {
+          filter_type: string
+          filter_value: string
+        }[]
+      }
       get_country_stats: {
         Args: never
         Returns: {
