@@ -914,8 +914,10 @@ export default function Import() {
                     </div>
 
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="group-name" className="text-sm whitespace-nowrap">Nome Gruppo</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="group-name" className="text-sm font-medium flex items-center gap-1.5">
+                          Nome Gruppo <span className="text-destructive">*</span>
+                        </Label>
                         <Input
                           id="group-name"
                           placeholder="Es. Global, Cosmoprof 2024, Pitti Uomo..."
@@ -923,12 +925,17 @@ export default function Import() {
                           onChange={(e) => setGroupName(e.target.value)}
                           className="max-w-xs text-sm"
                         />
+                        {!groupName.trim() && (
+                          <p className="text-[11px] text-muted-foreground">Inserisci un nome gruppo per procedere con l'importazione</p>
+                        )}
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={handleConfirmMapping} disabled={uploading}>
-                          {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
-                          Conferma e Importa ({pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe)
-                        </Button>
+                        {groupName.trim() && (
+                          <Button onClick={handleConfirmMapping} disabled={uploading}>
+                            {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
+                            Conferma e Importa ({pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe)
+                          </Button>
+                        )}
                         <Button variant="outline" onClick={() => { setAiMapping(null); setGroupName(""); }}>
                           Annulla
                         </Button>
