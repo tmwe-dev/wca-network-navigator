@@ -1,49 +1,70 @@
 
 
-## Diagnosi: Problemi nei Dati Importati
+## Diagnosi e Piano di Ristrutturazione Contatti
 
-Ho analizzato il database e identificato tre problemi distinti:
+### Analisi del record "ADAMO PARFUM SRL"
 
-### Problemi trovati
+Ho trovato il record. Ecco il confronto:
 
-1. **1.570 righe completamente vuote** — tutti i campi (company_name, name, email, phone, country) sono NULL. Sono righe spazzatura create durante importazioni di file con righe vuote.
+| Campo | Valore salvato | Valore nel raw_data |
+|-------|---------------|---------------------|
+| `company_name` | ADAMO PARFUM SRL | `alias_2`: "ADAMO PARFUM SRL", `name_2`: "ADAMO PARFUM SRL" |
+| `name` | **"Cliente"** ← ERRATO | `alias`: "Cliente", `name`: "Cliente" |
+| `email` | info@adamoparfum.com | ✓ corretto |
+| `phone` | NULL | `phone`: "NULL" (stringa) |
+| `address` | NULL | `address`: "Via dell'Industria, 58A 20037 Paderno Dugnano (Milan)" |
 
-2. **252 righe con la stringa letterale "NULL"** — il testo `"NULL"` è stato salvato come valore effettivo nel campo `company_name` o `name`, anziché come valore NULL reale del database. Questo è il motivo per cui nella lista vedi "NULL" come nome azienda.
+**Problema principale**: il campo sorgente `name` / `alias` contiene etichette generiche come "Cliente", "log", "Nuovo utente" — **non** nomi di persone. Questi sono stati mappati nel campo `name` della tabella. Numeri:
+- **721 record** con `name` = "Cliente"
+- **269 record** con `name` = "log"
+- **112 record** con `name` = "Nuovo utente"
 
-3. **Limite 1.000 righe** — la query Supabase restituisce al massimo 1.000 record (su 13.032 totali), quindi vedi solo una porzione dei dati, sbilanciata verso le importazioni più recenti (che includono molte righe sporche).
+Inoltre, il campo `address` dal file sorgente non è stato mappato correttamente e molti `phone` con valore stringa "NULL" non sono stati puliti.
 
-### Piano di correzione
+---
 
-**Fase 1 — Pulizia dati (migrazione SQL)**
-- Eliminare le 1.570 righe completamente vuote
-- Convertire tutte le stringhe `"NULL"` in valori NULL reali nei campi: `company_name`, `name`, `email`, `phone`, `country`, `note`
+### Piano: Ristrutturazione completa della sezione Contatti
 
-```sql
--- Rimuovi righe completamente vuote
-DELETE FROM imported_contacts 
-WHERE company_name IS NULL AND name IS NULL 
-  AND email IS NULL AND phone IS NULL AND country IS NULL;
+#### 1. Pulizia dati (migrazione SQL)
 
--- Converti stringhe "NULL" in NULL reale
-UPDATE imported_contacts SET company_name = NULL WHERE company_name = 'NULL';
-UPDATE imported_contacts SET name = NULL WHERE name = 'NULL';
-UPDATE imported_contacts SET email = NULL WHERE email = 'NULL';
-UPDATE imported_contacts SET phone = NULL WHERE phone = 'NULL';
-UPDATE imported_contacts SET note = NULL WHERE note = 'NULL';
-```
+- Convertire `name` = "Cliente" / "log" / "Nuovo utente" in `NULL` (non sono nomi reali)
+- Recuperare `address` e `city` dal `raw_data` dove mancano
+- Pulire `phone` con valore stringa "NULL"
 
-**Fase 2 — Miglioramento query (useContacts.ts)**
-- Aggiungere paginazione o aumentare il limite per gestire i 13.000+ record
-- Filtrare di default i record che hanno almeno un campo significativo (company_name o email non null)
+#### 2. Concetto di "Gruppo di carico"
 
-**Fase 3 — Miglioramento display (ContactListPanel.tsx)**
-- Mostrare "Senza nome" al posto di "NULL" o campi vuoti
-- Evidenziare visivamente i record incompleti con un badge di qualità
+Aggiungere `group_name` alla tabella `import_logs` — è il nome logico che l'utente assegna al batch di contatti al momento dell'upload (es. "Global", "Cosmoprof 2024", "Pitti Uomo"). In alternativa, si può usare il campo `origin` già presente sui contatti come raggruppatore naturale.
 
-### File da modificare
-| File | Modifica |
-|------|----------|
-| Migrazione SQL | Pulizia dati |
-| `src/hooks/useContacts.ts` | Filtro qualità minima + limite query |
-| `src/components/contacts/ContactListPanel.tsx` | Display fallback migliorato |
+**Scelta proposta**: aggiungere colonna `group_name text` su `import_logs` e propagare il valore come filtro. Durante l'import, l'utente potrà dare un nome al gruppo. Per i dati esistenti, il `file_name` diventa il gruppo di default.
+
+#### 3. Pagina Contatti ridisegnata
+
+La pagina `/contacts` diventa un browser di gruppi di carico:
+- **Barra superiore**: selettore del gruppo di carico (dropdown con nome gruppo + conteggio record)
+- **Filtri secondari**: paese, origine, ricerca
+- **Lista contatti**: raggruppati per paese/origine all'interno del gruppo selezionato
+- I contatti qui sono in fase "pre-circuito" — non hanno ancora avuto interazioni reali
+
+#### 4. Nuova pagina "Circuito di Attesa" (`/holding-pattern`)
+
+Una dashboard separata che mostra SOLO i contatti che hanno ricevuto almeno un'interazione reale (email, chiamata, WhatsApp, meeting). Include:
+- Tabella con colonne: Azienda, Contatto, Data 1° contatto, Data ultimo contatto, N° interazioni, Note, Status
+- Filtri per status (contacted, in_progress, negotiation, converted, lost)
+- Timeline espandibile per ogni riga
+- KPI in alto: totali per fase del circuito
+
+Un contatto passa dalla pagina Contatti al Circuito di Attesa quando viene registrata la prima interazione reale.
+
+#### 5. File da creare/modificare
+
+| File | Azione |
+|------|--------|
+| Migrazione SQL | Pulizia "Cliente"/"log", aggiunta `group_name` a `import_logs` |
+| `src/hooks/useContacts.ts` | Aggiungere filtro per `import_log_id` / gruppo |
+| `src/components/contacts/ContactFiltersBar.tsx` | Aggiungere selettore gruppo di carico |
+| `src/components/contacts/ContactListPanel.tsx` | Adattare alla selezione per gruppo |
+| `src/pages/HoldingPattern.tsx` | **Nuovo** — Dashboard circuito di attesa |
+| `src/components/holding/HoldingDashboard.tsx` | **Nuovo** — Tabella + KPI |
+| `src/App.tsx` | Aggiungere rotta `/holding-pattern` |
+| `src/components/layout/AppSidebar.tsx` | Aggiungere voce "Circuito di Attesa" |
 
