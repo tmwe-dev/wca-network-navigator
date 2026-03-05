@@ -10,6 +10,14 @@ import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
+/** Treat literal "NULL"/"null" strings as actual null */
+function clean(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const t = v.trim();
+  if (t === "" || t.toUpperCase() === "NULL") return null;
+  return t;
+}
+
 function countryFlag(country: string | null): string {
   if (!country) return "🌍";
   const code = country.trim().toUpperCase().slice(0, 2);
@@ -32,7 +40,7 @@ function groupContacts(contacts: any[], groupBy: string): Group[] {
 
     switch (groupBy) {
       case "origin":
-        key = c.origin || "Sconosciuta";
+        key = clean(c.origin) || "Sconosciuta";
         label = key;
         break;
       case "status":
@@ -44,8 +52,8 @@ function groupContacts(contacts: any[], groupBy: string): Group[] {
         label = key === "nd" ? "Senza data" : format(new Date(c.created_at), "MMMM yyyy");
         break;
       default:
-        key = c.country || "??";
-        label = c.country || "Sconosciuto";
+        key = clean(c.country) || "??";
+        label = clean(c.country) || "Sconosciuto";
     }
 
     if (!map[key]) map[key] = { key, label, items: [] };
@@ -57,7 +65,7 @@ function groupContacts(contacts: any[], groupBy: string): Group[] {
 
 /** Returns a quality level for the contact record */
 function getContactQuality(c: any): "good" | "partial" | "poor" {
-  const has = (v: any) => !!v;
+  const has = (v: any) => !!clean(v);
   const fields = [has(c.company_name), has(c.name), has(c.email), has(c.phone || c.mobile), has(c.country)];
   const filled = fields.filter(Boolean).length;
   if (filled >= 4) return "good";
@@ -153,8 +161,15 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 {group.items.map((c: any) => {
                   const isActive = selectedId === c.id;
                   const quality = getContactQuality(c);
-                  const displayName = c.company_name || c.name || c.email || "Senza nome";
-                  const isAnonymous = !c.company_name && !c.name;
+                  const cName = clean(c.company_name);
+                  const cContact = clean(c.name);
+                  const cEmail = clean(c.email);
+                  const cPhone = clean(c.phone);
+                  const cMobile = clean(c.mobile);
+                  const cPosition = clean(c.position);
+                  const cCountry = clean(c.country);
+                  const displayName = cName || cContact || cEmail || "Senza nome";
+                  const isAnonymous = !cName && !cContact;
 
                   return (
                     <div
@@ -178,7 +193,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                         <div className="flex-1 min-w-0 space-y-0.5">
                           <div className="flex items-center gap-1.5">
                             {filters.groupBy !== "country" && (
-                              <span className="text-sm">{countryFlag(c.country)}</span>
+                              <span className="text-sm">{countryFlag(cCountry)}</span>
                             )}
                             <span className={`font-semibold truncate ${isAnonymous ? "text-muted-foreground italic" : "text-foreground"}`}>
                               {displayName}
@@ -187,15 +202,15 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                               <span title="Dati incompleti"><AlertTriangle className="w-3 h-3 text-destructive shrink-0" /></span>
                             )}
                           </div>
-                          {c.company_name && c.name && (
+                          {cName && cContact && (
                             <div className="text-muted-foreground truncate">
-                              {c.name}
-                              {c.position && <span className="ml-1 text-[10px] text-primary/70">• {c.position}</span>}
+                              {cContact}
+                              {cPosition && <span className="ml-1 text-[10px] text-primary/70">• {cPosition}</span>}
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            {c.email && <span className="truncate max-w-[120px]" title={c.email}>✉ {c.email}</span>}
-                            {c.phone && <span className="truncate max-w-[80px]" title={c.phone}>☎ {c.phone}</span>}
+                            {cEmail && <span className="truncate max-w-[120px]" title={cEmail}>✉ {cEmail}</span>}
+                            {cPhone && <span className="truncate max-w-[80px]" title={cPhone}>☎ {cPhone}</span>}
                           </div>
                           <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
                         </div>
@@ -203,12 +218,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
                       {/* Hover actions */}
                       <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {c.email && (
+                        {cEmail && (
                           <Button variant="ghost" size="icon" className="h-5 w-5" title="Email">
                             <Mail className="w-3 h-3" />
                           </Button>
                         )}
-                        {(c.phone || c.mobile) && (
+                        {(cPhone || cMobile) && (
                           <Button variant="ghost" size="icon" className="h-5 w-5" title="Chiama">
                             <Phone className="w-3 h-3" />
                           </Button>
