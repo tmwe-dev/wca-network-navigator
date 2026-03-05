@@ -512,10 +512,12 @@ export function useCreateImportFromParsedRows() {
       rows,
       userId,
       fileName,
+      groupName,
     }: {
       rows: any[];
       userId: string;
       fileName: string;
+      groupName?: string;
     }) => {
       const { data: importLog, error: logError } = await supabase
         .from("import_logs")
@@ -526,6 +528,7 @@ export function useCreateImportFromParsedRows() {
           total_rows: rows.length,
           status: "pending",
           normalization_method: "ai",
+          group_name: groupName || null,
         })
         .select()
         .single();
@@ -551,6 +554,8 @@ export function useCreateImportFromParsedRows() {
           origin: mapped.origin || null,
           company_alias: mapped.company_alias || null,
           contact_alias: mapped.contact_alias || null,
+          position: mapped.position || null,
+          external_id: mapped.external_id || null,
           raw_data: rawData,
         };
       });

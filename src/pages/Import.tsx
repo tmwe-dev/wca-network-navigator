@@ -177,6 +177,7 @@ export default function Import() {
   const [tab, setTab] = useState("upload");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"file" | "paste">("file");
+  const [groupName, setGroupName] = useState("");
 
   // Paste state
   const [pasteText, setPasteText] = useState("");
@@ -444,9 +445,9 @@ export default function Import() {
           return;
         }
 
-        log = await createFromParsed.mutateAsync({ rows: finalRows, userId: user.id, fileName });
+        log = await createFromParsed.mutateAsync({ rows: finalRows, userId: user.id, fileName, groupName: groupName.trim() || undefined });
       } else {
-        log = await createFromParsed.mutateAsync({ rows: aiMapping.parsed_rows, userId: user.id, fileName });
+        log = await createFromParsed.mutateAsync({ rows: aiMapping.parsed_rows, userId: user.id, fileName, groupName: groupName.trim() || undefined });
       }
 
       setActiveLogId(log.id);
@@ -455,6 +456,7 @@ export default function Import() {
       setPasteText("");
       setPendingFile(null);
       setPendingRows([]);
+      setGroupName("");
       toast({ title: "Importazione completata", description: `${pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe nello staging` });
     } catch (err) {
       toast({ title: "Errore", description: String(err), variant: "destructive" });
@@ -911,14 +913,26 @@ export default function Import() {
                       })()}
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button onClick={handleConfirmMapping} disabled={uploading}>
-                        {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
-                        Conferma e Importa ({pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe)
-                      </Button>
-                      <Button variant="outline" onClick={() => setAiMapping(null)}>
-                        Annulla
-                      </Button>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="group-name" className="text-sm whitespace-nowrap">Nome Gruppo</Label>
+                        <Input
+                          id="group-name"
+                          placeholder="Es. Global, Cosmoprof 2024, Pitti Uomo..."
+                          value={groupName}
+                          onChange={(e) => setGroupName(e.target.value)}
+                          className="max-w-xs text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleConfirmMapping} disabled={uploading}>
+                          {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
+                          Conferma e Importa ({pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe)
+                        </Button>
+                        <Button variant="outline" onClick={() => { setAiMapping(null); setGroupName(""); }}>
+                          Annulla
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
