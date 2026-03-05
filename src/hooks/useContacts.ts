@@ -40,23 +40,15 @@ export function useContactFilterOptions() {
   return useQuery({
     queryKey: FILTER_OPTIONS_KEY,
     queryFn: async () => {
-      // Fetch distinct origins
-      const { data: originData } = await supabase
-        .from("imported_contacts")
-        .select("origin")
-        .not("origin", "is", null)
-        .or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+      const { data, error } = await supabase.rpc("get_contact_filter_options");
+      if (error) throw error;
 
-      const origins = [...new Set((originData ?? []).map((r: any) => r.origin).filter(Boolean))].sort() as string[];
-
-      // Fetch distinct countries
-      const { data: countryData } = await supabase
-        .from("imported_contacts")
-        .select("country")
-        .not("country", "is", null)
-        .or("company_name.not.is.null,name.not.is.null,email.not.is.null");
-
-      const countries = [...new Set((countryData ?? []).map((r: any) => r.country).filter(Boolean))].sort() as string[];
+      const origins: string[] = [];
+      const countries: string[] = [];
+      (data ?? []).forEach((r: any) => {
+        if (r.filter_type === "origin") origins.push(r.filter_value);
+        else if (r.filter_type === "country") countries.push(r.filter_value);
+      });
 
       return { origins, countries };
     },
