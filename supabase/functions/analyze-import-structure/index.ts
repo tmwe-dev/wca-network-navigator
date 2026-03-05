@@ -86,6 +86,25 @@ Campi GENERATI INTERNAMENTE (NON importare da file esterni): company_alias, cont
 - Se una colonna si chiama "alias" e contiene nomi abbreviati testuali: il PRIMO alias → company_alias, il SECONDO alias → contact_alias
 - Se una colonna si chiama "alias" ma contiene codici/numeri → va in "external_id"
 
+## REGOLE ANTI-ETICHETTA (CRITICO)
+- PRIMA di mappare una colonna, conta i valori UNICI nel campione di ~50 righe
+- Se una colonna ha ≤5 valori unici su 50 righe (es. "Cliente" ripetuto 40 volte), NON è un dato anagrafico — è una ETICHETTA/CATEGORIA
+- Etichette comuni da riconoscere: "Cliente", "Nuovo utente", "log", "Fornitore", "Agente", "Partner" — queste vanno in "note" o ignorate, MAI in "name" o "company_name"
+- Il campo "name" deve contenere nomi di PERSONA DIVERSI su ogni riga (es. "Mario Rossi", "Anna Bianchi", "John Smith")
+- Il campo "company_name" deve contenere nomi di AZIENDA DIVERSI su ogni riga
+- Se una colonna contiene sempre lo stesso valore o pochissimi valori unici, è una classificazione/etichetta → mappa a "note" o "origin", mai a campi anagrafici
+- Se NESSUNA colonna contiene nomi di persona diversi, lascia "name" non mappato
+
+## REGOLE COLONNE DUPLICATE (name, name_2, alias, alias_2, ecc.)
+- Se il file ha colonne con nomi simili (es. "name" e "name_2", "alias" e "alias_2"): confronta i VALORI
+  - Se "name" ha pochi valori unici (etichetta) e "name_2" ha valori tutti diversi → "name_2" è il dato reale, "name" va in "note" o ignorato
+  - Se "name_2" contiene suffissi aziendali (Srl, SpA, S.r.l., GmbH, Ltd, Inc, LLC) → è company_name
+  - Se "name_2" contiene nomi di persona (nome + cognome) → è name
+- Stessa logica per "alias" e "alias_2":
+  - Se "alias" ha pochi valori unici → è un'etichetta, non un alias reale
+  - Se "alias_2" ha valori diversi con suffissi aziendali → è company_alias
+- NON mappare mai un'etichetta ripetitiva come "Cliente" al campo "name" o "company_name"
+
 ## REGOLE GENERALI
 - Il column_mapping NON DEVE MAI essere vuoto se il file contiene dati utili
 - Se hai dubbi, mappa comunque e segnala nei warnings
