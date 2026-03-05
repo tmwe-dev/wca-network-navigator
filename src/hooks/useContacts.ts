@@ -13,6 +13,7 @@ export interface ContactFilters {
   hasDeepSearch?: boolean;
   hasAlias?: boolean;
   groupBy?: "country" | "origin" | "status" | "date";
+  importLogId?: string;
   page?: number;
   pageSize?: number;
 }
@@ -45,8 +46,11 @@ export function useContacts(filters: ContactFilters = {}) {
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false });
 
-      // Quality filter: at least company_name or name or email must exist
+      // Quality filter
       q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+      // Group filter (import_log_id)
+      if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
 
       if (filters.search) {
         q = q.or(
@@ -69,6 +73,59 @@ export function useContacts(filters: ContactFilters = {}) {
       const { data, error, count } = await q;
       if (error) throw error;
       return { items: data ?? [], totalCount: count ?? 0, page, pageSize };
+    },
+  });
+}
+
+/** Contacts that have at least 1 interaction (holding pattern) */
+export function useHoldingPatternContacts(filters: ContactFilters = {}) {
+  const page = filters.page ?? 0;
+  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
+
+  return useQuery({
+    queryKey: ["holding-pattern", filters],
+    queryFn: async () => {
+      let q = supabase
+        .from("imported_contacts")
+        .select("*", { count: "exact" })
+        .gt("interaction_count", 0)
+        .order("last_interaction_at", { ascending: false });
+
+      if (filters.search) {
+        q = q.or(
+          `company_name.ilike.%${filters.search}%,name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
+        );
+      }
+      if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
+      if (filters.country) q = q.eq("country", filters.country);
+
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      q = q.range(from, to);
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { items: data ?? [], totalCount: count ?? 0, page, pageSize };
+    },
+  });
+}
+
+export function useHoldingPatternStats() {
+  return useQuery({
+    queryKey: ["holding-pattern-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imported_contacts")
+        .select("lead_status", { count: "exact" })
+        .gt("interaction_count", 0);
+      if (error) throw error;
+
+      const stats: Record<string, number> = { contacted: 0, in_progress: 0, negotiation: 0, converted: 0, lost: 0, total: 0 };
+      (data ?? []).forEach((r: any) => {
+        stats.total++;
+        if (stats[r.lead_status] !== undefined) stats[r.lead_status]++;
+      });
+      return stats;
     },
   });
 }
@@ -101,7 +158,10 @@ export function useUpdateLeadStatus() {
         .in("id", ids);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: CONTACTS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CONTACTS_KEY });
+      qc.invalidateQueries({ queryKey: ["holding-pattern"] });
+    },
   });
 }
 
@@ -120,7 +180,6 @@ export function useCreateContactInteraction() {
         .insert(interaction);
       if (iError) throw iError;
 
-      // bump interaction_count & last_interaction_at
       const { data: current } = await supabase
         .from("imported_contacts")
         .select("interaction_count")
@@ -138,6 +197,7 @@ export function useCreateContactInteraction() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: CONTACTS_KEY });
       qc.invalidateQueries({ queryKey: INTERACTIONS_KEY(vars.contact_id) });
+      qc.invalidateQueries({ queryKey: ["holding-pattern"] });
     },
   });
 }
