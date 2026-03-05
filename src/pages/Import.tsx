@@ -49,13 +49,13 @@ import {
   type ImportLog,
   type ImportedContact,
 } from "@/hooks/useImportLogs";
-import ExcelJS from "exceljs";
-
-const TARGET_COLUMNS = [
-  "company_name", "name", "email", "phone", "mobile",
-  "country", "city", "address", "zip_code", "position", "note", "origin",
-  "external_id", "company_alias", "contact_alias",
-];
+import {
+  parseFile,
+  autoMapColumns,
+  mappingsToDict,
+  transformRow,
+  TARGET_COLUMNS,
+} from "@/lib/import";
 
 // Normalize header key: lowercase, strip accents, collapse spaces/dashes to underscore
 function normalizeKey(key: string): string {
@@ -69,117 +69,15 @@ function normalizeKey(key: string): string {
     .replace(/^_|_$/g, "");
 }
 
-// Auto-detect CSV delimiter
-function detectDelimiter(firstLine: string): string {
-  const candidates = [",", ";", "\t"];
-  let best = ",";
-  let bestCount = 0;
-  for (const d of candidates) {
-    const count = firstLine.split(d).length - 1;
-    if (count > bestCount) { bestCount = count; best = d; }
-  }
-  return best;
-}
-
-// Handle duplicate headers
-function deduplicateHeaders(headers: string[]): string[] {
-  const counts: Record<string, number> = {};
-  return headers.map((h) => {
-    if (!counts[h]) { counts[h] = 1; return h; }
-    counts[h]++;
-    return `${h}_${counts[h]}`;
-  });
-}
-
-// Parse CSV/Excel file to rows — headers normalizzati per uniformità
-async function parseFile(file: File): Promise<{ headers: string[]; rows: any[] }> {
-  if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    if (lines.length < 2) return { headers: [], rows: [] };
-    const delimiter = detectDelimiter(lines[0]);
-    const rawHeaders = lines[0].split(delimiter).map((h) => h.trim().replace(/['"]/g, ""));
-    const normalizedHeaders = rawHeaders.map(normalizeKey);
-    const headers = deduplicateHeaders(normalizedHeaders);
-    const rows = lines.slice(1).map((line) => {
-      const values: string[] = [];
-      let current = "";
-      let inQuotes = false;
-      for (const ch of line) {
-        if (ch === '"') { inQuotes = !inQuotes; continue; }
-        if (ch === delimiter && !inQuotes) { values.push(current.trim()); current = ""; continue; }
-        current += ch;
-      }
-      values.push(current.trim());
-      const obj: Record<string, string> = {};
-      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-      return obj;
-    });
-    return { headers, rows };
-  }
-
-  const buffer = await file.arrayBuffer();
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-  const sheet = workbook.worksheets[0];
-  if (!sheet) return { headers: [], rows: [] };
-  const rawNormalized: string[] = [];
-  const rows: any[] = [];
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) {
-      row.eachCell((cell) => { rawNormalized.push(normalizeKey(String(cell.value || "").trim())); });
-    }
-  });
-  const headers = deduplicateHeaders(rawNormalized);
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return;
-    const obj: Record<string, string> = {};
-    row.eachCell((cell, colNumber) => {
-      const key = headers[colNumber - 1];
-      if (key) obj[key] = String(cell.value || "").trim();
-    });
-    if (Object.values(obj).some((v) => v)) rows.push(obj);
-  });
-  return { headers, rows };
-}
-
 // Detect if a file is a re-import correction (exported incomplete/error CSV)
 function isReimportCorrection(headers: string[]): boolean {
   const normalized = headers.map(normalizeKey);
   return normalized.includes("_import_id") || normalized.includes("motivo_errore") || normalized.includes("import_id");
 }
 
-// 3-tier key lookup: exact → normalized → fuzzy substring
-function findRowKey(row: Record<string, any>, targetKey: string): string | undefined {
-  const keys = Object.keys(row);
-  // 1. Exact match
-  if (row[targetKey] !== undefined) return targetKey;
-  // 2. Normalized match
-  const normTarget = normalizeKey(targetKey);
-  const foundNorm = keys.find(k => normalizeKey(k) === normTarget);
-  if (foundNorm) return foundNorm;
-  // 3. Fuzzy substring (both directions)
-  const tLower = normTarget.replace(/_/g, "");
-  const foundFuzzy = keys.find(k => {
-    const kNorm = normalizeKey(k).replace(/_/g, "");
-    return kNorm.length > 2 && tLower.length > 2 && (kNorm.includes(tLower) || tLower.includes(kNorm));
-  });
-  return foundFuzzy;
-}
-
-// Apply AI column_mapping to a single row with fuzzy key matching
+// Apply AI column_mapping to a single row — uses transformRow with auto-normalization
 function applyMapping(row: Record<string, any>, mapping: Record<string, string>, logFirst = false): Record<string, string | null> {
-  const result: Record<string, string | null> = {};
-  for (const [srcKey, dstCol] of Object.entries(mapping)) {
-    if (!TARGET_COLUMNS.includes(dstCol)) continue;
-    const actualKey = findRowKey(row, srcKey);
-    const val = actualKey !== undefined ? row[actualKey] : undefined;
-    result[dstCol] = val && String(val).trim() ? String(val).trim() : null;
-    if (logFirst && actualKey !== srcKey) {
-      console.log(`[Import Mapping] "${srcKey}" → resolved to "${actualKey}" for target "${dstCol}", value: ${result[dstCol]}`);
-    }
-  }
-  // Post-mapping diagnostics
+  const result = transformRow(row, mapping);
   if (logFirst) {
     const populated = Object.values(result).filter(v => v !== null).length;
     const rowDataCount = Object.values(row).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
