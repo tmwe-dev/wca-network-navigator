@@ -31,8 +31,38 @@ export interface ContactInteraction {
 
 const CONTACTS_KEY = ["contacts"] as const;
 const INTERACTIONS_KEY = (id: string) => ["contact-interactions", id] as const;
+const FILTER_OPTIONS_KEY = ["contacts-filter-options"] as const;
 
 const DEFAULT_PAGE_SIZE = 200;
+
+/** Fetches all distinct origins and countries for filter dropdowns */
+export function useContactFilterOptions() {
+  return useQuery({
+    queryKey: FILTER_OPTIONS_KEY,
+    queryFn: async () => {
+      // Fetch distinct origins
+      const { data: originData } = await supabase
+        .from("imported_contacts")
+        .select("origin")
+        .not("origin", "is", null)
+        .or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+      const origins = [...new Set((originData ?? []).map((r: any) => r.origin).filter(Boolean))].sort() as string[];
+
+      // Fetch distinct countries
+      const { data: countryData } = await supabase
+        .from("imported_contacts")
+        .select("country")
+        .not("country", "is", null)
+        .or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+      const countries = [...new Set((countryData ?? []).map((r: any) => r.country).filter(Boolean))].sort() as string[];
+
+      return { origins, countries };
+    },
+    staleTime: 60_000,
+  });
+}
 
 export function useContacts(filters: ContactFilters = {}) {
   const page = filters.page ?? 0;

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Mail, Phone, Search, Megaphone, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
-import { useContacts, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
+import { useContacts, useContactFilterOptions, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -73,6 +73,7 @@ interface Props {
 export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country", page: 0 });
   const { data, isLoading } = useContacts(filters);
+  const { data: filterOptions } = useContactFilterOptions();
   const contacts = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const page = data?.page ?? 0;
@@ -81,8 +82,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const selection = useSelection(contacts);
 
-  const countries = useMemo(() => [...new Set(contacts.map((c: any) => c.country).filter(Boolean))].sort() as string[], [contacts]);
-  const origins = useMemo(() => [...new Set(contacts.map((c: any) => c.origin).filter(Boolean))].sort() as string[], [contacts]);
+  const countries = filterOptions?.countries ?? [];
+  const origins = filterOptions?.origins ?? [];
 
   const groups = useMemo(() => groupContacts(contacts, filters.groupBy || "country"), [contacts, filters.groupBy]);
 
