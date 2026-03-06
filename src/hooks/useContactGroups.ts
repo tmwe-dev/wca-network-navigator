@@ -33,10 +33,11 @@ export function useContactsByGroup(
   groupKey: string | null,
   page: number = 0,
   pageSize: number = 200,
-  enabled: boolean = false
+  enabled: boolean = false,
+  holdingPattern?: "out" | "in" | "all"
 ) {
   return useQuery({
-    queryKey: ["contacts-by-group", groupType, groupKey, page, pageSize],
+    queryKey: ["contacts-by-group", groupType, groupKey, page, pageSize, holdingPattern],
     enabled: enabled && !!groupType && !!groupKey,
     queryFn: async () => {
       let q = supabase
@@ -46,6 +47,10 @@ export function useContactsByGroup(
 
       // Quality filter
       q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+
+      // Holding pattern filter
+      if (holdingPattern === "out") q = q.eq("interaction_count", 0);
+      else if (holdingPattern === "in") q = q.gt("interaction_count", 0);
 
       // Apply group filter
       switch (groupType) {

@@ -225,15 +225,16 @@ function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias }:
 
 /* ── expanded group content ── */
 
-function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection }: {
+function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern }: {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
   onSelect: (id: string) => void;
   selection: ReturnType<typeof useSelection>;
+  holdingPattern?: "out" | "in" | "all";
 }) {
   const [page, setPage] = useState(0);
-  const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true);
+  const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
   const contacts = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const pageSize = data?.pageSize ?? 200;
@@ -284,7 +285,7 @@ interface Props {
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
-  const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country" });
+  const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country", holdingPattern: "out" });
   const { data: filterOptions } = useContactFilterOptions();
   const { data: allGroupCounts, isLoading: groupsLoading } = useContactGroupCounts();
 
@@ -382,6 +383,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                     selectedId={selectedId}
                     onSelect={onSelect}
                     selection={selection}
+                    holdingPattern={filters.holdingPattern}
                   />
                 )}
               </div>
