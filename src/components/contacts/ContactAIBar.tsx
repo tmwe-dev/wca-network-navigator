@@ -8,7 +8,7 @@ import type { ContactFilters } from "@/hooks/useContacts";
 import ReactMarkdown from "react-markdown";
 
 export interface AICommand {
-  type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "multi";
+  type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "create_jobs" | "multi";
   filters?: Partial<ContactFilters>;
   groupBy?: ContactFilters["groupBy"];
   sort?: string;
