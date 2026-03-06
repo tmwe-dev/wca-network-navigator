@@ -1762,6 +1762,19 @@ export type Database = {
           filter_value: string
         }[]
       }
+      get_contact_group_counts: {
+        Args: never
+        Returns: {
+          contact_count: number
+          group_key: string
+          group_label: string
+          group_type: string
+          with_alias: number
+          with_deep_search: number
+          with_email: number
+          with_phone: number
+        }[]
+      }
       get_country_stats: {
         Args: never
         Returns: {

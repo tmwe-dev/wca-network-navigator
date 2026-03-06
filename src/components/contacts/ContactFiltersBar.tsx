@@ -1,8 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FolderOpen, Globe, MapPin, Tag, LayoutGrid, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, FolderOpen, Globe, MapPin, Tag, Calendar } from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
+import type { ContactGroupCount } from "@/hooks/useContactGroups";
+import { cn } from "@/lib/utils";
 
 const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "Tutti" },
@@ -14,12 +17,12 @@ const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
   { value: "lost", label: "Perso" },
 ];
 
-const GROUP_OPTIONS = [
-  { value: "country", label: "Paese" },
-  { value: "origin", label: "Origine" },
-  { value: "status", label: "Status" },
-  { value: "date", label: "Data" },
-];
+const GROUP_MODES = [
+  { value: "country", icon: Globe, label: "Paese" },
+  { value: "origin", icon: MapPin, label: "Origine" },
+  { value: "status", icon: Tag, label: "Status" },
+  { value: "date", icon: Calendar, label: "Data" },
+] as const;
 
 interface Props {
   filters: ContactFilters;
@@ -27,6 +30,7 @@ interface Props {
   countries: string[];
   origins: string[];
   importGroups?: ImportGroup[];
+  groupCounts?: ContactGroupCount[];
 }
 
 function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
@@ -41,7 +45,20 @@ function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType;
   );
 }
 
-export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups }: Props) {
+export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups, groupCounts }: Props) {
+  const currentGroupBy = filters.groupBy || "country";
+
+  // Build count maps from groupCounts
+  const countryCounts: Record<string, number> = {};
+  const originCounts: Record<string, number> = {};
+  const statusCounts: Record<string, number> = {};
+
+  (groupCounts ?? []).forEach((g) => {
+    if (g.group_type === "country") countryCounts[g.group_key] = g.contact_count;
+    else if (g.group_type === "origin") originCounts[g.group_key] = g.contact_count;
+    else if (g.group_type === "status") statusCounts[g.group_key] = g.contact_count;
+  });
+
   return (
     <div className="flex flex-col gap-2 p-3 border-b border-border bg-card/50 shrink-0 max-h-[40vh] overflow-y-auto">
       {/* Row 1: Import group */}
@@ -79,8 +96,28 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
         </div>
       </FilterBlock>
 
-      {/* Row 3: Filters grid */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Row 3: Grouping icons */}
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mr-1">Raggruppa:</span>
+        {GROUP_MODES.map(({ value, icon: Icon, label }) => (
+          <Button
+            key={value}
+            variant={currentGroupBy === value ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-7 w-7 p-0",
+              currentGroupBy === value && "shadow-sm"
+            )}
+            title={label}
+            onClick={() => onChange({ groupBy: value as ContactFilters["groupBy"] })}
+          >
+            <Icon className="w-3.5 h-3.5" />
+          </Button>
+        ))}
+      </div>
+
+      {/* Row 4: Filters grid */}
+      <div className="grid grid-cols-3 gap-2">
         <FilterBlock icon={Globe} label="Paese">
           <Select value={filters.country ?? "all"} onValueChange={(v) => onChange({ country: v === "all" ? undefined : v })}>
             <SelectTrigger className="h-8 text-xs">
@@ -89,7 +126,9 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
               {countries.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}{countryCounts[c] ? ` (${countryCounts[c]})` : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -103,7 +142,9 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
             <SelectContent>
               <SelectItem value="all">Tutte</SelectItem>
               {origins.map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
+                <SelectItem key={o} value={o}>
+                  {o}{originCounts[o] ? ` (${originCounts[o]})` : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -119,30 +160,16 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterBlock>
-
-        <FilterBlock icon={LayoutGrid} label="Raggruppa per">
-          <Select
-            value={filters.groupBy ?? "country"}
-            onValueChange={(v) => onChange({ groupBy: v as ContactFilters["groupBy"] })}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Paese" />
-            </SelectTrigger>
-            <SelectContent>
-              {GROUP_OPTIONS.map((g) => (
-                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}{s.value !== "all" && statusCounts[s.value] ? ` (${statusCounts[s.value]})` : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </FilterBlock>
       </div>
 
-      {/* Row 4: Date range */}
+      {/* Row 5: Date range */}
       <FilterBlock icon={Calendar} label="Periodo">
         <div className="flex items-center gap-2">
           <Input
