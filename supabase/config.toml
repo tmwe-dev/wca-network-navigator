@@ -87,3 +87,6 @@ verify_jwt = false
 
 [functions.import-assistant]
 verify_jwt = false
+
+[functions.contacts-assistant]
+verify_jwt = false
