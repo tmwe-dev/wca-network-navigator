@@ -31,6 +31,24 @@ export function useSelection<T extends { id: string }>(items: T[]) {
     setSelectedIds(new Set());
   }, []);
 
+  /** Add a batch of IDs to the current selection (union) */
+  const addBatch = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }, []);
+
+  /** Remove a batch of IDs from the current selection */
+  const removeBatch = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+  }, []);
+
   const isAllSelected = useMemo(
     () => items.length > 0 && selectedIds.size === items.length,
     [items.length, selectedIds.size]
@@ -51,6 +69,8 @@ export function useSelection<T extends { id: string }>(items: T[]) {
     selectAll,
     selectWhere,
     clear,
+    addBatch,
+    removeBatch,
     isAllSelected,
     toggleAll,
     count: selectedIds.size,
