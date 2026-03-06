@@ -1,6 +1,30 @@
 import { getYearsMember } from "@/lib/countries";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 
+/** Typed shape for partner.enrichment_data JSON field */
+export interface EnrichmentData {
+  deep_search_at?: string | null;
+  tokens_used?: {
+    credits_consumed?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** Safely cast enrichment_data from Json to EnrichmentData */
+export function asEnrichment(data: unknown): EnrichmentData | null {
+  if (!data || typeof data !== "object") return null;
+  return data as EnrichmentData;
+}
+
+/** Directory cache member shape */
+export interface DirectoryCacheMember {
+  wca_id?: number;
+  company_name?: string;
+  city?: string;
+  [key: string]: unknown;
+}
+
 /** Returns the logo URL as-is if present */
 export function getRealLogoUrl(logoUrl: string | null | undefined): string | null {
   if (!logoUrl) return null;

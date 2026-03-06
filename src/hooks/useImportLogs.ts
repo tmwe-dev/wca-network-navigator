@@ -63,6 +63,13 @@ export interface ImportedContact {
   origin: string | null;
   company_alias: string | null;
   contact_alias: string | null;
+  position: string | null;
+  external_id: string | null;
+  lead_status: string;
+  deep_search_at: string | null;
+  last_interaction_at: string | null;
+  interaction_count: number;
+  converted_at: string | null;
   is_selected: boolean;
   is_transferred: boolean;
   raw_data: any;

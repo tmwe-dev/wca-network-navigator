@@ -22,7 +22,7 @@ export function useEmailDrafts() {
     queryKey: ["email-drafts"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("email_drafts" as any)
+        .from("email_drafts")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -37,13 +37,13 @@ export function useSaveEmailDraft() {
     mutationFn: async (draft: Partial<EmailDraft> & { id?: string }) => {
       if (draft.id) {
         const { error } = await supabase
-          .from("email_drafts" as any)
+          .from("email_drafts")
           .update(draft as any)
           .eq("id", draft.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
-          .from("email_drafts" as any)
+          .from("email_drafts")
           .insert(draft as any)
           .select()
           .single();

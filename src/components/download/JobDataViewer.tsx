@@ -95,7 +95,8 @@ export function JobDataViewer({
         .from("directory_cache").select("members").eq("country_code", countryCode);
       const nameMap = new Map<number, string>();
       for (const entry of cacheEntries || []) {
-        for (const m of (entry.members as any[] || [])) {
+        const members = (entry.members || []) as Array<{ wca_id?: number; company_name?: string }>;
+        for (const m of members) {
           if (m.wca_id && failedIds.includes(m.wca_id)) {
             nameMap.set(m.wca_id, m.company_name || `WCA ${m.wca_id}`);
           }

@@ -62,8 +62,8 @@ export function CompactContactCard({
           {c.name && (
             <div className="text-muted-foreground truncate">
               {c.name}
-              {(c as any).position && (
-                <span className="ml-1 text-[10px] text-primary/70">• {(c as any).position}</span>
+              {c.position && (
+                <span className="ml-1 text-[10px] text-primary/70">• {c.position}</span>
               )}
             </div>
           )}

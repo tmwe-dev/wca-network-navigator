@@ -42,7 +42,8 @@ import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/compon
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { CardSocialIcons } from "@/components/partners/shared/CardSocialIcons";
-import { getBranchCountries, sortPartners, type SortOption } from "@/lib/partnerUtils";
+import { getBranchCountries, sortPartners, asEnrichment, type SortOption } from "@/lib/partnerUtils";
+import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 export default function PartnerHub() {
@@ -81,6 +82,7 @@ export default function PartnerHub() {
 
   const partnerIds = useMemo(() => (partners || []).map((p: any) => p.id), [partners]);
   const { data: blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
+  const { data: socialLinksMap } = useBatchSocialLinks(partnerIds);
 
   const filteredPartners = useMemo(() => {
     let list = filterIncomplete
@@ -492,12 +494,12 @@ export default function PartnerHub() {
                               <p className="text-xs text-muted-foreground truncate">{partner.company_name}</p>
                             </div>
                             <div className="flex flex-col items-end gap-0.5 shrink-0 text-right">
-                              {!!(partner.enrichment_data as any)?.deep_search_at && (
+                              {!!asEnrichment(partner.enrichment_data)?.deep_search_at && (
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
                                   </TooltipTrigger>
-                                  <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
+                                  <TooltipContent>Deep Search – {format(new Date(asEnrichment(partner.enrichment_data)!.deep_search_at!), "dd/MM/yyyy")}</TooltipContent>
                                 </Tooltip>
                               )}
                               {partner.member_since && (
@@ -592,7 +594,7 @@ export default function PartnerHub() {
                             );
                           })()}
                           {/* Social */}
-                          <CardSocialIcons partnerId={partner.id} />
+                          <CardSocialIcons links={socialLinksMap?.get(partner.id) || []} />
                           {/* Branch country flags */}
                           {branchCountries.length > 0 && (
                             <div className="flex items-center gap-0.5 mt-1.5 flex-wrap">
