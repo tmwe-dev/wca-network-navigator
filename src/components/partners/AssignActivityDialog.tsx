@@ -92,6 +92,9 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           due_date: dueDate || null,
           scheduled_at: scheduledAt || null,
           campaign_batch_id: batchId,
+          source_meta: {
+            company_name: partnerNames?.[pid] || null,
+          },
         }));
 
         await createActivities.mutateAsync(activities);

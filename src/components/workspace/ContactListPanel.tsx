@@ -25,17 +25,34 @@ const FILTER_CHIPS: { key: FilterKey; label: string; variant: "green" | "red" }[
   { key: "not_enriched", label: "Non arricchito", variant: "red" },
 ];
 
+/** Resolve display fields from partners join OR source_meta fallback */
+function getDisplayFields(a: AllActivity) {
+  const p = a.partners;
+  const m = a.source_meta || {};
+  return {
+    companyName: p?.company_alias || p?.company_name || m.company_name || a.title.replace(/^Email a /, ""),
+    contactName: a.selected_contact?.contact_alias || a.selected_contact?.name || m.contact_name || null,
+    countryCode: p?.country_code || m.country_code || "??",
+    countryName: p?.country_name || m.country || (a.source_type === "prospect" ? "Italia" : "Import"),
+    city: p?.city || m.city || null,
+    isEnriched: !!p?.enriched_at,
+    hasWebsite: !!p?.website || !!m.website,
+    email: a.selected_contact?.email || m.email || null,
+  };
+}
+
 function matchesFilter(a: AllActivity, f: FilterKey): boolean {
   const contact = a.selected_contact;
+  const d = getDisplayFields(a);
   switch (f) {
-    case "with_email": return !!contact?.email;
-    case "no_email": return !contact?.email;
-    case "with_contact": return !!contact;
-    case "no_contact": return !contact;
+    case "with_email": return !!contact?.email || !!d.email;
+    case "no_email": return !contact?.email && !d.email;
+    case "with_contact": return !!contact || !!d.contactName;
+    case "no_contact": return !contact && !d.contactName;
     case "with_alias": return !!(contact?.contact_alias || a.partners?.company_alias);
     case "no_alias": return !contact?.contact_alias && !a.partners?.company_alias;
-    case "enriched": return !!a.partners?.enriched_at;
-    case "not_enriched": return !a.partners?.enriched_at;
+    case "enriched": return d.isEnriched;
+    case "not_enriched": return !d.isEnriched;
   }
 }
 
@@ -90,14 +107,15 @@ export default function ContactListPanel({
   const searched = useMemo(() => {
     if (!search.trim()) return emailActivities;
     const q = search.toLowerCase();
-    return emailActivities.filter((a) =>
-      a.partners?.company_name?.toLowerCase().includes(q) ||
-      a.partners?.company_alias?.toLowerCase().includes(q) ||
-      a.partners?.country_name?.toLowerCase().includes(q) ||
-      a.partners?.city?.toLowerCase().includes(q) ||
-      a.selected_contact?.name?.toLowerCase().includes(q) ||
-      a.selected_contact?.contact_alias?.toLowerCase().includes(q)
-    );
+    return emailActivities.filter((a) => {
+      const d = getDisplayFields(a);
+      return d.companyName?.toLowerCase().includes(q) ||
+        d.contactName?.toLowerCase().includes(q) ||
+        d.countryName?.toLowerCase().includes(q) ||
+        d.city?.toLowerCase().includes(q) ||
+        a.title?.toLowerCase().includes(q) ||
+        a.description?.toLowerCase().includes(q);
+    });
   }, [emailActivities, search]);
 
   const filtered = useMemo(() => {
@@ -115,7 +133,7 @@ export default function ContactListPanel({
   }, [searched]);
 
   const grouped = useMemo(
-    () => groupByCountry(filtered, (a) => a.partners?.country_code || "??", (a) => a.partners?.country_name || (a.source_type === "prospect" ? "Italia" : "Import")),
+    () => groupByCountry(filtered, (a) => getDisplayFields(a).countryCode, (a) => getDisplayFields(a).countryName),
     [filtered]
   );
 
@@ -198,11 +216,10 @@ export default function ContactListPanel({
                 const isSelected = activity.id === selectedActivityId;
                 const isChecked = selectedIds.has(activity.id);
                 const contact = activity.selected_contact;
-                const hasEmail = !!contact?.email;
-                const displayName = contact?.contact_alias || contact?.name;
-                const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name || activity.title.replace(/^Email a /, "");
-                const isEnriched = !!activity.partners?.enriched_at;
-                const hasWebsite = !!activity.partners?.website;
+                const d = getDisplayFields(activity);
+                const hasEmail = !!contact?.email || !!d.email;
+                const displayName = d.contactName;
+                const companyDisplay = d.companyName;
                 const linkedinUrl = activity.partner_id ? linkedinMap?.[activity.partner_id] : undefined;
 
                 return (
@@ -220,14 +237,14 @@ export default function ContactListPanel({
                           isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                         )}>
                           <Building2 className="w-3.5 h-3.5" />
-                          {isEnriched && (
+                          {d.isEnriched && (
                             <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background" title="Arricchito" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
-                            {hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
+                            {d.hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
                             {linkedinUrl && (
                               <>
                                 <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
@@ -241,11 +258,11 @@ export default function ContactListPanel({
                               </>
                             )}
                           </div>
-                          {contact ? (
+                          {(contact || displayName) ? (
                             <div className="flex items-center gap-1 mt-0.5">
                               <User className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground truncate">
-                                {displayName}{contact.title && ` · ${contact.title}`}
+                                {displayName}{contact?.title && ` · ${contact.title}`}
                               </span>
                             </div>
                           ) : (
@@ -257,7 +274,7 @@ export default function ContactListPanel({
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {hasEmail ? (
                               <Mail className="w-3 h-3 text-primary/60" />
-                            ) : contact ? (
+                            ) : (contact || displayName) ? (
                               <div className="flex items-center gap-1">
                                 <Mail className="w-3 h-3 text-destructive/60" />
                                 <span className="text-[10px] text-destructive/80">No email</span>

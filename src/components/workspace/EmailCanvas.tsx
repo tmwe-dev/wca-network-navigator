@@ -123,6 +123,11 @@ export default function EmailCanvas({
 
   const partner = activity?.partners;
   const contact = activity?.selected_contact;
+  const meta = activity?.source_meta || {};
+  const displayCompany = partner?.company_alias || partner?.company_name || meta.company_name || activity?.title;
+  const displayCountry = partner?.country_name || meta.country || "";
+  const displayCity = partner?.city || meta.city || "";
+  const displayCountryCode = partner?.country_code || meta.country_code || "";
 
   // Empty state
   if (!activity) {
@@ -185,7 +190,7 @@ export default function EmailCanvas({
               <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
             </div>
             <p className="text-sm text-muted-foreground">Generazione in corso...</p>
-            <p className="text-xs text-muted-foreground/60">Analisi profilo {partner?.company_alias || partner?.company_name || activity?.title}</p>
+            <p className="text-xs text-muted-foreground/60">Analisi profilo {displayCompany}</p>
           </div>
         ) : displayEmail ? (
           <div className="p-4">
@@ -211,7 +216,7 @@ export default function EmailCanvas({
                       <AtSign className="w-3 h-3 text-muted-foreground" />
                     </div>
                     <span className="font-medium text-foreground">
-                      {contact?.contact_alias || contact?.name || partner?.company_name || displayEmail.partnerName || activity?.title}
+                      {contact?.contact_alias || contact?.name || meta.contact_name || displayCompany || displayEmail.partnerName || activity?.title}
                     </span>
                     {displayEmail.contactEmail ? (
                       <span className="text-muted-foreground">&lt;{displayEmail.contactEmail}&gt;</span>
@@ -238,7 +243,7 @@ export default function EmailCanvas({
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[10px] text-muted-foreground">
-                    {getCountryFlag(partner?.country_code || "")} {partner?.city}, {partner?.country_name}
+                    {getCountryFlag(displayCountryCode)} {displayCity}{displayCity && displayCountry ? ", " : ""}{displayCountry}
                   </span>
                   {companyLinkedIn && (
                     <a href={companyLinkedIn.url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-400">

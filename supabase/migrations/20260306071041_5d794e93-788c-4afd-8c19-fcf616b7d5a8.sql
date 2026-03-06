@@ -1,0 +1,1 @@
+ALTER TABLE public.activities ADD COLUMN source_meta jsonb DEFAULT '{}'::jsonb;

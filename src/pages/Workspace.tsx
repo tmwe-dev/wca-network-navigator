@@ -111,8 +111,11 @@ export default function Workspace() {
 
   const handleDeepSearch = () => {
     const targets = selectedIds.size > 0 ? emailActivities.filter((a) => selectedIds.has(a.id)) : emailActivities;
-    const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id))];
-    if (!uniquePartnerIds.length) return;
+    const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id).filter(Boolean))] as string[];
+    if (!uniquePartnerIds.length) {
+      toast({ title: "Deep Search disponibile solo per partner WCA", variant: "destructive" });
+      return;
+    }
     deepSearch.start(uniquePartnerIds);
   };
 
