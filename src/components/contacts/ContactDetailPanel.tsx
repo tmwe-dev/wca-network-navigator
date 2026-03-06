@@ -82,7 +82,7 @@ export function ContactDetailPanel({ contact }: Props) {
         interaction_type: newType,
         title: newTitle,
         description: newDesc || undefined,
-        outcome: newOutcome || undefined,
+        outcome: newOutcome && newOutcome !== "none" ? newOutcome : undefined,
       },
       {
         onSuccess: () => {
@@ -240,7 +240,7 @@ export function ContactDetailPanel({ contact }: Props) {
                 <SelectValue placeholder="Esito (opzionale)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nessuno</SelectItem>
+                <SelectItem value="none">Nessuno</SelectItem>
                 <SelectItem value="positive">Positivo</SelectItem>
                 <SelectItem value="neutral">Neutro</SelectItem>
                 <SelectItem value="negative">Negativo</SelectItem>
