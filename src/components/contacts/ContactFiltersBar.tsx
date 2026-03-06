@@ -7,6 +7,7 @@ import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 import { cn } from "@/lib/utils";
+import { ContactAIBar, type AICommand } from "./ContactAIBar";
 
 const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "Tutti" },
@@ -32,6 +33,10 @@ interface Props {
   origins: string[];
   importGroups?: ImportGroup[];
   groupCounts?: ContactGroupCount[];
+  totalContacts?: number;
+  selectedCount?: number;
+  sortKey?: string;
+  onAICommand?: (cmd: AICommand) => void;
 }
 
 function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
@@ -46,7 +51,7 @@ function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType;
   );
 }
 
-export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups, groupCounts }: Props) {
+export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups, groupCounts, totalContacts, selectedCount, sortKey, onAICommand }: Props) {
   const currentGroupBy = filters.groupBy || "country";
 
   // Build count maps from groupCounts
@@ -62,6 +67,16 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
 
   return (
     <div className="flex flex-col gap-2 p-3 border-b border-border bg-card/50 shrink-0 max-h-[40vh] overflow-y-auto">
+      {/* Row 0: AI Bar */}
+      {onAICommand && (
+        <ContactAIBar
+          filters={filters}
+          totalContacts={totalContacts ?? 0}
+          selectedCount={selectedCount ?? 0}
+          sortKey={sortKey ?? "company"}
+          onAICommand={onAICommand}
+        />
+      )}
       {/* Row 1: Import group */}
       {importGroups && importGroups.length > 0 && (
         <FilterBlock icon={FolderOpen} label="Gruppo di carico">

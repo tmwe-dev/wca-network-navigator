@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { resolveCountryCode, getCountryFlag } from "@/lib/countries";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
-import { useContactFilterOptions, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
+import { useContactFilterOptions, useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useContactGroupCounts, useContactsByGroup, type ContactGroupCount } from "@/hooks/useContactGroups";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import type { AICommand } from "./ContactAIBar";
 
 /* ── helpers ── */
 
