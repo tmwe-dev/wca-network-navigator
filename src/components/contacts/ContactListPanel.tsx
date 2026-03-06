@@ -7,6 +7,7 @@ import {
   AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles, Loader2,
   MapPin, Tag
 } from "lucide-react";
+import { resolveCountryCode, getCountryFlag } from "@/lib/countries";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
 import { useContactFilterOptions, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
@@ -26,9 +27,9 @@ function clean(v: string | null | undefined): string | null {
 
 function countryFlag(country: string | null): string {
   if (!country) return "🌍";
-  const code = country.trim().toUpperCase().slice(0, 2);
-  if (code.length !== 2) return "🌍";
-  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+  const code = resolveCountryCode(country);
+  if (!code) return "🌍";
+  return getCountryFlag(code);
 }
 
 function formatPhone(phone: string): string {
