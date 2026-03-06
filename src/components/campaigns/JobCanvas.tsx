@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, CheckCircle2, FileText, Calendar, Save, User, Users, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,12 +27,14 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
   const [notesLoaded, setNotesLoaded] = useState<string | null>(null);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
 
-  // Sync notes when job changes
-  if (job && job.id !== notesLoaded) {
-    setNotes(job.notes || "");
-    setNotesLoaded(job.id);
-    setSelectedTemplates([]);
-  }
+  // Sync notes when job changes (moved to useEffect to avoid setState during render)
+  useEffect(() => {
+    if (job && job.id !== notesLoaded) {
+      setNotes(job.notes || "");
+      setNotesLoaded(job.id);
+      setSelectedTemplates([]);
+    }
+  }, [job, notesLoaded]);
 
   const bulkCount = selectedContactIds?.size || 0;
   const hasBulkSelection = bulkCount > 0;
@@ -114,7 +116,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <span className="text-lg">{getCountryFlag(job.country_code)}</span>
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>{job.city}, {job.country_name}</span>
+                  <span>{job.city || ""}{job.city && job.country_name ? ", " : ""}{job.country_name || ""}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

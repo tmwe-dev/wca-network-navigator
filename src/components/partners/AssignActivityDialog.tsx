@@ -91,7 +91,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           activity_type: activityType as any,
           title: effectiveTitle,
           description: description.trim() || null,
-          assigned_to: assignedTo || null,
+          assigned_to: assignedTo && assignedTo !== "none" ? assignedTo : null,
           priority,
           due_date: dueDate || null,
           scheduled_at: scheduledAt || null,
@@ -122,6 +122,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
     setTitle("");
     setDescription("");
     setActivityType("follow_up");
+    setAssignedTo("");
     setPriority("medium");
     setDueDate("");
     setScheduledAt("");

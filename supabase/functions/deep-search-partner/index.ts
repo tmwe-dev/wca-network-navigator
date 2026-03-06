@@ -31,21 +31,14 @@ async function consumeCredits(userId: string, totalTokens: { prompt: number; com
   const total = inputCost + outputCost
   if (total <= 0) return
 
-  const { data: credits } = await supabase.from('user_credits').select('balance, total_consumed').eq('user_id', userId).single()
-  if (!credits) return
-
-  await supabase.from('user_credits').update({
-    balance: Math.max(0, credits.balance - total),
-    total_consumed: credits.total_consumed + total,
-  }).eq('user_id', userId)
-
-  await supabase.from('credit_transactions').insert({
-    user_id: userId,
-    amount: -total,
-    operation: 'ai_call',
-    description: `deep-search-partner: ${totalTokens.prompt} in + ${totalTokens.completion} out`,
+  const { data } = await supabase.rpc('deduct_credits', {
+    p_user_id: userId,
+    p_amount: total,
+    p_operation: 'ai_call',
+    p_description: `deep-search-partner: ${totalTokens.prompt} in + ${totalTokens.completion} out`,
   })
-  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`)
+  const row = data?.[0]
+  console.log(`Credits consumed: ${total} (success: ${row?.success}, balance: ${row?.new_balance})`)
 }
 
 // Helper: Firecrawl search
@@ -161,11 +154,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // ── Auth & BYOK check ──
+    // ── Auth & BYOK check (REQUIRED) ──
     const userId = await getUserId(req, supabase)
-    const byok = userId ? await isByok(userId, supabase) : false
+    if (!userId) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const byok = await isByok(userId, supabase)
 
-    if (userId && !byok) {
+    if (!byok) {
       const { data: credits } = await supabase.from('user_credits').select('balance').eq('user_id', userId).single()
       if (!credits || credits.balance < 10) {
         return new Response(

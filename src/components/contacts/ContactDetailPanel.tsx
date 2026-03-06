@@ -180,7 +180,7 @@ export function ContactDetailPanel({ contact }: Props) {
 
       {/* Dates */}
       <div className="text-[11px] text-muted-foreground space-y-0.5">
-        <p>Importato: {format(new Date(c.created_at), "dd MMM yyyy", { locale: it })}</p>
+        {c.created_at && <p>Importato: {format(new Date(c.created_at), "dd MMM yyyy", { locale: it })}</p>}
         {c.last_interaction_at && (
           <p>Ultima interazione: {format(new Date(c.last_interaction_at), "dd MMM yyyy", { locale: it })}</p>
         )}

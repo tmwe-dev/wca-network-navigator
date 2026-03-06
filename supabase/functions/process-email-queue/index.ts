@@ -185,14 +185,16 @@ Deno.serve(async (req) => {
         await supabase.from("email_campaign_queue").update({
           status: "failed",
           error_message: errorMsg,
-          retry_count: item.retry_count + 1,
+          retry_count: (item.retry_count || 0) + 1,
         }).eq("id", item.id);
         failedCount++;
       }
 
-      // Update draft counters
+      // Update draft counters (atomic increment via raw SQL-like approach)
+      const { data: currentDraft } = await supabase.from("email_drafts").select("sent_count").eq("id", draft_id).single();
+      const cumulativeSent = (currentDraft?.sent_count || 0) + 1;
       await supabase.from("email_drafts").update({
-        sent_count: sentCount,
+        sent_count: cumulativeSent,
       }).eq("id", draft_id);
 
       // Delay between sends

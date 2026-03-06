@@ -152,6 +152,11 @@ export function useProcessQueue() {
         if ((draft as any)?.queue_status === "paused" || (draft as any)?.queue_status === "cancelled") {
           break;
         }
+
+        // Delay between batch invocations to avoid hammering the server
+        if (!completed) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
       } catch (err) {
         console.error("Queue processing error:", err);
         toast.error("Errore nel processing della coda");

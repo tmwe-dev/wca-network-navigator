@@ -183,13 +183,22 @@ export function useContactsForPartners(partnerIds: string[]) {
     queryKey: ["partner-contacts-map", partnerIds],
     queryFn: async () => {
       if (!partnerIds.length) return {} as Record<string, PartnerContactRecord[]>;
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, partner_id, name, email, direct_phone, mobile, title, is_primary, contact_alias")
-        .in("partner_id", partnerIds);
-      if (error) throw error;
+      
+      // Batch .in() calls in chunks of 100 to avoid URL length limits
+      const CHUNK = 100;
+      const allData: any[] = [];
+      for (let i = 0; i < partnerIds.length; i += CHUNK) {
+        const chunk = partnerIds.slice(i, i + CHUNK);
+        const { data, error } = await supabase
+          .from("partner_contacts")
+          .select("id, partner_id, name, email, direct_phone, mobile, title, is_primary, contact_alias")
+          .in("partner_id", chunk);
+        if (error) throw error;
+        if (data) allData.push(...data);
+      }
+      
       const map: Record<string, PartnerContactRecord[]> = {};
-      (data || []).forEach((c) => {
+      allData.forEach((c) => {
         if (!map[c.partner_id]) map[c.partner_id] = [];
         map[c.partner_id].push(c as PartnerContactRecord);
       });

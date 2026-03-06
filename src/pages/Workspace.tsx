@@ -131,23 +131,34 @@ export default function Workspace() {
     setBatchGenerating(true);
     setBatchProgress({ current: 0, total: toGenerate.length });
     let generated = 0;
+    let failed = 0;
     for (const activity of toGenerate) {
-      setBatchProgress({ current: generated + 1, total: toGenerate.length });
+      setBatchProgress({ current: generated + failed + 1, total: toGenerate.length });
       try {
         const result = await generate({ activity_id: activity.id, goal, base_proposal: baseProposal, document_ids: documents.map((d) => d.id), reference_urls: referenceLinks, quality });
         if (result) {
           handleEmailGenerated(activity.id, { subject: result.subject, body: result.body, contactEmail: result.contact_email, partnerName: result.partner_name, contactName: result.contact_name, activityId: activity.id });
+          generated++;
+        } else {
+          failed++;
         }
-      } catch { /* continue */ }
-      generated++;
-      if (generated < toGenerate.length) await new Promise((r) => setTimeout(r, 500));
+      } catch {
+        failed++;
+      }
+      if (generated + failed < toGenerate.length) await new Promise((r) => setTimeout(r, 500));
     }
     setBatchGenerating(false);
     setBatchProgress(null);
     setCurrentEmailIndex(0);
     queryClient.invalidateQueries({ queryKey: ["sorting-jobs"] });
     queryClient.invalidateQueries({ queryKey: ["all-activities"] });
-    toast({ title: `${generated} email generate con successo` });
+    if (generated > 0 && failed === 0) {
+      toast({ title: `${generated} email generate con successo` });
+    } else if (generated > 0) {
+      toast({ title: `${generated} email generate, ${failed} fallite`, variant: "destructive" });
+    } else {
+      toast({ title: `Generazione fallita per tutte le ${failed} email`, variant: "destructive" });
+    }
   };
 
   const emailKeys = Array.from(generatedEmails.keys());

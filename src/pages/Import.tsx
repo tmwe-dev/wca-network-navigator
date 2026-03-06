@@ -402,7 +402,7 @@ export default function Import() {
     } finally {
       setUploading(false);
     }
-  }, [aiMapping, pendingFile, pendingRows, createFromParsed]);
+  }, [aiMapping, pendingFile, pendingRows, createFromParsed, groupName]);
 
   // Change mapping target via Select dropdown (with duplicate prevention)
   const handleMappingTargetChange = useCallback((srcKey: string, newTarget: string) => {

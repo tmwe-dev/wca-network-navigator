@@ -1821,6 +1821,10 @@ export type Database = {
           member_count: number
         }[]
       }
+      increment_contact_interaction: {
+        Args: { p_contact_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"

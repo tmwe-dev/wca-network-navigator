@@ -17,6 +17,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -110,8 +111,9 @@ export default function EmailCanvas({
     if (!displayEmail?.contactEmail) { toast({ title: "Nessun indirizzo email", variant: "destructive" }); return; }
     setSending(true);
     try {
+      const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
       const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { to: displayEmail.contactEmail, subject: displaySubject, html: displayBody.replace(/\n/g, "<br>") },
+        body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
