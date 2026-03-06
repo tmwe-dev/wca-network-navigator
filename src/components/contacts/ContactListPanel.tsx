@@ -214,6 +214,38 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             }
           }
           break;
+        case "create_jobs":
+          if (c.contact_ids?.length) {
+            try {
+              const { data: contacts } = await supabase
+                .from("imported_contacts")
+                .select("id, company_name, name, email, phone, country, city")
+                .in("id", c.contact_ids.slice(0, 200));
+              if (!contacts?.length) {
+                toast({ title: "Nessun contatto trovato", variant: "destructive" });
+                break;
+              }
+              const batchId = `contacts_${Date.now()}`;
+              const jobs = contacts.map((ct: any) => ({
+                partner_id: ct.id,
+                company_name: ct.company_name || ct.name || "Contatto",
+                country_code: ct.country || "XX",
+                country_name: ct.country || "Sconosciuto",
+                city: ct.city || null,
+                email: ct.email || null,
+                phone: ct.phone || null,
+                job_type: "email" as const,
+                batch_id: batchId,
+              }));
+              await supabase.from("campaign_jobs").insert(jobs);
+              toast({ title: "Job creati", description: `${jobs.length} job aggiunti al batch ${batchId.slice(-6)}` });
+              selection.clear();
+              setSelectedGroups(new Set());
+              navigate("/campaign-jobs");
+            } catch (e: any) {
+              toast({ title: "Errore", description: e.message, variant: "destructive" });
+            }
+          }
         case "multi":
           if (c.commands) {
             for (const sub of c.commands) await exec(sub);
