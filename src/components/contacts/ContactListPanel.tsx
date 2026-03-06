@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Mail, Phone, Search, Megaphone, RefreshCw, ChevronLeft, ChevronRight,
   AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles, Loader2,
-  MapPin, Tag, ArrowUpAZ, ArrowDownAZ
+  MapPin, Tag
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolveCountryCode, getCountryFlag } from "@/lib/countries";
@@ -401,24 +401,9 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         countries={countries}
         origins={origins}
         groupCounts={allGroupCounts}
+        sortKey={sortKey}
+        onSortChange={(v) => setSortKey(v as SortKey)}
       />
-
-      {/* Sort bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-card/50">
-        <ArrowUpAZ className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Ordina:</span>
-        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-          <SelectTrigger className="h-6 text-[10px] w-auto min-w-[100px] border-border/50">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="company">Azienda A→Z</SelectItem>
-            <SelectItem value="name">Nome A→Z</SelectItem>
-            <SelectItem value="city">Città A→Z</SelectItem>
-            <SelectItem value="date">Data ↓</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Bulk actions */}
       {selection.count > 0 && (
