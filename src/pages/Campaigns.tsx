@@ -328,6 +328,8 @@ export default function Campaigns() {
             const { supabase } = await import("@/integrations/supabase/client");
             const rows = campaignPartners.map(p => ({
               partner_id: p.id,
+              source_type: "partner" as const,
+              source_id: p.id,
               activity_type: "send_email" as const,
               title: `Campagna Email - ${p.company_name}`,
               campaign_batch_id: batchId,

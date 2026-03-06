@@ -82,6 +82,8 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
         const chunk = partnerIds.slice(i, i + CHUNK);
         const activities = chunk.map((pid) => ({
           partner_id: pid,
+          source_type: "partner" as const,
+          source_id: pid,
           activity_type: activityType as any,
           title: effectiveTitle,
           description: description.trim() || null,
