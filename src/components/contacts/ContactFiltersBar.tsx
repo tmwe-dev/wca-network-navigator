@@ -1,8 +1,16 @@
+import { useState } from "react";
+import { format, parse } from "date-fns";
+import { it } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Search, FolderOpen, Globe, MapPin, Tag, Calendar, Plane, PlaneLanding, List } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
+  ArrowUpAZ, X
+} from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
@@ -23,8 +31,15 @@ const GROUP_MODES = [
   { value: "country", icon: Globe, label: "Paese" },
   { value: "origin", icon: MapPin, label: "Origine" },
   { value: "status", icon: Tag, label: "Status" },
-  { value: "date", icon: Calendar, label: "Data" },
+  { value: "date", icon: CalendarIcon, label: "Data" },
 ] as const;
+
+const SORT_OPTIONS = [
+  { value: "company", label: "Azienda A→Z" },
+  { value: "name", label: "Nome A→Z" },
+  { value: "city", label: "Città A→Z" },
+  { value: "date", label: "Data ↓" },
+];
 
 interface Props {
   filters: ContactFilters;
@@ -35,26 +50,62 @@ interface Props {
   groupCounts?: ContactGroupCount[];
   totalContacts?: number;
   selectedCount?: number;
-  sortKey?: string;
+  sortKey: string;
+  onSortChange: (key: string) => void;
   onAICommand?: (cmd: AICommand) => void;
 }
 
-function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
+function DatePickerButton({ value, onChange, placeholder }: {
+  value?: string;
+  onChange: (v: string | undefined) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const date = value ? new Date(value + "T00:00:00") : undefined;
+
   return (
-    <div className="space-y-1 min-w-0">
-      <label className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-        <Icon className="w-3 h-3 shrink-0" />
-        {label}
-      </label>
-      {children}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "h-7 flex-1 justify-start text-left text-[10px] font-normal px-2 gap-1.5 min-w-0",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="w-3 h-3 shrink-0" />
+          {date ? format(date, "dd/MM/yyyy") : <span className="truncate">{placeholder}</span>}
+          {date && (
+            <X
+              className="w-3 h-3 ml-auto shrink-0 hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); onChange(undefined); }}
+            />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => {
+            onChange(d ? format(d, "yyyy-MM-dd") : undefined);
+            setOpen(false);
+          }}
+          initialFocus
+          locale={it}
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
-export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups, groupCounts, totalContacts, selectedCount, sortKey, onAICommand }: Props) {
+export function ContactFiltersBar({
+  filters, onChange, countries, origins, importGroups, groupCounts,
+  totalContacts, selectedCount, sortKey, onSortChange, onAICommand
+}: Props) {
   const currentGroupBy = filters.groupBy || "country";
 
-  // Build count maps from groupCounts
   const countryCounts: Record<string, number> = {};
   const originCounts: Record<string, number> = {};
   const statusCounts: Record<string, number> = {};
@@ -65,27 +116,144 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
     else if (g.group_type === "status") statusCounts[g.group_key] = g.contact_count;
   });
 
+  const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId || filters.search);
+
   return (
-    <div className="flex flex-col gap-2 p-3 border-b border-border bg-card/50 shrink-0 max-h-[40vh] overflow-y-auto">
-      {/* Row 0: AI Bar */}
+    <div className="flex flex-col gap-1.5 p-2 border-b border-border bg-card/50 shrink-0">
+      {/* AI Bar */}
       {onAICommand && (
         <ContactAIBar
           filters={filters}
           totalContacts={totalContacts ?? 0}
           selectedCount={selectedCount ?? 0}
-          sortKey={sortKey ?? "company"}
+          sortKey={sortKey}
           onAICommand={onAICommand}
         />
       )}
-      {/* Row 1: Import group */}
-      {importGroups && importGroups.length > 0 && (
-        <FilterBlock icon={FolderOpen} label="Gruppo di carico">
+
+      {/* Row 1: Search */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <Input
+          value={filters.search ?? ""}
+          onChange={(e) => onChange({ search: e.target.value })}
+          placeholder="Cerca azienda, nome, email…"
+          className="h-7 pl-8 text-xs"
+        />
+      </div>
+
+      {/* Row 2: Group + Holding Pattern */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {GROUP_MODES.map(({ value, icon: Icon, label }) => (
+          <Button
+            key={value}
+            variant={currentGroupBy === value ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-6 w-6 p-0", currentGroupBy === value && "shadow-sm")}
+            title={label}
+            onClick={() => onChange({ groupBy: value as ContactFilters["groupBy"] })}
+          >
+            <Icon className="w-3 h-3" />
+          </Button>
+        ))}
+
+        <Separator orientation="vertical" className="h-4 mx-1" />
+
+        {([
+          { value: "all" as const, icon: List, label: "Tutti" },
+          { value: "in" as const, icon: Plane, label: "In circuito" },
+          { value: "out" as const, icon: PlaneLanding, label: "Da lavorare" },
+        ]).map(({ value, icon: Icon, label }) => {
+          const active = (filters.holdingPattern ?? "all") === value;
+          return (
+            <Button
+              key={value}
+              variant={active ? "default" : "ghost"}
+              size="sm"
+              className={cn("h-6 px-1.5 gap-1 text-[10px]", active && "shadow-sm")}
+              onClick={() => onChange({ holdingPattern: value })}
+            >
+              <Icon className="w-3 h-3" />
+              <span className="hidden sm:inline">{label}</span>
+            </Button>
+          );
+        })}
+
+        {hasActiveFilters && (
+          <>
+            <Separator orientation="vertical" className="h-4 mx-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 gap-1 text-[10px] text-destructive hover:text-destructive"
+              onClick={() => onChange({
+                country: undefined, origin: undefined, leadStatus: undefined,
+                dateFrom: undefined, dateTo: undefined, importLogId: undefined, search: ""
+              })}
+            >
+              <X className="w-3 h-3" /> Reset
+            </Button>
+          </>
+        )}
+      </div>
+
+      {/* Row 3: Inline filters grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        <Select value={filters.country ?? "all"} onValueChange={(v) => onChange({ country: v === "all" ? undefined : v })}>
+          <SelectTrigger className="h-7 text-[10px]">
+            <Globe className="w-3 h-3 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Paese" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i paesi</SelectItem>
+            {countries.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}{countryCounts[c] ? ` (${countryCounts[c]})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.origin ?? "all"} onValueChange={(v) => onChange({ origin: v === "all" ? undefined : v })}>
+          <SelectTrigger className="h-7 text-[10px]">
+            <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Origine" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le origini</SelectItem>
+            {origins.map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}{originCounts[o] ? ` (${originCounts[o]})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.leadStatus ?? "all"}
+          onValueChange={(v) => onChange({ leadStatus: v === "all" ? undefined : v as LeadStatus })}
+        >
+          <SelectTrigger className="h-7 text-[10px]">
+            <Tag className="w-3 h-3 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}{s.value !== "all" && statusCounts[s.value] ? ` (${statusCounts[s.value]})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {importGroups && importGroups.length > 0 ? (
           <Select
             value={filters.importLogId ?? "all"}
             onValueChange={(v) => onChange({ importLogId: v === "all" ? undefined : v })}
           >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Tutti i gruppi" />
+            <SelectTrigger className="h-7 text-[10px]">
+              <FolderOpen className="w-3 h-3 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="Gruppo" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti i gruppi</SelectItem>
@@ -96,137 +264,39 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
               ))}
             </SelectContent>
           </Select>
-        </FilterBlock>
-      )}
-
-      {/* Row 2: Search */}
-      <FilterBlock icon={Search} label="Cerca">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            value={filters.search ?? ""}
-            onChange={(e) => onChange({ search: e.target.value })}
-            placeholder="Azienda, nome, email…"
-            className="h-8 pl-8 text-xs"
-          />
-        </div>
-      </FilterBlock>
-
-      {/* Row 3: Grouping icons + Holding pattern filter */}
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mr-1">Raggruppa:</span>
-        {GROUP_MODES.map(({ value, icon: Icon, label }) => (
-          <Button
-            key={value}
-            variant={currentGroupBy === value ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "h-7 w-7 p-0",
-              currentGroupBy === value && "shadow-sm"
-            )}
-            title={label}
-            onClick={() => onChange({ groupBy: value as ContactFilters["groupBy"] })}
-          >
-            <Icon className="w-3.5 h-3.5" />
-          </Button>
-        ))}
-
-        <Separator orientation="vertical" className="h-5 mx-1.5" />
-
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mr-1">Circuito:</span>
-        {([
-          { value: "all" as const, icon: List, label: "Tutti" },
-          { value: "in" as const, icon: Plane, label: "In attesa" },
-          { value: "out" as const, icon: PlaneLanding, label: "Da lavorare" },
-        ]).map(({ value, icon: Icon, label }) => {
-          const active = (filters.holdingPattern ?? "all") === value;
-          return (
-            <Button
-              key={value}
-              variant={active ? "default" : "ghost"}
-              size="sm"
-              className={cn("h-7 px-1.5 gap-1 text-[10px]", active && "shadow-sm")}
-              title={label}
-              onClick={() => onChange({ holdingPattern: value })}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{label}</span>
-            </Button>
-          );
-        })}
+        ) : (
+          <div /> /* empty cell */
+        )}
       </div>
 
-      {/* Row 4: Filters grid */}
-      <div className="grid grid-cols-3 gap-2">
-        <FilterBlock icon={Globe} label="Paese">
-          <Select value={filters.country ?? "all"} onValueChange={(v) => onChange({ country: v === "all" ? undefined : v })}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Tutti" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              {countries.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}{countryCounts[c] ? ` (${countryCounts[c]})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterBlock>
+      {/* Row 4: Date pickers + Sort */}
+      <div className="flex items-center gap-1.5">
+        <DatePickerButton
+          value={filters.dateFrom}
+          onChange={(v) => onChange({ dateFrom: v })}
+          placeholder="Dal"
+        />
+        <span className="text-[10px] text-muted-foreground shrink-0">→</span>
+        <DatePickerButton
+          value={filters.dateTo}
+          onChange={(v) => onChange({ dateTo: v })}
+          placeholder="Al"
+        />
 
-        <FilterBlock icon={MapPin} label="Origine">
-          <Select value={filters.origin ?? "all"} onValueChange={(v) => onChange({ origin: v === "all" ? undefined : v })}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Tutte" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte</SelectItem>
-              {origins.map((o) => (
-                <SelectItem key={o} value={o}>
-                  {o}{originCounts[o] ? ` (${originCounts[o]})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterBlock>
+        <Separator orientation="vertical" className="h-4 mx-0.5" />
 
-        <FilterBlock icon={Tag} label="Status">
-          <Select
-            value={filters.leadStatus ?? "all"}
-            onValueChange={(v) => onChange({ leadStatus: v === "all" ? undefined : v as LeadStatus })}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Tutti" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}{s.value !== "all" && statusCounts[s.value] ? ` (${statusCounts[s.value]})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterBlock>
+        <Select value={sortKey} onValueChange={onSortChange}>
+          <SelectTrigger className="h-7 text-[10px] w-auto min-w-[110px]">
+            <ArrowUpAZ className="w-3 h-3 shrink-0 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-
-      {/* Row 5: Date range */}
-      <FilterBlock icon={Calendar} label="Periodo">
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={filters.dateFrom ?? ""}
-            onChange={(e) => onChange({ dateFrom: e.target.value || undefined })}
-            className="h-8 flex-1 text-xs"
-          />
-          <span className="text-xs text-muted-foreground">→</span>
-          <Input
-            type="date"
-            value={filters.dateTo ?? ""}
-            onChange={(e) => onChange({ dateTo: e.target.value || undefined })}
-            className="h-8 flex-1 text-xs"
-          />
-        </div>
-      </FilterBlock>
     </div>
   );
 }
