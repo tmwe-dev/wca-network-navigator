@@ -12,6 +12,7 @@ export interface ContactFilters {
   dateTo?: string;
   hasDeepSearch?: boolean;
   hasAlias?: boolean;
+  holdingPattern?: "out" | "in" | "all";
   groupBy?: "country" | "origin" | "status" | "date";
   importLogId?: string;
   page?: number;
@@ -87,6 +88,8 @@ export function useContacts(filters: ContactFilters = {}) {
       if (filters.hasDeepSearch === true) q = q.not("deep_search_at", "is", null);
       if (filters.hasDeepSearch === false) q = q.is("deep_search_at", null);
       if (filters.hasAlias === true) q = q.not("company_alias", "is", null);
+      if (filters.holdingPattern === "out") q = q.eq("interaction_count", 0);
+      else if (filters.holdingPattern === "in") q = q.gt("interaction_count", 0);
 
       const from = page * pageSize;
       const to = from + pageSize - 1;

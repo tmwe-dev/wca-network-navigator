@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, FolderOpen, Globe, MapPin, Tag, Calendar } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Search, FolderOpen, Globe, MapPin, Tag, Calendar, Plane, PlaneLanding, List } from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
@@ -96,7 +97,7 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
         </div>
       </FilterBlock>
 
-      {/* Row 3: Grouping icons */}
+      {/* Row 3: Grouping icons + Holding pattern filter */}
       <div className="flex items-center gap-1">
         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mr-1">Raggruppa:</span>
         {GROUP_MODES.map(({ value, icon: Icon, label }) => (
@@ -114,6 +115,30 @@ export function ContactFiltersBar({ filters, onChange, countries, origins, impor
             <Icon className="w-3.5 h-3.5" />
           </Button>
         ))}
+
+        <Separator orientation="vertical" className="h-5 mx-1.5" />
+
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mr-1">Circuito:</span>
+        {([
+          { value: "all" as const, icon: List, label: "Tutti" },
+          { value: "in" as const, icon: Plane, label: "In attesa" },
+          { value: "out" as const, icon: PlaneLanding, label: "Da lavorare" },
+        ]).map(({ value, icon: Icon, label }) => {
+          const active = (filters.holdingPattern ?? "all") === value;
+          return (
+            <Button
+              key={value}
+              variant={active ? "default" : "ghost"}
+              size="sm"
+              className={cn("h-7 px-1.5 gap-1 text-[10px]", active && "shadow-sm")}
+              title={label}
+              onClick={() => onChange({ holdingPattern: value })}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{label}</span>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Row 4: Filters grid */}
