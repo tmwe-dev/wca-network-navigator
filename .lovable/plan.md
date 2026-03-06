@@ -1,91 +1,116 @@
 
 
-## Analisi: Come si integrano i tre sistemi e proposta di separazione
+# Analisi completa: Gestione Contatti, Partner Hub e Sincronizzazione Workspace
 
-### Le tre origini dati oggi
+## 1. Stato attuale della sincronizzazione
+
+### Flusso dati per origine
 
 ```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  OPERATIONS/WCA  │    │  PROSPECT CENTER │    │   CONTATTI       │
-│  (partners)      │    │  (prospects)     │    │ (imported_contacts)│
-│                  │    │                  │    │                   │
-│ Tabella: partners│    │ Tabella: prospects│   │ Tab: imported_    │
-│ Contatti: partner│    │ Contatti: prospect│   │     contacts      │
-│  _contacts       │    │  _contacts       │   │                   │
-│ Origin: WCA      │    │ Origin: Report   │   │ Origin: file CSV  │
-│                  │    │  Aziende         │   │  (import_logs)    │
-└────────┬─────────┘    └────────┬─────────┘   └────────┬──────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                     ACTIVITIES (tabella unica)                   │
-│  partner_id → partners.id                                        │
-│  activity_type: send_email | phone_call | meeting | follow_up    │
-│                                                                  │
-│  ⚠️ PROBLEMA: partner_id e' FK verso "partners" soltanto        │
-│  → prospects e imported_contacts NON possono creare activities   │
-└──────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                     WORKSPACE                                     │
-│  Filtra activities con status != completed e type = send_email    │
-│  Genera email usando partner data + partner_contacts              │
-│  ⚠️ Funziona SOLO con dati da "partners"                         │
-└──────────────────────────────────────────────────────────────────┘
+ORIGINE              TABELLA SORGENTE        → activities           → Workspace           → generate-email
+─────────────────────────────────────────────────────────────────────────────────────────────────────────
+WCA (Partner Hub)    partners +               partner_id=UUID       source_type=partner   Legge partners +
+                     partner_contacts         source_type=partner   JOIN su partners.*    partner_contacts ✅
+                                              source_id=partner.id
+
+Contatti (CSV)       imported_contacts        partner_id=NULL       source_type=contact   Legge imported_
+                                              source_type=contact   Fallback su title     contacts ✅
+                                              source_id=contact.id
+
+Prospect (RA)        prospects +              ❌ NESSUN PUNTO       source_type=prospect  Legge prospects +
+                     prospect_contacts        DI INGRESSO           (codice pronto ma     prospect_contacts ✅
+                                                                    nessuna activity
+                                                                    viene mai creata)
 ```
 
-### Il problema tecnico centrale
+### Problemi identificati
 
-La tabella `activities` ha `partner_id UUID NOT NULL` che punta a `partners`. Questo significa:
+**A. Prospect: pipeline morta**
+- Il Workspace filtra per `source_type === "prospect"` (linea 59 di Workspace.tsx), ma **nessuna pagina crea activities con `source_type: 'prospect'`**.
+- ProspectCenter (`src/pages/ProspectCenter.tsx`) non ha un AssignActivityDialog.
+- Il codice nel generate-email (linee 136-184) per prospect e' pronto ma inutilizzato.
 
-1. **Partner Hub / Operations** → Seleziono partner → `AssignActivityDialog` crea activity con `partner_id` → Workspace le legge con join su `partners(company_name, ...)` e `partner_contacts(email, ...)` → Genera email → Funziona perfettamente.
+**B. Workspace ContactListPanel: hardcoded su partner data**
+- Linee 94-99: la ricerca cerca solo in `a.partners?.company_name`, `a.partners?.city`, ecc.
+- Linee 117-118: il raggruppamento usa `a.partners?.country_code || "??"` — per source_type=contact questo restituisce sempre "??" perche' `partners` e' null.
+- Linee 200-206: il display usa `activity.partners?.company_alias`, `activity.partners?.enriched_at`, `activity.partners?.website` — tutti null per contatti importati.
+- Linea 87: `linkedinMap` cerca solo in `partner_social_links` con `partner_id` — non funziona per contatti.
 
-2. **Prospect Center** → I prospect vivono nella tabella `prospects` con contatti in `prospect_contacts`. NON possono creare activities perche' `partner_id` non punta a `prospects`.
+**C. EmailCanvas: dati mancanti per non-partner**
+- Linea 64-66: `partnerId = activity?.partner_id` → null per contatti, quindi `useSocialLinks(null)` non restituisce nulla.
+- Linea 241: `partner?.country_code`, `partner?.city`, `partner?.country_name` — tutti null per contatti importati, mostrando "🏳 , ".
+- Il fallback a linea 214 (`activity?.title`) funziona parzialmente ma non mostra company/contact info strutturata.
 
-3. **Contatti (imported_contacts)** → Il `send_to_workspace` che abbiamo appena implementato tenta di matchare per `company_name` con `partners` e creare activity. Se il match fallisce, l'activity non viene creata. I contatti importati da CSV che non esistono in WCA **non possono entrare nel Workspace**.
+**D. Deep Search nel Workspace: rotto per non-partner**
+- Linea 114: `handleDeepSearch` prende `a.partner_id` — null per contatti, quindi la deep search non parte.
 
-### Come funziona oggi il flusso job per origine
+### Dimensione file (candidati refactoring)
 
-| Passaggio | Partners (WCA) | Prospects (RA) | Imported Contacts |
-|-----------|---------------|----------------|-------------------|
-| Selezione | Partner Hub multi-select | ProspectCenter (non ha assign) | Contacts AI command |
-| Assign Job | `AssignActivityDialog` → `activities` | Non supportato | `send_to_workspace` (match fragile) |
-| Workspace | Legge `activities` + `partners` join | Non accessibile | Solo se match riesce |
-| Email gen | `partner_contacts` + `partners.enrichment_data` | N/A | N/A |
-| Campaign | `campaign_jobs` (partner_id) | N/A | N/A |
+| File | Righe | Stato |
+|------|-------|-------|
+| `src/pages/PartnerHub.tsx` | **692** | Troppo grande — mescola lista, filtri, dettaglio, workbench |
+| `src/components/contacts/ContactListPanel.tsx` | **620** | Troppo grande — contiene card, group strip, expanded content, AI commands, export logic |
+| `supabase/functions/generate-email/index.ts` | **477** | Grande ma coerente — potrebbe splittare prompt building |
+| `src/components/contacts/ContactFiltersBar.tsx` | **339** | Moderato — gestibile |
+| `src/components/workspace/ContactListPanel.tsx` | **308** | Moderato ma hardcoded su partner |
+| `src/pages/Workspace.tsx` | **305** | Moderato — OK |
+| `src/components/workspace/EmailCanvas.tsx` | **300** | Moderato — OK |
+| `src/components/contacts/ContactDetailPanel.tsx` | **259** | OK |
+| `src/pages/HubOperativo.tsx` | **230** | OK |
+| `src/hooks/useActivities.ts` | **~170** | OK |
 
-### Proposta: Architettura a 3 contesti con pipeline unificata
+## 2. Piano di refactoring proposto
 
-L'idea dell'utente e' corretta: separare i tre contesti ma mantenere la stessa UX operativa. Servono due cambiamenti architetturali:
+### Fase 1 — Fix sincronizzazione Workspace per contatti importati
 
-**Opzione A — Tabella `activities` polimorfica** (consigliata)
+Correggere il `workspace/ContactListPanel.tsx` per leggere i dati corretti in base a `source_type`:
+- **Ricerca**: cercare anche in `activity.title` e `activity.description` quando `partners` e' null
+- **Raggruppamento**: usare il country dall'`imported_contacts` (memorizzato in description o fetchato da source_id)
+- **Display**: mostrare nome/azienda dal title dell'activity con fallback strutturato
+- **Deep Search**: disabilitare per source_type !== "partner" (non applicabile)
 
-Aggiungere alla tabella `activities`:
-- `source_type TEXT` → `'partner'` | `'prospect'` | `'contact'`
-- `source_id UUID` → ID generico (partner_id, prospect_id, o imported_contact_id)
-- Rendere `partner_id` nullable (backward compatible)
+### Fase 2 — Aggiungere AssignActivityDialog per Prospect
 
-Il Workspace legge `source_type` e fa il join corretto. Il generatore email adatta il contesto.
+Creare un punto di ingresso nel ProspectCenter per selezionare prospect e creare activities con `source_type: 'prospect'`, completando la pipeline.
 
-**Opzione B — Hub di navigazione con 3 sotto-workspace**
+### Fase 3 — Refactoring file grandi
 
-Una pagina "Centro Operativo" con 3 tab:
-- Tab WCA → filtra activities dove source=partner
-- Tab Prospect → filtra activities dove source=prospect  
-- Tab Contatti → filtra activities dove source=contact
+**`ContactListPanel.tsx` (620 righe) → 4 file:**
+- `ContactCard.tsx` (~80 righe) — componente singola card
+- `GroupStrip.tsx` (~80 righe) — header gruppo espandibile
+- `ExpandedGroupContent.tsx` (~60 righe) — contenuto gruppo paginato
+- `ContactListPanel.tsx` (~400 righe) — logica principale, filtri, AI commands
 
-Stessi componenti (`EmailCanvas`, `QualitySelector`, `GoalBar`), diverso data source.
+**`PartnerHub.tsx` (692 righe) → 3 file:**
+- `PartnerListSidebar.tsx` (~250 righe) — lista laterale con filtri e cards
+- `PartnerCard.tsx` (gia' esiste ma sottoutilizzato)
+- `PartnerHub.tsx` (~300 righe) — layout, routing livelli, dettaglio
 
-### Riepilogo problemi attuali
+### Fase 4 — Arricchire activity con metadati sorgente
 
-1. **`activities.partner_id` non nullable** → prospects e imported_contacts esclusi dal workflow
-2. **Workspace join hardcoded** su `partners` + `partner_contacts` → non legge altre origini
-3. **`campaign_jobs.partner_id`** → stessa limitazione per le campagne
-4. **`send_to_workspace` in ContactListPanel** → match per company_name fragile, fallisce se il contatto non esiste in `partners`
-5. **Nessun `AssignActivityDialog` equivalente** per prospects e imported_contacts
+Aggiungere alla tabella `activities` un campo opzionale `source_meta JSONB` per cacheare i dati essenziali della sorgente (company_name, country, email, city) al momento della creazione. Questo elimina la necessita' di join polimorfici nel Workspace e rende il display immediato.
 
-### Prossimi passi suggeriti
+```sql
+ALTER TABLE activities ADD COLUMN source_meta jsonb DEFAULT '{}'::jsonb;
+```
 
-La separazione richiede una migrazione DB (rendere `partner_id` nullable, aggiungere `source_type`/`source_id`) e refactoring del Workspace. E' un intervento strutturale che va pianificato in modo dedicato. Vuoi che prepari il piano di implementazione completo?
+Al momento della creazione dell'activity, salvare:
+```json
+{
+  "company_name": "...",
+  "contact_name": "...", 
+  "email": "...",
+  "country": "...",
+  "city": "..."
+}
+```
+
+Questo risolve tutti i problemi di display nel Workspace senza query aggiuntive.
+
+### Ordine di implementazione consigliato
+
+1. **Fase 4** (source_meta) — risolve la radice del problema
+2. **Fase 1** (fix Workspace) — usa source_meta per display corretto
+3. **Fase 3** (refactoring file) — pulizia codice
+4. **Fase 2** (Prospect assign) — completa la pipeline
 
