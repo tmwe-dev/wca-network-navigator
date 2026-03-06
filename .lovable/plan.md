@@ -1,60 +1,62 @@
 
 
-## Piano: Fix mapping colonne e UI di selezione
+## Piano: Ricostruzione ContactListPanel con gruppi collassabili e azioni complete
 
-### Problemi identificati
+### Cosa cambia
 
-**Bug 1 — Dati mischiati (causa principale)**: `parseFile` restituisce le righe come `string[][]` (array di array), ma il codice le usa come se fossero oggetti `{header: value}`. Quando l'AI restituisce un mapping tipo `{"Città": "city"}`, il sistema cerca `row["Città"]` su un array — non trova nulla o trova dati sbagliati. Questo causa la duplicazione della città e i campi invertiti.
+**1. Gruppi collassabili (accordion) nel pannello sinistro**
 
-**Bug 2 — Nessun dropdown per cambiare destinazione**: L'interfaccia di mapping permette solo di trascinare e scambiare le destinazioni tra colonne già mappate. Non c'è modo di selezionare una destinazione diversa da un menu a tendina — se la colonna "Città" è stata mappata a "country", non puoi correggerla a "city" senza che un'altra colonna sia già mappata a "city".
+Attualmente i gruppi mostrano tutti i contatti aperti. Il nuovo comportamento:
+- Ogni gruppo appare come una **striscia cliccabile** (es. "🇮🇹 Italy — 42 contatti") con contatori inline (email, telefono, deep search)
+- Cliccando la striscia si **espande/collassa** il gruppo mostrando i contatti al suo interno
+- Di default tutti i gruppi sono collassati — l'utente vede solo le strisce
+- Funziona per qualsiasi raggruppamento (Paese, Origine, Status, Data)
 
-### Correzioni
+**2. Card contatto con distinzione chiara azienda/contatto**
 
-#### 1. Conversione righe da array a oggetti (file: `Import.tsx`)
+Ogni card mostra:
+- **Riga 1**: Nome azienda in grassetto (o "Senza nome" in corsivo)
+- **Riga 2**: Icona persona + nome contatto + posizione
+- **Riga 3**: Icone rapide inline — ✉ email (link mailto), 📱 WhatsApp (link wa.me), ☎ telefono (link tel)
+- Holding pattern compatto a destra
 
-Dopo il parsing, convertire ogni riga da `string[]` a `Record<string, string>` usando gli headers:
+**3. Azioni sul gruppo nella striscia**
 
-```text
-const { parsed } = await parseFile(file);
-const { headers, rows } = parsed;
+Nella striscia del gruppo, accanto al contatore:
+- **Deep Search** sul gruppo intero (seleziona tutti i contatti del gruppo)
+- **Alias Azienda** (genera alias per tutti i contatti del gruppo)
+- Contatori: totale, con email, con telefono, con deep search, con alias
 
-// Converti string[][] → Record<string, string>[]
-const rowObjects = rows.map(row => {
-  const obj: Record<string, string> = {};
-  headers.forEach((h, idx) => { obj[h] = row[idx] || ""; });
-  return obj;
-});
+**4. Bulk actions funzionanti**
 
-setPendingRows(rowObjects);  // ← ora sono oggetti, non array
-```
-
-Stessa cosa per il campione inviato all'AI — deve ricevere oggetti con chiavi header, non array.
-
-#### 2. Aggiungere Select dropdown nella UI di mapping (file: `Import.tsx`)
-
-Sostituire l'etichetta draggable della destinazione con un componente `<Select>` che elenca tutte le colonne target disponibili (`TARGET_SCHEMA`), più l'opzione "— Non mappare —" per escludere la colonna:
-
-```text
-Colonna Sorgente | Esempio      | → | [Select: company_name ▼] | 🗑
-Città            | Milano       | → | [Select: city ▼]         | 🗑  
-Paese            | Italy        | → | [Select: country ▼]      | 🗑
-```
-
-Il drag-and-drop resta come funzionalità secondaria, ma il Select diventa il controllo principale. Quando si cambia la selezione, se la destinazione scelta era già usata da un'altra riga, quella riga viene automaticamente liberata (target = "").
-
-#### 3. Prevenzione duplicati di destinazione
-
-Aggiungere un controllo che impedisce di assegnare la stessa colonna target a due sorgenti diverse. Se si seleziona "city" per una riga e "city" era già assegnata a un'altra, quella precedente diventa "— Non mappare —" con un toast di avviso.
+Le azioni bulk esistenti (Deep Search, Campagna, Status) vengono collegate alle funzionalità reali — in particolare Deep Search chiamerà l'edge function `deep-search-partner` adattata per i contatti (o un equivalente).
 
 ### File da modificare
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Import.tsx` | Conversione rows array→oggetti, Select dropdown nel mapping, prevenzione duplicati |
+| `src/components/contacts/ContactListPanel.tsx` | Riscrittura completa: gruppi accordion collassabili, card riprogettate, contatori per gruppo, azioni gruppo (Deep Search, Alias), link WhatsApp/email/telefono inline |
+| `src/components/contacts/ContactDetailPanel.tsx` | Migliorare distinzione azienda vs contatto nel header, assicurare WhatsApp punti al mobile prima del telefono |
 
-### Risultato atteso
+### Dettaglio tecnico
 
-- I dati non saranno più mischiati tra colonne
-- L'utente potrà scegliere liberamente la destinazione di ogni colonna sorgente
-- Nessuna colonna target potrà essere assegnata due volte
+**Striscia gruppo** — usa stato locale `Set<string>` per i gruppi aperti. Struttura:
+```text
+┌─────────────────────────────────────────────┐
+│ 🇮🇹 Italy                    ✉12 ☎8 🔍3  42 │  ← cliccabile
+├─────────────────────────────────────────────┤
+│  [card] Acme Logistics                      │  ← visibile solo se espanso
+│         Mario Rossi • Sales Manager         │
+│         ✉ mario@acme.it  📱 WhatsApp        │
+│  [card] Beta Transport ...                  │
+└─────────────────────────────────────────────┘
+```
+
+**Contatori gruppo** — calcolati con un `useMemo` sugli items del gruppo:
+- `withEmail`: contatti con email non-null
+- `withPhone`: contatti con phone/mobile non-null  
+- `withDeepSearch`: contatti con deep_search_at non-null
+- `withAlias`: contatti con company_alias non-null
+
+**Deep Search su gruppo** — seleziona tutti gli ID del gruppo e li passa alla bulk action esistente. Per ora i contatti non hanno la stessa infrastruttura dei partner, quindi la Deep Search sarà un placeholder che aggiorna `deep_search_at` e registra un'interazione.
 
