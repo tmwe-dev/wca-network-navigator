@@ -84,7 +84,7 @@ export default function ContactListPanel({
     );
   }, [activities]);
 
-  const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id))], [emailActivities]);
+  const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
 
   const searched = useMemo(() => {
@@ -115,7 +115,7 @@ export default function ContactListPanel({
   }, [searched]);
 
   const grouped = useMemo(
-    () => groupByCountry(filtered, (a) => a.partners?.country_code || "??", (a) => a.partners?.country_name || "?"),
+    () => groupByCountry(filtered, (a) => a.partners?.country_code || "??", (a) => a.partners?.country_name || (a.source_type === "prospect" ? "Italia" : "Import")),
     [filtered]
   );
 
@@ -200,10 +200,10 @@ export default function ContactListPanel({
                 const contact = activity.selected_contact;
                 const hasEmail = !!contact?.email;
                 const displayName = contact?.contact_alias || contact?.name;
-                const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name;
+                const companyDisplay = activity.partners?.company_alias || activity.partners?.company_name || activity.title.replace(/^Email a /, "");
                 const isEnriched = !!activity.partners?.enriched_at;
                 const hasWebsite = !!activity.partners?.website;
-                const linkedinUrl = linkedinMap?.[activity.partner_id];
+                const linkedinUrl = activity.partner_id ? linkedinMap?.[activity.partner_id] : undefined;
 
                 return (
                   <div key={activity.id}

@@ -185,7 +185,7 @@ export default function EmailCanvas({
               <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
             </div>
             <p className="text-sm text-muted-foreground">Generazione in corso...</p>
-            <p className="text-xs text-muted-foreground/60">Analisi profilo {partner?.company_alias || partner?.company_name}</p>
+            <p className="text-xs text-muted-foreground/60">Analisi profilo {partner?.company_alias || partner?.company_name || activity?.title}</p>
           </div>
         ) : displayEmail ? (
           <div className="p-4">
@@ -211,7 +211,7 @@ export default function EmailCanvas({
                       <AtSign className="w-3 h-3 text-muted-foreground" />
                     </div>
                     <span className="font-medium text-foreground">
-                      {contact?.contact_alias || contact?.name || partner?.company_name}
+                      {contact?.contact_alias || contact?.name || partner?.company_name || displayEmail.partnerName || activity?.title}
                     </span>
                     {displayEmail.contactEmail ? (
                       <span className="text-muted-foreground">&lt;{displayEmail.contactEmail}&gt;</span>
