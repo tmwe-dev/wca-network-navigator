@@ -24,6 +24,10 @@ interface AssignActivityDialogProps {
   partnerIds: string[];
   partnerNames?: Record<string, string>;
   onSuccess: () => void;
+  /** Override source_type (default: "partner") */
+  sourceType?: "partner" | "prospect" | "contact";
+  /** Extra source_meta fields merged per-item */
+  extraSourceMeta?: Record<string, Record<string, any>>;
 }
 
 type ActivityTypeValue = "send_email" | "phone_call" | "meeting" | "follow_up" | "other";
@@ -42,7 +46,7 @@ const priorities = [
   { value: "high", label: "Alta", color: "text-destructive" },
 ];
 
-export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNames, onSuccess }: AssignActivityDialogProps) {
+export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNames, onSuccess, sourceType = "partner", extraSourceMeta }: AssignActivityDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [activityType, setActivityType] = useState<ActivityTypeValue>("follow_up");
@@ -81,8 +85,8 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
       for (let i = 0; i < partnerIds.length; i += CHUNK) {
         const chunk = partnerIds.slice(i, i + CHUNK);
         const activities = chunk.map((pid) => ({
-          partner_id: pid,
-          source_type: "partner" as const,
+          partner_id: sourceType === "partner" ? pid : null,
+          source_type: sourceType,
           source_id: pid,
           activity_type: activityType as any,
           title: effectiveTitle,
@@ -94,6 +98,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           campaign_batch_id: batchId,
           source_meta: {
             company_name: partnerNames?.[pid] || null,
+            ...(extraSourceMeta?.[pid] || {}),
           },
         }));
 
