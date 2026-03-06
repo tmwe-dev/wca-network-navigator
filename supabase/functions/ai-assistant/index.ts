@@ -885,33 +885,16 @@ async function consumeCredits(userId: string, usage: { prompt_tokens?: number; c
 
   if (apiKey?.api_key) return; // BYOK — no deduction
 
-  // Deduct credits
-  const { data: credits } = await supabase
-    .from("user_credits")
-    .select("balance, total_consumed")
-    .eq("user_id", userId)
-    .single();
+  // Deduct credits atomically
+  const { data: deductResult } = await supabase.rpc("deduct_credits", {
+    p_user_id: userId,
+    p_amount: totalCredits,
+    p_operation: "ai_call",
+    p_description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
+  });
 
-  if (!credits) return;
-
-  const newBalance = Math.max(0, credits.balance - totalCredits);
-  const newConsumed = credits.total_consumed + totalCredits;
-
-  await supabase
-    .from("user_credits")
-    .update({ balance: newBalance, total_consumed: newConsumed })
-    .eq("user_id", userId);
-
-  await supabase
-    .from("credit_transactions")
-    .insert({
-      user_id: userId,
-      amount: -totalCredits,
-      operation: "ai_call",
-      description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
-    });
-
-  console.log(`[CREDITS] User ${userId}: -${totalCredits} credits (balance: ${newBalance})`);
+  const row = deductResult?.[0];
+  console.log(`[CREDITS] User ${userId}: -${totalCredits} credits (success: ${row?.success}, balance: ${row?.new_balance})`);
 }
 
 serve(async (req) => {

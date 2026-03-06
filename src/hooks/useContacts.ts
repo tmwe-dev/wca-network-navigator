@@ -212,19 +212,10 @@ export function useCreateContactInteraction() {
         .insert(interaction);
       if (iError) throw iError;
 
-      const { data: current } = await supabase
-        .from("imported_contacts")
-        .select("interaction_count")
-        .eq("id", interaction.contact_id)
-        .single();
-
-      await supabase
-        .from("imported_contacts")
-        .update({
-          interaction_count: ((current?.interaction_count as number) ?? 0) + 1,
-          last_interaction_at: new Date().toISOString(),
-        })
-        .eq("id", interaction.contact_id);
+      // Atomic increment via DB function
+      await supabase.rpc("increment_contact_interaction" as any, {
+        p_contact_id: interaction.contact_id,
+      });
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: CONTACTS_KEY });

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 
 export interface Partner {
   id: string;
@@ -59,7 +60,8 @@ export function usePartners(filters?: PartnerFilters) {
         .eq("is_active", true);
 
       if (filters?.search) {
-        query = query.ilike("company_name", `%${filters.search}%`);
+        const s = sanitizeSearchTerm(filters.search);
+        if (s) query = query.ilike("company_name", `%${s}%`);
       }
 
       if (filters?.countries && filters.countries.length > 0) {

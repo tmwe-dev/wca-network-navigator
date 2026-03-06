@@ -22,6 +22,7 @@ import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog
 import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
+import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 
 interface ProspectListPanelProps {
   atecoCodes: string[];
@@ -92,7 +93,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
     if (search.length >= 2) {
       const q = search.toLowerCase();
       list = list.filter(p =>
-        p.company_name.toLowerCase().includes(q) ||
+        p.company_name?.toLowerCase().includes(q) ||
         p.city?.toLowerCase().includes(q) ||
         p.province?.toLowerCase().includes(q)
       );
@@ -319,7 +320,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
   );
 
   const Field = ({ label, value, href }: { label: string; value?: string | number | null; href?: string }) => {
-    if (!value) return null;
+    if (value == null || value === "") return null;
     return (
       <div className="flex items-center justify-between text-xs py-1">
         <span className={th.dim}>{label}</span>

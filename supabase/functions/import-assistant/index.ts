@@ -596,6 +596,20 @@ serve(async (req) => {
     // Signal if data was modified so frontend can refresh
     const dataModified = iterations > 0; // If tools were called, data may have changed
 
+    // Consume credits for AI usage
+    const userId = claimsData.claims.sub as string;
+    if (result.usage) {
+      const inputTokens = result.usage.prompt_tokens || 0;
+      const outputTokens = result.usage.completion_tokens || 0;
+      const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 3) / 1000));
+      await supabase.rpc("deduct_credits", {
+        p_user_id: userId,
+        p_amount: totalCredits,
+        p_operation: "ai_call",
+        p_description: `Import Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
+      });
+    }
+
     return new Response(JSON.stringify({ content: finalContent, data_modified: dataModified }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

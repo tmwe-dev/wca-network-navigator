@@ -29,17 +29,18 @@ export function useCampaignJobs(batchId?: string | null) {
   return useQuery({
     queryKey: ["campaign-jobs", batchId],
     queryFn: async () => {
-      let q = supabase
+      if (!batchId) return [] as CampaignJob[];
+      const { data, error } = await supabase
         .from("campaign_jobs")
         .select("*")
+        .eq("batch_id", batchId)
         .order("created_at", { ascending: true });
-      if (batchId) q = q.eq("batch_id", batchId);
-      const { data, error } = await q;
       if (error) throw error;
       return (data || []) as CampaignJob[];
     },
+    enabled: !!batchId,
     staleTime: 5_000,
-    refetchInterval: 8_000,
+    refetchInterval: batchId ? 8_000 : false,
   });
 }
 

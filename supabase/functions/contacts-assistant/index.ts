@@ -271,29 +271,12 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
   const outputTokens = usage.completion_tokens || 0;
   const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 3) / 1000));
 
-  const { data: credits } = await supabase
-    .from("user_credits")
-    .select("balance, total_consumed")
-    .eq("user_id", userId)
-    .single();
-
-  if (!credits) return;
-  const newBalance = Math.max(0, credits.balance - totalCredits);
-  const newConsumed = credits.total_consumed + totalCredits;
-
-  await supabase
-    .from("user_credits")
-    .update({ balance: newBalance, total_consumed: newConsumed })
-    .eq("user_id", userId);
-
-  await supabase
-    .from("credit_transactions")
-    .insert({
-      user_id: userId,
-      amount: -totalCredits,
-      operation: "ai_call",
-      description: `Contacts Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
-    });
+  await supabase.rpc("deduct_credits", {
+    p_user_id: userId,
+    p_amount: totalCredits,
+    p_operation: "ai_call",
+    p_description: `Contacts Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
+  });
 }
 
 // ── Main handler ──
