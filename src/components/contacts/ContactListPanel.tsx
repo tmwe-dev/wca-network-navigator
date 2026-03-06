@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -398,8 +399,10 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   }, [currentGroupBy, selectedGroups, selection, filters.holdingPattern]);
 
   /** Handle structured AI commands */
-  const handleAICommand = useCallback((cmd: AICommand) => {
-    const exec = (c: AICommand) => {
+  const navigate = useNavigate();
+
+  const handleAICommand = useCallback(async (cmd: AICommand) => {
+    const exec = async (c: AICommand) => {
       switch (c.type) {
         case "apply_filters":
           if (c.filters) setFilters((prev) => ({ ...prev, ...c.filters }));
@@ -420,13 +423,90 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             );
           }
           break;
+        case "export_csv":
+          if (c.contact_ids?.length) {
+            try {
+              const { data } = await supabase
+                .from("imported_contacts")
+                .select("company_name, name, email, phone, mobile, country, city, address, zip_code, origin, lead_status, position, note")
+                .in("id", c.contact_ids.slice(0, 500));
+              if (data?.length) {
+                const headers = ["Azienda", "Nome", "Email", "Telefono", "Cellulare", "Paese", "Città", "Indirizzo", "CAP", "Origine", "Stato", "Ruolo", "Note"];
+                const esc = (v: string | null) => {
+                  if (!v) return "";
+                  const s = v.replace(/"/g, '""');
+                  return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
+                };
+                const rows = data.map((r: any) => [
+                  r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note
+                ].map(esc).join(";"));
+                const csv = "\uFEFF" + headers.join(";") + "\r\n" + rows.join("\r\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `contatti_export_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast({ title: "Export completato", description: `${data.length} contatti esportati in CSV` });
+              }
+            } catch (e: any) {
+              toast({ title: "Errore export", description: e.message, variant: "destructive" });
+            }
+          }
+          break;
+        case "send_to_workspace":
+          if (c.contact_ids?.length) {
+            try {
+              const { data: contacts } = await supabase
+                .from("imported_contacts")
+                .select("id, company_name, name, email, country")
+                .in("id", c.contact_ids.slice(0, 200))
+                .not("email", "is", null);
+              if (!contacts?.length) {
+                toast({ title: "Nessun contatto con email", description: "I contatti selezionati non hanno email", variant: "destructive" });
+                break;
+              }
+              // Find matching partners
+              const companyNames = [...new Set(contacts.map((c: any) => c.company_name).filter(Boolean))];
+              const { data: partners } = await supabase
+                .from("partners")
+                .select("id, company_name, country_name")
+                .in("company_name", companyNames.slice(0, 200));
+              const partnerMap = new Map((partners || []).map((p: any) => [p.company_name?.toLowerCase(), p.id]));
+
+              // Create activities for contacts with matching partners
+              const activities = contacts
+                .filter((c: any) => c.company_name && partnerMap.has(c.company_name.toLowerCase()))
+                .map((c: any) => ({
+                  partner_id: partnerMap.get(c.company_name.toLowerCase()),
+                  activity_type: "send_email" as const,
+                  title: `Email a ${c.name || c.company_name}`,
+                  description: `Contatto: ${c.name || ""} - ${c.email}`,
+                  priority: "medium",
+                }));
+
+              if (activities.length) {
+                await supabase.from("activities").insert(activities);
+                toast({ title: "Inviati al Workspace", description: `${activities.length} attività email create` });
+                navigate("/workspace");
+              } else {
+                toast({ title: "Nessun partner trovato", description: "Nessun contatto corrisponde a un partner esistente. Importa prima i partner.", variant: "destructive" });
+              }
+            } catch (e: any) {
+              toast({ title: "Errore", description: e.message, variant: "destructive" });
+            }
+          }
+          break;
         case "multi":
-          c.commands?.forEach(exec);
+          if (c.commands) {
+            for (const sub of c.commands) await exec(sub);
+          }
           break;
       }
     };
-    exec(cmd);
-  }, [selection, updateLeadStatus, queryClient]);
+    await exec(cmd);
+  }, [selection, updateLeadStatus, queryClient, navigate]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
