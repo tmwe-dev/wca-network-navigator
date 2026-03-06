@@ -1,70 +1,131 @@
 
-# Fix: Alias generation mirata (singolo contatto / selezione)
 
-## Problema identificato
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-1. **`generate-aliases` edge function** (riga 16-30): accetta solo `countryCodes` e carica TUTTI i partner di quei paesi. Non supporta singoli contatti o partner.
-2. **`handleGroupAlias`** in `ContactListPanel.tsx` (riga 71-73): mostra solo un toast, non invoca mai la funzione.
-3. **Nessun pulsante** nel `ContactDetailPanel` per generare l'alias di un singolo contatto.
-4. **Nessun supporto** per `imported_contacts` -- la funzione lavora solo sulla tabella `partners`/`partner_contacts`.
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-## Piano di correzione
+---
 
-### 1. Aggiornare edge function `generate-aliases`
-Accettare tre modalita di input mutuamente esclusive:
-- `countryCodes: string[]` -- comportamento esistente (batch per paese)
-- `partnerIds: string[]` -- genera alias solo per partner specifici
-- `contactIds: string[]` -- genera alias per contatti importati (tabella `imported_contacts`)
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-Per `contactIds`, la logica sara:
-- Caricare i contatti dalla tabella `imported_contacts` (non `partners`)
-- Generare `company_alias` e `contact_alias` con lo stesso prompt AI
-- Salvare direttamente su `imported_contacts`
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-### 2. Collegare il pulsante "Alias" nel GroupStrip
-In `ContactListPanel.tsx`, `handleGroupAlias` diventa:
-- Se ci sono contatti selezionati nella selezione globale, usa quelli (IDs specifici)
-- Altrimenti, carica gli ID del gruppo e li passa alla funzione
-- Mostra toast con conteggio reale e progress
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-### 3. Aggiungere pulsante alias singolo nel ContactDetailPanel
-- Aggiungere un bottone "Genera Alias" accanto alle quick actions
-- Visibile solo se `company_alias` o `contact_alias` sono null
-- Chiama `generate-aliases` con `contactIds: [contact.id]`
-- Aggiorna il pannello dopo la generazione
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-### 4. Collegare selezione bulk nel ContactListPanel
-- Il pulsante bulk "Alias" nella barra di selezione (gia presente visivamente ma non funzionale) invoca `generate-aliases` con gli ID selezionati
+---
 
-## File da modificare
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
+
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/generate-aliases/index.ts` | Aggiungere supporto `contactIds` e `partnerIds` |
-| `src/components/contacts/ContactListPanel.tsx` | Implementare `handleGroupAlias` reale con invocazione |
-| `src/components/contacts/ContactDetailPanel.tsx` | Aggiungere bottone "Genera Alias" |
-| `src/components/contacts/GroupStrip.tsx` | Nessuna modifica (gia passa `onAlias`) |
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
 
-## Dettagli tecnici
+---
 
-### Edge function - nuovo branch per contactIds
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
 ```
-if (contactIds?.length) {
-  // Load from imported_contacts
-  // Batch in groups of 15
-  // AI generates company_alias + contact_alias
-  // Save back to imported_contacts
-}
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
 ```
 
-### ContactDetailPanel - nuovo bottone
-Accanto ai bottoni Email/WhatsApp/Chiama, un bottone "Genera Alias" che:
-- Chiama `supabase.functions.invoke("generate-aliases", { body: { contactIds: [c.id] } })`
-- Invalida la query `contact-group-counts` e il contatto corrente
-- Mostra toast di successo/errore
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
 
-### ContactListPanel - handleGroupAlias corretto
-- Se `selection.count > 0`: usa `Array.from(selection.selectedIds)`
-- Altrimenti: carica gli ID del gruppo con `fetchGroupContactIds`
-- Chiama `generate-aliases` con `contactIds`
-- Mostra toast con conteggio effettivo e risultato
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+
