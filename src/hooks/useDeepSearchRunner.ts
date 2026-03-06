@@ -61,6 +61,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     setCanvasOpen(true);
     abortRef.current = false;
     let done = 0;
+    let processed = 0;
 
     try {
       for (const id of toProcess) {
@@ -85,6 +86,9 @@ export function useDeepSearchRunner(): DeepSearchState {
           cached = data;
         }
 
+        // Check abort again after any async operation
+        if (abortRef.current) break;
+
         setCurrent({
           partnerId: id,
           companyName: cached?.company_name || `Partner ${done}`,
@@ -99,6 +103,14 @@ export function useDeepSearchRunner(): DeepSearchState {
         const { data, error } = await supabase.functions.invoke("deep-search-partner", {
           body: { partnerId: id },
         });
+
+        // Check abort immediately after the edge function returns
+        if (abortRef.current) {
+          processed = done;
+          break;
+        }
+
+        processed = done;
 
         const result: DeepSearchResult = {
           partnerId: id,
@@ -121,8 +133,8 @@ export function useDeepSearchRunner(): DeepSearchState {
       }
 
       const msg = abortRef.current
-        ? `Deep Search interrotta: ${done} partner processati`
-        : `Deep Search completata: ${done} partner`;
+        ? `Deep Search interrotta: ${processed} partner processati`
+        : `Deep Search completata: ${processed} partner`;
       abortRef.current
         ? toast.info(msg, { id: "deep-search-global" })
         : toast.success(msg, { id: "deep-search-global" });
@@ -139,6 +151,7 @@ export function useDeepSearchRunner(): DeepSearchState {
 
   const stop = useCallback(() => {
     abortRef.current = true;
+    toast.info("Interruzione Deep Search in corso...", { id: "deep-search-global" });
   }, []);
 
   return { running, canvasOpen, results, current, start, stop, setCanvasOpen };
