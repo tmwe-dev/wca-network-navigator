@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search, Megaphone, RefreshCw } from "lucide-react";
+import { Search, Megaphone, RefreshCw, Briefcase, ClipboardList, Loader2 } from "lucide-react";
 import { ContactFiltersBar } from "./ContactFiltersBar";
 import { GroupStrip } from "./GroupStrip";
 import { ExpandedGroupContent } from "./ExpandedGroupContent";
@@ -242,8 +242,16 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
       {/* Bulk actions */}
       {selection.count > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-primary/10 border-b border-primary/20 text-xs">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-primary/10 border-b border-primary/20 text-xs flex-wrap">
           <span className="font-bold text-primary">{selection.count} selezionati</span>
+          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"
+            onClick={() => handleAICommand({ action: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}>
+            <Briefcase className="w-3 h-3" /> Workspace
+          </Button>
+          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"
+            onClick={() => handleAICommand({ action: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}>
+            <ClipboardList className="w-3 h-3" /> Crea Job
+          </Button>
           <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Search className="w-3 h-3" /> Deep Search</Button>
           <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Megaphone className="w-3 h-3" /> Campagna</Button>
           <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><RefreshCw className="w-3 h-3" /> Status</Button>
