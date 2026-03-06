@@ -13,6 +13,7 @@ import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
 import { useContactFilterOptions, useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useContactGroupCounts, useContactsByGroup, type ContactGroupCount } from "@/hooks/useContactGroups";
+import { useImportGroups } from "@/hooks/useImportGroups";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -325,6 +326,9 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("company");
   const { data: filterOptions } = useContactFilterOptions();
   const { data: allGroupCounts, isLoading: groupsLoading } = useContactGroupCounts();
+  const { data: importGroups } = useImportGroups();
+  const updateLeadStatus = useUpdateLeadStatus();
+  const queryClient = useQueryClient();
 
   const countries = filterOptions?.countries ?? [];
   const origins = filterOptions?.origins ?? [];
@@ -393,6 +397,37 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     }
   }, [currentGroupBy, selectedGroups, selection, filters.holdingPattern]);
 
+  /** Handle structured AI commands */
+  const handleAICommand = useCallback((cmd: AICommand) => {
+    const exec = (c: AICommand) => {
+      switch (c.type) {
+        case "apply_filters":
+          if (c.filters) setFilters((prev) => ({ ...prev, ...c.filters }));
+          if (c.groupBy) setFilters((prev) => ({ ...prev, groupBy: c.groupBy! }));
+          setOpenGroups(new Set());
+          break;
+        case "set_sort":
+          if (c.sort) setSortKey(c.sort as SortKey);
+          break;
+        case "select_contacts":
+          if (c.contact_ids?.length) selection.addBatch(c.contact_ids);
+          break;
+        case "update_status":
+          if (c.contact_ids?.length && c.status) {
+            updateLeadStatus.mutate(
+              { ids: c.contact_ids, status: c.status as LeadStatus },
+              { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] }) }
+            );
+          }
+          break;
+        case "multi":
+          c.commands?.forEach(exec);
+          break;
+      }
+    };
+    exec(cmd);
+  }, [selection, updateLeadStatus, queryClient]);
+
   return (
     <div className="flex flex-col h-full min-h-0">
       <ContactFiltersBar
@@ -400,9 +435,13 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         onChange={handleFilterChange}
         countries={countries}
         origins={origins}
+        importGroups={importGroups}
         groupCounts={allGroupCounts}
+        totalContacts={totalContacts}
+        selectedCount={selection.count}
         sortKey={sortKey}
         onSortChange={(v) => setSortKey(v as SortKey)}
+        onAICommand={handleAICommand}
       />
 
       {/* Bulk actions */}
