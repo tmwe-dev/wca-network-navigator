@@ -8,7 +8,7 @@ import {
 import {
   Search, Mail, Phone, MapPin, Building2, User,
   ArrowLeft, ExternalLink, Euro, Users, ChevronRight, Star, Shield,
-  Send as SendIcon, Loader2,
+  Send as SendIcon, Loader2, ClipboardList,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import { t } from "@/components/download/theme";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
 import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
@@ -54,7 +55,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const [sortBy, setSortBy] = useState<"name" | "fatturato" | "dipendenti">("name");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
-
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters],
     queryFn: async () => {
@@ -182,11 +183,18 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
             {selectedIds.size > 0 && <span className="ml-2 text-sky-400 font-medium">· {selectedIds.size} selezionati</span>}
           </p>
           {selectedIds.size > 0 && (
-            <Button size="sm" onClick={handleSendToWorkspace} disabled={sending}
-              className="h-7 gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white">
-              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SendIcon className="w-3.5 h-3.5" />}
-              Workspace ({selectedIds.size})
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" onClick={() => setActivityDialogOpen(true)}
+                className="h-7 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
+                <ClipboardList className="w-3.5 h-3.5" />
+                Attività ({selectedIds.size})
+              </Button>
+              <Button size="sm" onClick={handleSendToWorkspace} disabled={sending}
+                className="h-7 gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white">
+                {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SendIcon className="w-3.5 h-3.5" />}
+                Workspace ({selectedIds.size})
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -260,6 +268,26 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
               })}
         </div>
       </ScrollArea>
+
+      <AssignActivityDialog
+        open={activityDialogOpen}
+        onOpenChange={setActivityDialogOpen}
+        partnerIds={Array.from(selectedIds)}
+        partnerNames={Object.fromEntries(
+          (filtered || []).filter(p => selectedIds.has(p.id)).map(p => [p.id, p.company_name])
+        )}
+        sourceType="prospect"
+        extraSourceMeta={Object.fromEntries(
+          (filtered || []).filter(p => selectedIds.has(p.id)).map(p => [p.id, {
+            email: p.email || p.pec || null,
+            country: "Italia",
+            country_code: "IT",
+            city: p.city || null,
+            website: p.website || null,
+          }])
+        )}
+        onSuccess={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }
