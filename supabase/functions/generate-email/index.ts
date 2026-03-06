@@ -72,7 +72,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch activity with partner + selected contact
+    // Fetch activity
     const { data: activity, error: actErr } = await supabase
       .from("activities")
       .select(`
@@ -91,11 +91,106 @@ serve(async (req) => {
 
     if (actErr || !activity) throw new Error("Activity not found");
 
-    const partner = activity.partners;
-    const contact = activity.selected_contact;
+    const sourceType = activity.source_type || "partner";
+    let partner = activity.partners;
+    let contact = activity.selected_contact;
+    let contactEmail: string | null = null;
+
+    // For contact-source activities, fetch from imported_contacts
+    if (sourceType === "contact" && activity.source_id) {
+      const { data: importedContact } = await supabase
+        .from("imported_contacts")
+        .select("id, company_name, company_alias, name, contact_alias, email, phone, mobile, country, city, position, origin, note")
+        .eq("id", activity.source_id)
+        .single();
+      if (importedContact) {
+        // Map imported_contacts fields to partner-like structure for the prompt
+        partner = {
+          id: importedContact.id,
+          company_name: importedContact.company_name || "Azienda sconosciuta",
+          company_alias: importedContact.company_alias,
+          country_code: importedContact.country || "??",
+          country_name: importedContact.country || "Sconosciuto",
+          city: importedContact.city || "",
+          email: importedContact.email,
+          phone: importedContact.phone,
+          website: null,
+          profile_description: importedContact.note,
+          rating: null,
+          raw_profile_markdown: null,
+        };
+        contact = {
+          id: importedContact.id,
+          name: importedContact.name || importedContact.company_name || "",
+          email: importedContact.email,
+          direct_phone: importedContact.phone,
+          mobile: importedContact.mobile,
+          title: importedContact.position,
+          contact_alias: importedContact.contact_alias,
+        };
+        contactEmail = importedContact.email;
+      }
+    }
+
+    // For prospect-source activities, fetch from prospects
+    if (sourceType === "prospect" && activity.source_id) {
+      const { data: prospect } = await supabase
+        .from("prospects")
+        .select("id, company_name, city, province, region, email, phone, website, codice_ateco, descrizione_ateco, fatturato, dipendenti")
+        .eq("id", activity.source_id)
+        .single();
+      if (prospect) {
+        partner = {
+          id: prospect.id,
+          company_name: prospect.company_name,
+          company_alias: null,
+          country_code: "IT",
+          country_name: "Italia",
+          city: [prospect.city, prospect.province].filter(Boolean).join(", "),
+          email: prospect.email,
+          phone: prospect.phone,
+          website: prospect.website,
+          profile_description: [
+            prospect.descrizione_ateco,
+            prospect.fatturato ? `Fatturato: €${(prospect.fatturato / 1_000_000).toFixed(1)}M` : null,
+            prospect.dipendenti ? `Dipendenti: ${prospect.dipendenti}` : null,
+          ].filter(Boolean).join(" · "),
+          rating: null,
+          raw_profile_markdown: null,
+        };
+        contact = null;
+        contactEmail = prospect.email;
+
+        // Try to find prospect contacts
+        const { data: pContacts } = await supabase
+          .from("prospect_contacts")
+          .select("name, email, phone, role")
+          .eq("prospect_id", prospect.id)
+          .limit(1);
+        if (pContacts?.[0]) {
+          const pc = pContacts[0];
+          contact = {
+            id: prospect.id,
+            name: pc.name,
+            email: pc.email,
+            direct_phone: pc.phone,
+            mobile: null,
+            title: pc.role,
+            contact_alias: null,
+          };
+          contactEmail = pc.email || prospect.email;
+        }
+      }
+    }
+
+    // For partner source (default), keep existing logic
+    if (sourceType === "partner" || !contactEmail) {
+      contactEmail = contact?.email || partner?.email || null;
+    }
+
+    if (!partner) throw new Error("Source entity not found");
 
     // --- VALIDATION: check contact has email ---
-    const contactEmail = contact?.email || partner.email || null;
     if (!contactEmail) {
       return new Response(
         JSON.stringify({
@@ -109,13 +204,17 @@ serve(async (req) => {
     }
 
     // Fetch partner networks, services, social links, settings in parallel
+    // For non-partner sources, skip partner-specific lookups
+    const isPartnerSource = sourceType === "partner" && activity.partner_id;
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
-      supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-      quality !== "fast"
+      isPartnerSource
+        ? supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id)
+        : Promise.resolve({ data: [] }),
+      isPartnerSource && quality !== "fast"
         ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id)
         : Promise.resolve({ data: [] }),
       supabase.from("app_settings").select("key, value").like("key", "ai_%"),
-      quality === "premium"
+      isPartnerSource && quality === "premium"
         ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id)
         : Promise.resolve({ data: [] }),
     ]);

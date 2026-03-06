@@ -467,37 +467,21 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 toast({ title: "Nessun contatto con email", description: "I contatti selezionati non hanno email", variant: "destructive" });
                 break;
               }
-              // Find matching partners
-              const companyNames = [...new Set(contacts.map((c: any) => c.company_name).filter(Boolean))];
-              const { data: partners } = await supabase
-                .from("partners")
-                .select("id, company_name, country_name")
-                .in("company_name", companyNames.slice(0, 200));
-              const partnerMap = new Map((partners || []).map((p: any) => [p.company_name?.toLowerCase(), p.id]));
 
-              // Create activities for contacts with matching partners
-              const activities = contacts
-                .filter((c: any) => c.company_name && partnerMap.has(c.company_name.toLowerCase()))
-                .map((c: any) => {
-                  const pid = partnerMap.get(c.company_name.toLowerCase());
-                  return {
-                    partner_id: pid,
-                    source_type: "partner" as const,
-                    source_id: pid,
-                    activity_type: "send_email" as const,
-                    title: `Email a ${c.name || c.company_name}`,
-                    description: `Contatto: ${c.name || ""} - ${c.email}`,
-                    priority: "medium",
-                  };
-                });
+              // Create activities directly with source_type=contact — no partner match needed
+              const activities = contacts.map((ct: any) => ({
+                partner_id: null,
+                source_type: "contact" as const,
+                source_id: ct.id,
+                activity_type: "send_email" as const,
+                title: `Email a ${ct.name || ct.company_name || "Contatto"}`,
+                description: `Contatto: ${ct.name || ""} - ${ct.email}`,
+                priority: "medium",
+              }));
 
-              if (activities.length) {
-                await supabase.from("activities").insert(activities);
-                toast({ title: "Inviati al Workspace", description: `${activities.length} attività email create` });
-                navigate("/workspace");
-              } else {
-                toast({ title: "Nessun partner trovato", description: "Nessun contatto corrisponde a un partner esistente. Importa prima i partner.", variant: "destructive" });
-              }
+              await supabase.from("activities").insert(activities);
+              toast({ title: "Inviati al Workspace", description: `${activities.length} attività email create nel tab Contatti` });
+              navigate("/workspace");
             } catch (e: any) {
               toast({ title: "Errore", description: e.message, variant: "destructive" });
             }
