@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,12 +8,16 @@ import {
 import {
   Search, Mail, Phone, MapPin, Building2, User,
   ArrowLeft, ExternalLink, Euro, Users, ChevronRight, Star, Shield,
+  Send as SendIcon, Loader2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { t } from "@/components/download/theme";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import type { Prospect } from "@/hooks/useProspects";
 
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
@@ -44,9 +48,12 @@ function contactQuality(p: Prospect): "complete" | "partial" | "missing" {
 
 export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFilter, quickSearch, advFilters }: ProspectListPanelProps) {
   const th = t(isDark);
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "fatturato" | "dipendenti">("name");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
 
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters],
@@ -100,6 +107,48 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
   const selectedProspect = useMemo(() => filtered.find(p => p.id === selectedId), [filtered, selectedId]);
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }, []);
+
+  const handleSendToWorkspace = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    const targets = (filtered || []).filter(p => ids.includes(p.id));
+    const withEmail = targets.filter(p => p.email || p.pec);
+    if (!withEmail.length) { toast.error("Nessun prospect con email selezionato"); return; }
+
+    setSending(true);
+    try {
+      const activities = withEmail.map(p => ({
+        partner_id: null,
+        source_type: "prospect" as const,
+        source_id: p.id,
+        activity_type: "send_email" as const,
+        title: `Email a ${p.company_name}`,
+        description: `Prospect: ${p.company_name} - ${p.email || p.pec}`,
+        priority: "medium",
+        source_meta: {
+          company_name: p.company_name,
+          email: p.email || p.pec || null,
+          country: "Italia",
+          country_code: "IT",
+          city: p.city || null,
+          website: p.website || null,
+        },
+      }));
+
+      const CHUNK = 50;
+      for (let i = 0; i < activities.length; i += CHUNK) {
+        await supabase.from("activities").insert(activities.slice(i, i + CHUNK) as any);
+      }
+      toast.success(`${activities.length} attività create nel Workspace`);
+      setSelectedIds(new Set());
+      navigate("/workspace");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally { setSending(false); }
+  }, [selectedIds, filtered, navigate]);
+
   if (selectedId && selectedProspect) {
     return (
       <div className="h-full overflow-auto">
@@ -127,9 +176,19 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
             </SelectContent>
           </Select>
         </div>
-        <p className={`text-xs ${th.dim}`}>
-          {isLoading ? "Caricamento..." : `${filtered.length} prospect`}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className={`text-xs ${th.dim}`}>
+            {isLoading ? "Caricamento..." : `${filtered.length} prospect`}
+            {selectedIds.size > 0 && <span className="ml-2 text-sky-400 font-medium">· {selectedIds.size} selezionati</span>}
+          </p>
+          {selectedIds.size > 0 && (
+            <Button size="sm" onClick={handleSendToWorkspace} disabled={sending}
+              className="h-7 gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white">
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SendIcon className="w-3.5 h-3.5" />}
+              Workspace ({selectedIds.size})
+            </Button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
@@ -140,53 +199,61 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
               ))
             : filtered.map(prospect => {
                 const q = contactQuality(prospect);
+                const isChecked = selectedIds.has(prospect.id);
                 return (
                   <div
                     key={prospect.id}
-                    onClick={() => setSelectedId(prospect.id)}
                     className={cn(
-                      "p-3 cursor-pointer transition-all duration-200 group",
+                      "p-3 cursor-pointer transition-all duration-200 group flex items-start gap-2",
                       isDark ? "hover:bg-white/[0.06]" : "hover:bg-sky-50/50",
                       q === "missing" && "border-l-4 border-l-red-500",
                       q === "partial" && "border-l-4 border-l-amber-400",
                       q === "complete" && "border-l-4 border-l-emerald-500",
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}>
-                        <Building2 className={`w-4 h-4 ${th.dim}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className={`font-semibold text-sm truncate ${th.h2}`}>{prospect.company_name}</p>
-                            <p className={`text-xs truncate ${th.sub}`}>
-                              {prospect.city && <span className="font-medium">{prospect.city}</span>}
-                              {prospect.province && <span> ({prospect.province})</span>}
-                            </p>
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleSelect(prospect.id)}
+                      className="mt-2 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex-1 min-w-0" onClick={() => setSelectedId(prospect.id)}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}>
+                          <Building2 className={`w-4 h-4 ${th.dim}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className={`font-semibold text-sm truncate ${th.h2}`}>{prospect.company_name}</p>
+                              <p className={`text-xs truncate ${th.sub}`}>
+                                {prospect.city && <span className="font-medium">{prospect.city}</span>}
+                                {prospect.province && <span> ({prospect.province})</span>}
+                              </p>
+                            </div>
+                            {prospect.fatturato != null && (
+                              <span className={`text-xs font-mono font-bold shrink-0 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                                {formatCurrency(prospect.fatturato)}
+                              </span>
+                            )}
                           </div>
-                          {prospect.fatturato != null && (
-                            <span className={`text-xs font-mono font-bold shrink-0 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                              {formatCurrency(prospect.fatturato)}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 mt-1 text-xs">
+                            <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                            <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
+                            {prospect.dipendenti != null && (
+                              <span className={`flex items-center gap-0.5 ${th.dim}`}>
+                                <Users className="w-3 h-3" />{prospect.dipendenti}
+                              </span>
+                            )}
+                            {prospect.rating_affidabilita && (
+                              <span className={`flex items-center gap-0.5 ${th.dim}`}>
+                                <Shield className="w-3 h-3" />{prospect.rating_affidabilita}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs">
-                          <Mail className={cn("w-3.5 h-3.5", (prospect.email || prospect.pec) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                          <Phone className={cn("w-3.5 h-3.5", prospect.phone ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                          {prospect.dipendenti != null && (
-                            <span className={`flex items-center gap-0.5 ${th.dim}`}>
-                              <Users className="w-3 h-3" />{prospect.dipendenti}
-                            </span>
-                          )}
-                          {prospect.rating_affidabilita && (
-                            <span className={`flex items-center gap-0.5 ${th.dim}`}>
-                              <Shield className="w-3 h-3" />{prospect.rating_affidabilita}
-                            </span>
-                          )}
-                        </div>
+                        <ChevronRight className={`w-4 h-4 shrink-0 mt-1 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
                       </div>
-                      <ChevronRight className={`w-4 h-4 shrink-0 mt-1 ${th.dim} opacity-0 group-hover:opacity-100 transition-opacity`} />
                     </div>
                   </div>
                 );

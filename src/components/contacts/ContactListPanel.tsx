@@ -460,7 +460,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             try {
               const { data: contacts } = await supabase
                 .from("imported_contacts")
-                .select("id, company_name, name, email, country")
+                .select("id, company_name, name, email, country, city")
                 .in("id", c.contact_ids.slice(0, 200))
                 .not("email", "is", null);
               if (!contacts?.length) {
@@ -477,6 +477,13 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 title: `Email a ${ct.name || ct.company_name || "Contatto"}`,
                 description: `Contatto: ${ct.name || ""} - ${ct.email}`,
                 priority: "medium",
+                source_meta: {
+                  company_name: ct.company_name || null,
+                  contact_name: ct.name || null,
+                  email: ct.email || null,
+                  country: ct.country || null,
+                  city: ct.city || null,
+                },
               }));
 
               await supabase.from("activities").insert(activities);

@@ -33,6 +33,7 @@ export type Database = {
           selected_contact_id: string | null
           sent_at: string | null
           source_id: string
+          source_meta: Json | null
           source_type: string
           status: Database["public"]["Enums"]["activity_status"]
           title: string
@@ -55,6 +56,7 @@ export type Database = {
           selected_contact_id?: string | null
           sent_at?: string | null
           source_id: string
+          source_meta?: Json | null
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
           title: string
@@ -77,6 +79,7 @@ export type Database = {
           selected_contact_id?: string | null
           sent_at?: string | null
           source_id?: string
+          source_meta?: Json | null
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
           title?: string

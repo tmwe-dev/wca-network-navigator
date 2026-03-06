@@ -89,11 +89,23 @@ export function useUpdateActivity() {
   });
 }
 
+export interface SourceMeta {
+  company_name?: string;
+  contact_name?: string;
+  email?: string;
+  country?: string;
+  country_code?: string;
+  city?: string;
+  website?: string;
+  position?: string;
+}
+
 export interface AllActivity {
   id: string;
   partner_id: string | null;
   source_type: "partner" | "prospect" | "contact";
   source_id: string;
+  source_meta: SourceMeta;
   activity_type: string;
   title: string;
   description: string | null;
