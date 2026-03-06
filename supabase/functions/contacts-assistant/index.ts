@@ -35,13 +35,22 @@ Ogni comando è un JSON con un "type" e parametri specifici:
 4. update_status — Aggiorna lead status dei contatti selezionati
    { "type": "update_status", "contact_ids": ["id1", ...], "status": "new"|"contacted"|"in_progress"|"negotiation"|"converted"|"lost" }
 
-5. multi — Esegui più comandi in sequenza
+5. export_csv — Esporta contatti in un file CSV scaricabile
+   { "type": "export_csv", "contact_ids": ["id1", "id2", ...] }
+   Usa search_contacts (ids_only=true) per ottenere gli ID, poi restituisci il comando. Il frontend gestirà il download.
+
+6. send_to_workspace — Invia contatti al Workspace per generare email personalizzate
+   { "type": "send_to_workspace", "contact_ids": ["id1", "id2", ...] }
+   Usa search_contacts (ids_only=true) per ottenere gli ID, poi restituisci il comando. Il frontend creerà le attività e reindirizzerà al Workspace.
+
+7. multi — Esegui più comandi in sequenza
    { "type": "multi", "commands": [ ... ] }
 
 REGOLE
 - Prima di applicare filtri, usa search_contacts o count_contacts per verificare quanti risultati ci saranno.
 - Per selezionare contatti, usa search_contacts per ottenere gli ID e poi restituisci select_contacts.
 - Per update_status, CHIEDI SEMPRE conferma prima di procedere mostrando quanti contatti saranno aggiornati.
+- Per export_csv e send_to_workspace, cerca prima i contatti con search_contacts (ids_only=true), poi restituisci il comando con gli ID trovati. Massimo 500 contatti per export.
 - Sii sintetico nelle risposte. Una o due frasi di conferma + il comando.
 - Se l'utente chiede qualcosa che non puoi fare con i tool, dillo chiaramente.
 
