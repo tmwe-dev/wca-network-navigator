@@ -118,8 +118,67 @@ export function ContactFiltersBar({
 
   const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId || filters.search);
 
+  const activeGroup = importGroups?.find((g) => g.id === filters.importLogId);
+  const [basketOpen, setBasketOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-1.5 p-2 border-b border-border bg-card/50 shrink-0">
+      {/* Row 0: Active basket header */}
+      {importGroups && importGroups.length > 0 && (
+        <Popover open={basketOpen} onOpenChange={setBasketOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between h-8 px-3 text-xs gap-2 border-primary/20 bg-primary/5 hover:bg-primary/10"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <FolderOpen className="w-3.5 h-3.5 shrink-0 text-primary" />
+                {activeGroup ? (
+                  <>
+                    <span className="font-semibold truncate">{activeGroup.group_name}</span>
+                    <span className="text-muted-foreground shrink-0">({activeGroup.imported_rows})</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium truncate">Tutti i cestini</span>
+                    <span className="text-muted-foreground shrink-0">({totalContacts ?? 0})</span>
+                  </>
+                )}
+              </span>
+              <span className="text-[10px] text-muted-foreground shrink-0">▾ Cambia</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 max-h-64 overflow-y-auto" align="start">
+            <button
+              className={cn(
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent text-left",
+                !filters.importLogId && "bg-accent font-semibold"
+              )}
+              onClick={() => { onChange({ importLogId: undefined }); setBasketOpen(false); }}
+            >
+              <FolderOpen className="w-3 h-3 shrink-0 text-muted-foreground" />
+              <span className="truncate flex-1">Tutti i cestini</span>
+              <span className="text-muted-foreground">{totalContacts ?? 0}</span>
+            </button>
+            <Separator className="my-1" />
+            {importGroups.map((g) => (
+              <button
+                key={g.id}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent text-left",
+                  filters.importLogId === g.id && "bg-accent font-semibold"
+                )}
+                onClick={() => { onChange({ importLogId: g.id }); setBasketOpen(false); }}
+              >
+                <FolderOpen className="w-3 h-3 shrink-0 text-muted-foreground" />
+                <span className="truncate flex-1">{g.group_name}</span>
+                <span className="text-muted-foreground">{g.imported_rows}</span>
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+
       {/* AI Bar */}
       {onAICommand && (
         <ContactAIBar
@@ -197,8 +256,8 @@ export function ContactFiltersBar({
         )}
       </div>
 
-      {/* Row 3: Inline filters grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+      {/* Row 3: Inline filters grid (3 cols — basket removed) */}
+      <div className="grid grid-cols-3 gap-1.5">
         <Select value={filters.country ?? "all"} onValueChange={(v) => onChange({ country: v === "all" ? undefined : v })}>
           <SelectTrigger className="h-7 text-[10px]">
             <Globe className="w-3 h-3 shrink-0 text-muted-foreground" />
@@ -245,28 +304,6 @@ export function ContactFiltersBar({
             ))}
           </SelectContent>
         </Select>
-
-        {importGroups && importGroups.length > 0 ? (
-          <Select
-            value={filters.importLogId ?? "all"}
-            onValueChange={(v) => onChange({ importLogId: v === "all" ? undefined : v })}
-          >
-            <SelectTrigger className="h-7 text-[10px]">
-              <FolderOpen className="w-3 h-3 shrink-0 text-muted-foreground" />
-              <SelectValue placeholder="Gruppo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i gruppi</SelectItem>
-              {importGroups.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.group_name} ({g.imported_rows})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div /> /* empty cell */
-        )}
       </div>
 
       {/* Row 4: Date pickers + Sort */}
