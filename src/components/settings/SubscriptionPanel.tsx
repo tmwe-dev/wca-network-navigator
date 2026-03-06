@@ -37,7 +37,7 @@ export function SubscriptionPanel() {
     setCheckoutLoading(tierKey);
     try {
       await startCheckout(priceId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nell'apertura del checkout");
     } finally {
       setCheckoutLoading(null);
@@ -48,7 +48,7 @@ export function SubscriptionPanel() {
     setPortalLoading(true);
     try {
       await openPortal();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nell'apertura del portale");
     } finally {
       setPortalLoading(false);
@@ -63,7 +63,7 @@ export function SubscriptionPanel() {
       });
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nell'acquisto crediti");
     } finally {
       setBuyingCredits(false);

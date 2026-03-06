@@ -95,7 +95,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
       queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
       toast({ title: "Alias generati", description: `${data?.processed || 0} contatti elaborati` });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "Errore generazione alias", description: e.message, variant: "destructive" });
     } finally {
       setAliasLoading(false);
@@ -158,7 +158,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   const s = v.replace(/"/g, '""');
                   return s.includes(";") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
                 };
-                const rows = data.map((r: any) => [
+                const rows = data.map((r: { id: string; [k: string]: unknown }) => [
                   r.company_name, r.name, r.email, r.phone, r.mobile, r.country, r.city, r.address, r.zip_code, r.origin, r.lead_status, r.position, r.note
                 ].map(esc).join(";"));
                 const csv = "\uFEFF" + headers.join(";") + "\r\n" + rows.join("\r\n");
@@ -171,7 +171,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 URL.revokeObjectURL(url);
                 toast({ title: "Export completato", description: `${data.length} contatti esportati in CSV` });
               }
-            } catch (e: any) {
+            } catch (e: unknown) {
               toast({ title: "Errore export", description: e.message, variant: "destructive" });
             }
           }
@@ -189,7 +189,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 break;
               }
 
-              const activities = contacts.map((ct: any) => ({
+              const activities = contacts.map((ct: { id: string; name: string; [k: string]: unknown }) => ({
                 partner_id: null,
                 source_type: "contact" as const,
                 source_id: ct.id,
@@ -209,7 +209,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               await supabase.from("activities").insert(activities);
               toast({ title: "Inviati al Workspace", description: `${activities.length} attività email create nel tab Contatti` });
               navigate("/workspace");
-            } catch (e: any) {
+            } catch (e: unknown) {
               toast({ title: "Errore", description: e.message, variant: "destructive" });
             }
           }
@@ -343,5 +343,5 @@ async function fetchGroupContactIds(
 
   q = q.limit(1000);
   const { data } = await q;
-  return (data ?? []).map((r: any) => r.id);
+  return (data ?? []).map((r: { id: string; [k: string]: unknown }) => r.id);
 }

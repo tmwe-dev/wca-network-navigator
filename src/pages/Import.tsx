@@ -107,14 +107,14 @@ export default function Import() {
 
   // AI mapping state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingRows, setPendingRows] = useState<any[]>([]);
+  const [pendingRows, setPendingRows] = useState<Record<string, unknown>[]>([]);
   const [aiMapping, setAiMapping] = useState<{
     column_mapping: Record<string, string>;
-    parsed_rows: any[];
+    parsed_rows: Record<string, unknown>[];
     confidence: number;
     warnings: string[];
     unmapped_columns?: string[];
-    data_quality?: any;
+    data_quality?: Record<string, unknown>;
   } | null>(null);
 
   // Drag state (file drop zone)
@@ -139,7 +139,7 @@ export default function Import() {
   const [uploading, setUploading] = useState(false);
 
   // === Re-import correction: update existing imported_contacts ===
-  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => {
+  const handleReimportCorrection = useCallback(async (rows: Record<string, unknown>[], headers: string[]) => {
     setUploading(true);
     try {
       // Find the _import_id column key in the row objects
@@ -262,7 +262,7 @@ export default function Import() {
 
       const sampleSize = Math.min(50, rowObjects.length);
       const step = rowObjects.length / sampleSize;
-      const sample: any[] = [];
+      const sample: Record<string, unknown>[] = [];
       for (let i = 0; i < sampleSize; i++) {
         sample.push(rowObjects[Math.floor(i * step)]);
       }
@@ -444,7 +444,7 @@ export default function Import() {
     if (incomplete.length === 0) return;
 
     const SEP = ";";
-    const escapeCell = (val: any) => {
+    const escapeCell = (val: unknown) => {
       if (val === null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       // Quote if contains separator, quotes, or newlines

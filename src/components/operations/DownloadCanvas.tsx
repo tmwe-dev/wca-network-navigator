@@ -141,7 +141,7 @@ export function DownloadCanvas({ open, onClose, onStop, current, results, runnin
 }
 
 /* ── Mini summary chip ── */
-function MiniChip({ icon: Icon, value, isDark, color }: { icon: any; value: number; isDark: boolean; color: string }) {
+function MiniChip({ icon: Icon, value, isDark, color }: { icon: React.ElementType; value: number; isDark: boolean; color: string }) {
   const colorMap: Record<string, string> = {
     emerald: isDark ? "text-emerald-400" : "text-emerald-600",
     sky: isDark ? "text-sky-400" : "text-sky-600",

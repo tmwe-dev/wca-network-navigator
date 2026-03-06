@@ -35,7 +35,7 @@ export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
       } else {
         setState("ready");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[ProtectedRoute] Unexpected error:", e);
       setErrorMsg(e?.message || "Errore di rete");
       setState("error");

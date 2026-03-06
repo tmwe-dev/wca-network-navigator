@@ -103,8 +103,8 @@ export default function TemplateManager() {
       }
       toast.success(`${files.length} file caricati`);
       qc.invalidateQueries({ queryKey: ["email-templates"] });
-    } catch (err: any) {
-      toast.error("Errore upload: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      toast.error("Errore upload: " + ((err as Error).message || "Sconosciuto"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";

@@ -95,8 +95,8 @@ export default function BlacklistManager() {
       setPreview(null);
       setAllParsed([]);
       if (fileRef.current) fileRef.current.value = "";
-    } catch (err: any) {
-      toast.error("Errore importazione: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      toast.error("Errore importazione: " + ((err as Error).message || "Sconosciuto"));
     }
   };
 
@@ -110,8 +110,8 @@ export default function BlacklistManager() {
       } else {
         toast.error(data?.error || "Scraping fallito");
       }
-    } catch (err: any) {
-      toast.error("Errore: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      toast.error("Errore: " + ((err as Error).message || "Sconosciuto"));
     } finally {
       setScraping(false);
     }

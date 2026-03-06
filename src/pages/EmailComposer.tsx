@@ -209,10 +209,10 @@ export default function EmailComposer() {
     }
 
     // Add attachment links
-    const attachedTemplates = templates.filter((t: any) => selectedAttachments.includes(t.id));
+    const attachedTemplates = templates.filter((t: { id: string; name: string; html_body: string }) => selectedAttachments.includes(t.id));
     if (attachedTemplates.length > 0) {
       html += `<br/><p><strong>Allegati:</strong></p><ul>`;
-      attachedTemplates.forEach((t: any) => {
+      attachedTemplates.forEach((t: { id: string; name: string; html_body: string }) => {
         html += `<li><a href="${encodeURI(t.file_url)}" target="_blank">${escapeHtml(t.file_name)}</a></li>`;
       });
       html += `</ul>`;
@@ -288,7 +288,7 @@ export default function EmailComposer() {
 
       // Fetch contacts for variable substitution
       const partnerIds = recipientsWithEmail.map((r) => r.id);
-      const contactBatches: any[] = [];
+      const contactBatches: Record<string, unknown>[] = [];
       for (let i = 0; i < partnerIds.length; i += 50) {
         const { data: contacts } = await supabase
           .from("partner_contacts")
@@ -298,7 +298,7 @@ export default function EmailComposer() {
       }
 
       const contactMap: Record<string, string> = {};
-      contactBatches.forEach((c: any) => {
+      contactBatches.forEach((c: Record<string, unknown>) => {
         if (!contactMap[c.partner_id] || c.is_primary) {
           contactMap[c.partner_id] = c.name;
         }
@@ -345,7 +345,7 @@ export default function EmailComposer() {
   // Template groups for attachments
   const templatesByCategory = useMemo(() => {
     const groups: Record<string, any[]> = {};
-    templates.forEach((t: any) => {
+    templates.forEach((t: { id: string; name: string; html_body: string }) => {
       const cat = t.category || "altro";
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(t);
@@ -459,7 +459,7 @@ export default function EmailComposer() {
               {Object.entries(templatesByCategory).map(([cat, files]) => (
                 <div key={cat} className="space-y-1">
                   <p className="text-xs text-muted-foreground capitalize">{CATEGORIES.find(c => c.value === cat)?.label || cat}</p>
-                  {files.map((t: any) => (
+                  {files.map((t: { id: string; name: string; html_body: string }) => (
                     <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
                       <Checkbox
                         checked={selectedAttachments.includes(t.id)}

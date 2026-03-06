@@ -43,7 +43,7 @@ function getMemberBadgeColor(years: number): string {
 }
 
 interface PartnerCardProps {
-  partner: any;
+  partner: PartnerWithRelations;
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
 }
 
@@ -213,7 +213,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {/* Services */}
         {partner.partner_services?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {partner.partner_services.slice(0, 4).map((s: any, i: number) => (
+            {partner.partner_services.slice(0, 4).map((s: { service_category: string }, i: number) => (
               <Tooltip key={i}>
                 <TooltipTrigger>
                   <span

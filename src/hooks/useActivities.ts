@@ -186,7 +186,7 @@ export function useContactsForPartners(partnerIds: string[]) {
       
       // Batch .in() calls in chunks of 100 to avoid URL length limits
       const CHUNK = 100;
-      const allData: any[] = [];
+      const allData: Record<string, unknown>[] = [];
       for (let i = 0; i < partnerIds.length; i += CHUNK) {
         const chunk = partnerIds.slice(i, i + CHUNK);
         const { data, error } = await supabase

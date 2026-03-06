@@ -121,9 +121,9 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     enabled: countryCodes.length > 0,
   });
 
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: { members: unknown }) => {
     const members = entry.members as unknown as DirectoryCacheMember[];
-    return (members || []).map((m: any) => ({
+    return (members || []).map((m: Record<string, unknown>) => ({
       company_name: m.company_name,
       city: m.city,
       country: m.country,
@@ -300,7 +300,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     });
 
     // Build set of already-cached country codes to skip
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e: { country_code: string }) => e.country_code));
 
     for (let ci = 0; ci < selectedCountries.length; ci++) {
       if (abortRef.current) break;

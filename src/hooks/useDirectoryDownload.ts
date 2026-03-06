@@ -129,9 +129,9 @@ export function useDirectoryDownload({
   });
 
   // ── Derived data ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: { members: unknown }) => {
     const members = entry.members as unknown as DirectoryCacheMember[];
-    return (members || []).map((m: any) => ({
+    return (members || []).map((m: Record<string, unknown>) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
     }));
@@ -227,7 +227,7 @@ export function useDirectoryDownload({
   const handleStartScan = useCallback(async () => {
     setIsScanning(true); setScanError(null); abortRef.current = false;
     const allMembers: DirectoryMember[] = [];
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e: { country_code: string }) => e.country_code));
     if (skipCachedDirs && cachedCountryCodes.has(countryCode)) {
       setIsScanning(false); setScanComplete(true); return;
     }

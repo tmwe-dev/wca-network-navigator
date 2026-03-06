@@ -26,7 +26,7 @@ export interface Prospect {
   rating_affidabilita: string | null;
   credit_score: number | null;
   source: string;
-  enrichment_data: any;
+  enrichment_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

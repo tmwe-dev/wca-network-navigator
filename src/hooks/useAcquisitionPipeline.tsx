@@ -128,7 +128,7 @@ export function useAcquisitionPipeline() {
 
       // Ensure partner exists in DB
       let partnerId: string | null = null;
-      let partnerData: any = null;
+      let partnerData: Record<string, unknown> | null = null;
 
       const { data: existingPartner } = await supabase
         .from("partners")
@@ -406,8 +406,8 @@ export function useAcquisitionPipeline() {
                     ...prev,
                     logo_url: updatedPartner?.logo_url || prev.logo_url,
                     linkedin_links: (socialLinks || [])
-                      .filter((l: any) => l.platform === "linkedin")
-                      .map((l: any) => ({ name: "LinkedIn", url: l.url })),
+                      .filter((l: { platform: string; url: string }) => l.platform === "linkedin")
+                      .map((l: { platform: string; url: string }) => ({ name: "LinkedIn", url: l.url })),
                   } : prev
                 );
               }
@@ -554,7 +554,7 @@ export function useAcquisitionPipeline() {
                 body: { countryCode: job.country_code, network: job.network_name || "" },
               });
               if (scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
+                const membersJson = scanResult.members.map((m: Record<string, unknown>) => ({
                   company_name: m.company_name,
                   city: m.city,
                   country_code: job.country_code,
@@ -669,7 +669,7 @@ export function useAcquisitionPipeline() {
           if (cached && cached.length > 0) {
             for (const entry of cached) {
               const members = (entry.members as unknown as DirectoryCacheMember[]) || [];
-              members.forEach((m: any) => {
+              members.forEach((m: Record<string, unknown>) => {
                 if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
                   allMembers.push({
                     wca_id: m.wca_id,
@@ -689,7 +689,7 @@ export function useAcquisitionPipeline() {
             );
 
             if (scanResult?.members) {
-              const membersJson = scanResult.members.map((m: any) => ({
+              const membersJson = scanResult.members.map((m: Record<string, unknown>) => ({
                 company_name: m.company_name,
                 city: m.city,
                 country_code: code,
@@ -707,7 +707,7 @@ export function useAcquisitionPipeline() {
                 { onConflict: "country_code,network_name" }
               );
 
-              scanResult.members.forEach((m: any) => {
+              scanResult.members.forEach((m: Record<string, unknown>) => {
                 if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
                   allMembers.push({
                     wca_id: m.wca_id,
@@ -761,8 +761,8 @@ export function useAcquisitionPipeline() {
       }
 
       setPipelineStatus("idle");
-    } catch (err: any) {
-      toast({ title: "Errore scansione", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore scansione", description: (err as Error).message, variant: "destructive" });
       setPipelineStatus("idle");
     }
   }, [selectedCountries, selectedNetworks]);
@@ -932,7 +932,7 @@ export function useAcquisitionPipeline() {
       rating: partner.rating ? Number(partner.rating) : undefined,
       website: partner.website || undefined,
       profile_description: partner.profile_description || undefined,
-      linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
+      linkedin_links: (socialLinks || []).filter((l: { platform: string; url: string }) => l.platform === "linkedin").map((l: { platform: string; url: string }) => ({ name: "LinkedIn", url: l.url })),
       warehouse_sqm: ed?.warehouse_sqm,
       employees: ed?.employee_count,
       founded: ed?.founding_year ? String(ed.founding_year) : undefined,

@@ -204,8 +204,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       toast({ title: "Re-sync avviato", description: `${allWcaIds.length} partner da aggiornare` });
       onStartRunning();
-    } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore", description: (err as Error).message, variant: "destructive" });
     }
     setStarting(false);
   }

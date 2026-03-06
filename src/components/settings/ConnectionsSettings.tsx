@@ -16,7 +16,7 @@ import BlacklistManager from "@/components/settings/BlacklistManager";
 
 interface ConnectionsSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: (key: string, value: string) => void;
 }
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {
@@ -79,7 +79,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
       if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
       else toast.warning("Cookie salvato ma la verifica è fallita.");
       ensureSession();
-    } catch (err: any) { toast.error("Errore: " + (err.message || "Sconosciuto")); }
+    } catch (err: unknown) { toast.error("Errore: " + ((err as Error).message || "Sconosciuto")); }
     finally { setSavingCookie(false); }
   };
 

@@ -68,7 +68,7 @@ export default function Onboarding() {
 
       toast.success("Configurazione completata!");
       navigate("/", { replace: true });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nel salvataggio");
     } finally {
       setSaving(false);

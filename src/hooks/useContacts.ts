@@ -47,7 +47,7 @@ export function useContactFilterOptions() {
 
       const origins: string[] = [];
       const countries: string[] = [];
-      (data ?? []).forEach((r: any) => {
+      (data ?? []).forEach((r: Record<string, unknown>) => {
         if (r.filter_type === "origin") origins.push(r.filter_value);
         else if (r.filter_type === "country") countries.push(r.filter_value);
       });
@@ -153,7 +153,7 @@ export function useHoldingPatternStats() {
       if (error) throw error;
 
       const stats: Record<string, number> = { contacted: 0, in_progress: 0, negotiation: 0, converted: 0, lost: 0, total: 0 };
-      (data ?? []).forEach((r: any) => {
+      (data ?? []).forEach((r: Record<string, unknown>) => {
         stats.total++;
         if (stats[r.lead_status] !== undefined) stats[r.lead_status]++;
       });

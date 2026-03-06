@@ -35,7 +35,7 @@ function useDirectoryTotal() {
     queryFn: async () => {
       const { data } = await supabase.rpc("get_directory_counts");
       const result: Record<string, { count: number; verified: boolean }> = {};
-      (data || []).forEach((r: any) => {
+      (data || []).forEach((r: Record<string, unknown>) => {
         result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
       });
       return result;
@@ -141,7 +141,7 @@ export default function Operations() {
       } else {
         toast.error(data?.error || "Errore generazione alias", { id: toastId });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore", { id: toastId });
     } finally {
       setAliasGenerating(false);
@@ -361,7 +361,7 @@ export default function Operations() {
 
 /* ── Stat Pill — tri-state color by value ── */
 function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant = "info" }: {
-  icon: any; value: number; label: string; isDark: boolean;
+  icon: React.ElementType; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
   variant?: "info" | "warn" | "ok";
 }) {

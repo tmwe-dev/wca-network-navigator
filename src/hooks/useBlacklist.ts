@@ -135,7 +135,7 @@ export function useImportBlacklist() {
           const entryName = (entry.company_name || "").toLowerCase().trim();
           const entryCountry = (entry.country || "").toLowerCase().trim();
 
-          const match = partners.find((p: any) => {
+          const match = partners.find((p: { company_name: string; country_name: string; id: string }) => {
             const pName = (p.company_name || "").toLowerCase().trim();
             const pCountry = (p.country_name || "").toLowerCase().trim();
             const nameMatch = pName === entryName || pName.includes(entryName) || entryName.includes(pName);

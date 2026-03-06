@@ -15,7 +15,7 @@ import AIProfileSettings from "@/components/settings/AIProfileSettings";
 
 interface GeneralSettingsProps {
   settings: Record<string, string> | undefined;
-  updateSetting: any;
+  updateSetting: (key: string, value: string) => void;
 }
 
 export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProps) {
@@ -77,8 +77,8 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
       });
       if (error) throw error;
       toast.success("Email di test inviata con successo!");
-    } catch (err: any) {
-      toast.error("Errore invio: " + (err.message || "Sconosciuto"));
+    } catch (err: unknown) {
+      toast.error("Errore invio: " + ((err as Error).message || "Sconosciuto"));
     } finally {
       setSendingTest(false);
     }

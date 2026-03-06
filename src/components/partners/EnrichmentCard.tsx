@@ -9,7 +9,7 @@ interface EnrichmentCardProps {
   partner: {
     id: string;
     enriched_at?: string | null;
-    enrichment_data?: any;
+    enrichment_data?: Record<string, unknown> | null;
     ai_parsed_at?: string | null;
   };
 }

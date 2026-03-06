@@ -40,6 +40,7 @@ import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import type { PartnerContactRow, PartnerNetworkRow, PartnerCertificationRow, PartnerWithRelations } from "@/types/database";
 
 export default function PartnerHub() {
   const [search, setSearch] = useState("");
@@ -75,40 +76,40 @@ export default function PartnerHub() {
   const toggleFavorite = useToggleFavorite();
   const createActivities = useCreateActivities();
 
-  const partnerIds = useMemo(() => (partners || []).map((p: any) => p.id), [partners]);
+  const partnerIds = useMemo(() => (partners || []).map((p: PartnerWithRelations) => p.id), [partners]);
   const { data: blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
   const { data: socialLinksMap } = useBatchSocialLinks(partnerIds);
 
   const filteredPartners = useMemo(() => {
     let list = filterIncomplete
-      ? (partners || []).filter((p: any) => getPartnerContactQuality(p.partner_contacts) !== "complete")
+      ? (partners || []).filter((p: PartnerWithRelations) => getPartnerContactQuality(p.partner_contacts) !== "complete")
       : partners || [];
 
     if (filters.networks && filters.networks.length > 0) {
-      list = list.filter((p: any) => {
-        const pNetworks = (p.partner_networks || []).map((n: any) => n.network_name);
+      list = list.filter((p: PartnerWithRelations) => {
+        const pNetworks = (p.partner_networks || []).map((n: PartnerNetworkRow) => n.network_name);
         return filters.networks!.some((fn) => pNetworks.some((pn: string) => pn.toLowerCase().includes(fn.toLowerCase())));
       });
     }
     if (filters.certifications && filters.certifications.length > 0) {
-      list = list.filter((p: any) => {
-        const pCerts = (p.partner_certifications || []).map((c: any) => c.certification);
+      list = list.filter((p: PartnerWithRelations) => {
+        const pCerts = (p.partner_certifications || []).map((c: PartnerCertificationRow) => c.certification);
         return filters.certifications!.every((fc) => pCerts.includes(fc));
       });
     }
     if (filters.minRating && filters.minRating > 0) {
-      list = list.filter((p: any) => (p.rating || 0) >= filters.minRating!);
+      list = list.filter((p: PartnerWithRelations) => (p.rating || 0) >= filters.minRating!);
     }
     if (filters.minYearsMember && filters.minYearsMember > 0) {
-      list = list.filter((p: any) => getYearsMember(p.member_since) >= filters.minYearsMember!);
+      list = list.filter((p: PartnerWithRelations) => getYearsMember(p.member_since) >= filters.minYearsMember!);
     }
     if (filters.hasBranches) {
-      list = list.filter((p: any) => p.has_branches === true);
+      list = list.filter((p: PartnerWithRelations) => p.has_branches === true);
     }
     if (filters.expiresWithinMonths) {
       const now = new Date();
       if (filters.expiresWithinMonths === "active") {
-        list = list.filter((p: any) => {
+        list = list.filter((p: PartnerWithRelations) => {
           if (!p.membership_expires) return false;
           return new Date(p.membership_expires) >= now;
         });
@@ -116,7 +117,7 @@ export default function PartnerHub() {
         const months = filters.expiresWithinMonths as number;
         const deadline = new Date(now);
         deadline.setMonth(deadline.getMonth() + months);
-        list = list.filter((p: any) => {
+        list = list.filter((p: PartnerWithRelations) => {
           if (!p.membership_expires) return false;
           const exp = new Date(p.membership_expires);
           return exp >= now && exp <= deadline;
@@ -132,7 +133,7 @@ export default function PartnerHub() {
   const countryOptions = useMemo(() => {
     if (!partners) return [];
     const map: Record<string, { code: string; name: string; flag: string; count: number }> = {};
-    partners.forEach((p: any) => {
+    partners.forEach((p: PartnerWithRelations) => {
       if (!map[p.country_code]) {
         map[p.country_code] = { code: p.country_code, name: p.country_name, flag: getCountryFlag(p.country_code), count: 0 };
       }
@@ -167,14 +168,14 @@ export default function PartnerHub() {
     if (selectedIds.size === filteredPartners.length && filteredPartners.length > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredPartners.map((p: any) => p.id)));
+      setSelectedIds(new Set(filteredPartners.map((p: PartnerWithRelations) => p.id)));
     }
   }, [selectedIds.size, filteredPartners]);
 
   const handleBulkDeepSearch = useCallback(() => {
     const ids = filteredPartners
-      .filter((p: any) => selectedIds.has(p.id))
-      .map((p: any) => p.id);
+      .filter((p: PartnerWithRelations) => selectedIds.has(p.id))
+      .map((p: PartnerWithRelations) => p.id);
     if (ids.length === 0) return;
     deepSearch.start(ids);
   }, [selectedIds, filteredPartners, deepSearch]);
@@ -243,8 +244,8 @@ export default function PartnerHub() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`, { id: toastId });
-    } catch (e: any) {
-      toast.error(`Errore generazione alias: ${e.message || "sconosciuto"}`, { id: toastId });
+    } catch (e: unknown) {
+      toast.error(`Errore generazione alias: ${(e as Error).message || "sconosciuto"}`, { id: toastId });
     } finally {
       setAliasGenerating(null);
     }
@@ -439,7 +440,7 @@ export default function PartnerHub() {
                     <Skeleton className="h-4 w-28" />
                   </div>
                 ))
-              : filteredPartners.map((partner: any) => (
+              : filteredPartners.map((partner: PartnerWithRelations) => (
                   <PartnerListItem
                     key={partner.id}
                     partner={partner}
@@ -518,7 +519,7 @@ export default function PartnerHub() {
         onClose={() => setAiOpen(false)}
         context={{
           selectedCountries: selectedCountry
-            ? [{ code: selectedCountry, name: partners?.find((p: any) => p.country_code === selectedCountry)?.country_name || selectedCountry }]
+            ? [{ code: selectedCountry, name: partners?.find((p: PartnerWithRelations) => p.country_code === selectedCountry)?.country_name || selectedCountry }]
             : [],
           filterMode: viewLevel,
         }}

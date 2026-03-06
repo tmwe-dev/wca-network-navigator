@@ -33,13 +33,14 @@ import { getNetworkLogo } from "@/components/partners/shared/NetworkLogos";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
+import type { PartnerContactRow, PartnerServiceRow, PartnerNetworkRow, PartnerWithRelations } from "@/types/database";
 
 const PartnerMiniGlobe = lazy(() =>
   import("@/components/partners/PartnerMiniGlobe").then((m) => ({ default: m.PartnerMiniGlobe }))
 );
 
 interface PartnerDetailFullProps {
-  partner: any;
+  partner: PartnerWithRelations;
   onToggleFavorite: () => void;
   onAssignActivity?: (partnerId: string) => void;
   onSendToWorkspace?: (partnerId: string) => void;
@@ -47,7 +48,7 @@ interface PartnerDetailFullProps {
 }
 
 /* ═══ KPI CARD ═══ */
-function KpiCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
+function KpiCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
   return (
     <div className={cn("flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border bg-card/60 min-w-[80px]", color)}>
       <Icon className="w-4 h-4 opacity-70" strokeWidth={1.5} />
@@ -77,7 +78,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
       } else {
         toast.error(data?.error || "Errore nella Deep Search");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nella Deep Search");
     } finally {
       setDeepSearching(false);
@@ -88,8 +89,8 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
   const branchCountries = getBranchCountries(partner);
   const years = getYearsMember(partner.member_since);
   const services = partner.partner_services || [];
-  const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-  const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+  const transportServices = services.filter((s: PartnerServiceRow) => TRANSPORT_SERVICES.includes(s.service_category));
+  const specialtyServices = services.filter((s: PartnerServiceRow) => SPECIALTY_SERVICES.includes(s.service_category));
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[partner.partner_type || ""] || Box;
   const enrichment = asEnrichment(partner.enrichment_data);
   const contacts = partner.partner_contacts || [];
@@ -97,8 +98,8 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
   const interactions = partner.interactions || [];
 
   /* ── KPI data ── */
-  const contactsWithEmail = contacts.filter((c: any) => c.email).length;
-  const contactsWithPhone = contacts.filter((c: any) => c.direct_phone || c.mobile).length;
+  const contactsWithEmail = contacts.filter((c: PartnerContactRow) => c.email).length;
+  const contactsWithPhone = contacts.filter((c: PartnerContactRow) => c.direct_phone || c.mobile).length;
 
   return (
     <div className="p-5 space-y-4">
@@ -243,7 +244,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
       {/* ═══ NETWORK BAR ═══ */}
       {networks.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {networks.map((n: any) => {
+          {networks.map((n: PartnerNetworkRow) => {
             const logo = getNetworkLogo(n.network_name);
             return (
               <Tooltip key={n.id}>
@@ -285,7 +286,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
             <div className="bg-card/60 border border-sky-500/10 rounded-xl p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Servizi di Trasporto</p>
               <div className="flex flex-wrap gap-2">
-                {transportServices.map((s: any, i: number) => {
+                {transportServices.map((s: PartnerServiceRow, i: number) => {
                   const Icon = getServiceIcon(s.service_category);
                   return (
                     <div key={i} className="flex flex-col items-center gap-1 bg-card/80 border border-sky-500/10 rounded-lg px-3 py-2 min-w-[65px]">
@@ -303,7 +304,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
             <div className="bg-card/60 border border-violet-500/10 rounded-xl p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Specialità</p>
               <div className="flex flex-wrap gap-2">
-                {specialtyServices.map((s: any, i: number) => {
+                {specialtyServices.map((s: PartnerServiceRow, i: number) => {
                   const Icon = getServiceIcon(s.service_category);
                   return (
                     <div key={i} className="flex flex-col items-center gap-1 bg-card/80 border border-violet-500/10 rounded-lg px-3 py-2 min-w-[65px]">
@@ -335,7 +336,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
               </div>
             ) : (
               <div className="space-y-2">
-                {interactions.map((interaction: any) => (
+                {interactions.map((interaction: Record<string, unknown>) => (
                   <div key={interaction.id} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border/20 hover:shadow-sm transition-shadow">
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 bg-primary/10 text-primary border border-primary/10">
                       {interaction.interaction_type?.charAt(0).toUpperCase()}
@@ -360,7 +361,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
             <div className="bg-card/60 border border-border/30 rounded-xl p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Promemoria</p>
               <div className="space-y-2">
-                {partner.reminders.map((r: any) => (
+                {partner.reminders.map((r: Record<string, unknown>) => (
                   <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/20">
                     <div>
                       <p className="font-medium text-sm">{r.title}</p>
@@ -433,7 +434,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
                 <Users className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} /> Contatti Ufficio ({contacts.length})
               </p>
               <div className="space-y-2">
-                {contacts.map((c: any) => (
+                {contacts.map((c: PartnerContactRow) => (
                   <div key={c.id} className="bg-muted/20 border border-border/20 rounded-lg p-3 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <User className="w-3.5 h-3.5 text-muted-foreground/50" strokeWidth={1.5} />
@@ -525,7 +526,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
             <div className="bg-card/60 border border-border/30 rounded-xl p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Routing</p>
               <div className="space-y-1.5">
-                {enrichment.key_routes.map((route: any, i: number) => {
+                {enrichment.key_routes.map((route: Record<string, unknown>, i: number) => {
                   const fromCode = resolveCountryCode(route.from || route.origin || "");
                   const toCode = resolveCountryCode(route.to || route.destination || "");
                   return (
@@ -559,7 +560,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
             <div className="bg-card/60 border border-border/30 rounded-xl p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Certificazioni</p>
               <div className="flex flex-wrap gap-1.5">
-                {partner.partner_certifications.map((c: any, i: number) => (
+                {partner.partner_certifications.map((c: { certification: string }, i: number) => (
                   <span key={i} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/15 rounded-lg px-2.5 py-1.5 text-sm">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
                     {c.certification}

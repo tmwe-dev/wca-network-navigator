@@ -19,19 +19,20 @@ import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { PartnerContactRow, PartnerServiceRow, PartnerNetworkRow, PartnerWithRelations } from "@/types/database";
 
 /* ── Helpers ── */
-const hasPhone = (p: any) =>
-  (p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone);
-const hasEmail = (p: any) =>
-  (p.partner_contacts || []).some((c: any) => c.email);
-const hasDeepSearch = (p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
-const hasServices = (p: any) => (p.partner_services || []).length > 0;
-const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
+const hasPhone = (p: PartnerWithRelations) =>
+  (p.partner_contacts || []).some((c: PartnerContactRow) => c.mobile || c.direct_phone);
+const hasEmail = (p: PartnerWithRelations) =>
+  (p.partner_contacts || []).some((c: PartnerContactRow) => c.email);
+const hasDeepSearch = (p: PartnerWithRelations) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
+const hasServices = (p: PartnerWithRelations) => (p.partner_services || []).length > 0;
+const hasRating3Plus = (p: PartnerWithRelations) => (p.rating || 0) >= 3;
 
 type FilterTag = "with_phone" | "with_email" | "deep_search" | "rating_3" | "with_services";
 
-const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
+const FILTER_FNS: Record<FilterTag, (p: PartnerWithRelations) => boolean> = {
   with_phone: hasPhone,
   with_email: hasEmail,
   deep_search: hasDeepSearch,
@@ -41,7 +42,7 @@ const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
 
 interface CountryWorkbenchProps {
   countryCode: string;
-  partners: any[];
+  partners: PartnerWithRelations[];
   onBack: () => void;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -68,18 +69,18 @@ export function CountryWorkbench({
   const flag = getCountryFlag(countryCode);
 
   const countryPartners = useMemo(
-    () => (partners || []).filter((p: any) => p.country_code === countryCode),
+    () => (partners || []).filter((p: PartnerWithRelations) => p.country_code === countryCode),
     [partners, countryCode]
   );
 
   const totalAiCredits = useMemo(() => {
-    return countryPartners.reduce((sum: number, p: any) => {
+    return countryPartners.reduce((sum: number, p: PartnerWithRelations) => {
       const credits = asEnrichment(p.enrichment_data)?.tokens_used?.credits_consumed || 0;
       return sum + credits;
     }, 0);
   }, [countryPartners]);
 
-  const partnerIds = useMemo(() => countryPartners.map((p: any) => p.id), [countryPartners]);
+  const partnerIds = useMemo(() => countryPartners.map((p: PartnerWithRelations) => p.id), [countryPartners]);
   const { data: linkedinMap } = useQuery({
     queryKey: ["linkedin-links-hub", countryCode, partnerIds],
     queryFn: async () => {
@@ -114,7 +115,7 @@ export function CountryWorkbench({
   });
 
   const dynamicCounts = useMemo(() => {
-    const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
+    const countFor = (excludeTag: FilterTag, predicate: (p: PartnerWithRelations) => boolean) => {
       let list = countryPartners;
       for (const tag of activeFilters) {
         if (tag === excludeTag) continue;
@@ -134,13 +135,13 @@ export function CountryWorkbench({
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
     for (const tag of activeFilters) list = list.filter(FILTER_FNS[tag]);
-    return list.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0) || a.company_name.localeCompare(b.company_name));
+    return list.sort((a: PartnerWithRelations, b: PartnerWithRelations) => (b.rating || 0) - (a.rating || 0) || a.company_name.localeCompare(b.company_name));
   }, [countryPartners, activeFilters]);
 
-  const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
+  const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: PartnerWithRelations) => selectedIds.has(p.id));
 
   const handleSelectAll = useCallback(() => {
-    onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
+    onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: PartnerWithRelations) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
   const filterChips: { key: FilterTag; label: string; icon: typeof Phone; color: string; activeColor: string; count: number }[] = [
@@ -228,16 +229,16 @@ export function CountryWorkbench({
       {/* ═══ PARTNER LIST ═══ */}
       <ScrollArea className="flex-1">
         <div className="py-1">
-          {filteredPartners.map((partner: any) => {
+          {filteredPartners.map((partner: PartnerWithRelations) => {
             const isSelected = selectedIds.has(partner.id);
             const years = getYearsMember(partner.member_since);
             const services = partner.partner_services || [];
-            const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-            const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+            const transportServices = services.filter((s: PartnerServiceRow) => TRANSPORT_SERVICES.includes(s.service_category));
+            const specialtyServices = services.filter((s: PartnerServiceRow) => SPECIALTY_SERVICES.includes(s.service_category));
             const networks = partner.partner_networks || [];
             const linkedinUrl = linkedinMap?.[partner.id];
             const hasActivity = activityPartnerIds?.has(partner.id);
-            const primaryContact = (partner.partner_contacts || []).find((c: any) => c.is_primary) || (partner.partner_contacts || [])[0];
+            const primaryContact = (partner.partner_contacts || []).find((c: PartnerContactRow) => c.is_primary) || (partner.partner_contacts || [])[0];
             const contactEmail = primaryContact?.email;
             const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
 
@@ -299,7 +300,7 @@ export function CountryWorkbench({
                   {/* Row 3: Service icons */}
                   {(transportServices.length > 0 || specialtyServices.length > 0) && (
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      {transportServices.slice(0, 5).map((s: any, i: number) => {
+                      {transportServices.slice(0, 5).map((s: PartnerServiceRow, i: number) => {
                         const Icon = getServiceIcon(s.service_category);
                         return (
                           <Tooltip key={`t${i}`}>
@@ -313,7 +314,7 @@ export function CountryWorkbench({
                       {specialtyServices.length > 0 && transportServices.length > 0 && (
                         <span className="w-px h-3 bg-border/50" />
                       )}
-                      {specialtyServices.slice(0, 3).map((s: any, i: number) => {
+                      {specialtyServices.slice(0, 3).map((s: PartnerServiceRow, i: number) => {
                         const Icon = getServiceIcon(s.service_category);
                         return (
                           <Tooltip key={`s${i}`}>
@@ -330,7 +331,7 @@ export function CountryWorkbench({
                   {/* Row 4: Networks (compact) */}
                   {networks.length > 0 && (
                     <div className="flex items-center gap-1 mt-1.5">
-                      {networks.slice(0, 3).map((n: any) => (
+                      {networks.slice(0, 3).map((n: PartnerNetworkRow) => (
                         <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
                           {n.network_name.replace("WCA ", "").substring(0, 10)}
                         </span>

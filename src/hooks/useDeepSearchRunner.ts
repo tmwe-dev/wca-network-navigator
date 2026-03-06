@@ -43,7 +43,7 @@ export function useDeepSearchRunner(): DeepSearchState {
         .in("id", partnerIds)
         .not("enrichment_data->deep_search_at", "is", null);
 
-      const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
+      const doneSet = new Set((alreadyDone || []).map((p: { id: string }) => p.id));
       toProcess = partnerIds.filter(id => !doneSet.has(id));
       const skipped = partnerIds.length - toProcess.length;
 
@@ -69,11 +69,11 @@ export function useDeepSearchRunner(): DeepSearchState {
         done++;
 
         // Get partner info — try filtered cache first, then fetch if missing
-        let cached: any = null;
+        let cached: Record<string, unknown> | null = null;
         const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
         for (const [, data] of allCached) {
           if (Array.isArray(data)) {
-            cached = data.flat().find((p: any) => p.id === id);
+            cached = data.flat().find((p: { id: string }) => p.id === id);
             if (cached) break;
           }
         }
@@ -141,7 +141,7 @@ export function useDeepSearchRunner(): DeepSearchState {
 
       queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore Deep Search", { id: "deep-search-global" });
     } finally {
       setRunning(false);

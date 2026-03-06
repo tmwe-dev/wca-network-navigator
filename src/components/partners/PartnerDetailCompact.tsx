@@ -31,9 +31,10 @@ import { t } from "@/components/download/theme";
 
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
+import type { PartnerContactRow, PartnerServiceRow, PartnerNetworkRow } from "@/types/database";
 
 interface PartnerDetailCompactProps {
-  partner: any;
+  partner: PartnerWithRelations;
   onBack: () => void;
   onToggleFavorite: () => void;
   isDark: boolean;
@@ -58,15 +59,15 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati`);
         queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
       } else { toast.error(data?.error || "Errore"); }
-    } catch (e: any) { toast.error(e?.message || "Errore"); }
+    } catch (e: unknown) { toast.error(e?.message || "Errore"); }
     finally { setDeepSearching(false); }
   }, [partner.id, queryClient]);
 
   const contacts = partner.partner_contacts || [];
   const services = partner.partner_services || [];
   const networks = partner.partner_networks || [];
-  const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-  const specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
+  const transportServices = services.filter((s: PartnerServiceRow) => TRANSPORT_SERVICES.includes(s.service_category));
+  const specialtyServices = services.filter((s: PartnerServiceRow) => !TRANSPORT_SERVICES.includes(s.service_category));
 
   return (
     <div className="p-4 space-y-4">
@@ -126,7 +127,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {contacts.length > 0 && (
         <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
-          {contacts.map((c: any) => (
+          {contacts.map((c: PartnerContactRow) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
@@ -182,7 +183,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Servizi</p>
           <div className="flex flex-wrap gap-1.5">
-            {services.map((s: any, i: number) => {
+            {services.map((s: PartnerServiceRow, i: number) => {
               const Icon = getServiceIcon(s.service_category);
               return (
                 <Tooltip key={i}>
@@ -202,7 +203,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
           <div className="flex flex-wrap gap-1.5">
-            {networks.map((n: any) => (
+            {networks.map((n: PartnerNetworkRow) => (
               <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
                 {n.network_name}
                 {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}

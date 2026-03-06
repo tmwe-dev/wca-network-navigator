@@ -48,8 +48,8 @@ export function useWorkspaceDocuments() {
       setDocuments((prev) => [...prev, doc]);
       toast({ title: "Documento caricato", description: file.name });
       return doc;
-    } catch (err: any) {
-      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore upload", description: (err as Error).message, variant: "destructive" });
       return null;
     } finally {
       setUploading(false);

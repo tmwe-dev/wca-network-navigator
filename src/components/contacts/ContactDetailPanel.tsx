@@ -84,8 +84,8 @@ export function ContactDetailPanel({ contact }: Props) {
       queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
       queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
       toast({ title: "Alias generato", description: `${data?.processed || 0} contatti elaborati` });
-    } catch (e: any) {
-      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Errore", description: (e as Error).message, variant: "destructive" });
     } finally {
       setAliasLoading(false);
     }

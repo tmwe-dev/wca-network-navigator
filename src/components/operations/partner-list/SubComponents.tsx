@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils";
 import {
   Download, Telescope, Building2, UserCircle, CheckCircle2,
 } from "lucide-react";
+import type { PartnerContactRow, PartnerWithRelations } from "@/types/database";
 
 /* ── Icon Indicator (circular with badge) — tri-state ── */
 export function IconIndicator({ icon: Icon, count, label, isDark, onClick, active, verified }: {
-  icon: any; count: number; label: string; isDark: boolean;
+  icon: React.ElementType; count: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean; verified?: boolean;
 }) {
   const done = count === 0;
@@ -69,7 +70,7 @@ export function StatusDot({ ok, label, isDark }: { ok: boolean; label: string; i
 /* ── Horizontal Wizard Step ── */
 export function HorizStep({ step, active, done, isDark, icon: Icon, label, missing }: {
   step: number; active: boolean; done: boolean; isDark: boolean;
-  icon: any; label: string; missing: number;
+  icon: React.ElementType; label: string; missing: number;
 }) {
   return (
     <div className={cn(
@@ -98,7 +99,7 @@ export function HorizStep({ step, active, done, isDark, icon: Icon, label, missi
 /* ── Download Choice Card (compact) ── */
 export function DownloadChoice({ selected, onClick, isDark, icon: Icon, title, description, count, color }: {
   selected: boolean; onClick: () => void; isDark: boolean;
-  icon: any; title: string; description: string; count: number; color: string;
+  icon: React.ElementType; title: string; description: string; count: number; color: string;
 }) {
   return (
     <button onClick={onClick} className={cn(
@@ -139,7 +140,7 @@ export function FilterActionBar({ filter, count, isDark, onDownload, onDeepSearc
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
 }) {
-  const configs: Record<string, { icon: any; label: string; action: () => void; disabled?: boolean; color: string }> = {
+  const configs: Record<string, { icon: React.ElementType; label: string; action: () => void; disabled?: boolean; color: string }> = {
     profiles: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
     email: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },
     phone: { icon: Download, label: "Scarica Profili Filtrati", action: onDownload, color: isDark ? "bg-sky-600 hover:bg-sky-500" : "bg-sky-500 hover:bg-sky-600" },

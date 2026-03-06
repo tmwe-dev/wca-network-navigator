@@ -29,6 +29,7 @@ import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { useDirectoryDownload } from "@/hooks/useDirectoryDownload";
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
 import { IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar } from "./partner-list/SubComponents";
+import type { PartnerContactRow, PartnerWithRelations } from "@/types/database";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
@@ -81,23 +82,23 @@ export function PartnerListPanel({
   const filteredPartners = useMemo(() => {
     let list = partners || [];
     if (progressFilter) {
-      list = list.filter((p: any) => {
+      list = list.filter((p: PartnerWithRelations) => {
         switch (progressFilter) {
           case "profiles": return !p.raw_profile_html;
           case "deep": return !(p.enrichment_data && asEnrichment(p.enrichment_data)?.deep_search_at);
-          case "email": return !p.email && !(p.partner_contacts || []).some((c: any) => c.email);
-          case "phone": return !p.phone && !(p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile);
+          case "email": return !p.email && !(p.partner_contacts || []).some((c: PartnerContactRow) => c.email);
+          case "phone": return !p.phone && !(p.partner_contacts || []).some((c: PartnerContactRow) => c.direct_phone || c.mobile);
           case "alias_co": return !p.company_alias;
-          case "alias_ct": return !(p.partner_contacts || []).some((c: any) => c.contact_alias);
+          case "alias_ct": return !(p.partner_contacts || []).some((c: PartnerContactRow) => c.contact_alias);
           default: return true;
         }
       });
     }
     const sorted = [...list];
     switch (sortBy) {
-      case "name_asc": return sorted.sort((a: any, b: any) => a.company_name.localeCompare(b.company_name));
-      case "rating_desc": return sorted.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0));
-      case "contacts_desc": return sorted.sort((a: any, b: any) => {
+      case "name_asc": return sorted.sort((a: PartnerWithRelations, b: PartnerWithRelations) => a.company_name.localeCompare(b.company_name));
+      case "rating_desc": return sorted.sort((a: PartnerWithRelations, b: PartnerWithRelations) => (b.rating || 0) - (a.rating || 0));
+      case "contacts_desc": return sorted.sort((a: PartnerWithRelations, b: PartnerWithRelations) => {
         const qa = getPartnerContactQuality(a.partner_contacts);
         const qb = getPartnerContactQuality(b.partner_contacts);
         const order: Record<string, number> = { complete: 0, partial: 1, missing: 2 };
@@ -213,7 +214,7 @@ export function PartnerListPanel({
               count={filteredPartners.length}
               isDark={isDark}
               onDownload={async () => {
-                const filteredWcaIds = filteredPartners.map((p: any) => p.wca_id).filter((id: number | null): id is number => id != null);
+                const filteredWcaIds = filteredPartners.map((p: PartnerWithRelations) => p.wca_id).filter((id: number | null): id is number => id != null);
                 if (filteredWcaIds.length === 0) { toast.error("Nessun partner filtrato ha un WCA ID"); return; }
                 const sessionOk = await dl.ensureSession();
                 if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
@@ -229,7 +230,7 @@ export function PartnerListPanel({
                 if (jobId && onJobCreated) onJobCreated(jobId);
               }}
               onDeepSearch={() => {
-                const ids = filteredPartners.map((p: any) => p.id);
+                const ids = filteredPartners.map((p: PartnerWithRelations) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
               }}
               onGenerateAlias={(type) => onGenerateAliases?.(countryCodes, type)}
@@ -296,7 +297,7 @@ export function PartnerListPanel({
                     <Button size="sm" className={cn("w-full h-8 text-xs font-bold", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
                       disabled={deepSearchRunning}
                       onClick={() => {
-                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !asEnrichment(p.enrichment_data)?.deep_search_at).map((p: any) => p.id);
+                        const ids = (partners || []).filter((p: PartnerWithRelations) => p.raw_profile_html && !asEnrichment(p.enrichment_data)?.deep_search_at).map((p: PartnerWithRelations) => p.id);
                         if (ids.length > 0) onDeepSearch?.(ids);
                       }}>
                       {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Deep Search ({missingDeep})</>}
@@ -354,14 +355,14 @@ export function PartnerListPanel({
                     <Skeleton className="h-4 w-28" />
                   </div>
                 ))
-              : filteredPartners.map((partner: any) => {
+              : filteredPartners.map((partner: PartnerWithRelations) => {
                   const q = getPartnerContactQuality(partner.partner_contacts);
                   const years = getYearsMember(partner.member_since);
                   const contacts = partner.partner_contacts || [];
-                  const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+                  const primaryContact = contacts.find((c: PartnerContactRow) => c.is_primary) || contacts[0];
                   const hasProfile = !!partner.raw_profile_html;
-                  const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
-                  const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
+                  const hasEmail = !!partner.email || contacts.some((c: PartnerContactRow) => c.email);
+                  const hasPhone = !!partner.phone || contacts.some((c: PartnerContactRow) => c.direct_phone || c.mobile);
                   const hasDeep = !!asEnrichment(partner.enrichment_data)?.deep_search_at;
 
                   return (

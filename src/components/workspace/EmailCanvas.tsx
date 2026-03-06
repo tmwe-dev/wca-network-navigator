@@ -118,8 +118,8 @@ export default function EmailCanvas({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
-    } catch (err: any) {
-      toast({ title: "Errore invio", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore invio", description: (err as Error).message, variant: "destructive" });
     } finally { setSending(false); }
   };
 

@@ -43,7 +43,7 @@ export function SendEmailDialog({
       toast.success(`Email inviata a ${recipientEmail}`);
       onOpenChange(false);
       setBody("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e?.message || "Errore nell'invio dell'email");
     } finally {
       setSending(false);

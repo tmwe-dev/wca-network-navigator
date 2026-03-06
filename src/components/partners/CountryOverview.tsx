@@ -23,6 +23,7 @@ import {
   CheckSquare,
 } from "lucide-react";
 import {
+import type { PartnerContactRow, PartnerWithRelations } from "@/types/database";
   Select,
   SelectContent,
   SelectItem,
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/select";
 
 interface CountryOverviewProps {
-  partners: any[];
+  partners: PartnerWithRelations[];
   isLoading: boolean;
   onSelectPartner: (id: string) => void;
   selectedId: string | null;
@@ -48,7 +49,7 @@ interface CountryGroup {
   withContacts: number;
   withWhatsApp: number;
   withEmail: number;
-  partners: any[];
+  partners: PartnerWithRelations[];
 }
 
 type ContactFilter = "all" | "whatsapp" | "email";
@@ -68,14 +69,14 @@ export function CountryOverview({
   const [filterMode, setFilterMode] = useState<"all" | "complete" | "incomplete">("all");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
-  const hasWhatsApp = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.mobile);
-  const hasEmail = (p: any) =>
-    (p.partner_contacts || []).some((c: any) => c.email);
+  const hasWhatsApp = (p: PartnerWithRelations) =>
+    (p.partner_contacts || []).some((c: PartnerContactRow) => c.mobile);
+  const hasEmail = (p: PartnerWithRelations) =>
+    (p.partner_contacts || []).some((c: PartnerContactRow) => c.email);
 
   const countryGroups = useMemo(() => {
     const map = new Map<string, CountryGroup>();
-    (partners || []).forEach((p: any) => {
+    (partners || []).forEach((p: PartnerWithRelations) => {
       if (!map.has(p.country_code)) {
         map.set(p.country_code, {
           code: p.country_code,
@@ -139,7 +140,7 @@ export function CountryOverview({
   const visiblePartnerIds = useMemo(() => {
     const ids: string[] = [];
     filteredGroups.forEach((g) => {
-      g.partners.forEach((p: any) => {
+      g.partners.forEach((p: PartnerWithRelations) => {
         if (contactFilter === "whatsapp" && !hasWhatsApp(p)) return;
         if (contactFilter === "email" && !hasEmail(p)) return;
         ids.push(p.id);
@@ -152,7 +153,7 @@ export function CountryOverview({
 
   const totalPartners = partners?.length || 0;
   const totalWithContacts = useMemo(
-    () => (partners || []).filter((p: any) => {
+    () => (partners || []).filter((p: PartnerWithRelations) => {
       const q = getPartnerContactQuality(p.partner_contacts);
       return q === "complete" || q === "partial";
     }).length,
@@ -273,7 +274,7 @@ export function CountryOverview({
             const completePct = group.total > 0 ? Math.round((group.withContacts / group.total) * 100) : 0;
 
             // Filter partners within group by contactFilter
-            const visiblePartners = group.partners.filter((p: any) => {
+            const visiblePartners = group.partners.filter((p: PartnerWithRelations) => {
               if (contactFilter === "whatsapp") return hasWhatsApp(p);
               if (contactFilter === "email") return hasEmail(p);
               return true;
@@ -332,8 +333,8 @@ export function CountryOverview({
                 <CollapsibleContent>
                   <div className="bg-muted/30 divide-y divide-border/50">
                     {visiblePartners
-                      .sort((a: any, b: any) => a.company_name.localeCompare(b.company_name))
-                      .map((partner: any) => {
+                      .sort((a: PartnerWithRelations, b: PartnerWithRelations) => a.company_name.localeCompare(b.company_name))
+                      .map((partner: PartnerWithRelations) => {
                         const q = getPartnerContactQuality(partner.partner_contacts);
                         const contactCount = (partner.partner_contacts || []).length;
                         const pHasWhatsApp = hasWhatsApp(partner);

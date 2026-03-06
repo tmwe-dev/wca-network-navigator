@@ -93,9 +93,9 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
           onAICommand(command);
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("ContactAIBar error:", e);
-      toast({ title: "Errore", description: e.message || "Errore di comunicazione", variant: "destructive" });
+      toast({ title: "Errore", description: (e as Error).message || "Errore di comunicazione", variant: "destructive" });
     } finally {
       setLoading(false);
       inputRef.current?.focus();

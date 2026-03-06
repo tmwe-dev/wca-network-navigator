@@ -44,7 +44,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
     queryFn: async () => {
       const { data } = await supabase.rpc("get_directory_counts");
       const result: Record<string, { count: number; verified: boolean }> = {};
-      (data || []).forEach((r: any) => {
+      (data || []).forEach((r: Record<string, unknown>) => {
         result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
       });
       return result;

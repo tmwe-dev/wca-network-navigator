@@ -8,7 +8,7 @@ import { clean, formatPhone, getContactQuality } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 
 interface ContactCardProps {
-  c: any;
+  c: Record<string, unknown>;
   isActive: boolean;
   isSelected: boolean;
   onSelect: () => void;

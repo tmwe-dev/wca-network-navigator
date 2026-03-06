@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface Partner {
   id: string;
@@ -21,7 +22,7 @@ export interface Partner {
   membership_expires: string | null;
   profile_description: string | null;
   has_branches: boolean | null;
-  branch_cities: any;
+  branch_cities: Json | null;
   partner_type: string | null;
   is_active: boolean | null;
   is_favorite: boolean | null;

@@ -34,7 +34,7 @@ export function useEmailGenerator() {
       // Handle structured error responses (e.g. 422 no_email)
       if (error) {
         // Try to parse the response body for structured errors
-        let parsed: any = null;
+        let parsed: Record<string, unknown> | null = null;
         try {
           if (error.context instanceof Response) {
             parsed = await error.context.json();
@@ -85,8 +85,8 @@ export function useEmailGenerator() {
       }
 
       return result;
-    } catch (err: any) {
-      toast({ title: "Errore generazione", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Errore generazione", description: (err as Error).message, variant: "destructive" });
       return null;
     } finally {
       setIsGenerating(false);

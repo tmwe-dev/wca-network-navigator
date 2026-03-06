@@ -47,7 +47,7 @@ interface Props {
 }
 
 function RangeRow({ label, icon: Icon, minVal, maxVal, onMinChange, onMaxChange, isDark, placeholder }: {
-  label: string; icon: any; minVal: string; maxVal: string;
+  label: string; icon: React.ElementType; minVal: string; maxVal: string;
   onMinChange: (v: string) => void; onMaxChange: (v: string) => void;
   isDark: boolean; placeholder?: [string, string];
 }) {
@@ -78,7 +78,7 @@ function RangeRow({ label, icon: Icon, minVal, maxVal, onMinChange, onMaxChange,
 }
 
 function StarSelector({ label, icon: Icon, value, onChange, isDark }: {
-  label: string; icon: any; value: number; onChange: (v: number) => void; isDark: boolean;
+  label: string; icon: React.ElementType; value: number; onChange: (v: number) => void; isDark: boolean;
 }) {
   const th = t(isDark);
   return (
@@ -109,7 +109,7 @@ function StarSelector({ label, icon: Icon, value, onChange, isDark }: {
 }
 
 function ChipMultiSelect({ label, icon: Icon, options, selected, onToggle, isDark }: {
-  label: string; icon: any; options: string[]; selected: string[];
+  label: string; icon: React.ElementType; options: string[]; selected: string[];
   onToggle: (v: string) => void; isDark: boolean;
 }) {
   const th = t(isDark);

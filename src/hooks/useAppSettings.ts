@@ -10,7 +10,7 @@ export function useAppSettings() {
         .select("key, value");
       if (error) throw error;
       const map: Record<string, string> = {};
-      data?.forEach((row: any) => {
+      data?.forEach((row: { key: string; value: string | null }) => {
         map[row.key] = row.value;
       });
       return map;

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 export async function saveExtractionResult(
   partnerId: string,
   wcaId: number,
-  result: any,
+  result: Record<string, unknown>,
   existingCompanyName: string,
 ) {
   let hasEmail = false;
@@ -48,8 +48,8 @@ export async function saveExtractionResult(
       if (c.email) hasEmail = true;
       if (c.phone || c.mobile) hasPhone = true;
     }
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts.filter((c: string) => c.email).length;
+    extractedPhoneCount = result.contacts.filter((c: string) => c.phone || c.mobile).length;
   }
 
   // ── Save company name (skip error messages) ──
@@ -103,8 +103,8 @@ export async function saveExtractionResult(
       .from("partner_networks").select("network_name").eq("partner_id", partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
     const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({
+      .filter((n: Record<string, string>) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n: Record<string, string>) => ({
         partner_id: partnerId,
         network_name: n.name.trim(),
         expires: n.expires || null,

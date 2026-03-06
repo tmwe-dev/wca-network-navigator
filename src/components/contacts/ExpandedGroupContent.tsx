@@ -38,7 +38,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
 
   return (
     <div className="p-2 space-y-1">
-      {contacts.map((c: any) => (
+      {contacts.map((c: Record<string, unknown>) => (
         <ContactCard
           key={c.id}
           c={c}

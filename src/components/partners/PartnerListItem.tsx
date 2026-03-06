@@ -11,9 +11,10 @@ import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { CardSocialIcons } from "@/components/partners/shared/CardSocialIcons";
 import { getBranchCountries, asEnrichment } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
+import type { PartnerContactRow, PartnerServiceRow, PartnerWithRelations } from "@/types/database";
 
 interface PartnerListItemProps {
-  partner: any;
+  partner: PartnerWithRelations;
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
@@ -109,7 +110,7 @@ export function PartnerListItem({
           <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
             {(() => {
               const contacts = partner.partner_contacts || [];
-              const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+              const primaryContact = contacts.find((c: PartnerContactRow) => c.is_primary) || contacts[0];
               if (!primaryContact) return <span className="italic text-muted-foreground/40">Nessun contatto</span>;
               return (
                 <>
@@ -135,14 +136,14 @@ export function PartnerListItem({
           </div>
           {/* Service icons */}
           {(() => {
-            const transport = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-            const specialty = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+            const transport = services.filter((s: PartnerServiceRow) => TRANSPORT_SERVICES.includes(s.service_category));
+            const specialty = services.filter((s: PartnerServiceRow) => SPECIALTY_SERVICES.includes(s.service_category));
             if (transport.length === 0 && specialty.length === 0) return null;
             return (
               <div className="flex items-start gap-3 mt-1.5">
                 {transport.length > 0 && (
                   <div className="flex items-center gap-1 flex-wrap">
-                    {transport.map((s: any, i: number) => {
+                    {transport.map((s: PartnerServiceRow, i: number) => {
                       const Icon = getServiceIcon(s.service_category);
                       return (
                         <Tooltip key={i}>
@@ -160,7 +161,7 @@ export function PartnerListItem({
                 )}
                 {specialty.length > 0 && (
                   <div className="flex items-center gap-1 flex-wrap">
-                    {specialty.map((s: any, i: number) => {
+                    {specialty.map((s: PartnerServiceRow, i: number) => {
                       const Icon = getServiceIcon(s.service_category);
                       return (
                         <Tooltip key={i}>

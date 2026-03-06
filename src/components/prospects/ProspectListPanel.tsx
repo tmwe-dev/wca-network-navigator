@@ -146,8 +146,8 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
       toast.success(`${activities.length} attività create nel Workspace`);
       setSelectedIds(new Set());
       navigate("/workspace");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     } finally { setSending(false); }
   }, [selectedIds, filtered, navigate]);
 
@@ -387,7 +387,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
       {/* Contatti Personali (Management) */}
       {contacts.length > 0 && (
         <Section title={`Management (${contacts.length})`}>
-          {contacts.map((c: any) => (
+          {contacts.map((c: Record<string, unknown>) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />

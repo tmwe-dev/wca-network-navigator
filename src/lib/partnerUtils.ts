@@ -59,10 +59,10 @@ export type SortOption =
   | "branches_desc"
   | "contacts_desc";
 
-export function getBranchCountries(partner: any): { code: string; name: string }[] {
+export function getBranchCountries(partner: { branch_cities?: unknown; country_code?: string }): { code: string; name: string }[] {
   if (!partner.branch_cities || !Array.isArray(partner.branch_cities)) return [];
   const map = new Map<string, string>();
-  partner.branch_cities.forEach((b: any) => {
+  partner.branch_cities.forEach((b: Record<string, string>) => {
     const code = b?.country_code || b?.country;
     if (code && code !== partner.country_code) {
       map.set(code, b?.country_name || code);
@@ -71,7 +71,7 @@ export function getBranchCountries(partner: any): { code: string; name: string }
   return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
 }
 
-export function sortPartners(partners: any[], sortBy: SortOption): any[] {
+export function sortPartners<T extends Record<string, unknown>>(partners: T[], sortBy: SortOption): T[] {
   const sorted = [...partners];
   switch (sortBy) {
     case "name_asc": return sorted.sort((a, b) => a.company_name.localeCompare(b.company_name));

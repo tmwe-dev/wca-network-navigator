@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
 
 // Find a field value from a row using multiple possible aliases
-function findField(row: Record<string, any>, aliases: string[]): string | null {
+function findField(row: Record<string, unknown>, aliases: string[]): string | null {
   for (const alias of aliases) {
     if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
       return String(row[alias]).trim();
@@ -72,7 +72,7 @@ export interface ImportedContact {
   converted_at: string | null;
   is_selected: boolean;
   is_transferred: boolean;
-  raw_data: any;
+  raw_data: Record<string, unknown>;
   created_at: string;
 }
 
@@ -82,11 +82,11 @@ export interface ImportError {
   row_number: number;
   error_type: string;
   error_message: string | null;
-  raw_data: any;
-  corrected_data: any;
+  raw_data: Record<string, unknown>;
+  corrected_data: Record<string, unknown>;
   status: string;
   attempted_corrections: number;
-  ai_suggestions: any;
+  ai_suggestions: Record<string, unknown>;
   created_at: string;
 }
 
@@ -132,7 +132,7 @@ export function useImportedContacts(importLogId: string | null) {
       if (!importLogId) return [];
       // Fetch all rows in batches to bypass the 1000-row default limit
       const PAGE_SIZE = 1000;
-      let allData: any[] = [];
+      let allData: Record<string, unknown>[] = [];
       let from = 0;
       let hasMore = true;
       while (hasMore) {
@@ -180,7 +180,7 @@ export function useCreateImport() {
       userId,
     }: {
       file: File;
-      rows: any[];
+      rows: Record<string, unknown>[];
       userId: string;
     }) => {
       // 1. Upload file to storage
@@ -442,7 +442,7 @@ export function useAnalyzeImportStructure() {
       inputType,
       rawText,
     }: {
-      sampleRows?: any[];
+      sampleRows?: Record<string, unknown>[];
       inputType: "paste" | "file";
       rawText?: string;
     }) => {
@@ -452,7 +452,7 @@ export function useAnalyzeImportStructure() {
       if (error) throw error;
       return data as {
         column_mapping: Record<string, string>;
-        parsed_rows: any[];
+        parsed_rows: Record<string, unknown>[];
         confidence: number;
         warnings: string[];
         unmapped_columns?: string[];
@@ -492,7 +492,7 @@ export function useFixImportErrors() {
 
 export function exportErrorsToCSV(errors: ImportError[]) {
   const SEP = ";";
-  const escapeCell = (val: any) => {
+  const escapeCell = (val: unknown) => {
     if (val === null || val === undefined) return "";
     const s = String(val).replace(/"/g, '""');
     if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
@@ -539,7 +539,7 @@ export function useCreateImportFromParsedRows() {
       fileName,
       groupName,
     }: {
-      rows: any[];
+      rows: Record<string, unknown>[];
       userId: string;
       fileName: string;
       groupName?: string;
