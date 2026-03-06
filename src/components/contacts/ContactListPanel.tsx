@@ -136,9 +136,18 @@ function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: {
               </a>
             )}
           </div>
-        </div>
-        <div className="shrink-0">
-          <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
+          <div className="flex items-center justify-between border-t border-border/50 pt-1 mt-1">
+            <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
+            {c.interaction_count > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-chart-3/20 text-chart-3">
+                <MessageCircle className="w-3 h-3" />{c.interaction_count}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
+                <MessageCircle className="w-3 h-3" />0
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
