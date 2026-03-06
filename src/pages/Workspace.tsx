@@ -212,6 +212,7 @@ export default function Workspace() {
           selectedActivityId={selectedActivity?.id || null}
           onSelect={setSelectedActivity}
           search={search}
+          sourceType={sourceTab}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onSelectAll={handleSelectAll}
