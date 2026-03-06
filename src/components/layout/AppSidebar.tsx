@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
-  Users, PackageCheck, Command, Upload, UserCheck,
+  Users, PackageCheck, Command, Upload, UserCheck, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +25,7 @@ const navSections = [
     items: [
       { title: "Campaigns", url: "/campaigns", icon: Mail },
       { title: "Email", url: "/email-composer", icon: Send },
+      { title: "Hub Operativo", url: "/hub", icon: Zap },
       { title: "Workspace", url: "/workspace", icon: Sparkles },
     ],
   },
