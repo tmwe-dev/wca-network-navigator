@@ -193,14 +193,14 @@ export function validateAndTransform(
  * Takes a raw row object + column_mapping dict and returns transformed values.
  */
 export function transformRow(
-  row: Record<string, any>,
+  row: Record<string, unknown>,
   columnMapping: Record<string, string>,
   heuristicMappings?: ColumnMapping[]
 ): Record<string, string | null> {
   const result: Record<string, string | null> = {};
 
   for (const [srcKey, dstCol] of Object.entries(columnMapping)) {
-    if (!TARGET_COLUMNS.includes(dstCol as any)) continue;
+    if (!(TARGET_COLUMNS as readonly string[]).includes(dstCol)) continue;
 
     // Find actual key in row (fuzzy)
     const actualKey = findRowKey(row, srcKey);
@@ -243,7 +243,7 @@ function detectTransformForTarget(targetCol: string): TransformationType {
 }
 
 /** 3-tier key lookup: exact → normalized → fuzzy substring */
-function findRowKey(row: Record<string, any>, targetKey: string): string | undefined {
+function findRowKey(row: Record<string, unknown>, targetKey: string): string | undefined {
   const keys = Object.keys(row);
   if (row[targetKey] !== undefined) return targetKey;
 

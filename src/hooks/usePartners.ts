@@ -24,8 +24,10 @@ export interface Partner {
   partner_type: string | null;
   is_active: boolean | null;
   is_favorite: boolean | null;
+  rating: number | null;
   created_at: string | null;
   updated_at: string | null;
+  partner_contacts?: Array<{ id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }>;
 }
 
 export interface PartnerFilters {

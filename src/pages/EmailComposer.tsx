@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Send, Save, Eye, Plus, Trash2, Loader2, Mail, Globe, Users, Briefcase, Link as LinkIcon, Paperclip, X, ListOrdered } from "lucide-react";
+import { Send, Save, Eye, Plus, Loader2, Mail, Globe, Users, Briefcase, Link as LinkIcon, Paperclip, X, ListOrdered } from "lucide-react";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
@@ -52,7 +52,7 @@ export default function EmailComposer() {
   const [partnerSearch, setPartnerSearch] = useState("");
 
   const [sending, setSending] = useState(false);
-  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0, failed: 0 });
+  const [_sendProgress, _setSendProgress] = useState({ sent: 0, total: 0, failed: 0 });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [queueDelay, setQueueDelay] = useState(5);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);

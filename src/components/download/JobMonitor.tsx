@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import {
-  Play, Pause, Square, Loader2, Timer, Zap, Activity,
+  Play, Pause, Square, Timer, Zap, Activity,
   ArrowRight, Settings2, CheckCircle, List, Mail, Phone, XCircle,
   ChevronDown, ChevronRight, Trash2, AlertTriangle,
 } from "lucide-react";

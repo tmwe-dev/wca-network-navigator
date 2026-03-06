@@ -1,5 +1,12 @@
 import { getYearsMember } from "@/lib/countries";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import type { Partner } from "@/hooks/usePartners";
+
+interface BranchCity {
+  country_code?: string;
+  country?: string;
+  country_name?: string;
+}
 
 /** Returns the logo URL as-is if present */
 export function getRealLogoUrl(logoUrl: string | null | undefined): string | null {
@@ -16,10 +23,10 @@ export type SortOption =
   | "branches_desc"
   | "contacts_desc";
 
-export function getBranchCountries(partner: any): { code: string; name: string }[] {
+export function getBranchCountries(partner: Partner): { code: string; name: string }[] {
   if (!partner.branch_cities || !Array.isArray(partner.branch_cities)) return [];
   const map = new Map<string, string>();
-  partner.branch_cities.forEach((b: any) => {
+  (partner.branch_cities as BranchCity[]).forEach((b: BranchCity) => {
     const code = b?.country_code || b?.country;
     if (code && code !== partner.country_code) {
       map.set(code, b?.country_name || code);
@@ -28,7 +35,7 @@ export function getBranchCountries(partner: any): { code: string; name: string }
   return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
 }
 
-export function sortPartners(partners: any[], sortBy: SortOption): any[] {
+export function sortPartners(partners: Partner[], sortBy: SortOption): Partner[] {
   const sorted = [...partners];
   switch (sortBy) {
     case "name_asc": return sorted.sort((a, b) => a.company_name.localeCompare(b.company_name));

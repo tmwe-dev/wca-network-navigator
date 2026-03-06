@@ -8,7 +8,7 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { DownloadCanvas, type DownloadResult, type DownloadCurrent } from "@/components/operations/DownloadCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { SpeedGauge } from "@/components/download/SpeedGauge";
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
@@ -23,8 +23,8 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
-import { getCountryFlag } from "@/lib/countries";
-import { Skeleton } from "@/components/ui/skeleton";
+
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -127,7 +127,7 @@ export default function Operations() {
     deepSearch.stop();
   }, [deepSearch]);
 
-  const handleGenerateAliases = useCallback(async (codes: string[], type: "company" | "contact") => {
+  const handleGenerateAliases = useCallback(async (codes: string[], _type: "company" | "contact") => {
     if (aliasGenerating) return;
     setAliasGenerating(true);
     const toastId = toast.loading("Generazione alias in corso...");
@@ -147,8 +147,6 @@ export default function Operations() {
       setAliasGenerating(false);
     }
   }, [aliasGenerating, queryClient]);
-
-  const th = t(isDark);
 
   return (
     <ThemeCtx.Provider value={isDark}>
@@ -360,7 +358,7 @@ export default function Operations() {
 }
 
 /* ── Stat Pill — tri-state color by value ── */
-function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant = "info" }: {
+function StatPill({ icon: Icon, value, label, isDark: _isDark, onClick, active, variant = "info" }: {
   icon: any; value: number; label: string; isDark: boolean;
   onClick?: () => void; active?: boolean;
   variant?: "info" | "warn" | "ok";

@@ -16,8 +16,6 @@ import {
   Globe,
   MapPin,
   MessageCircle,
-  GlobeIcon,
-  Building2,
   UserCheck,
   UserX,
   AlertTriangle,

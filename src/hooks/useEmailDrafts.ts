@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface EmailDraft {
   id: string;
@@ -7,7 +8,7 @@ export interface EmailDraft {
   html_body: string | null;
   category: string | null;
   recipient_type: string;
-  recipient_filter: any;
+  recipient_filter: Json | null;
   attachment_ids: string[];
   link_urls: { label: string; url: string }[];
   status: string;
@@ -22,7 +23,7 @@ export function useEmailDrafts() {
     queryKey: ["email-drafts"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("email_drafts" as any)
+        .from("email_drafts")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -37,14 +38,14 @@ export function useSaveEmailDraft() {
     mutationFn: async (draft: Partial<EmailDraft> & { id?: string }) => {
       if (draft.id) {
         const { error } = await supabase
-          .from("email_drafts" as any)
-          .update(draft as any)
+          .from("email_drafts")
+          .update(draft as unknown as Record<string, unknown>)
           .eq("id", draft.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
-          .from("email_drafts" as any)
-          .insert(draft as any)
+          .from("email_drafts")
+          .insert(draft as unknown as Record<string, unknown>)
           .select()
           .single();
         if (error) throw error;

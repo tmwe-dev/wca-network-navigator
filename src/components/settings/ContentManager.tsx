@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspacePresets, WorkspacePreset } from "@/hooks/useWorkspacePresets";
+import { useWorkspacePresets } from "@/hooks/useWorkspacePresets";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { DEFAULT_GOALS, DEFAULT_PROPOSALS, ContentItem } from "@/data/defaultContentPresets";
 import { Card, CardContent } from "@/components/ui/card";

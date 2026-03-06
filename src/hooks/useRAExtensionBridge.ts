@@ -20,8 +20,8 @@ type RAResponse = {
   errors?: number;
   currentCompany?: string;
   log?: Array<{ time: string; msg: string }>;
-  data?: any;
-  results?: any[];
+  data?: unknown;
+  results?: unknown[];
   version?: string;
 };
 
@@ -63,7 +63,7 @@ export function useRAExtensionBridge() {
   // Poll for RA extension every 5s
   useEffect(() => {
     const doPing = () => {
-      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, "*");
+      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, window.location.origin);
     };
     doPing();
     const interval = setInterval(doPing, 5000);
@@ -71,7 +71,7 @@ export function useRAExtensionBridge() {
   }, []);
 
   const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 600000): Promise<RAResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 600000): Promise<RAResponse> => {
       return new Promise((resolve) => {
         const requestId = `ra_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -85,7 +85,7 @@ export function useRAExtensionBridge() {
           resolve(response);
         });
 
-        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, "*");
+        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, window.location.origin);
       });
     },
     []
@@ -100,7 +100,7 @@ export function useRAExtensionBridge() {
 
   /** Phase 1: Search only — returns list of companies without scraping profiles */
   const searchOnly = useCallback(
-    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: any; delaySeconds?: number }) => {
+    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: Record<string, unknown>; delaySeconds?: number }) => {
       return sendMessage("searchOnly", { params }, 600000); // 10min timeout
     },
     [sendMessage]

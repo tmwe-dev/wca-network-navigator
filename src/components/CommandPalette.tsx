@@ -16,7 +16,6 @@ import {
   Download,
   Building2,
   Star,
-  Phone,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useContext } from "react";
-import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Download } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";

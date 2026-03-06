@@ -10,7 +10,7 @@ export default function Global() {
     if (code) setSelectedCountry(code);
   }, []);
 
-  const handleJobCreated = useCallback((job: JobCreatedInfo) => {
+  const handleJobCreated = useCallback((_job: JobCreatedInfo) => {
     // Extract country code from job info — the AI returns country name,
     // but the download_jobs table has country_code which DownloadStatusPanel uses
   }, []);

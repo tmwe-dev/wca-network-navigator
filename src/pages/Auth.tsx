@@ -18,7 +18,7 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       if (session) navigate("/", { replace: true });
     });
     supabase.auth.getSession().then(({ data: { session } }) => {

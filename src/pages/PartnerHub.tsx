@@ -3,7 +3,6 @@ import { useCreateActivities } from "@/hooks/useActivities";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,21 +14,18 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Phone, Mail, Globe, MapPin, ChevronRight, Users,
-  Filter, Cpu, Box, CheckSquare, Loader2, Sparkles, Bot,
+  Filter, CheckSquare, Loader2, Bot,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { useBlacklistByPartnerIds } from "@/hooks/useBlacklist";
 import {
   getCountryFlag, getYearsMember, formatServiceCategory,
-  getServiceIconColor,
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import PartnerFiltersSheet from "@/components/partners/PartnerFiltersSheet";
 import { BulkActionBar } from "@/components/partners/BulkActionBar";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
@@ -60,11 +56,8 @@ export default function PartnerHub() {
 
   const [aiOpen, setAiOpen] = useState(false);
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
-  const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
-
   const deepSearch = useDeepSearch();
 
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const mergedFilters: PartnerFilters = {
@@ -80,7 +73,7 @@ export default function PartnerHub() {
   const createActivities = useCreateActivities();
 
   const partnerIds = useMemo(() => (partners || []).map((p: any) => p.id), [partners]);
-  const { data: blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
+  const { data: _blacklistedIds } = useBlacklistByPartnerIds(partnerIds);
 
   const filteredPartners = useMemo(() => {
     let list = filterIncomplete
@@ -225,33 +218,6 @@ export default function PartnerHub() {
     setSelectedCountry(null);
     setSelectedIds(new Set());
   };
-
-  const handleDownloadProfiles = (countryCode: string) => {
-    navigate("/", { state: { preselectedCountry: countryCode } });
-  };
-
-  const handleCountryDeepSearch = useCallback((partnerIds: string[]) => {
-    if (partnerIds.length === 0) return;
-    setSelectedIds(new Set(partnerIds));
-    deepSearch.start(partnerIds);
-  }, [deepSearch]);
-
-  const handleGenerateAliases = useCallback(async (countryCode: string, type: "company" | "contact") => {
-    setAliasGenerating(type);
-    const toastId = toast.loading("Generazione alias in corso...");
-    try {
-      const { error } = await supabase.functions.invoke("generate-aliases", {
-        body: { countryCode, type },
-      });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      toast.success(`Alias ${type === "company" ? "azienda" : "contatti"} generati con successo`, { id: toastId });
-    } catch (e: any) {
-      toast.error(`Errore generazione alias: ${e.message || "sconosciuto"}`, { id: toastId });
-    } finally {
-      setAliasGenerating(null);
-    }
-  }, [queryClient]);
 
   // Active events bar
   const renderEventsBar = () => {

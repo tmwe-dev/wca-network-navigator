@@ -5,11 +5,10 @@ import { CheckCircle2, Send, X, Loader2 } from "lucide-react";
 import { SortingList } from "@/components/sorting/SortingList";
 import { SortingCanvas } from "@/components/sorting/SortingCanvas";
 import { useSortingJobs, useBulkReview, useCancelJobs, useSendJob } from "@/hooks/useSortingJobs";
-import type { SortingJob } from "@/hooks/useSortingJobs";
 import { toast } from "sonner";
 
 export default function Sorting() {
-  const { data: jobs = [], isLoading } = useSortingJobs();
+  const { data: jobs = [] } = useSortingJobs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);

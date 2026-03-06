@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
@@ -33,14 +34,14 @@ export function useDirectoryDownload({
   const [downloadMode, setDownloadMode] = useState<DownloadMode>("new");
   const directoryOnly = directoryOnlyProp ?? false;
   const setDirectoryOnly = onDirectoryOnlyChange ?? (() => {});
-  const [skipCachedDirs, setSkipCachedDirs] = useState(true);
+  const [skipCachedDirs, _setSkipCachedDirs] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [scannedMembers, setScannedMembers] = useState<DirectoryMember[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [scanError, setScanError] = useState<string | null>(null);
   const abortRef = useRef(false);
-  const [dirThenDownload, setDirThenDownload] = useState(false);
+  const [_dirThenDownload, setDirThenDownload] = useState(false);
   const [autoDownloadPending, setAutoDownloadPending] = useState(false);
 
   // ── Queries ──
@@ -129,9 +130,11 @@ export function useDirectoryDownload({
   });
 
   // ── Derived data ──
-  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
-    const members = entry.members as any[];
-    return (members || []).map((m: any) => ({
+  interface CacheEntry { country_code: string; members: unknown }
+  interface CacheMember { company_name: string; city: string; country: string; country_code?: string; wca_id?: number }
+  const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: CacheEntry) => {
+    const members = entry.members as CacheMember[];
+    return (members || []).map((m: CacheMember) => ({
       company_name: m.company_name, city: m.city, country: m.country,
       country_code: m.country_code || entry.country_code, wca_id: m.wca_id,
     }));
@@ -218,7 +221,7 @@ export function useDirectoryDownload({
   const saveScanToCache = useCallback(async (cc: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await supabase.from("directory_cache").upsert({
-      country_code: cc, network_name: netKey, members: membersJson as any,
+      country_code: cc, network_name: netKey, members: membersJson as unknown as Json,
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: "country_code,network_name" });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });
@@ -227,7 +230,7 @@ export function useDirectoryDownload({
   const handleStartScan = useCallback(async () => {
     setIsScanning(true); setScanError(null); abortRef.current = false;
     const allMembers: DirectoryMember[] = [];
-    const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
+    const cachedCountryCodes = new Set(cachedEntries.map((e: { country_code: string }) => e.country_code));
     if (skipCachedDirs && cachedCountryCodes.has(countryCode)) {
       setIsScanning(false); setScanComplete(true); return;
     }

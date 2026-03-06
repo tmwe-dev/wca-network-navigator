@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Plug, Mail, Phone, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AcquisitionToolbar } from "@/components/acquisition/AcquisitionToolbar";
@@ -14,7 +13,6 @@ import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useScrapingSettings, calcDelay } from "@/hooks/useScrapingSettings";
 
 type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
-import { WCA_NETWORKS } from "@/data/wcaFilters";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -53,7 +51,7 @@ export default function AcquisizionePartner() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [resumeLoading, setResumeLoading] = useState(true);
+  const [_resumeLoading, setResumeLoading] = useState(true);
   const [liveStats, setLiveStats] = useState({
     processed: 0,
     withEmail: 0,
@@ -79,7 +77,6 @@ export default function AcquisizionePartner() {
 
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
-  const pollingAbortRef = useRef(false);
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, waitForExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
   const extensionWarningShown = useRef(false);
   const [sessionHealth, setSessionHealth] = useState<SessionHealth>("unknown");
@@ -226,7 +223,6 @@ export default function AcquisizionePartner() {
 
           // ── Check if page actually loaded (zero retry: mark as done + failed) ──
           if (extResult.pageLoaded === false) {
-            console.warn(`[Pipeline] Page not loaded for ${item.wca_id}, marking as skipped (no retry)`);
             localStats = { ...localStats, failedLoads: localStats.failedLoads + 1 };
             setLiveStats(localStats);
             processedSet.add(item.wca_id);

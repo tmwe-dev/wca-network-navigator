@@ -1,4 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type ServiceCategory = Database["public"]["Enums"]["service_category"];
+type CertificationType = Database["public"]["Enums"]["certification_type"];
+
+interface ExtractedContact {
+  name?: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+}
+
+interface ExtractedNetwork {
+  name: string;
+  expires?: string | null;
+}
+
+interface ExtractedProfile {
+  address?: string;
+  phone?: string;
+  fax?: string;
+  mobile?: string;
+  emergencyPhone?: string;
+  email?: string;
+  website?: string;
+  description?: string;
+  memberSince?: string;
+  membershipExpires?: string;
+  officeType?: string;
+  branchCities?: unknown[];
+  networks?: ExtractedNetwork[];
+  services?: string[];
+  certifications?: string[];
+}
+
+interface ExtractionResult {
+  success: boolean;
+  contacts?: ExtractedContact[];
+  companyName?: string;
+  profile?: ExtractedProfile;
+  profileHtml?: string;
+}
 
 /**
  * Saves extracted profile data, contacts, and company name to the database.
@@ -6,8 +49,8 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function saveExtractionResult(
   partnerId: string,
-  wcaId: number,
-  result: any,
+  _wcaId: number,
+  result: ExtractionResult,
   existingCompanyName: string,
 ) {
   let hasEmail = false;
@@ -18,7 +61,7 @@ export async function saveExtractionResult(
   let extractedPhoneCount = 0;
 
   // ── Save contacts (deduplicate by name) ──
-  if (result.success && result.contacts?.length > 0) {
+  if (result.success && (result.contacts?.length ?? 0) > 0) {
     const { data: existingContacts } = await supabase
       .from("partner_contacts")
       .select("id, name, email")
@@ -27,7 +70,7 @@ export async function saveExtractionResult(
       (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
-    for (const c of result.contacts) {
+    for (const c of result.contacts!) {
       const nameKey = (c.name || c.title || "Sconosciuto").trim().toLowerCase();
       if (!existingByName.has(nameKey)) {
         await supabase.from("partner_contacts").insert({
@@ -48,8 +91,8 @@ export async function saveExtractionResult(
       if (c.email) hasEmail = true;
       if (c.phone || c.mobile) hasPhone = true;
     }
-    extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
-    extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
+    extractedEmailCount = result.contacts!.filter((c: ExtractedContact) => c.email).length;
+    extractedPhoneCount = result.contacts!.filter((c: ExtractedContact) => c.phone || c.mobile).length;
   }
 
   // ── Save company name (skip error messages) ──
@@ -65,7 +108,7 @@ export async function saveExtractionResult(
   // ── Save profile data ──
   if (result.profile) {
     const p = result.profile;
-    const upd: Record<string, any> = {};
+    const upd: Record<string, unknown> = {};
     if (p.address) upd.address = p.address;
     if (p.phone) upd.phone = p.phone;
     if (p.fax) upd.fax = p.fax;
@@ -81,7 +124,7 @@ export async function saveExtractionResult(
       if (ot.includes("head") || ot.includes("main")) upd.office_type = "head_office";
       else if (ot.includes("branch")) upd.office_type = "branch";
     }
-    if (p.branchCities?.length > 0) {
+    if ((p.branchCities?.length ?? 0) > 0) {
       upd.has_branches = true;
       upd.branch_cities = p.branchCities;
     }
@@ -98,13 +141,13 @@ export async function saveExtractionResult(
   }
 
   // ── A) Save networks ──
-  if (result.profile?.networks?.length > 0) {
+  if ((result.profile?.networks?.length ?? 0) > 0) {
     const { data: existingNets } = await supabase
       .from("partner_networks").select("network_name").eq("partner_id", partnerId);
     const existingSet = new Set((existingNets || []).map((n) => n.network_name?.toLowerCase()));
-    const toInsert = result.profile.networks
-      .filter((n: any) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
-      .map((n: any) => ({
+    const toInsert = result.profile!.networks!
+      .filter((n: ExtractedNetwork) => n.name && !existingSet.has(n.name.trim().toLowerCase()))
+      .map((n: ExtractedNetwork) => ({
         partner_id: partnerId,
         network_name: n.name.trim(),
         expires: n.expires || null,
@@ -115,7 +158,7 @@ export async function saveExtractionResult(
   }
 
   // ── B) Save services ──
-  if (result.profile?.services?.length > 0) {
+  if ((result.profile?.services?.length ?? 0) > 0) {
     const serviceMap: Record<string, string> = {
       air: "air_freight", "air freight": "air_freight",
       "ocean fcl": "ocean_fcl", "sea fcl": "ocean_fcl", fcl: "ocean_fcl",
@@ -142,7 +185,7 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.services.map((s: string) => mapService(s)).filter(Boolean) as string[]
+      result.profile!.services!.map((s: string) => mapService(s)).filter(Boolean) as string[]
     )];
     if (mapped.length > 0) {
       const { data: existingSvc } = await supabase
@@ -150,7 +193,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
-        service_category: s as any,
+        service_category: s as ServiceCategory,
       }));
       if (toInsert.length > 0) {
         await supabase.from("partner_services").insert(toInsert);
@@ -159,7 +202,7 @@ export async function saveExtractionResult(
   }
 
   // ── C) Save certifications ──
-  if (result.profile?.certifications?.length > 0) {
+  if ((result.profile?.certifications?.length ?? 0) > 0) {
     const validCerts = ["IATA", "BASC", "ISO", "C-TPAT", "AEO"] as const;
     const mapCert = (text: string): typeof validCerts[number] | null => {
       const upper = text.trim().toUpperCase();
@@ -170,7 +213,7 @@ export async function saveExtractionResult(
       return null;
     };
     const mapped = [...new Set(
-      result.profile.certifications.map((c: string) => mapCert(c)).filter(Boolean) as string[]
+      result.profile!.certifications!.map((c: string) => mapCert(c)).filter(Boolean) as string[]
     )];
     if (mapped.length > 0) {
       const { data: existingCerts } = await supabase
@@ -178,7 +221,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
-        certification: c as any,
+        certification: c as CertificationType,
       }));
       if (toInsert.length > 0) {
         await supabase.from("partner_certifications").insert(toInsert);

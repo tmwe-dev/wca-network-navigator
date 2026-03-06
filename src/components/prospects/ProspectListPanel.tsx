@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search, Mail, Phone, MapPin, Building2, User,
-  ArrowLeft, ExternalLink, Euro, Users, ChevronRight, Star, Shield,
+  ArrowLeft, ExternalLink, Users, ChevronRight, Shield,
   Send as SendIcon, Loader2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";

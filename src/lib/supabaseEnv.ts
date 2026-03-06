@@ -20,7 +20,18 @@ export function getSupabaseEnv() {
     if (typeof document !== "undefined") {
       const el = document.getElementById("root");
       if (el && !el.hasChildNodes()) {
-        el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;color:#ef4444;padding:2rem;text-align:center"><div><h2>⚠️ Configurazione mancante</h2><p style="margin-top:0.5rem;color:#888">${msg}</p></div></div>`;
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;color:#ef4444;padding:2rem;text-align:center";
+        const inner = document.createElement("div");
+        const h2 = document.createElement("h2");
+        h2.textContent = "\u26a0\ufe0f Configurazione mancante";
+        const p = document.createElement("p");
+        p.style.cssText = "margin-top:0.5rem;color:#888";
+        p.textContent = msg;
+        inner.appendChild(h2);
+        inner.appendChild(p);
+        wrapper.appendChild(inner);
+        el.appendChild(wrapper);
       }
     }
     throw new Error(msg);

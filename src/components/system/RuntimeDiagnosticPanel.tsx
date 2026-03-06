@@ -11,7 +11,7 @@ interface DiagState {
   activeJobs: number;
   queryCacheSize: number;
   lastFailedCall: { endpoint: string; status: number; ts: string } | null;
-  lastWcaError: any;
+  lastWcaError: unknown;
 }
 
 export function RuntimeDiagnosticPanel() {
@@ -57,7 +57,7 @@ export function RuntimeDiagnosticPanel() {
           }
         };
         window.addEventListener("message", handler);
-        window.postMessage({ direction: "from-webapp", action: "ping", requestId: id }, window.location.origin || "*");
+        window.postMessage({ direction: "from-webapp", action: "ping", requestId: id }, window.location.origin);
       });
       state.extensionStatus = extOk ? "connected" : "timeout";
     } catch {
@@ -104,10 +104,6 @@ export function RuntimeDiagnosticPanel() {
 
   if (!open || !diag) return null;
 
-  const statusDot = (ok: boolean) => (
-    <span className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-emerald-400" : "bg-red-400"}`} />
-  );
-
   return (
     <div className="fixed bottom-4 right-4 z-[9999] w-80 bg-background border border-border rounded-xl shadow-2xl text-xs font-mono overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
@@ -124,7 +120,7 @@ export function RuntimeDiagnosticPanel() {
         <Row label="Active Jobs" value={String(diag.activeJobs)} dot={diag.activeJobs === 0} />
         <Row label="RQ Cache" value={String(diag.queryCacheSize)} dot />
 
-        {diag.lastWcaError && (
+        {!!diag.lastWcaError && (
           <div className="pt-1 border-t border-border">
             <span className="text-red-400">Last WCA Error:</span>
             <pre className="text-[10px] text-muted-foreground mt-0.5 whitespace-pre-wrap">{JSON.stringify(diag.lastWcaError, null, 1)}</pre>

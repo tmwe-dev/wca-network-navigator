@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Slider } from "@/components/ui/slider";
+
 import {
   Sparkles, Globe, ChevronDown, ChevronRight, Wrench, Loader2,
-  FlaskConical, CheckCircle, Users,
+  FlaskConical,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,7 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { useNetworkConfigs, type NetworkConfig } from "@/hooks/useNetworkConfigs";
 import { scrapeWcaPartnerById } from "@/lib/api/wcaScraper";
 import { WcaBrowser } from "./WcaBrowser";
-import { useTheme, t } from "./theme";
+import { t } from "./theme";
 
 interface EnrichPartner {
   id: string;
@@ -60,7 +60,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState(false);
   const [current, setCurrent] = useState(0);
-  const [results, setResults] = useState<{ id: string; success: boolean }[]>([]);
+  const [_results, setResults] = useState<{ id: string; success: boolean }[]>([]);
 
   const { data: partners, isLoading } = useQuery({
     queryKey: ["enrichment-partners", filterCountry, filterType, onlyNotEnriched],

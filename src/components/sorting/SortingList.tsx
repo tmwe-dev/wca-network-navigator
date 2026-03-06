@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, CheckCircle2, Clock, Filter } from "lucide-react";
+import { Search, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { isToday, parseISO } from "date-fns";

@@ -43,7 +43,7 @@ export function useDeepSearchRunner(): DeepSearchState {
         .in("id", partnerIds)
         .not("enrichment_data->deep_search_at", "is", null);
 
-      const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
+      const doneSet = new Set((alreadyDone || []).map((p: { id: string }) => p.id));
       toProcess = partnerIds.filter(id => !doneSet.has(id));
       const skipped = partnerIds.length - toProcess.length;
 
@@ -68,11 +68,12 @@ export function useDeepSearchRunner(): DeepSearchState {
         done++;
 
         // Get partner info — try filtered cache first, then fetch if missing
-        let cached: any = null;
-        const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
+        interface CachedPartner { id: string; company_name?: string; country_code?: string; logo_url?: string | null }
+        let cached: CachedPartner | null | undefined = null;
+        const allCached = queryClient.getQueriesData<CachedPartner[]>({ queryKey: queryKeys.partners.all });
         for (const [, data] of allCached) {
           if (Array.isArray(data)) {
-            cached = data.flat().find((p: any) => p.id === id);
+            cached = data.flat().find((p: CachedPartner) => p.id === id);
             if (cached) break;
           }
         }
@@ -129,8 +130,8 @@ export function useDeepSearchRunner(): DeepSearchState {
 
       queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
-    } catch (e: any) {
-      toast.error(e?.message || "Errore Deep Search", { id: "deep-search-global" });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Errore Deep Search", { id: "deep-search-global" });
     } finally {
       setRunning(false);
       setCurrent(null);

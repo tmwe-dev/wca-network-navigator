@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useContext } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
 
 interface LogEntry {
@@ -23,7 +23,6 @@ const typeColors: Record<string, { dark: string; light: string }> = {
 
 export function DownloadTerminal() {
   const isDark = useContext(ThemeCtx);
-  const th = t(isDark);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);

@@ -3,17 +3,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Search, ArrowRight, Mail, Phone, ChevronLeft, ChevronRight, Users,
+  Search, ArrowRight, Mail, ChevronLeft, ChevronRight, Users,
 } from "lucide-react";
 import { CompactContactCard } from "./CompactContactCard";
 import { AdvancedActivityForm } from "./AdvancedActivityForm";
 import type { ImportedContact } from "@/hooks/useImportLogs";
 import {
-  useToggleContactSelection,
   useTransferToPartners,
   useCreateActivitiesFromImport,
 } from "@/hooks/useImportLogs";
@@ -25,7 +24,7 @@ interface ContactsGridTabProps {
 
 const PAGE_SIZES = [25, 50, 100, 250];
 
-export function ContactsGridTab({ contacts, activeLogId }: ContactsGridTabProps) {
+export function ContactsGridTab({ contacts, activeLogId: _activeLogId }: ContactsGridTabProps) {
   const [search, setSearch] = useState("");
   const [filterOrigin, setFilterOrigin] = useState<string>("__all__");
   const [filterCountry, setFilterCountry] = useState<string>("__all__");
@@ -34,7 +33,6 @@ export function ContactsGridTab({ contacts, activeLogId }: ContactsGridTabProps)
   const [localSelection, setLocalSelection] = useState<Set<string>>(new Set());
   const [activityFormOpen, setActivityFormOpen] = useState(false);
 
-  const toggleSelection = useToggleContactSelection();
   const transferToPartners = useTransferToPartners();
   const createActivities = useCreateActivitiesFromImport();
 

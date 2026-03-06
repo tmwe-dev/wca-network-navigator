@@ -14,7 +14,7 @@ import {
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
-import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
+import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";

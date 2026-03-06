@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Check, CheckCheck, Filter, RefreshCw, Database, X } from "lucide-react";
+import { Check, CheckCheck, Database, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { t } from "@/components/download/theme";

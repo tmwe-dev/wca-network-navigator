@@ -20,7 +20,7 @@ export async function verifyWcaSession(
 
   // Verify session via extension
   const verify = () =>
-    new Promise<any>((resolve) => {
+    new Promise<{ success: boolean; authenticated?: boolean }>((resolve) => {
       const requestId = `verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const timer = setTimeout(() => resolve({ success: false }), 30000);
       const handler = (event: MessageEvent) => {
@@ -34,7 +34,7 @@ export async function verifyWcaSession(
         resolve(event.data?.response || { success: false });
       };
       window.addEventListener("message", handler);
-      window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
+      window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, window.location.origin);
     });
 
   const result = await verify();
@@ -66,7 +66,7 @@ export async function verifyWcaSession(
         window.addEventListener("message", handler);
         window.postMessage(
           { direction: "from-webapp", action: "autoLogin", requestId, username: creds.username, password: creds.password },
-          "*"
+          window.location.origin
         );
       });
       markRequestSent();

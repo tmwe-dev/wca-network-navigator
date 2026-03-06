@@ -1,14 +1,14 @@
 import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ImportAssistant } from "@/components/import/ImportAssistant";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import {
   Upload, FileText, Loader2, CheckCircle2, AlertCircle,
-  Sparkles, Users, Mail, Phone, ArrowRight, ClipboardPaste,
+  Sparkles, Users, ClipboardPaste,
   FileSearch, Download, Wand2, ArrowLeftRight, FolderOpen, Trash2,
 } from "lucide-react";
 import {
@@ -36,22 +36,14 @@ import {
   useImportLog,
   useImportedContacts,
   useImportErrors,
-  useCreateImport,
   useProcessImport,
-  useToggleContactSelection,
-  useTransferToPartners,
-  useCreateActivitiesFromImport,
   useAnalyzeImportStructure,
   useFixImportErrors,
   useCreateImportFromParsedRows,
-  exportErrorsToCSV,
   type ImportLog,
-  type ImportedContact,
 } from "@/hooks/useImportLogs";
 import {
   parseFile,
-  autoMapColumns,
-  mappingsToDict,
   transformRow,
   TARGET_COLUMNS,
   TARGET_SCHEMA,
@@ -84,9 +76,8 @@ function applyMapping(row: Record<string, any>, mapping: Record<string, string>,
   if (logFirst) {
     const populated = Object.values(result).filter(v => v !== null).length;
     const rowDataCount = Object.values(row).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
-    console.log(`[Import Mapping] Populated ${populated}/${Object.keys(result).length} fields from row with ${rowDataCount} non-empty values`);
     if (populated < rowDataCount * 0.3) {
-      console.warn(`[Import Mapping] ⚠️ Low mapping rate — AI keys: [${Object.keys(mapping).join(", ")}] vs Row keys: [${Object.keys(row).join(", ")}]`);
+      // Low mapping rate — potential mapping mismatch
     }
   }
   return result;
@@ -136,11 +127,7 @@ export default function Import() {
   const { data: contacts = [] } = useImportedContacts(activeLogId);
   const { data: errors = [] } = useImportErrors(activeLogId);
 
-  const createImport = useCreateImport();
   const processImport = useProcessImport();
-  const toggleSelection = useToggleContactSelection();
-  const transferToPartners = useTransferToPartners();
-  const createActivities = useCreateActivitiesFromImport();
   const analyzeStructure = useAnalyzeImportStructure();
   const fixErrors = useFixImportErrors();
   const createFromParsed = useCreateImportFromParsedRows();
@@ -170,8 +157,6 @@ export default function Import() {
         const match = dataHeaders.find(h => normalizeKey(h) === col);
         if (match) columnKeyMap[col] = match;
       }
-
-      console.log("[Re-import] ID key:", idKey, "| Column map:", columnKeyMap);
 
       let updatedCount = 0;
       let errorCount = 0;
@@ -362,17 +347,15 @@ export default function Import() {
           return;
         }
 
-        console.log("[Import] Using column_mapping:", mappingKeys);
         const finalRows = pendingRows.map((row, idx) => {
           const mapped = applyMapping(row, aiMapping.column_mapping, idx === 0);
           return { ...mapped, _raw: row };
         });
 
         const nonEmptyCount = finalRows.filter(r =>
-          TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
+          TARGET_COLUMNS.some(col => (r as Record<string, unknown>)[col] && String((r as Record<string, unknown>)[col]).trim())
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
-        console.log(`[Import] Fill rate: ${(fillRate * 100).toFixed(1)}% (${nonEmptyCount}/${finalRows.length})`);
 
         if (fillRate < 0.1) {
           toast({

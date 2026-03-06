@@ -5,10 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Mail, Phone, Search, Megaphone, RefreshCw, ChevronLeft, ChevronRight,
-  AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles, Loader2,
+  AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles,
   MapPin, Tag
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { resolveCountryCode, getCountryFlag } from "@/lib/countries";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";

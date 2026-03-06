@@ -253,17 +253,8 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   );
 }
 
-/* ═══ Coverage color helper ═══ */
-function coverageColor(count: number, total: number, isDark: boolean) {
-  if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
-  const pct = count / total;
-  if (pct >= 0.8) return isDark ? "text-emerald-400" : "text-emerald-600";
-  if (pct >= 0.5) return isDark ? "text-amber-400" : "text-amber-600";
-  return isDark ? "text-rose-400" : "text-rose-500";
-}
-
 /* ═══ COUNTRY CARD ═══ */
-function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggle, isDark }: {
+function CountryCard({ country, stats, cacheData: _cacheData, getStatus, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
   stats: Record<string, any>;
   cacheData: Record<string, { count: number; verified: boolean }>;

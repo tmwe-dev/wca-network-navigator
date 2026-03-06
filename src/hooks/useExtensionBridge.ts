@@ -6,14 +6,20 @@ const EXTRACT_LOCK_KEY = '__extractContactsLock__';
 
 type ExtractLock = {
   busy: boolean;
-  queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }>;
+  queue: Array<{ resolve: (v: ExtensionResponse) => void; fn: () => Promise<ExtensionResponse> }>;
 };
 
-function getExtractLock(): ExtractLock {
-  if (!(window as any)[EXTRACT_LOCK_KEY]) {
-    (window as any)[EXTRACT_LOCK_KEY] = { busy: false, queue: [] };
+declare global {
+  interface Window {
+    [key: `__${string}__`]: unknown;
   }
-  return (window as any)[EXTRACT_LOCK_KEY];
+}
+
+function getExtractLock(): ExtractLock {
+  if (!window[EXTRACT_LOCK_KEY as `__${string}__`]) {
+    (window[EXTRACT_LOCK_KEY as `__${string}__`] as unknown) = { busy: false, queue: [] } as ExtractLock;
+  }
+  return window[EXTRACT_LOCK_KEY as `__${string}__`] as ExtractLock;
 }
 
 async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
@@ -25,7 +31,7 @@ async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
         const result = await fn();
         resolve(result);
       } catch (err) {
-        resolve({ success: false, error: String(err) } as any);
+        resolve({ success: false, error: String(err) } as T);
       } finally {
         lock.busy = false;
         const next = lock.queue.shift();
@@ -36,7 +42,7 @@ async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
       run();
     } else {
       console.warn("[ExtensionBridge] extractContacts queued — another extraction in progress");
-      lock.queue.push({ resolve, fn: run as any });
+      lock.queue.push({ resolve: resolve as (v: ExtensionResponse) => void, fn: run as unknown as () => Promise<ExtensionResponse> });
     }
   });
 }
@@ -152,10 +158,9 @@ export function useExtensionBridge() {
       };
       window.addEventListener("message", handler);
 
-      const origin = window.location.origin;
       window.postMessage(
         { direction: "from-webapp", action: "ping", requestId: id },
-        origin || "*"
+        window.location.origin
       );
     };
 
@@ -172,7 +177,7 @@ export function useExtensionBridge() {
 
   // Send a message to the extension and wait for response (with nonce anti-spoof)
   const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<ExtensionResponse> => {
       return new Promise((resolve) => {
         const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         const nonce = crypto.randomUUID();
@@ -187,7 +192,6 @@ export function useExtensionBridge() {
           resolve(response);
         });
 
-        const origin = window.location.origin;
         window.postMessage(
           {
             direction: "from-webapp",
@@ -196,7 +200,7 @@ export function useExtensionBridge() {
             nonce,
             ...payload,
           },
-          origin || "*"
+          window.location.origin
         );
       });
     },

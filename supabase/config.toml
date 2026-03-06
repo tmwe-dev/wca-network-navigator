@@ -1,92 +1,93 @@
 project_id = "zrbditqddhjkutzjycgi"
 
 [functions.scrape-wca-partners]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-partner]
-verify_jwt = false
+verify_jwt = true
 
 [functions.enrich-partner-website]
-verify_jwt = false
+verify_jwt = true
 
 [functions.scrape-wca-directory]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-download-job]
-verify_jwt = false
+verify_jwt = true
 
 [functions.deep-search-partner]
-verify_jwt = false
+verify_jwt = true
 
 [functions.parse-profile-ai]
-verify_jwt = false
+verify_jwt = true
 
 
 [functions.save-wca-cookie]
-verify_jwt = false
+verify_jwt = true
 
 [functions.scrape-wca-blacklist]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-wca-credentials]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-ra-cookie]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-ra-credentials]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-ra-prospects]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-aliases]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-subscription]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-checkout]
-verify_jwt = false
+verify_jwt = true
 
 [functions.customer-portal]
-verify_jwt = false
+verify_jwt = true
 
+# Stripe webhook must remain unauthenticated (called by Stripe servers)
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.consume-credits]
-verify_jwt = false
+verify_jwt = true
 
 [functions.buy-credits]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-linkedin-cookie]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-linkedin-credentials]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-ai-import]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-import-structure]
-verify_jwt = false
+verify_jwt = true
 
 [functions.deduplicate-partners]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.contacts-assistant]
-verify_jwt = false
+verify_jwt = true

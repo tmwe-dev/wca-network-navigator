@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from "react";
 import { OctagonX, Loader2, Hourglass, CheckCircle2 } from "lucide-react";
-import { ThemeCtx, t } from "@/components/download/theme";
+import { ThemeCtx } from "@/components/download/theme";
 import { getLastRequestTimestamp } from "@/lib/wcaCheckpoint";
 
 interface SpeedGaugeProps {

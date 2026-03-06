@@ -10,9 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Globe, Building2, Users, Mail, Phone, CalendarClock,
   Search, Sparkles, ArrowRight, CheckCircle2, Clock, AlertCircle,
-  Zap, Send, Filter,
+  Zap, Send,
 } from "lucide-react";
-import { useAllActivities, useUpdateActivity, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
+import { useAllActivities, useUpdateActivity, type AllActivity } from "@/hooks/useActivities";
 import { cn } from "@/lib/utils";
 
 type SourceTab = "partner" | "prospect" | "contact";

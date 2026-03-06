@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { WCA_COUNTRIES_MAP, WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
+import { WCA_COUNTRIES, type WCACountry } from "@/data/wcaCountries";
 
 export interface GlobePartner {
   id: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug, Search } from "lucide-react";
+import { Square, Download, AlertTriangle, ArrowRight, RotateCcw, Plug } from "lucide-react";
 import { useRAExtensionBridge, type RAScrapingStatus } from "@/hooks/useRAExtensionBridge";
 import { useScrapingSettings } from "@/hooks/useScrapingSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ type Phase = "idle" | "searching" | "results" | "scraping" | "done";
 
 export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filters }: Props) {
   const th = t(isDark);
-  const { isAvailable, scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
+  const { isAvailable, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -131,13 +131,13 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       atecoCodes: ac,
       regions: rg.length > 0 ? rg : undefined,
       provinces: pr.length > 0 ? pr : undefined,
-      filters: fl,
+      filters: fl as unknown as Record<string, unknown>,
       delaySeconds: settings.baseDelay,
     });
 
     if (res.success && res.results && res.results.length > 0) {
       // Dedup against DB using partita_iva
-      const deduped = await dedupAgainstDb(res.results);
+      const deduped = await dedupAgainstDb(res.results as SearchResult[]);
       setSearchResults(deduped);
       // Auto-select only new ones
       const newSet = new Set(deduped.filter(r => !r.inDb).map(r => r.url));

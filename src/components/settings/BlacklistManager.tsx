@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Upload, Loader2, ShieldAlert, RefreshCw, CheckCircle2, AlertTriangle,
-  FileSpreadsheet, Calendar, Hash, Building2, MapPin, DollarSign,
+  FileSpreadsheet, Calendar, MapPin, DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";

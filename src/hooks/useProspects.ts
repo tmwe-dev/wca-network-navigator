@@ -26,7 +26,7 @@ export interface Prospect {
   rating_affidabilita: string | null;
   credit_score: number | null;
   source: string;
-  enrichment_data: any;
+  enrichment_data: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +36,7 @@ export function useProspects() {
     queryKey: ["prospects"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("*")
         .order("company_name");
       if (error) throw error;

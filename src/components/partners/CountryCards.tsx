@@ -5,7 +5,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
-import { Search, ArrowUpDown, Star } from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,

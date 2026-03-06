@@ -2,7 +2,7 @@ import { useRef, useCallback, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
-import { waitForGreenLight, markRequestSent, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
+import { waitForGreenLight, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
 import { appendLog } from "@/lib/download/terminalLog";
 import { verifyWcaSession } from "@/lib/download/sessionVerifier";
 import { processOneProfile, type ProcessContext } from "@/lib/download/processProfile";
@@ -64,7 +64,6 @@ export function useDownloadProcessor() {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
-    console.log("[Processor] startJob BEGIN:", jobId);
 
     const ac = new AbortController();
     abortRef.current = ac;

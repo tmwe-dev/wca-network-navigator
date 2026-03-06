@@ -29,8 +29,7 @@ import { SocialLinks } from "@/components/partners/SocialLinks";
 import { ActivityList } from "@/components/partners/ActivityList";
 import { t } from "@/components/download/theme";
 
-import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
-import { getBranchCountries } from "@/lib/partnerUtils";
+import { getServiceIcon } from "@/components/partners/shared/ServiceIcons";
 
 interface PartnerDetailCompactProps {
   partner: any;
@@ -46,9 +45,6 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const enrichment = partner.enrichment_data as any;
-  const branchCountries = getBranchCountries(partner);
-
   const handleDeepSearch = useCallback(async () => {
     setDeepSearching(true);
     try {
@@ -65,9 +61,6 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const contacts = partner.partner_contacts || [];
   const services = partner.partner_services || [];
   const networks = partner.partner_networks || [];
-  const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-  const specialtyServices = services.filter((s: any) => !TRANSPORT_SERVICES.includes(s.service_category));
-
   return (
     <div className="p-4 space-y-4">
       {/* Back + Header */}

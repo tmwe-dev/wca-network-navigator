@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Timer, Zap, ChevronDown, Settings2, RefreshCw, CheckCircle, Square, FolderDown,
+  Loader2, Timer, Zap, ChevronDown, RefreshCw, Square, FolderDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -149,9 +149,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
     return uniqueIds.filter(id => noProfileWcaSet.has(id)).length;
   }, [uniqueIds, noProfileWcaSet]);
 
-  // Also count new partners (not in DB at all) as needing profile
-  const noProfileTotalCount = noProfileInDirectoryCount + missingIds.length;
-
   // IDs to download based on mode
   const idsToDownload = useMemo(() => {
     if (downloadMode === "all") return uniqueIds;
@@ -255,7 +252,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       setDownloadMode("no_profile");
 
       // 6. Show summary
-      const remaining = dbList.length - removedCount;
       toast({
         title: "🧹 Pulizia completata",
         description: `Directory: ${freshWcaIds.size} partner reali. ${removedCount > 0 ? `Rimossi ${removedCount} obsoleti. ` : ""}Avvio download profili mancanti...`,

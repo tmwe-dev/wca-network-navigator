@@ -54,7 +54,7 @@ export function useLinkedInExtensionBridge() {
         direction: "from-webapp-li",
         action: "ping",
         requestId: `poll_li_${Date.now()}`,
-      }, "*");
+      }, window.location.origin);
     };
 
     doPing();
@@ -63,7 +63,7 @@ export function useLinkedInExtensionBridge() {
   }, []);
 
   const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<LiExtensionResponse> => {
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<LiExtensionResponse> => {
       return new Promise((resolve) => {
         const requestId = `li_${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -77,7 +77,7 @@ export function useLinkedInExtensionBridge() {
           resolve(response);
         });
 
-        window.postMessage({ direction: "from-webapp-li", action, requestId, ...payload }, "*");
+        window.postMessage({ direction: "from-webapp-li", action, requestId, ...payload }, window.location.origin);
       });
     },
     []

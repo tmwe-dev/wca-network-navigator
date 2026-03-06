@@ -8,12 +8,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Target, FileText, Paperclip, Link2, X, Plus, Loader2, Save, Trash2,
+  Target, FileText, Paperclip, Link2, X, Plus, Loader2,
   ExternalLink,
 } from "lucide-react";
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
-import { toast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem } from "@/data/defaultContentPresets";
 
@@ -58,14 +57,12 @@ export default function GoalBar({
   goal, baseProposal, onGoalChange, onBaseProposalChange,
   documents, onUploadDocument, onRemoveDocument, uploading,
   referenceLinks, onAddLink, onRemoveLink,
-  presets, activePresetId, onLoadPreset, onSavePreset, onDeletePreset,
+  presets: _presets, activePresetId: _activePresetId, onLoadPreset: _onLoadPreset, onSavePreset: _onSavePreset, onDeletePreset: _onDeletePreset,
 }: GoalBarProps) {
   const safeDocuments = documents ?? [];
   const safeLinks = referenceLinks ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [linkInput, setLinkInput] = useState("");
-  const [presetName, setPresetName] = useState("");
-  const [showSave, setShowSave] = useState(false);
 
   const { data: settings } = useAppSettings();
 
@@ -89,21 +86,6 @@ export default function GoalBar({
     if (!url) return;
     onAddLink(url.startsWith("http") ? url : `https://${url}`);
     setLinkInput("");
-  };
-
-  const handlePresetSelect = (value: string) => {
-    if (value === "__save__") { setShowSave(true); return; }
-    const preset = presets.find((p) => p.id === value);
-    if (preset) onLoadPreset(preset);
-  };
-
-  const handleSavePreset = () => {
-    const name = presetName.trim();
-    if (!name) { toast({ title: "Inserisci un nome", variant: "destructive" }); return; }
-    onSavePreset(name, activePresetId || undefined);
-    setShowSave(false);
-    setPresetName("");
-    toast({ title: "Preset salvato" });
   };
 
   return (

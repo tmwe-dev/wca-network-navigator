@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, Suspense, lazy } from "react";
+import { useState, useCallback, Suspense, lazy } from "react";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,16 +10,15 @@ import {
   Users, User, Sparkles, Loader2, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
   MessageSquare, Clock, Box, ClipboardList, Briefcase, Send,
-  TrendingUp, Hash, Zap, UserCheck,
+  Hash, Zap, UserCheck,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { PartnerRating } from "@/components/partners/PartnerRating";
 import {
   getCountryFlag, getYearsMember, formatPartnerType,
-  formatServiceCategory, getServiceIconColor, resolveCountryCode,
+  formatServiceCategory, resolveCountryCode,
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";

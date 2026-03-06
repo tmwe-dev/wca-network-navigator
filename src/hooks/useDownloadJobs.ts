@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
 export interface DownloadJob {
@@ -38,11 +39,17 @@ interface RtState {
   queryClient: ReturnType<typeof useQueryClient> | null;
 }
 
-function getRtState(): RtState {
-  if (!(window as any)[RT_KEY]) {
-    (window as any)[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
+declare global {
+  interface Window {
+    [key: string]: unknown;
   }
-  return (window as any)[RT_KEY];
+}
+
+function getRtState(): RtState {
+  if (!(window as unknown as Record<string, unknown>)[RT_KEY]) {
+    (window as unknown as Record<string, unknown>)[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
+  }
+  return (window as unknown as Record<string, unknown>)[RT_KEY] as RtState;
 }
 
 export function useDownloadJobs() {
@@ -120,7 +127,6 @@ export function useCreateDownloadJob() {
       const skippedCount = params.wca_ids.length - filteredIds.length;
 
       if (skippedCount > 0) {
-        console.log(`[CreateJob] Filtered out ${skippedCount} stale WCA IDs (already in partners_no_contacts)`);
         toast({ title: "Filtro applicato", description: `${skippedCount} profili non più presenti su WCA esclusi` });
       }
 
@@ -139,7 +145,6 @@ export function useCreateDownloadJob() {
         .limit(1);
 
       if (existing && existing.length > 0) {
-        console.log(`[CreateJob] Skip duplicato per ${params.country_code}/${params.network_name}`);
         return existing[0].id;
       }
 
@@ -149,7 +154,7 @@ export function useCreateDownloadJob() {
           country_code: params.country_code,
           country_name: params.country_name,
           network_name: params.network_name,
-          wca_ids: filteredIds as any,
+          wca_ids: filteredIds as unknown as Json,
           total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",

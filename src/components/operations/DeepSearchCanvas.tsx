@@ -3,7 +3,6 @@ import { X, Square, Search, Linkedin, Facebook, Instagram, MessageCircle, Star, 
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getCountryFlag } from "@/lib/countries";
-import { t } from "@/components/download/theme";
 
 /* ── Types ── */
 export interface DeepSearchResult {
@@ -41,7 +40,6 @@ interface Props {
 
 export function DeepSearchCanvas({ open, onClose, onStop, current, results, running, isDark }: Props) {
   const historyRef = useRef<HTMLDivElement>(null);
-  const th = t(isDark);
 
   // Auto-scroll history
   useEffect(() => {

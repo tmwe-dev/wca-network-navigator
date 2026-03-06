@@ -14,7 +14,7 @@ import {
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
   Zap, FolderDown, RefreshCw, Square, CheckCircle2, MailX,
 } from "lucide-react";
-import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
+import { usePartners } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -54,7 +54,6 @@ export function PartnerListPanel({
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
-  const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "rating_desc" | "contacts_desc">("name_asc");
@@ -66,8 +65,6 @@ export function PartnerListPanel({
     countries: countryCodes,
     search: search.length >= 2 ? search : undefined,
   });
-
-  const toggleFavorite = useToggleFavorite();
 
   // ── Hooks ──
   const dl = useDirectoryDownload({
@@ -355,7 +352,6 @@ export function PartnerListPanel({
                   </div>
                 ))
               : filteredPartners.map((partner: any) => {
-                  const q = getPartnerContactQuality(partner.partner_contacts);
                   const years = getYearsMember(partner.member_since);
                   const contacts = partner.partner_contacts || [];
                   const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];

@@ -1,18 +1,15 @@
-import { useState, useEffect, useContext, createContext } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import {
-  RefreshCw, Play, Users, Mail, Phone, AlertTriangle, ArrowRight, Loader2
+  RefreshCw, Play, Users, Mail, AlertTriangle, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { WCA_NETWORKS } from "@/data/wcaFilters";
-
-const ThemeCtx = createContext(true);
 
 interface NetworkStats {
   network_name: string;

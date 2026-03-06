@@ -2,9 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { resolveCountryCode } from "@/lib/countries";
+import type { Json } from "@/integrations/supabase/types";
 
 // Find a field value from a row using multiple possible aliases
-function findField(row: Record<string, any>, aliases: string[]): string | null {
+function findField(row: Record<string, unknown>, aliases: string[]): string | null {
   for (const alias of aliases) {
     if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== "") {
       return String(row[alias]).trim();
@@ -65,7 +66,7 @@ export interface ImportedContact {
   contact_alias: string | null;
   is_selected: boolean;
   is_transferred: boolean;
-  raw_data: any;
+  raw_data: Record<string, unknown>;
   created_at: string;
 }
 
@@ -75,11 +76,11 @@ export interface ImportError {
   row_number: number;
   error_type: string;
   error_message: string | null;
-  raw_data: any;
-  corrected_data: any;
+  raw_data: Record<string, unknown>;
+  corrected_data: Record<string, unknown>;
   status: string;
   attempted_corrections: number;
-  ai_suggestions: any;
+  ai_suggestions: Record<string, unknown>;
   created_at: string;
 }
 
@@ -125,7 +126,7 @@ export function useImportedContacts(importLogId: string | null) {
       if (!importLogId) return [];
       // Fetch all rows in batches to bypass the 1000-row default limit
       const PAGE_SIZE = 1000;
-      let allData: any[] = [];
+      let allData: Record<string, unknown>[] = [];
       let from = 0;
       let hasMore = true;
       while (hasMore) {
@@ -140,7 +141,7 @@ export function useImportedContacts(importLogId: string | null) {
         hasMore = (data?.length || 0) === PAGE_SIZE;
         from += PAGE_SIZE;
       }
-      return allData as ImportedContact[];
+      return allData as unknown as ImportedContact[];
     },
     enabled: !!importLogId,
   });
@@ -173,7 +174,7 @@ export function useCreateImport() {
       userId,
     }: {
       file: File;
-      rows: any[];
+      rows: Record<string, unknown>[];
       userId: string;
     }) => {
       // 1. Upload file to storage
@@ -217,7 +218,7 @@ export function useCreateImport() {
         zip_code: findField(row, FIELD_ALIASES.zip_code),
         note: findField(row, FIELD_ALIASES.note),
         origin: findField(row, FIELD_ALIASES.origin),
-        raw_data: row,
+        raw_data: row as unknown as Json,
       }));
 
       // Insert in batches of 100
@@ -321,7 +322,7 @@ export function useTransferToPartners() {
             direct_phone: c.phone,
             mobile: c.mobile,
             contact_alias: c.contact_alias,
-            title: (c as any).position || null,
+            title: (c as unknown as { position?: string | null }).position || null,
             is_primary: true,
           });
         }
@@ -435,7 +436,7 @@ export function useAnalyzeImportStructure() {
       inputType,
       rawText,
     }: {
-      sampleRows?: any[];
+      sampleRows?: Record<string, unknown>[];
       inputType: "paste" | "file";
       rawText?: string;
     }) => {
@@ -445,7 +446,7 @@ export function useAnalyzeImportStructure() {
       if (error) throw error;
       return data as {
         column_mapping: Record<string, string>;
-        parsed_rows: any[];
+        parsed_rows: Record<string, unknown>[];
         confidence: number;
         warnings: string[];
         unmapped_columns?: string[];
@@ -485,7 +486,7 @@ export function useFixImportErrors() {
 
 export function exportErrorsToCSV(errors: ImportError[]) {
   const SEP = ";";
-  const escapeCell = (val: any) => {
+  const escapeCell = (val: unknown) => {
     if (val === null || val === undefined) return "";
     const s = String(val).replace(/"/g, '""');
     if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
@@ -496,13 +497,13 @@ export function exportErrorsToCSV(errors: ImportError[]) {
 
   // Extract raw_data fields as separate columns
   const firstWithRaw = errors.find(e => e.raw_data && typeof e.raw_data === "object");
-  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, any>) : [];
+  const rawKeys = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>) : [];
 
   const headers = ["riga", "tipo_errore", "messaggio", ...rawKeys];
   const csvRows = [headers.map(escapeCell).join(SEP)];
 
   for (const err of errors) {
-    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, any>;
+    const raw = (err.raw_data && typeof err.raw_data === "object" ? err.raw_data : {}) as Record<string, unknown>;
     const row = [
       escapeCell(err.row_number),
       escapeCell(err.error_type),
@@ -532,7 +533,7 @@ export function useCreateImportFromParsedRows() {
       fileName,
       groupName,
     }: {
-      rows: any[];
+      rows: Record<string, unknown>[];
       userId: string;
       fileName: string;
       groupName?: string;
@@ -559,22 +560,22 @@ export function useCreateImportFromParsedRows() {
         return {
           import_log_id: importLog.id,
           row_number: index + 1,
-          company_name: mapped.company_name || null,
-          name: mapped.name || null,
-          email: mapped.email || null,
-          phone: mapped.phone || null,
-          mobile: mapped.mobile || null,
-          country: mapped.country || null,
-          city: mapped.city || null,
-          address: mapped.address || null,
-          zip_code: mapped.zip_code || null,
-          note: mapped.note || null,
-          origin: mapped.origin || null,
-          company_alias: mapped.company_alias || null,
-          contact_alias: mapped.contact_alias || null,
-          position: mapped.position || null,
-          external_id: mapped.external_id || null,
-          raw_data: rawData,
+          company_name: (mapped.company_name as string | null) || null,
+          name: (mapped.name as string | null) || null,
+          email: (mapped.email as string | null) || null,
+          phone: (mapped.phone as string | null) || null,
+          mobile: (mapped.mobile as string | null) || null,
+          country: (mapped.country as string | null) || null,
+          city: (mapped.city as string | null) || null,
+          address: (mapped.address as string | null) || null,
+          zip_code: (mapped.zip_code as string | null) || null,
+          note: (mapped.note as string | null) || null,
+          origin: (mapped.origin as string | null) || null,
+          company_alias: (mapped.company_alias as string | null) || null,
+          contact_alias: (mapped.contact_alias as string | null) || null,
+          position: (mapped.position as string | null) || null,
+          external_id: (mapped.external_id as string | null) || null,
+          raw_data: rawData as unknown as Json,
         };
       });
 

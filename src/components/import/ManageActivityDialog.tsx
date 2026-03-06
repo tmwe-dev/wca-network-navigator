@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Clock, Save, Loader2 } from "lucide-react";
+import { CalendarIcon, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +52,7 @@ export function ManageActivityDialog({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
-  const [dueTime, setDueTime] = useState("09:00");
+  const [_dueTime, _setDueTime] = useState("09:00");
 
   useEffect(() => {
     if (activity) {

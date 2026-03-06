@@ -27,8 +27,6 @@ export interface QueueStats {
 }
 
 export function useEmailCampaignQueue(draftId: string | null) {
-  const qc = useQueryClient();
-
   const { data: items = [], refetch: refetchItems } = useQuery({
     queryKey: ["email-campaign-queue", draftId],
     queryFn: async () => {
