@@ -43,7 +43,7 @@ function FilterBlock({ icon: Icon, label, children }: { icon: React.ElementType;
 
 export function ContactFiltersBar({ filters, onChange, countries, origins, importGroups }: Props) {
   return (
-    <div className="flex flex-col gap-2 p-3 border-b border-border bg-card/50">
+    <div className="flex flex-col gap-2 p-3 border-b border-border bg-card/50 shrink-0 max-h-[40vh] overflow-y-auto">
       {/* Row 1: Import group */}
       {importGroups && importGroups.length > 0 && (
         <FilterBlock icon={FolderOpen} label="Gruppo di carico">

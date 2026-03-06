@@ -353,7 +353,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <ContactFiltersBar
         filters={filters}
         onChange={handleFilterChange}
@@ -381,7 +381,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       )}
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="p-3 space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
