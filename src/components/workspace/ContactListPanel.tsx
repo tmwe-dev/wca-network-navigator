@@ -80,6 +80,7 @@ interface ContactListPanelProps {
   selectedActivityId: string | null;
   onSelect: (activity: AllActivity) => void;
   search?: string;
+  sourceType?: "partner" | "prospect" | "contact";
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
@@ -87,7 +88,7 @@ interface ContactListPanelProps {
 }
 
 export default function ContactListPanel({
-  selectedActivityId, onSelect, search = "",
+  selectedActivityId, onSelect, search = "", sourceType,
   selectedIds, onToggleSelect, onSelectAll, onDeselectAll,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
@@ -97,9 +98,9 @@ export default function ContactListPanel({
   const emailActivities = useMemo(() => {
     if (!activities) return [];
     return activities.filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed"
+      (a) => a.activity_type === "send_email" && a.status !== "completed" && (!sourceType || a.source_type === sourceType)
     );
-  }, [activities]);
+  }, [activities, sourceType]);
 
   const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
