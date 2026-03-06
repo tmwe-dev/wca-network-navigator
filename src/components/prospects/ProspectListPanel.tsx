@@ -60,7 +60,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects-by-ateco", atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters],
     queryFn: async () => {
-      let query = supabase.from("prospects" as any).select("*").order("company_name");
+      let query = supabase.from("prospects").select("*").order("company_name");
 
       if (quickSearch && quickSearch.length >= 2) {
         query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);
@@ -141,7 +141,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
 
       const CHUNK = 50;
       for (let i = 0; i < activities.length; i += CHUNK) {
-        await supabase.from("activities").insert(activities.slice(i, i + CHUNK) as any);
+        await supabase.from("activities").insert(activities.slice(i, i + CHUNK));
       }
       toast.success(`${activities.length} attività create nel Workspace`);
       setSelectedIds(new Set());
@@ -167,7 +167,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${th.dim}`} />
             <Input placeholder="Cerca prospect..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-10 h-9 rounded-xl text-sm ${th.input}`} />
           </div>
-          <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+          <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
             <SelectTrigger className={`w-[140px] h-9 rounded-xl text-xs ${th.selTrigger}`}>
               <SelectValue />
             </SelectTrigger>
@@ -304,11 +304,11 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
     queryKey: ["prospect-contacts", prospect.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospect_contacts" as any)
+        .from("prospect_contacts")
         .select("*")
         .eq("prospect_id", prospect.id);
       if (error) throw error;
-      return data as any[];
+      return (data || []) as { id: string; name: string; email: string | null }[];
     },
   });
 

@@ -176,7 +176,7 @@ export default function Workspace() {
       <div className="w-[320px] shrink-0 border-r border-border bg-background overflow-hidden flex flex-col">
         {/* Source tabs */}
         <div className="px-2 pt-2 pb-1 border-b border-border shrink-0">
-          <Tabs value={sourceTab} onValueChange={(v) => { setSourceTab(v as any); setSelectedActivity(null); setSelectedIds(new Set()); }}>
+          <Tabs value={sourceTab} onValueChange={(v) => { setSourceTab(v as typeof sourceTab); setSelectedActivity(null); setSelectedIds(new Set()); }}>
             <TabsList className="w-full h-8">
               <TabsTrigger value="partner" className="flex-1 text-[11px] gap-1 h-7">
                 <Globe className="w-3 h-3" /> WCA

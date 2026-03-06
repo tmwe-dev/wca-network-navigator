@@ -23,7 +23,7 @@ export default function Contacts() {
       {/* Right panel — detail */}
       <div className="flex-1 bg-card">
         {selectedContact ? (
-          <ContactDetailPanel contact={selectedContact as any} />
+          <ContactDetailPanel contact={selectedContact!} />
         ) : (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
             Seleziona un contatto per visualizzare i dettagli

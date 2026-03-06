@@ -240,7 +240,7 @@ function FeaturedJobCard({ job, pauseResume, updateSpeed }: {
                 <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-violet-500 text-white border-0">Acquisizione</Badge>
               )}
             </p>
-            <p className={`text-xs ${(statusColor as any)[job.status] || th.dim}`}>
+            <p className={`text-xs ${(statusColor as Record<string, string>)[job.status] || th.dim}`}>
               {statusLabel[job.status] || job.status} • {job.current_index}/{job.total_count}
             </p>
           </div>

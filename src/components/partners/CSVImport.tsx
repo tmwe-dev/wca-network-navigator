@@ -223,7 +223,7 @@ export function CSVImport() {
             phone: p.phone,
             email: p.email,
             website: p.website,
-            partner_type: p.partner_type as any,
+            partner_type: p.partner_type,
             wca_id: p.wca_id,
             is_active: true,
           })))

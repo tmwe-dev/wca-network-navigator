@@ -1,5 +1,6 @@
 import { getYearsMember } from "@/lib/countries";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
+import type { Json } from "@/integrations/supabase/types";
 
 /** Typed shape for partner.enrichment_data JSON field */
 export interface EnrichmentData {
@@ -23,6 +24,24 @@ export interface DirectoryCacheMember {
   company_name?: string;
   city?: string;
   [key: string]: unknown;
+}
+
+/** Terminal log entry shape for download_jobs.terminal_log JSON field */
+export interface TerminalLogEntry {
+  ts: string;
+  type: string;
+  msg: string;
+}
+
+/** Cast terminal_log Json to typed array */
+export function asTerminalLog(data: unknown): TerminalLogEntry[] {
+  if (!Array.isArray(data)) return [];
+  return data as TerminalLogEntry[];
+}
+
+/** Cast a value to Supabase Json type for JSON column insert/update */
+export function toJson<T>(value: T): Json {
+  return value as unknown as Json;
 }
 
 /** Returns the logo URL as-is if present */

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { asTerminalLog, toJson } from "@/lib/partnerUtils";
 
 /**
  * Append a log entry to a download job's terminal_log field.
@@ -14,11 +15,11 @@ export async function appendLog(jobId: string, type: string, msg: string) {
       .select("terminal_log")
       .eq("id", jobId)
       .single();
-    const current = (data?.terminal_log as any[] || []);
+    const current = asTerminalLog(data?.terminal_log);
     const updated = [...current, { ts, type, msg }].slice(-150);
     await supabase
       .from("download_jobs")
-      .update({ terminal_log: updated as any })
+      .update({ terminal_log: toJson(updated) })
       .eq("id", jobId);
   } catch {
     // Silently fail — terminal log is non-critical

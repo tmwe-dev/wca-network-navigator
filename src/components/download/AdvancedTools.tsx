@@ -67,7 +67,7 @@ function EnrichSection({ isDark }: { isDark: boolean }) {
     queryFn: async () => {
       let query = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
       if (filterCountry) query = query.eq("country_code", filterCountry);
-      if (filterType) query = query.eq("partner_type", filterType as any);
+      if (filterType) query = query.eq("partner_type", filterType);
       if (onlyNotEnriched) query = query.is("enriched_at", null);
       const { data, error } = await query.limit(500);
       if (error) throw error;

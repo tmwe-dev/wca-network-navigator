@@ -84,7 +84,7 @@ export function PartnerListPanel({
       list = list.filter((p: any) => {
         switch (progressFilter) {
           case "profiles": return !p.raw_profile_html;
-          case "deep": return !(p.enrichment_data && (p.enrichment_data as any)?.deep_search_at);
+          case "deep": return !(p.enrichment_data && asEnrichment(p.enrichment_data)?.deep_search_at);
           case "email": return !p.email && !(p.partner_contacts || []).some((c: any) => c.email);
           case "phone": return !p.phone && !(p.partner_contacts || []).some((c: any) => c.direct_phone || c.mobile);
           case "alias_co": return !p.company_alias;
@@ -193,7 +193,7 @@ export function PartnerListPanel({
               <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${th.dim}`} />
               <Input placeholder="Cerca partner..." value={search} onChange={e => setSearch(e.target.value)} className={`pl-8 h-7 rounded-lg text-xs ${th.input}`} />
             </div>
-            <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+            <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className={`w-[100px] h-7 rounded-lg text-[11px] ${th.selTrigger}`}><SelectValue /></SelectTrigger>
               <SelectContent className={th.selContent}>
                 <SelectItem value="name_asc" className="text-xs">Nome A-Z</SelectItem>
@@ -296,7 +296,7 @@ export function PartnerListPanel({
                     <Button size="sm" className={cn("w-full h-8 text-xs font-bold", isDark ? "bg-cyan-600 hover:bg-cyan-500 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white")}
                       disabled={deepSearchRunning}
                       onClick={() => {
-                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !(p.enrichment_data as any)?.deep_search_at).map((p: any) => p.id);
+                        const ids = (partners || []).filter((p: any) => p.raw_profile_html && !asEnrichment(p.enrichment_data)?.deep_search_at).map((p: any) => p.id);
                         if (ids.length > 0) onDeepSearch?.(ids);
                       }}>
                       {deepSearchRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> In corso...</> : <><Telescope className="w-3.5 h-3.5 mr-1" /> Deep Search ({missingDeep})</>}
@@ -362,7 +362,7 @@ export function PartnerListPanel({
                   const hasProfile = !!partner.raw_profile_html;
                   const hasEmail = !!partner.email || contacts.some((c: any) => c.email);
                   const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
-                  const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
+                  const hasDeep = !!asEnrichment(partner.enrichment_data)?.deep_search_at;
 
                   return (
                     <div key={partner.id} onClick={() => handleSelectPartner(partner.id)}

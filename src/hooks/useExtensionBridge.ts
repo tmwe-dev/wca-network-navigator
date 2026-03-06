@@ -2,18 +2,18 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 // ── Global serial queue for extractContacts — safety net against concurrent extractions ──
-const EXTRACT_LOCK_KEY = '__extractContactsLock__';
-
 type ExtractLock = {
   busy: boolean;
-  queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }>;
+  queue: Array<{ resolve: (v: unknown) => void; fn: () => Promise<unknown> }>;
 };
 
+let _extractLock: ExtractLock | null = null;
+
 function getExtractLock(): ExtractLock {
-  if (!(window as any)[EXTRACT_LOCK_KEY]) {
-    (window as any)[EXTRACT_LOCK_KEY] = { busy: false, queue: [] };
+  if (!_extractLock) {
+    _extractLock = { busy: false, queue: [] };
   }
-  return (window as any)[EXTRACT_LOCK_KEY];
+  return _extractLock;
 }
 
 async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
@@ -25,7 +25,7 @@ async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
         const result = await fn();
         resolve(result);
       } catch (err) {
-        resolve({ success: false, error: String(err) } as any);
+        resolve({ success: false, error: String(err) } as T);
       } finally {
         lock.busy = false;
         const next = lock.queue.shift();
@@ -36,7 +36,7 @@ async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
       run();
     } else {
       console.warn("[ExtensionBridge] extractContacts queued — another extraction in progress");
-      lock.queue.push({ resolve, fn: run as any });
+      lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run });
     }
   });
 }

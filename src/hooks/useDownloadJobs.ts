@@ -38,11 +38,13 @@ interface RtState {
   queryClient: ReturnType<typeof useQueryClient> | null;
 }
 
+let _rtState: RtState | null = null;
+
 function getRtState(): RtState {
-  if (!(window as any)[RT_KEY]) {
-    (window as any)[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
+  if (!_rtState) {
+    _rtState = { refCount: 0, channel: null, queryClient: null };
   }
-  return (window as any)[RT_KEY];
+  return _rtState;
 }
 
 export function useDownloadJobs() {
@@ -149,7 +151,7 @@ export function useCreateDownloadJob() {
           country_code: params.country_code,
           country_name: params.country_name,
           network_name: params.network_name,
-          wca_ids: filteredIds as any,
+          wca_ids: toJson(filteredIds),
           total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",

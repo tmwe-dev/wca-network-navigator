@@ -60,7 +60,7 @@ export function useCreateActivities() {
       }));
       const { data, error } = await supabase
         .from("activities")
-        .insert(cleaned as any)
+        .insert(cleaned)
         .select();
       if (error) throw error;
       return data;
@@ -78,7 +78,7 @@ export function useUpdateActivity() {
     mutationFn: async ({ id, ...updates }: { id: string; status?: "pending" | "in_progress" | "completed" | "cancelled"; completed_at?: string | null; selected_contact_id?: string | null }) => {
       const { error } = await supabase
         .from("activities")
-        .update(updates as any)
+        .update(updates)
         .eq("id", id);
       if (error) throw error;
     },

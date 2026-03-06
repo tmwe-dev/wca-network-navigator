@@ -36,7 +36,7 @@ export function useProspects() {
     queryKey: ["prospects"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("*")
         .order("company_name");
       if (error) throw error;

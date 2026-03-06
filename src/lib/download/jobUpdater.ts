@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toJson } from "@/lib/partnerUtils";
+import type { Json } from "@/integrations/supabase/types";
 
 /**
  * Centralized helper for updating download job progress in the database.
@@ -19,16 +21,16 @@ export async function updateJobProgress(
     errorMessage?: string | null;
   },
 ) {
-  const payload: Record<string, any> = {};
+  const payload: Record<string, Json | string | number | boolean | null> = {};
 
   if (updates.currentIndex !== undefined) payload.current_index = updates.currentIndex;
-  if (updates.processedIds) payload.processed_ids = updates.processedIds as any;
+  if (updates.processedIds) payload.processed_ids = toJson(updates.processedIds);
   if (updates.lastWcaId !== undefined) payload.last_processed_wca_id = updates.lastWcaId;
   if (updates.lastCompany) payload.last_processed_company = updates.lastCompany;
   if (updates.contactResult) payload.last_contact_result = updates.contactResult;
   if (updates.contactsFound !== undefined) payload.contacts_found_count = updates.contactsFound;
   if (updates.contactsMissing !== undefined) payload.contacts_missing_count = updates.contactsMissing;
-  if (updates.failedIds) payload.failed_ids = updates.failedIds as any;
+  if (updates.failedIds) payload.failed_ids = toJson(updates.failedIds);
   if (updates.status) payload.status = updates.status;
   if (updates.errorMessage !== undefined) payload.error_message = updates.errorMessage;
 

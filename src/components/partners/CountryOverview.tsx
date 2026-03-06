@@ -226,7 +226,7 @@ export function CountryOverview({
         </div>
 
         <div className="flex items-center gap-2">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
               <SelectValue />
@@ -237,7 +237,7 @@ export function CountryOverview({
               <SelectItem value="pct">% Completi</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as typeof filterMode)}>
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <Filter className="w-3 h-3 mr-1 shrink-0" />
               <SelectValue />

@@ -38,13 +38,13 @@ export function useSaveEmailDraft() {
       if (draft.id) {
         const { error } = await supabase
           .from("email_drafts")
-          .update(draft as any)
+          .update(draft)
           .eq("id", draft.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("email_drafts")
-          .insert(draft as any)
+          .insert(draft)
           .select()
           .single();
         if (error) throw error;

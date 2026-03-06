@@ -4,6 +4,7 @@ import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
 import { waitForGreenLight, markRequestSent, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
 import { appendLog } from "@/lib/download/terminalLog";
+import { asTerminalLog, toJson } from "@/lib/partnerUtils";
 import { verifyWcaSession } from "@/lib/download/sessionVerifier";
 import { processOneProfile, type ProcessContext } from "@/lib/download/processProfile";
 import { updateJobProgress } from "@/lib/download/jobUpdater";
@@ -88,7 +89,7 @@ export function useDownloadProcessor() {
       // 3. Atomic claim
       const { data: claimed } = await supabase
         .from("download_jobs")
-        .update({ status: "running", error_message: null, terminal_log: [] as any })
+        .update({ status: "running", error_message: null, terminal_log: toJson([]) })
         .eq("id", jobId).eq("status", "pending").select("id");
       if (!claimed?.length) return;
 
@@ -403,8 +404,8 @@ export function useDownloadProcessor() {
     supabase.from("download_jobs").select("id, terminal_log").in("status", ["running", "pending"]).then(async ({ data }) => {
       const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       for (const job of (data || [])) {
-        const log = [...((job.terminal_log as any[]) || []), { ts, type: "STOP", msg: "🛑 EMERGENCY STOP" }].slice(-150);
-        await supabase.from("download_jobs").update({ status: "cancelled", error_message: "EMERGENCY STOP", terminal_log: log as any }).eq("id", job.id);
+        const log = [...(asTerminalLog(job.terminal_log)), { ts, type: "STOP", msg: "🛑 EMERGENCY STOP" }].slice(-150);
+        await supabase.from("download_jobs").update({ status: "cancelled", error_message: "EMERGENCY STOP", terminal_log: toJson(log) }).eq("id", job.id);
       }
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
     });
@@ -424,8 +425,8 @@ export function useDownloadProcessor() {
       if (orphaned?.length && !processingRef.current) {
         const job = orphaned[0];
         const ts = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        const log = [...((job.terminal_log as any[]) || []), { ts, type: "INFO", msg: "🔄 Ripresa automatica dopo refresh" }].slice(-150);
-        await supabase.from("download_jobs").update({ status: "pending", error_message: null, terminal_log: log as any }).eq("id", job.id).eq("status", "running");
+        const log = [...(asTerminalLog(job.terminal_log)), { ts, type: "INFO", msg: "🔄 Ripresa automatica dopo refresh" }].slice(-150);
+        await supabase.from("download_jobs").update({ status: "pending", error_message: null, terminal_log: toJson(log) }).eq("id", job.id).eq("status", "running");
       }
     }, 10000);
     return () => clearInterval(interval);

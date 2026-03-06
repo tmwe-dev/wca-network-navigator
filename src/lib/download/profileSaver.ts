@@ -150,7 +150,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingSvc || []).map((s) => s.service_category as string));
       const toInsert = mapped.filter((s) => !existingSet.has(s)).map((s) => ({
         partner_id: partnerId,
-        service_category: s as any,
+        service_category: s,
       }));
       if (toInsert.length > 0) {
         await supabase.from("partner_services").insert(toInsert);
@@ -178,7 +178,7 @@ export async function saveExtractionResult(
       const existingSet = new Set((existingCerts || []).map((c) => c.certification as string));
       const toInsert = mapped.filter((c) => !existingSet.has(c)).map((c) => ({
         partner_id: partnerId,
-        certification: c as any,
+        certification: c,
       }));
       if (toInsert.length > 0) {
         await supabase.from("partner_certifications").insert(toInsert);

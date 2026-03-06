@@ -72,7 +72,7 @@ export function useEmailGenerator() {
           email_subject: result.subject,
           email_body: result.body,
           scheduled_at: new Date().toISOString(),
-        } as any)
+        })
         .eq("id", params.activity_id);
 
       if (updateError) {

@@ -29,7 +29,7 @@ export function useBlacklistEntries() {
     queryKey: ["blacklist-entries"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("blacklist_entries" as any)
+        .from("blacklist_entries")
         .select("*")
         .order("blacklist_no", { ascending: true });
       if (error) throw error;
@@ -43,7 +43,7 @@ export function useBlacklistSyncLog() {
     queryKey: ["blacklist-sync-log"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("blacklist_sync_log" as any)
+        .from("blacklist_sync_log")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
@@ -58,18 +58,18 @@ export function useBlacklistStats() {
     queryKey: ["blacklist-stats"],
     queryFn: async () => {
       const { data: entries, error: e1 } = await supabase
-        .from("blacklist_entries" as any)
+        .from("blacklist_entries")
         .select("id, matched_partner_id");
       if (e1) throw e1;
       const total = entries?.length || 0;
-      const matched = entries?.filter((e: any) => e.matched_partner_id).length || 0;
+      const matched = entries?.filter((e) => e.matched_partner_id).length || 0;
 
       const { data: logs } = await supabase
-        .from("blacklist_sync_log" as any)
+        .from("blacklist_sync_log")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1);
-      const lastUpdated = (logs as any)?.[0]?.created_at || null;
+      const lastUpdated = logs?.[0]?.created_at || null;
 
       return { total, matched, lastUpdated };
     },
@@ -82,7 +82,7 @@ export function useBlacklistForPartner(partnerId: string | undefined) {
     enabled: !!partnerId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("blacklist_entries" as any)
+        .from("blacklist_entries")
         .select("*")
         .eq("matched_partner_id", partnerId);
       if (error) throw error;
@@ -97,11 +97,11 @@ export function useBlacklistByPartnerIds(partnerIds: string[]) {
     enabled: partnerIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("blacklist_entries" as any)
+        .from("blacklist_entries")
         .select("matched_partner_id")
         .not("matched_partner_id", "is", null);
       if (error) throw error;
-      const ids = new Set((data || []).map((d: any) => d.matched_partner_id));
+      const ids = new Set((data || []).map((d) => d.matched_partner_id));
       return ids;
     },
   });
@@ -112,18 +112,18 @@ export function useImportBlacklist() {
   return useMutation({
     mutationFn: async (entries: Omit<BlacklistEntry, "id" | "created_at" | "updated_at">[]) => {
       // Delete existing manual entries then insert new ones
-      await supabase.from("blacklist_entries" as any).delete().eq("source", "manual");
+      await supabase.from("blacklist_entries").delete().eq("source", "manual");
 
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50);
-        const { error } = await supabase.from("blacklist_entries" as any).insert(batch as any);
+        const { error } = await supabase.from("blacklist_entries").insert(batch);
         if (error) throw error;
       }
 
       // Match with partners
       const { data: allEntries } = await supabase
-        .from("blacklist_entries" as any)
+        .from("blacklist_entries")
         .select("id, company_name, country");
       const { data: partners } = await supabase
         .from("partners")
@@ -131,7 +131,7 @@ export function useImportBlacklist() {
 
       let matchCount = 0;
       if (allEntries && partners) {
-        for (const entry of allEntries as any[]) {
+        for (const entry of (allEntries || [])) {
           const entryName = (entry.company_name || "").toLowerCase().trim();
           const entryCountry = (entry.country || "").toLowerCase().trim();
 
@@ -145,8 +145,8 @@ export function useImportBlacklist() {
 
           if (match) {
             await supabase
-              .from("blacklist_entries" as any)
-              .update({ matched_partner_id: match.id } as any)
+              .from("blacklist_entries")
+              .update({ matched_partner_id: match.id })
               .eq("id", entry.id);
             matchCount++;
           }
@@ -154,11 +154,11 @@ export function useImportBlacklist() {
       }
 
       // Log sync
-      await supabase.from("blacklist_sync_log" as any).insert({
+      await supabase.from("blacklist_sync_log").insert({
         sync_type: "manual_import",
         entries_count: entries.length,
         matched_count: matchCount,
-      } as any);
+      });
 
       return { imported: entries.length, matched: matchCount };
     },

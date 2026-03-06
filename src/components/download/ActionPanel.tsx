@@ -122,7 +122,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   });
 
   const cachedMembers: DirectoryMember[] = cachedEntries.flatMap((entry: any) => {
-    const members = entry.members as any[];
+    const members = entry.members as unknown as DirectoryCacheMember[];
     return (members || []).map((m: any) => ({
       company_name: m.company_name,
       city: m.city,
@@ -273,7 +273,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const saveScanToCache = useCallback(async (countryCode: string, netKey: string, scanned: DirectoryMember[], total: number, pages: number) => {
     const membersJson = scanned.map(m => ({ company_name: m.company_name, city: m.city, country: m.country, country_code: m.country_code, wca_id: m.wca_id }));
     await supabase.from("directory_cache").upsert({
-      country_code: countryCode, network_name: netKey, members: membersJson as any,
+      country_code: countryCode, network_name: netKey, members: toJson(membersJson),
       total_results: total, total_pages: pages, scanned_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: "country_code,network_name" });
     queryClient.invalidateQueries({ queryKey: ["directory-cache"] });

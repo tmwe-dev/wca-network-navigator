@@ -63,7 +63,7 @@ export function useReviewJob() {
     mutationFn: async ({ id, reviewed }: { id: string; reviewed: boolean }) => {
       const { error } = await supabase
         .from("activities")
-        .update({ reviewed } as any)
+        .update({ reviewed })
         .eq("id", id);
       if (error) throw error;
     },
@@ -77,7 +77,7 @@ export function useBulkReview() {
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
         .from("activities")
-        .update({ reviewed: true } as any)
+        .update({ reviewed: true })
         .in("id", ids);
       if (error) throw error;
     },
@@ -94,7 +94,7 @@ export function useCancelJobs() {
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
         .from("activities")
-        .update({ status: "cancelled" } as any)
+        .update({ status: "cancelled" })
         .in("id", ids);
       if (error) throw error;
     },
@@ -131,7 +131,7 @@ export function useSendJob() {
           status: "completed",
           sent_at: new Date().toISOString(),
           completed_at: new Date().toISOString(),
-        } as any)
+        })
         .eq("id", job.id);
       if (error) throw error;
     },
@@ -150,7 +150,7 @@ export function useUpdateJobEmail() {
     mutationFn: async ({ id, email_subject, email_body }: { id: string; email_subject: string; email_body: string }) => {
       const { error } = await supabase
         .from("activities")
-        .update({ email_subject, email_body } as any)
+        .update({ email_subject, email_body })
         .eq("id", id);
       if (error) throw error;
     },

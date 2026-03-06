@@ -200,7 +200,7 @@ export function transformRow(
   const result: Record<string, string | null> = {};
 
   for (const [srcKey, dstCol] of Object.entries(columnMapping)) {
-    if (!TARGET_COLUMNS.includes(dstCol as any)) continue;
+    if (!TARGET_COLUMNS.includes(dstCol)) continue;
 
     // Find actual key in row (fuzzy)
     const actualKey = findRowKey(row, srcKey);

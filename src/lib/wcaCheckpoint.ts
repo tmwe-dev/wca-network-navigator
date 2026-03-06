@@ -9,17 +9,17 @@
  * This is the SINGLE source of truth for WCA request timing authorization.
  */
 
-const CHECKPOINT_KEY = '__wcaCheckpoint__';
-
 interface CheckpointState {
   lastRequestTs: number;  // timestamp of the last WCA request (ms)
 }
 
+let _checkpointState: CheckpointState | null = null;
+
 function getState(): CheckpointState {
-  if (!(window as any)[CHECKPOINT_KEY]) {
-    (window as any)[CHECKPOINT_KEY] = { lastRequestTs: 0 };
+  if (!_checkpointState) {
+    _checkpointState = { lastRequestTs: 0 };
   }
-  return (window as any)[CHECKPOINT_KEY];
+  return _checkpointState;
 }
 
 /** Green zone threshold in seconds (raised from 15 to 20 to reduce WCA anti-bot triggers) */

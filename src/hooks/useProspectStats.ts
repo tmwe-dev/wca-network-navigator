@@ -27,10 +27,10 @@ export function useProspectStats() {
     queryKey: ["prospect-global-stats"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("email, pec, phone, fatturato, codice_ateco, region, province");
       if (error) throw error;
-      const rows = (data || []) as any[];
+      const rows = (data || []);
       const withEmail = rows.filter(r => r.email).length;
       const withPec = rows.filter(r => r.pec).length;
       const withPhone = rows.filter(r => r.phone).length;
@@ -60,10 +60,10 @@ export function useAtecoGroups() {
     queryKey: ["ateco-groups"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospects" as any)
+        .from("prospects")
         .select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
       if (error) throw error;
-      const rows = (data || []) as any[];
+      const rows = (data || []);
 
       const map = new Map<string, AtecoGroup>();
       for (const r of rows) {

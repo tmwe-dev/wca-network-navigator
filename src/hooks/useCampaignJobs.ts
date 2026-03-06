@@ -64,7 +64,7 @@ export function useCreateCampaignJobs() {
     mutationFn: async (jobs: Omit<CampaignJob, "id" | "created_at" | "completed_at" | "status" | "assigned_to" | "notes">[]) => {
       const { data, error } = await supabase
         .from("campaign_jobs")
-        .insert(jobs as any)
+        .insert(jobs)
         .select();
       if (error) throw error;
 
@@ -83,7 +83,7 @@ export function useUpdateCampaignJob() {
     mutationFn: async ({ id, ...updates }: Partial<CampaignJob> & { id: string }) => {
       const { error } = await supabase
         .from("campaign_jobs")
-        .update(updates as any)
+        .update(updates)
         .eq("id", id);
       if (error) throw error;
     },

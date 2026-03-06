@@ -88,7 +88,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           partner_id: sourceType === "partner" ? pid : null,
           source_type: sourceType,
           source_id: pid,
-          activity_type: activityType as any,
+          activity_type: activityType,
           title: effectiveTitle,
           description: description.trim() || null,
           assigned_to: assignedTo && assignedTo !== "none" ? assignedTo : null,

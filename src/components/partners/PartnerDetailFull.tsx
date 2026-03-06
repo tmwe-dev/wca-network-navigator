@@ -91,7 +91,7 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
   const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
   const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[partner.partner_type || ""] || Box;
-  const enrichment = partner.enrichment_data as any;
+  const enrichment = asEnrichment(partner.enrichment_data);
   const contacts = partner.partner_contacts || [];
   const networks = partner.partner_networks || [];
   const interactions = partner.interactions || [];

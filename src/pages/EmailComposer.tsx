@@ -241,7 +241,7 @@ export default function EmailComposer() {
         link_urls: links,
         status: "draft",
         total_count: recipientsWithEmail.length,
-      } as any);
+      });
       toast.success("Bozza salvata");
     } catch {
       toast.error("Errore nel salvataggio");
@@ -263,7 +263,7 @@ export default function EmailComposer() {
     try {
       // Save draft first
       const { data: savedDraft, error: draftError } = await supabase
-        .from("email_drafts" as any)
+        .from("email_drafts")
         .insert({
           subject,
           html_body: htmlBody,
@@ -279,12 +279,12 @@ export default function EmailComposer() {
           link_urls: links,
           status: "queued",
           total_count: recipientsWithEmail.length,
-        } as any)
+        })
         .select()
         .single();
       if (draftError) throw draftError;
 
-      const draftId = (savedDraft as any).id;
+      const draftId = savedDraft.id;
 
       // Fetch contacts for variable substitution
       const partnerIds = recipientsWithEmail.map((r) => r.id);

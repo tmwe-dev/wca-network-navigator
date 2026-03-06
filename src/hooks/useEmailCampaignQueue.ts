@@ -34,7 +34,7 @@ export function useEmailCampaignQueue(draftId: string | null) {
     queryFn: async () => {
       if (!draftId) return [];
       const { data, error } = await supabase
-        .from("email_campaign_queue" as any)
+        .from("email_campaign_queue")
         .select("*")
         .eq("draft_id", draftId)
         .order("position", { ascending: true });
@@ -97,18 +97,18 @@ export function useEnqueueCampaign() {
       // Insert in batches of 100
       for (let i = 0; i < rows.length; i += 100) {
         const batch = rows.slice(i, i + 100);
-        const { error } = await supabase.from("email_campaign_queue" as any).insert(batch as any);
+        const { error } = await supabase.from("email_campaign_queue").insert(batch);
         if (error) throw error;
       }
 
       // Update draft
-      await supabase.from("email_drafts" as any).update({
+      await supabase.from("email_drafts").update({
         queue_status: "idle",
         queue_delay_seconds: params.delaySeconds,
         total_count: params.recipients.length,
         sent_count: 0,
         status: "queued",
-      } as any).eq("id", params.draftId);
+      }).eq("id", params.draftId);
 
       return { queued: rows.length };
     },
@@ -145,11 +145,11 @@ export function useProcessQueue() {
 
         // Check if paused
         const { data: draft } = await supabase
-          .from("email_drafts" as any)
+          .from("email_drafts")
           .select("queue_status")
           .eq("id", draftId)
           .single();
-        if ((draft as any)?.queue_status === "paused" || (draft as any)?.queue_status === "cancelled") {
+        if (draft?.queue_status === "paused" || draft?.queue_status === "cancelled") {
           break;
         }
 

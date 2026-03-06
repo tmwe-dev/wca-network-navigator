@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { asEnrichment, toJson, type DirectoryCacheMember } from "@/lib/partnerUtils";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
@@ -90,7 +91,7 @@ export function useAcquisitionPipeline() {
       .select("processed_ids")
       .eq("id", jobId)
       .single();
-    const processedSet = new Set<number>(((currentJobData?.processed_ids as number[]) || []));
+    const processedSet = new Set<number>(((currentJobData?.processed_ids as unknown as number[]) || []));
 
     for (let i = startFrom; i < items.length; i++) {
       if (cancelRef.current) break;
@@ -216,7 +217,7 @@ export function useAcquisitionPipeline() {
             );
             await supabase.from("download_jobs").update({
               current_index: processedSet.size,
-              processed_ids: [...processedSet] as any,
+              processed_ids: toJson([...processedSet]),
               last_processed_wca_id: item.wca_id,
               last_contact_result: "skipped",
               contacts_missing_count: localStats.empty + localStats.failedLoads,
@@ -457,7 +458,7 @@ export function useAcquisitionPipeline() {
 
       await supabase.from("download_jobs").update({
         current_index: processedSet.size,
-        processed_ids: [...processedSet] as any,
+        processed_ids: toJson([...processedSet]),
         last_processed_wca_id: item.wca_id,
         last_processed_company: canvas.company_name || null,
         last_contact_result: contactResult,
@@ -532,7 +533,7 @@ export function useAcquisitionPipeline() {
               .eq("country_code", job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
-                const members = (entry.members as any[]) || [];
+                const members = (entry.members as unknown as DirectoryCacheMember[]) || [];
                 for (const m of members) {
                   if (!m.wca_id || !m.company_name) continue;
                   const qi = stillMissing.find(q => q.wca_id === m.wca_id);
@@ -563,7 +564,7 @@ export function useAcquisitionPipeline() {
                   {
                     country_code: job.country_code,
                     network_name: job.network_name || "",
-                    members: membersJson as any,
+                    members: toJson(membersJson),
                     total_results: scanResult.members.length,
                     scanned_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
@@ -667,7 +668,7 @@ export function useAcquisitionPipeline() {
 
           if (cached && cached.length > 0) {
             for (const entry of cached) {
-              const members = (entry.members as any[]) || [];
+              const members = (entry.members as unknown as DirectoryCacheMember[]) || [];
               members.forEach((m: any) => {
                 if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
                   allMembers.push({
@@ -698,7 +699,7 @@ export function useAcquisitionPipeline() {
                 {
                   country_code: code,
                   network_name: net,
-                  members: membersJson as any,
+                  members: toJson(membersJson),
                   total_results: scanResult.members.length,
                   scanned_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
@@ -818,7 +819,7 @@ export function useAcquisitionPipeline() {
             country_code: countryCode,
             country_name: countryPartner?.country_name || countryCode,
             network_name: selectedNetworks.length > 0 ? selectedNetworks.join(", ") : "All Networks",
-            wca_ids: items.map((i) => i.wca_id) as any,
+            wca_ids: toJson(items.map((i) => i.wca_id)),
             total_count: items.length,
             delay_seconds: delaySeconds,
             status: "running",
@@ -916,7 +917,7 @@ export function useAcquisitionPipeline() {
       supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
       supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
     ]);
-    const ed = partner.enrichment_data as any;
+    const ed = asEnrichment(partner.enrichment_data);
     setCanvasData({
       company_name: partner.company_name,
       city: partner.city,

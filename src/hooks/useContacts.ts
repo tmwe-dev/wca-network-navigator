@@ -213,7 +213,7 @@ export function useCreateContactInteraction() {
       if (iError) throw iError;
 
       // Atomic increment via DB function
-      await supabase.rpc("increment_contact_interaction" as any, {
+      await supabase.rpc("increment_contact_interaction", {
         p_contact_id: interaction.contact_id,
       });
     },

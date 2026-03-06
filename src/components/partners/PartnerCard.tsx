@@ -167,12 +167,12 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             </span>
           )}
           {/* Contact quality badge */}
-          {!!(partner.enrichment_data as any)?.deep_search_at && (
+          {!!asEnrichment(partner.enrichment_data)?.deep_search_at && (
             <Tooltip>
               <TooltipTrigger>
                 <span className="w-5 h-5 bg-sky-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">D</span>
               </TooltipTrigger>
-              <TooltipContent>Deep Search – {new Date((partner.enrichment_data as any).deep_search_at).toLocaleDateString("it-IT")}</TooltipContent>
+              <TooltipContent>Deep Search – {new Date(asEnrichment(partner.enrichment_data)?.deep_search_at).toLocaleDateString("it-IT")}</TooltipContent>
             </Tooltip>
           )}
           {(() => {

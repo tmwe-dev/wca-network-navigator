@@ -41,7 +41,7 @@ export function DownloadTerminal() {
 
   // Extract terminal_log directly from the job data (already in the shared query)
   const entries: LogEntry[] = targetJob
-    ? ((targetJob as any).terminal_log as LogEntry[] || [])
+    ? (((targetJob as { terminal_log?: unknown }).terminal_log || []) as LogEntry[])
     : [];
 
   // Auto-scroll using sentinel div (more reliable than scrollTop)

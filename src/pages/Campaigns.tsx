@@ -240,8 +240,8 @@ export default function Campaigns() {
       country_name: p.country_name,
       email: p.email,
       partner_type: p.partner_type || 'freight_forwarder',
-      partner_certifications: (p as any).partner_certifications || [],
-      partner_services: (p as any).partner_services || [],
+      partner_certifications: ((p as Record<string, unknown>).partner_certifications as unknown[]) || [],
+      partner_services: ((p as Record<string, unknown>).partner_services as unknown[]) || [],
     }));
   }, [countryPartnersData]);
 
@@ -335,7 +335,7 @@ export default function Campaigns() {
               campaign_batch_id: batchId,
               priority: "medium",
             }));
-            await supabase.from("activities").insert(rows as any);
+            await supabase.from("activities").insert(rows);
             navigate(`/reminders?tab=attivita&batch=${batchId}`);
           }}
         />,

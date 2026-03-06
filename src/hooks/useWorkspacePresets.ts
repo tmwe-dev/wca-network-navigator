@@ -1,3 +1,4 @@
+import { toJson } from "@/lib/partnerUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,7 +24,7 @@ export function useWorkspacePresets() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data, error } = await supabase
-        .from("workspace_presets" as any)
+        .from("workspace_presets")
         .select("*")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -39,27 +40,27 @@ export function useWorkspacePresets() {
 
       if (preset.id) {
         const { error } = await supabase
-          .from("workspace_presets" as any)
+          .from("workspace_presets")
           .update({
             name: preset.name,
             goal: preset.goal,
             base_proposal: preset.base_proposal,
-            document_ids: preset.document_ids as any,
-            reference_links: preset.reference_links as any,
+            document_ids: toJson(preset.document_ids),
+            reference_links: toJson(preset.reference_links),
             updated_at: new Date().toISOString(),
           })
           .eq("id", preset.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("workspace_presets" as any)
+          .from("workspace_presets")
           .insert({
             user_id: user.id,
             name: preset.name,
             goal: preset.goal,
             base_proposal: preset.base_proposal,
-            document_ids: preset.document_ids as any,
-            reference_links: preset.reference_links as any,
+            document_ids: toJson(preset.document_ids),
+            reference_links: toJson(preset.reference_links),
           });
         if (error) throw error;
       }
@@ -70,7 +71,7 @@ export function useWorkspacePresets() {
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("workspace_presets" as any)
+        .from("workspace_presets")
         .delete()
         .eq("id", id);
       if (error) throw error;

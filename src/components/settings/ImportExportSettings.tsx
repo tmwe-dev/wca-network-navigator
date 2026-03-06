@@ -47,14 +47,14 @@ export function ImportExportSettings() {
   const exportCSV = () => {
     if (!partners?.length) { toastHook({ title: "Nessun dato", variant: "destructive" }); return; }
     const headers = selectedFields.join(",");
-    const rows = partners.map((p) => selectedFields.map((f) => { const v = (p as any)[f]; return v == null ? "" : `"${String(v).replace(/"/g, '""')}"`; }).join(","));
+    const rows = partners.map((p) => selectedFields.map((f) => { const v = (p as Record<string, unknown>)[f]; return v == null ? "" : `"${String(v).replace(/"/g, '""')}"`; }).join(","));
     downloadBlob([headers, ...rows].join("\n"), "text/csv;charset=utf-8;", "csv");
     toastHook({ title: "Export completato", description: `${partners.length} partner esportati in CSV.` });
   };
 
   const exportJSON = () => {
     if (!partners?.length) { toastHook({ title: "Nessun dato", variant: "destructive" }); return; }
-    const data = partners.map((p) => { const o: Record<string, any> = {}; selectedFields.forEach((f) => { o[f] = (p as any)[f]; }); return o; });
+    const data = partners.map((p) => { const o: Record<string, any> = {}; selectedFields.forEach((f) => { o[f] = (p as Record<string, unknown>)[f]; }); return o; });
     downloadBlob(JSON.stringify(data, null, 2), "application/json", "json");
     toastHook({ title: "Export completato", description: `${partners.length} partner esportati in JSON.` });
   };

@@ -46,7 +46,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
   const years = getYearsMember(partner.member_since);
-  const enrichment = partner.enrichment_data as any;
+  const enrichment = asEnrichment(partner.enrichment_data);
   const branchCountries = getBranchCountries(partner);
 
   const handleDeepSearch = useCallback(async () => {
@@ -105,7 +105,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
 
       {/* Rating + KPIs */}
       <div className="flex items-center gap-4 flex-wrap">
-        {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details as any} />}
+        {partner.rating > 0 && <PartnerRating rating={Number(partner.rating)} ratingDetails={partner.rating_details} />}
         {years > 0 && (
           <div className="flex items-center gap-1">
             <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />

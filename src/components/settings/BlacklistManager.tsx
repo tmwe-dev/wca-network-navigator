@@ -20,7 +20,7 @@ async function parseBlacklistFile(file: File): Promise<Omit<BlacklistEntry, "id"
   if (file.name.endsWith(".csv")) {
     const text = new TextDecoder().decode(buffer);
     const blob = new Blob([text], { type: "text/csv" });
-    const stream = blob.stream() as any;
+    const stream = blob.stream();
     await workbook.csv.read(stream);
   } else {
     await workbook.xlsx.load(buffer);
@@ -90,7 +90,7 @@ export default function BlacklistManager() {
   const handleImport = async () => {
     if (allParsed.length === 0) return;
     try {
-      const result = await importMutation.mutateAsync(allParsed as any);
+      const result = await importMutation.mutateAsync(allParsed);
       toast.success(`Importati ${result.imported} record, ${result.matched} match trovati`);
       setPreview(null);
       setAllParsed([]);
