@@ -1,62 +1,62 @@
 
 
-## Piano: Ricostruzione ContactListPanel con gruppi collassabili e azioni complete
+## Piano: Mostrare tutti gli 11.000 contatti con gruppi e contatori completi
 
-### Cosa cambia
+### Problema principale
 
-**1. Gruppi collassabili (accordion) nel pannello sinistro**
+Il sistema carica solo 200 contatti per pagina e costruisce i gruppi client-side da quei 200. Con 11.000 record, l'utente vede solo i gruppi presenti nei primi 200 contatti — non tutti i paesi, origini o status reali.
 
-Attualmente i gruppi mostrano tutti i contatti aperti. Il nuovo comportamento:
-- Ogni gruppo appare come una **striscia cliccabile** (es. "🇮🇹 Italy — 42 contatti") con contatori inline (email, telefono, deep search)
-- Cliccando la striscia si **espande/collassa** il gruppo mostrando i contatti al suo interno
-- Di default tutti i gruppi sono collassati — l'utente vede solo le strisce
-- Funziona per qualsiasi raggruppamento (Paese, Origine, Status, Data)
+### Soluzione: gruppi dal database + caricamento on-demand
 
-**2. Card contatto con distinzione chiara azienda/contatto**
+**1. Nuova RPC `get_contact_group_counts`** — restituisce i conteggi per TUTTI i contatti nel database, raggruppati per paese, origine, status e mese. Una singola chiamata SQL che bypassa il limite di 1000 righe.
 
-Ogni card mostra:
-- **Riga 1**: Nome azienda in grassetto (o "Senza nome" in corsivo)
-- **Riga 2**: Icona persona + nome contatto + posizione
-- **Riga 3**: Icone rapide inline — ✉ email (link mailto), 📱 WhatsApp (link wa.me), ☎ telefono (link tel)
-- Holding pattern compatto a destra
+```sql
+CREATE OR REPLACE FUNCTION get_contact_group_counts()
+RETURNS TABLE (
+  group_type text,
+  group_key text,
+  group_label text,
+  contact_count bigint,
+  with_email bigint,
+  with_phone bigint,
+  with_deep_search bigint,
+  with_alias bigint
+)
+```
 
-**3. Azioni sul gruppo nella striscia**
+Restituisce righe come:
+- `("country", "Italy", "Italy", 2450, 1800, 900, 120, 50)`
+- `("origin", "Cosmoprof", "Cosmoprof", 340, 200, 100, 0, 0)`
+- `("status", "new", "new", 8000, ...)`
 
-Nella striscia del gruppo, accanto al contatore:
-- **Deep Search** sul gruppo intero (seleziona tutti i contatti del gruppo)
-- **Alias Azienda** (genera alias per tutti i contatti del gruppo)
-- Contatori: totale, con email, con telefono, con deep search, con alias
+**2. Riscrittura della logica gruppi nel `ContactListPanel`**
 
-**4. Bulk actions funzionanti**
+- Le **strisce dei gruppi** vengono dalla RPC (tutti i gruppi, tutti i conteggi reali)
+- Quando l'utente **espande un gruppo**, viene fatta una query filtrata per quel valore specifico (es. `country = "Italy"`) con paginazione interna al gruppo
+- Nessun limite artificiale di 200 — l'utente vede TUTTI i gruppi nell'elenco
 
-Le azioni bulk esistenti (Deep Search, Campagna, Status) vengono collegate alle funzionalità reali — in particolare Deep Search chiamerà l'edge function `deep-search-partner` adattata per i contatti (o un equivalente).
+**3. Contatori nei dropdown filtri**
+
+La stessa RPC fornisce i dati per mostrare i conteggi nelle opzioni dei dropdown Paese, Origine e Status:
+- `Italy (2450)`, `Germany (890)`, etc.
+
+**4. Icone al posto del dropdown "Raggruppa per"**
+
+Sostituire il Select "Raggruppa per" con 4 icone toggle (Globe, MapPin, Tag, Calendar) come da piano precedente approvato.
 
 ### File da modificare
 
 | File | Modifica |
 |------|----------|
-| `src/components/contacts/ContactListPanel.tsx` | Riscrittura completa: gruppi accordion collassabili, card riprogettate, contatori per gruppo, azioni gruppo (Deep Search, Alias), link WhatsApp/email/telefono inline |
-| `src/components/contacts/ContactDetailPanel.tsx` | Migliorare distinzione azienda vs contatto nel header, assicurare WhatsApp punti al mobile prima del telefono |
+| DB Migration | Nuova RPC `get_contact_group_counts` |
+| `src/hooks/useContacts.ts` | Nuovo hook `useContactGroupCounts()` + hook `useContactsByGroup(groupType, groupKey, page)` per caricamento on-demand |
+| `src/components/contacts/ContactListPanel.tsx` | Strisce da RPC, espansione carica contatti filtrati, paginazione per gruppo |
+| `src/components/contacts/ContactFiltersBar.tsx` | 4 icone toggle per raggruppamento + conteggi nei dropdown |
 
-### Dettaglio tecnico
+### Flusso utente risultante
 
-**Striscia gruppo** — usa stato locale `Set<string>` per i gruppi aperti. Struttura:
-```text
-┌─────────────────────────────────────────────┐
-│ 🇮🇹 Italy                    ✉12 ☎8 🔍3  42 │  ← cliccabile
-├─────────────────────────────────────────────┤
-│  [card] Acme Logistics                      │  ← visibile solo se espanso
-│         Mario Rossi • Sales Manager         │
-│         ✉ mario@acme.it  📱 WhatsApp        │
-│  [card] Beta Transport ...                  │
-└─────────────────────────────────────────────┘
-```
-
-**Contatori gruppo** — calcolati con un `useMemo` sugli items del gruppo:
-- `withEmail`: contatti con email non-null
-- `withPhone`: contatti con phone/mobile non-null  
-- `withDeepSearch`: contatti con deep_search_at non-null
-- `withAlias`: contatti con company_alias non-null
-
-**Deep Search su gruppo** — seleziona tutti gli ID del gruppo e li passa alla bulk action esistente. Per ora i contatti non hanno la stessa infrastruttura dei partner, quindi la Deep Search sarà un placeholder che aggiorna `deep_search_at` e registra un'interazione.
+1. Apre la pagina Contatti → vede TUTTE le strisce (es. 45 paesi) con conteggi reali
+2. Clicca "Italy (2450)" → carica i primi 200 contatti italiani
+3. Scorre → paginazione interna al gruppo
+4. I dropdown mostrano `Italy (2450)`, `Cosmoprof (340)`, etc.
 
