@@ -406,6 +406,8 @@ async function executeTool(name: string, args: any): Promise<any> {
 
         await supabase.from("activities").insert({
           partner_id: partner.id,
+          source_type: "partner",
+          source_id: partner.id,
           activity_type: args.activity_type,
           title: `${args.activity_type === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
           status: "pending",

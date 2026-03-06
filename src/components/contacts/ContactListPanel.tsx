@@ -478,13 +478,18 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               // Create activities for contacts with matching partners
               const activities = contacts
                 .filter((c: any) => c.company_name && partnerMap.has(c.company_name.toLowerCase()))
-                .map((c: any) => ({
-                  partner_id: partnerMap.get(c.company_name.toLowerCase()),
-                  activity_type: "send_email" as const,
-                  title: `Email a ${c.name || c.company_name}`,
-                  description: `Contatto: ${c.name || ""} - ${c.email}`,
-                  priority: "medium",
-                }));
+                .map((c: any) => {
+                  const pid = partnerMap.get(c.company_name.toLowerCase());
+                  return {
+                    partner_id: pid,
+                    source_type: "partner" as const,
+                    source_id: pid,
+                    activity_type: "send_email" as const,
+                    title: `Email a ${c.name || c.company_name}`,
+                    description: `Contatto: ${c.name || ""} - ${c.email}`,
+                    priority: "medium",
+                  };
+                });
 
               if (activities.length) {
                 await supabase.from("activities").insert(activities);

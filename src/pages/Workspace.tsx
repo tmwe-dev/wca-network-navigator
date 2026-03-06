@@ -9,7 +9,8 @@ import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspaceP
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
-import { Sparkles, Search, Zap, Trash2, Square } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +31,7 @@ interface StoredEmail {
 }
 
 export default function Workspace() {
+  const [sourceTab, setSourceTab] = useState<"partner" | "prospect" | "contact">("partner");
   const [selectedActivity, setSelectedActivity] = useState<AllActivity | null>(null);
   const [goal, setGoal] = useState("");
   const [baseProposal, setBaseProposal] = useState("");
@@ -54,8 +56,8 @@ export default function Workspace() {
 
   const emailActivities = useMemo(() =>
     (activities || []).filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed"
-    ), [activities]);
+      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.source_type === sourceTab
+    ), [activities, sourceTab]);
 
   // Preset handlers
   const handleLoadPreset = useCallback((preset: WorkspacePreset) => {
@@ -158,10 +160,28 @@ export default function Workspace() {
     <div className="flex h-[calc(100vh-3rem)] overflow-hidden bg-background">
       {/* Left: Contact list */}
       <div className="w-[320px] shrink-0 border-r border-border bg-background overflow-hidden flex flex-col">
-        <div className="h-[52px] flex items-center gap-2.5 px-3 border-b border-white/[0.06] glass-panel shrink-0">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-gradient-blue">Email Workspace</span>
-          <span className="glass-panel-blue text-blue-300 text-xs font-mono px-2 py-0.5 rounded-full glow-blue">
+        {/* Source tabs */}
+        <div className="px-2 pt-2 pb-1 border-b border-border shrink-0">
+          <Tabs value={sourceTab} onValueChange={(v) => { setSourceTab(v as any); setSelectedActivity(null); setSelectedIds(new Set()); }}>
+            <TabsList className="w-full h-8">
+              <TabsTrigger value="partner" className="flex-1 text-[11px] gap-1 h-7">
+                <Globe className="w-3 h-3" /> WCA
+              </TabsTrigger>
+              <TabsTrigger value="prospect" className="flex-1 text-[11px] gap-1 h-7">
+                <Building2 className="w-3 h-3" /> Prospect
+              </TabsTrigger>
+              <TabsTrigger value="contact" className="flex-1 text-[11px] gap-1 h-7">
+                <Users className="w-3 h-3" /> Contatti
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="h-[42px] flex items-center gap-2.5 px-3 border-b border-border shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold text-foreground">
+            {sourceTab === "partner" ? "WCA Partners" : sourceTab === "prospect" ? "Prospect RA" : "Contatti Import"}
+          </span>
+          <span className="bg-primary/10 text-primary text-xs font-mono px-2 py-0.5 rounded-full">
             {emailActivities.length}
           </span>
           <div className="flex-1" />
@@ -170,7 +190,7 @@ export default function Workspace() {
             <Input
               value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca..."
-              className="pl-7 h-7 w-32 text-xs bg-white/[0.05] border-white/10 placeholder:text-white/30 focus:border-blue-500/50 focus:ring-0 focus:bg-white/[0.07] rounded-md"
+              className="pl-7 h-7 w-32 text-xs bg-muted/50 border-border placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-0 rounded-md"
             />
           </div>
         </div>

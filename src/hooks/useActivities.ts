@@ -38,7 +38,9 @@ export function useCreateActivities() {
   return useMutation({
     mutationFn: async (
       activities: {
-        partner_id: string;
+        partner_id?: string | null;
+        source_type?: "partner" | "prospect" | "contact";
+        source_id?: string;
         assigned_to?: string | null;
         activity_type: "send_email" | "phone_call" | "add_to_campaign" | "meeting" | "follow_up" | "other";
         title: string;
@@ -49,10 +51,12 @@ export function useCreateActivities() {
         campaign_batch_id?: string | null;
       }[]
     ) => {
-      // Clean "none" values from assigned_to
+      // Clean "none" values and ensure source fields
       const cleaned = activities.map(a => ({
         ...a,
         assigned_to: a.assigned_to === "none" ? null : a.assigned_to,
+        source_type: a.source_type || "partner",
+        source_id: a.source_id || a.partner_id,
       }));
       const { data, error } = await supabase
         .from("activities")
@@ -87,7 +91,9 @@ export function useUpdateActivity() {
 
 export interface AllActivity {
   id: string;
-  partner_id: string;
+  partner_id: string | null;
+  source_type: "partner" | "prospect" | "contact";
+  source_id: string;
   activity_type: string;
   title: string;
   description: string | null;
@@ -134,7 +140,8 @@ export function useAllActivities() {
           team_members(name),
           selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, direct_phone, mobile, title, contact_alias)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(1000);
       if (error) throw error;
       return (data || []) as unknown as AllActivity[];
     },

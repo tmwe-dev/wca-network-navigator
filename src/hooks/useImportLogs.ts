@@ -400,6 +400,8 @@ export function useCreateActivitiesFromImport() {
         // Create activity
         await supabase.from("activities").insert({
           partner_id: partner.id,
+          source_type: "partner",
+          source_id: partner.id,
           activity_type: activityType,
           title: `${activityType === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
           status: "pending",
