@@ -30,6 +30,7 @@ const Import = lazy(() => import("./pages/Import"));
 const Global = lazy(() => import("./pages/Global"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
 const Contacts = lazy(() => import("./pages/Contacts"));
+const HubOperativo = lazy(() => import("./pages/HubOperativo"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -81,6 +82,7 @@ const App = () => (
                   <Route path="/global" element={<Global />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/contacts" element={<Contacts />} />
+                  <Route path="/hub" element={<HubOperativo />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
