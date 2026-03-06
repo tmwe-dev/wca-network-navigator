@@ -68,19 +68,23 @@ serve(async (req) => {
     const outputCost = Math.ceil((output_tokens || 0) / 1000 * rates.output);
     const totalCredits = inputCost + outputCost;
 
-    // Check balance
-    const { data: credits } = await supabaseAdmin
-      .from("user_credits")
-      .select("balance, total_consumed")
-      .eq("user_id", user.id)
-      .single();
+    // FIX #3: Atomic credit deduction using DB function
+    const { data: deductResult, error: deductError } = await supabaseAdmin.rpc("deduct_credits", {
+      p_user_id: user.id,
+      p_amount: totalCredits,
+      p_operation: "ai_call",
+      p_description: `${provider}: ${input_tokens || 0} input + ${output_tokens || 0} output tokens`,
+    });
 
-    if (!credits || credits.balance < totalCredits) {
+    if (deductError) throw deductError;
+
+    const row = deductResult?.[0];
+    if (!row?.success) {
       return new Response(JSON.stringify({
         allowed: false,
         byok: false,
         credits_consumed: 0,
-        balance: credits?.balance || 0,
+        balance: row?.new_balance || 0,
         required: totalCredits,
         message: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.",
       }), {
@@ -89,30 +93,11 @@ serve(async (req) => {
       });
     }
 
-    // Deduct credits
-    const newBalance = credits.balance - totalCredits;
-    const newConsumed = credits.total_consumed + totalCredits;
-
-    await supabaseAdmin
-      .from("user_credits")
-      .update({ balance: newBalance, total_consumed: newConsumed })
-      .eq("user_id", user.id);
-
-    // Log transaction
-    await supabaseAdmin
-      .from("credit_transactions")
-      .insert({
-        user_id: user.id,
-        amount: -totalCredits,
-        operation: "ai_call",
-        description: `${provider}: ${input_tokens || 0} input + ${output_tokens || 0} output tokens`,
-      });
-
     return new Response(JSON.stringify({
       allowed: true,
       byok: false,
       credits_consumed: totalCredits,
-      balance: newBalance,
+      balance: row.new_balance,
       message: `${totalCredits} crediti consumati`,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

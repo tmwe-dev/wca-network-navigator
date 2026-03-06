@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 
 export type LeadStatus = "new" | "contacted" | "in_progress" | "negotiation" | "converted" | "lost";
 
@@ -76,9 +77,12 @@ export function useContacts(filters: ContactFilters = {}) {
       if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
 
       if (filters.search) {
-        q = q.or(
-          `company_name.ilike.%${filters.search}%,name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
-        );
+        const s = sanitizeSearchTerm(filters.search);
+        if (s) {
+          q = q.or(
+            `company_name.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%`
+          );
+        }
       }
       if (filters.country) q = q.eq("country", filters.country);
       if (filters.origin) q = q.eq("origin", filters.origin);
@@ -117,9 +121,12 @@ export function useHoldingPatternContacts(filters: ContactFilters = {}) {
         .order("last_interaction_at", { ascending: false });
 
       if (filters.search) {
-        q = q.or(
-          `company_name.ilike.%${filters.search}%,name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
-        );
+        const s = sanitizeSearchTerm(filters.search);
+        if (s) {
+          q = q.or(
+            `company_name.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%`
+          );
+        }
       }
       if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
       if (filters.country) q = q.eq("country", filters.country);

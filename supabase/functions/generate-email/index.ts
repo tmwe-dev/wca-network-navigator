@@ -55,10 +55,46 @@ function getProfileTruncation(quality: Quality): { description: number; rawProfi
   }
 }
 
+/** Validate URL: only allow http/https, block private IPs */
+function isValidPublicUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const host = parsed.hostname;
+    // Block private/internal IPs
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|169\.254\.|localhost|::1|fc|fd)/i.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // ── Auth check (REQUIRED) ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+
     const { activity_id, goal, base_proposal, language, document_ids, reference_urls, quality: rawQuality } = await req.json();
     if (!activity_id) throw new Error("activity_id is required");
 
@@ -67,8 +103,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Use service role for data queries (user is already authenticated above)
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
+      supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
@@ -104,7 +141,6 @@ serve(async (req) => {
         .eq("id", activity.source_id)
         .single();
       if (importedContact) {
-        // Map imported_contacts fields to partner-like structure for the prompt
         partner = {
           id: importedContact.id,
           company_name: importedContact.company_name || "Azienda sconosciuta",
@@ -204,7 +240,6 @@ serve(async (req) => {
     }
 
     // Fetch partner networks, services, social links, settings in parallel
-    // For non-partner sources, skip partner-specific lookups
     const isPartnerSource = sourceType === "partner" && activity.partner_id;
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
       isPartnerSource
@@ -245,11 +280,13 @@ serve(async (req) => {
     }
 
     // Scrape reference URLs via Firecrawl — only for "premium"
+    // FIX #7: Validate URLs to prevent SSRF
     let linksContext = "";
     if (quality === "premium" && reference_urls && reference_urls.length > 0) {
       const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
       if (FIRECRAWL_API_KEY) {
-        const urlsToScrape = reference_urls.slice(0, 3);
+        const validUrls = (reference_urls as string[]).filter(isValidPublicUrl);
+        const urlsToScrape = validUrls.slice(0, 3);
         const scrapeResults = await Promise.allSettled(
           urlsToScrape.map(async (url: string) => {
             try {
@@ -438,6 +475,19 @@ Genera l'email completa con oggetto e corpo.`;
 
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content || "";
+
+    // Consume credits atomically
+    if (result.usage) {
+      const inputTokens = result.usage.prompt_tokens || 0;
+      const outputTokens = result.usage.completion_tokens || 0;
+      const totalCredits = Math.max(1, Math.ceil((inputTokens + outputTokens * 2) / 1000));
+      await supabase.rpc("deduct_credits", {
+        p_user_id: userId,
+        p_amount: totalCredits,
+        p_operation: "ai_call",
+        p_description: `generate-email (${quality}): ${inputTokens} in + ${outputTokens} out`,
+      });
+    }
 
     let subject = "";
     let body = content;
