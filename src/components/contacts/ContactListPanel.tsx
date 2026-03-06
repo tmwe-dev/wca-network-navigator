@@ -68,9 +68,39 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     toast({ title: `Deep Search avviata su ${group.contact_count} contatti del gruppo "${group.group_label}"` });
   };
 
-  const handleGroupAlias = (group: ContactGroupCount) => {
-    toast({ title: `Generazione alias per ${group.contact_count} contatti del gruppo "${group.group_label}"` });
-  };
+  const [aliasLoading, setAliasLoading] = useState(false);
+
+  const handleGroupAlias = useCallback(async (group: ContactGroupCount) => {
+    if (aliasLoading) return;
+    setAliasLoading(true);
+    try {
+      // If there's an active selection, use those IDs; otherwise load group IDs
+      const ids = selection.count > 0
+        ? Array.from(selection.selectedIds)
+        : await fetchGroupContactIds(currentGroupBy, group.group_key, filters.holdingPattern);
+
+      if (!ids.length) {
+        toast({ title: "Nessun contatto trovato" });
+        return;
+      }
+
+      toast({ title: `Generazione alias per ${ids.length} contatti...` });
+
+      const { data, error } = await supabase.functions.invoke("generate-aliases", {
+        body: { contactIds: ids },
+      });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
+      toast({ title: "Alias generati", description: `${data?.processed || 0} contatti elaborati` });
+    } catch (e: any) {
+      toast({ title: "Errore generazione alias", description: e.message, variant: "destructive" });
+    } finally {
+      setAliasLoading(false);
+    }
+  }, [aliasLoading, selection, currentGroupBy, filters.holdingPattern, queryClient]);
 
   const handleToggleGroupSelect = useCallback(async (group: ContactGroupCount) => {
     const key = `${currentGroupBy}:${group.group_key}`;

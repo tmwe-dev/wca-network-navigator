@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles } from "lucide-react";
+import { Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, RefreshCw } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
 import {
@@ -17,6 +17,8 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Contact {
   id: string;
@@ -61,11 +63,33 @@ export function ContactDetailPanel({ contact }: Props) {
   const { data: interactions = [] } = useContactInteractions(c.id);
   const updateStatus = useUpdateLeadStatus();
   const createInteraction = useCreateContactInteraction();
+  const queryClient = useQueryClient();
   const [showNewInteraction, setShowNewInteraction] = useState(false);
   const [newType, setNewType] = useState("note");
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newOutcome, setNewOutcome] = useState("");
+  const [aliasLoading, setAliasLoading] = useState(false);
+
+  const needsAlias = !c.company_alias || !c.contact_alias;
+
+  const handleGenerateAlias = async () => {
+    if (aliasLoading) return;
+    setAliasLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-aliases", {
+        body: { contactIds: [c.id] },
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
+      toast({ title: "Alias generato", description: `${data?.processed || 0} contatti elaborati` });
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    } finally {
+      setAliasLoading(false);
+    }
+  };
 
   const handleStatusChange = (s: LeadStatus) => {
     updateStatus.mutate(
@@ -151,6 +175,18 @@ export function ContactDetailPanel({ contact }: Props) {
             <a href={`tel:${c.phone || c.mobile}`}>
               <Phone className="w-3 h-3" /> Chiama
             </a>
+          </Button>
+        )}
+        {needsAlias && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/5"
+            onClick={handleGenerateAlias}
+            disabled={aliasLoading}
+          >
+            <Sparkles className="w-3 h-3" />
+            {aliasLoading ? "Generazione..." : "Genera Alias"}
           </Button>
         )}
       </div>
