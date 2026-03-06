@@ -31,7 +31,7 @@ let GREEN_ZONE_SECONDS = 20;
  */
 export function setGreenZoneDelay(seconds: number): void {
   GREEN_ZONE_SECONDS = Math.max(15, Math.min(60, seconds));
-  console.log(`[wcaCheckpoint] GREEN_ZONE_SECONDS set to ${GREEN_ZONE_SECONDS}s`);
+  
 }
 
 export function getGreenZoneDelay(): number {

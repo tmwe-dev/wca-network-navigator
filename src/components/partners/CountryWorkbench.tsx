@@ -15,7 +15,7 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
-import { getRealLogoUrl } from "@/lib/partnerUtils";
+import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +25,7 @@ const hasPhone = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone);
 const hasEmail = (p: any) =>
   (p.partner_contacts || []).some((c: any) => c.email);
-const hasDeepSearch = (p: any) => !!(p.enrichment_data as any)?.deep_search_at;
+const hasDeepSearch = (p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
 const hasServices = (p: any) => (p.partner_services || []).length > 0;
 const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
 
@@ -74,7 +74,7 @@ export function CountryWorkbench({
 
   const totalAiCredits = useMemo(() => {
     return countryPartners.reduce((sum: number, p: any) => {
-      const credits = (p.enrichment_data as any)?.tokens_used?.credits_consumed || 0;
+      const credits = asEnrichment(p.enrichment_data)?.tokens_used?.credits_consumed || 0;
       return sum + credits;
     }, 0);
   }, [countryPartners]);
@@ -275,7 +275,7 @@ export function CountryWorkbench({
                         <TooltipTrigger>
                           <span className="w-[18px] h-[18px] bg-sky-500/20 text-sky-400 text-[8px] font-bold rounded flex items-center justify-center shrink-0">D</span>
                         </TooltipTrigger>
-                        <TooltipContent>Deep Search – {format(new Date((partner.enrichment_data as any).deep_search_at), "dd/MM/yyyy")}</TooltipContent>
+                        <TooltipContent>Deep Search – {format(new Date(asEnrichment(partner.enrichment_data)!.deep_search_at!), "dd/MM/yyyy")}</TooltipContent>
                       </Tooltip>
                     )}
                     {hasActivity && (

@@ -64,7 +64,7 @@ export function useDownloadProcessor() {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
-    console.log("[Processor] startJob BEGIN:", jobId);
+    
 
     const ac = new AbortController();
     abortRef.current = ac;
@@ -98,7 +98,8 @@ export function useDownloadProcessor() {
       const cacheMap = new Map<number, { name: string; city: string }>();
       const { data: cacheEntries } = await supabase.from("directory_cache").select("members").eq("country_code", job.country_code);
       for (const entry of cacheEntries || []) {
-        for (const m of (entry.members as any[] || [])) {
+        const members = (entry.members || []) as Array<{ wca_id?: number; company_name?: string; city?: string }>;
+        for (const m of members) {
           if (m.wca_id) cacheMap.set(m.wca_id, { name: m.company_name || `WCA ${m.wca_id}`, city: m.city || "" });
         }
       }

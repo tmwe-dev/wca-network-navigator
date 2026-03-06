@@ -79,17 +79,8 @@ function isReimportCorrection(headers: string[]): boolean {
 }
 
 // Apply AI column_mapping to a single row — uses transformRow with auto-normalization
-function applyMapping(row: Record<string, any>, mapping: Record<string, string>, logFirst = false): Record<string, string | null> {
-  const result = transformRow(row, mapping);
-  if (logFirst) {
-    const populated = Object.values(result).filter(v => v !== null).length;
-    const rowDataCount = Object.values(row).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
-    console.log(`[Import Mapping] Populated ${populated}/${Object.keys(result).length} fields from row with ${rowDataCount} non-empty values`);
-    if (populated < rowDataCount * 0.3) {
-      console.warn(`[Import Mapping] ⚠️ Low mapping rate — AI keys: [${Object.keys(mapping).join(", ")}] vs Row keys: [${Object.keys(row).join(", ")}]`);
-    }
-  }
-  return result;
+function applyMapping(row: Record<string, any>, mapping: Record<string, string>): Record<string, string | null> {
+  return transformRow(row, mapping);
 }
 
 function statusBadge(status: string) {
@@ -171,7 +162,7 @@ export default function Import() {
         if (match) columnKeyMap[col] = match;
       }
 
-      console.log("[Re-import] ID key:", idKey, "| Column map:", columnKeyMap);
+      
 
       let updatedCount = 0;
       let errorCount = 0;
@@ -362,9 +353,8 @@ export default function Import() {
           return;
         }
 
-        console.log("[Import] Using column_mapping:", mappingKeys);
-        const finalRows = pendingRows.map((row, idx) => {
-          const mapped = applyMapping(row, aiMapping.column_mapping, idx === 0);
+        const finalRows = pendingRows.map((row) => {
+          const mapped = applyMapping(row, aiMapping.column_mapping);
           return { ...mapped, _raw: row };
         });
 
@@ -372,7 +362,6 @@ export default function Import() {
           TARGET_COLUMNS.some(col => r[col] && String(r[col]).trim())
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
-        console.log(`[Import] Fill rate: ${(fillRate * 100).toFixed(1)}% (${nonEmptyCount}/${finalRows.length})`);
 
         if (fillRate < 0.1) {
           toast({

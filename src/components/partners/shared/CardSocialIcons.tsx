@@ -1,10 +1,12 @@
 import { Globe, MessageCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSocialLinks } from "@/hooks/useSocialLinks";
+import type { SocialLink } from "@/hooks/useSocialLinks";
 
-// TODO: batch fetch — this component triggers an N+1 query when rendered per-card in a list
-export function CardSocialIcons({ partnerId }: { partnerId: string }) {
-  const { data: links = [] } = useSocialLinks(partnerId);
+interface CardSocialIconsProps {
+  links: SocialLink[];
+}
+
+export function CardSocialIcons({ links }: CardSocialIconsProps) {
   const companyLinks = links.filter((l) => !l.contact_id);
   if (companyLinks.length === 0) return null;
   return (

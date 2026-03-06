@@ -120,7 +120,7 @@ export function useCreateDownloadJob() {
       const skippedCount = params.wca_ids.length - filteredIds.length;
 
       if (skippedCount > 0) {
-        console.log(`[CreateJob] Filtered out ${skippedCount} stale WCA IDs (already in partners_no_contacts)`);
+        
         toast({ title: "Filtro applicato", description: `${skippedCount} profili non più presenti su WCA esclusi` });
       }
 
@@ -139,7 +139,7 @@ export function useCreateDownloadJob() {
         .limit(1);
 
       if (existing && existing.length > 0) {
-        console.log(`[CreateJob] Skip duplicato per ${params.country_code}/${params.network_name}`);
+        
         return existing[0].id;
       }
 
