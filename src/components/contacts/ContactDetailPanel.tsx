@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Mail, Phone, MessageCircle, Search, Plus, ExternalLink } from "lucide-react";
+import { Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
 import {
@@ -52,6 +52,10 @@ const INTERACTION_TYPES = [
   { value: "note", label: "Nota" },
 ];
 
+function formatPhone(phone: string): string {
+  return phone.replace(/[^0-9+]/g, "");
+}
+
 export function ContactDetailPanel({ contact }: Props) {
   const c = contact;
   const { data: interactions = [] } = useContactInteractions(c.id);
@@ -92,24 +96,35 @@ export function ContactDetailPanel({ contact }: Props) {
     );
   };
 
-  const whatsappUrl = c.mobile || c.phone
-    ? `https://wa.me/${(c.mobile || c.phone)!.replace(/[^0-9+]/g, "")}`
-    : null;
+  const waPhone = c.mobile || c.phone;
+  const whatsappUrl = waPhone ? `https://wa.me/${formatPhone(waPhone)}` : null;
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-5">
-      {/* Header */}
-      <div>
-        <h2 className="text-base font-semibold text-foreground truncate">
-          {c.company_name || "Senza nome"}
-        </h2>
-        {c.name && (
-          <p className="text-sm text-muted-foreground">
-            {c.name}
-            {c.position && <span className="text-primary/70"> • {c.position}</span>}
-          </p>
+      {/* Header — clear company vs contact distinction */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-primary/60 shrink-0" />
+          <h2 className="text-base font-bold text-foreground truncate">
+            {c.company_name || "Senza azienda"}
+          </h2>
+        </div>
+        {c.company_alias && (
+          <div className="flex items-center gap-1.5 ml-6">
+            <Sparkles className="w-3 h-3 text-primary/50" />
+            <span className="text-[11px] text-primary/70 italic">{c.company_alias}</span>
+          </div>
         )}
-        <p className="text-xs text-muted-foreground mt-0.5">
+        {c.name && (
+          <div className="flex items-center gap-2 ml-6">
+            <User className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              {c.name}
+              {c.position && <span className="text-primary/70"> • {c.position}</span>}
+            </p>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground ml-6">
           {[c.city, c.country].filter(Boolean).join(", ")}
           {c.address && ` — ${c.address}`}
         </p>
@@ -124,17 +139,17 @@ export function ContactDetailPanel({ contact }: Props) {
             </a>
           </Button>
         )}
+        {whatsappUrl && (
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-success border-success/30 hover:bg-success/5" asChild>
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="w-3 h-3" /> WhatsApp
+            </a>
+          </Button>
+        )}
         {(c.phone || c.mobile) && (
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1" asChild>
             <a href={`tel:${c.phone || c.mobile}`}>
               <Phone className="w-3 h-3" /> Chiama
-            </a>
-          </Button>
-        )}
-        {whatsappUrl && (
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" asChild>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="w-3 h-3" /> WhatsApp
             </a>
           </Button>
         )}
@@ -152,7 +167,7 @@ export function ContactDetailPanel({ contact }: Props) {
       {/* Badges info */}
       <div className="flex flex-wrap gap-1.5">
         {c.origin && <Badge variant="outline" className="text-[10px]">{c.origin}</Badge>}
-        {c.company_alias && <Badge variant="secondary" className="text-[10px]">Alias: {c.company_alias}</Badge>}
+        {c.contact_alias && <Badge variant="secondary" className="text-[10px]">Alias contatto: {c.contact_alias}</Badge>}
         {c.deep_search_at && (
           <Badge className="text-[10px] bg-success/20 text-success border-0">
             <Search className="w-2.5 h-2.5 mr-0.5" /> Deep Search
