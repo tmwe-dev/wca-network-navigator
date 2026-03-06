@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Mail, Phone, Search, Megaphone, RefreshCw, ChevronLeft, ChevronRight,
-  AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles, Loader2
+  AlertTriangle, ChevronDown, MessageCircle, User, Building2, Sparkles, Loader2,
+  MapPin, Tag
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactFiltersBar } from "./ContactFiltersBar";
@@ -60,17 +61,21 @@ function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: {
   const cPhone = clean(c.phone);
   const cMobile = clean(c.mobile);
   const cPosition = clean(c.position);
+  const cCity = clean(c.city);
+  const cZip = clean(c.zip_code);
+  const cOrigin = clean(c.origin);
   const quality = getContactQuality(c);
   const displayCompany = cName || "Senza azienda";
   const waPhone = cMobile || cPhone;
+  const cityDisplay = [cCity, cZip].filter(Boolean).join(", ");
 
   return (
     <div
-      className={`group relative rounded-lg border p-2.5 text-xs cursor-pointer transition-all ${
+      className={`group relative rounded-lg border p-2.5 text-xs cursor-pointer transition-all bg-card/80 ${
         isActive
-          ? "border-primary/50 bg-primary/5 shadow-sm"
+          ? "border-primary/50 bg-primary/10 shadow-sm"
           : isSelected
-          ? "border-primary/30 bg-primary/3"
+          ? "border-primary/30 bg-primary/5"
           : "border-border hover:border-primary/30 hover:shadow-sm"
       }`}
       onClick={onSelect}
@@ -84,7 +89,7 @@ function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: {
         />
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-1.5">
-            <Building2 className="w-3 h-3 text-primary/60 shrink-0" />
+            <Building2 className="w-3 h-3 text-primary shrink-0" />
             <span className={`font-bold truncate ${!cName ? "text-muted-foreground italic" : "text-foreground"}`}>
               {displayCompany}
             </span>
@@ -93,15 +98,30 @@ function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: {
             )}
           </div>
           {cContact && (
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <User className="w-3 h-3 shrink-0 text-muted-foreground/60" />
+            <div className="flex items-center gap-1.5 text-foreground/90">
+              <User className="w-3 h-3 shrink-0 text-foreground/60" />
               <span className="truncate">{cContact}</span>
-              {cPosition && <span className="text-[10px] text-primary/70">• {cPosition}</span>}
+              {cPosition && <span className="text-[10px] text-primary">• {cPosition}</span>}
+            </div>
+          )}
+          {(cityDisplay || cOrigin) && (
+            <div className="flex items-center gap-2 text-foreground/90">
+              {cityDisplay && (
+                <span className="inline-flex items-center gap-1 text-[10px]">
+                  <MapPin className="w-3 h-3 text-foreground/60 shrink-0" />
+                  <span className="truncate">{cityDisplay}</span>
+                </span>
+              )}
+              {cOrigin && (
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-0">
+                  <Tag className="w-2.5 h-2.5 mr-0.5" />{cOrigin}
+                </Badge>
+              )}
             </div>
           )}
           <div className="flex items-center gap-2 pt-0.5">
             {cEmail && (
-              <a href={`mailto:${cEmail}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors" title={cEmail}>
+              <a href={`mailto:${cEmail}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-foreground/80 hover:text-primary transition-colors" title={cEmail}>
                 <Mail className="w-3 h-3" /><span className="truncate max-w-[100px]">{cEmail}</span>
               </a>
             )}
@@ -111,7 +131,7 @@ function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: {
               </a>
             )}
             {cPhone && (
-              <a href={`tel:${cPhone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors" title={cPhone}>
+              <a href={`tel:${cPhone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-foreground/80 hover:text-primary transition-colors" title={cPhone}>
                 <Phone className="w-3 h-3" /><span className="truncate max-w-[80px]">{cPhone}</span>
               </a>
             )}
