@@ -83,7 +83,7 @@ interface ContactListPanelProps {
   sourceType?: "partner" | "prospect" | "contact";
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
-  onSelectAll: () => void;
+  onSelectAll: (filteredIds: string[]) => void;
   onDeselectAll: () => void;
 }
 
@@ -98,7 +98,7 @@ export default function ContactListPanel({
   const emailActivities = useMemo(() => {
     if (!activities) return [];
     return activities.filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed" && (!sourceType || a.source_type === sourceType)
+      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.status !== "cancelled" && (!sourceType || a.source_type === sourceType)
     );
   }, [activities, sourceType]);
 
@@ -144,6 +144,7 @@ export default function ContactListPanel({
 
   const clearFilters = useCallback(() => setActiveFilters(new Set()), []);
 
+  const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
 
   if (isLoading) {
@@ -163,7 +164,7 @@ export default function ContactListPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox checked={allSelected}
-              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll()} />
+              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll(filteredIds)} />
             <p className="text-[11px] text-muted-foreground font-medium">
               {selectedIds.size > 0 ? (
                 <span className="text-primary">{selectedIds.size} selezionati</span>
