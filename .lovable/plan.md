@@ -1,51 +1,131 @@
 
 
-## Rendere più evidenti i contatti, email e cellulari nelle card
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### Problema
-Attualmente le informazioni di contatto (nome persona, email, telefono/cellulare) sono mostrate in modo poco evidente: testo piccolo (`text-[10px]`), colori sbiaditi (`text-muted-foreground`), icone solo come indicatori senza testo visibile, e in alcuni casi i dati sono nascosti dietro tooltip. L'utente non riesce a capire a colpo d'occhio chi ha dati sufficienti per essere lavorato nel Workspace.
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-### Card coinvolte (6 componenti)
+---
 
-1. **PartnerCard** (`src/components/partners/PartnerCard.tsx`) — action bar in basso mostra solo icone Phone/Mail senza testo. I contatti personali (`partner_contacts`) non sono mostrati affatto — solo il badge "Contatti OK/Parziale/No contatti"
-2. **PartnerListItem** (`src/components/partners/PartnerListItem.tsx`) — mostra nome contatto primario ma email/telefono sono solo icone colorate in tooltip, mai testo visibile
-3. **PartnerDetailCompact** (`src/components/partners/PartnerDetailCompact.tsx`) — nella sezione contatti mostra Mail/Phone come icone colorate ma senza il testo dell'email/telefono visibile
-4. **ContactCard** (`src/components/contacts/ContactCard.tsx`) — già mostra email e telefono con testo, ma in `text-[10px]` molto piccolo e `text-foreground` poco contrastato
-5. **CompactContactCard** (`src/components/import/CompactContactCard.tsx`) — mostra email/phone con emoji ✉/☎ in `text-muted-foreground`, poco leggibile
-6. **Workspace ContactListPanel** (`src/components/workspace/ContactListPanel.tsx`) — mostra icone Mail/Phone colorate ma senza il testo dell'email o numero visibile
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-### Modifiche per ogni componente
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-#### 1. PartnerCard — aggiungere sezione contatto primario
-- Sopra la action bar, aggiungere una riga con nome del contatto primario (da `partner_contacts`), la sua email e il suo cellulare in testo visibile
-- Usare `text-xs font-medium` con colori ad alto contrasto (email in `text-sky-400`, telefono in `text-emerald-400`)
-- Se nessun contatto: mostrare "Nessun contatto personale" in rosso
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-#### 2. PartnerListItem — rendere email/telefono visibili come testo
-- Sotto il nome del contatto primario, mostrare email e telefono come testo troncato visibile (non solo icone)
-- Formato: `📧 mario@azienda.com · 📱 +39 333...`
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-#### 3. PartnerDetailCompact — mostrare email/telefono sotto il nome contatto
-- Aggiungere sotto ogni nome contatto una riga con email e telefono in testo visibile, cliccabile
+---
 
-#### 4. ContactCard — aumentare dimensione e contrasto
-- Email/telefono da `text-[10px]` a `text-xs`
-- Colore da `text-foreground` a `text-sky-400` per email e `text-emerald-400` per telefono/WA
-- Aumentare `max-w` dei truncate
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-#### 5. CompactContactCard — stile uniforme con icone Lucide
-- Sostituire emoji ✉/☎ con icone `Mail`/`Phone` colorate
-- Aumentare contrasto e dimensione del testo email/phone
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
 
-#### 6. Workspace ContactListPanel — mostrare email/telefono come testo
-- Sotto le icone Mail/Phone, aggiungere il testo dell'email troncato e il numero di telefono visibile
-- Questo rende immediatamente chiaro quali attività sono "pronte" per il Workspace
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
-### File coinvolti
-- `src/components/partners/PartnerCard.tsx`
-- `src/components/partners/PartnerListItem.tsx`
-- `src/components/partners/PartnerDetailCompact.tsx`
-- `src/components/contacts/ContactCard.tsx`
-- `src/components/import/CompactContactCard.tsx`
-- `src/components/workspace/ContactListPanel.tsx`
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
+
+---
+
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+```
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
+
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

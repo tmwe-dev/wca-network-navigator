@@ -74,15 +74,15 @@ export function CompactContactCard({
           </div>
 
           {/* Row 4: Email/phone hints */}
-          <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="flex items-center gap-2 flex-wrap">
             {c.email && (
-              <span className="truncate max-w-[120px]" title={c.email}>
-                ✉ {c.email}
+              <span className="inline-flex items-center gap-1 text-xs text-sky-400 font-medium truncate max-w-[160px]" title={c.email}>
+                <Mail className="w-3 h-3 shrink-0" /> {c.email}
               </span>
             )}
             {c.phone && (
-              <span className="truncate max-w-[80px]" title={c.phone}>
-                ☎ {c.phone}
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium truncate max-w-[120px]" title={c.phone}>
+                <Phone className="w-3 h-3 shrink-0" /> {c.phone}
               </span>
             )}
           </div>

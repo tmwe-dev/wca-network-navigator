@@ -80,20 +80,20 @@ export function ContactCard({ c, isActive, isSelected, onSelect, onToggle }: Con
               )}
             </div>
           )}
-          <div className="flex items-center gap-2 pt-0.5">
+          <div className="flex items-center gap-2 pt-0.5 flex-wrap">
             {cEmail && (
-              <a href={`mailto:${cEmail}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-foreground hover:text-primary transition-colors font-medium" title={cEmail}>
-                <Mail className="w-3 h-3" /><span className="truncate max-w-[100px]">{cEmail}</span>
+              <a href={`mailto:${cEmail}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 transition-colors font-medium" title={cEmail}>
+                <Mail className="w-3.5 h-3.5" /><span className="truncate max-w-[150px]">{cEmail}</span>
               </a>
             )}
             {waPhone && (
-              <a href={`https://wa.me/${formatPhone(waPhone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-success hover:text-success/80 transition-colors font-medium" title={`WhatsApp: ${waPhone}`}>
-                <MessageCircle className="w-3 h-3" /><span>WA</span>
+              <a href={`https://wa.me/${formatPhone(waPhone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium" title={`WhatsApp: ${waPhone}`}>
+                <MessageCircle className="w-3.5 h-3.5" /><span>WA</span>
               </a>
             )}
             {cPhone && (
-              <a href={`tel:${cPhone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-foreground hover:text-primary transition-colors" title={cPhone}>
-                <Phone className="w-3 h-3" /><span className="truncate max-w-[80px]">{cPhone}</span>
+              <a href={`tel:${cPhone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium" title={cPhone}>
+                <Phone className="w-3.5 h-3.5" /><span className="truncate max-w-[120px]">{cPhone}</span>
               </a>
             )}
           </div>

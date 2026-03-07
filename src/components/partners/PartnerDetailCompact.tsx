@@ -133,15 +133,21 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                 <span className={`text-sm font-medium ${th.h2}`}>{c.name}</span>
                 {c.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">{c.contact_alias}</span>}
                 {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">Primary</span>}
-                <div className="flex items-center gap-1 ml-auto">
-                  <Mail className={cn("w-3.5 h-3.5", c.email ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                  <Phone className={cn("w-3.5 h-3.5", (c.direct_phone || c.mobile) ? "text-sky-500" : isDark ? "text-white/15" : "text-slate-200")} />
-                </div>
               </div>
               {c.title && <p className={`text-xs ml-6 ${th.dim}`}>{c.title}</p>}
-              <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">
-                {c.email && <a href={`mailto:${c.email}`} className={`hover:underline ${th.body}`}>{c.email}</a>}
-                {c.direct_phone && <a href={`tel:${c.direct_phone}`} className={`hover:underline ${th.body}`}>{c.direct_phone}</a>}
+              <div className="space-y-0.5 ml-6 mt-1">
+                {c.email && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <a href={`mailto:${c.email}`} className="text-sky-400 hover:underline font-medium">{c.email}</a>
+                  </div>
+                )}
+                {c.direct_phone && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <a href={`tel:${c.direct_phone}`} className="text-emerald-400 hover:underline font-medium">{c.direct_phone}</a>
+                  </div>
+                )}
                 {c.mobile && (
                   <span className="flex items-center gap-1">
                     <a href={`tel:${c.mobile}`} className={`hover:underline ${th.body}`}>{c.mobile}</a>

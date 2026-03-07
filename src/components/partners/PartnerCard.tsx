@@ -236,8 +236,40 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
           </div>
         )}
 
+        {/* Primary contact info */}
+        {(() => {
+          const contacts = partner.partner_contacts || [];
+          const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+          if (!primary) return (
+            <div className="mt-3 pt-2 border-t">
+              <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>
+            </div>
+          );
+          return (
+            <div className="mt-3 pt-2 border-t space-y-0.5">
+              <div className="flex items-center gap-1.5 text-xs">
+                <UserCheck className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="font-semibold text-foreground truncate">{primary.contact_alias || primary.name}</span>
+                {primary.title && <span className="text-[10px] text-muted-foreground">· {primary.title}</span>}
+              </div>
+              {primary.email && (
+                <div className="flex items-center gap-1.5 text-xs ml-4">
+                  <Mail className="w-3 h-3 text-sky-400 shrink-0" />
+                  <a href={`mailto:${primary.email}`} className="text-sky-400 hover:underline truncate max-w-[180px] font-medium">{primary.email}</a>
+                </div>
+              )}
+              {(primary.direct_phone || primary.mobile) && (
+                <div className="flex items-center gap-1.5 text-xs ml-4">
+                  <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span className="text-emerald-400 font-medium">{primary.direct_phone || primary.mobile}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Action bar */}
-        <div className="flex items-center gap-1 mt-3 pt-2 border-t">
+        <div className="flex items-center gap-1 mt-2 pt-2 border-t">
           {partner.phone && (
             <Tooltip>
               <TooltipTrigger asChild>
