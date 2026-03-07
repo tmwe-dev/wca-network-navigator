@@ -1,131 +1,41 @@
 
 
-# Piano Completo di Correzione e Code Quality — WCA Network Navigator
+## Diagnosi dei problemi nel Workspace
 
-Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
+### Problemi identificati
 
----
+**1. Disallineamento filtri ContactListPanel ↔ Workspace**
+Il `ContactListPanel` filtra internamente la lista con i chip (es. "Con email"), ma `onSelectAll` nel parent `Workspace.tsx` (riga 94) seleziona TUTTI gli `emailActivities`, ignorando i filtri attivi nel pannello. Risultato: il checkbox "seleziona tutti" non si allinea mai con la lista filtrata.
 
-## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+**2. `onSelectAll` non conosce la lista filtrata**
+Quando l'utente clicca il checkbox in alto dopo aver filtrato "Con email 15", il Workspace seleziona tutti (es. 30 attività), non solo i 15 filtrati. Il check `allSelected` nel ContactListPanel confronta `filtered` vs `selectedIds`, ma il set non corrisponde mai esattamente → il checkbox non risulta mai "checked".
 
-Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
+**3. Stato `cancelled` non escluso nel ContactListPanel**
+`Workspace.tsx` riga 59 esclude `cancelled`, ma `ContactListPanel` riga 101 filtra solo `completed`. Le attività cancellate appaiono nella lista del pannello ma vengono ignorate dalla generazione email.
 
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
-| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
-| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
-| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
-| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
-
-I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
+**4. Genera email non funziona con filtri**
+`handleGenerateAll` usa `emailActivities.filter(a => selectedIds.has(a.id))`. Se nessun ID è selezionato (perché il selectAll non funziona), genera su tutti — ma molti senza email vengono esclusi silenziosamente.
 
 ---
 
-## Fase 2 — N+1 Query Fix (CardSocialIcons)
+### Piano di fix
 
-**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+**A. ContactListPanel — esporre la lista filtrata al parent**
+- Aggiungere una callback `onFilteredIdsChange?: (ids: string[]) => void` alle props
+- Chiamarla con un `useEffect` ogni volta che `filtered` cambia
+- In `Workspace.tsx`, mantenere uno stato `filteredIds` aggiornato dal pannello
 
-**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+**B. Workspace — `onSelectAll` deve selezionare solo gli ID filtrati**
+- Cambiare `handleSelectAll` (riga 94) per usare `filteredIds` invece di `emailActivities`
+- Cambiare `handleDeselectAll` per deselezionare solo gli ID filtrati (o tutti)
 
-| File | Modifica |
-|------|----------|
-| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
-| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
-| Callers di CardSocialIcons | Passare link dal batch hook |
+**C. ContactListPanel — escludere `cancelled`**
+- Riga 101: aggiungere `&& a.status !== "cancelled"` al filtro
 
----
+**D. Genera email — usare gli ID filtrati come fallback**
+- In `handleGenerateAll` (riga 123), quando `selectedIds.size === 0`, usare `filteredIds` (non tutti gli emailActivities)
 
-## Fase 3 — Null Safety (crash preventions)
-
-Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
-
-| File | Fix |
-|------|-----|
-| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
-| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
-| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
-| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
-
----
-
-## Fase 4 — Riduzione `as any` nei file principali
-
-663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
-
-**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
-
-| Gruppo | File principali | Fix |
-|--------|----------------|-----|
-| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
-| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
-| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
-| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
-
----
-
-## Fase 5 — Splitting Componenti Grandi
-
-### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
-
-```text
-src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
-src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
-src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
-src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
-```
-
-### 5B. `Settings.tsx` (851 righe → ~5 file)
-
-```text
-src/pages/Settings.tsx                     (~100 righe — tabs container)
-src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
-src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
-src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
-src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
-```
-I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
-
-### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
-
-```text
-src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
-src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
-src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
-```
-
-### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
-
-```text
-src/pages/EmailComposer.tsx                (~150 righe — page container)
-src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
-src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
-```
-
----
-
-## Fase 6 — Lock File + Varie
-
-| Issue | Fix |
-|-------|-----|
-| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
-| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
-| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
-
----
-
-## Riepilogo Esecuzione
-
-| Fase | Scope | File stimati | Rischio |
-|------|-------|-------------|---------|
-| 1 — Console cleanup | 5 file | 5 | Basso |
-| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
-| 3 — Null safety | 4 file | 4 | Basso |
-| 4 — Type safety | 10-15 file | 15 | Medio |
-| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
-| 6 — Varie | 2 file | 2 | Basso |
-
-**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
-
-Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+### File modificati
+- `src/components/workspace/ContactListPanel.tsx` — aggiungere prop callback, fix filtro cancelled
+- `src/pages/Workspace.tsx` — gestire filteredIds, fix selectAll/generateAll
 
