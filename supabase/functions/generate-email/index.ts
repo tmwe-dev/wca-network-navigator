@@ -107,6 +107,33 @@ function detectLanguage(countryCode: string): { language: string; languageLabel:
   return map[cc] || { language: "english", languageLabel: "English" };
 }
 
+/** Check if a string looks like a person's name (vs a job title/department) */
+function isLikelyPersonName(value: string): boolean {
+  if (!value || value.trim().length < 2) return false;
+  const lower = value.toLowerCase().trim();
+  const roleKeywords = [
+    "department", "pricing", "business development", "manager", "director",
+    "office", "logistics", "operations", "commercial", "sales", "admin",
+    "accounting", "hr", "human resources", "finance", "marketing",
+    "customer service", "general", "managing", "executive", "officer",
+    "coordinator", "supervisor", "assistant", "secretary", "reception",
+    "procurement", "purchasing", "supply chain", "warehouse", "import",
+    "export", "freight", "shipping", "forwarding", "trade", "compliance",
+    "legal", "it ", "information technology", "support", "helpdesk",
+    "division", "unit", "team", "group", "section", "bureau", "desk",
+    "rappresentante", "responsabile", "direttore", "ufficio", "reparto",
+    "amministrazione", "commerciale", "operativo", "logistica",
+    "contabilità", "segreteria", "acquisti", "vendite",
+  ];
+  // If it contains any role keyword, it's not a person name
+  if (roleKeywords.some((kw) => lower.includes(kw))) return false;
+  // If it contains "&" or "/" it's likely a department combo
+  if (/[&\/]/.test(value)) return false;
+  // If all words are capitalized short words (2-3 letters each), likely acronyms
+  if (/^[A-Z]{2,4}(\s+[A-Z]{2,4})*$/.test(value.trim())) return false;
+  return true;
+}
+
 /** Validate URL: only allow http/https, block private IPs */
 function isValidPublicUrl(url: string): boolean {
   try {
