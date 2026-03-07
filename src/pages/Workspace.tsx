@@ -135,12 +135,23 @@ export default function Workspace() {
     const targets = selectedIds.size > 0
       ? emailActivities.filter((a) => selectedIds.has(a.id))
       : emailActivities.filter((a) => filteredIds.includes(a.id));
+    
+    // Filter: must have email
     const withEmail = targets.filter(a => a.selected_contact?.email || a.partners?.email);
-    const skipped = targets.length - withEmail.length;
-    if (skipped > 0) {
-      toast({ title: `${skipped} partner esclusi`, description: "Nessun indirizzo email disponibile" });
+    const skippedEmail = targets.length - withEmail.length;
+    
+    // Filter: partner-source must have selected_contact_id
+    const withContact = withEmail.filter(a => a.source_type !== "partner" || !!a.selected_contact_id);
+    const skippedContact = withEmail.length - withContact.length;
+    
+    if (skippedEmail > 0) {
+      toast({ title: `${skippedEmail} esclusi`, description: "Nessun indirizzo email disponibile" });
     }
-    const toGenerate = withEmail.slice(0, 20);
+    if (skippedContact > 0) {
+      toast({ title: `${skippedContact} esclusi`, description: "Nessun contatto selezionato" });
+    }
+    
+    const toGenerate = withContact.slice(0, 20);
     if (toGenerate.length === 0) return;
     setBatchGenerating(true);
     setBatchProgress({ current: 0, total: toGenerate.length });
