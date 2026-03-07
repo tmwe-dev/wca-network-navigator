@@ -148,6 +148,10 @@ export default function ContactListPanel({
   const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
 
+  useEffect(() => {
+    onFilteredIdsChange?.(filteredIds);
+  }, [filteredIds, onFilteredIdsChange]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full p-4 space-y-3">

@@ -220,6 +220,7 @@ export default function Workspace() {
           onToggleSelect={handleToggleSelect}
           onSelectAll={handleSelectAll}
           onDeselectAll={handleDeselectAll}
+          onFilteredIdsChange={setFilteredIds}
         />
       </div>
 
