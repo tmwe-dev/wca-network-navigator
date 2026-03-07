@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Wand2, Loader2, Send, Copy, Edit3, Eye, RotateCcw,
   Mail, User, Building2, CheckCircle2, AlertCircle,
-  ChevronLeft, ChevronRight, Zap, AtSign
+  ChevronLeft, ChevronRight, Zap, AtSign, AlertTriangle
 } from "lucide-react";
 import { type AllActivity } from "@/hooks/useActivities";
 import { type GeneratedEmail, useEmailGenerator } from "@/hooks/useEmailGenerator";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+import ContactPicker from "@/components/workspace/ContactPicker";
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -63,6 +64,8 @@ export default function EmailCanvas({
   const [sending, setSending] = useState(false);
 
   const partnerId = activity?.partner_id || null;
+  const sourceType = activity?.source_type || "partner";
+  const hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
   const { data: socialLinks = [] } = useSocialLinks(partnerId);
   const companyLinkedIn = socialLinks.find((l) => l.platform === "linkedin" && !l.contact_id);
   const contactLinkedIn = socialLinks.find(
@@ -77,6 +80,10 @@ export default function EmailCanvas({
 
   const handleGenerate = async () => {
     if (!activity) return;
+    if (sourceType === "partner" && !activity.selected_contact_id) {
+      toast({ title: "Seleziona un contatto", description: "Devi selezionare un contatto prima di generare l'email", variant: "destructive" });
+      return;
+    }
     const result = await generate({
       activity_id: activity.id, goal, base_proposal: baseProposal,
       document_ids: documentIds, reference_urls: referenceUrls, quality,
@@ -290,14 +297,33 @@ export default function EmailCanvas({
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
             <Wand2 className="w-10 h-10 text-muted-foreground/20" />
-            <p className="text-sm text-muted-foreground">
-              Compila Goal e Proposta, poi clicca <strong className="text-primary">Genera</strong>
-            </p>
-            {!totalEmails && (
-              <Button onClick={handleGenerate} disabled={isGenerating} size="sm"
-                className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground mt-2">
-                <Wand2 className="w-3.5 h-3.5" /> Genera Email
-              </Button>
+            {/* Contact picker for partner-source activities */}
+            {sourceType === "partner" && partnerId && (
+              <div className="w-full max-w-xs mb-2">
+                <ContactPicker
+                  activityId={activity.id}
+                  partnerId={partnerId}
+                  selectedContactId={activity.selected_contact_id}
+                />
+              </div>
+            )}
+            {sourceType === "partner" && !activity.selected_contact_id ? (
+              <div className="flex items-center gap-2 text-warning text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                Seleziona un contatto per generare l'email
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Compila Goal e Proposta, poi clicca <strong className="text-primary">Genera</strong>
+                </p>
+                {!totalEmails && (
+                  <Button onClick={handleGenerate} disabled={isGenerating} size="sm"
+                    className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground mt-2">
+                    <Wand2 className="w-3.5 h-3.5" /> Genera Email
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}

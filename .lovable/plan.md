@@ -1,58 +1,131 @@
 
 
-## Problema: email indirizzate all'azienda invece che al contatto
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### Diagnosi
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-Ho verificato il flusso completo e trovato **3 cause concatenate**:
+---
 
-1. **Le attività vengono create senza `selected_contact_id`** — il dialog `AssignActivityDialog` non include mai la selezione del contatto. Quindi tutte le attività arrivano al Workspace senza un contatto associato.
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-2. **L'edge function `generate-email` accetta di generare senza contatto** — quando `contact` è `null`, riga 416 dice letteralmente all'AI: *"indirizzare all'azienda usando il nome"*. Risultato: "Cara società XY".
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-3. **Nessuna UI per scegliere il contatto** — nel Workspace, non c'è modo di selezionare tra i contatti disponibili di un partner prima di generare.
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-### Soluzione in 3 parti
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-#### 1. Edge Function: rifiutare generazione senza contatto
+---
 
-**File: `supabase/functions/generate-email/index.ts`**
-- Dopo aver risolto partner e contact, se `contact` è `null` (e `sourceType === "partner"`), restituire errore 422 `"no_contact"` con messaggio chiaro
-- Rimuovere il fallback riga 416 che dice "indirizzare all'azienda"
-- Quando `contact` esiste, rendere il prompt ancora più esplicito: "Rivolgiti SEMPRE alla persona, MAI all'azienda nel saluto"
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-#### 2. Workspace: aggiungere selezione contatto
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
 
-**File: `src/components/workspace/ContactListPanel.tsx`** (o nuovo componente `ContactPicker`)
-- Quando l'utente clicca su un'attività che ha un partner con contatti ma `selected_contact_id` è null, mostrare un piccolo picker/dropdown con i contatti disponibili
-- Chiamare `useUpdateActivity` per salvare il `selected_contact_id` scelto
-- Se il partner ha un solo contatto, auto-selezionarlo
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
-**File: `src/components/workspace/EmailCanvas.tsx`**
-- Prima del bottone "Genera", mostrare il contatto selezionato
-- Se mancante, mostrare avviso con link per selezionarne uno
-- Bloccare la generazione se non c'è contatto
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
 
-#### 3. Batch generation: skip intelligente
+---
 
-**File: `src/pages/Workspace.tsx`**
-- In `handleGenerateAll`, oltre al filtro `withEmail`, aggiungere filtro `withContact` 
-- Le attività senza contatto selezionato vengono escluse con toast riepilogativo: "X partner esclusi (nessun contatto selezionato)"
-- Per i partner con un solo contatto, auto-assegnare il contatto prima di generare
+## Fase 3 — Null Safety (crash preventions)
 
-### Dettaglio tecnico del ContactPicker
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
 
-Nuovo componente inline che appare nella lista attività o nell'EmailCanvas:
-- Query `partner_contacts` per il `partner_id` dell'attività
-- Se 1 contatto → auto-select + update activity
-- Se 2+ contatti → dropdown con nome, ruolo, email
-- Se 0 contatti → badge "Nessun contatto disponibile"
-- Al cambio selezione → `supabase.from("activities").update({ selected_contact_id })` 
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
 
-### File coinvolti
-- `supabase/functions/generate-email/index.ts` — validazione contatto + prompt fix
-- `src/components/workspace/EmailCanvas.tsx` — UI contatto + blocco generazione
-- `src/components/workspace/ContactListPanel.tsx` — indicatore contatto nella lista
-- `src/pages/Workspace.tsx` — filtro batch
-- Nuovo: `src/components/workspace/ContactPicker.tsx` — picker contatto riusabile
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+```
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
+
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

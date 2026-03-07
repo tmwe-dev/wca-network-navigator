@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle, Send } from "lucide-react";
+import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle, Send, UserCheck } from "lucide-react";
+import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
 import { useQuery } from "@tanstack/react-query";
@@ -265,7 +266,16 @@ export default function ContactListPanel({
                               </>
                             )}
                           </div>
-                          {(contact || displayName) ? (
+                          {activity.source_type === "partner" && activity.partner_id && !activity.selected_contact_id ? (
+                            <div className="mt-0.5">
+                              <ContactPicker
+                                activityId={activity.id}
+                                partnerId={activity.partner_id}
+                                selectedContactId={activity.selected_contact_id}
+                                compact
+                              />
+                            </div>
+                          ) : (contact || displayName) ? (
                             <div className="flex items-center gap-1 mt-0.5">
                               <User className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground truncate">
