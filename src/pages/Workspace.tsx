@@ -43,6 +43,7 @@ export default function Workspace() {
   const { presets, save: savePreset, remove: removePreset } = useWorkspacePresets();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [generatedEmails, setGeneratedEmails] = useState<Map<string, StoredEmail>>(new Map());
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [batchGenerating, setBatchGenerating] = useState(false);
@@ -91,7 +92,7 @@ export default function Workspace() {
       return next;
     });
   }, []);
-  const handleSelectAll = useCallback(() => setSelectedIds(new Set(emailActivities.map((a) => a.id))), [emailActivities]);
+  const handleSelectAll = useCallback((ids: string[]) => setSelectedIds(new Set(ids)), []);
   const handleDeselectAll = useCallback(() => setSelectedIds(new Set()), []);
 
   const handleEmailGenerated = useCallback((activityId: string, email: StoredEmail) => {
@@ -120,7 +121,9 @@ export default function Workspace() {
   };
 
   const handleGenerateAll = async () => {
-    const targets = selectedIds.size > 0 ? emailActivities.filter((a) => selectedIds.has(a.id)) : emailActivities;
+    const targets = selectedIds.size > 0
+      ? emailActivities.filter((a) => selectedIds.has(a.id))
+      : emailActivities.filter((a) => filteredIds.includes(a.id));
     const withEmail = targets.filter(a => a.selected_contact?.email || a.partners?.email);
     const skipped = targets.length - withEmail.length;
     if (skipped > 0) {
