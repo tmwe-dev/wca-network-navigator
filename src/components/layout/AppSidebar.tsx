@@ -4,7 +4,7 @@ import {
   Calendar, Mail, Globe, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
   Users, PackageCheck, Command, Upload, UserCheck, Zap,
-  Rocket,
+  Rocket, Microscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,6 +38,7 @@ const navSections = [
       { title: "Agenda", url: "/reminders", icon: Calendar },
       { title: "Import", url: "/import", icon: Upload },
       { title: "Impostazioni", url: "/settings", icon: Settings },
+      { title: "Diagnostica", url: "/diagnostics", icon: Microscope },
       { title: "Guida", url: "/guida", icon: BookOpen },
     ],
   },
