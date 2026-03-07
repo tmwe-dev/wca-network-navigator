@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,13 +83,14 @@ interface ContactListPanelProps {
   sourceType?: "partner" | "prospect" | "contact";
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
-  onSelectAll: () => void;
+  onSelectAll: (filteredIds: string[]) => void;
   onDeselectAll: () => void;
+  onFilteredIdsChange?: (ids: string[]) => void;
 }
 
 export default function ContactListPanel({
   selectedActivityId, onSelect, search = "", sourceType,
-  selectedIds, onToggleSelect, onSelectAll, onDeselectAll,
+  selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onFilteredIdsChange,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
@@ -98,7 +99,7 @@ export default function ContactListPanel({
   const emailActivities = useMemo(() => {
     if (!activities) return [];
     return activities.filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed" && (!sourceType || a.source_type === sourceType)
+      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.status !== "cancelled" && (!sourceType || a.source_type === sourceType)
     );
   }, [activities, sourceType]);
 
@@ -144,7 +145,12 @@ export default function ContactListPanel({
 
   const clearFilters = useCallback(() => setActiveFilters(new Set()), []);
 
+  const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
+
+  useEffect(() => {
+    onFilteredIdsChange?.(filteredIds);
+  }, [filteredIds, onFilteredIdsChange]);
 
   if (isLoading) {
     return (
@@ -163,7 +169,7 @@ export default function ContactListPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox checked={allSelected}
-              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll()} />
+              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll(filteredIds)} />
             <p className="text-[11px] text-muted-foreground font-medium">
               {selectedIds.size > 0 ? (
                 <span className="text-primary">{selectedIds.size} selezionati</span>
