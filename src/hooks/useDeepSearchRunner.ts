@@ -74,22 +74,31 @@ export function useDeepSearchRunner(): DeepSearchState {
         if (abortRef.current) break;
         done++;
 
-        // Get partner info — try filtered cache first, then fetch if missing
+        // Get record info — try cache first, then fetch
         let cached: any = null;
-        const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
-        for (const [, data] of allCached) {
-          if (Array.isArray(data)) {
-            cached = data.flat().find((p: any) => p.id === id);
-            if (cached) break;
+        if (mode === "partner") {
+          const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
+          for (const [, data] of allCached) {
+            if (Array.isArray(data)) {
+              cached = data.flat().find((p: any) => p.id === id);
+              if (cached) break;
+            }
           }
-        }
-        if (!cached) {
+          if (!cached) {
+            const { data } = await supabase
+              .from("partners")
+              .select("id, company_name, country_code, logo_url")
+              .eq("id", id)
+              .maybeSingle();
+            cached = data;
+          }
+        } else {
           const { data } = await supabase
-            .from("partners")
-            .select("id, company_name, country_code, logo_url")
+            .from("imported_contacts")
+            .select("id, company_name, name, country")
             .eq("id", id)
             .maybeSingle();
-          cached = data;
+          cached = data ? { company_name: data.name || data.company_name, country_code: data.country } : null;
         }
 
         // Check abort again after any async operation
@@ -97,7 +106,7 @@ export function useDeepSearchRunner(): DeepSearchState {
 
         setCurrent({
           partnerId: id,
-          companyName: cached?.company_name || `Partner ${done}`,
+          companyName: cached?.company_name || `Record ${done}`,
           countryCode: cached?.country_code,
           logoUrl: cached?.logo_url,
           index: done,
@@ -106,8 +115,8 @@ export function useDeepSearchRunner(): DeepSearchState {
 
         toast.loading(`Deep Search ${done}/${toProcess.length}...`, { id: "deep-search-global" });
 
-        const { data, error } = await supabase.functions.invoke("deep-search-partner", {
-          body: { partnerId: id },
+        const { data, error } = await supabase.functions.invoke(fnName, {
+          body: { [bodyKey]: id },
         });
 
         // Check abort immediately after the edge function returns
