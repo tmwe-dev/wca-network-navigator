@@ -769,6 +769,7 @@ export type Database = {
           created_at: string
           deep_search_at: string | null
           email: string | null
+          enrichment_data: Json | null
           external_id: string | null
           id: string
           import_log_id: string
@@ -798,6 +799,7 @@ export type Database = {
           created_at?: string
           deep_search_at?: string | null
           email?: string | null
+          enrichment_data?: Json | null
           external_id?: string | null
           id?: string
           import_log_id: string
@@ -827,6 +829,7 @@ export type Database = {
           created_at?: string
           deep_search_at?: string | null
           email?: string | null
+          enrichment_data?: Json | null
           external_id?: string | null
           id?: string
           import_log_id?: string
