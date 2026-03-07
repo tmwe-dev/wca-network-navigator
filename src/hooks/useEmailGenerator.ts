@@ -31,7 +31,7 @@ export function useEmailGenerator() {
         body: params,
       });
       
-      // Handle structured error responses (e.g. 422 no_email)
+      // Handle structured error responses (e.g. 422 no_email, no_contact)
       if (error) {
         // Try to parse the response body for structured errors
         let parsed: any = null;
@@ -41,6 +41,14 @@ export function useEmailGenerator() {
           }
         } catch {}
         
+        if (parsed?.error === "no_contact") {
+          toast({
+            title: "Contatto mancante",
+            description: `${parsed.partner_name || "Il partner"} non ha un contatto selezionato. Seleziona un contatto prima di generare.`,
+            variant: "destructive",
+          });
+          return null;
+        }
         if (parsed?.error === "no_email") {
           toast({
             title: "Email mancante",

@@ -278,6 +278,18 @@ serve(async (req) => {
 
     if (!partner) throw new Error("Source entity not found");
 
+    // --- VALIDATION: partner source MUST have a selected contact ---
+    if (sourceType === "partner" && !contact) {
+      return new Response(
+        JSON.stringify({
+          error: "no_contact",
+          message: "Nessun contatto selezionato. Seleziona un contatto prima di generare l'email.",
+          partner_name: partner.company_name,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // --- VALIDATION: check contact has email ---
     if (!contactEmail) {
       return new Response(
@@ -413,7 +425,9 @@ CONTATTO DESTINATARIO:
 - Ruolo: ${contact.title || "N/A"}
 - Email: ${contact.email || contactEmail}
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
-` : `Nessun contatto specifico selezionato — indirizzare all'azienda usando il nome "${recipientCompany}".`;
+
+REGOLA ASSOLUTA: Rivolgiti SEMPRE alla persona (${recipientName}), MAI all'azienda nel saluto. L'email è personale, diretta al contatto. Non scrivere mai "Cara azienda", "Gentile società", "Dear Company" o simili.
+` : `ATTENZIONE: Nessun contatto selezionato. Rivolgiti comunque in modo generico ma MAI usando "Cara/Dear" + nome azienda. Usa "Gentile responsabile" o equivalente nella lingua richiesta.`;
 
     // --- SIGNATURE BLOCK ---
     let signatureBlock = settings.ai_email_signature_block || "";
