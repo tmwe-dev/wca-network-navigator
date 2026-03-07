@@ -297,14 +297,33 @@ export default function EmailCanvas({
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
             <Wand2 className="w-10 h-10 text-muted-foreground/20" />
-            <p className="text-sm text-muted-foreground">
-              Compila Goal e Proposta, poi clicca <strong className="text-primary">Genera</strong>
-            </p>
-            {!totalEmails && (
-              <Button onClick={handleGenerate} disabled={isGenerating} size="sm"
-                className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground mt-2">
-                <Wand2 className="w-3.5 h-3.5" /> Genera Email
-              </Button>
+            {/* Contact picker for partner-source activities */}
+            {sourceType === "partner" && partnerId && (
+              <div className="w-full max-w-xs mb-2">
+                <ContactPicker
+                  activityId={activity.id}
+                  partnerId={partnerId}
+                  selectedContactId={activity.selected_contact_id}
+                />
+              </div>
+            )}
+            {sourceType === "partner" && !activity.selected_contact_id ? (
+              <div className="flex items-center gap-2 text-warning text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                Seleziona un contatto per generare l'email
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Compila Goal e Proposta, poi clicca <strong className="text-primary">Genera</strong>
+                </p>
+                {!totalEmails && (
+                  <Button onClick={handleGenerate} disabled={isGenerating} size="sm"
+                    className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground mt-2">
+                    <Wand2 className="w-3.5 h-3.5" /> Genera Email
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}
