@@ -422,10 +422,22 @@ serve(async (req) => {
       }
     }
 
-    // --- USE ALIASES as primary names ---
-    const recipientName = contact
-      ? (contact.contact_alias || contact.name)
-      : (partner.company_alias || partner.company_name);
+    // --- USE ALIASES as primary names, but validate they're actual person names ---
+    let recipientName: string;
+    if (contact) {
+      const alias = contact.contact_alias;
+      const name = contact.name;
+      if (alias && isLikelyPersonName(alias)) {
+        recipientName = alias;
+      } else if (name && isLikelyPersonName(name)) {
+        recipientName = name;
+      } else {
+        // Neither alias nor name is a person name — use generic greeting
+        recipientName = "";
+      }
+    } else {
+      recipientName = "";
+    }
     const recipientCompany = partner.company_alias || partner.company_name;
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompanyAlias = settings.ai_company_alias || settings.ai_company_name || "";
@@ -448,12 +460,12 @@ ${linkedinContext}`;
 
     const contactContext = contact ? `
 CONTATTO DESTINATARIO:
-- Nome da usare nel saluto: ${recipientName} (IMPORTANTE: usa SOLO questo nome, mai il nome completo con cognome)
+${recipientName ? `- Nome da usare nel saluto: ${recipientName} (IMPORTANTE: usa SOLO questo nome, mai il nome completo con cognome)` : `- ATTENZIONE: il nome del contatto non è disponibile o è un titolo/ruolo aziendale. Usa "Gentile responsabile" o equivalente nella lingua dell'email.`}
 - Ruolo: ${contact.title || "N/A"}
 - Email: ${contact.email || contactEmail}
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
 
-REGOLA ASSOLUTA: Rivolgiti SEMPRE alla persona (${recipientName}), MAI all'azienda nel saluto. L'email è personale, diretta al contatto. Non scrivere mai "Cara azienda", "Gentile società", "Dear Company" o simili.
+REGOLA ASSOLUTA: ${recipientName ? `Rivolgiti SEMPRE alla persona (${recipientName}), MAI all'azienda nel saluto.` : `Non hai un nome di persona valido. Usa un saluto generico come "Gentile responsabile" o equivalente. MAI usare nomi di ruoli/dipartimenti come se fossero persone.`} L'email è personale, diretta al contatto. Non scrivere mai "Cara azienda", "Gentile società", "Dear Company" o simili.
 ` : `ATTENZIONE: Nessun contatto selezionato. Rivolgiti comunque in modo generico ma MAI usando "Cara/Dear" + nome azienda. Usa "Gentile responsabile" o equivalente nella lingua richiesta.`;
 
     // --- SIGNATURE BLOCK ---
@@ -508,14 +520,15 @@ REGOLE CRITICHE:
 5. Non inventare informazioni — usa solo i dati forniti
 6. L'email deve essere pronta per l'invio, non un template generico
 7. Usa i network condivisi come punto di connessione se esistono
-8. Rispondi SOLO con il testo dell'email (no markdown, no commenti esterni)
-9. Includi un oggetto email nella prima riga nel formato "Subject: ..."
-10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email
+8. Genera il corpo dell'email in HTML semplice: usa <p> per i paragrafi, <br> per gli a capo interni, <strong> per enfasi, <ul>/<li> per elenchi puntati. NON usare markdown. NON usare \n per gli a capo, usa i tag HTML.
+9. Includi un oggetto email nella prima riga nel formato "Subject: ..." (l'oggetto è testo puro, non HTML)
+10. Dopo l'oggetto, vai a capo due volte e scrivi il corpo dell'email in HTML
 11. Se sono forniti documenti di riferimento o informazioni da link, usali per arricchire il contenuto
 12. Se sono disponibili profili LinkedIn, puoi menzionare la connessione professionale
 13. IMPORTANTE: Usa SEMPRE l'alias/nome breve del destinatario nel saluto (es. "Dear Marco" non "Dear Marco Rossi"). Mai usare nome e cognome completi.
 14. IMPORTANTE: Usa SEMPRE l'alias/nome breve del mittente, mai il nome completo con cognome.
-15. Il corpo dell'email deve terminare con un saluto di chiusura (es. "Best regards," o "Cordiali saluti,") seguito dal nome del mittente. NON aggiungere dettagli come ruolo, azienda, telefono, email — quelli sono nella firma automatica.`;
+15. Il corpo dell'email deve terminare con un saluto di chiusura (es. "Best regards," o "Cordiali saluti,") seguito dal nome del mittente. NON aggiungere dettagli come ruolo, azienda, telefono, email — quelli sono nella firma automatica.
+16. CRITICO: Se il nome del destinatario sembra un ruolo/titolo aziendale (es. "Pricing & Business Development", "Operations Manager", "Import Department"), NON usarlo MAI come nome di persona nel saluto. In quel caso usa "Gentile responsabile" o equivalente.`;
 
     const userPrompt = `${senderContext}
 
@@ -592,9 +605,18 @@ Genera l'email completa con oggetto e corpo.`;
       body = content.substring(subjectMatch[0].length).trim();
     }
 
-    // Append signature block to body
+    // Post-processing: convert plain text newlines to HTML if AI didn't use HTML tags
+    if (!/<(p|br|div|ul|ol|h[1-6])\b/i.test(body)) {
+      body = body
+        .split(/\n\n+/)
+        .map((para) => `<p>${para.replace(/\n/g, "<br>")}</p>`)
+        .join("\n");
+    }
+
+    // Append signature block to body (as HTML)
     if (signatureBlock.trim()) {
-      body = body + "\n\n" + signatureBlock;
+      const sigHtml = signatureBlock.replace(/\n/g, "<br>");
+      body = body + `<br><br>${sigHtml}`;
     }
 
     return new Response(
