@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, Phone, ChevronRight } from "lucide-react";
+import { Mail, Phone, ChevronRight, User } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -106,28 +106,35 @@ export function PartnerListItem({
             {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
           </div>
           {/* Inline contacts status */}
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+          <div className="mt-1.5 space-y-0.5">
             {(() => {
               const contacts = partner.partner_contacts || [];
               const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
-              if (!primaryContact) return <span className="italic text-muted-foreground/40">Nessun contatto</span>;
+              if (!primaryContact) return <span className="italic text-xs text-destructive/70">Nessun contatto personale</span>;
               return (
                 <>
-                  <span className="truncate max-w-[120px]">{primaryContact.name}</span>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Mail className={cn("w-3.5 h-3.5", primaryContact.email ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
-                    </TooltipTrigger>
-                    <TooltipContent>{primaryContact.email || "Email mancante"}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Phone className={cn("w-3.5 h-3.5", (primaryContact.direct_phone || primaryContact.mobile) ? "text-sky-500 fill-sky-500" : "text-muted-foreground/25")} />
-                    </TooltipTrigger>
-                    <TooltipContent>{primaryContact.direct_phone || primaryContact.mobile || "Telefono mancante"}</TooltipContent>
-                  </Tooltip>
-                  {contacts.length > 1 && (
-                    <span className="text-[10px] text-muted-foreground">+{contacts.length - 1}</span>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-foreground truncate max-w-[140px]">{primaryContact.contact_alias || primaryContact.name}</span>
+                    {primaryContact.title && <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">· {primaryContact.title}</span>}
+                    {contacts.length > 1 && (
+                      <span className="text-[10px] text-muted-foreground">+{contacts.length - 1}</span>
+                    )}
+                  </div>
+                  {primaryContact.email && (
+                    <div className="flex items-center gap-1.5 text-xs ml-4">
+                      <Mail className="w-3 h-3 text-sky-400 shrink-0" />
+                      <a href={`mailto:${primaryContact.email}`} onClick={(e) => e.stopPropagation()} className="text-sky-400 hover:underline truncate max-w-[180px] font-medium">{primaryContact.email}</a>
+                    </div>
+                  )}
+                  {(primaryContact.direct_phone || primaryContact.mobile) && (
+                    <div className="flex items-center gap-1.5 text-xs ml-4">
+                      <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span className="text-emerald-400 font-medium truncate max-w-[140px]">{primaryContact.direct_phone || primaryContact.mobile}</span>
+                    </div>
+                  )}
+                  {!primaryContact.email && !primaryContact.direct_phone && !primaryContact.mobile && (
+                    <span className="text-[10px] text-destructive/70 ml-4">Manca email e telefono</span>
                   )}
                 </>
               );

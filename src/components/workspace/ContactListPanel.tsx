@@ -288,24 +288,28 @@ export default function ContactListPanel({
                               <span className="text-[11px] text-warning">Nessun contatto</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="space-y-0.5 mt-0.5">
                             {hasEmail ? (
-                              <Mail className="w-3 h-3 text-primary/60" />
+                              <div className="flex items-center gap-1">
+                                <Mail className="w-3 h-3 text-sky-400 shrink-0" />
+                                <span className="text-[11px] text-sky-400 font-medium truncate max-w-[160px]">{contact?.email || d.email}</span>
+                              </div>
                             ) : (contact || displayName) ? (
                               <div className="flex items-center gap-1">
                                 <Mail className="w-3 h-3 text-destructive/60" />
-                                <span className="text-[10px] text-destructive/80">No email</span>
+                                <span className="text-[11px] text-destructive/80">No email</span>
                               </div>
                             ) : null}
                             {(contact?.direct_phone || contact?.mobile) && (
-                              <>
-                                <Phone className="w-3 h-3 text-primary/60" />
+                              <div className="flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                                <span className="text-[11px] text-emerald-400 font-medium truncate max-w-[120px]">{contact.mobile || contact.direct_phone}</span>
                                 <a href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
                                   target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                                  title="WhatsApp" className="inline-flex">
+                                  title="WhatsApp" className="inline-flex ml-0.5">
                                   <MessageCircle className="w-3 h-3 text-success hover:scale-110 transition-transform" />
                                 </a>
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>
