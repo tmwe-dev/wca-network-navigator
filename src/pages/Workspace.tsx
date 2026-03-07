@@ -56,7 +56,7 @@ export default function Workspace() {
 
   const emailActivities = useMemo(() =>
     (activities || []).filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.source_type === sourceTab
+      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.status !== "cancelled" && a.source_type === sourceTab
     ), [activities, sourceTab]);
 
   // Preset handlers
