@@ -90,7 +90,7 @@ interface ContactListPanelProps {
 
 export default function ContactListPanel({
   selectedActivityId, onSelect, search = "", sourceType,
-  selectedIds, onToggleSelect, onSelectAll, onDeselectAll,
+  selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onFilteredIdsChange,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
