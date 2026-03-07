@@ -143,19 +143,30 @@ export function useDeepSearchRunner(): DeepSearchState {
         setResults(prev => [...prev, result]);
         if (error) console.error("Deep search error for", id, error);
 
-        // Live update: invalidate partner cache after each partner so cards refresh in real-time
-        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+        // Live update caches
+        if (mode === "contact") {
+          queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
+        } else {
+          queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+        }
       }
 
+      const label = mode === "contact" ? "contatti" : "partner";
       const msg = abortRef.current
-        ? `Deep Search interrotta: ${processed} partner processati`
-        : `Deep Search completata: ${processed} partner`;
+        ? `Deep Search interrotta: ${processed} ${label} processati`
+        : `Deep Search completata: ${processed} ${label}`;
       abortRef.current
         ? toast.info(msg, { id: "deep-search-global" })
         : toast.success(msg, { id: "deep-search-global" });
 
-      queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+      if (mode === "contact") {
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["all-activities"] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+      }
     } catch (e: any) {
       toast.error(e?.message || "Errore Deep Search", { id: "deep-search-global" });
     } finally {
