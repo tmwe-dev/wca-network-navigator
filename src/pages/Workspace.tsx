@@ -112,12 +112,23 @@ export default function Workspace() {
 
   const handleDeepSearch = () => {
     const targets = selectedIds.size > 0 ? emailActivities.filter((a) => selectedIds.has(a.id)) : emailActivities.filter((a) => filteredIds.includes(a.id));
-    const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id).filter(Boolean))] as string[];
-    if (!uniquePartnerIds.length) {
-      toast({ title: "Deep Search disponibile solo per partner WCA", variant: "destructive" });
-      return;
+
+    if (sourceTab === "contact") {
+      // For contacts, use source_id (which points to imported_contacts)
+      const contactIds = [...new Set(targets.map((a) => a.source_id).filter(Boolean))] as string[];
+      if (!contactIds.length) {
+        toast({ title: "Nessun contatto trovato per la Deep Search", variant: "destructive" });
+        return;
+      }
+      deepSearch.start(contactIds, false, "contact");
+    } else {
+      const uniquePartnerIds = [...new Set(targets.map((a) => a.partner_id).filter(Boolean))] as string[];
+      if (!uniquePartnerIds.length) {
+        toast({ title: "Deep Search disponibile solo per partner WCA", variant: "destructive" });
+        return;
+      }
+      deepSearch.start(uniquePartnerIds);
     }
-    deepSearch.start(uniquePartnerIds);
   };
 
   const handleGenerateAll = async () => {

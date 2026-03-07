@@ -20,7 +20,7 @@ import type { SortKey } from "./contactHelpers";
 
 interface Props {
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (contact: any) => void;
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {

@@ -1,46 +1,131 @@
 
 
-## Due problemi da risolvere
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### Problema 1: Contacts — Dettaglio non visibile alla selezione
-
-**Causa**: `Contacts.tsx` cerca il contatto selezionato dentro `useContacts()` (query flat senza filtri), ma il `ContactListPanel` carica i contatti tramite `useContactsByGroup` dentro `ExpandedGroupContent`. Sono due query diverse: il contatto cliccato non esiste nell'array `contacts` di `useContacts()`, quindi `selectedContact` è sempre `null`.
-
-**Fix**: Eliminare la dipendenza da `useContacts()` in `Contacts.tsx`. Invece, quando viene selezionato un ID, fare una query dedicata per caricare quel singolo contatto dal database (`imported_contacts` per ID). Oppure, passare l'intero oggetto contatto da `ExpandedGroupContent` → `ContactListPanel` → `Contacts.tsx` invece del solo ID.
-
-Approccio scelto: cambiare `onSelect` da `(id: string) => void` a `(contact: Contact) => void` nel `ContactListPanel`, e in `Contacts.tsx` salvare direttamente l'oggetto contatto invece di cercarlo.
-
-**File**:
-- `src/pages/Contacts.tsx` — rimuovere `useContacts()`, salvare l'oggetto contatto selezionato direttamente
-- `src/components/contacts/ContactListPanel.tsx` — cambiare `onSelect` per passare l'intero oggetto
-- `src/components/contacts/ExpandedGroupContent.tsx` — passare l'oggetto contatto in `onSelect`
-- `src/components/contacts/ContactCard.tsx` — verificare che passi l'oggetto corretto
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
 ---
 
-### Problema 2: Deep Search nel Workspace limitata solo a partner WCA
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-**Causa**: In `Workspace.tsx` riga 115, `handleDeepSearch` estrae `partner_id` dalle attività. Per le attività con `source_type === "contact"`, `partner_id` è `null` → l'array `uniquePartnerIds` è vuoto → mostra il toast "Deep Search disponibile solo per partner WCA".
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-L'edge function `deep-search-partner` è progettata per lavorare sulla tabella `partners` (WCA). Per i contatti importati (`imported_contacts`), serve una logica diversa: cercare online la persona/azienda usando nome, email, azienda come query di ricerca.
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-**Fix**: Creare una nuova edge function `deep-search-contact` che:
-1. Riceve un `contactId` (da `imported_contacts`)
-2. Cerca online usando Firecrawl: nome persona + azienda, LinkedIn, profili social
-3. Salva i risultati in `imported_contacts.enrichment_data` (va aggiunta la colonna) o direttamente nei campi esistenti
-4. Aggiorna `deep_search_at`
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-Nel Workspace, quando `sourceTab === "contact"`, usare `source_id` (che punta all'`imported_contact`) e chiamare la nuova edge function invece di `deep-search-partner`.
+---
 
-**File**:
-- `supabase/functions/deep-search-contact/index.ts` — nuova edge function
-- `src/pages/Workspace.tsx` — biforcazione logica Deep Search per tipo sorgente
-- `src/hooks/useDeepSearchRunner.ts` — supporto per tipo "contact" (query su `imported_contacts` invece di `partners`)
-- Migration DB: aggiungere colonna `enrichment_data jsonb` a `imported_contacts` (se necessario per salvare risultati)
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-La nuova edge function eseguirà:
-- Ricerca Firecrawl: `"Nome Cognome" azienda linkedin`
-- Ricerca Firecrawl: `"Nome Cognome" azienda`
-- AI analysis dei risultati per estrarre: profilo LinkedIn, ruolo, azienda attuale/passate, social links
-- Salvataggio risultati nel contatto
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
+
+---
+
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+```
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
+
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

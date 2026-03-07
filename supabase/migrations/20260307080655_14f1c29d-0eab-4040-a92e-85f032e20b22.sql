@@ -1,0 +1,1 @@
+ALTER TABLE public.imported_contacts ADD COLUMN IF NOT EXISTS enrichment_data jsonb DEFAULT NULL;
