@@ -453,12 +453,14 @@ ${settings.ai_style_instructions ? `- Istruzioni: ${settings.ai_style_instructio
 ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : ""}
 `;
 
-    const effectiveLanguage = language || settings.ai_language || "inglese";
+    // Auto-detect language from recipient's country code
+    const detected = detectLanguage(partner.country_code);
+    const effectiveLanguage = language || detected.language;
 
     const systemPrompt = `Sei un esperto copywriter di email B2B nel settore della logistica e del freight forwarding internazionale. Scrivi email professionali, personalizzate e convincenti.
 
 REGOLE CRITICHE:
-1. Scrivi in ${effectiveLanguage === "entrambe" ? "inglese (adatta al paese del destinatario)" : effectiveLanguage}
+1. Scrivi INTERAMENTE in ${effectiveLanguage} — oggetto (Subject:), saluto, corpo e chiusura devono essere TUTTI in ${effectiveLanguage}. Lingua scelta dal paese del destinatario (${partner.country_code} → ${detected.languageLabel}).
 2. L'email deve essere specifica per il destinatario — usa i dati del profilo per personalizzare
 3. Mantieni il tono indicato dal profilo del mittente
 4. NON INCLUDERE una firma — la firma viene aggiunta automaticamente dal sistema
