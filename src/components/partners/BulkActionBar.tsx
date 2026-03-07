@@ -36,7 +36,7 @@ export function BulkActionBar({
 
         <Button size="sm" variant="ghost" onClick={onAssignActivity}
           className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100" disabled={deepSearching}>
-          <ClipboardList className="w-3 h-3" /> Attività
+          <ClipboardList className="w-3 h-3" /> Attività Diverse
         </Button>
 
         {onDeepSearch && !deepSearching && (
@@ -66,7 +66,7 @@ export function BulkActionBar({
             className="h-6 px-2 text-[11px] gap-1 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100"
             disabled={deepSearching || sendingToWorkspace}>
             {sendingToWorkspace ? <Loader2 className="w-3 h-3 animate-spin" /> : <Briefcase className="w-3 h-3" />}
-            Workspace
+            Email Workspace
           </Button>
         )}
 
