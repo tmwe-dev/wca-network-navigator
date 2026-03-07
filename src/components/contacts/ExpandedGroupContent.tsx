@@ -11,7 +11,7 @@ interface ExpandedGroupContentProps {
   groupType: string;
   groupKey: string;
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (contact: any) => void;
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;
@@ -44,7 +44,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
           c={c}
           isActive={selectedId === c.id}
           isSelected={selection.selectedIds.has(c.id)}
-          onSelect={() => onSelect(c.id)}
+          onSelect={() => onSelect(c)}
           onToggle={() => selection.toggle(c.id)}
         />
       ))}
