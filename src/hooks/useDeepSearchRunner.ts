@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 
+export type DeepSearchMode = "partner" | "contact";
+
 export interface DeepSearchState {
   running: boolean;
   canvasOpen: boolean;
   results: DeepSearchResult[];
   current: DeepSearchCurrent | null;
-  start: (partnerIds: string[], force?: boolean) => void;
+  start: (ids: string[], force?: boolean, mode?: DeepSearchMode) => void;
   stop: () => void;
   setCanvasOpen: (v: boolean) => void;
 }
@@ -31,24 +33,28 @@ export function useDeepSearchRunner(): DeepSearchState {
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
 
-  const start = useCallback(async (partnerIds: string[], force = false) => {
-    if (running || partnerIds.length === 0) return;
+  const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
+    if (running || ids.length === 0) return;
 
-    // Smart filter: check which partners already have deep_search_at
-    let toProcess = partnerIds;
+    const tableName = mode === "contact" ? "imported_contacts" : "partners";
+    const fnName = mode === "contact" ? "deep-search-contact" : "deep-search-partner";
+    const bodyKey = mode === "contact" ? "contactId" : "partnerId";
+
+    // Smart filter: check which already have deep_search_at
+    let toProcess = ids;
     if (!force) {
       const { data: alreadyDone } = await supabase
-        .from("partners")
+        .from(tableName)
         .select("id")
-        .in("id", partnerIds)
-        .not("enrichment_data->deep_search_at", "is", null);
+        .in("id", ids)
+        .not("deep_search_at", "is", null);
 
       const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
-      toProcess = partnerIds.filter(id => !doneSet.has(id));
-      const skipped = partnerIds.length - toProcess.length;
+      toProcess = ids.filter(id => !doneSet.has(id));
+      const skipped = ids.length - toProcess.length;
 
       if (toProcess.length === 0) {
-        toast.info(`Tutti i ${partnerIds.length} partner hanno già la Deep Search`, { id: "deep-search-global" });
+        toast.info(`Tutti i ${ids.length} record hanno già la Deep Search`, { id: "deep-search-global" });
         return;
       }
       if (skipped > 0) {
