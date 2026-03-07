@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +85,7 @@ interface ContactListPanelProps {
   onToggleSelect: (id: string) => void;
   onSelectAll: (filteredIds: string[]) => void;
   onDeselectAll: () => void;
+  onFilteredIdsChange?: (ids: string[]) => void;
 }
 
 export default function ContactListPanel({
