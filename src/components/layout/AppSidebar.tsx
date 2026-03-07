@@ -4,6 +4,7 @@ import {
   Calendar, Mail, Globe, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
   Users, PackageCheck, Command, Upload, UserCheck, Zap,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,6 +28,7 @@ const navSections = [
       { title: "Email", url: "/email-composer", icon: Send },
       { title: "Hub Operativo", url: "/hub", icon: Zap },
       { title: "Workspace", url: "/workspace", icon: Sparkles },
+      { title: "Cockpit", url: "/cockpit", icon: Rocket },
     ],
   },
   {
