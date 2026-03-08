@@ -14,10 +14,11 @@ const channels: { id: DraftChannel; label: string; icon: any; gradient: string; 
 interface ChannelDropZonesProps {
   isDragging: boolean;
   draggedContactId: string | null;
+  dragCount: number;
   onDrop: (channel: DraftChannel, contactId: string, contactName: string) => void;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, onDrop }: ChannelDropZonesProps) {
+export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop }: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   return (
@@ -32,10 +33,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, onDrop }: Chann
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.08, duration: 0.4 }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setHoveredChannel(ch.id);
-            }}
+            onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
             onDragLeave={() => setHoveredChannel(null)}
             onDrop={(e) => {
               e.preventDefault();
@@ -46,19 +44,15 @@ export function ChannelDropZones({ isDragging, draggedContactId, onDrop }: Chann
             }}
             className={cn(
               "relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-default",
-              isDragging
-                ? "border-primary/40 bg-gradient-to-br " + ch.gradient
-                : "border-border/60 bg-card/60",
+              isDragging ? "border-primary/40 bg-gradient-to-br " + ch.gradient : "border-border/60 bg-card/60",
               isHovered && "scale-105 border-primary shadow-xl " + ch.glowColor,
               !isDragging && "hover:border-border/50 hover:bg-card/40"
             )}
           >
-            {/* Glow effect when dragging over */}
             {isHovered && (
               <motion.div
                 className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               />
             )}
 
@@ -80,11 +74,10 @@ export function ChannelDropZones({ isDragging, draggedContactId, onDrop }: Chann
             </span>
             {isDragging && (
               <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="text-[11px] text-muted-foreground/70"
               >
-                Rilascia qui
+                {dragCount > 1 ? `Rilascia ${dragCount} contatti` : "Rilascia qui"}
               </motion.span>
             )}
           </motion.div>
