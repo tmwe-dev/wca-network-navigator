@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -6,6 +6,8 @@ import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/
 import { NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useScrapingSettings, calcDelay } from "@/hooks/useScrapingSettings";
+import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
+import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
 
 export type PipelineStatus = "idle" | "scanning" | "running" | "paused" | "done";
 export type SessionHealth = "unknown" | "checking" | "active" | "recovering" | "dead";
@@ -72,7 +74,13 @@ export function useAcquisitionPipeline() {
 
   const { isAvailable: extensionAvailable, checkAvailable: checkExtension, waitForExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
 
-  // ── Extension-driven pipeline ──
+  // ── Resume from active job ──
+  useAcquisitionResume({
+    setActiveJobId, setQueue, setSelectedIds, setCompletedCount,
+    setLiveStats, setPipelineStatus, setResumeLoading, pauseRef, cancelRef,
+  });
+
+  // ── Extension-driven pipeline loop ──
   const runExtensionLoop = useCallback(async (jobId: string, items: QueueItem[], startFrom = 0) => {
     let localStats = { ...liveStats };
     let consecutiveEmpty = 0;
@@ -481,282 +489,28 @@ export function useAcquisitionPipeline() {
     return localStats;
   }, [includeEnrich, includeDeepSearch, delaySeconds, extensionAvailable, checkExtension, extensionExtract, liveStats, scrapingSettings]);
 
-  // Check for active acquisition jobs on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: activeJobs } = await supabase
-          .from("download_jobs")
-          .select("*")
-          .eq("job_type", "acquisition")
-          .in("status", ["running", "paused"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (activeJobs && activeJobs.length > 0) {
-          const job = activeJobs[0];
-          setActiveJobId(job.id);
-          const wcaIds = (job.wca_ids as number[]) || [];
-          const processedIds = new Set((job.processed_ids as number[]) || []);
-
-          const queueItems: QueueItem[] = wcaIds.map((id) => ({
-            wca_id: id,
-            company_name: `WCA ${id}`,
-            country_code: job.country_code,
-            city: "",
-            status: processedIds.has(id) ? ("done" as const) : ("pending" as const),
-            alreadyDownloaded: false,
-          }));
-
-          // Enrich names from partners table
-          const { data: partners } = await supabase
-            .from("partners")
-            .select("wca_id, company_name, city")
-            .in("wca_id", wcaIds);
-          if (partners) {
-            for (const p of partners) {
-              const qi = queueItems.find((q) => q.wca_id === p.wca_id);
-              if (qi) {
-                qi.company_name = p.company_name;
-                qi.city = p.city;
-              }
-            }
-          }
-
-          // Enrich remaining from directory_cache
-          const stillMissing = queueItems.filter(q => q.company_name.startsWith("WCA "));
-          if (stillMissing.length > 0) {
-            const { data: cacheEntries } = await supabase
-              .from("directory_cache")
-              .select("members")
-              .eq("country_code", job.country_code);
-            if (cacheEntries) {
-              for (const entry of cacheEntries) {
-                const members = (entry.members as any[]) || [];
-                for (const m of members) {
-                  if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing.find(q => q.wca_id === m.wca_id);
-                  if (qi) {
-                    qi.company_name = m.company_name;
-                    if (m.city) qi.city = m.city;
-                  }
-                }
-              }
-            }
-          }
-
-          // If still missing names, re-scan directory
-          const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
-          if (stillMissing2.length > 0) {
-            try {
-              const { data: scanResult } = await supabase.functions.invoke("scrape-wca-directory", {
-                body: { countryCode: job.country_code, network: job.network_name || "" },
-              });
-              if (scanResult?.members) {
-                const membersJson = scanResult.members.map((m: any) => ({
-                  company_name: m.company_name,
-                  city: m.city,
-                  country_code: job.country_code,
-                  wca_id: m.wca_id,
-                }));
-                await supabase.from("directory_cache").upsert(
-                  {
-                    country_code: job.country_code,
-                    network_name: job.network_name || "",
-                    members: membersJson as any,
-                    total_results: scanResult.members.length,
-                    scanned_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  },
-                  { onConflict: "country_code,network_name" }
-                );
-                for (const m of scanResult.members) {
-                  if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
-                  if (qi) {
-                    qi.company_name = m.company_name;
-                    if (m.city) qi.city = m.city;
-                  }
-                }
-              }
-            } catch (scanErr) {
-              console.warn("Re-scan directory for names failed:", scanErr);
-            }
-          }
-
-          setQueue(queueItems);
-          setSelectedIds(new Set(wcaIds.filter((id) => !processedIds.has(id))));
-          setCompletedCount(processedIds.size);
-
-          setLiveStats({
-            processed: processedIds.size,
-            withEmail: job.contacts_found_count || 0,
-            withPhone: 0,
-            complete: job.contacts_found_count || 0,
-            empty: job.contacts_missing_count || 0,
-            failedLoads: 0,
-          });
-
-          if (job.status === "running" || job.status === "paused") {
-            setPipelineStatus("paused");
-            pauseRef.current = true;
-
-            if (job.status === "running") {
-              await supabase.from("download_jobs").update({ status: "paused" }).eq("id", job.id);
-            }
-
-            toast({
-              title: "Acquisizione precedente trovata",
-              description: `${processedIds.size}/${wcaIds.length} partner già processati. Premi Riprendi per continuare.`,
-            });
-          } else {
-            setPipelineStatus("paused");
-            toast({
-              title: "Acquisizione precedente trovata",
-              description: `${processedIds.size}/${wcaIds.length} partner già processati. Puoi riprendere.`,
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to check active acquisition jobs:", err);
-      } finally {
-        setResumeLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelRef.current = true;
-    };
-  }, []);
-
-  // Scan directory for selected countries
+  // ── Scan directory ──
   const handleScan = useCallback(async () => {
     if (selectedCountries.length === 0) {
       toast({ title: "Seleziona almeno un paese", variant: "destructive" });
       return;
     }
-
     setPipelineStatus("scanning");
     setScanStats(null);
     setQueue([]);
 
     try {
-      const allMembers: QueueItem[] = [];
-      const existingWcaIds = new Set<number>();
+      const result = await scanDirectory(selectedCountries, selectedNetworks);
+      setScanStats(result.scanStats);
+      setQueue(result.queue);
+      setSelectedIds(result.selectedIds);
 
-      for (const code of selectedCountries) {
-        const { data: partners } = await supabase
-          .from("partners")
-          .select("wca_id")
-          .eq("country_code", code)
-          .not("wca_id", "is", null);
-        partners?.forEach((p) => {
-          if (p.wca_id) existingWcaIds.add(p.wca_id);
-        });
-      }
-
-      for (const code of selectedCountries) {
-        const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
-
-        for (const net of networkFilter) {
-          const { data: cached } = await supabase
-            .from("directory_cache")
-            .select("*")
-            .eq("country_code", code)
-            .eq("network_name", net);
-
-          if (cached && cached.length > 0) {
-            for (const entry of cached) {
-              const members = (entry.members as any[]) || [];
-              members.forEach((m: any) => {
-                if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
-                  allMembers.push({
-                    wca_id: m.wca_id,
-                    company_name: m.company_name || `WCA ${m.wca_id}`,
-                    country_code: code,
-                    city: m.city || "",
-                    status: "pending",
-                    alreadyDownloaded: existingWcaIds.has(m.wca_id),
-                  });
-                }
-              });
-            }
-          } else {
-            const { data: scanResult } = await supabase.functions.invoke(
-              "scrape-wca-directory",
-              { body: { countryCode: code, network: net } }
-            );
-
-            if (scanResult?.members) {
-              const membersJson = scanResult.members.map((m: any) => ({
-                company_name: m.company_name,
-                city: m.city,
-                country_code: code,
-                wca_id: m.wca_id,
-              }));
-              await supabase.from("directory_cache").upsert(
-                {
-                  country_code: code,
-                  network_name: net,
-                  members: membersJson as any,
-                  total_results: scanResult.members.length,
-                  scanned_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                },
-                { onConflict: "country_code,network_name" }
-              );
-
-              scanResult.members.forEach((m: any) => {
-                if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
-                  allMembers.push({
-                    wca_id: m.wca_id,
-                    company_name: m.company_name || `WCA ${m.wca_id}`,
-                    country_code: code,
-                    city: m.city || "",
-                    status: "pending",
-                    alreadyDownloaded: existingWcaIds.has(m.wca_id),
-                  });
-                }
-              });
-            }
-          }
-        }
-      }
-
-      const existing = allMembers.filter((m) => m.alreadyDownloaded).length;
-      setScanStats({ total: allMembers.length, existing, missing: allMembers.length - existing });
-      setQueue(allMembers);
-      setSelectedIds(new Set(allMembers.filter((m) => !m.alreadyDownloaded).map((m) => m.wca_id)));
-
-      // Load networks for existing partners
-      const wcaIdsInDb = allMembers.filter(m => existingWcaIds.has(m.wca_id)).map(m => m.wca_id);
-      if (wcaIdsInDb.length > 0) {
-        try {
-          const { data: partnersWithIds } = await supabase
-            .from("partners")
-            .select("id, wca_id")
-            .in("wca_id", wcaIdsInDb);
-          if (partnersWithIds && partnersWithIds.length > 0) {
-            const partnerIds = partnersWithIds.map(p => p.id);
-            const { data: networkRows } = await supabase
-              .from("partner_networks")
-              .select("partner_id, network_name")
-              .in("partner_id", partnerIds);
-            if (networkRows) {
-              const wcaIdToNetworks: Record<number, string[]> = {};
-              for (const nr of networkRows) {
-                const p = partnersWithIds.find(pp => pp.id === nr.partner_id);
-                if (p?.wca_id) {
-                  if (!wcaIdToNetworks[p.wca_id]) wcaIdToNetworks[p.wca_id] = [];
-                  wcaIdToNetworks[p.wca_id].push(nr.network_name);
-                }
-              }
-              setQueue(prev => prev.map(q =>
-                wcaIdToNetworks[q.wca_id] ? { ...q, networks: wcaIdToNetworks[q.wca_id] } : q
-              ));
-            }
-          }
-        } catch { /* non-blocking */ }
+      // Enrich with network data
+      const wcaIdToNetworks = await enrichQueueWithNetworks(result.queue);
+      if (Object.keys(wcaIdToNetworks).length > 0) {
+        setQueue(prev => prev.map(q =>
+          wcaIdToNetworks[q.wca_id] ? { ...q, networks: wcaIdToNetworks[q.wca_id] } : q
+        ));
       }
 
       setPipelineStatus("idle");
@@ -766,25 +520,17 @@ export function useAcquisitionPipeline() {
     }
   }, [selectedCountries, selectedNetworks]);
 
-  // Start acquisition pipeline
+  // ── Start pipeline ──
   const startPipeline = useCallback(async () => {
     const extReady = await waitForExtension(10000);
     if (!extReady) {
-      toast({
-        title: "Estensione Chrome non trovata",
-        description: "Installa o ricarica l'estensione WCA Cookie Sync e riprova.",
-        variant: "destructive",
-      });
+      toast({ title: "Estensione Chrome non trovata", description: "Installa o ricarica l'estensione WCA Cookie Sync e riprova.", variant: "destructive" });
       return;
     }
 
     const sessionResult = await verifySession();
     if (!sessionResult.success || !sessionResult.authenticated) {
-      toast({
-        title: "Sessione WCA non attiva",
-        description: "Effettua il login su wcaworld.com e riprova.",
-        variant: "destructive",
-      });
+      toast({ title: "Sessione WCA non attiva", description: "Effettua il login su wcaworld.com e riprova.", variant: "destructive" });
       return;
     }
 
@@ -867,7 +613,7 @@ export function useAcquisitionPipeline() {
     }
   }, [queue, includeEnrich, includeDeepSearch, delaySeconds, selectedIds, extensionAvailable, checkExtension, extensionExtract, activeJobId, selectedCountries, selectedNetworks, runExtensionLoop, waitForExtension]);
 
-  // Network exclusion handlers
+  // ── Network exclusion handlers ──
   const handleExcludeNetwork = useCallback((network: string) => {
     setExcludedNetworks((prev) => {
       const next = new Set(prev);
@@ -906,43 +652,16 @@ export function useAcquisitionPipeline() {
     toast({ title: `Network "${network}" riattivato` });
   }, []);
 
-  // Partner click handler for preview
+  // ── Partner click handler ──
   const handlePartnerClick = useCallback(async (wcaId: number) => {
-    const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
-    if (!partner) return;
-    const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
-      supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
-      supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
-      supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
-      supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
-    ]);
-    const ed = partner.enrichment_data as any;
-    setCanvasData({
-      company_name: partner.company_name,
-      city: partner.city,
-      country_code: partner.country_code,
-      country_name: partner.country_name,
-      logo_url: partner.logo_url || undefined,
-      contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
-      services: (svcs || []).map(s => s.service_category),
-      key_markets: ed?.key_markets || [],
-      key_routes: ed?.key_routes || [],
-      networks: (nets || []).map(n => n.network_name),
-      rating: partner.rating ? Number(partner.rating) : undefined,
-      website: partner.website || undefined,
-      profile_description: partner.profile_description || undefined,
-      linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
-      warehouse_sqm: ed?.warehouse_sqm,
-      employees: ed?.employee_count,
-      founded: ed?.founding_year ? String(ed.founding_year) : undefined,
-      fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
-      contactSource: "extension",
-    });
+    const preview = await loadPartnerPreview(wcaId);
+    if (!preview) return;
+    setCanvasData(preview);
     setCanvasPhase("complete");
     setIsAnimatingOut(false);
   }, []);
 
-  // Pause/Resume/Cancel
+  // ── Pause/Resume/Cancel ──
   const togglePause = useCallback(() => {
     pauseRef.current = !pauseRef.current;
     const newStatus = pauseRef.current ? "paused" : "running";

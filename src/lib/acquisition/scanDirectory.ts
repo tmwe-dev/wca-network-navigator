@@ -1,0 +1,186 @@
+/**
+ * Directory scanning logic — extracted from useAcquisitionPipeline.tsx
+ * Pure async function that returns scan results without managing React state.
+ */
+import { supabase } from "@/integrations/supabase/client";
+import type { QueueItem } from "@/components/acquisition/types";
+import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
+
+export interface ScanResult {
+  queue: QueueItem[];
+  scanStats: ScanStats;
+  selectedIds: Set<number>;
+}
+
+export async function scanDirectory(
+  selectedCountries: string[],
+  selectedNetworks: string[],
+): Promise<ScanResult> {
+  const allMembers: QueueItem[] = [];
+  const existingWcaIds = new Set<number>();
+
+  // Gather existing partner WCA IDs
+  for (const code of selectedCountries) {
+    const { data: partners } = await supabase
+      .from("partners")
+      .select("wca_id")
+      .eq("country_code", code)
+      .not("wca_id", "is", null);
+    partners?.forEach((p) => {
+      if (p.wca_id) existingWcaIds.add(p.wca_id);
+    });
+  }
+
+  // Scan each country × network combination
+  for (const code of selectedCountries) {
+    const networkFilter = selectedNetworks.length > 0 ? selectedNetworks : [""];
+
+    for (const net of networkFilter) {
+      const { data: cached } = await supabase
+        .from("directory_cache")
+        .select("*")
+        .eq("country_code", code)
+        .eq("network_name", net);
+
+      if (cached && cached.length > 0) {
+        for (const entry of cached) {
+          const members = (entry.members as any[]) || [];
+          members.forEach((m: any) => {
+            if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
+              allMembers.push({
+                wca_id: m.wca_id,
+                company_name: m.company_name || `WCA ${m.wca_id}`,
+                country_code: code,
+                city: m.city || "",
+                status: "pending",
+                alreadyDownloaded: existingWcaIds.has(m.wca_id),
+              });
+            }
+          });
+        }
+      } else {
+        const { data: scanResult } = await supabase.functions.invoke(
+          "scrape-wca-directory",
+          { body: { countryCode: code, network: net } }
+        );
+
+        if (scanResult?.members) {
+          const membersJson = scanResult.members.map((m: any) => ({
+            company_name: m.company_name,
+            city: m.city,
+            country_code: code,
+            wca_id: m.wca_id,
+          }));
+          await supabase.from("directory_cache").upsert(
+            {
+              country_code: code,
+              network_name: net,
+              members: membersJson as any,
+              total_results: scanResult.members.length,
+              scanned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "country_code,network_name" }
+          );
+
+          scanResult.members.forEach((m: any) => {
+            if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
+              allMembers.push({
+                wca_id: m.wca_id,
+                company_name: m.company_name || `WCA ${m.wca_id}`,
+                country_code: code,
+                city: m.city || "",
+                status: "pending",
+                alreadyDownloaded: existingWcaIds.has(m.wca_id),
+              });
+            }
+          });
+        }
+      }
+    }
+  }
+
+  const existing = allMembers.filter((m) => m.alreadyDownloaded).length;
+  const scanStats: ScanStats = { total: allMembers.length, existing, missing: allMembers.length - existing };
+  const selectedIds = new Set(allMembers.filter((m) => !m.alreadyDownloaded).map((m) => m.wca_id));
+
+  return { queue: allMembers, scanStats, selectedIds };
+}
+
+/**
+ * Enrich queue items with network data from existing partners.
+ */
+export async function enrichQueueWithNetworks(
+  queue: QueueItem[],
+): Promise<Record<number, string[]>> {
+  const wcaIdsInDb = queue.filter(m => m.alreadyDownloaded).map(m => m.wca_id);
+  if (wcaIdsInDb.length === 0) return {};
+
+  try {
+    const { data: partnersWithIds } = await supabase
+      .from("partners")
+      .select("id, wca_id")
+      .in("wca_id", wcaIdsInDb);
+
+    if (!partnersWithIds || partnersWithIds.length === 0) return {};
+
+    const partnerIds = partnersWithIds.map(p => p.id);
+    const { data: networkRows } = await supabase
+      .from("partner_networks")
+      .select("partner_id, network_name")
+      .in("partner_id", partnerIds);
+
+    if (!networkRows) return {};
+
+    const wcaIdToNetworks: Record<number, string[]> = {};
+    for (const nr of networkRows) {
+      const p = partnersWithIds.find(pp => pp.id === nr.partner_id);
+      if (p?.wca_id) {
+        if (!wcaIdToNetworks[p.wca_id]) wcaIdToNetworks[p.wca_id] = [];
+        wcaIdToNetworks[p.wca_id].push(nr.network_name);
+      }
+    }
+    return wcaIdToNetworks;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Load full partner preview data for a given WCA ID.
+ */
+export async function loadPartnerPreview(wcaId: number) {
+  const { data: partner } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
+  if (!partner) return null;
+
+  const [{ data: contacts }, { data: nets }, { data: svcs }, { data: socialLinks }] = await Promise.all([
+    supabase.from("partner_contacts").select("name, title, email, direct_phone, mobile").eq("partner_id", partner.id),
+    supabase.from("partner_networks").select("network_name").eq("partner_id", partner.id),
+    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
+    supabase.from("partner_social_links").select("*").eq("partner_id", partner.id),
+  ]);
+
+  const ed = partner.enrichment_data as any;
+
+  return {
+    company_name: partner.company_name,
+    city: partner.city,
+    country_code: partner.country_code,
+    country_name: partner.country_name,
+    logo_url: partner.logo_url || undefined,
+    contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
+    services: (svcs || []).map(s => s.service_category),
+    key_markets: ed?.key_markets || [],
+    key_routes: ed?.key_routes || [],
+    networks: (nets || []).map(n => n.network_name),
+    rating: partner.rating ? Number(partner.rating) : undefined,
+    website: partner.website || undefined,
+    profile_description: partner.profile_description || undefined,
+    linkedin_links: (socialLinks || []).filter((l: any) => l.platform === "linkedin").map((l: any) => ({ name: "LinkedIn", url: l.url })),
+    warehouse_sqm: ed?.warehouse_sqm,
+    employees: ed?.employee_count,
+    founded: ed?.founding_year ? String(ed.founding_year) : undefined,
+    fleet: ed?.has_own_fleet ? (ed.fleet_details || "Sì") : undefined,
+    contactSource: "extension" as const,
+  };
+}
