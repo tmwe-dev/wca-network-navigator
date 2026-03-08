@@ -66,10 +66,10 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
           transition={{ repeat: Infinity, duration: 4 }}
           className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-chart-3/10 flex items-center justify-center mb-4"
         >
-          <Sparkles className="w-7 h-7 text-primary/40" />
+          <Sparkles className="w-7 h-7 text-primary/70" />
         </motion.div>
-        <h3 className="text-sm font-medium text-foreground/60 mb-1">AI Draft Studio</h3>
-        <p className="text-xs text-muted-foreground/50 max-w-[200px]">
+        <h3 className="text-sm font-medium text-foreground mb-1">AI Draft Studio</h3>
+        <p className="text-xs text-muted-foreground max-w-[200px]">
           Trascina un contatto su un canale per generare il messaggio
         </p>
       </div>
@@ -83,10 +83,10 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
         <div className="flex items-center gap-2 mb-1">
           <Icon className={cn("w-4 h-4", meta?.color)} />
           <span className="text-sm font-semibold text-foreground">{meta?.label}</span>
-          <span className="text-xs text-muted-foreground/50">→</span>
+          <span className="text-xs text-muted-foreground">→</span>
           <span className="text-sm text-foreground/80">{draft.contactName}</span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/50">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/80">
           <span>Lingua: {draft.language}</span>
           <span>·</span>
           <span>Tono: professionale</span>
@@ -106,12 +106,12 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
           {/* Subject */}
           {draft.channel === "email" && (
             <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold">Oggetto</label>
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Oggetto</label>
               <div className="mt-1 text-sm font-medium text-foreground">
                 {draft.isGenerating ? (
                   <TypewriterText text={draft.subject} speed={30} />
                 ) : (
-                  draft.subject || <span className="text-muted-foreground/30">In generazione...</span>
+                  draft.subject || <span className="text-muted-foreground/60">In generazione...</span>
                 )}
               </div>
             </div>
@@ -119,7 +119,7 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
 
           {/* Body */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold">Messaggio</label>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Messaggio</label>
             <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
               {draft.isGenerating ? (
                 <div className="space-y-2">
@@ -143,14 +143,14 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
               ) : draft.body ? (
                 <TypewriterText text={draft.body} speed={15} />
               ) : (
-                <span className="text-muted-foreground/30">In attesa...</span>
+                <span className="text-muted-foreground/60">In attesa...</span>
               )}
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="prompt" className="flex-1 overflow-y-auto p-4">
-          <div className="text-xs text-muted-foreground/60 space-y-2">
+          <div className="text-xs text-muted-foreground space-y-2">
             <p>System: Sei un esperto copywriter B2B nel settore freight forwarding...</p>
             <p>Goal: Proposta di collaborazione</p>
             <p>Lingua: {draft.language}</p>
@@ -167,7 +167,7 @@ export function AIDraftStudio({ draft, onDraftChange }: AIDraftStudioProps) {
         </TabsContent>
 
         <TabsContent value="history" className="flex-1 overflow-y-auto p-4">
-          <p className="text-xs text-muted-foreground/40 text-center py-8">Nessuna generazione precedente</p>
+          <p className="text-xs text-muted-foreground/70 text-center py-8">Nessuna generazione precedente</p>
         </TabsContent>
       </Tabs>
 
