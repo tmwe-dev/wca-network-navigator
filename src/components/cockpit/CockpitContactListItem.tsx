@@ -41,18 +41,18 @@ export function CockpitContactListItem({ contact, flag, index, onDragStart, onDr
       onDragEnd={onDragEnd}
       className="group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-card/60 transition-colors"
     >
-      <GripVertical className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 flex-shrink-0" />
+      <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground flex-shrink-0" />
       <span className="text-sm">{flag}</span>
       <div className="flex-1 min-w-0 flex items-center gap-3">
         <span className="text-sm font-medium text-foreground truncate w-[120px]">{contact.name}</span>
-        <span className="text-xs text-muted-foreground truncate w-[140px]">{contact.company}</span>
-        <span className="text-[11px] text-muted-foreground/60 truncate w-[80px]">{contact.role}</span>
-        <span className="text-[11px] text-muted-foreground/50 w-[80px]">{contact.lastContact}</span>
+        <span className="text-xs text-foreground/80 truncate w-[140px]">{contact.company}</span>
+        <span className="text-[11px] text-muted-foreground truncate w-[80px]">{contact.role}</span>
+        <span className="text-[11px] text-muted-foreground/80 w-[80px]">{contact.lastContact}</span>
       </div>
       <div className="flex items-center gap-0.5">
         {contact.channels.map(ch => {
           const Icon = channelIcon[ch];
-          return Icon ? <Icon key={ch} className="w-3 h-3 text-muted-foreground/40" /> : null;
+          return Icon ? <Icon key={ch} className="w-3 h-3 text-muted-foreground/80" /> : null;
         })}
       </div>
       <span className={cn(

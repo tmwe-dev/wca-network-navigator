@@ -59,7 +59,7 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
   };
 
   const micRingColor: Record<MicState, string> = {
-    idle: "border-muted-foreground/30",
+    idle: "border-muted-foreground/60",
     listening: "border-destructive animate-pulse",
     processing: "border-warning animate-spin",
     applied: "border-success",
@@ -79,7 +79,7 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
             {isProcessing ? (
               <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
             ) : (
-              <Sparkles className="w-4 h-4 text-primary/60 flex-shrink-0" />
+              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
             )}
             <input
               ref={inputRef}
@@ -87,9 +87,9 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Comanda la pagina — filtra, ordina, cerca con AI..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none"
             />
-            <Search className="w-4 h-4 text-muted-foreground/40" />
+            <Search className="w-4 h-4 text-muted-foreground/70" />
           </div>
         </div>
 
@@ -115,7 +115,7 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
               <Mic className="w-4 h-4 text-destructive" />
             </motion.div>
           ) : (
-            <MicOff className="w-4 h-4 text-muted-foreground/60" />
+            <MicOff className="w-4 h-4 text-muted-foreground" />
           )}
           {micState === "listening" && (
             <motion.span
@@ -133,7 +133,7 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
             onClick={() => onViewChange("card")}
             className={cn(
               "p-1.5 rounded-md transition-all duration-200",
-              viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/50 hover:text-foreground"
+              viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
             )}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -143,7 +143,7 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
             onClick={() => onViewChange("list")}
             className={cn(
               "p-1.5 rounded-md transition-all duration-200",
-              viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/50 hover:text-foreground"
+              viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
             )}
           >
             <List className="w-4 h-4" />

@@ -57,7 +57,7 @@ export function ContactStream({ viewMode, searchQuery, filters, onDragStart, onD
   return (
     <div className="p-3 space-y-2">
       <div className="flex items-center justify-between px-1 mb-1">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-foreground/80">
           {filteredContacts.length} contatti
         </span>
       </div>
