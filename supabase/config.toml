@@ -90,3 +90,6 @@ verify_jwt = false
 
 [functions.contacts-assistant]
 verify_jwt = false
+
+[functions.cockpit-assistant]
+verify_jwt = false

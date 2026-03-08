@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TopCommandBar } from "@/components/cockpit/TopCommandBar";
+import { TopCommandBar, type CockpitAIAction } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
@@ -41,7 +41,6 @@ export interface CockpitContact {
   language: string;
 }
 
-// Demo contacts as array for useSelection
 export const DEMO_CONTACTS = [
   { id: "1", name: "Marco Bianchi", company: "Logistica Milano Srl", role: "CEO", country: "IT", language: "italiano", lastContact: "2 giorni fa", priority: 9, channels: ["email", "whatsapp", "linkedin"] as string[], email: "marco@logmilano.it" },
   { id: "2", name: "Sarah Johnson", company: "Global Freight Ltd", role: "VP Sales", country: "GB", language: "english", lastContact: "1 settimana fa", priority: 8, channels: ["email", "linkedin"] as string[], email: "sarah@globalfreight.co.uk" },
@@ -68,31 +67,86 @@ const Cockpit = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const selection = useSelection(DEMO_CONTACTS);
-  const { generate, isGenerating } = useOutreachGenerator();
+  const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
 
-  const handleCommand = useCallback((command: string, filters: CockpitFilter[]) => {
-    setActiveFilters(filters);
-  }, []);
+  // ── AI Action Executor ──
+  const executeAIActions = useCallback((actions: CockpitAIAction[], message: string) => {
+    for (const action of actions) {
+      switch (action.type) {
+        case "filter":
+          if (action.filters) setActiveFilters(action.filters);
+          break;
+        case "select_all":
+          selection.selectAll();
+          break;
+        case "clear_selection":
+          selection.clear();
+          break;
+        case "select_where": {
+          const { field, operator, value } = action;
+          selection.selectWhere((c: typeof DEMO_CONTACTS[0]) => {
+            const fieldVal = (c as any)[field!];
+            if (operator === ">=") return fieldVal >= (value as number);
+            if (operator === "==") return fieldVal === value;
+            if (operator === "includes" && Array.isArray(fieldVal)) return fieldVal.includes(value as string);
+            return false;
+          });
+          break;
+        }
+        case "bulk_action":
+          if (action.action === "deep_search") {
+            toast.info(`Deep Search per ${selection.count} contatti — disponibile con dati reali`);
+          } else if (action.action === "alias") {
+            toast.info(`Generazione Alias per ${selection.count} contatti — disponibile con dati reali`);
+          } else if (action.action === "outreach") {
+            toast.info(`Outreach per ${selection.count} contatti — trascina sulle drop zone`);
+          }
+          break;
+        case "single_action": {
+          const contact = DEMO_CONTACTS.find(c => c.name.toLowerCase().includes((action.contactName || "").toLowerCase()));
+          if (contact) {
+            if (action.action === "deep_search") {
+              toast.info(`Deep Search per ${contact.name} — disponibile con dati reali`);
+            } else if (action.action === "alias") {
+              toast.info(`Genera Alias per ${contact.name} — disponibile con dati reali`);
+            }
+          } else {
+            toast.error(`Contatto "${action.contactName}" non trovato`);
+          }
+          break;
+        }
+        case "view_mode":
+          if (action.mode) setViewMode(action.mode);
+          break;
+        case "auto_outreach": {
+          const names = action.contactNames || [];
+          const matchIds = DEMO_CONTACTS
+            .filter(c => names.some(n => c.name.toLowerCase().includes(n.toLowerCase())))
+            .map(c => c.id);
+          if (matchIds.length > 0) {
+            selection.addBatch(matchIds);
+            toast.info(`Outreach ${action.channel} per ${matchIds.length} contatti — trascina sulle drop zone`);
+          }
+          break;
+        }
+      }
+    }
+    if (message) toast.success(message);
+  }, [selection]);
 
   const handleRemoveFilter = useCallback((filterId: string) => {
     setActiveFilters(prev => prev.filter(f => f.id !== filterId));
   }, []);
 
-  // When dragging a selected card, drag all selected; otherwise just the one
   const handleDragStart = useCallback((id: string) => {
-    if (selection.selectedIds.has(id)) {
-      setDraggedContactId(id); // marker; ChannelDropZones reads selectedIds
-    } else {
-      setDraggedContactId(id);
-    }
-  }, [selection.selectedIds]);
+    setDraggedContactId(id);
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     setDraggedContactId(null);
   }, []);
 
-  // Resolve which IDs are being dropped
   const getDraggedIds = useCallback((): string[] => {
     if (!draggedContactId) return [];
     if (selection.selectedIds.has(draggedContactId) && selection.count > 1) {
@@ -110,15 +164,11 @@ const Cockpit = () => {
   const handleDrop = useCallback(async (channel: DraftChannel, _contactId: string, _contactName: string) => {
     const ids = getDraggedIds();
     if (ids.length === 0) return;
-
-    // Generate for first contact, queue info for rest
     const firstId = ids[0];
     const contact = DEMO_CONTACTS_MAP[firstId];
     if (!contact) return;
 
-    if (ids.length > 1) {
-      toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
-    }
+    if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
     setDraftState({
       channel, contactId: firstId, contactName: contact.name,
@@ -161,7 +211,6 @@ const Cockpit = () => {
     }
   }, [draftState, generate, refetchCredits]);
 
-  // Bulk actions
   const handleBulkDeepSearch = useCallback(() => {
     toast.info("Deep Search disponibile con dati reali (non demo)");
   }, []);
@@ -178,11 +227,20 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${DEMO_CONTACTS_MAP[id]?.name || id} — disponibile con dati reali`);
   }, []);
 
+  // Contacts data for AI command bar
+  const contactsForAI = useMemo(() =>
+    DEMO_CONTACTS.map(c => ({
+      id: c.id, name: c.name, company: c.company, country: c.country,
+      priority: c.priority, language: c.language, channels: c.channels,
+    })),
+  []);
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
       <TopCommandBar
-        onCommand={handleCommand} viewMode={viewMode} onViewChange={setViewMode}
+        onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={setSearchQuery}
+        contacts={contactsForAI}
       />
       <AnimatePresence>
         {activeFilters.length > 0 && (

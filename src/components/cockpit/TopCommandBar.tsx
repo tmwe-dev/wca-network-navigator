@@ -2,60 +2,70 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 
+export interface CockpitAIAction {
+  type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
+  filters?: CockpitFilter[];
+  field?: string;
+  operator?: string;
+  value?: unknown;
+  action?: string;
+  contactName?: string;
+  mode?: ViewMode;
+  channel?: string;
+  contactNames?: string[];
+}
+
 interface TopCommandBarProps {
-  onCommand: (command: string, filters: CockpitFilter[]) => void;
+  onAIActions: (actions: CockpitAIAction[], message: string) => void;
   viewMode: ViewMode;
   onViewChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  contacts: Array<{ id: string; name: string; company: string; country: string; priority: number; language: string; channels: string[] }>;
 }
 
 type MicState = "idle" | "listening" | "processing" | "applied";
 
-export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, onSearchChange }: TopCommandBarProps) {
+export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts }: TopCommandBarProps) {
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isProcessing) return;
     setIsProcessing(true);
-    // Simulate AI parsing
-    setTimeout(() => {
-      const filters: CockpitFilter[] = [];
-      const lower = input.toLowerCase();
-      if (lower.includes("italian") || lower.includes("italia")) {
-        filters.push({ id: "lang-it", label: "🇮🇹 Italiano", type: "language" });
+
+    try {
+      const { data, error } = await supabase.functions.invoke("cockpit-assistant", {
+        body: { command: input, contacts },
+      });
+
+      if (error) {
+        let parsed: any = null;
+        try {
+          if (error.context instanceof Response) parsed = await error.context.json();
+        } catch {}
+        throw new Error(parsed?.error || error.message);
       }
-      if (lower.includes("priorit")) {
-        filters.push({ id: "prio-high", label: "⚡ Alta priorità", type: "priority" });
-      }
-      if (lower.includes("linkedin")) {
-        filters.push({ id: "ch-linkedin", label: "LinkedIn", type: "channel" });
-      }
-      if (lower.includes("email")) {
-        filters.push({ id: "ch-email", label: "Email", type: "channel" });
-      }
-      if (lower.includes("whatsapp")) {
-        filters.push({ id: "ch-whatsapp", label: "WhatsApp", type: "channel" });
-      }
-      if (lower.includes("list")) {
-        onViewChange("list");
-      }
-      if (lower.includes("card")) {
-        onViewChange("card");
-      }
-      if (filters.length === 0) {
-        filters.push({ id: `custom-${Date.now()}`, label: input.trim(), type: "custom" });
-      }
-      onCommand(input, filters);
+
+      if (data?.error) throw new Error(data.error);
+
+      const actions: CockpitAIAction[] = data?.actions || [];
+      const message: string = data?.message || "";
+
+      onAIActions(actions, message);
       setInput("");
+    } catch (err: any) {
+      toast.error(err.message || "Errore nel comando AI");
+    } finally {
       setIsProcessing(false);
-    }, 800);
+    }
   };
 
   const micRingColor: Record<MicState, string> = {
@@ -86,8 +96,9 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Comanda la pagina — filtra, ordina, cerca con AI..."
+              placeholder="Comanda con AI — filtra, seleziona, lancia deep search..."
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none"
+              disabled={isProcessing}
             />
             <Search className="w-4 h-4 text-muted-foreground/70" />
           </div>
@@ -102,16 +113,10 @@ export function TopCommandBar({ onCommand, viewMode, onViewChange, searchQuery, 
             micState === "listening" && "bg-destructive/10",
             micState === "idle" && "bg-card/60 hover:bg-card/80"
           )}
-          onClick={() => {
-            // Placeholder for voice — will be implemented later
-            setMicState(prev => prev === "idle" ? "listening" : "idle");
-          }}
+          onClick={() => setMicState(prev => prev === "idle" ? "listening" : "idle")}
         >
           {micState === "listening" ? (
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-            >
+            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
               <Mic className="w-4 h-4 text-destructive" />
             </motion.div>
           ) : (
