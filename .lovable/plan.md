@@ -1,131 +1,55 @@
 
 
-# Piano Completo di Correzione e Code Quality — WCA Network Navigator
+## Piano: Cockpit con dati reali dal database
 
-Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
+### Problema
+Il Cockpit usa `DEMO_CONTACTS` hardcoded. Nel database ci sono 3 fonti reali di contatti:
+- **partner_contacts** (da WCA) — con `partner_id` per risalire ad azienda/paese
+- **imported_contacts** (da file import) — con `import_log_id` per risalire al gruppo/file
+- **prospect_contacts** (da Report Aziende) — con `prospect_id` per risalire all'azienda
 
----
+### Soluzione
+Creare un hook `useCockpitContacts` che aggrega le 3 fonti in un formato unificato `CockpitContact`, eliminando completamente `DEMO_CONTACTS`.
 
-## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+### Nuovo hook: `src/hooks/useCockpitContacts.ts`
 
-Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
+Tre query parallele con React Query:
+1. `partner_contacts` JOIN `partners` → origin `"wca"`, originDetail = network name
+2. `imported_contacts` JOIN `import_logs` → origin `"import"`, originDetail = file_name o group_name
+3. `prospect_contacts` JOIN `prospects` → origin `"report_aziende"`, originDetail = "Report Aziende"
 
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
-| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
-| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
-| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
-| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
-
-I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
-
----
-
-## Fase 2 — N+1 Query Fix (CardSocialIcons)
-
-**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
-
-**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
-
-| File | Modifica |
-|------|----------|
-| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
-| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
-| Callers di CardSocialIcons | Passare link dal batch hook |
-
----
-
-## Fase 3 — Null Safety (crash preventions)
-
-Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
-
-| File | Fix |
-|------|-----|
-| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
-| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
-| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
-| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
-
----
-
-## Fase 4 — Riduzione `as any` nei file principali
-
-663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
-
-**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
-
-| Gruppo | File principali | Fix |
-|--------|----------------|-----|
-| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
-| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
-| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
-| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
-
----
-
-## Fase 5 — Splitting Componenti Grandi
-
-### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
-
-```text
-src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
-src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
-src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
-src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+Normalizza ogni record in:
+```ts
+interface CockpitContact {
+  id: string;
+  name: string;
+  company: string;
+  role: string;
+  country: string;
+  language: string;
+  lastContact: string;
+  priority: number;
+  channels: string[];
+  email: string;
+  origin: ContactOrigin;
+  originDetail: string;
+}
 ```
 
-### 5B. `Settings.tsx` (851 righe → ~5 file)
+Canali determinati dalla presenza di email/phone/mobile. Priorità calcolata da completezza dati + recency. Language dedotto dal country_code.
 
-```text
-src/pages/Settings.tsx                     (~100 righe — tabs container)
-src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
-src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
-src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
-src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
-```
-I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+### File da modificare
 
-### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+1. **`src/hooks/useCockpitContacts.ts`** (nuovo) — hook con 3 query aggregate, merge e normalizzazione
+2. **`src/pages/Cockpit.tsx`** — rimuovere `DEMO_CONTACTS` e `DEMO_CONTACTS_MAP`, usare il nuovo hook; passare i contatti reali a `ContactStream` e `useSelection`
+3. **`src/components/cockpit/ContactStream.tsx`** — ricevere i contatti come prop invece di importare `DEMO_CONTACTS`
+4. **`src/components/cockpit/TopCommandBar.tsx`** — nessuna modifica (già riceve contatti come prop)
 
-```text
-src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
-src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
-src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
-```
+### Empty state
+Quando non ci sono contatti nel database, mostrare un empty state con invito a importare dati o scaricare da WCA.
 
-### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
-
-```text
-src/pages/EmailComposer.tsx                (~150 righe — page container)
-src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
-src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
-```
-
----
-
-## Fase 6 — Lock File + Varie
-
-| Issue | Fix |
-|-------|-----|
-| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
-| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
-| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
-
----
-
-## Riepilogo Esecuzione
-
-| Fase | Scope | File stimati | Rischio |
-|------|-------|-------------|---------|
-| 1 — Console cleanup | 5 file | 5 | Basso |
-| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
-| 3 — Null safety | 4 file | 4 | Basso |
-| 4 — Type safety | 10-15 file | 15 | Medio |
-| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
-| 6 — Varie | 2 file | 2 | Basso |
-
-**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
-
-Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+### Dettagli tecnici
+- Le query usano `.limit(500)` per performance
+- L'ordinamento priorità: contatti con email+phone > solo email > solo phone > niente
+- Mapping country → language: IT→italiano, FR→français, DE→deutsch, ES→español, default→english
 
