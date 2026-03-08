@@ -2,8 +2,8 @@ import { useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Moon, Sun, Settings,
-  Wifi, WifiOff, BookOpen, Send, Sparkles,
-  Users, PackageCheck, Command, Upload, UserCheck, Zap,
+  Wifi, WifiOff, BookOpen, Send,
+  Users, Command, Upload, UserCheck, Zap,
   Rocket, Microscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
