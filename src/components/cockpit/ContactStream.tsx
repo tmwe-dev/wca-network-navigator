@@ -1,22 +1,26 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X } from "lucide-react";
+import { Search, Sparkles, X, Users } from "lucide-react";
 import { CockpitContactCard } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { DEMO_CONTACTS } from "@/pages/Cockpit";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
+import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {
   IT: "🇮🇹", GB: "🇬🇧", FR: "🇫🇷", DE: "🇩🇪", ES: "🇪🇸", JP: "🇯🇵", RU: "🇷🇺", US: "🇺🇸",
+  CN: "🇨🇳", BR: "🇧🇷", NL: "🇳🇱", BE: "🇧🇪", CH: "🇨🇭", AT: "🇦🇹", PT: "🇵🇹", PL: "🇵🇱",
+  TR: "🇹🇷", IN: "🇮🇳", AE: "🇦🇪", SA: "🇸🇦", KR: "🇰🇷", AU: "🇦🇺", CA: "🇨🇦", MX: "🇲🇽",
 };
 
 interface ContactStreamProps {
   viewMode: ViewMode;
   searchQuery: string;
   filters: CockpitFilter[];
+  contacts: CockpitContact[];
+  isLoading: boolean;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   selectedIds: Set<string>;
@@ -32,12 +36,13 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, filters, onDragStart, onDragEnd,
+  viewMode, searchQuery, filters, contacts, isLoading,
+  onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
-    let result = [...DEMO_CONTACTS];
+    let result = [...contacts];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c =>
@@ -50,7 +55,29 @@ export function ContactStream({
       if (f.type === "priority") result = result.filter(c => c.priority >= 7);
     }
     return result.sort((a, b) => b.priority - a.priority);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, contacts]);
+
+  if (isLoading) {
+    return (
+      <div className="p-3 space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (contacts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
+        <Users className="w-12 h-12 text-muted-foreground/40" />
+        <h3 className="text-sm font-semibold text-foreground/70">Nessun contatto</h3>
+        <p className="text-xs text-muted-foreground max-w-[240px]">
+          Importa contatti, scarica da WCA o aggiungi prospect per popolare il Cockpit.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-3 space-y-2">
