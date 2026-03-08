@@ -79,8 +79,8 @@ const App = () => (
                   <Route path="/guida" element={<Guida />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
-                  <Route path="/workspace" element={<Workspace />} />
-                  <Route path="/sorting" element={<Sorting />} />
+                  <Route path="/workspace" element={<CockpitRedirect />} />
+                  <Route path="/sorting" element={<CockpitRedirect />} />
                   <Route path="/import" element={<Import />} />
                   <Route path="/global" element={<Global />} />
                   <Route path="/test-download" element={<TestDownload />} />
