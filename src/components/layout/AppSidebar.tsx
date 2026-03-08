@@ -18,17 +18,15 @@ const navSections = [
       { title: "Operations", url: "/", icon: Globe },
       { title: "Global", url: "/global", icon: Globe },
       { title: "Partner Hub", url: "/partner-hub", icon: Users },
-      { title: "Sorting", url: "/sorting", icon: PackageCheck },
     ],
   },
   {
     label: "Comunicazione",
     items: [
+      { title: "Cockpit", url: "/cockpit", icon: Rocket },
       { title: "Campaigns", url: "/campaigns", icon: Mail },
       { title: "Email", url: "/email-composer", icon: Send },
       { title: "Hub Operativo", url: "/hub", icon: Zap },
-      { title: "Workspace", url: "/workspace", icon: Sparkles },
-      { title: "Cockpit", url: "/cockpit", icon: Rocket },
     ],
   },
   {
