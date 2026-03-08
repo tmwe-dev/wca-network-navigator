@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Contact {
@@ -19,18 +20,17 @@ interface Props {
   contact: Contact;
   flag: string;
   index: number;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }
 
 const channelIcon: Record<string, any> = {
-  email: Mail,
-  linkedin: Linkedin,
-  whatsapp: MessageCircle,
-  sms: Smartphone,
+  email: Mail, linkedin: Linkedin, whatsapp: MessageCircle, sms: Smartphone,
 };
 
-export function CockpitContactListItem({ contact, flag, index, onDragStart, onDragEnd }: Props) {
+export function CockpitContactListItem({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
@@ -39,8 +39,17 @@ export function CockpitContactListItem({ contact, flag, index, onDragStart, onDr
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className="group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-card/60 transition-colors"
+      className={cn(
+        "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",
+        isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
+      )}
     >
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={onToggleSelect}
+        className="h-3.5 w-3.5 flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      />
       <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground flex-shrink-0" />
       <span className="text-sm">{flag}</span>
       <div className="flex-1 min-w-0 flex items-center gap-3">

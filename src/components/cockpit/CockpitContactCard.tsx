@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Contact {
@@ -19,15 +20,16 @@ interface CockpitContactCardProps {
   contact: Contact;
   flag: string;
   index: number;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onDeepSearch: () => void;
+  onAlias: () => void;
 }
 
 const channelIcon: Record<string, any> = {
-  email: Mail,
-  linkedin: Linkedin,
-  whatsapp: MessageCircle,
-  sms: Smartphone,
+  email: Mail, linkedin: Linkedin, whatsapp: MessageCircle, sms: Smartphone,
 };
 
 const priorityColor = (p: number) => {
@@ -37,7 +39,7 @@ const priorityColor = (p: number) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-export function CockpitContactCard({ contact, flag, index, onDragStart, onDragEnd }: CockpitContactCardProps) {
+export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -48,20 +50,29 @@ export function CockpitContactCard({ contact, flag, index, onDragStart, onDragEn
       onDragEnd={onDragEnd}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      className="group relative rounded-xl border border-border/80 bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-shadow duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30"
+      className={cn(
+        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg hover:shadow-primary/5",
+        isSelected
+          ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
+          : "border-border/80 hover:border-primary/30"
+      )}
     >
-      {/* Subtle glow on hover */}
       <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       <div className="relative flex gap-3">
-        {/* Drag Handle */}
-        <div className="flex items-center pt-0.5">
+        {/* Checkbox + Drag Handle */}
+        <div className="flex flex-col items-center gap-1.5 pt-0.5">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onToggleSelect}
+            className="h-3.5 w-3.5"
+            onClick={(e) => e.stopPropagation()}
+          />
           <GripVertical className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Header */}
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
@@ -76,14 +87,12 @@ export function CockpitContactCard({ contact, flag, index, onDragStart, onDragEn
             </span>
           </div>
 
-          {/* Meta row */}
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90 mb-2">
             <span>{contact.language}</span>
             <span>·</span>
             <span>{contact.lastContact}</span>
           </div>
 
-          {/* Channels + Actions */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
               {contact.channels.map(ch => {
@@ -96,10 +105,18 @@ export function CockpitContactCard({ contact, flag, index, onDragStart, onDragEn
               })}
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="p-1 rounded-md text-muted-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors" title="Deep Search">
+              <button
+                className="p-1 rounded-md text-muted-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors"
+                title="Deep Search"
+                onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}
+              >
                 <Search className="w-3 h-3" />
               </button>
-              <button className="p-1 rounded-md text-muted-foreground/80 hover:text-chart-3 hover:bg-chart-3/10 transition-colors" title="AI Generate">
+              <button
+                className="p-1 rounded-md text-muted-foreground/80 hover:text-chart-3 hover:bg-chart-3/10 transition-colors"
+                title="Genera Alias"
+                onClick={(e) => { e.stopPropagation(); onAlias(); }}
+              >
                 <Sparkles className="w-3 h-3" />
               </button>
             </div>
