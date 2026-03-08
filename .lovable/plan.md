@@ -1,87 +1,131 @@
 
 
-## Analisi: Cockpit vs Workspace vs Sorting
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### Ruoli attuali
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-| Pagina | Cosa fa | Dati | Limite |
-|---|---|---|---|
-| **Cockpit** | Selezione contatti → drag su canale → AI genera draft | Contatti reali (3 fonti) | Il draft generato **non viene salvato** nel DB, non crea attività, non passa al Sorting |
-| **Workspace** | Lista attività `send_email` → configura goal/proposta/documenti → genera email batch → salva su `activities` | Attività esistenti (create da Campaigns o Hub) | Grafica standard, nessun drag-drop, nessuna AI command bar |
-| **Sorting** | Coda di revisione: approva, modifica, invia o scarta le email generate dal Workspace | `activities` con `status=pending` e `email_body` non null | Solo revisione, nessuna generazione |
+---
 
-### Flusso attuale (disconnesso)
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
+
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
+
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
+
+---
+
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
+
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
+
+---
+
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
 
 ```text
-Campaigns → crea activities → Workspace (genera email) → Sorting (revisiona e invia)
-Cockpit → genera draft → NULLA (il draft muore nel componente)
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
 ```
 
-Il Cockpit genera email ma non le salva. Il Workspace genera e salva ma non ha la UX premium. Il Sorting solo revisiona. Sono 3 step di un unico funnel frammentato.
-
-### Proposta: Cockpit come centro operativo unificato con 3 modalità
-
-Trasformare il Cockpit in un'unica pagina con **3 tab/modalità** che coprono l'intero funnel, eliminando Workspace e Sorting come pagine separate:
+### 5B. `Settings.tsx` (851 righe → ~5 file)
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  AI Command Bar + Filtri                                │
-├──────────┬──────────────────────┬───────────────────────┤
-│          │                      │                       │
-│ Contact  │   Tab: GENERA        │   AI Draft Studio     │
-│ Stream   │   Tab: REVISIONA     │   (genera / preview   │
-│          │   Tab: PIANIFICA     │    / modifica / invia) │
-│          │                      │                       │
-├──────────┴──────────────────────┴───────────────────────┤
-│  Batch Action Bar (approva / invia / scarta)            │
-└─────────────────────────────────────────────────────────┘
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
 ```
 
-**Tab GENERA** (ex Workspace):
-- La colonna centrale mostra i channel drop zones (drag-drop)
-- Drag un contatto → AI genera email → salva come `activity` con `email_body`
-- Goal bar, documenti, preset integrati nel pannello destro
-- Batch generation: seleziona N contatti → genera per tutti
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
 
-**Tab REVISIONA** (ex Sorting):
-- La colonna sinistra filtra solo `activities` con `email_body` e `status=pending`
-- La colonna centrale mostra l'anteprima email con edit inline
-- Azioni: Approva, Modifica, Invia, Scarta
-- Batch: approva/invia tutti i selezionati
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
 
-**Tab PIANIFICA** (nuovo):
-- Crea attività future (chiamate, meeting, follow-up) senza generare email
-- Calendario/timeline per scheduling
-- Drag contatto → scegli tipo attività → pianifica data
+---
 
-### Collegamento con Campaigns
+## Fase 6 — Lock File + Varie
 
-Attualmente Campaigns crea `activities` e naviga a `/reminders`. Il piano prevede:
-- Campaigns → crea activities → redirect a **Cockpit tab GENERA** con filtro `campaign_batch_id`
-- Le attività create da Campaigns appaiono automaticamente nel Contact Stream del Cockpit
-- L'utente può generare email direttamente, poi passare a tab REVISIONA per approvare e inviare
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
 
-### File da modificare
+---
 
-1. **`src/pages/Cockpit.tsx`** — Aggiungere sistema a 3 tab (genera, revisiona, pianifica); integrare la logica di generazione email dal Workspace (goal, documenti, preset); integrare la logica di revisione dal Sorting
-2. **`src/components/cockpit/GeneratePanel.tsx`** (nuovo) — Colonna centrale per tab GENERA: drop zones + goal bar + batch generation
-3. **`src/components/cockpit/ReviewPanel.tsx`** (nuovo) — Colonna centrale per tab REVISIONA: lista job pending + anteprima email + azioni (approva/modifica/invia/scarta)
-4. **`src/components/cockpit/AIDraftStudio.tsx`** — Estendere per supportare sia la generazione che la revisione: in modalità genera mostra il draft in tempo reale; in modalità revisiona mostra l'email salvata con edit inline
-5. **`src/pages/Campaigns.tsx`** — Cambiare il redirect da `/reminders` a `/cockpit?tab=genera&batch=<id>`
-6. **`src/components/layout/AppSidebar.tsx`** — Rimuovere le voci Workspace e Sorting dalla sidebar (diventano tab del Cockpit)
-7. **`src/App.tsx`** — Redirect `/workspace` e `/sorting` a `/cockpit` per backward compatibility
+## Riepilogo Esecuzione
 
-### Cosa NON cambia
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
 
-- L'estetica del Cockpit (glassmorphism, 3 colonne, badge origin, AI command bar) resta identica
-- Il Contact Stream resta la colonna sinistra in tutte le modalità
-- L'AI Draft Studio resta la colonna destra
-- Gli hook esistenti (`useSortingJobs`, `useEmailGenerator`, `useWorkspaceDocuments`) vengono riutilizzati senza modifiche
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
 
-### Dimensione dell'intervento
-
-- ~600 righe di nuovo codice (2 pannelli centrali)
-- ~200 righe di refactoring (Cockpit.tsx + routing)
-- 2 pagine eliminate (Workspace.tsx e Sorting.tsx diventano redirect)
-- Nessuna migrazione DB necessaria
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

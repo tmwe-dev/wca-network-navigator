@@ -26,6 +26,7 @@ const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const EmailComposer = lazy(() => import("./pages/EmailComposer"));
 const Workspace = lazy(() => import("./pages/Workspace"));
 const Sorting = lazy(() => import("./pages/Sorting"));
+const CockpitRedirect = lazy(() => import("./pages/CockpitRedirect"));
 const Import = lazy(() => import("./pages/Import"));
 const Global = lazy(() => import("./pages/Global"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
@@ -78,8 +79,8 @@ const App = () => (
                   <Route path="/guida" element={<Guida />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
-                  <Route path="/workspace" element={<Workspace />} />
-                  <Route path="/sorting" element={<Sorting />} />
+                  <Route path="/workspace" element={<CockpitRedirect />} />
+                  <Route path="/sorting" element={<CockpitRedirect />} />
                   <Route path="/import" element={<Import />} />
                   <Route path="/global" element={<Global />} />
                   <Route path="/test-download" element={<TestDownload />} />
