@@ -8,6 +8,7 @@ import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
+import { useCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { toast } from "sonner";
 
 export type ViewMode = "card" | "list";
@@ -33,29 +34,8 @@ export interface DraftState {
   isGenerating: boolean;
 }
 
-export interface CockpitContact {
-  id: string;
-  name: string;
-  company: string;
-  email: string;
-  country: string;
-  language: string;
-}
-
-export const DEMO_CONTACTS = [
-  { id: "1", name: "Marco Bianchi", company: "Logistica Milano Srl", role: "CEO", country: "IT", language: "italiano", lastContact: "2 giorni fa", priority: 9, channels: ["email", "whatsapp", "linkedin"] as string[], email: "marco@logmilano.it", origin: "wca" as ContactOrigin, originDetail: "WCA World" },
-  { id: "2", name: "Sarah Johnson", company: "Global Freight Ltd", role: "VP Sales", country: "GB", language: "english", lastContact: "1 settimana fa", priority: 8, channels: ["email", "linkedin"] as string[], email: "sarah@globalfreight.co.uk", origin: "wca" as ContactOrigin, originDetail: "WCA Projects" },
-  { id: "3", name: "Pierre Dupont", company: "TransEurope SA", role: "Directeur Commercial", country: "FR", language: "français", lastContact: "3 giorni fa", priority: 7, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "pierre@transeurope.fr", origin: "import" as ContactOrigin, originDetail: "Fiera Monaco 2025.xlsx" },
-  { id: "4", name: "Hans Weber", company: "Spedition Weber GmbH", role: "Geschäftsführer", country: "DE", language: "deutsch", lastContact: "5 giorni fa", priority: 6, channels: ["email", "linkedin"] as string[], email: "hans@weber-spedition.de", origin: "import" as ContactOrigin, originDetail: "LinkedIn Export Q1.csv" },
-  { id: "5", name: "Ana Garcia", company: "Transportes Garcia", role: "Directora", country: "ES", language: "español", lastContact: "2 settimane fa", priority: 5, channels: ["email", "whatsapp", "sms"] as string[], email: "ana@tgarcia.es", origin: "report_aziende" as ContactOrigin, originDetail: "Report Aziende" },
-  { id: "6", name: "Yuki Tanaka", company: "Nippon Logistics KK", role: "Manager", country: "JP", language: "english", lastContact: "1 mese fa", priority: 4, channels: ["email", "linkedin"] as string[], email: "yuki@nipponlog.jp", origin: "wca" as ContactOrigin, originDetail: "WCA eCommerce" },
-  { id: "7", name: "Roberto Esposito", company: "NaviCargo SpA", role: "Resp. Commerciale", country: "IT", language: "italiano", lastContact: "Ieri", priority: 10, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "roberto@navicargo.it", origin: "report_aziende" as ContactOrigin, originDetail: "Report Aziende" },
-  { id: "8", name: "Elena Volkov", company: "TransSiberian LLC", role: "Business Dev", country: "RU", language: "english", lastContact: "4 giorni fa", priority: 7, channels: ["email"] as string[], email: "elena@transsib.ru", origin: "import" as ContactOrigin, originDetail: "Contatti CIS.csv" },
-];
-
-const DEMO_CONTACTS_MAP: Record<string, CockpitContact> = Object.fromEntries(
-  DEMO_CONTACTS.map(c => [c.id, { id: c.id, name: c.name, company: c.company, email: c.email, country: c.country, language: c.language }])
-);
+// Re-export for backward compatibility
+export type { CockpitContact };
 
 const Cockpit = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
@@ -67,7 +47,8 @@ const Cockpit = () => {
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const selection = useSelection(DEMO_CONTACTS);
+  const { contacts, contactsMap, isLoading } = useCockpitContacts();
+  const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
 
@@ -86,7 +67,7 @@ const Cockpit = () => {
           break;
         case "select_where": {
           const { field, operator, value } = action;
-          selection.selectWhere((c: typeof DEMO_CONTACTS[0]) => {
+          selection.selectWhere((c: CockpitContact) => {
             const fieldVal = (c as any)[field!];
             if (operator === ">=") return fieldVal >= (value as number);
             if (operator === "==") return fieldVal === value;
@@ -97,20 +78,20 @@ const Cockpit = () => {
         }
         case "bulk_action":
           if (action.action === "deep_search") {
-            toast.info(`Deep Search per ${selection.count} contatti — disponibile con dati reali`);
+            toast.info(`Deep Search per ${selection.count} contatti`);
           } else if (action.action === "alias") {
-            toast.info(`Generazione Alias per ${selection.count} contatti — disponibile con dati reali`);
+            toast.info(`Generazione Alias per ${selection.count} contatti`);
           } else if (action.action === "outreach") {
             toast.info(`Outreach per ${selection.count} contatti — trascina sulle drop zone`);
           }
           break;
         case "single_action": {
-          const contact = DEMO_CONTACTS.find(c => c.name.toLowerCase().includes((action.contactName || "").toLowerCase()));
+          const contact = contacts.find(c => c.name.toLowerCase().includes((action.contactName || "").toLowerCase()));
           if (contact) {
             if (action.action === "deep_search") {
-              toast.info(`Deep Search per ${contact.name} — disponibile con dati reali`);
+              toast.info(`Deep Search per ${contact.name}`);
             } else if (action.action === "alias") {
-              toast.info(`Genera Alias per ${contact.name} — disponibile con dati reali`);
+              toast.info(`Genera Alias per ${contact.name}`);
             }
           } else {
             toast.error(`Contatto "${action.contactName}" non trovato`);
@@ -122,7 +103,7 @@ const Cockpit = () => {
           break;
         case "auto_outreach": {
           const names = action.contactNames || [];
-          const matchIds = DEMO_CONTACTS
+          const matchIds = contacts
             .filter(c => names.some(n => c.name.toLowerCase().includes(n.toLowerCase())))
             .map(c => c.id);
           if (matchIds.length > 0) {
@@ -134,7 +115,7 @@ const Cockpit = () => {
       }
     }
     if (message) toast.success(message);
-  }, [selection]);
+  }, [selection, contacts]);
 
   const handleRemoveFilter = useCallback((filterId: string) => {
     setActiveFilters(prev => prev.filter(f => f.id !== filterId));
@@ -166,7 +147,7 @@ const Cockpit = () => {
     const ids = getDraggedIds();
     if (ids.length === 0) return;
     const firstId = ids[0];
-    const contact = DEMO_CONTACTS_MAP[firstId];
+    const contact = contactsMap[firstId];
     if (!contact) return;
 
     if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
@@ -193,12 +174,12 @@ const Cockpit = () => {
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
     }
-  }, [generate, refetchCredits, getDraggedIds]);
+  }, [generate, refetchCredits, getDraggedIds, contactsMap]);
 
   const handleRegenerate = useCallback(async () => {
     if (!draftState.channel || !draftState.contactId) return;
     setDraftState(prev => ({ ...prev, subject: "", body: "", isGenerating: true }));
-    const contact = DEMO_CONTACTS_MAP[draftState.contactId];
+    const contact = contactsMap[draftState.contactId];
     const result = await generate({
       channel: draftState.channel, contact_name: draftState.contactName || "",
       contact_email: contact?.email, company_name: contact?.company || "",
@@ -210,30 +191,30 @@ const Cockpit = () => {
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
     }
-  }, [draftState, generate, refetchCredits]);
+  }, [draftState, generate, refetchCredits, contactsMap]);
 
   const handleBulkDeepSearch = useCallback(() => {
-    toast.info("Deep Search disponibile con dati reali (non demo)");
-  }, []);
+    toast.info(`Deep Search per ${selection.count} contatti`);
+  }, [selection.count]);
 
   const handleBulkAlias = useCallback(() => {
-    toast.info("Generazione Alias disponibile con dati reali (non demo)");
-  }, []);
+    toast.info(`Generazione Alias per ${selection.count} contatti`);
+  }, [selection.count]);
 
   const handleSingleDeepSearch = useCallback((id: string) => {
-    toast.info(`Deep Search per ${DEMO_CONTACTS_MAP[id]?.name || id} — disponibile con dati reali`);
-  }, []);
+    toast.info(`Deep Search per ${contactsMap[id]?.name || id}`);
+  }, [contactsMap]);
 
   const handleSingleAlias = useCallback((id: string) => {
-    toast.info(`Genera Alias per ${DEMO_CONTACTS_MAP[id]?.name || id} — disponibile con dati reali`);
-  }, []);
+    toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
+  }, [contactsMap]);
 
   const contactsForAI = useMemo(() =>
-    DEMO_CONTACTS.map(c => ({
+    contacts.map(c => ({
       id: c.id, name: c.name, company: c.company, country: c.country,
       priority: c.priority, language: c.language, channels: c.channels,
     })),
-  []);
+  [contacts]);
 
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
@@ -251,6 +232,7 @@ const Cockpit = () => {
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} filters={activeFilters}
+            contacts={contacts} isLoading={isLoading}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             selectedIds={selection.selectedIds} onToggle={selection.toggle}
             onSelectAll={selection.selectAll} onClear={selection.clear}
