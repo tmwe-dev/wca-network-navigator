@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import type { ContactOrigin } from "@/pages/Cockpit";
 
 interface Contact {
   id: string;
@@ -14,6 +15,8 @@ interface Contact {
   priority: number;
   channels: string[];
   email: string;
+  origin: ContactOrigin;
+  originDetail: string;
 }
 
 interface CockpitContactCardProps {
@@ -39,7 +42,40 @@ const priorityColor = (p: number) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
+const originConfig: Record<ContactOrigin, { label: string; bg: string; text: string; border: string; dot: string }> = {
+  wca: {
+    label: "WCA",
+    bg: "bg-chart-1/15",
+    text: "text-chart-1",
+    border: "border-chart-1/30",
+    dot: "bg-chart-1",
+  },
+  report_aziende: {
+    label: "RA",
+    bg: "bg-chart-4/15",
+    text: "text-chart-4",
+    border: "border-chart-4/30",
+    dot: "bg-chart-4",
+  },
+  import: {
+    label: "Import",
+    bg: "bg-chart-3/15",
+    text: "text-chart-3",
+    border: "border-chart-3/30",
+    dot: "bg-chart-3",
+  },
+};
+
+// Left accent bar color per origin
+const originAccent: Record<ContactOrigin, string> = {
+  wca: "from-chart-1/60 to-chart-1/10",
+  report_aziende: "from-chart-4/60 to-chart-4/10",
+  import: "from-chart-3/60 to-chart-3/10",
+};
+
 export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
+  const oc = originConfig[contact.origin];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -51,12 +87,15 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg hover:shadow-primary/5",
+        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 overflow-hidden",
         isSelected
           ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
           : "border-border/80 hover:border-primary/30"
       )}
     >
+      {/* Left accent bar based on origin */}
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l-xl", originAccent[contact.origin])} />
+
       <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       <div className="relative flex gap-3">
@@ -82,12 +121,27 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
               <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
               <div className="text-[11px] text-muted-foreground">{contact.role}</div>
             </div>
-            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
-              P{contact.priority}
-            </span>
+            {/* Origin badge + Priority */}
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <span
+                className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1", oc.bg, oc.text, oc.border)}
+                title={contact.originDetail}
+              >
+                <span className={cn("w-1.5 h-1.5 rounded-full", oc.dot)} />
+                {oc.label}
+              </span>
+              <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
+                P{contact.priority}
+              </span>
+            </div>
           </div>
 
+          {/* Origin detail line */}
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90 mb-2">
+            <span className={cn("truncate max-w-[140px]", oc.text)} title={contact.originDetail}>
+              {contact.originDetail}
+            </span>
+            <span>·</span>
             <span>{contact.language}</span>
             <span>·</span>
             <span>{contact.lastContact}</span>

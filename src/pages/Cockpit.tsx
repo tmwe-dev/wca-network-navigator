@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 export type ViewMode = "card" | "list";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
+export type ContactOrigin = "wca" | "report_aziende" | "import";
 
 export interface CockpitFilter {
   id: string;
@@ -42,14 +43,14 @@ export interface CockpitContact {
 }
 
 export const DEMO_CONTACTS = [
-  { id: "1", name: "Marco Bianchi", company: "Logistica Milano Srl", role: "CEO", country: "IT", language: "italiano", lastContact: "2 giorni fa", priority: 9, channels: ["email", "whatsapp", "linkedin"] as string[], email: "marco@logmilano.it" },
-  { id: "2", name: "Sarah Johnson", company: "Global Freight Ltd", role: "VP Sales", country: "GB", language: "english", lastContact: "1 settimana fa", priority: 8, channels: ["email", "linkedin"] as string[], email: "sarah@globalfreight.co.uk" },
-  { id: "3", name: "Pierre Dupont", company: "TransEurope SA", role: "Directeur Commercial", country: "FR", language: "français", lastContact: "3 giorni fa", priority: 7, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "pierre@transeurope.fr" },
-  { id: "4", name: "Hans Weber", company: "Spedition Weber GmbH", role: "Geschäftsführer", country: "DE", language: "deutsch", lastContact: "5 giorni fa", priority: 6, channels: ["email", "linkedin"] as string[], email: "hans@weber-spedition.de" },
-  { id: "5", name: "Ana Garcia", company: "Transportes Garcia", role: "Directora", country: "ES", language: "español", lastContact: "2 settimane fa", priority: 5, channels: ["email", "whatsapp", "sms"] as string[], email: "ana@tgarcia.es" },
-  { id: "6", name: "Yuki Tanaka", company: "Nippon Logistics KK", role: "Manager", country: "JP", language: "english", lastContact: "1 mese fa", priority: 4, channels: ["email", "linkedin"] as string[], email: "yuki@nipponlog.jp" },
-  { id: "7", name: "Roberto Esposito", company: "NaviCargo SpA", role: "Resp. Commerciale", country: "IT", language: "italiano", lastContact: "Ieri", priority: 10, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "roberto@navicargo.it" },
-  { id: "8", name: "Elena Volkov", company: "TransSiberian LLC", role: "Business Dev", country: "RU", language: "english", lastContact: "4 giorni fa", priority: 7, channels: ["email"] as string[], email: "elena@transsib.ru" },
+  { id: "1", name: "Marco Bianchi", company: "Logistica Milano Srl", role: "CEO", country: "IT", language: "italiano", lastContact: "2 giorni fa", priority: 9, channels: ["email", "whatsapp", "linkedin"] as string[], email: "marco@logmilano.it", origin: "wca" as ContactOrigin, originDetail: "WCA World" },
+  { id: "2", name: "Sarah Johnson", company: "Global Freight Ltd", role: "VP Sales", country: "GB", language: "english", lastContact: "1 settimana fa", priority: 8, channels: ["email", "linkedin"] as string[], email: "sarah@globalfreight.co.uk", origin: "wca" as ContactOrigin, originDetail: "WCA Projects" },
+  { id: "3", name: "Pierre Dupont", company: "TransEurope SA", role: "Directeur Commercial", country: "FR", language: "français", lastContact: "3 giorni fa", priority: 7, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "pierre@transeurope.fr", origin: "import" as ContactOrigin, originDetail: "Fiera Monaco 2025.xlsx" },
+  { id: "4", name: "Hans Weber", company: "Spedition Weber GmbH", role: "Geschäftsführer", country: "DE", language: "deutsch", lastContact: "5 giorni fa", priority: 6, channels: ["email", "linkedin"] as string[], email: "hans@weber-spedition.de", origin: "import" as ContactOrigin, originDetail: "LinkedIn Export Q1.csv" },
+  { id: "5", name: "Ana Garcia", company: "Transportes Garcia", role: "Directora", country: "ES", language: "español", lastContact: "2 settimane fa", priority: 5, channels: ["email", "whatsapp", "sms"] as string[], email: "ana@tgarcia.es", origin: "report_aziende" as ContactOrigin, originDetail: "Report Aziende" },
+  { id: "6", name: "Yuki Tanaka", company: "Nippon Logistics KK", role: "Manager", country: "JP", language: "english", lastContact: "1 mese fa", priority: 4, channels: ["email", "linkedin"] as string[], email: "yuki@nipponlog.jp", origin: "wca" as ContactOrigin, originDetail: "WCA eCommerce" },
+  { id: "7", name: "Roberto Esposito", company: "NaviCargo SpA", role: "Resp. Commerciale", country: "IT", language: "italiano", lastContact: "Ieri", priority: 10, channels: ["email", "whatsapp", "linkedin", "sms"] as string[], email: "roberto@navicargo.it", origin: "report_aziende" as ContactOrigin, originDetail: "Report Aziende" },
+  { id: "8", name: "Elena Volkov", company: "TransSiberian LLC", role: "Business Dev", country: "RU", language: "english", lastContact: "4 giorni fa", priority: 7, channels: ["email"] as string[], email: "elena@transsib.ru", origin: "import" as ContactOrigin, originDetail: "Contatti CIS.csv" },
 ];
 
 const DEMO_CONTACTS_MAP: Record<string, CockpitContact> = Object.fromEntries(
@@ -227,7 +228,6 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${DEMO_CONTACTS_MAP[id]?.name || id} — disponibile con dati reali`);
   }, []);
 
-  // Contacts data for AI command bar
   const contactsForAI = useMemo(() =>
     DEMO_CONTACTS.map(c => ({
       id: c.id, name: c.name, company: c.company, country: c.country,
