@@ -71,6 +71,24 @@ export default function Import() {
             </TabsList>
 
             <TabsContent value="file" className="mt-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={w.importSource === "business_card" ? "default" : "outline"}
+                  onClick={() => w.setImportSource("business_card")}
+                >
+                  Biglietti da visita
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={w.importSource === "standard" ? "default" : "outline"}
+                  onClick={() => w.setImportSource("standard")}
+                >
+                  Import standard
+                </Button>
+              </div>
               <div
                 onDragOver={w.handleDragOver}
                 onDragLeave={w.handleDragLeave}
@@ -84,12 +102,15 @@ export default function Import() {
               >
                 <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm font-medium">Trascina qui il tuo file o clicca per selezionare</p>
-                <p className="text-xs text-muted-foreground mt-1">.csv, .xlsx, .xls, .txt</p>
+                <p className="text-xs text-muted-foreground mt-1">.csv, .xlsx, .xls, .txt, .json</p>
+                {w.importSource === "business_card" && (
+                  <p className="text-xs text-muted-foreground mt-2">L'import sarà marcato come origine Biglietti da visita.</p>
+                )}
               </div>
               <input
                 ref={w.fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls,.txt"
+                accept=".csv,.xlsx,.xls,.txt,.json"
                 onChange={w.handleFileInputChange}
                 className="hidden"
               />
