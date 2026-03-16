@@ -56,7 +56,7 @@ export default function Import() {
               Importa Contatti
             </DialogTitle>
             <DialogDescription>
-              Carica un file o incolla testo direttamente. Formati supportati: CSV, Excel, TXT.
+              Carica file di contatti o biglietti da visita. Formati supportati: CSV, Excel, TXT, JSON.
             </DialogDescription>
           </DialogHeader>
 

@@ -60,6 +60,16 @@ function formatRelativeDate(dateStr: string | null): string {
   return `${Math.floor(days / 365)} anni fa`;
 }
 
+function getImportedOriginDetail(origin: string | null, groupName?: string | null, fileName?: string | null): string {
+  if (origin?.startsWith("business_card:")) {
+    return `Biglietti da visita · ${origin.replace("business_card:", "")}`;
+  }
+  if (origin === "business_card") {
+    return groupName ? `Biglietti da visita · ${groupName}` : "Biglietti da visita";
+  }
+  return groupName || fileName || "Import";
+}
+
 // ── Query: partner_contacts + partners ──
 function usePartnerContactsQuery() {
   return useQuery({
