@@ -1,155 +1,211 @@
 
-Obiettivo confermato: fare un’analisi tecnica di Report Aziende per capire come evitare uno scraping “scheda per scheda” e privilegiare un flusso di export/download più robusto.
+Obiettivo approvato: costruire una nuova Home 3D come ingresso principale dell’app, senza eliminare nulla sotto, ma comprimendo la complessità in 8 mondi navigabili, con copy orientato all’azione.
 
-Cosa ho verificato nella struttura attuale
-- L’integrazione RA oggi è costruita attorno all’estensione Chrome:
-  - `src/hooks/useRAExtensionBridge.ts` espone solo azioni di scraping/search/login/status.
-  - `public/ra-extension/background.js` apre `search.php?tab=2`, compila il form, legge la tabella risultati e poi visita le singole schede.
-- Il flusso corrente è quindi:
-  1. ricerca in RA
-  2. estrazione lista risultati da tabella
-  3. apertura profilo azienda
-  4. parsing DOM della scheda
-  5. salvataggio in `prospects`
-- Questo approccio è coerente con pochi record, ma è debolissimo per l’obiettivo “download massivo di indirizzi/contatti”:
-  - richiede una visita per record
-  - dipende dal DOM della scheda
-  - è lento
-  - rischia blocchi/session expiry
-  - non sfrutta eventuali export nativi o API
+1. Tesi del prodotto da tradurre nella Super Home
+La nuova home non deve mostrare “tutte le pagine”.
+Deve mostrare 8 mondi chiari, ciascuno con un verbo e un risultato:
 
-Conclusione tecnica principale
-- Sì: il modello attuale non è la strada giusta se il target è scaricare dataset ampi con indirizzi/contatti.
-- La strategia da privilegiare deve diventare “download first”, con questo ordine:
-  1. API ufficiale, se realmente disponibile nel piano
-  2. export nativo da ricerca personalizzata / risultati
-  3. scraping della tabella risultati senza entrare nelle schede
-  4. apertura schede solo come fallback per record incompleti o arricchimento
+- Cockpit → Scrivi e avvia outreach
+- Acquisition → Scarica e arricchisci dati
+- Network → Gestisci relazioni partner
+- Prospects → Scopri e qualifica opportunità
+- Campaigns → Seleziona e lancia campagne
+- Contacts → Organizza i contatti
+- Operations → Coordina i processi interni
+- System → Configura e controlla il sistema
 
-Analisi del sito rispetto al tuo obiettivo
-1. Ricerca avanzata (`search.php`)
-- Utile per costruire il set di aziende target.
-- Già compatibile con l’architettura attuale.
-- Però oggi il codice usa questa pagina solo per trovare link, non per massimizzare i dati direttamente dai risultati.
+Questa tassonomia è più forte di quella attuale, perché oggi la sidebar mescola aree operative, legacy e strumenti.
 
-2. Ricerca personalizzata (`searchPersonalizzata.php`)
-- È il punto più promettente.
-- Se davvero consente di scegliere le colonne, allora può diventare la fonte primaria del dataset.
-- In questo caso l’estensione non dovrebbe più “scrapare aziende”, ma:
-  - costruire query/filtro
-  - selezionare colonne
-  - leggere o scaricare il risultato tabellare/export
-  - convertire il file/risultato nel formato `prospects`/import interno
+2. Cosa emerge dal codice attuale
+Le sezioni non sono doppioni perfetti, ma sono stratificate:
 
-3. API / collegamento API
-- Se il tuo account ha davvero accesso API, questa è la soluzione migliore in assoluto.
-- L’analisi tecnica deve quindi partire da una verifica concreta:
-  - endpoint reali
-  - autenticazione
-  - formato risposta
-  - limiti
-  - campi disponibili
-- Se esiste, l’estensione può diventare secondaria o sparire per RA.
+- `Operations` = centro tecnico di download/WCA, job, deep search, alias, stato globale.
+- `Global` = ingresso semplificato al download con chat + globo.
+- `Partner Hub` / `Campaigns` = due porte diverse sul mondo partner.
+- `Prospect Center` = mondo separato e forte per prospect/scouting.
+- `Contacts` = anagrafica e dettaglio contatti.
+- `Hub Operativo` = coda attività e coordinamento per fonte.
+- `Cockpit` = centro premium AI/outreach, oggi il template più maturo.
+- `Workspace` + `Sorting` = ancora vivi nel codice e nei flussi, ma concettualmente legacy.
 
-Limiti precisi dell’implementazione attuale
-- `runSearchOnly()` e `runBatchScrape()` ciclano per ATECO/area e paginazione, ma lavorano sempre via browser automation.
-- `extractSearchResults()` legge solo ciò che vede in tabella; non gestisce un export file.
-- `extractProfileData()` cerca campi nel DOM della scheda, quindi è fragile per strutture complesse come indirizzi multipli, sedi secondarie, recapiti sparsi.
-- Non esiste oggi un modulo per:
-  - catturare download CSV/XLS
-  - parsare export RA
-  - importare export RA nel wizard import come sorgente dedicata
-  - usare API RA se presenti
+Conclusione: la Super Home deve semplificare sopra questa architettura, non rifarla.
 
-Proposta architetturale consigliata
-Fase A — Discovery tecnica reale del sito
-- Studiare concretamente:
-  - `searchPersonalizzata.php`
-  - presenza di bottoni export
-  - richieste XHR/fetch per generazione tabella/export
-  - presenza reale di endpoint API
-- Output atteso:
-  - mappa dei parametri
-  - formato export
-  - formato API
-  - strategia primaria/fallback
+3. Piano informativo: come mappare le pagine ai nuovi mondi
+Ogni card porta a una rotta primaria chiara:
 
-Fase B — Nuovo motore RA “download first”
-- Introdurre un layer RA con 3 modalità:
-  - `api`
-  - `export`
-  - `table_scrape`
-- Logica:
-  - se API disponibile: usa API
-  - altrimenti se export disponibile: genera/scarica export
-  - altrimenti: legge la tabella risultati
-  - schede dettaglio solo per arricchimento selettivo
+- Cockpit → `/cockpit`
+- Acquisition → `/operations`
+- Network → `/partner-hub`
+- Prospects → `/prospects`
+- Campaigns → `/campaigns`
+- Contacts → `/contacts`
+- Operations → `/hub`
+- System → `/settings`
 
-Fase C — Integrazione con il sistema attuale
-- I dati RA non devono più passare solo dal parser della scheda.
-- Devono poter essere caricati come lotto importato, con origine chiara `report_aziende`.
-- Idealmente:
-  - export/API -> staging/import
-  - poi trasferimento/uso come gli altri record
-- Questo allinea RA con la logica già usata per business card e import strutturati.
+Mondi secondari assorbiti mentalmente:
+- `Global` entra sotto Acquisition
+- `Reminders` entra sotto Operations/Contacts
+- `Diagnostics` e `Guida` entrano sotto System
+- `Workspace` e `Sorting` restano attivi ma non visibili in home
 
-Cosa proporrei di costruire dopo questa analisi
-1. Modulo “RA Discovery”
-- Un’azione nell’estensione per:
-  - aprire `searchPersonalizzata.php`
-  - ispezionare form, colonne, pulsanti export, chiamate rete
-  - restituire una diagnosi strutturata
+4. Struttura UX della nuova Home 3D
+Layout consigliato:
 
-2. Modulo “RA Export Capture”
-- Se il sito scarica un file:
-  - intercettare il download
-  - leggere CSV/XLS
-  - convertirlo in record interni
-- Questo è il percorso più importante se non c’è API.
+```text
+[ header minimale ]
 
-3. Modulo “RA API Client”
-- Solo se la verifica conferma API accessibile dal tuo piano.
-- Sarebbe il backend più stabile per query massive.
+        stato vivo del sistema
+             (centro)
 
-4. Fallback “scrape tabella, non scheda”
-- Se export/API non ci sono:
-  - estrarre il massimo dalla tabella risultati
-  - paginare
-  - salvare solo dataset lista
-  - dettaglio singolo solo on-demand
+   card 3D orbitanti sul bordo esterno
+   una frontale, due laterali percepibili
 
-Decisione tecnica consigliata
-- Non continuare a investire sullo scraping delle schede come motore principale RA.
-- Fare subito una discovery mirata su:
-  - `searchPersonalizzata.php`
-  - export risultati
-  - API reale del tuo account
-- Poi rifattorizzare l’integrazione RA verso “download first”.
+[ descrizione breve della card attiva ]
+[ CTA: Entra ]
 
-File/aree che toccherei nella futura implementazione
-- `public/ra-extension/background.js`
-  - nuova modalità discovery/export/api
-- `src/hooks/useRAExtensionBridge.ts`
-  - nuove azioni tipo `discoverExport`, `runExport`, `testApi`
-- `src/components/prospects/ProspectImporter.tsx`
-  - nuova UI per scegliere modalità RA: API / Export / Fallback
-- pipeline import esistente
-  - per far entrare i dataset RA esportati come lotto chiaro e riutilizzabile
+[ strip globale KPI sintetica ]
+```
 
-Rischi da considerare
-- L’API potrebbe essere solo commerciale o non accessibile dal tuo piano.
-- L’export potrebbe essere generato via richieste firmate o token sessione.
-- Il formato export potrebbe essere XLS/CSV con colonne variabili.
-- Alcuni campi chiave potrebbero essere disponibili solo nel dettaglio, quindi servirà comunque un fallback ibrido.
+Regole UX:
+- solo 8 card
+- una sola card protagonista alla volta
+- testo principale in formato “Verbo + risultato”
+- nessun percorso legacy in primo piano
+- home pensata anche per utenti inesperti
 
-Esito della proposta
-- La tua osservazione è corretta: per grandi volumi non ha senso verificare gli indirizzi entrando nelle schede una per una.
-- La proposta migliore è rifondare RA su un approccio “API/export prima, scraping solo come fallback o arricchimento”.
-- Il prossimo step concreto che propongo è una discovery tecnica del flusso `searchPersonalizzata` + export/API, così possiamo capire qual è la via davvero sostenibile prima di scrivere altra logica.
+5. Architettura visiva consigliata
+Tecnologia:
+- React + Framer Motion
+- CSS 3D (`perspective`, `transform-style: preserve-3d`)
+- blur, glow, gradient, parallax leggero
+- niente Three.js nella prima versione
 
-<lov-actions>
-<lov-suggestion message="Testa end-to-end il flusso Report Aziende nel preview e verifica dove si blocca davvero tra login, ricerca e risultati.">Verifica end-to-end</lov-suggestion>
-<lov-suggestion message="Analizza tecnicamente searchPersonalizzata.php e individua se esiste un export CSV/XLS utilizzabile direttamente dall’estensione.">Analizza export RA</lov-suggestion>
-<lov-suggestion message="Verifica se il mio account Report Aziende ha davvero accesso API e proponi un client dedicato al posto dello scraping delle schede.">Verifica API RA</lov-suggestion>
-<lov-suggestion message="Progetta una nuova integrazione Report Aziende con priorità API/export e scraping della scheda solo come fallback per record incompleti.">Progetta motore download-first</lov-suggestion>
-</lov-actions>
+Perché:
+- effetto wow sufficiente
+- più stabile e leggero
+- più facile da mantenere
+- coerente col sistema attuale
+
+Riferimenti da riusare:
+- estetica Cockpit come standard visivo
+- atmosfera/glow del mondo Campaigns/Globe
+- contrasto alto, glassmorphism leggibile
+
+6. Cosa costruire
+A. Nuova pagina Home 3D
+- nuova pagina dedicata, es. `SuperHome3D`
+- nuova rotta `/`
+- `Operations` spostato definitivamente a `/operations`
+
+B. Modello dati delle card
+- array centralizzato con:
+  - titolo breve
+  - verbo+risultato
+  - descrizione secondaria
+  - icona
+  - KPI sintetici
+  - rotta target
+  - stile cromatico
+
+C. Componente carosello orbitale
+- card disposte ad anello
+- rotazione via click, drag, wheel, tastiera
+- card frontale evidenziata
+- profondità simulata con scala/opacità/blur/translateZ
+
+D. Centro pagina = mission control
+- stato vivo del sistema, ma leggero:
+  - contatti
+  - campagne
+  - attività
+  - job attivi
+- non un pannello operativo completo
+- serve a dare senso, non a sostituire le pagine
+
+E. Strip KPI globale
+- una riga compatta sotto o sopra:
+  - nuovi contatti
+  - partner attivi
+  - campagne in corso
+  - attività aperte
+
+7. Da dove prendere i dati
+Per la home servono solo query leggere e già esistenti:
+- attività aperte da `useAllActivities`
+- job attivi da `useDownloadJobs`
+- prospect da `useProspectStats`
+- contatti/outreach da `useCockpitContacts` o contatori dedicati
+- partner da hook già usati da `Campaigns` / `Partner Hub`
+
+Regola:
+- niente query pesanti o viste complesse nella prima home
+- KPI sintetici, non liste operative
+
+8. Impatto su navigazione e routing
+Va riallineata la struttura attuale, oggi incoerente:
+- nella sidebar `Operations` punta ancora a `/`
+- `Workspace` e `Sorting` sono ancora in primo livello
+- la nuova Home deve diventare la vera porta principale
+
+Piano:
+- `/` = Super Home
+- `/operations` = area tecnica esistente
+- sidebar aggiornata per riflettere la nuova gerarchia
+- `Workspace` e `Sorting` tolti dal primo piano, ma non rimossi
+
+9. Cosa NON buttare via
+Nulla di operativo.
+Il piano conserva:
+- tutte le route esistenti
+- tutti i flussi dati
+- tutte le pagine interne
+- tutte le logiche AI, jobs, import, campagne
+
+Quello che cambia è:
+- il livello di accesso
+- la chiarezza dei mondi
+- la gerarchia mentale
+- la grafica d’ingresso
+
+10. Ordine di implementazione consigliato
+Fase 1 — Mappa definitiva dei mondi
+- consolidare nomi, copy e rotta primaria per le 8 card
+- definire quali pagine secondarie stanno sotto ogni mondo
+
+Fase 2 — Fondazione tecnica
+- introdurre nuova pagina `/`
+- spostare l’attuale ingresso tecnico a `/operations`
+- definire modello card + KPI
+
+Fase 3 — Carosello 3D
+- costruire anello orbitale
+- animazioni cinematiche
+- focus sulla card attiva
+- CTA di accesso
+
+Fase 4 — Mission control centrale
+- stato sintetico del sistema
+- KPI globali
+- microcopy di orientamento
+
+Fase 5 — Rifinitura navigazione
+- aggiornare sidebar, command palette e accessi
+- nascondere legacy dal primo livello
+- mantenere continuità interna
+
+11. Risultato atteso
+Una “super porta” sopra il software, che:
+- rende il prodotto leggibile in pochi secondi
+- valorizza le parti più forti senza distruggere nulla
+- usa il miglior linguaggio visivo già presente
+- prepara una futura unificazione vera delle sezioni duplicate
+- trasforma il sistema da “potente ma frammentato” a “potente ma guidato”
+
+12. Decisione progettuale finale
+Procederei con questa impostazione precisa:
+- nuova home = 8 mondi navigabili
+- copy principale = verbo + risultato
+- no legacy visibile in home
+- centro pagina = mission control sintetico
+- stile visivo = standard Cockpit + profondità orbitale
+- tecnologia = Framer Motion + CSS 3D, non Three.js nella prima release
