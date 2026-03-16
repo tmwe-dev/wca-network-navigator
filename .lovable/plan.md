@@ -1,131 +1,155 @@
 
+Obiettivo confermato: fare un’analisi tecnica di Report Aziende per capire come evitare uno scraping “scheda per scheda” e privilegiare un flusso di export/download più robusto.
 
-# Piano Completo di Correzione e Code Quality — WCA Network Navigator
+Cosa ho verificato nella struttura attuale
+- L’integrazione RA oggi è costruita attorno all’estensione Chrome:
+  - `src/hooks/useRAExtensionBridge.ts` espone solo azioni di scraping/search/login/status.
+  - `public/ra-extension/background.js` apre `search.php?tab=2`, compila il form, legge la tabella risultati e poi visita le singole schede.
+- Il flusso corrente è quindi:
+  1. ricerca in RA
+  2. estrazione lista risultati da tabella
+  3. apertura profilo azienda
+  4. parsing DOM della scheda
+  5. salvataggio in `prospects`
+- Questo approccio è coerente con pochi record, ma è debolissimo per l’obiettivo “download massivo di indirizzi/contatti”:
+  - richiede una visita per record
+  - dipende dal DOM della scheda
+  - è lento
+  - rischia blocchi/session expiry
+  - non sfrutta eventuali export nativi o API
 
-Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
+Conclusione tecnica principale
+- Sì: il modello attuale non è la strada giusta se il target è scaricare dataset ampi con indirizzi/contatti.
+- La strategia da privilegiare deve diventare “download first”, con questo ordine:
+  1. API ufficiale, se realmente disponibile nel piano
+  2. export nativo da ricerca personalizzata / risultati
+  3. scraping della tabella risultati senza entrare nelle schede
+  4. apertura schede solo come fallback per record incompleti o arricchimento
 
----
+Analisi del sito rispetto al tuo obiettivo
+1. Ricerca avanzata (`search.php`)
+- Utile per costruire il set di aziende target.
+- Già compatibile con l’architettura attuale.
+- Però oggi il codice usa questa pagina solo per trovare link, non per massimizzare i dati direttamente dai risultati.
 
-## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+2. Ricerca personalizzata (`searchPersonalizzata.php`)
+- È il punto più promettente.
+- Se davvero consente di scegliere le colonne, allora può diventare la fonte primaria del dataset.
+- In questo caso l’estensione non dovrebbe più “scrapare aziende”, ma:
+  - costruire query/filtro
+  - selezionare colonne
+  - leggere o scaricare il risultato tabellare/export
+  - convertire il file/risultato nel formato `prospects`/import interno
 
-Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
+3. API / collegamento API
+- Se il tuo account ha davvero accesso API, questa è la soluzione migliore in assoluto.
+- L’analisi tecnica deve quindi partire da una verifica concreta:
+  - endpoint reali
+  - autenticazione
+  - formato risposta
+  - limiti
+  - campi disponibili
+- Se esiste, l’estensione può diventare secondaria o sparire per RA.
 
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
-| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
-| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
-| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
-| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
+Limiti precisi dell’implementazione attuale
+- `runSearchOnly()` e `runBatchScrape()` ciclano per ATECO/area e paginazione, ma lavorano sempre via browser automation.
+- `extractSearchResults()` legge solo ciò che vede in tabella; non gestisce un export file.
+- `extractProfileData()` cerca campi nel DOM della scheda, quindi è fragile per strutture complesse come indirizzi multipli, sedi secondarie, recapiti sparsi.
+- Non esiste oggi un modulo per:
+  - catturare download CSV/XLS
+  - parsare export RA
+  - importare export RA nel wizard import come sorgente dedicata
+  - usare API RA se presenti
 
-I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
+Proposta architetturale consigliata
+Fase A — Discovery tecnica reale del sito
+- Studiare concretamente:
+  - `searchPersonalizzata.php`
+  - presenza di bottoni export
+  - richieste XHR/fetch per generazione tabella/export
+  - presenza reale di endpoint API
+- Output atteso:
+  - mappa dei parametri
+  - formato export
+  - formato API
+  - strategia primaria/fallback
 
----
+Fase B — Nuovo motore RA “download first”
+- Introdurre un layer RA con 3 modalità:
+  - `api`
+  - `export`
+  - `table_scrape`
+- Logica:
+  - se API disponibile: usa API
+  - altrimenti se export disponibile: genera/scarica export
+  - altrimenti: legge la tabella risultati
+  - schede dettaglio solo per arricchimento selettivo
 
-## Fase 2 — N+1 Query Fix (CardSocialIcons)
+Fase C — Integrazione con il sistema attuale
+- I dati RA non devono più passare solo dal parser della scheda.
+- Devono poter essere caricati come lotto importato, con origine chiara `report_aziende`.
+- Idealmente:
+  - export/API -> staging/import
+  - poi trasferimento/uso come gli altri record
+- Questo allinea RA con la logica già usata per business card e import strutturati.
 
-**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+Cosa proporrei di costruire dopo questa analisi
+1. Modulo “RA Discovery”
+- Un’azione nell’estensione per:
+  - aprire `searchPersonalizzata.php`
+  - ispezionare form, colonne, pulsanti export, chiamate rete
+  - restituire una diagnosi strutturata
 
-**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+2. Modulo “RA Export Capture”
+- Se il sito scarica un file:
+  - intercettare il download
+  - leggere CSV/XLS
+  - convertirlo in record interni
+- Questo è il percorso più importante se non c’è API.
 
-| File | Modifica |
-|------|----------|
-| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
-| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
-| Callers di CardSocialIcons | Passare link dal batch hook |
+3. Modulo “RA API Client”
+- Solo se la verifica conferma API accessibile dal tuo piano.
+- Sarebbe il backend più stabile per query massive.
 
----
+4. Fallback “scrape tabella, non scheda”
+- Se export/API non ci sono:
+  - estrarre il massimo dalla tabella risultati
+  - paginare
+  - salvare solo dataset lista
+  - dettaglio singolo solo on-demand
 
-## Fase 3 — Null Safety (crash preventions)
+Decisione tecnica consigliata
+- Non continuare a investire sullo scraping delle schede come motore principale RA.
+- Fare subito una discovery mirata su:
+  - `searchPersonalizzata.php`
+  - export risultati
+  - API reale del tuo account
+- Poi rifattorizzare l’integrazione RA verso “download first”.
 
-Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+File/aree che toccherei nella futura implementazione
+- `public/ra-extension/background.js`
+  - nuova modalità discovery/export/api
+- `src/hooks/useRAExtensionBridge.ts`
+  - nuove azioni tipo `discoverExport`, `runExport`, `testApi`
+- `src/components/prospects/ProspectImporter.tsx`
+  - nuova UI per scegliere modalità RA: API / Export / Fallback
+- pipeline import esistente
+  - per far entrare i dataset RA esportati come lotto chiaro e riutilizzabile
 
-| File | Fix |
-|------|-----|
-| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
-| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
-| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
-| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+Rischi da considerare
+- L’API potrebbe essere solo commerciale o non accessibile dal tuo piano.
+- L’export potrebbe essere generato via richieste firmate o token sessione.
+- Il formato export potrebbe essere XLS/CSV con colonne variabili.
+- Alcuni campi chiave potrebbero essere disponibili solo nel dettaglio, quindi servirà comunque un fallback ibrido.
 
----
+Esito della proposta
+- La tua osservazione è corretta: per grandi volumi non ha senso verificare gli indirizzi entrando nelle schede una per una.
+- La proposta migliore è rifondare RA su un approccio “API/export prima, scraping solo come fallback o arricchimento”.
+- Il prossimo step concreto che propongo è una discovery tecnica del flusso `searchPersonalizzata` + export/API, così possiamo capire qual è la via davvero sostenibile prima di scrivere altra logica.
 
-## Fase 4 — Riduzione `as any` nei file principali
-
-663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
-
-**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
-
-| Gruppo | File principali | Fix |
-|--------|----------------|-----|
-| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
-| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
-| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
-| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
-
----
-
-## Fase 5 — Splitting Componenti Grandi
-
-### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
-
-```text
-src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
-src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
-src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
-src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
-```
-
-### 5B. `Settings.tsx` (851 righe → ~5 file)
-
-```text
-src/pages/Settings.tsx                     (~100 righe — tabs container)
-src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
-src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
-src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
-src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
-```
-I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
-
-### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
-
-```text
-src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
-src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
-src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
-```
-
-### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
-
-```text
-src/pages/EmailComposer.tsx                (~150 righe — page container)
-src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
-src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
-```
-
----
-
-## Fase 6 — Lock File + Varie
-
-| Issue | Fix |
-|-------|-----|
-| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
-| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
-| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
-
----
-
-## Riepilogo Esecuzione
-
-| Fase | Scope | File stimati | Rischio |
-|------|-------|-------------|---------|
-| 1 — Console cleanup | 5 file | 5 | Basso |
-| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
-| 3 — Null safety | 4 file | 4 | Basso |
-| 4 — Type safety | 10-15 file | 15 | Medio |
-| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
-| 6 — Varie | 2 file | 2 | Basso |
-
-**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
-
-Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
-
+<lov-actions>
+<lov-suggestion message="Testa end-to-end il flusso Report Aziende nel preview e verifica dove si blocca davvero tra login, ricerca e risultati.">Verifica end-to-end</lov-suggestion>
+<lov-suggestion message="Analizza tecnicamente searchPersonalizzata.php e individua se esiste un export CSV/XLS utilizzabile direttamente dall’estensione.">Analizza export RA</lov-suggestion>
+<lov-suggestion message="Verifica se il mio account Report Aziende ha davvero accesso API e proponi un client dedicato al posto dello scraping delle schede.">Verifica API RA</lov-suggestion>
+<lov-suggestion message="Progetta una nuova integrazione Report Aziende con priorità API/export e scraping della scheda solo come fallback per record incompleti.">Progetta motore download-first</lov-suggestion>
+</lov-actions>
