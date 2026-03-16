@@ -241,7 +241,7 @@ export default function Import() {
                     <Upload className="w-12 h-12 text-muted-foreground" />
                     <div className="text-center">
                       <p className="font-medium">Carica un file o incolla testo</p>
-                      <p className="text-sm text-muted-foreground">CSV, Excel (.xlsx), TXT — l'AI mapperà automaticamente le colonne</p>
+                      <p className="text-sm text-muted-foreground">CSV, Excel (.xlsx), TXT, JSON — anche per biglietti da visita con mapping AI automatico</p>
                     </div>
                     <Button onClick={() => w.setUploadDialogOpen(true)} disabled={w.uploading}>
                       {w.uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Upload className="w-4 h-4 mr-1.5" />}
