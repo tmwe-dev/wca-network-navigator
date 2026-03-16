@@ -1,211 +1,131 @@
 
-Obiettivo approvato: costruire una nuova Home 3D come ingresso principale dell’app, senza eliminare nulla sotto, ma comprimendo la complessità in 8 mondi navigabili, con copy orientato all’azione.
 
-1. Tesi del prodotto da tradurre nella Super Home
-La nuova home non deve mostrare “tutte le pagine”.
-Deve mostrare 8 mondi chiari, ciascuno con un verbo e un risultato:
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-- Cockpit → Scrivi e avvia outreach
-- Acquisition → Scarica e arricchisci dati
-- Network → Gestisci relazioni partner
-- Prospects → Scopri e qualifica opportunità
-- Campaigns → Seleziona e lancia campagne
-- Contacts → Organizza i contatti
-- Operations → Coordina i processi interni
-- System → Configura e controlla il sistema
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-Questa tassonomia è più forte di quella attuale, perché oggi la sidebar mescola aree operative, legacy e strumenti.
+---
 
-2. Cosa emerge dal codice attuale
-Le sezioni non sono doppioni perfetti, ma sono stratificate:
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-- `Operations` = centro tecnico di download/WCA, job, deep search, alias, stato globale.
-- `Global` = ingresso semplificato al download con chat + globo.
-- `Partner Hub` / `Campaigns` = due porte diverse sul mondo partner.
-- `Prospect Center` = mondo separato e forte per prospect/scouting.
-- `Contacts` = anagrafica e dettaglio contatti.
-- `Hub Operativo` = coda attività e coordinamento per fonte.
-- `Cockpit` = centro premium AI/outreach, oggi il template più maturo.
-- `Workspace` + `Sorting` = ancora vivi nel codice e nei flussi, ma concettualmente legacy.
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-Conclusione: la Super Home deve semplificare sopra questa architettura, non rifarla.
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-3. Piano informativo: come mappare le pagine ai nuovi mondi
-Ogni card porta a una rotta primaria chiara:
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-- Cockpit → `/cockpit`
-- Acquisition → `/operations`
-- Network → `/partner-hub`
-- Prospects → `/prospects`
-- Campaigns → `/campaigns`
-- Contacts → `/contacts`
-- Operations → `/hub`
-- System → `/settings`
+---
 
-Mondi secondari assorbiti mentalmente:
-- `Global` entra sotto Acquisition
-- `Reminders` entra sotto Operations/Contacts
-- `Diagnostics` e `Guida` entrano sotto System
-- `Workspace` e `Sorting` restano attivi ma non visibili in home
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-4. Struttura UX della nuova Home 3D
-Layout consigliato:
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
+
+---
+
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
 
 ```text
-[ header minimale ]
-
-        stato vivo del sistema
-             (centro)
-
-   card 3D orbitanti sul bordo esterno
-   una frontale, due laterali percepibili
-
-[ descrizione breve della card attiva ]
-[ CTA: Entra ]
-
-[ strip globale KPI sintetica ]
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
 ```
 
-Regole UX:
-- solo 8 card
-- una sola card protagonista alla volta
-- testo principale in formato “Verbo + risultato”
-- nessun percorso legacy in primo piano
-- home pensata anche per utenti inesperti
+### 5B. `Settings.tsx` (851 righe → ~5 file)
 
-5. Architettura visiva consigliata
-Tecnologia:
-- React + Framer Motion
-- CSS 3D (`perspective`, `transform-style: preserve-3d`)
-- blur, glow, gradient, parallax leggero
-- niente Three.js nella prima versione
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
 
-Perché:
-- effetto wow sufficiente
-- più stabile e leggero
-- più facile da mantenere
-- coerente col sistema attuale
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
 
-Riferimenti da riusare:
-- estetica Cockpit come standard visivo
-- atmosfera/glow del mondo Campaigns/Globe
-- contrasto alto, glassmorphism leggibile
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
 
-6. Cosa costruire
-A. Nuova pagina Home 3D
-- nuova pagina dedicata, es. `SuperHome3D`
-- nuova rotta `/`
-- `Operations` spostato definitivamente a `/operations`
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
 
-B. Modello dati delle card
-- array centralizzato con:
-  - titolo breve
-  - verbo+risultato
-  - descrizione secondaria
-  - icona
-  - KPI sintetici
-  - rotta target
-  - stile cromatico
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
 
-C. Componente carosello orbitale
-- card disposte ad anello
-- rotazione via click, drag, wheel, tastiera
-- card frontale evidenziata
-- profondità simulata con scala/opacità/blur/translateZ
+---
 
-D. Centro pagina = mission control
-- stato vivo del sistema, ma leggero:
-  - contatti
-  - campagne
-  - attività
-  - job attivi
-- non un pannello operativo completo
-- serve a dare senso, non a sostituire le pagine
+## Fase 6 — Lock File + Varie
 
-E. Strip KPI globale
-- una riga compatta sotto o sopra:
-  - nuovi contatti
-  - partner attivi
-  - campagne in corso
-  - attività aperte
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
 
-7. Da dove prendere i dati
-Per la home servono solo query leggere e già esistenti:
-- attività aperte da `useAllActivities`
-- job attivi da `useDownloadJobs`
-- prospect da `useProspectStats`
-- contatti/outreach da `useCockpitContacts` o contatori dedicati
-- partner da hook già usati da `Campaigns` / `Partner Hub`
+---
 
-Regola:
-- niente query pesanti o viste complesse nella prima home
-- KPI sintetici, non liste operative
+## Riepilogo Esecuzione
 
-8. Impatto su navigazione e routing
-Va riallineata la struttura attuale, oggi incoerente:
-- nella sidebar `Operations` punta ancora a `/`
-- `Workspace` e `Sorting` sono ancora in primo livello
-- la nuova Home deve diventare la vera porta principale
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
 
-Piano:
-- `/` = Super Home
-- `/operations` = area tecnica esistente
-- sidebar aggiornata per riflettere la nuova gerarchia
-- `Workspace` e `Sorting` tolti dal primo piano, ma non rimossi
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
 
-9. Cosa NON buttare via
-Nulla di operativo.
-Il piano conserva:
-- tutte le route esistenti
-- tutti i flussi dati
-- tutte le pagine interne
-- tutte le logiche AI, jobs, import, campagne
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 
-Quello che cambia è:
-- il livello di accesso
-- la chiarezza dei mondi
-- la gerarchia mentale
-- la grafica d’ingresso
-
-10. Ordine di implementazione consigliato
-Fase 1 — Mappa definitiva dei mondi
-- consolidare nomi, copy e rotta primaria per le 8 card
-- definire quali pagine secondarie stanno sotto ogni mondo
-
-Fase 2 — Fondazione tecnica
-- introdurre nuova pagina `/`
-- spostare l’attuale ingresso tecnico a `/operations`
-- definire modello card + KPI
-
-Fase 3 — Carosello 3D
-- costruire anello orbitale
-- animazioni cinematiche
-- focus sulla card attiva
-- CTA di accesso
-
-Fase 4 — Mission control centrale
-- stato sintetico del sistema
-- KPI globali
-- microcopy di orientamento
-
-Fase 5 — Rifinitura navigazione
-- aggiornare sidebar, command palette e accessi
-- nascondere legacy dal primo livello
-- mantenere continuità interna
-
-11. Risultato atteso
-Una “super porta” sopra il software, che:
-- rende il prodotto leggibile in pochi secondi
-- valorizza le parti più forti senza distruggere nulla
-- usa il miglior linguaggio visivo già presente
-- prepara una futura unificazione vera delle sezioni duplicate
-- trasforma il sistema da “potente ma frammentato” a “potente ma guidato”
-
-12. Decisione progettuale finale
-Procederei con questa impostazione precisa:
-- nuova home = 8 mondi navigabili
-- copy principale = verbo + risultato
-- no legacy visibile in home
-- centro pagina = mission control sintetico
-- stile visivo = standard Cockpit + profondità orbitale
-- tecnologia = Framer Motion + CSS 3D, non Three.js nella prima release
