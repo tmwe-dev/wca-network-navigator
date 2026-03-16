@@ -9,7 +9,7 @@ export interface ParsedFile {
   rows: string[][];
   totalRows: number;
   sampleRows: string[][];
-  detectedFormat: "csv" | "xlsx" | "xls" | "txt";
+  detectedFormat: "csv" | "xlsx" | "xls" | "txt" | "json";
 }
 
 export interface ParsingOptions {

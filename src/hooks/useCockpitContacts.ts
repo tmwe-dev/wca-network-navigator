@@ -166,7 +166,7 @@ export function useCockpitContacts() {
         channels: inferChannels(ic.email, ic.phone, ic.mobile),
         email: ic.email || "",
         origin: "import" as ContactOrigin,
-        originDetail: log?.group_name || log?.file_name || "Import",
+        originDetail: getImportedOriginDetail(ic.origin, log?.group_name, log?.file_name),
       });
     }
 

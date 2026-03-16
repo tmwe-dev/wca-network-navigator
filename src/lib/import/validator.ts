@@ -33,7 +33,12 @@ export function applyTransformation(value: string, transformation: Transformatio
 }
 
 export function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/[\s\-.\(\)]/g, "");
+  const primaryCandidate = phone
+    .split(/\s*(?:\||\/|;|,|\n|•)\s*/)
+    .map((part) => part.trim())
+    .find(Boolean) || phone;
+
+  let cleaned = primaryCandidate.replace(/[\s\-.\(\)]/g, "");
   // Convert 00xx to +xx
   if (cleaned.startsWith("00")) cleaned = "+" + cleaned.slice(2);
   // Italian mobile (3xx) → +39

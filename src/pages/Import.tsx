@@ -258,6 +258,7 @@ export default function Import() {
                   pendingRows={w.pendingRows}
                   groupName={w.groupName}
                   setGroupName={w.setGroupName}
+                  importSource={w.importSource}
                   uploading={w.uploading}
                   onConfirm={w.handleConfirmMapping}
                   onCancel={() => { w.setAiMapping(null); w.setGroupName(""); }}

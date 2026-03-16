@@ -401,6 +401,7 @@ export function useImportWizard() {
     tab, setTab,
     uploadDialogOpen, setUploadDialogOpen,
     dialogTab, setDialogTab,
+    importSource, setImportSource,
     groupName, setGroupName,
     pasteText, setPasteText,
     pendingFile, pendingRows,
