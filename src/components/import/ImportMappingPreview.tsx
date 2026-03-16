@@ -27,6 +27,7 @@ interface ImportMappingPreviewProps {
   pendingRows: any[];
   groupName: string;
   setGroupName: (v: string) => void;
+  importSource: "standard" | "business_card";
   uploading: boolean;
   onConfirm: () => void;
   onCancel: () => void;

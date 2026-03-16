@@ -63,6 +63,9 @@ export async function parseFile(
   optionsOverride?: Partial<ParsingOptions>
 ): Promise<{ parsed: ParsedFile; options: ParsingOptions }> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  if (ext === "json") {
+    return parseJson(file, optionsOverride);
+  }
   if (["xlsx", "xls"].includes(ext)) {
     return parseExcel(file, optionsOverride);
   }

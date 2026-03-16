@@ -42,6 +42,7 @@ export interface ImportLog {
   normalization_method: string;
   processing_batch: number;
   total_batches: number;
+  group_name?: string | null;
   created_at: string;
   completed_at: string | null;
 }

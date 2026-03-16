@@ -60,6 +60,7 @@ export function useImportWizard() {
   const [tab, setTab] = useState("upload");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"file" | "paste">("file");
+  const [importSource, setImportSource] = useState<"standard" | "business_card">("business_card");
   const [groupName, setGroupName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
