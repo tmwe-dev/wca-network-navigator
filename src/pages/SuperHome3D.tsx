@@ -297,8 +297,8 @@ export default function SuperHome3D() {
           </section>
 
           <section className="order-1 flex items-center justify-center lg:order-2">
-            <div className="relative flex h-[420px] w-full max-w-[620px] items-center justify-center sm:h-[520px]" style={{ perspective: "2200px" }}>
-              <div className="absolute inset-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/30 bg-background/75 shadow-[0_0_90px_hsl(var(--primary)/0.24)] backdrop-blur-3xl sm:h-56 sm:w-56">
+            <div className="relative flex h-[420px] w-full max-w-[620px] items-center justify-center overflow-hidden sm:h-[520px]">
+              <div className="absolute inset-1/2 z-20 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/30 bg-background/75 shadow-[0_0_90px_hsl(var(--primary)/0.24)] backdrop-blur-3xl sm:h-56 sm:w-56">
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Sistema vivo</div>
                   <div className="mt-3 font-display text-4xl font-semibold text-foreground">{formatCompact(openActivities + activeJobs + campaignCount)}</div>
@@ -306,19 +306,24 @@ export default function SuperHome3D() {
                 </div>
               </div>
 
-              <motion.div
-                animate={{ rotateY: -activeIndex * (360 / worlds.length) }}
-                transition={{ type: "spring", stiffness: 90, damping: 18 }}
+              <div
                 className="relative h-full w-full"
-                style={{ transformStyle: "preserve-3d" }}
                 onWheel={(event) => {
                   event.preventDefault();
                   setActiveIndex((current) => (event.deltaY > 0 ? (current + 1) % worlds.length : (current - 1 + worlds.length) % worlds.length));
                 }}
               >
                 {worlds.map((world, index) => {
-                  const isActive = index === activeIndex;
-                  const angle = (360 / worlds.length) * index;
+                  const offset = (index - activeIndex + worlds.length) % worlds.length;
+                  const normalizedOffset = offset > worlds.length / 2 ? offset - worlds.length : offset;
+                  const isActive = normalizedOffset === 0;
+                  const distance = Math.abs(normalizedOffset);
+                  const x = normalizedOffset * 118;
+                  const y = distance * 16;
+                  const scale = isActive ? 1 : Math.max(0.78, 1 - distance * 0.08);
+                  const opacity = Math.max(0.18, 1 - distance * 0.22);
+                  const zIndex = worlds.length - distance;
+
                   return (
                     <motion.button
                       key={world.key}
@@ -327,13 +332,17 @@ export default function SuperHome3D() {
                       className={cn(
                         "absolute left-1/2 top-1/2 flex h-44 w-[15.5rem] -translate-x-1/2 -translate-y-1/2 flex-col justify-between rounded-[1.75rem] border bg-card/60 p-5 text-left shadow-glass backdrop-blur-2xl transition-all duration-300 sm:h-52 sm:w-[18rem]",
                         world.theme.ring,
-                        isActive ? world.theme.glow : "opacity-80"
+                        isActive ? world.theme.glow : ""
                       )}
-                      style={{
-                        transform: `rotateY(${angle}deg) translateZ(250px)`,
-                        transformStyle: "preserve-3d",
+                      style={{ zIndex }}
+                      animate={{
+                        x,
+                        y,
+                        scale,
+                        opacity,
+                        rotate: normalizedOffset * 4,
                       }}
-                      animate={{ scale: isActive ? 1.04 : 0.92, opacity: isActive ? 1 : 0.55 }}
+                      transition={{ type: "spring", stiffness: 220, damping: 24 }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className={cn("rounded-2xl border border-border/70 p-2.5", world.theme.soft)}>
@@ -356,7 +365,7 @@ export default function SuperHome3D() {
                     </motion.button>
                   );
                 })}
-              </motion.div>
+              </div>
             </div>
           </section>
         </div>
