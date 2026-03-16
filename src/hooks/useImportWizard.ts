@@ -156,8 +156,8 @@ export function useImportWizard() {
 
   // ── Process file ──
   const processFile = useCallback(async (file: File) => {
-    if (!file.name.match(/\.(csv|xlsx?|txt)$/i)) {
-      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx) o TXT", variant: "destructive" });
+    if (!file.name.match(/\.(csv|xlsx?|txt|json)$/i)) {
+      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx), TXT o JSON", variant: "destructive" });
       return;
     }
     setUploading(true);
