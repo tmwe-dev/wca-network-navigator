@@ -1,10 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Calendar, Mail, Globe, Moon, Sun, Settings,
+  Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
-  Users, PackageCheck, Command, Upload, UserCheck, Zap,
-  Rocket, Microscope,
+  Users, Command, Upload, UserCheck, Zap,
+  Rocket, Microscope, Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,27 +13,27 @@ import { useState } from "react";
 
 const navSections = [
   {
-    label: "Operazioni",
+    label: "Mission Control",
     items: [
-      { title: "Operations", url: "/", icon: Globe },
-      { title: "Global", url: "/global", icon: Globe },
-      { title: "Partner Hub", url: "/partner-hub", icon: Users },
-      { title: "Sorting", url: "/sorting", icon: PackageCheck },
+      { title: "Super Home", url: "/", icon: Home },
+      { title: "Acquisition", url: "/operations", icon: Globe },
+      { title: "Network", url: "/partner-hub", icon: Users },
+      { title: "Global", url: "/global", icon: Sparkles },
     ],
   },
   {
-    label: "Comunicazione",
+    label: "Execution",
     items: [
+      { title: "Cockpit", url: "/cockpit", icon: Rocket },
       { title: "Campaigns", url: "/campaigns", icon: Mail },
       { title: "Email", url: "/email-composer", icon: Send },
-      { title: "Hub Operativo", url: "/hub", icon: Zap },
-      { title: "Workspace", url: "/workspace", icon: Sparkles },
-      { title: "Cockpit", url: "/cockpit", icon: Rocket },
+      { title: "Operations", url: "/hub", icon: Zap },
     ],
   },
   {
-    label: "Gestione",
+    label: "Data & System",
     items: [
+      { title: "Prospects", url: "/prospects", icon: Compass },
       { title: "Contatti", url: "/contacts", icon: UserCheck },
       { title: "Agenda", url: "/reminders", icon: Calendar },
       { title: "Import", url: "/import", icon: Upload },

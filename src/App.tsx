@@ -68,7 +68,7 @@ const App = () => (
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<Operations />} />
+                  <Route path="/" element={<SuperHome3D />} />
                   <Route path="/operations" element={<Operations />} />
                   <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/acquisizione" element={<AcquisizionePartner />} />
