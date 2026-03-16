@@ -242,7 +242,7 @@ export default function SuperHome3D() {
               key={activeWorld.key}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className={cn(
                 "max-w-xl rounded-[2rem] border bg-card/65 p-6 shadow-glass backdrop-blur-2xl sm:p-8",
                 activeWorld.theme.ring,
@@ -298,7 +298,7 @@ export default function SuperHome3D() {
 
           <section className="order-1 flex items-center justify-center lg:order-2">
             <div className="relative flex h-[420px] w-full max-w-[620px] items-center justify-center overflow-hidden sm:h-[520px]">
-              <div className="absolute inset-1/2 z-20 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/30 bg-background/75 shadow-[0_0_90px_hsl(var(--primary)/0.24)] backdrop-blur-3xl sm:h-56 sm:w-56">
+              <div className="pointer-events-none absolute inset-1/2 z-20 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/30 bg-background/75 shadow-[0_0_90px_hsl(var(--primary)/0.24)] backdrop-blur-3xl sm:h-56 sm:w-56">
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Sistema vivo</div>
                   <div className="mt-3 font-display text-4xl font-semibold text-foreground">{formatCompact(openActivities + activeJobs + campaignCount)}</div>
@@ -307,7 +307,7 @@ export default function SuperHome3D() {
               </div>
 
               <div
-                className="relative h-full w-full"
+                className="relative isolate h-full w-full"
                 onWheel={(event) => {
                   event.preventDefault();
                   setActiveIndex((current) => (event.deltaY > 0 ? (current + 1) % worlds.length : (current - 1 + worlds.length) % worlds.length));
@@ -318,31 +318,26 @@ export default function SuperHome3D() {
                   const normalizedOffset = offset > worlds.length / 2 ? offset - worlds.length : offset;
                   const isActive = normalizedOffset === 0;
                   const distance = Math.abs(normalizedOffset);
-                  const x = normalizedOffset * 118;
-                  const y = distance * 16;
-                  const scale = isActive ? 1 : Math.max(0.78, 1 - distance * 0.08);
-                  const opacity = Math.max(0.18, 1 - distance * 0.22);
-                  const zIndex = worlds.length - distance;
+                  const x = normalizedOffset * 132;
+                  const y = distance * 18;
+                  const scale = isActive ? 1 : Math.max(0.8, 1 - distance * 0.09);
+                  const opacity = Math.max(0.28, 1 - distance * 0.24);
+                  const zIndex = 40 - distance;
 
                   return (
                     <motion.button
                       key={world.key}
                       type="button"
-                      onClick={() => setActiveIndex(index)}
+                      onClick={() => (isActive ? navigate(world.route) : setActiveIndex(index))}
                       className={cn(
-                        "absolute left-1/2 top-1/2 flex h-44 w-[15.5rem] -translate-x-1/2 -translate-y-1/2 flex-col justify-between rounded-[1.75rem] border bg-card/60 p-5 text-left shadow-glass backdrop-blur-2xl transition-all duration-300 sm:h-52 sm:w-[18rem]",
+                        "absolute left-1/2 top-1/2 flex h-44 w-[15.5rem] -translate-x-1/2 -translate-y-1/2 select-none flex-col justify-between rounded-[1.75rem] border bg-card/70 p-5 text-left shadow-glass backdrop-blur-2xl transition-colors duration-200 touch-manipulation sm:h-52 sm:w-[18rem]",
                         world.theme.ring,
-                        isActive ? world.theme.glow : ""
+                        isActive ? world.theme.glow : "hover:bg-card/80"
                       )}
-                      style={{ zIndex }}
-                      animate={{
-                        x,
-                        y,
-                        scale,
-                        opacity,
-                        rotate: normalizedOffset * 4,
-                      }}
-                      transition={{ type: "spring", stiffness: 220, damping: 24 }}
+                      style={{ zIndex, pointerEvents: distance <= 2 ? "auto" : "none" }}
+                      animate={{ x, y, scale, opacity }}
+                      transition={{ duration: 0.28, ease: "easeOut" }}
+                      whileHover={isActive ? { scale: 1.02 } : { scale: scale + 0.03 }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className={cn("rounded-2xl border border-border/70 p-2.5", world.theme.soft)}>
@@ -358,9 +353,12 @@ export default function SuperHome3D() {
                         <div className="text-lg text-foreground/80">{world.outcome}</div>
                       </div>
 
-                      <div className="space-y-1.5 text-sm">
+                      <div className="space-y-2 text-sm">
                         <div className="font-medium text-foreground">{world.stat}</div>
                         <div className="text-muted-foreground">{world.helper}</div>
+                        <div className="pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                          {isActive ? "Clicca per entrare" : "Clicca per selezionare"}
+                        </div>
                       </div>
                     </motion.button>
                   );
