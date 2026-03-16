@@ -40,6 +40,7 @@ export function ImportMappingPreview({
   pendingRows,
   groupName,
   setGroupName,
+  importSource,
   uploading,
   onConfirm,
   onCancel,
