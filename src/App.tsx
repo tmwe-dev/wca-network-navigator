@@ -14,6 +14,7 @@ import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 // ── Lazy-loaded pages (code-split per route) ──
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const SuperHome3D = lazy(() => import("./pages/SuperHome3D"));
 const Operations = lazy(() => import("./pages/Operations"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const PartnerHub = lazy(() => import("./pages/PartnerHub"));
