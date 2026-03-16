@@ -63,6 +63,9 @@ export async function parseFile(
   optionsOverride?: Partial<ParsingOptions>
 ): Promise<{ parsed: ParsedFile; options: ParsingOptions }> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  if (ext === "json") {
+    return parseJson(file, optionsOverride);
+  }
   if (["xlsx", "xls"].includes(ext)) {
     return parseExcel(file, optionsOverride);
   }
@@ -206,6 +209,86 @@ async function parseExcel(
     },
     options,
   };
+}
+
+/** Parse JSON arrays/objects into the same tabular format used by the import wizard */
+async function parseJson(
+  file: File,
+  optionsOverride?: Partial<ParsingOptions>
+): Promise<{ parsed: ParsedFile; options: ParsingOptions }> {
+  const encoding = optionsOverride?.encoding || "utf-8";
+  const text = await readFileAsText(file, encoding);
+
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("Il file JSON non è valido.");
+  }
+
+  const records = extractJsonRecords(json);
+  if (records.length === 0) {
+    throw new Error("Il file JSON non contiene record importabili.");
+  }
+
+  const headers = deduplicateHeaders(Array.from(new Set(records.flatMap(record => Object.keys(record)))));
+  const rows = records.map((record) => headers.map((header) => serializeJsonValue(record[header])));
+  const sampleIndices = getSampleIndices(rows.length, SAMPLE_SIZE);
+  const sampleRows = sampleIndices.map(i => rows[i]);
+
+  const options: ParsingOptions = {
+    delimiter: "",
+    encoding,
+    hasHeader: true,
+    quoteChar: '"',
+    skipRows: optionsOverride?.skipRows || 0,
+  };
+
+  return {
+    parsed: {
+      headers,
+      rawHeaders: headers,
+      rows,
+      totalRows: rows.length,
+      sampleRows,
+      detectedFormat: "json",
+    },
+    options,
+  };
+}
+
+function extractJsonRecords(json: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(json)) {
+    return json.filter((item): item is Record<string, unknown> => !!item && typeof item === "object" && !Array.isArray(item));
+  }
+
+  if (json && typeof json === "object") {
+    const objectEntries = Object.entries(json as Record<string, unknown>);
+    for (const [, value] of objectEntries) {
+      if (Array.isArray(value)) {
+        const records = value.filter((item): item is Record<string, unknown> => !!item && typeof item === "object" && !Array.isArray(item));
+        if (records.length > 0) return records;
+      }
+    }
+
+    return [json as Record<string, unknown>];
+  }
+
+  return [];
+}
+
+function serializeJsonValue(value: unknown): string {
+  if (value == null) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => serializeJsonValue(item))
+      .filter(Boolean)
+      .join(" | ");
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value).trim();
 }
 
 /** Deduplicate headers: "email", "email" → "email", "email_2" */

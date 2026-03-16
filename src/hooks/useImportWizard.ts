@@ -60,6 +60,7 @@ export function useImportWizard() {
   const [tab, setTab] = useState("upload");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"file" | "paste">("file");
+  const [importSource, setImportSource] = useState<"standard" | "business_card">("business_card");
   const [groupName, setGroupName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -155,8 +156,8 @@ export function useImportWizard() {
 
   // ── Process file ──
   const processFile = useCallback(async (file: File) => {
-    if (!file.name.match(/\.(csv|xlsx?|txt)$/i)) {
-      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx) o TXT", variant: "destructive" });
+    if (!file.name.match(/\.(csv|xlsx?|txt|json)$/i)) {
+      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx), TXT o JSON", variant: "destructive" });
       return;
     }
     setUploading(true);
@@ -243,6 +244,11 @@ export function useImportWizard() {
   // ── Confirm mapping ──
   const handleConfirmMapping = useCallback(async () => {
     if (!aiMapping) return;
+    if (!groupName.trim()) {
+      toast({ title: "Inserisci un evento o gruppo", variant: "destructive" });
+      return;
+    }
+
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -278,9 +284,21 @@ export function useImportWizard() {
           setUploading(false);
           return;
         }
-        log = await createFromParsed.mutateAsync({ rows: finalRows, userId: user.id, fileName, groupName: groupName.trim() || undefined });
+        log = await createFromParsed.mutateAsync({
+          rows: finalRows,
+          userId: user.id,
+          fileName,
+          groupName: groupName.trim(),
+          importSource,
+        });
       } else {
-        log = await createFromParsed.mutateAsync({ rows: aiMapping.parsed_rows, userId: user.id, fileName, groupName: groupName.trim() || undefined });
+        log = await createFromParsed.mutateAsync({
+          rows: aiMapping.parsed_rows,
+          userId: user.id,
+          fileName,
+          groupName: groupName.trim(),
+          importSource,
+        });
       }
 
       setActiveLogId(log.id);
@@ -296,7 +314,7 @@ export function useImportWizard() {
     } finally {
       setUploading(false);
     }
-  }, [aiMapping, pendingFile, pendingRows, createFromParsed, groupName]);
+  }, [aiMapping, pendingFile, pendingRows, createFromParsed, groupName, importSource]);
 
   // ── Change mapping target ──
   const handleMappingTargetChange = useCallback((srcKey: string, newTarget: string) => {
@@ -383,6 +401,7 @@ export function useImportWizard() {
     tab, setTab,
     uploadDialogOpen, setUploadDialogOpen,
     dialogTab, setDialogTab,
+    importSource, setImportSource,
     groupName, setGroupName,
     pasteText, setPasteText,
     pendingFile, pendingRows,

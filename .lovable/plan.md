@@ -1,120 +1,131 @@
 
-Obiettivo: far entrare i file dei biglietti da visita nello stesso flusso degli import esistenti, ma in modo esplicito e riconoscibile come origine “Biglietto da visita”, anche quando una riga contiene più telefoni o più cellulari.
 
-Cosa ho verificato nella struttura attuale
-- Il flusso giusto non è `Settings > CSVImport`: quello importa direttamente in `partners` ed è separato.
-- Il flusso corretto è la pagina `Import`, che già salva in:
-  - `import_logs` = lotto / gruppo / evento
-  - `imported_contacts` = staging contatti
-- `imported_contacts` oggi ha un solo `phone` e un solo `mobile`, più `origin`, `note`, `raw_data`, `external_id`, `position`.
-- In Cockpit e nei contatti importati i record vengono già letti da `imported_contacts`, quindi se facciamo entrare i biglietti lì diventano subito utilizzabili come gli altri.
-- Quando poi trasferisci verso `partners` / `partner_contacts`, oggi il sistema usa ancora un solo `direct_phone` e un solo `mobile`.
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-Problema reale da risolvere
-- I biglietti da visita possono avere:
-  - più numeri
-  - numeri non chiaramente distinti tra fisso/mobile
-  - campi presenti solo a volte
-  - JSON/CSV con struttura variabile
-- Lo schema attuale regge bene l’import “minimo”, ma non conserva bene la pluralità dei numeri.
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-Proposta consigliata
-1. Tenere i biglietti dentro il flusso Import esistente
-- Upload nella pagina `Import`, non nel vecchio `CSVImport`.
-- Ogni file crea un gruppo/evento in `import_logs`.
-- `group_name` obbligatorio, es. “Fiera Milano 2026”.
-- `origin` valorizzato in modo chiaro, ad esempio `business_card` oppure `business_card:<evento>`.
+---
 
-2. Aggiungere supporto JSON oltre a CSV/Excel
-- Estendere il parser esistente per leggere anche JSON.
-- Supportare:
-  - array di oggetti
-  - oggetto wrapper con lista interna
-- Convertire il JSON nello stesso formato `headers/rows` usato oggi dal mapping AI/manuale.
-- Così CSV, Excel e JSON entrano tutti nello stesso wizard.
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-3. Gestire i numeri multipli senza perdere dati
-Scelta migliore:
-- mantenere `phone` e `mobile` come campi “primari” per compatibilità con UI attuale
-- aggiungere un contenitore completo dei numeri dentro `raw_data` oppure, meglio, in nuovi campi JSON dedicati tipo:
-  - `phones_json`
-  - `mobiles_json`
-  - oppure un unico `contact_numbers`
-- Regola operativa:
-  - il mapping estrae il numero principale in `phone` e/o `mobile`
-  - tutti gli altri numeri restano salvati nel payload completo
-- Questo evita di rompere il codice esistente e permette evoluzione successiva.
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-4. Rendere l’origine molto chiara in UI
-- Nello storico import mostrare badge o label “Biglietti da visita”.
-- In Cockpit `originDetail` dovrebbe preferire:
-  - “Biglietti da visita”
-  - nome evento/gruppo
-- Nei filtri contatti sarà chiaro distinguere WCA vs Import standard vs Biglietti da visita.
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-5. Allineare il trasferimento verso i contatti WCA-like
-- Quando un contatto da biglietto viene trasferito:
-  - `partners`: dati azienda principali
-  - `partner_contacts`: nome, ruolo, email, telefono principale, mobile principale
-- I numeri extra non vanno persi:
-  - restano nello staging
-  - oppure vengono copiati in metadati/note del contatto trasferito nella prima fase
-- In una fase 2 si può introdurre una tabella numeri separata se vuoi trattare più recapiti in modo pienamente strutturato.
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-Proposta di implementazione pratica
-Fase 1: subito utile e senza stravolgere
-- aggiungere JSON nel parser
-- aggiungere “Import biglietti da visita” come variante del wizard Import
-- valorizzare `origin = business_card`
-- usare `group_name` come evento obbligatorio
-- salvare tutti i numeri originali in `raw_data`
-- scegliere `phone/mobile` primari con regole semplici
+---
 
-Fase 2: robustezza per numeri multipli
-- aggiungere campi JSON dedicati per i recapiti multipli nello staging
-- mostrare in UI “+ altri numeri”
-- trasferire anche i recapiti aggiuntivi in forma strutturata o note
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-Fase 3: modello pieno enterprise
-- creare tabella relazionale per recapiti multipli dei contatti
-- un contatto può avere N telefoni, N mobili, N email
-- è la soluzione più pulita, ma è anche più invasiva
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
 
-Raccomandazione architetturale
-Ti consiglio la Fase 1 + preparazione Fase 2.
-Perché:
-- riusi tutto il flusso Import attuale
-- i biglietti diventano subito “come gli altri”
-- il sistema resta compatibile con Cockpit e contatti esistenti
-- non perdi i numeri multipli
-- non fai subito una refactor pesante delle relazioni
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
-Dettagli tecnici da toccare
-- `src/lib/import/types.ts`
-  - aggiungere supporto formato `json`
-- `src/lib/import/fileParser.ts`
-  - aggiungere parser JSON
-- `src/pages/Import.tsx`
-  - aggiornare copy/UI per indicare anche JSON e import biglietti da visita
-- `src/hooks/useImportWizard.ts`
-  - accettare `.json`
-  - imporre gruppo/evento
-  - valorizzare origine specifica business card
-- `src/hooks/useImportLogs.ts`
-  - inserire eventuale logica per numeri multipli e metadati origine
-- `src/hooks/useCockpitContacts.ts`
-  - migliorare `originDetail` per mostrare chiaramente “Biglietti da visita”
-- opzionale DB
-  - aggiungere campi JSON per numeri multipli se vuoi conservarli in modo esplicito oltre `raw_data`
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
 
-Decisione progettuale consigliata
-- Sì: import JSON oltre a CSV/Excel
-- Sì: usare il wizard `Import`, non il vecchio `CSVImport`
-- Sì: tracciare chiaramente l’origine come “biglietto da visita”
-- Sì: gestire più numeri con campo principale + archivio completo dei numeri
-- Non subito: rifare tutto il modello contatti con relazioni multiple, a meno che tu voglia un CRM molto più avanzato già ora
+---
 
-Se approvi questa direzione, il passo successivo corretto è:
-- integrare JSON nel wizard Import
-- aggiungere la semantica “business card import”
-- preparare la conservazione dei numeri multipli senza rompere il resto dell’app
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+```
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
+
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+

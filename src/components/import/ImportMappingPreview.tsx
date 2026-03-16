@@ -27,6 +27,7 @@ interface ImportMappingPreviewProps {
   pendingRows: any[];
   groupName: string;
   setGroupName: (v: string) => void;
+  importSource: "standard" | "business_card";
   uploading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -39,6 +40,7 @@ export function ImportMappingPreview({
   pendingRows,
   groupName,
   setGroupName,
+  importSource,
   uploading,
   onConfirm,
   onCancel,
@@ -186,18 +188,20 @@ export function ImportMappingPreview({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="group-name" className="text-sm font-medium flex items-center gap-1.5">
-              Nome Gruppo <span className="text-destructive">*</span>
+              Nome evento / gruppo <span className="text-destructive">*</span>
             </Label>
             <Input
               id="group-name"
-              placeholder="Es. Global, Cosmoprof 2024, Pitti Uomo..."
+              placeholder={importSource === "business_card" ? "Es. Cosmoprof 2026, Fiera Milano, Meeting clienti..." : "Es. Global, Cosmoprof 2024, Pitti Uomo..."}
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               className="max-w-xs text-sm"
             />
-            {!groupName.trim() && (
-              <p className="text-[11px] text-muted-foreground">Inserisci un nome gruppo per procedere con l'importazione</p>
-            )}
+            <p className="text-[11px] text-muted-foreground">
+              {importSource === "business_card"
+                ? "Questo import verrà etichettato chiaramente come Biglietti da visita nel database e nel Cockpit."
+                : "Il gruppo separa logicamente questo batch dagli altri import."}
+            </p>
           </div>
           <div className="flex gap-2">
             {groupName.trim() && (

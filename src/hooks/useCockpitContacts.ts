@@ -60,6 +60,16 @@ function formatRelativeDate(dateStr: string | null): string {
   return `${Math.floor(days / 365)} anni fa`;
 }
 
+function getImportedOriginDetail(origin: string | null, groupName?: string | null, fileName?: string | null): string {
+  if (origin?.startsWith("business_card:")) {
+    return `Biglietti da visita · ${origin.replace("business_card:", "")}`;
+  }
+  if (origin === "business_card") {
+    return groupName ? `Biglietti da visita · ${groupName}` : "Biglietti da visita";
+  }
+  return groupName || fileName || "Import";
+}
+
 // ── Query: partner_contacts + partners ──
 function usePartnerContactsQuery() {
   return useQuery({
@@ -156,7 +166,7 @@ export function useCockpitContacts() {
         channels: inferChannels(ic.email, ic.phone, ic.mobile),
         email: ic.email || "",
         origin: "import" as ContactOrigin,
-        originDetail: log?.group_name || log?.file_name || "Import",
+        originDetail: getImportedOriginDetail(ic.origin, log?.group_name, log?.file_name),
       });
     }
 

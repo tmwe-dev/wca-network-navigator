@@ -42,6 +42,7 @@ export interface ImportLog {
   normalization_method: string;
   processing_batch: number;
   total_batches: number;
+  group_name?: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -538,12 +539,20 @@ export function useCreateImportFromParsedRows() {
       userId,
       fileName,
       groupName,
+      importSource,
     }: {
       rows: any[];
       userId: string;
       fileName: string;
       groupName?: string;
+      importSource?: "standard" | "business_card";
     }) => {
+      const source = importSource || "standard";
+      const normalizedGroupName = groupName?.trim() || null;
+      const businessCardOrigin = normalizedGroupName
+        ? `business_card:${normalizedGroupName}`
+        : "business_card";
+
       const { data: importLog, error: logError } = await supabase
         .from("import_logs")
         .insert({
@@ -553,16 +562,19 @@ export function useCreateImportFromParsedRows() {
           total_rows: rows.length,
           status: "pending",
           normalization_method: "ai",
-          group_name: groupName || null,
+          group_name: normalizedGroupName,
         })
         .select()
         .single();
       if (logError) throw logError;
 
       const contacts = rows.map((row, index) => {
-        // If _raw is present, use it as raw_data (original file row before mapping)
         const rawData = row._raw || row;
         const { _raw, ...mapped } = row;
+        const isBusinessCard = source === "business_card";
+        const existingNote = mapped.note || null;
+        const sourceNote = isBusinessCard ? "Importato da biglietto da visita" : null;
+
         return {
           import_log_id: importLog.id,
           row_number: index + 1,
@@ -575,8 +587,8 @@ export function useCreateImportFromParsedRows() {
           city: mapped.city || null,
           address: mapped.address || null,
           zip_code: mapped.zip_code || null,
-          note: mapped.note || null,
-          origin: mapped.origin || null,
+          note: [existingNote, sourceNote].filter(Boolean).join(" · ") || null,
+          origin: isBusinessCard ? businessCardOrigin : mapped.origin || null,
           company_alias: mapped.company_alias || null,
           contact_alias: mapped.contact_alias || null,
           position: mapped.position || null,
