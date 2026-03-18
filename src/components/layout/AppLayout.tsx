@@ -69,8 +69,26 @@ export function AppLayout() {
                   <ActiveProcessIndicator />
                   <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-3" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <CreditCounter />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/email-composer")}
+                    aria-label="Email"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/reminders")}
+                    aria-label="Agenda"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
