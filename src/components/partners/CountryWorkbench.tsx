@@ -6,9 +6,9 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin,
-  Send, Star, Package, X, User, Search, Trophy,
-  ChevronUp, ChevronDown,
+  ArrowLeft, CheckSquare, MapPin,
+  Send, Star, X, User, Search, Trophy,
+  ChevronUp, ChevronDown, Users,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -19,25 +19,21 @@ import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
 
 /* ── Helpers ── */
-const hasPhone = (p: any) =>
-  (p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone);
-const hasEmail = (p: any) =>
-  (p.partner_contacts || []).some((c: any) => c.email);
 const hasDeepSearch = (p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
-const hasServices = (p: any) => (p.partner_services || []).length > 0;
 const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
+const hasService = (p: any, svc: string) =>
+  (p.partner_services || []).some((s: any) => s.service_category === svc);
 
-type FilterTag = "with_phone" | "with_email" | "deep_search" | "rating_3" | "with_services";
+type GenericFilter = "deep_search" | "rating_3";
 type SortField = "name" | "city" | "rating" | "years";
 type SortDir = "asc" | "desc";
 
-const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
-  with_phone: hasPhone,
-  with_email: hasEmail,
+const GENERIC_FILTER_FNS: Record<GenericFilter, (p: any) => boolean> = {
   deep_search: hasDeepSearch,
   rating_3: hasRating3Plus,
-  with_services: hasServices,
 };
+
+const ALL_SERVICES = [...TRANSPORT_SERVICES, ...SPECIALTY_SERVICES];
 
 const sortFns: Record<SortField, (a: any, b: any, dir: SortDir) => number> = {
   name: (a, b, dir) => {
@@ -73,15 +69,24 @@ export function CountryWorkbench({
   countryCode, partners, onBack, onSelectPartner,
   selectedId, selectedIds, onToggleSelection, onSelectAllFiltered,
 }: CountryWorkbenchProps) {
-  const [activeFilters, setActiveFilters] = useState<Set<FilterTag>>(new Set());
+  const [activeGenericFilters, setActiveGenericFilters] = useState<Set<GenericFilter>>(new Set());
+  const [activeServiceFilters, setActiveServiceFilters] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const toggleFilter = useCallback((tag: FilterTag) => {
-    setActiveFilters((prev) => {
+  const toggleGenericFilter = useCallback((tag: GenericFilter) => {
+    setActiveGenericFilters((prev) => {
       const next = new Set(prev);
       next.has(tag) ? next.delete(tag) : next.add(tag);
+      return next;
+    });
+  }, []);
+
+  const toggleServiceFilter = useCallback((svc: string) => {
+    setActiveServiceFilters((prev) => {
+      const next = new Set(prev);
+      next.has(svc) ? next.delete(svc) : next.add(svc);
       return next;
     });
   }, []);
@@ -103,31 +108,54 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  const dynamicCounts = useMemo(() => {
-    const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
-      let list = countryPartners;
-      if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-      for (const tag of activeFilters) {
-        if (tag === excludeTag) continue;
-        list = list.filter(FILTER_FNS[tag]);
-      }
-      return list.filter(predicate).length;
-    };
-    return {
-      with_phone: countFor("with_phone", hasPhone),
-      with_email: countFor("with_email", hasEmail),
-      deep_search: countFor("deep_search", hasDeepSearch),
-      rating_3: countFor("rating_3", hasRating3Plus),
-      with_services: countFor("with_services", hasServices),
-    };
-  }, [countryPartners, activeFilters, searchTerm]);
+  // Which services exist in this country
+  const availableServices = useMemo(() => {
+    return ALL_SERVICES.filter((svc) =>
+      countryPartners.some((p) => hasService(p, svc))
+    );
+  }, [countryPartners]);
 
+  // Apply search + generic filters + service filters (AND)
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
     if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    for (const tag of activeFilters) list = list.filter(FILTER_FNS[tag]);
+    for (const tag of activeGenericFilters) list = list.filter(GENERIC_FILTER_FNS[tag]);
+    for (const svc of activeServiceFilters) list = list.filter((p) => hasService(p, svc));
     return [...list].sort((a, b) => sortFns[sortField](a, b, sortDir));
-  }, [countryPartners, activeFilters, searchTerm, sortField, sortDir]);
+  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm, sortField, sortDir]);
+
+  // Dynamic counts for generic filters
+  const genericCounts = useMemo(() => {
+    const base = (() => {
+      let list = countryPartners;
+      if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
+      for (const svc of activeServiceFilters) list = list.filter((p) => hasService(p, svc));
+      return list;
+    })();
+    return {
+      deep_search: base.filter((p) => !activeGenericFilters.has("deep_search") || true).filter(hasDeepSearch).length,
+      rating_3: base.filter((p) => !activeGenericFilters.has("rating_3") || true).filter(hasRating3Plus).length,
+    };
+  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm]);
+
+  // Dynamic counts for service filters
+  const serviceCounts = useMemo(() => {
+    // Base: search + generic filters applied, but exclude current service from service filters
+    let base = countryPartners;
+    if (searchTerm) base = base.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
+    for (const tag of activeGenericFilters) base = base.filter(GENERIC_FILTER_FNS[tag]);
+
+    const counts: Record<string, number> = {};
+    for (const svc of availableServices) {
+      let list = base;
+      for (const activeSvc of activeServiceFilters) {
+        if (activeSvc === svc) continue;
+        list = list.filter((p) => hasService(p, activeSvc));
+      }
+      counts[svc] = list.filter((p) => hasService(p, svc)).length;
+    }
+    return counts;
+  }, [countryPartners, activeGenericFilters, activeServiceFilters, availableServices, searchTerm]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -135,19 +163,23 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const filterChips: { key: FilterTag; icon: typeof Phone; activeColor: string; iconColor: string; count: number }[] = [
-    { key: "with_phone", icon: Phone, activeColor: "bg-emerald-500/25 border-emerald-500/60", iconColor: "text-emerald-400", count: dynamicCounts.with_phone },
-    { key: "with_email", icon: Mail, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.with_email },
-    { key: "deep_search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.deep_search },
-    { key: "rating_3", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60", iconColor: "text-amber-400", count: dynamicCounts.rating_3 },
-    { key: "with_services", icon: Package, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.with_services },
-  ];
+  const hasAnyFilter = activeGenericFilters.size > 0 || activeServiceFilters.size > 0;
+
+  const clearAllFilters = useCallback(() => {
+    setActiveGenericFilters(new Set());
+    setActiveServiceFilters(new Set());
+  }, []);
 
   const sortButtons: { field: SortField; icon: typeof User; label: string }[] = [
     { field: "name", icon: User, label: "Nome" },
     { field: "city", icon: MapPin, label: "Città" },
     { field: "rating", icon: Star, label: "Rating" },
     { field: "years", icon: Trophy, label: "Anni" },
+  ];
+
+  const genericChips: { key: GenericFilter; icon: typeof Send; activeColor: string; iconColor: string; count: number }[] = [
+    { key: "deep_search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: genericCounts.deep_search },
+    { key: "rating_3", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60", iconColor: "text-amber-400", count: genericCounts.rating_3 },
   ];
 
   return (
@@ -181,7 +213,7 @@ export function CountryWorkbench({
         </div>
       </div>
 
-      {/* ═══ SORT ICONS + FILTER CHIPS ═══ */}
+      {/* ═══ SORT + GENERIC FILTERS ═══ */}
       <div className="px-4 py-2 border-b border-border/40 flex items-center gap-3">
         {/* Sort icons */}
         <div className="flex items-center gap-0.5">
@@ -215,16 +247,16 @@ export function CountryWorkbench({
 
         <div className="w-px h-5 bg-border/60" />
 
-        {/* Filter chips — icon + count only */}
+        {/* Generic filter chips */}
         <div className="flex items-center gap-1">
-          {filterChips.map((f) => {
+          {genericChips.map((f) => {
             const Icon = f.icon;
-            const isActive = activeFilters.has(f.key);
+            const isActive = activeGenericFilters.has(f.key);
             return (
               <Tooltip key={f.key}>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => toggleFilter(f.key)}
+                    onClick={() => toggleGenericFilter(f.key)}
                     className={cn(
                       "flex items-center gap-1 px-2 py-1.5 rounded-full border transition-all text-[11px] font-bold tabular-nums",
                       isActive
@@ -237,29 +269,56 @@ export function CountryWorkbench({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  {f.key === "with_phone" && "Con telefono"}
-                  {f.key === "with_email" && "Con email"}
                   {f.key === "deep_search" && "Deep Search"}
                   {f.key === "rating_3" && "Rating ≥ 3"}
-                  {f.key === "with_services" && "Con servizi"}
                 </TooltipContent>
               </Tooltip>
             );
           })}
-          {activeFilters.size > 0 && (
-            <button onClick={() => setActiveFilters(new Set())}
-              className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all">
+        </div>
+      </div>
+
+      {/* ═══ SERVICE FILTERS ═══ */}
+      {availableServices.length > 0 && (
+        <div className="px-4 py-2 border-b border-border/40 flex items-center gap-1 flex-wrap">
+          {availableServices.map((svc) => {
+            const Icon = getServiceIcon(svc);
+            const isActive = activeServiceFilters.has(svc);
+            const count = serviceCounts[svc] || 0;
+            return (
+              <Tooltip key={svc}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => toggleServiceFilter(svc)}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1.5 rounded-full border transition-all text-[11px] font-bold tabular-nums",
+                      isActive
+                        ? "bg-primary/20 border-primary/60 text-primary"
+                        : "bg-muted/60 border-border/60 text-foreground/80 hover:bg-accent/50"
+                    )}
+                  >
+                    <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-sky-400/80")} strokeWidth={1.8} />
+                    <span>{count}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">{formatServiceCategory(svc)}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+          {hasAnyFilter && (
+            <button onClick={clearAllFilters}
+              className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all ml-1">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-      </div>
+      )}
 
       {/* ═══ LIST HEADER ═══ */}
       <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/30">
         <span className="text-[11px] text-muted-foreground font-medium">
           <span className="font-bold text-foreground">{filteredPartners.length}</span>
-          {(activeFilters.size > 0 || searchTerm) && <span> / {countryPartners.length}</span>}
+          {(hasAnyFilter || searchTerm) && <span> / {countryPartners.length}</span>}
           {" "}partner
         </span>
         <button onClick={handleSelectAll}
@@ -286,9 +345,9 @@ export function CountryWorkbench({
               ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
             ];
             const networks = partner.partner_networks || [];
-            const primaryContact = (partner.partner_contacts || []).find((c: any) => c.is_primary) || (partner.partner_contacts || [])[0];
-            const contactEmail = primaryContact?.email;
-            const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
+            const contacts = partner.partner_contacts || [];
+            const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+            const extraContacts = contacts.length > 1 ? contacts.length - 1 : 0;
 
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
@@ -338,68 +397,52 @@ export function CountryWorkbench({
                     </div>
                   )}
 
-                  {/* Row 3: Contact info */}
-                  <div className="space-y-0.5">
-                    {primaryContact ? (
-                      <>
-                        <div className="flex items-center gap-1.5 text-[11px]">
-                          <User className="w-3 h-3 text-muted-foreground shrink-0" />
-                          <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
-                          {(partner.partner_contacts || []).length > 1 && (
-                            <span className="text-[10px] text-foreground/60">+{(partner.partner_contacts || []).length - 1}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 ml-[18px]">
-                          {contactEmail && (
-                            <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1 text-[11px] text-sky-400 hover:underline truncate">
-                              <Mail className="w-3 h-3 shrink-0" /><span className="truncate">{contactEmail}</span>
-                            </a>
-                          )}
-                          {contactPhone && (
-                            <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1 text-[11px] text-emerald-400 whitespace-nowrap">
-                              <Phone className="w-3 h-3 shrink-0" />{contactPhone}
-                            </a>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
-                    )}
-                  </div>
+                  {/* Row 3: Contact name only */}
+                  {primaryContact ? (
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
+                      {extraContacts > 0 && (
+                        <span className="flex items-center gap-0.5 text-[10px] text-foreground/60">
+                          <Users className="w-3 h-3" />
+                          <span>+{extraContacts}</span>
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
+                  )}
 
-                  {/* Row 4: Services + Networks */}
+                  {/* Separator + Services + Networks */}
                   {(allServices.length > 0 || networks.length > 0) && (
                     <>
                       <div className="border-t border-border/30 pt-1" />
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {allServices.slice(0, 5).map((s: any, i: number) => {
-                          const Icon = getServiceIcon(s.service_category);
-                          return (
-                            <Tooltip key={i}>
-                              <TooltipTrigger>
-                                <Icon className="w-3.5 h-3.5 text-sky-400/80" strokeWidth={1.5} />
-                              </TooltipTrigger>
-                              <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
-                            </Tooltip>
-                          );
-                        })}
-                        {allServices.length > 5 && (
-                          <span className="text-[9px] text-foreground/60">+{allServices.length - 5}</span>
-                        )}
-                        {allServices.length > 0 && networks.length > 0 && (
-                          <span className="text-muted-foreground">·</span>
-                        )}
-                        {networks.slice(0, 2).map((n: any) => (
-                          <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium truncate max-w-[80px]">
-                            {n.network_name.replace("WCA ", "").substring(0, 10)}
-                          </span>
-                        ))}
-                        {networks.length > 2 && (
-                          <span className="text-[9px] text-foreground/60">+{networks.length - 2}</span>
-                        )}
-                      </div>
+                      {/* Services row — ALL icons */}
+                      {allServices.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {allServices.map((s: any, i: number) => {
+                            const Icon = getServiceIcon(s.service_category);
+                            return (
+                              <Tooltip key={i}>
+                                <TooltipTrigger>
+                                  <Icon className="w-3.5 h-3.5 text-sky-400/80" strokeWidth={1.5} />
+                                </TooltipTrigger>
+                                <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Networks row — ALL names */}
+                      {networks.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {networks.map((n: any) => (
+                            <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium truncate max-w-[100px]">
+                              {n.network_name.replace("WCA ", "")}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
