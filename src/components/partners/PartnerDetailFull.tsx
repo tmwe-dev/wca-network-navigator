@@ -1,21 +1,17 @@
-import { useState, useCallback, Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { getRealLogoUrl, getBranchCountries } from "@/lib/partnerUtils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Star, StarOff, Phone, Mail, Globe, MapPin, Calendar,
-  Users, User, Sparkles, Loader2, Building2,
+  Users, User, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
-  MessageSquare, Clock, ClipboardList, Briefcase, Send,
-  Hash, ChevronDown, StickyNote, Save,
+  MessageSquare, Clock,
+  Hash, ChevronDown,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { PartnerRating } from "@/components/partners/PartnerRating";
 import {
   getCountryFlag, getYearsMember, formatPartnerType,
@@ -40,9 +36,6 @@ const PartnerMiniGlobe = lazy(() =>
 interface PartnerDetailFullProps {
   partner: any;
   onToggleFavorite: () => void;
-  onAssignActivity?: (partnerId: string) => void;
-  onSendToWorkspace?: (partnerId: string) => void;
-  onEmail?: (partnerId: string) => void;
 }
 
 /* ═══ Section wrapper — enrichment-style ═══ */
@@ -66,57 +59,9 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
   );
 }
 
-export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity, onSendToWorkspace, onEmail }: PartnerDetailFullProps) {
-  const [deepSearching, setDeepSearching] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [showNoteInput, setShowNoteInput] = useState(false);
-  const [savingNote, setSavingNote] = useState(false);
-  const queryClient = useQueryClient();
+export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFullProps) {
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
-
-  const handleDeepSearch = useCallback(async () => {
-    setDeepSearching(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("deep-search-partner", {
-        body: { partnerId: partner.id },
-      });
-      if (error) throw error;
-      if (data?.success) {
-        toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati${data.logoFound ? ", logo trovato" : ""}`);
-        queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
-        queryClient.invalidateQueries({ queryKey: ["social-links", partner.id] });
-      } else {
-        toast.error(data?.error || "Errore nella Deep Search");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Errore nella Deep Search");
-    } finally {
-      setDeepSearching(false);
-    }
-  }, [partner.id, queryClient]);
-
-  const handleSaveNote = useCallback(async () => {
-    if (!noteText.trim()) return;
-    setSavingNote(true);
-    try {
-      const { error } = await supabase.from("interactions").insert({
-        partner_id: partner.id,
-        interaction_type: "note",
-        subject: noteText.trim().slice(0, 80),
-        notes: noteText.trim(),
-      });
-      if (error) throw error;
-      toast.success("Nota salvata");
-      setNoteText("");
-      setShowNoteInput(false);
-      queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
-    } catch (e: any) {
-      toast.error("Errore salvataggio nota");
-    } finally {
-      setSavingNote(false);
-    }
-  }, [noteText, partner.id, queryClient]);
 
   const hasBranches = Array.isArray(partner.branch_cities) && partner.branch_cities.length > 0;
   const branchCountries = getBranchCountries(partner);
@@ -246,59 +191,6 @@ export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity,
           </div>
         </div>
       </div>
-
-      {/* ═══ ACTION BAR ═══ */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/5 to-purple-500/5 backdrop-blur-sm border border-violet-500/10">
-        {onAssignActivity && (
-          <Button size="sm" variant="ghost" onClick={() => onAssignActivity(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <ClipboardList className="w-3.5 h-3.5" /> Attività
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={handleDeepSearch} disabled={deepSearching}
-          className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-          {deepSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          Deep Search
-        </Button>
-        {onSendToWorkspace && (
-          <Button size="sm" variant="ghost" onClick={() => onSendToWorkspace(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <Briefcase className="w-3.5 h-3.5" /> Workspace
-          </Button>
-        )}
-        {onEmail && (
-          <Button size="sm" variant="ghost" onClick={() => onEmail(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <Send className="w-3.5 h-3.5" /> Email
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={() => setShowNoteInput(!showNoteInput)}
-          className={cn("h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground",
-            showNoteInput && "bg-violet-500/10 text-foreground")}>
-          <StickyNote className="w-3.5 h-3.5" /> Note
-        </Button>
-      </div>
-
-      {/* ═══ NOTE INPUT ═══ */}
-      {showNoteInput && (
-        <Section>
-          <SectionTitle icon={StickyNote}>Nuova Nota</SectionTitle>
-          <Textarea
-            placeholder="Scrivi una nota su questo partner..."
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            className="min-h-[60px] bg-card/60 border-violet-500/10 text-sm"
-            rows={2}
-          />
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}
-              className="h-7 px-3 text-xs gap-1.5">
-              {savingNote ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Salva
-            </Button>
-          </div>
-        </Section>
-      )}
 
       {/* ═══ ENRICHMENT — priority position ═══ */}
       <EnrichmentCard partner={partner} />

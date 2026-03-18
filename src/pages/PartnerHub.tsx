@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Globe, MapPin, Users,
-  Filter, CheckSquare, Loader2,
+  Filter, CheckSquare,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -31,7 +31,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PartnerFiltersSheet from "@/components/partners/PartnerFiltersSheet";
-import { BulkActionBar } from "@/components/partners/BulkActionBar";
+import { UnifiedActionBar } from "@/components/partners/UnifiedActionBar";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
 import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
@@ -255,32 +255,66 @@ export default function PartnerHub() {
     }
   }, [queryClient]);
 
-  // Active events bar
-  const renderEventsBar = () => {
-    if (!deepSearch.running || !deepSearch.current) return null;
-    const { index, total } = deepSearch.current;
-    return (
-      <div className="px-4 py-2 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2 text-xs">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-          <span className="font-medium">
-            Deep Search {index}/{total}...
-          </span>
-          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${(index / total) * 100}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Single partner deep search handler
+  const handleSingleDeepSearch = useCallback(async (partnerId: string) => {
+    deepSearch.start([partnerId]);
+  }, [deepSearch]);
+
+  // Unified action bar handlers for single-partner context
+  const handleUnifiedEmail = useCallback(() => {
+    if (selectedIds.size > 0) {
+      handleBulkEmail();
+    } else if (selectedId) {
+      navigate("/email-composer", { state: { partnerIds: [selectedId] } });
+    }
+  }, [selectedIds, selectedId, navigate, handleBulkEmail]);
+
+  const handleUnifiedWorkspace = useCallback(async () => {
+    if (selectedIds.size > 0) {
+      handleSendToWorkspace();
+    } else if (selectedId) {
+      setSendingToWorkspace(true);
+      try {
+        await createActivities.mutateAsync([{
+          partner_id: selectedId,
+          activity_type: "send_email" as const,
+          title: "Outreach email",
+          priority: "medium",
+        }]);
+        toast.success("Attività creata — apertura Workspace...");
+        navigate("/workspace");
+      } catch { toast.error("Errore"); }
+      finally { setSendingToWorkspace(false); }
+    }
+  }, [selectedIds, selectedId, createActivities, navigate, handleSendToWorkspace]);
+
+  const handleUnifiedAssignActivity = useCallback(() => {
+    if (selectedIds.size === 0 && selectedId) {
+      setSelectedIds(new Set([selectedId]));
+    }
+    setAssignDialogOpen(true);
+  }, [selectedIds, selectedId]);
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden flex flex-col">
+      {/* ═══ UNIFIED ACTION BAR ═══ */}
+      <UnifiedActionBar
+        selectedIds={selectedIds}
+        focusedPartner={selectedPartner || null}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onAssignActivity={handleUnifiedAssignActivity}
+        onDeepSearch={handleBulkDeepSearch}
+        onStopDeepSearch={handleStopDeepSearch}
+        onEmail={handleUnifiedEmail}
+        onSendToWorkspace={handleUnifiedWorkspace}
+        sendingToWorkspace={sendingToWorkspace}
+        deepSearching={deepSearch.running}
+        deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
+        onSingleDeepSearch={handleSingleDeepSearch}
+        singleDeepSearching={deepSearch.running && deepSearch.current?.total === 1}
+      />
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
       <div className="h-full flex flex-col border-r border-border bg-background">
@@ -385,23 +419,8 @@ export default function PartnerHub() {
           </div>
         )}
 
-        {/* Bulk action bar — top position */}
-        <BulkActionBar
-          count={selectedIds.size}
-          onClear={() => setSelectedIds(new Set())}
-          onAssignActivity={() => setAssignDialogOpen(true)}
-          onDeepSearch={handleBulkDeepSearch}
-          onStopDeepSearch={handleStopDeepSearch}
-          onEmail={handleBulkEmail}
-          onSendToWorkspace={handleSendToWorkspace}
-          sendingToWorkspace={sendingToWorkspace}
-          deepSearching={deepSearch.running}
-          deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
-          partnerIds={Array.from(selectedIds)}
-        />
 
-        {/* Active events bar */}
-        {renderEventsBar()}
+
 
         {/* Content based on viewLevel */}
         {viewLevel === "countries" ? (
@@ -485,25 +504,6 @@ export default function PartnerHub() {
             onToggleFavorite={() =>
               toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })
             }
-            onAssignActivity={(id) => {
-              setSelectedIds(new Set([id]));
-              setAssignDialogOpen(true);
-            }}
-            onSendToWorkspace={async (id) => {
-              setSendingToWorkspace(true);
-              try {
-                await createActivities.mutateAsync([{
-                  partner_id: id,
-                  activity_type: "send_email" as const,
-                  title: "Outreach email",
-                  priority: "medium",
-                }]);
-                toast.success("Attività creata — apertura Workspace...");
-                navigate("/workspace");
-              } catch { toast.error("Errore"); }
-              finally { setSendingToWorkspace(false); }
-            }}
-            onEmail={(id) => navigate("/email-composer", { state: { partnerIds: [id] } })}
           />
         ) : null}
       </div>
