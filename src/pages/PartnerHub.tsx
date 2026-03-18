@@ -499,17 +499,6 @@ export default function PartnerHub() {
       </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* AI Assistant */}
-      <AiAssistantDialog
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        context={{
-          selectedCountries: selectedCountry
-            ? [{ code: selectedCountry, name: (partners?.find((p: any) => p.country_code === selectedCountry) as any)?.country_name || selectedCountry }]
-            : [],
-          filterMode: viewLevel,
-        }}
-      />
     </div>
     </TooltipProvider>
   );
