@@ -108,9 +108,15 @@ export function ContactDetailPanel({ contact }: Props) {
         body: { contactIds: [c.id] },
       });
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
-      toast({ title: "Alias generato", description: `${data?.processed || 0} contatti elaborati` });
+      const processed = data?.processed || 0;
+      if (processed === 0) {
+        toast({ title: "Alias già presente", description: "Questo contatto ha già un alias generato" });
+      } else {
+        toast({ title: "✨ Alias generato", description: `${processed} contatti elaborati con successo` });
+      }
+      setJustGenerated(true);
+      await queryClient.refetchQueries({ queryKey: ["contact-group-counts"] });
+      await queryClient.refetchQueries({ queryKey: ["contact-group-items"] });
     } catch (e: any) {
       toast({ title: "Errore", description: e.message, variant: "destructive" });
     } finally {
