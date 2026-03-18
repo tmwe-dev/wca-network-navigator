@@ -1,131 +1,83 @@
 
 
-# Piano Completo di Correzione e Code Quality — WCA Network Navigator
+## Ristrutturazione PartnerDetailFull
 
-Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
+### Analisi attuale
 
----
+Il pannello di dettaglio ha 612 righe e spreca spazio con:
+- **8 KPI cards** in alto (righe 126-159): Anni WCA, Network, Contatti, Scadenza, Con Email, Con Tel, Servizi, Interazioni — informazioni ridondanti rispetto alla card nella lista
+- **Header card** (righe 161-244): ripete rating, trophy, telefono, email, website, social — visibile anche dalla lista
+- **Profilo Aziendale** (righe 307-315): testo `text-muted-foreground` illeggibile su dark
+- **Layout a 2 colonne** (righe 317-609): sparso e frammentato, con servizi e certificazioni separati dall'enrichment
+- **Manca**: sezione Note
 
-## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+L'Enrichment Card ha lo stile giusto: `bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5`, pulito, monocromatico con sfumature leggere.
 
-Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
-
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
-| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
-| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
-| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
-| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
-
-I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
-
----
-
-## Fase 2 — N+1 Query Fix (CardSocialIcons)
-
-**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
-
-**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
-
-| File | Modifica |
-|------|----------|
-| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
-| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
-| Callers di CardSocialIcons | Passare link dal batch hook |
-
----
-
-## Fase 3 — Null Safety (crash preventions)
-
-Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
-
-| File | Fix |
-|------|-----|
-| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
-| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
-| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
-| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
-
----
-
-## Fase 4 — Riduzione `as any` nei file principali
-
-663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
-
-**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
-
-| Gruppo | File principali | Fix |
-|--------|----------------|-----|
-| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
-| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
-| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
-| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
-
----
-
-## Fase 5 — Splitting Componenti Grandi
-
-### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+### Proposta nuovo layout — colonna singola, prioritizzato
 
 ```text
-src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
-src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
-src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
-src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+┌─────────────────────────────────────────────────┐
+│ HEADER COMPATTO                                  │
+│ [Logo] ALTISA  #115931  ⭐ ✈ HQ                  │
+│ 🇩🇿 Algeria · Algiers · ⭐⭐⭐⭐ · 🏆7 yrs        │
+│ 📞 +213... · 🌐 altisa-dz.com · 🔗 LinkedIn     │
+├─────────────────────────────────────────────────┤
+│ ACTION BAR (invariato)                           │
+│ [Attività] [Deep Search] [Workspace] [Email]     │
+│ [Note]  ← NUOVO                                 │
+├─────────────────────────────────────────────────┤
+│ ENRICHMENT (stile viola, spostato in alto)        │
+│ Profilo Aziendale + Profili Contatti              │
+├─────────────────────────────────────────────────┤
+│ PROFILO WCA (testo leggibile, text-foreground)    │
+├─────────────────────────────────────────────────┤
+│ CONTATTI UFFICIO (persone con email/tel/WA)       │
+├─────────────────────────────────────────────────┤
+│ NETWORK (loghi compatti inline)                  │
+├─────────────────────────────────────────────────┤
+│ SERVIZI (tutte le icone inline, no 2 sezioni)    │
+├─────────────────────────────────────────────────┤
+│ ATTIVITÀ                                         │
+├─────────────────────────────────────────────────┤
+│ TIMELINE + PROMEMORIA                            │
+├─────────────────────────────────────────────────┤
+│ DETTAGLI SECONDARI (collapsible)                 │
+│ Certificazioni, Filiali, Mercati, Routing, Mappa │
+└─────────────────────────────────────────────────┘
 ```
 
-### 5B. `Settings.tsx` (851 righe → ~5 file)
+### Modifiche tecniche in `src/components/partners/PartnerDetailFull.tsx`
 
-```text
-src/pages/Settings.tsx                     (~100 righe — tabs container)
-src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
-src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
-src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
-src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
-```
-I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+#### 1. Rimuovere le 8 KPI cards (righe 126-159)
+Eliminare completamente la griglia "MEMBERSHIP SUMMARY" e la riga "KPI CARDS ROW". Le info chiave (anni, network count, scadenza) restano nell'header compatto.
 
-### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+#### 2. Header card — aggiungere info membership inline
+Integrare anni WCA, scadenza membership e conteggio network come badge compatti nella riga sotto il nome, eliminando la necessità delle card separate.
 
-```text
-src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
-src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
-src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
-```
+#### 3. Eliminare il layout a 2 colonne
+Passare a colonna singola. Riordinare le sezioni in ordine di priorità d'uso.
 
-### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+#### 4. Enrichment → subito dopo l'action bar
+Spostare `<EnrichmentCard>` dalla riga 358 (metà pagina) a subito sotto l'action bar.
 
-```text
-src/pages/EmailComposer.tsx                (~150 righe — page container)
-src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
-src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
-```
+#### 5. Profilo WCA — fix leggibilità
+Cambiare `text-muted-foreground` → `text-foreground/90` per il testo del profilo.
 
----
+#### 6. Servizi — unificare in una sola sezione
+Unire "Servizi di Trasporto" e "Specialità" in un'unica sezione "Servizi" con icone inline.
 
-## Fase 6 — Lock File + Varie
+#### 7. Stile uniforme — template EnrichmentCard
+Applicare a tutte le sezioni lo stesso stile monocromatico dell'EnrichmentCard:
+- `bg-card/60 backdrop-blur-sm border border-border/20 rounded-2xl` (senza colori forti)
+- Titoli sezione: `text-xs text-muted-foreground uppercase tracking-wider`
+- Testi: `text-foreground` (niente azzurro/sky per testi normali)
 
-| Issue | Fix |
-|-------|-----|
-| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
-| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
-| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+#### 8. Aggiungere bottone "Note" nell'action bar
+Aggiungere un pulsante Note che apre un dialog/area di testo per annotazioni rapide (salvataggio su tabella `interactions` con tipo `note`).
 
----
+#### 9. Dettagli secondari — collapsible
+Raggruppare Certificazioni, Filiali, Mercati Principali, Routing e Mappa in un `Collapsible` "Dettagli Avanzati" in fondo, per non ingombrare.
 
-## Riepilogo Esecuzione
-
-| Fase | Scope | File stimati | Rischio |
-|------|-------|-------------|---------|
-| 1 — Console cleanup | 5 file | 5 | Basso |
-| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
-| 3 — Null safety | 4 file | 4 | Basso |
-| 4 — Type safety | 10-15 file | 15 | Medio |
-| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
-| 6 — Varie | 2 file | 2 | Basso |
-
-**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
-
-Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+### File coinvolti
+- `src/components/partners/PartnerDetailFull.tsx` — ristrutturazione completa
 
