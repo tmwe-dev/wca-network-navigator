@@ -183,7 +183,18 @@ export function ContactFiltersBar({
 
         <Separator orientation="vertical" className="h-4 mx-0.5" />
 
-        <Select value={sortKey} onValueChange={onSortChange}>
+        {/* Met personally toggle */}
+        <Button
+          variant={filters.metPersonally ? "default" : "ghost"}
+          size="sm"
+          className={cn("h-6 px-1.5 gap-1 text-[10px]", filters.metPersonally && "shadow-sm")}
+          onClick={() => onChange({ metPersonally: !filters.metPersonally || undefined })}
+          title="Incontrati personalmente"
+        >
+          <Handshake className="w-3 h-3" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-4 mx-0.5" />
           <SelectTrigger className="h-6 text-[10px] w-auto min-w-[90px] px-2 gap-1">
             <ArrowUpAZ className="w-3 h-3 shrink-0 text-muted-foreground" />
             <SelectValue />
