@@ -7,16 +7,13 @@ import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
   ArrowLeft, Phone, Mail, CheckSquare, MapPin,
-  Send, Star, Package, X, User, Search, ArrowUpDown,
+  Send, Star, Package, X, User, Search, Trophy,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
-import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
@@ -31,7 +28,8 @@ const hasServices = (p: any) => (p.partner_services || []).length > 0;
 const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
 
 type FilterTag = "with_phone" | "with_email" | "deep_search" | "rating_3" | "with_services";
-type SortBy = "name_asc" | "name_desc" | "rating_desc" | "years_desc" | "city_asc";
+type SortField = "name" | "city" | "rating" | "years";
+type SortDir = "asc" | "desc";
 
 const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
   with_phone: hasPhone,
@@ -41,20 +39,23 @@ const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
   with_services: hasServices,
 };
 
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "name_asc", label: "Nome A-Z" },
-  { value: "name_desc", label: "Nome Z-A" },
-  { value: "rating_desc", label: "Rating ↓" },
-  { value: "years_desc", label: "Anni WCA ↓" },
-  { value: "city_asc", label: "Città A-Z" },
-];
-
-const sortFns: Record<SortBy, (a: any, b: any) => number> = {
-  name_asc: (a, b) => (a.company_name || "").localeCompare(b.company_name || ""),
-  name_desc: (a, b) => (b.company_name || "").localeCompare(a.company_name || ""),
-  rating_desc: (a, b) => (b.rating || 0) - (a.rating || 0) || (a.company_name || "").localeCompare(b.company_name || ""),
-  years_desc: (a, b) => getYearsMember(b.member_since) - getYearsMember(a.member_since) || (a.company_name || "").localeCompare(b.company_name || ""),
-  city_asc: (a, b) => (a.city || "").localeCompare(b.city || ""),
+const sortFns: Record<SortField, (a: any, b: any, dir: SortDir) => number> = {
+  name: (a, b, dir) => {
+    const cmp = (a.company_name || "").localeCompare(b.company_name || "");
+    return dir === "asc" ? cmp : -cmp;
+  },
+  city: (a, b, dir) => {
+    const cmp = (a.city || "").localeCompare(b.city || "");
+    return dir === "asc" ? cmp : -cmp;
+  },
+  rating: (a, b, dir) => {
+    const cmp = (a.rating || 0) - (b.rating || 0);
+    return dir === "asc" ? cmp : -cmp;
+  },
+  years: (a, b, dir) => {
+    const cmp = getYearsMember(a.member_since) - getYearsMember(b.member_since);
+    return dir === "asc" ? cmp : -cmp;
+  },
 };
 
 interface CountryWorkbenchProps {
@@ -74,7 +75,8 @@ export function CountryWorkbench({
 }: CountryWorkbenchProps) {
   const [activeFilters, setActiveFilters] = useState<Set<FilterTag>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<SortBy>("name_asc");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const toggleFilter = useCallback((tag: FilterTag) => {
     setActiveFilters((prev) => {
@@ -83,6 +85,15 @@ export function CountryWorkbench({
       return next;
     });
   }, []);
+
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "name" || field === "city" ? "asc" : "desc");
+    }
+  }, [sortField]);
 
   const countryName = WCA_COUNTRIES.find((c) => c.code === countryCode)?.name || countryCode;
   const flag = getCountryFlag(countryCode);
@@ -115,8 +126,8 @@ export function CountryWorkbench({
     let list = countryPartners;
     if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
     for (const tag of activeFilters) list = list.filter(FILTER_FNS[tag]);
-    return list.sort(sortFns[sortBy]);
-  }, [countryPartners, activeFilters, searchTerm, sortBy]);
+    return [...list].sort((a, b) => sortFns[sortField](a, b, sortDir));
+  }, [countryPartners, activeFilters, searchTerm, sortField, sortDir]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -124,12 +135,19 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const filterChips: { key: FilterTag; label: string; icon: typeof Phone; activeColor: string; inactiveIcon: string; count: number }[] = [
-    { key: "with_phone", label: "Telefono", icon: Phone, activeColor: "bg-emerald-500/25 border-emerald-500/60 text-emerald-300", inactiveIcon: "text-emerald-500", count: dynamicCounts.with_phone },
-    { key: "with_email", label: "Email", icon: Mail, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.with_email },
-    { key: "deep_search", label: "Deep Search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.deep_search },
-    { key: "rating_3", label: "Rating 3+", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60 text-amber-300", inactiveIcon: "text-amber-500", count: dynamicCounts.rating_3 },
-    { key: "with_services", label: "Servizi", icon: Package, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.with_services },
+  const filterChips: { key: FilterTag; icon: typeof Phone; activeColor: string; iconColor: string; count: number }[] = [
+    { key: "with_phone", icon: Phone, activeColor: "bg-emerald-500/25 border-emerald-500/60", iconColor: "text-emerald-400", count: dynamicCounts.with_phone },
+    { key: "with_email", icon: Mail, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.with_email },
+    { key: "deep_search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.deep_search },
+    { key: "rating_3", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60", iconColor: "text-amber-400", count: dynamicCounts.rating_3 },
+    { key: "with_services", icon: Package, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: dynamicCounts.with_services },
+  ];
+
+  const sortButtons: { field: SortField; icon: typeof User; label: string }[] = [
+    { field: "name", icon: User, label: "Nome" },
+    { field: "city", icon: MapPin, label: "Città" },
+    { field: "rating", icon: Star, label: "Rating" },
+    { field: "years", icon: Trophy, label: "Anni" },
   ];
 
   return (
@@ -150,9 +168,9 @@ export function CountryWorkbench({
         </div>
       </div>
 
-      {/* ═══ SEARCH + SORT ═══ */}
-      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* ═══ SEARCH ═══ */}
+      <div className="px-4 py-2 border-b border-border/40">
+        <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             value={searchTerm}
@@ -161,48 +179,77 @@ export function CountryWorkbench({
             className="h-8 pl-8 text-xs bg-muted/50 border-border/60"
           />
         </div>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-          <SelectTrigger className="h-8 w-[130px] text-xs bg-muted/50 border-border/60 shrink-0">
-            <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* ═══ FILTER CHIPS ═══ */}
-      <div className="px-4 py-2 border-b border-border/40">
-        <div className="flex items-center gap-1.5 overflow-x-auto">
+      {/* ═══ SORT ICONS + FILTER CHIPS ═══ */}
+      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-3">
+        {/* Sort icons */}
+        <div className="flex items-center gap-0.5">
+          {sortButtons.map((s) => {
+            const Icon = s.icon;
+            const isActive = sortField === s.field;
+            const DirIcon = sortDir === "asc" ? ChevronUp : ChevronDown;
+            return (
+              <Tooltip key={s.field}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleSort(s.field)}
+                    className={cn(
+                      "relative p-1.5 rounded-md transition-all",
+                      isActive
+                        ? "bg-primary/15 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    )}
+                  >
+                    <Icon className="w-4 h-4" strokeWidth={isActive ? 2.2 : 1.6} />
+                    {isActive && (
+                      <DirIcon className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 text-primary" strokeWidth={2.5} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">{s.label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        <div className="w-px h-5 bg-border/60" />
+
+        {/* Filter chips — icon + count only */}
+        <div className="flex items-center gap-1">
           {filterChips.map((f) => {
             const Icon = f.icon;
             const isActive = activeFilters.has(f.key);
             return (
-              <button key={f.key} onClick={() => toggleFilter(f.key)}
-                className={cn(
-                  "flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full border transition-all whitespace-nowrap font-medium",
-                  isActive
-                    ? f.activeColor
-                    : "bg-muted/80 border-border/60 text-foreground/80 hover:bg-accent/50 hover:text-foreground"
-                )}>
-                <Icon className={cn("w-3.5 h-3.5", isActive ? "" : f.inactiveIcon)} strokeWidth={1.8} />
-                {f.label}
-                <span className={cn(
-                  "min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
-                  isActive ? "bg-white/15 text-foreground" : "bg-foreground/10 text-foreground/70"
-                )}>
-                  {f.count}
-                </span>
-              </button>
+              <Tooltip key={f.key}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => toggleFilter(f.key)}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1.5 rounded-full border transition-all text-[11px] font-bold tabular-nums",
+                      isActive
+                        ? cn(f.activeColor, f.iconColor)
+                        : "bg-muted/60 border-border/60 text-foreground/80 hover:bg-accent/50"
+                    )}
+                  >
+                    <Icon className={cn("w-4 h-4", isActive ? "" : f.iconColor)} strokeWidth={1.8} />
+                    <span>{f.count}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {f.key === "with_phone" && "Con telefono"}
+                  {f.key === "with_email" && "Con email"}
+                  {f.key === "deep_search" && "Deep Search"}
+                  {f.key === "rating_3" && "Rating ≥ 3"}
+                  {f.key === "with_services" && "Con servizi"}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
           {activeFilters.size > 0 && (
             <button onClick={() => setActiveFilters(new Set())}
-              className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full text-foreground/70 hover:text-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
-              <X className="w-3 h-3" /> Reset
+              className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all">
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -234,7 +281,10 @@ export function CountryWorkbench({
             const isSelected = selectedIds.has(partner.id);
             const years = getYearsMember(partner.member_since);
             const services = partner.partner_services || [];
-            const allServices = [...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)), ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category))];
+            const allServices = [
+              ...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)),
+              ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
+            ];
             const networks = partner.partner_networks || [];
             const primaryContact = (partner.partner_contacts || []).find((c: any) => c.is_primary) || (partner.partner_contacts || [])[0];
             const contactEmail = primaryContact?.email;
@@ -268,9 +318,17 @@ export function CountryWorkbench({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  {/* Row 1: Name */}
-                  <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
+                <div className="flex-1 min-w-0 space-y-1">
+                  {/* Row 1: Name + Years badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
+                    {years > 0 && (
+                      <span className="flex items-center gap-0.5 shrink-0 text-amber-400">
+                        <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                        <span className="text-[11px] font-bold">{years}</span>
+                      </span>
+                    )}
+                  </div>
 
                   {/* Row 2: Rating */}
                   {partner.rating > 0 && (
@@ -280,23 +338,7 @@ export function CountryWorkbench({
                     </div>
                   )}
 
-                  {/* Row 3: City + Years */}
-                  <div className="flex items-center gap-2 text-[11px] text-foreground/80">
-                    <span className="flex items-center gap-0.5 truncate">
-                      <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />{partner.city}
-                    </span>
-                    {years > 0 && (
-                      <>
-                        <span className="text-muted-foreground">·</span>
-                        <TrophyRow years={years} />
-                      </>
-                    )}
-                  </div>
-
-                  {/* Separator */}
-                  <div className="border-t border-border/30" />
-
-                  {/* Row 4: Contact info */}
+                  {/* Row 3: Contact info */}
                   <div className="space-y-0.5">
                     {primaryContact ? (
                       <>
@@ -307,28 +349,30 @@ export function CountryWorkbench({
                             <span className="text-[10px] text-foreground/60">+{(partner.partner_contacts || []).length - 1}</span>
                           )}
                         </div>
-                        {contactEmail && (
-                          <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-[11px] text-sky-400 hover:underline truncate ml-[18px]">
-                            <Mail className="w-3 h-3 shrink-0" />{contactEmail}
-                          </a>
-                        )}
-                        {contactPhone && (
-                          <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-[11px] text-emerald-400 truncate ml-[18px]">
-                            <Phone className="w-3 h-3 shrink-0" />{contactPhone}
-                          </a>
-                        )}
+                        <div className="flex items-center gap-3 ml-[18px]">
+                          {contactEmail && (
+                            <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 text-[11px] text-sky-400 hover:underline truncate">
+                              <Mail className="w-3 h-3 shrink-0" /><span className="truncate">{contactEmail}</span>
+                            </a>
+                          )}
+                          {contactPhone && (
+                            <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 text-[11px] text-emerald-400 whitespace-nowrap">
+                              <Phone className="w-3 h-3 shrink-0" />{contactPhone}
+                            </a>
+                          )}
+                        </div>
                       </>
                     ) : (
                       <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
                     )}
                   </div>
 
-                  {/* Row 5: Services + Networks (combined) */}
+                  {/* Row 4: Services + Networks */}
                   {(allServices.length > 0 || networks.length > 0) && (
                     <>
-                      <div className="border-t border-border/30" />
+                      <div className="border-t border-border/30 pt-1" />
                       <div className="flex items-center gap-2 flex-wrap">
                         {allServices.slice(0, 5).map((s: any, i: number) => {
                           const Icon = getServiceIcon(s.service_category);
