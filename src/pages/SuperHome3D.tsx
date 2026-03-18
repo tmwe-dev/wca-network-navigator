@@ -117,10 +117,10 @@ export default function SuperHome3D() {
     },
     {
       key: "network",
-      title: "Network",
+      title: "Rubrica Partner",
       action: "Gestisci",
       outcome: "relazioni partner",
-      description: "Vista relazionale della rete, qualità contatti e stato dei partner.",
+      description: "Rubrica intelligente della rete: cerca, valuta e contatta i partner nel mondo.",
       route: "/partner-hub",
       icon: Network,
       theme: { ring: "border-chart-3/50", glow: "shadow-[0_0_60px_hsl(var(--chart-3)/0.22)]", soft: "bg-chart-3/12" },
