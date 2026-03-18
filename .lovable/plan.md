@@ -1,62 +1,131 @@
 
 
-## Country Workbench — Multi-sort, rimozione filtri generici, riposizionamento flag e icona network
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### 1. Multi-sort con stati colorati (off → blu asc → rosso desc → off)
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-Sostituire il sistema single-sort con un array ordinato di criteri. Ogni click su un'icona di sort:
-- Se il campo non è attivo → lo aggiunge in coda con direzione default (asc per name/city, desc per rating/years)
-- Se è attivo asc (blu) → passa a desc (rosso)
-- Se è attivo desc (rosso) → lo rimuove
+---
 
-**Nuovo stato:**
-```typescript
-type SortEntry = { field: SortField; dir: SortDir };
-const [sortStack, setSortStack] = useState<SortEntry[]>([{ field: "name", dir: "asc" }]);
-```
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-**Logica di sort:** applica i criteri in sequenza (primo criterio primario, secondo secondario, ecc.)
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-**Colori:** `text-blue-400` per asc, `text-red-400` per desc, con ChevronUp/ChevronDown corrispondente. Badge numerico piccolo per indicare la priorità (1, 2, 3...).
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-### 2. Rimuovere filtri generici Deep Search e Rating
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-Eliminare completamente:
-- `activeGenericFilters` state e `toggleGenericFilter`
-- `genericCounts` memo
-- `genericChips` array
-- La sezione UI dei generic filter chips (righe 263-291)
-- `GenericFilter` type, `GENERIC_FILTER_FNS`
-- Rimuovere `activeGenericFilters` dalla logica `filteredPartners` e `hasAnyFilter`
+---
 
-### 3. Spostare flag nella colonna destra, accanto ai network
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-- **Rimuovere** `<span className="text-xs leading-none">{flag}</span>` dalla colonna sinistra (riga 422)
-- **Aggiungere** la bandiera nella colonna destra, accanto al conteggio network: `🇹🇭 👥 3` sulla stessa riga
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
 
-### 4. Cambiare icona network
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
-Sostituire `Users` con un'icona più rappresentativa per i network di appartenenza. Usare `Network` o `Globe` da lucide-react (es. `Globe` per rappresentare network internazionali).
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
 
-### Layout risultante toolbar
+---
+
+## Fase 3 — Null Safety (crash preventions)
+
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
+
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
+
+---
+
+## Fase 4 — Riduzione `as any` nei file principali
+
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
+
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
 ```text
-┌──────────────────────────────────────────────┐
-│ 🔍 Cerca partner...                         │
-├──────────────────────────────────────────────┤
-│ [👤¹][📍][⭐²][🏆] │ ✈🚢📦🚛🚂⚠        [✕]│
-├──────────────────────────────────────────────┤
-│ Network: [▾ Tutti]   Filiali: [▾ Tutti]     │
-└──────────────────────────────────────────────┘
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
 ```
 
-Sort icons: blu=asc, rosso=desc, grigio=inattivo. Badge numerico per priorità.
+### 5B. `Settings.tsx` (851 righe → ~5 file)
 
-### Layout card destra
 ```text
-🏆 12
-🇹🇭 🌐 3
-⭐⭐⭐⭐ 4.2
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
 ```
 
-### File: `src/components/partners/CountryWorkbench.tsx` — unico file
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

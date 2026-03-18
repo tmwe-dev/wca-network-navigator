@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
   ArrowLeft, CheckSquare, MapPin,
-  Send, Star, X, User, Search, Trophy,
-  ChevronUp, ChevronDown, Users,
+  Star, X, User, Search, Trophy,
+  ChevronUp, ChevronDown, Globe,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -22,19 +22,12 @@ import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, asEnrichment, getBranchCountries } from "@/lib/partnerUtils";
 
 /* ── Helpers ── */
-const hasDeepSearch = (p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
-const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
 const hasService = (p: any, svc: string) =>
   (p.partner_services || []).some((s: any) => s.service_category === svc);
 
-type GenericFilter = "deep_search" | "rating_3";
 type SortField = "name" | "city" | "rating" | "years";
 type SortDir = "asc" | "desc";
-
-const GENERIC_FILTER_FNS: Record<GenericFilter, (p: any) => boolean> = {
-  deep_search: hasDeepSearch,
-  rating_3: hasRating3Plus,
-};
+type SortEntry = { field: SortField; dir: SortDir };
 
 const ALL_SERVICES = [...TRANSPORT_SERVICES, ...SPECIALTY_SERVICES];
 
@@ -57,6 +50,13 @@ const sortFns: Record<SortField, (a: any, b: any, dir: SortDir) => number> = {
   },
 };
 
+const DEFAULT_DIRS: Record<SortField, SortDir> = {
+  name: "asc",
+  city: "asc",
+  rating: "desc",
+  years: "desc",
+};
+
 interface CountryWorkbenchProps {
   countryCode: string;
   partners: any[];
@@ -72,19 +72,62 @@ export function CountryWorkbench({
   countryCode, partners, onBack, onSelectPartner,
   selectedId, selectedIds, onToggleSelection, onSelectAllFiltered,
 }: CountryWorkbenchProps) {
-  const [activeGenericFilters, setActiveGenericFilters] = useState<Set<GenericFilter>>(new Set());
+  const [sortStack, setSortStack] = useState<SortEntry[]>([{ field: "name", dir: "asc" }]);
   const [activeServiceFilters, setActiveServiceFilters] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [networkFilter, setNetworkFilter] = useState<string | null>(null);
   const [branchCountryFilter, setBranchCountryFilter] = useState<string | null>(null);
 
-  const toggleGenericFilter = useCallback((tag: GenericFilter) => {
-    setActiveGenericFilters((prev) => {
-      const next = new Set(prev);
-      next.has(tag) ? next.delete(tag) : next.add(tag);
-      return next;
+  const handleSortToggle = useCallback((field: SortField) => {
+    setSortStack((prev) => {
+      const idx = prev.findIndex((s) => s.field === field);
+      if (idx === -1) {
+        // Add with default dir
+        return [...prev, { field, dir: DEFAULT_DIRS[field] }];
+      }
+      const entry = prev[idx];
+      if (entry.dir === "asc") {
+        // asc → desc
+        const next = [...prev];
+        next[idx] = { field, dir: "desc" };
+        return next;
+      }
+      if (entry.dir === "desc") {
+        // desc → asc (for name/city) or remove (for rating/years that default desc)
+        if (DEFAULT_DIRS[field] === "desc") {
+          // default was desc, went desc→remove? No: desc is first state for these.
+          // Flow: off → desc (blue-ish) → asc (red) → off
+          const next = [...prev];
+          next[idx] = { field, dir: "asc" };
+          return next;
+        }
+        // default was asc: asc→desc→off
+        return prev.filter((_, i) => i !== idx);
+      }
+      return prev;
+    });
+  }, []);
+
+  // For fields with default=desc, the cycle is: off→desc→asc→off
+  // For fields with default=asc, the cycle is: off→asc→desc→off
+  // Generalize: off → defaultDir → oppositeDir → off
+  const handleSortToggleGeneral = useCallback((field: SortField) => {
+    setSortStack((prev) => {
+      const idx = prev.findIndex((s) => s.field === field);
+      const defaultDir = DEFAULT_DIRS[field];
+      const oppositeDir: SortDir = defaultDir === "asc" ? "desc" : "asc";
+
+      if (idx === -1) {
+        return [...prev, { field, dir: defaultDir }];
+      }
+      const entry = prev[idx];
+      if (entry.dir === defaultDir) {
+        const next = [...prev];
+        next[idx] = { field, dir: oppositeDir };
+        return next;
+      }
+      // opposite → remove
+      return prev.filter((_, i) => i !== idx);
     });
   }, []);
 
@@ -96,15 +139,6 @@ export function CountryWorkbench({
     });
   }, []);
 
-  const handleSort = useCallback((field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir(field === "name" || field === "city" ? "asc" : "desc");
-    }
-  }, [sortField]);
-
   const countryName = WCA_COUNTRIES.find((c) => c.code === countryCode)?.name || countryCode;
   const flag = getCountryFlag(countryCode);
 
@@ -113,14 +147,12 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  // Available services in this country
   const availableServices = useMemo(() => {
     return ALL_SERVICES.filter((svc) =>
       countryPartners.some((p) => hasService(p, svc))
     );
   }, [countryPartners]);
 
-  // Available networks in this country
   const availableNetworks = useMemo(() => {
     const names = new Set<string>();
     countryPartners.forEach((p) => {
@@ -129,7 +161,6 @@ export function CountryWorkbench({
     return Array.from(names).sort();
   }, [countryPartners]);
 
-  // Available branch countries
   const availableBranchCountries = useMemo(() => {
     const map = new Map<string, string>();
     countryPartners.forEach((p) => {
@@ -140,33 +171,23 @@ export function CountryWorkbench({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [countryPartners]);
 
-  // Apply all filters
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
     if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    for (const tag of activeGenericFilters) list = list.filter(GENERIC_FILTER_FNS[tag]);
     for (const svc of activeServiceFilters) list = list.filter((p) => hasService(p, svc));
     if (networkFilter) list = list.filter((p) =>
       (p.partner_networks || []).some((n: any) => n.network_name === networkFilter));
     if (branchCountryFilter) list = list.filter((p) =>
       getBranchCountries(p).some((b) => b.code === branchCountryFilter));
-    return [...list].sort((a, b) => sortFns[sortField](a, b, sortDir));
-  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm, sortField, sortDir, networkFilter, branchCountryFilter]);
-
-  // Dynamic counts for generic filters
-  const genericCounts = useMemo(() => {
-    let base = countryPartners;
-    if (searchTerm) base = base.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    for (const svc of activeServiceFilters) base = base.filter((p) => hasService(p, svc));
-    if (networkFilter) base = base.filter((p) =>
-      (p.partner_networks || []).some((n: any) => n.network_name === networkFilter));
-    if (branchCountryFilter) base = base.filter((p) =>
-      getBranchCountries(p).some((b) => b.code === branchCountryFilter));
-    return {
-      deep_search: base.filter(hasDeepSearch).length,
-      rating_3: base.filter(hasRating3Plus).length,
-    };
-  }, [countryPartners, activeServiceFilters, searchTerm, networkFilter, branchCountryFilter]);
+    // Multi-sort
+    return [...list].sort((a, b) => {
+      for (const { field, dir } of sortStack) {
+        const result = sortFns[field](a, b, dir);
+        if (result !== 0) return result;
+      }
+      return 0;
+    });
+  }, [countryPartners, activeServiceFilters, searchTerm, sortStack, networkFilter, branchCountryFilter]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -174,10 +195,9 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const hasAnyFilter = activeGenericFilters.size > 0 || activeServiceFilters.size > 0 || !!networkFilter || !!branchCountryFilter;
+  const hasAnyFilter = activeServiceFilters.size > 0 || !!networkFilter || !!branchCountryFilter;
 
   const clearAllFilters = useCallback(() => {
-    setActiveGenericFilters(new Set());
     setActiveServiceFilters(new Set());
     setNetworkFilter(null);
     setBranchCountryFilter(null);
@@ -188,11 +208,6 @@ export function CountryWorkbench({
     { field: "city", icon: MapPin, label: "Città" },
     { field: "rating", icon: Star, label: "Rating" },
     { field: "years", icon: Trophy, label: "Anni" },
-  ];
-
-  const genericChips: { key: GenericFilter; icon: typeof Send; activeColor: string; iconColor: string; count: number }[] = [
-    { key: "deep_search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60", iconColor: "text-sky-400", count: genericCounts.deep_search },
-    { key: "rating_3", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60", iconColor: "text-amber-400", count: genericCounts.rating_3 },
   ];
 
   return (
@@ -226,29 +241,47 @@ export function CountryWorkbench({
         </div>
       </div>
 
-      {/* ═══ SORT + GENERIC FILTERS + SERVICE ICONS ═══ */}
+      {/* ═══ SORT + SERVICE ICONS ═══ */}
       <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2 flex-wrap">
-        {/* Sort icons */}
+        {/* Multi-sort icons */}
         <div className="flex items-center gap-0.5">
           {sortButtons.map((s) => {
             const Icon = s.icon;
-            const isActive = sortField === s.field;
-            const DirIcon = sortDir === "asc" ? ChevronUp : ChevronDown;
+            const entry = sortStack.find((e) => e.field === s.field);
+            const stackIndex = entry ? sortStack.indexOf(entry) : -1;
+            const isActive = !!entry;
+            const isAsc = entry?.dir === "asc";
+            const DirIcon = isAsc ? ChevronUp : ChevronDown;
+            // Blue for first-state (default dir), Red for opposite
+            const isDefaultDir = entry?.dir === DEFAULT_DIRS[s.field];
+            const colorClass = isActive
+              ? isDefaultDir ? "text-blue-400" : "text-red-400"
+              : "text-muted-foreground";
+            const bgClass = isActive
+              ? isDefaultDir ? "bg-blue-500/15" : "bg-red-500/15"
+              : "hover:bg-accent/50";
+
             return (
               <Tooltip key={s.field}>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleSort(s.field)}
+                    onClick={() => handleSortToggleGeneral(s.field)}
                     className={cn(
                       "relative p-1.5 rounded-md transition-all",
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                      bgClass, colorClass,
+                      !isActive && "hover:text-foreground"
                     )}
                   >
                     <Icon className="w-4 h-4" strokeWidth={isActive ? 2.2 : 1.6} />
                     {isActive && (
-                      <DirIcon className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 text-primary" strokeWidth={2.5} />
+                      <>
+                        <DirIcon className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5" strokeWidth={2.5} />
+                        {sortStack.length > 1 && (
+                          <span className="absolute -top-1 -left-1 w-3.5 h-3.5 rounded-full bg-background border border-current text-[8px] font-bold flex items-center justify-center">
+                            {stackIndex + 1}
+                          </span>
+                        )}
+                      </>
                     )}
                   </button>
                 </TooltipTrigger>
@@ -258,42 +291,9 @@ export function CountryWorkbench({
           })}
         </div>
 
-        <div className="w-px h-5 bg-border/60" />
-
-        {/* Generic filter chips */}
-        <div className="flex items-center gap-1">
-          {genericChips.map((f) => {
-            const Icon = f.icon;
-            const isActive = activeGenericFilters.has(f.key);
-            return (
-              <Tooltip key={f.key}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => toggleGenericFilter(f.key)}
-                    className={cn(
-                      "flex items-center gap-1 px-2 py-1.5 rounded-full border transition-all text-[11px] font-bold tabular-nums",
-                      isActive
-                        ? cn(f.activeColor, f.iconColor)
-                        : "bg-muted/60 border-border/60 text-foreground/80 hover:bg-accent/50"
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4", isActive ? "" : f.iconColor)} strokeWidth={1.8} />
-                    <span>{f.count}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {f.key === "deep_search" && "Deep Search"}
-                  {f.key === "rating_3" && "Rating ≥ 3"}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-
         {availableServices.length > 0 && (
           <>
             <div className="w-px h-5 bg-border/60" />
-            {/* Service filter icons — no counts, compact */}
             <div className="flex items-center gap-0.5">
               {availableServices.map((svc) => {
                 const Icon = getServiceIcon(svc);
@@ -413,13 +413,12 @@ export function CountryWorkbench({
                   selectedId === partner.id && "bg-accent/60 shadow-sm",
                   isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
                 )}>
-                {/* Left: number + checkbox + flag stacked */}
+                {/* Left: number + checkbox */}
                 <div className="flex flex-col items-center shrink-0 gap-0.5">
                   <span className="text-[10px] text-muted-foreground/60 font-mono">{index + 1}</span>
                   <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }}>
                     <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                   </div>
-                  <span className="text-xs leading-none">{flag}</span>
                 </div>
 
                 {/* Logo standalone */}
@@ -433,18 +432,15 @@ export function CountryWorkbench({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-1">
-                  {/* Row 1: Name */}
                   <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
 
-                  {/* Row 2: Contact */}
                   {primaryContact ? (
                     <div className="flex items-center gap-1.5 text-[11px]">
                       <User className="w-3 h-3 text-muted-foreground shrink-0" />
                       <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
                       {extraContacts > 0 && (
                         <span className="flex items-center gap-0.5 text-[10px] text-foreground/60">
-                          <Users className="w-3 h-3" />
-                          <span>+{extraContacts}</span>
+                          +{extraContacts}
                         </span>
                       )}
                     </div>
@@ -452,7 +448,6 @@ export function CountryWorkbench({
                     <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
                   )}
 
-                  {/* Footer: Services + Branch flags */}
                   {(allServices.length > 0 || branches.length > 0) && (
                     <>
                       <div className="border-t border-border/30 pt-1" />
@@ -487,7 +482,7 @@ export function CountryWorkbench({
                   )}
                 </div>
 
-                {/* Right column: Trophy → Networks → Rating */}
+                {/* Right column: Trophy → Flag+Network → Rating */}
                 <div className="flex flex-col items-end gap-1.5 shrink-0 self-start pt-0.5">
                   {years > 0 && (
                     <span className="flex items-center gap-0.5 text-amber-400">
@@ -495,19 +490,22 @@ export function CountryWorkbench({
                       <span className="text-[11px] font-bold">{years}</span>
                     </span>
                   )}
-                  {networks.length > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <span className="flex items-center gap-0.5 text-muted-foreground">
-                          <Users className="w-3 h-3" />
-                          <span className="text-[10px] font-bold">{networks.length}</span>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">
-                        {networks.map((n: any) => n.network_name.replace("WCA ", "")).join(", ")}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm leading-none">{flag}</span>
+                    {networks.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className="flex items-center gap-0.5 text-muted-foreground">
+                            <Globe className="w-3 h-3" />
+                            <span className="text-[10px] font-bold">{networks.length}</span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs">
+                          {networks.map((n: any) => n.network_name.replace("WCA ", "")).join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </span>
                   {partner.rating > 0 && (
                     <div className="flex items-center gap-1">
                       <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />
