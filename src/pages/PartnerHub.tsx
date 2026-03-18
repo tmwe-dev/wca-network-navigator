@@ -414,6 +414,8 @@ export default function PartnerHub() {
         {viewLevel === "countries" ? (
           <CountryCards
             onSelectCountry={handleCountrySelect}
+            search={countrySearch}
+            sortBy={countrySortBy}
           />
         ) : viewLevel === "country" && selectedCountry ? (
           <CountryWorkbench
