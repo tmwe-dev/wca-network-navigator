@@ -423,52 +423,24 @@ export function CountryWorkbench({
                   <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                 </div>
 
-                {/* Logo */}
-                <div className="w-9 h-9 shrink-0 mt-0.5 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center">
-                  {getRealLogoUrl(partner.logo_url) ? (
-                    <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
-                  ) : (
-                    <span className="text-lg opacity-50">{flag}</span>
-                  )}
+                {/* Flag top-left + Logo centered */}
+                <div className="flex flex-col items-center shrink-0 gap-1 self-center">
+                  <span className="text-base leading-none self-start">{flag}</span>
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center">
+                    {getRealLogoUrl(partner.logo_url) ? (
+                      <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
+                    ) : (
+                      <span className="text-2xl opacity-50">{flag}</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-1">
-                  {/* Row 1: Name + Years + Networks count */}
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {networks.length > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <span className="flex items-center gap-0.5 text-muted-foreground">
-                              <Users className="w-3 h-3" />
-                              <span className="text-[10px] font-bold">{networks.length}</span>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="text-xs">
-                            {networks.map((n: any) => n.network_name.replace("WCA ", "")).join(", ")}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {years > 0 && (
-                        <span className="flex items-center gap-0.5 text-amber-400">
-                          <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                          <span className="text-[11px] font-bold">{years}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {/* Row 1: Name */}
+                  <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
 
-                  {/* Row 2: Rating */}
-                  {partner.rating > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <MiniStars rating={Number(partner.rating)} />
-                      <span className="text-[11px] font-medium text-amber-400">{Number(partner.rating).toFixed(1)}</span>
-                    </div>
-                  )}
-
-                  {/* Row 3: Contact */}
+                  {/* Row 2: Contact */}
                   {primaryContact ? (
                     <div className="flex items-center gap-1.5 text-[11px]">
                       <User className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -488,7 +460,6 @@ export function CountryWorkbench({
                   {(allServices.length > 0 || branches.length > 0) && (
                     <>
                       <div className="border-t border-border/30 pt-1" />
-                      {/* Services row */}
                       {allServices.length > 0 && (
                         <div className="flex items-center gap-1 flex-wrap">
                           {allServices.map((s: any, i: number) => {
@@ -504,7 +475,6 @@ export function CountryWorkbench({
                           })}
                         </div>
                       )}
-                      {/* Branch flags row */}
                       {branches.length > 0 && (
                         <div className="flex items-center gap-1 flex-wrap">
                           {branches.map((b) => (
@@ -518,6 +488,35 @@ export function CountryWorkbench({
                         </div>
                       )}
                     </>
+                  )}
+                </div>
+
+                {/* Right column: Trophy → Networks → Rating */}
+                <div className="flex flex-col items-end gap-1.5 shrink-0 self-start pt-0.5">
+                  {years > 0 && (
+                    <span className="flex items-center gap-0.5 text-amber-400">
+                      <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      <span className="text-[11px] font-bold">{years}</span>
+                    </span>
+                  )}
+                  {networks.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span className="flex items-center gap-0.5 text-muted-foreground">
+                          <Users className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">{networks.length}</span>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">
+                        {networks.map((n: any) => n.network_name.replace("WCA ", "")).join(", ")}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {partner.rating > 0 && (
+                    <div className="flex items-center gap-1">
+                      <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />
+                      <span className="text-[10px] font-bold text-amber-400">{Number(partner.rating).toFixed(1)}</span>
+                    </div>
                   )}
                 </div>
               </div>
