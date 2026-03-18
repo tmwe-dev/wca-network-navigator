@@ -613,6 +613,19 @@ Genera l'email completa con oggetto e corpo.`;
         .join("\n");
     }
 
+    // Clean up excessive whitespace/formatting from AI output
+    body = body
+      // Remove empty paragraphs (with optional whitespace/nbsp/br inside)
+      .replace(/<p>\s*(<br\s*\/?>|\s|&nbsp;)*\s*<\/p>/gi, "")
+      // Collapse 3+ consecutive <br> into 2
+      .replace(/(<br\s*\/?\s*>[\s\n]*){3,}/gi, "<br><br>")
+      // Remove leading/trailing <br> inside <p> tags
+      .replace(/<p>\s*(<br\s*\/?\s*>)+/gi, "<p>")
+      .replace(/(<br\s*\/?\s*>)+\s*<\/p>/gi, "</p>")
+      // Remove whitespace-only text nodes between tags
+      .replace(/>\s{2,}</g, "> <")
+      .trim();
+
     // Append signature block to body (as HTML)
     if (signatureBlock.trim()) {
       const sigHtml = signatureBlock.replace(/\n/g, "<br>");
