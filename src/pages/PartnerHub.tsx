@@ -31,7 +31,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PartnerFiltersSheet from "@/components/partners/PartnerFiltersSheet";
-import { BulkActionBar } from "@/components/partners/BulkActionBar";
+import { UnifiedActionBar } from "@/components/partners/UnifiedActionBar";
 import { AssignActivityDialog } from "@/components/partners/AssignActivityDialog";
 import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
