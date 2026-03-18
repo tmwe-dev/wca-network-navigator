@@ -40,9 +40,6 @@ const PartnerMiniGlobe = lazy(() =>
 interface PartnerDetailFullProps {
   partner: any;
   onToggleFavorite: () => void;
-  onAssignActivity?: (partnerId: string) => void;
-  onSendToWorkspace?: (partnerId: string) => void;
-  onEmail?: (partnerId: string) => void;
 }
 
 /* ═══ Section wrapper — enrichment-style ═══ */
