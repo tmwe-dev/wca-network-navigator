@@ -153,13 +153,25 @@ export function CountryWorkbench({
     );
   }, [countryPartners]);
 
+  const VALID_NETWORKS = useMemo(() => new Set([
+    "WCA Inter Global", "WCA First", "WCA Advanced Professionals",
+    "WCA China Global", "WCA Projects", "WCA Dangerous Goods",
+    "WCA Perishables", "WCA Time Critical", "WCA Pharma",
+    "WCA eCommerce", "WCA eCommerce Solutions", "WCA Relocations",
+    "WCA Live Events & Expo", "Global Affinity Alliance",
+    "Lognet Global", "Infinite Connection",
+    "Elite Global Logistics Network",
+  ]), []);
+
   const availableNetworks = useMemo(() => {
     const names = new Set<string>();
     countryPartners.forEach((p) => {
-      (p.partner_networks || []).forEach((n: any) => names.add(n.network_name));
+      (p.partner_networks || []).forEach((n: any) => {
+        if (VALID_NETWORKS.has(n.network_name)) names.add(n.network_name);
+      });
     });
     return Array.from(names).sort();
-  }, [countryPartners]);
+  }, [countryPartners, VALID_NETWORKS]);
 
   const availableBranchCountries = useMemo(() => {
     const map = new Map<string, string>();
