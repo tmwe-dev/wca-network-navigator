@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Globe, MapPin, Users,
-  Filter, CheckSquare, Loader2,
+  Filter, CheckSquare,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
