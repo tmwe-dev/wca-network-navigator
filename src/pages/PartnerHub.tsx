@@ -314,7 +314,7 @@ export default function PartnerHub() {
         onSingleDeepSearch={handleSingleDeepSearch}
         singleDeepSearching={deepSearch.running && deepSearch.current?.total === 1}
       />
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
       <div className="h-full flex flex-col border-r border-border bg-background">
