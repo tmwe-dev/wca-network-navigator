@@ -9,7 +9,7 @@ import {
   Users, User, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
   MessageSquare, Clock,
-  Hash, ChevronDown,
+  Hash, ChevronDown, Brain,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { PartnerRating } from "@/components/partners/PartnerRating";
