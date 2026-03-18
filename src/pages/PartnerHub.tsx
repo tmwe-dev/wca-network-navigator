@@ -289,19 +289,6 @@ export default function PartnerHub() {
 
           <div className="flex-1" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={() => setAiOpen(true)}
-              >
-                <Bot className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Assistente AI</TooltipContent>
-          </Tooltip>
 
           <div className="flex items-center gap-0.5 rounded-md border border-white/[0.08] p-0.5">
             <button
