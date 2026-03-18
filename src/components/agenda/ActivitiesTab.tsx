@@ -193,7 +193,12 @@ function ActivityRow({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+    <div className={cn("flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors", selected && "bg-primary/5 border-primary/30")}>
+      <Checkbox
+        checked={selected}
+        onCheckedChange={onToggle}
+        className="shrink-0"
+      />
       {a.partners && (
         <span className="text-lg shrink-0">{getCountryFlag(a.partners.country_code)}</span>
       )}
