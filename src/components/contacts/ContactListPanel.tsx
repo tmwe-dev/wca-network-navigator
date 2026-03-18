@@ -1,7 +1,11 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search, Megaphone, RefreshCw, Briefcase, ClipboardList, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Search, Megaphone, RefreshCw, Briefcase, ClipboardList, Loader2,
+  Sparkles, X, Square,
+} from "lucide-react";
 import { ContactFiltersBar } from "./ContactFiltersBar";
 import { GroupStrip } from "./GroupStrip";
 import { ExpandedGroupContent } from "./ExpandedGroupContent";
@@ -15,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AICommand } from "./ContactAIBar";
 import type { SortKey } from "./contactHelpers";
+import { cn } from "@/lib/utils";
 
 /* ── main panel ── */
 
@@ -74,7 +79,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     if (aliasLoading) return;
     setAliasLoading(true);
     try {
-      // If there's an active selection, use those IDs; otherwise load group IDs
       const ids = selection.count > 0
         ? Array.from(selection.selectedIds)
         : await fetchGroupContactIds(currentGroupBy, group.group_key, filters.holdingPattern);
@@ -246,6 +250,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               toast({ title: "Errore", description: e.message, variant: "destructive" });
             }
           }
+          break;
         case "multi":
           if (c.commands) {
             for (const sub of c.commands) await exec(sub);
@@ -255,6 +260,9 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     };
     await exec(cmd);
   }, [selection, updateLeadStatus, queryClient, navigate]);
+
+  const isBulk = selection.count > 0;
+  const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground";
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -272,22 +280,57 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         onAICommand={handleAICommand}
       />
 
-      {/* Bulk actions */}
-      {selection.count > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-primary/10 border-b border-primary/20 text-xs flex-wrap">
-          <span className="font-bold text-primary">{selection.count} selezionati</span>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"
-            onClick={() => handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}>
-            <Briefcase className="w-3 h-3" /> Workspace
-          </Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"
-            onClick={() => handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}>
-            <ClipboardList className="w-3 h-3" /> Crea Job
-          </Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Search className="w-3 h-3" /> Deep Search</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Megaphone className="w-3 h-3" /> Campagna</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><RefreshCw className="w-3 h-3" /> Status</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs ml-auto text-destructive hover:text-destructive" onClick={() => { selection.clear(); setSelectedGroups(new Set()); }}>Deseleziona</Button>
+      {/* Unified bulk action bar — Rubrica style */}
+      {isBulk && (
+        <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-violet-300 mr-1">{selection.count} sel.</span>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" className={btnClass}
+                  onClick={() => handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}>
+                  <Briefcase className="w-3.5 h-3.5" /> Workspace
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Invia al Workspace Email</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" className={btnClass}
+                  onClick={() => handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}>
+                  <ClipboardList className="w-3.5 h-3.5" /> Job
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Crea Job Campagna</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" className={btnClass}>
+                  <Sparkles className="w-3.5 h-3.5" /> Deep Search
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Arricchisci con Deep Search</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" className={btnClass}>
+                  <Megaphone className="w-3.5 h-3.5" /> Campagna
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Aggiungi a Campagna</TooltipContent>
+            </Tooltip>
+
+            <button
+              onClick={() => { selection.clear(); setSelectedGroups(new Set()); }}
+              className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
