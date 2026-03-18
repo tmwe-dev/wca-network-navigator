@@ -99,6 +99,11 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               </Badge>
             )}
             <div className="ml-auto flex items-center gap-1.5">
+              {hasBusinessCard && (
+                <span title="Incontrato personalmente">
+                  <Handshake className="w-3 h-3 text-emerald-400" />
+                </span>
+              )}
               <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full ${
                 c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
