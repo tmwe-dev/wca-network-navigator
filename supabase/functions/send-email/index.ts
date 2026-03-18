@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
       .in("key", [
         "smtp_host", "smtp_port", "smtp_user", "smtp_password",
         "default_sender_email", "default_sender_name",
+        "ai_signature_image_url", "ai_footer_image_url",
       ]);
 
     const s: Record<string, string> = {};
@@ -92,12 +93,24 @@ Deno.serve(async (req) => {
       },
     });
 
+    // Inject signature and footer images into HTML
+    let finalHtml = html;
+    const sigImg = s["ai_signature_image_url"];
+    const footerImg = s["ai_footer_image_url"];
+
+    if (sigImg) {
+      finalHtml += `<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`;
+    }
+    if (footerImg) {
+      finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+    }
+
     await client.send({
       from: senderEmail,
       to: to,
       subject: subject,
       content: "auto",
-      html: html,
+      html: finalHtml,
     });
 
     await client.close();
