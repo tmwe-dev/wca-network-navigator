@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
-  ArrowUpAZ, X, Filter, ChevronDown, Sparkles
+  ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake
 } from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
