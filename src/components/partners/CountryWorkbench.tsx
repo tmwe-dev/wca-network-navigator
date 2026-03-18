@@ -13,10 +13,13 @@ import {
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getYearsMember, formatServiceCategory } from "@/lib/countries";
-import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
+import { getRealLogoUrl, asEnrichment, getBranchCountries } from "@/lib/partnerUtils";
 
 /* ── Helpers ── */
 const hasDeepSearch = (p: any) => !!asEnrichment(p.enrichment_data)?.deep_search_at;
@@ -74,6 +77,8 @@ export function CountryWorkbench({
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [networkFilter, setNetworkFilter] = useState<string | null>(null);
+  const [branchCountryFilter, setBranchCountryFilter] = useState<string | null>(null);
 
   const toggleGenericFilter = useCallback((tag: GenericFilter) => {
     setActiveGenericFilters((prev) => {
@@ -108,54 +113,60 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  // Which services exist in this country
+  // Available services in this country
   const availableServices = useMemo(() => {
     return ALL_SERVICES.filter((svc) =>
       countryPartners.some((p) => hasService(p, svc))
     );
   }, [countryPartners]);
 
-  // Apply search + generic filters + service filters (AND)
+  // Available networks in this country
+  const availableNetworks = useMemo(() => {
+    const names = new Set<string>();
+    countryPartners.forEach((p) => {
+      (p.partner_networks || []).forEach((n: any) => names.add(n.network_name));
+    });
+    return Array.from(names).sort();
+  }, [countryPartners]);
+
+  // Available branch countries
+  const availableBranchCountries = useMemo(() => {
+    const map = new Map<string, string>();
+    countryPartners.forEach((p) => {
+      getBranchCountries(p).forEach((b) => map.set(b.code, b.name));
+    });
+    return Array.from(map.entries())
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [countryPartners]);
+
+  // Apply all filters
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
     if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
     for (const tag of activeGenericFilters) list = list.filter(GENERIC_FILTER_FNS[tag]);
     for (const svc of activeServiceFilters) list = list.filter((p) => hasService(p, svc));
+    if (networkFilter) list = list.filter((p) =>
+      (p.partner_networks || []).some((n: any) => n.network_name === networkFilter));
+    if (branchCountryFilter) list = list.filter((p) =>
+      getBranchCountries(p).some((b) => b.code === branchCountryFilter));
     return [...list].sort((a, b) => sortFns[sortField](a, b, sortDir));
-  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm, sortField, sortDir]);
+  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm, sortField, sortDir, networkFilter, branchCountryFilter]);
 
   // Dynamic counts for generic filters
   const genericCounts = useMemo(() => {
-    const base = (() => {
-      let list = countryPartners;
-      if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-      for (const svc of activeServiceFilters) list = list.filter((p) => hasService(p, svc));
-      return list;
-    })();
-    return {
-      deep_search: base.filter((p) => !activeGenericFilters.has("deep_search") || true).filter(hasDeepSearch).length,
-      rating_3: base.filter((p) => !activeGenericFilters.has("rating_3") || true).filter(hasRating3Plus).length,
-    };
-  }, [countryPartners, activeGenericFilters, activeServiceFilters, searchTerm]);
-
-  // Dynamic counts for service filters
-  const serviceCounts = useMemo(() => {
-    // Base: search + generic filters applied, but exclude current service from service filters
     let base = countryPartners;
     if (searchTerm) base = base.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    for (const tag of activeGenericFilters) base = base.filter(GENERIC_FILTER_FNS[tag]);
-
-    const counts: Record<string, number> = {};
-    for (const svc of availableServices) {
-      let list = base;
-      for (const activeSvc of activeServiceFilters) {
-        if (activeSvc === svc) continue;
-        list = list.filter((p) => hasService(p, activeSvc));
-      }
-      counts[svc] = list.filter((p) => hasService(p, svc)).length;
-    }
-    return counts;
-  }, [countryPartners, activeGenericFilters, activeServiceFilters, availableServices, searchTerm]);
+    for (const svc of activeServiceFilters) base = base.filter((p) => hasService(p, svc));
+    if (networkFilter) base = base.filter((p) =>
+      (p.partner_networks || []).some((n: any) => n.network_name === networkFilter));
+    if (branchCountryFilter) base = base.filter((p) =>
+      getBranchCountries(p).some((b) => b.code === branchCountryFilter));
+    return {
+      deep_search: base.filter(hasDeepSearch).length,
+      rating_3: base.filter(hasRating3Plus).length,
+    };
+  }, [countryPartners, activeServiceFilters, searchTerm, networkFilter, branchCountryFilter]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -163,11 +174,13 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const hasAnyFilter = activeGenericFilters.size > 0 || activeServiceFilters.size > 0;
+  const hasAnyFilter = activeGenericFilters.size > 0 || activeServiceFilters.size > 0 || !!networkFilter || !!branchCountryFilter;
 
   const clearAllFilters = useCallback(() => {
     setActiveGenericFilters(new Set());
     setActiveServiceFilters(new Set());
+    setNetworkFilter(null);
+    setBranchCountryFilter(null);
   }, []);
 
   const sortButtons: { field: SortField; icon: typeof User; label: string }[] = [
@@ -213,8 +226,8 @@ export function CountryWorkbench({
         </div>
       </div>
 
-      {/* ═══ SORT + GENERIC FILTERS ═══ */}
-      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-3">
+      {/* ═══ SORT + GENERIC FILTERS + SERVICE ICONS ═══ */}
+      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2 flex-wrap">
         {/* Sort icons */}
         <div className="flex items-center gap-0.5">
           {sortButtons.map((s) => {
@@ -276,40 +289,82 @@ export function CountryWorkbench({
             );
           })}
         </div>
+
+        {availableServices.length > 0 && (
+          <>
+            <div className="w-px h-5 bg-border/60" />
+            {/* Service filter icons — no counts, compact */}
+            <div className="flex items-center gap-0.5">
+              {availableServices.map((svc) => {
+                const Icon = getServiceIcon(svc);
+                const isActive = activeServiceFilters.has(svc);
+                return (
+                  <Tooltip key={svc}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => toggleServiceFilter(svc)}
+                        className={cn(
+                          "p-1.5 rounded-md border transition-all",
+                          isActive
+                            ? "bg-primary/20 border-primary/60 text-primary"
+                            : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        )}
+                      >
+                        <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-sky-400/80")} strokeWidth={1.8} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">{formatServiceCategory(svc)}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {hasAnyFilter && (
+          <button onClick={clearAllFilters}
+            className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all ml-auto">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* ═══ SERVICE FILTERS ═══ */}
-      {availableServices.length > 0 && (
-        <div className="px-4 py-2 border-b border-border/40 flex items-center gap-1 flex-wrap">
-          {availableServices.map((svc) => {
-            const Icon = getServiceIcon(svc);
-            const isActive = activeServiceFilters.has(svc);
-            const count = serviceCounts[svc] || 0;
-            return (
-              <Tooltip key={svc}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => toggleServiceFilter(svc)}
-                    className={cn(
-                      "flex items-center gap-1 px-2 py-1.5 rounded-full border transition-all text-[11px] font-bold tabular-nums",
-                      isActive
-                        ? "bg-primary/20 border-primary/60 text-primary"
-                        : "bg-muted/60 border-border/60 text-foreground/80 hover:bg-accent/50"
-                    )}
-                  >
-                    <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-sky-400/80")} strokeWidth={1.8} />
-                    <span>{count}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">{formatServiceCategory(svc)}</TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {hasAnyFilter && (
-            <button onClick={clearAllFilters}
-              className="p-1.5 rounded-full text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all ml-1">
-              <X className="w-3.5 h-3.5" />
-            </button>
+      {/* ═══ DROPDOWN FILTERS: Network + Branch Country ═══ */}
+      {(availableNetworks.length > 0 || availableBranchCountries.length > 0) && (
+        <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2">
+          {availableNetworks.length > 0 && (
+            <Select
+              value={networkFilter || "__all__"}
+              onValueChange={(v) => setNetworkFilter(v === "__all__" ? null : v)}
+            >
+              <SelectTrigger className="h-7 text-[11px] w-auto min-w-[120px] max-w-[180px] bg-muted/50 border-border/60">
+                <SelectValue placeholder="Network" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__" className="text-xs">Tutti i network</SelectItem>
+                {availableNetworks.map((n) => (
+                  <SelectItem key={n} value={n} className="text-xs">{n.replace("WCA ", "")}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {availableBranchCountries.length > 0 && (
+            <Select
+              value={branchCountryFilter || "__all__"}
+              onValueChange={(v) => setBranchCountryFilter(v === "__all__" ? null : v)}
+            >
+              <SelectTrigger className="h-7 text-[11px] w-auto min-w-[120px] max-w-[180px] bg-muted/50 border-border/60">
+                <SelectValue placeholder="Filiali" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__" className="text-xs">Tutte le filiali</SelectItem>
+                {availableBranchCountries.map((b) => (
+                  <SelectItem key={b.code} value={b.code} className="text-xs">
+                    {getCountryFlag(b.code)} {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
       )}
@@ -348,6 +403,7 @@ export function CountryWorkbench({
             const contacts = partner.partner_contacts || [];
             const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
             const extraContacts = contacts.length > 1 ? contacts.length - 1 : 0;
+            const branches = getBranchCountries(partner);
 
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
@@ -378,15 +434,30 @@ export function CountryWorkbench({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-1">
-                  {/* Row 1: Name + Years badge */}
+                  {/* Row 1: Name + Years + Networks count */}
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
-                    {years > 0 && (
-                      <span className="flex items-center gap-0.5 shrink-0 text-amber-400">
-                        <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span className="text-[11px] font-bold">{years}</span>
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {networks.length > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <span className="flex items-center gap-0.5 text-muted-foreground">
+                              <Users className="w-3 h-3" />
+                              <span className="text-[10px] font-bold">{networks.length}</span>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">
+                            {networks.map((n: any) => n.network_name.replace("WCA ", "")).join(", ")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {years > 0 && (
+                        <span className="flex items-center gap-0.5 text-amber-400">
+                          <Trophy className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                          <span className="text-[11px] font-bold">{years}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Row 2: Rating */}
@@ -397,7 +468,7 @@ export function CountryWorkbench({
                     </div>
                   )}
 
-                  {/* Row 3: Contact name only */}
+                  {/* Row 3: Contact */}
                   {primaryContact ? (
                     <div className="flex items-center gap-1.5 text-[11px]">
                       <User className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -413,13 +484,13 @@ export function CountryWorkbench({
                     <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
                   )}
 
-                  {/* Separator + Services + Networks */}
-                  {(allServices.length > 0 || networks.length > 0) && (
+                  {/* Footer: Services + Branch flags */}
+                  {(allServices.length > 0 || branches.length > 0) && (
                     <>
                       <div className="border-t border-border/30 pt-1" />
-                      {/* Services row — ALL icons */}
+                      {/* Services row */}
                       {allServices.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {allServices.map((s: any, i: number) => {
                             const Icon = getServiceIcon(s.service_category);
                             return (
@@ -433,13 +504,16 @@ export function CountryWorkbench({
                           })}
                         </div>
                       )}
-                      {/* Networks row — ALL names */}
-                      {networks.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {networks.map((n: any) => (
-                            <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium truncate max-w-[100px]">
-                              {n.network_name.replace("WCA ", "")}
-                            </span>
+                      {/* Branch flags row */}
+                      {branches.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {branches.map((b) => (
+                            <Tooltip key={b.code}>
+                              <TooltipTrigger>
+                                <span className="text-sm leading-none">{getCountryFlag(b.code)}</span>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">{b.name}</TooltipContent>
+                            </Tooltip>
                           ))}
                         </div>
                       )}
