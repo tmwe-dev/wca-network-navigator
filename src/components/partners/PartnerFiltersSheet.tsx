@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import {
   Star, ChevronDown, Filter, X, Check, ChevronsUpDown,
-  Globe, Network, ShieldCheck, Building2, Trophy, CalendarClock, Phone, Mail, Sparkles,
+  Globe, Network, ShieldCheck, Building2, Trophy, CalendarClock, Phone, Mail, Sparkles, Handshake,
 } from "lucide-react";
 import { PartnerFilters } from "@/hooks/usePartners";
 import { getCountryFlag, formatServiceCategory } from "@/lib/countries";
