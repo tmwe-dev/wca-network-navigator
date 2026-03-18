@@ -43,10 +43,19 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const currentGroupBy = filters.groupBy || "country";
   const groups = useMemo(() => {
     if (!allGroupCounts) return [];
-    return allGroupCounts
-      .filter((g) => g.group_type === currentGroupBy)
-      .sort((a, b) => b.contact_count - a.contact_count);
-  }, [allGroupCounts, currentGroupBy]);
+    let filtered = allGroupCounts.filter((g) => g.group_type === currentGroupBy);
+
+    // Client-side search filter on group labels
+    const search = filters.search?.trim().toLowerCase();
+    if (search) {
+      filtered = filtered.filter((g) =>
+        g.group_label.toLowerCase().includes(search) ||
+        g.group_key.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered.sort((a, b) => b.contact_count - a.contact_count);
+  }, [allGroupCounts, currentGroupBy, filters.search]);
 
   const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
 
@@ -54,6 +63,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [deepSearchLoading, setDeepSearchLoading] = useState(false);
 
   const toggleGroup = useCallback((key: string) => {
     setOpenGroups((prev) => {
@@ -69,9 +79,48 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     setOpenGroups(new Set());
   };
 
-  const handleGroupDeepSearch = (group: ContactGroupCount) => {
-    toast({ title: `Deep Search avviata su ${group.contact_count} contatti del gruppo "${group.group_label}"` });
-  };
+  /* ── Deep Search handler (group + bulk) ── */
+  const handleDeepSearch = useCallback(async (contactIds: string[]) => {
+    if (deepSearchLoading || !contactIds.length) return;
+    setDeepSearchLoading(true);
+    let success = 0;
+    let errors = 0;
+
+    toast({ title: `Deep Search avviata su ${contactIds.length} contatti...` });
+
+    for (const id of contactIds) {
+      try {
+        const { data, error } = await supabase.functions.invoke("deep-search-contact", {
+          body: { contactId: id },
+        });
+        if (error) { errors++; continue; }
+        if (data?.success) success++;
+        else errors++;
+      } catch {
+        errors++;
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
+
+    toast({
+      title: "Deep Search completata",
+      description: `${success} arricchiti${errors > 0 ? `, ${errors} errori` : ""}`,
+      variant: errors > 0 && success === 0 ? "destructive" : "default",
+    });
+    setDeepSearchLoading(false);
+  }, [deepSearchLoading, queryClient]);
+
+  const handleGroupDeepSearch = useCallback(async (group: ContactGroupCount) => {
+    const ids = await fetchGroupContactIds(currentGroupBy, group.group_key, filters.holdingPattern);
+    // Limit to 20 to avoid excessive API calls
+    const limited = ids.slice(0, 20);
+    if (limited.length < ids.length) {
+      toast({ title: `Deep Search limitata ai primi ${limited.length} contatti su ${ids.length}` });
+    }
+    await handleDeepSearch(limited);
+  }, [currentGroupBy, filters.holdingPattern, handleDeepSearch]);
 
   const [aliasLoading, setAliasLoading] = useState(false);
 
@@ -96,9 +145,14 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
       if (error) throw error;
 
+      const processed = data?.processed || 0;
+      if (processed === 0) {
+        toast({ title: "Alias già presenti", description: "Tutti i contatti hanno già un alias" });
+      } else {
+        toast({ title: "✨ Alias generati", description: `${processed} contatti elaborati` });
+      }
       queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
-      toast({ title: "Alias generati", description: `${data?.processed || 0} contatti elaborati` });
+      queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
     } catch (e: any) {
       toast({ title: "Errore generazione alias", description: e.message, variant: "destructive" });
     } finally {
@@ -125,6 +179,45 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   }, [currentGroupBy, selectedGroups, selection, filters.holdingPattern]);
 
   const navigate = useNavigate();
+
+  /* ── Bulk Campaign handler ── */
+  const handleBulkCampaign = useCallback(async () => {
+    const ids = Array.from(selection.selectedIds);
+    if (!ids.length) return;
+
+    try {
+      const { data: contacts } = await supabase
+        .from("imported_contacts")
+        .select("id, company_name, name, email, phone, country, city")
+        .in("id", ids.slice(0, 200));
+
+      if (!contacts?.length) {
+        toast({ title: "Nessun contatto trovato", variant: "destructive" });
+        return;
+      }
+
+      const batchId = `campaign_${Date.now()}`;
+      const jobs = contacts.map((ct: any) => ({
+        partner_id: ct.id,
+        company_name: ct.company_name || ct.name || "Contatto",
+        country_code: ct.country || "XX",
+        country_name: ct.country || "Sconosciuto",
+        city: ct.city || null,
+        email: ct.email || null,
+        phone: ct.phone || null,
+        job_type: "email" as const,
+        batch_id: batchId,
+      }));
+
+      await supabase.from("campaign_jobs").insert(jobs);
+      toast({ title: "Campagna creata", description: `${jobs.length} contatti aggiunti al batch` });
+      selection.clear();
+      setSelectedGroups(new Set());
+      navigate("/campaigns");
+    } catch (e: any) {
+      toast({ title: "Errore", description: e.message, variant: "destructive" });
+    }
+  }, [selection, navigate]);
 
   const handleAICommand = useCallback(async (cmd: AICommand) => {
     const exec = async (c: AICommand) => {
@@ -280,7 +373,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         onAICommand={handleAICommand}
       />
 
-      {/* Unified bulk action bar — Rubrica style */}
+      {/* Unified bulk action bar */}
       {isBulk && (
         <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -308,16 +401,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="sm" variant="ghost" className={btnClass}>
-                  <Sparkles className="w-3.5 h-3.5" /> Deep Search
+                <Button size="sm" variant="ghost" className={btnClass}
+                  disabled={deepSearchLoading}
+                  onClick={() => handleDeepSearch(Array.from(selection.selectedIds).slice(0, 20))}>
+                  {deepSearchLoading
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Search className="w-3.5 h-3.5" />}
+                  Deep Search
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="text-xs">Arricchisci con Deep Search</TooltipContent>
+              <TooltipContent className="text-xs">Arricchisci con Deep Search (max 20)</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="sm" variant="ghost" className={btnClass}>
+                <Button size="sm" variant="ghost" className={btnClass}
+                  onClick={handleBulkCampaign}>
                   <Megaphone className="w-3.5 h-3.5" /> Campagna
                 </Button>
               </TooltipTrigger>
@@ -361,6 +460,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   onAlias={() => handleGroupAlias(group)}
                   isGroupSelected={selectedGroups.has(groupSelKey)}
                   onToggleGroupSelect={() => handleToggleGroupSelect(group)}
+                  isAliasLoading={aliasLoading}
+                  isDeepSearchLoading={deepSearchLoading}
                 />
                 {isOpen && (
                   <ExpandedGroupContent
@@ -371,6 +472,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                     selection={selection}
                     holdingPattern={filters.holdingPattern}
                     sortKey={sortKey}
+                    searchFilter={filters.search}
                   />
                 )}
               </div>

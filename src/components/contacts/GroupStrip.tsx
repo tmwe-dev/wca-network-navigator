@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, Search, ChevronDown, Sparkles } from "lucide-react";
+import { Mail, Phone, Search, ChevronDown, Sparkles, Loader2 } from "lucide-react";
 import { countryFlag } from "./contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 
@@ -14,9 +14,11 @@ interface GroupStripProps {
   onAlias: () => void;
   isGroupSelected: boolean;
   onToggleGroupSelect: () => void;
+  isAliasLoading?: boolean;
+  isDeepSearchLoading?: boolean;
 }
 
-export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, isGroupSelected, onToggleGroupSelect }: GroupStripProps) {
+export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading }: GroupStripProps) {
   return (
     <div className="sticky top-0 z-10 border-b border-border bg-muted backdrop-blur-sm">
       <div className="flex items-center gap-2 px-3 py-2">
@@ -71,11 +73,29 @@ export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onA
 
       {isOpen && (
         <div className="flex items-center gap-1 px-3 pb-1.5 text-[10px]">
-          <Button variant="ghost" size="sm" className="h-5 text-[10px] gap-1 px-1.5" onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}>
-            <Search className="w-3 h-3" /> Deep Search
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 text-[10px] gap-1 px-1.5"
+            disabled={isDeepSearchLoading}
+            onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}
+          >
+            {isDeepSearchLoading
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <Search className="w-3 h-3" />}
+            Deep Search
           </Button>
-          <Button variant="ghost" size="sm" className="h-5 text-[10px] gap-1 px-1.5" onClick={(e) => { e.stopPropagation(); onAlias(); }}>
-            <Sparkles className="w-3 h-3" /> Alias
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 text-[10px] gap-1 px-1.5"
+            disabled={isAliasLoading}
+            onClick={(e) => { e.stopPropagation(); onAlias(); }}
+          >
+            {isAliasLoading
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <Sparkles className="w-3 h-3" />}
+            Alias
           </Button>
         </div>
       )}
