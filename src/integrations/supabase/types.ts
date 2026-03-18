@@ -108,6 +108,123 @@ export type Database = {
           },
         ]
       }
+      ai_memory: {
+        Row: {
+          content: string
+          context_page: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          importance: number
+          memory_type: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          context_page?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          memory_type?: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          context_page?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          memory_type?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_plan_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          last_used_at: string | null
+          name: string
+          steps_template: Json
+          tags: string[] | null
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          name: string
+          steps_template?: Json
+          tags?: string[] | null
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          steps_template?: Json
+          tags?: string[] | null
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_work_plans: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          description: string | null
+          id: string
+          metadata: Json | null
+          source_template_id: string | null
+          status: string
+          steps: Json
+          tags: string[] | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          source_template_id?: string | null
+          status?: string
+          steps?: Json
+          tags?: string[] | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          source_template_id?: string | null
+          status?: string
+          steps?: Json
+          tags?: string[] | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
