@@ -75,6 +75,15 @@ export function AppLayout() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/workspace")}
+                    aria-label="Workspace"
+                  >
+                    <Layers className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     onClick={() => navigate("/email-composer")}
                     aria-label="Email"
                   >
