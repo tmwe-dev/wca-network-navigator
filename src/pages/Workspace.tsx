@@ -9,12 +9,14 @@ import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspaceP
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -29,6 +31,12 @@ interface StoredEmail {
   contactName: string | null;
   activityId: string;
 }
+
+const SOURCE_TABS = [
+  { key: "partner" as const, icon: Globe, label: "WCA Partners", shortLabel: "WCA" },
+  { key: "prospect" as const, icon: Building2, label: "Prospect RA", shortLabel: "Prospect" },
+  { key: "contact" as const, icon: Users, label: "Contatti Import", shortLabel: "Contatti" },
+];
 
 export default function Workspace() {
   const [sourceTab, setSourceTab] = useState<"partner" | "prospect" | "contact">("partner");
@@ -59,6 +67,8 @@ export default function Workspace() {
     (activities || []).filter(
       (a) => a.activity_type === "send_email" && a.status !== "completed" && a.status !== "cancelled" && a.source_type === sourceTab
     ), [activities, sourceTab]);
+
+  const activeSourceLabel = SOURCE_TABS.find(t => t.key === sourceTab)?.label ?? "";
 
   // Preset handlers
   const handleLoadPreset = useCallback((preset: WorkspacePreset) => {
@@ -114,7 +124,6 @@ export default function Workspace() {
     const targets = selectedIds.size > 0 ? emailActivities.filter((a) => selectedIds.has(a.id)) : emailActivities.filter((a) => filteredIds.includes(a.id));
 
     if (sourceTab === "contact") {
-      // For contacts, use source_id (which points to imported_contacts)
       const contactIds = [...new Set(targets.map((a) => a.source_id).filter(Boolean))] as string[];
       if (!contactIds.length) {
         toast({ title: "Nessun contatto trovato per la Deep Search", variant: "destructive" });
@@ -136,11 +145,9 @@ export default function Workspace() {
       ? emailActivities.filter((a) => selectedIds.has(a.id))
       : emailActivities.filter((a) => filteredIds.includes(a.id));
     
-    // Filter: must have email
     const withEmail = targets.filter(a => a.selected_contact?.email || a.partners?.email);
     const skippedEmail = targets.length - withEmail.length;
     
-    // Filter: partner-source must have selected_contact_id
     const withContact = withEmail.filter(a => a.source_type !== "partner" || !!a.selected_contact_id);
     const skippedContact = withEmail.length - withContact.length;
     
@@ -196,151 +203,171 @@ export default function Workspace() {
   const selectedCount = selectedIds.size;
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] overflow-hidden bg-background">
-      {/* Left: Contact list */}
-      <div className="w-[320px] shrink-0 border-r border-border bg-background overflow-hidden flex flex-col">
-        {/* Source tabs */}
-        <div className="px-2 pt-2 pb-1 border-b border-border shrink-0">
-          <Tabs value={sourceTab} onValueChange={(v) => { setSourceTab(v as any); setSelectedActivity(null); setSelectedIds(new Set()); }}>
-            <TabsList className="w-full h-8">
-              <TabsTrigger value="partner" className="flex-1 text-[11px] gap-1 h-7">
-                <Globe className="w-3 h-3" /> WCA
-              </TabsTrigger>
-              <TabsTrigger value="prospect" className="flex-1 text-[11px] gap-1 h-7">
-                <Building2 className="w-3 h-3" /> Prospect
-              </TabsTrigger>
-              <TabsTrigger value="contact" className="flex-1 text-[11px] gap-1 h-7">
-                <Users className="w-3 h-3" /> Contatti
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <div className="h-[42px] flex items-center gap-2.5 px-3 border-b border-border shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold text-foreground">
-            {sourceTab === "partner" ? "WCA Partners" : sourceTab === "prospect" ? "Prospect RA" : "Contatti Import"}
-          </span>
-          <span className="bg-primary/10 text-primary text-xs font-mono px-2 py-0.5 rounded-full">
-            {emailActivities.length}
-          </span>
-          <div className="flex-1" />
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca..."
-              className="pl-7 h-7 w-32 text-xs bg-muted/50 border-border placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-0 rounded-md"
+    <TooltipProvider delayDuration={200}>
+    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden flex flex-col">
+      {/* ═══ TOP ACTION BAR — same style as UnifiedActionBar ═══ */}
+      <div className="h-10 flex items-center gap-2 px-4 border-b border-border/30 bg-background shrink-0 relative">
+        <Mail className="w-4 h-4 text-primary" />
+        <span className="text-xs font-semibold text-foreground">{activeSourceLabel}</span>
+        <span className="bg-primary/10 text-primary text-xs font-mono px-2 py-0.5 rounded-full">
+          {emailActivities.length}
+        </span>
+
+        {deepSearch.running && deepSearch.current && (
+          <div className="flex items-center gap-2 ml-2">
+            <span className="text-[11px] text-primary font-medium whitespace-nowrap">
+              Deep Search {deepSearch.current.index}/{deepSearch.current.total}
+            </span>
+            <Progress value={(deepSearch.current.index / deepSearch.current.total) * 100} className="w-20 h-1.5" />
+          </div>
+        )}
+
+        <div className="flex-1" />
+        <QualitySelector value={quality} onChange={setQuality} disabled={batchGenerating || deepSearch.running} />
+
+        {deepSearch.running ? (
+          <Button onClick={() => deepSearch.stop()} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">
+            <Square className="w-3.5 h-3.5" /> Stop
+          </Button>
+        ) : (
+          <Button onClick={handleDeepSearch} disabled={batchGenerating || emailActivities.length === 0} size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
+            <Sparkles className="w-3.5 h-3.5" />
+            {selectedCount > 0 ? `Deep Search (${selectedCount})` : "Deep Search"}
+          </Button>
+        )}
+
+        {selectedCount > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="h-7 gap-1.5 text-xs" disabled={deleteActivities.isPending}>
+                <Trash2 className="w-3.5 h-3.5" /> Elimina ({selectedCount})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Eliminare {selectedCount} attività?</AlertDialogTitle>
+                <AlertDialogDescription>Le attività selezionate verranno eliminate definitivamente.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annulla</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Elimina</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        <Button onClick={handleGenerateAll} disabled={batchGenerating || deepSearch.running || emailActivities.length === 0} size="sm" className="h-7 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Zap className="w-3.5 h-3.5" />
+          {selectedCount > 0 ? `Genera (${selectedCount})` : "Genera Tutte"}
+        </Button>
+
+        {/* Progress shimmer bar */}
+        {(batchGenerating || deepSearch.running) && (
+          <div
+            className="progress-shimmer-bar"
+            style={{
+              width: batchProgress
+                ? `${(batchProgress.current / batchProgress.total) * 100}%`
+                : deepSearch.current
+                  ? `${(deepSearch.current.index / deepSearch.current.total) * 100}%`
+                  : '30%',
+            }}
+          />
+        )}
+        {!batchGenerating && !deepSearch.running && batchProgress === null && generatedEmails.size > 0 && (
+          <div className="progress-shimmer-bar fade-out" style={{ width: '100%' }} />
+        )}
+      </div>
+
+      {/* ═══ RESIZABLE PANELS ═══ */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>
+          {/* ═══ LEFT PANEL ═══ */}
+          <div className="h-full flex flex-col border-r border-border bg-background">
+            {/* Source tabs — icon toggle bar like Rubrica */}
+            <div className="h-[52px] flex items-center gap-3 px-4 border-b border-border/30 bg-background shrink-0">
+              <div className="flex items-center gap-0.5 rounded-lg border border-border/40 p-0.5 shrink-0">
+                {SOURCE_TABS.map((tab) => (
+                  <Tooltip key={tab.key}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => { setSourceTab(tab.key); setSelectedActivity(null); setSelectedIds(new Set()); }}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all font-medium",
+                          sourceTab === tab.key
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        )}
+                      >
+                        <tab.icon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="hidden sm:inline">{tab.shortLabel}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">{tab.label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+
+              {/* Search */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={search} onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cerca..."
+                  className="pl-9 h-8 text-[13px] rounded-lg border-border/40"
+                />
+              </div>
+            </div>
+
+            {/* Contact list */}
+            <ContactListPanel
+              selectedActivityId={selectedActivity?.id || null}
+              onSelect={setSelectedActivity}
+              search={search}
+              sourceType={sourceTab}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+              onDeselectAll={handleDeselectAll}
+              onFilteredIdsChange={setFilteredIds}
             />
           </div>
-        </div>
-        <ContactListPanel
-          selectedActivityId={selectedActivity?.id || null}
-          onSelect={setSelectedActivity}
-          search={search}
-          sourceType={sourceTab}
-          selectedIds={selectedIds}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onFilteredIdsChange={setFilteredIds}
-        />
-      </div>
+        </ResizablePanel>
 
-      {/* Right: Config + Canvas */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top action bar */}
-        <div className="px-4 h-10 flex items-center gap-2 border-b border-border bg-background shrink-0 relative">
-          {deepSearch.running && deepSearch.current && (
-            <div className="flex items-center gap-2 mr-1">
-              <span className="text-[11px] text-primary font-medium whitespace-nowrap">
-                Deep Search {deepSearch.current.index}/{deepSearch.current.total}
-              </span>
-              <Progress value={(deepSearch.current.index / deepSearch.current.total) * 100} className="w-20 h-1.5" />
+        <ResizableHandle withHandle />
+
+        <ResizablePanel defaultSize={70} minSize={40}>
+          {/* ═══ RIGHT PANEL: Config + Canvas ═══ */}
+          <div className="h-full flex flex-col min-w-0 overflow-hidden">
+            {/* GoalBar */}
+            <div className="px-4 py-2.5 border-b border-border/30 shrink-0">
+              <GoalBar
+                goal={goal} baseProposal={baseProposal}
+                onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
+                documents={documents} onUploadDocument={upload} onRemoveDocument={remove} uploading={uploading}
+                referenceLinks={referenceLinks}
+                onAddLink={(url) => setReferenceLinks((prev) => [...prev, url])}
+                onRemoveLink={(idx) => setReferenceLinks((prev) => prev.filter((_, i) => i !== idx))}
+                presets={presets} activePresetId={activePresetId}
+                onLoadPreset={handleLoadPreset} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset}
+              />
             </div>
-          )}
-          <div className="flex-1" />
-          <QualitySelector value={quality} onChange={setQuality} disabled={batchGenerating || deepSearch.running} />
 
-          {deepSearch.running ? (
-            <Button onClick={() => deepSearch.stop()} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">
-              <Square className="w-3.5 h-3.5" /> Stop
-            </Button>
-          ) : (
-            <Button onClick={handleDeepSearch} disabled={batchGenerating || emailActivities.length === 0} size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              {selectedCount > 0 ? `Deep Search (${selectedCount})` : "Deep Search"}
-            </Button>
-          )}
-
-          {selectedCount > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" className="h-7 gap-1.5 text-xs" disabled={deleteActivities.isPending}>
-                  <Trash2 className="w-3.5 h-3.5" /> Elimina ({selectedCount})
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Eliminare {selectedCount} attività?</AlertDialogTitle>
-                  <AlertDialogDescription>Le attività selezionate verranno eliminate definitivamente.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Elimina</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-
-          <Button onClick={handleGenerateAll} disabled={batchGenerating || deepSearch.running || emailActivities.length === 0} size="sm" className="h-7 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Zap className="w-3.5 h-3.5" />
-            {selectedCount > 0 ? `Genera (${selectedCount})` : "Genera Tutte"}
-          </Button>
-
-          {/* Progress shimmer bar */}
-          {(batchGenerating || deepSearch.running) && (
-            <div
-              className="progress-shimmer-bar"
-              style={{
-                width: batchProgress
-                  ? `${(batchProgress.current / batchProgress.total) * 100}%`
-                  : deepSearch.current
-                    ? `${(deepSearch.current.index / deepSearch.current.total) * 100}%`
-                    : '30%',
-              }}
-            />
-          )}
-          {!batchGenerating && !deepSearch.running && batchProgress === null && generatedEmails.size > 0 && (
-            <div className="progress-shimmer-bar fade-out" style={{ width: '100%' }} />
-          )}
-        </div>
-
-        {/* GoalBar */}
-        <div className="px-4 py-2.5 border-b border-border shrink-0">
-          <GoalBar
-            goal={goal} baseProposal={baseProposal}
-            onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
-            documents={documents} onUploadDocument={upload} onRemoveDocument={remove} uploading={uploading}
-            referenceLinks={referenceLinks}
-            onAddLink={(url) => setReferenceLinks((prev) => [...prev, url])}
-            onRemoveLink={(idx) => setReferenceLinks((prev) => prev.filter((_, i) => i !== idx))}
-            presets={presets} activePresetId={activePresetId}
-            onLoadPreset={handleLoadPreset} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset}
-          />
-        </div>
-
-        {/* Email Canvas */}
-        <div className="flex-1 overflow-hidden">
-          <EmailCanvas
-            activity={selectedActivity} goal={goal} baseProposal={baseProposal}
-            documentIds={documents.map((d) => d.id)} referenceUrls={referenceLinks}
-            generatedEmails={generatedEmails} onEmailGenerated={handleEmailGenerated}
-            currentEmailIndex={currentEmailIndex} onIndexChange={handleIndexChange}
-            totalEmails={emailKeys.length} batchGenerating={batchGenerating} batchProgress={batchProgress}
-            quality={quality}
-          />
-        </div>
-      </div>
+            {/* Email Canvas */}
+            <div className="flex-1 overflow-hidden">
+              <EmailCanvas
+                activity={selectedActivity} goal={goal} baseProposal={baseProposal}
+                documentIds={documents.map((d) => d.id)} referenceUrls={referenceLinks}
+                generatedEmails={generatedEmails} onEmailGenerated={handleEmailGenerated}
+                currentEmailIndex={currentEmailIndex} onIndexChange={handleIndexChange}
+                totalEmails={emailKeys.length} batchGenerating={batchGenerating} batchProgress={batchProgress}
+                quality={quality}
+              />
+            </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
+    </TooltipProvider>
   );
 }
