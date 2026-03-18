@@ -260,9 +260,60 @@ export default function PartnerHub() {
     deepSearch.start([partnerId]);
   }, [deepSearch]);
 
+  // Unified action bar handlers for single-partner context
+  const handleUnifiedEmail = useCallback(() => {
+    if (selectedIds.size > 0) {
+      handleBulkEmail();
+    } else if (selectedId) {
+      navigate("/email-composer", { state: { partnerIds: [selectedId] } });
+    }
+  }, [selectedIds, selectedId, navigate, handleBulkEmail]);
+
+  const handleUnifiedWorkspace = useCallback(async () => {
+    if (selectedIds.size > 0) {
+      handleSendToWorkspace();
+    } else if (selectedId) {
+      setSendingToWorkspace(true);
+      try {
+        await createActivities.mutateAsync([{
+          partner_id: selectedId,
+          activity_type: "send_email" as const,
+          title: "Outreach email",
+          priority: "medium",
+        }]);
+        toast.success("Attività creata — apertura Workspace...");
+        navigate("/workspace");
+      } catch { toast.error("Errore"); }
+      finally { setSendingToWorkspace(false); }
+    }
+  }, [selectedIds, selectedId, createActivities, navigate, handleSendToWorkspace]);
+
+  const handleUnifiedAssignActivity = useCallback(() => {
+    if (selectedIds.size === 0 && selectedId) {
+      setSelectedIds(new Set([selectedId]));
+    }
+    setAssignDialogOpen(true);
+  }, [selectedIds, selectedId]);
+
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden">
+    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden flex flex-col">
+      {/* ═══ UNIFIED ACTION BAR ═══ */}
+      <UnifiedActionBar
+        selectedIds={selectedIds}
+        focusedPartner={selectedPartner || null}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onAssignActivity={handleUnifiedAssignActivity}
+        onDeepSearch={handleBulkDeepSearch}
+        onStopDeepSearch={handleStopDeepSearch}
+        onEmail={handleUnifiedEmail}
+        onSendToWorkspace={handleUnifiedWorkspace}
+        sendingToWorkspace={sendingToWorkspace}
+        deepSearching={deepSearch.running}
+        deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
+        onSingleDeepSearch={handleSingleDeepSearch}
+        singleDeepSearching={deepSearch.running && deepSearch.current?.total === 1}
+      />
       <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}

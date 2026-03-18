@@ -12,9 +12,6 @@ import {
   Hash, ChevronDown,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { PartnerRating } from "@/components/partners/PartnerRating";
 import {
   getCountryFlag, getYearsMember, formatPartnerType,
