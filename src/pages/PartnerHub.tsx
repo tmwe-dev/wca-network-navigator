@@ -57,6 +57,7 @@ export default function PartnerHub() {
   // Navigation: "countries" (Level 1) | "country" (Level 2) | "list" (flat list)
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [showAI, setShowAI] = useState(false);
 
   const { data: countryStatsData } = useCountryStats();
 
