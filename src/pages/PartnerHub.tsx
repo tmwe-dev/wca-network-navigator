@@ -284,38 +284,49 @@ export default function PartnerHub() {
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
       {/* ═══ LEFT PANEL ═══ */}
       <div className="h-full flex flex-col border-r border-border bg-background">
-        {/* Header — glass bar */}
-        <div className="h-[52px] flex items-center gap-3 px-4 border-b border-white/[0.06] glass-panel shrink-0">
-          <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow shrink-0" />
-          <span className="text-gradient-blue font-semibold text-sm">Rubrica Partner</span>
-          <span className="glass-panel-blue text-blue-300 text-xs font-mono px-2 py-0.5 rounded-full glow-blue">
-            {isLoading ? "…" : filteredPartners.length}
-          </span>
-
-          <div className="flex-1" />
-
-
-          <div className="flex items-center gap-0.5 rounded-md border border-white/[0.08] p-0.5">
+        {/* Header — restructured */}
+        <div className="h-[52px] flex items-center gap-3 px-4 border-b border-border/30 bg-background shrink-0">
+          {/* Left: toggle with totals */}
+          <div className="flex items-center gap-0.5 rounded-lg border border-border/40 p-0.5 shrink-0">
             <button
-              onClick={() => { setViewLevel("countries"); setSelectedCountry(null); }}
+              onClick={() => { setViewLevel("countries"); setSelectedCountry(null); setCountrySortBy("name"); }}
               className={cn(
-                "px-2 py-1 text-xs rounded transition-all font-medium",
-                viewLevel !== "list" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all font-medium tabular-nums",
+                viewLevel !== "list"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               )}
             >
-              <MapPin className="w-3 h-3 inline mr-1" />
-              Paesi
+              <MapPin className="w-3 h-3 shrink-0" />
+              <span className="font-bold">{countryStatsData ? Object.keys(countryStatsData.byCountry).length : "…"}</span>
+              <span>Paesi</span>
             </button>
             <button
-              onClick={() => setViewLevel("list")}
+              onClick={() => { setViewLevel(viewLevel === "list" ? "list" : "countries"); setCountrySortBy("total"); }}
               className={cn(
-                "px-2 py-1 text-xs rounded transition-all font-medium",
-                viewLevel === "list" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all font-medium tabular-nums",
+                viewLevel === "list"
+                  ? "bg-accent text-accent-foreground"
+                  : countrySortBy === "total" && viewLevel !== "list"
+                    ? "bg-accent/60 text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               )}
             >
-              <Users className="w-3 h-3 inline mr-1" />
-              Lista
+              <Users className="w-3 h-3 shrink-0" />
+              <span className="font-bold">{countryStatsData ? countryStatsData.global.total.toLocaleString() : "…"}</span>
+              <span>Partner</span>
             </button>
+          </div>
+
+          {/* Center: search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder={viewLevel === "list" ? "Cerca partner..." : "Cerca paese..."}
+              value={viewLevel === "list" ? search : countrySearch}
+              onChange={(e) => viewLevel === "list" ? setSearch(e.target.value) : setCountrySearch(e.target.value)}
+              className="pl-9 h-8 text-[13px] rounded-lg border-border/40"
+            />
           </div>
         </div>
 
