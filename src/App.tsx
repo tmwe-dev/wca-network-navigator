@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
@@ -11,29 +11,25 @@ import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPan
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 
 
-// ── Lazy-loaded pages (code-split per route) ──
+// ── New consolidated pages ──
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const NetworkPage = lazy(() => import("./pages/Network"));
+const CRM = lazy(() => import("./pages/CRM"));
+const Outreach = lazy(() => import("./pages/Outreach"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+
+// ── Standalone pages ──
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
-const SuperHome3D = lazy(() => import("./pages/SuperHome3D"));
-const Operations = lazy(() => import("./pages/Operations"));
-const Campaigns = lazy(() => import("./pages/Campaigns"));
-const PartnerHub = lazy(() => import("./pages/PartnerHub"));
-const Reminders = lazy(() => import("./pages/Reminders"));
-const AcquisizionePartner = lazy(() => import("./pages/AcquisizionePartner"));
 const Settings = lazy(() => import("./pages/Settings"));
-const Guida = lazy(() => import("./pages/Guida"));
-const ProspectCenter = lazy(() => import("./pages/ProspectCenter"));
-const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
-const EmailComposer = lazy(() => import("./pages/EmailComposer"));
-const Workspace = lazy(() => import("./pages/Workspace"));
-const Sorting = lazy(() => import("./pages/Sorting"));
-const Import = lazy(() => import("./pages/Import"));
+
+// ── Legacy pages kept alive for direct access / deep links ──
 const Global = lazy(() => import("./pages/Global"));
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
-const Contacts = lazy(() => import("./pages/Contacts"));
-const HubOperativo = lazy(() => import("./pages/HubOperativo"));
-const Cockpit = lazy(() => import("./pages/Cockpit"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
+const Guida = lazy(() => import("./pages/Guida"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -68,26 +64,35 @@ const App = () => (
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<SuperHome3D />} />
-                  <Route path="/operations" element={<Operations />} />
-                  <Route path="/campaigns" element={<Campaigns />} />
-                  <Route path="/acquisizione" element={<AcquisizionePartner />} />
-                  <Route path="/reminders" element={<Reminders />} />
+                  {/* ── 5 consolidated environments ── */}
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/network" element={<NetworkPage />} />
+                  <Route path="/crm" element={<CRM />} />
+                  <Route path="/outreach" element={<Outreach />} />
+                  <Route path="/agenda" element={<Agenda />} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="/prospects" element={<ProspectCenter />} />
-                  <Route path="/partner-hub" element={<PartnerHub />} />
-                  <Route path="/guida" element={<Guida />} />
-                  <Route path="/campaign-jobs" element={<CampaignJobs />} />
-                  <Route path="/email-composer" element={<EmailComposer />} />
-                  <Route path="/workspace" element={<Workspace />} />
-                  <Route path="/sorting" element={<Sorting />} />
-                  <Route path="/import" element={<Import />} />
+
+                  {/* ── Legacy pages kept alive ── */}
                   <Route path="/global" element={<Global />} />
+                  <Route path="/campaigns" element={<Campaigns />} />
+                  <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
-                  <Route path="/contacts" element={<Contacts />} />
-                  <Route path="/hub" element={<HubOperativo />} />
-                  <Route path="/cockpit" element={<Cockpit />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
+                  <Route path="/guida" element={<Guida />} />
+
+                  {/* ── Redirects from old routes to new environments ── */}
+                  <Route path="/operations" element={<Navigate to="/network" replace />} />
+                  <Route path="/partner-hub" element={<Navigate to="/network" replace />} />
+                  <Route path="/contacts" element={<Navigate to="/crm" replace />} />
+                  <Route path="/prospects" element={<Navigate to="/crm" replace />} />
+                  <Route path="/import" element={<Navigate to="/crm" replace />} />
+                  <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
+                  <Route path="/workspace" element={<Navigate to="/outreach" replace />} />
+                  <Route path="/email-composer" element={<Navigate to="/outreach" replace />} />
+                  <Route path="/sorting" element={<Navigate to="/outreach" replace />} />
+                  <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
+                  <Route path="/hub" element={<Navigate to="/agenda" replace />} />
+                  <Route path="/acquisizione" element={<Navigate to="/network" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
