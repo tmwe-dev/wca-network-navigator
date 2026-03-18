@@ -56,8 +56,29 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
   const handleDelete = (ids: string[]) => {
     deleteActivities.mutate(ids, {
-      onSuccess: () => toast.success(`${ids.length} attività eliminate`),
+      onSuccess: () => {
+        toast.success(`${ids.length} attività eliminate`);
+        clear();
+      },
     });
+  };
+
+  const handleBulkComplete = () => {
+    const ids = Array.from(selectedIds);
+    const pending = filtered.filter(a => ids.includes(a.id) && a.status !== "completed");
+    if (!pending.length) return toast.info("Nessuna attività da completare nella selezione");
+    Promise.all(
+      pending.map(a =>
+        updateActivity.mutateAsync({ id: a.id, status: "completed", completed_at: new Date().toISOString() })
+      )
+    ).then(() => {
+      toast.success(`${pending.length} attività completate`);
+      clear();
+    });
+  };
+
+  const handleBulkDelete = () => {
+    handleDelete(Array.from(selectedIds));
   };
 
   if (isLoading) {
