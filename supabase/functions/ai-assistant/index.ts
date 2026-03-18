@@ -955,6 +955,13 @@ serve(async (req) => {
     let systemPrompt = SYSTEM_PROMPT;
     if (context) {
       systemPrompt += "\n\nCONTESTO CORRENTE DELL'UTENTE:";
+      if (context.source === "partner_hub") {
+        systemPrompt += `\nL'utente è nella Rubrica Partner.`;
+        if (context.viewLevel) systemPrompt += ` Vista: ${context.viewLevel}.`;
+        if (context.selectedCountry) systemPrompt += ` Paese selezionato: ${context.selectedCountry}.`;
+        if (context.totalPartners !== undefined) systemPrompt += ` Partner visibili: ${context.totalPartners}.`;
+        if (context.selectedCount) systemPrompt += ` Partner selezionati: ${context.selectedCount}.`;
+      }
       if (context.selectedCountries?.length) {
         systemPrompt += `\nL'utente sta guardando questi paesi: ${context.selectedCountries.map((c: any) => `${c.name} (${c.code})`).join(", ")}.`;
       }

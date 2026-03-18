@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Globe, MapPin, Users,
-  Filter, CheckSquare,
+  Filter, CheckSquare, Sparkles,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -41,6 +41,7 @@ import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { PartnerAIBar } from "@/components/partners/PartnerAIBar";
 
 export default function PartnerHub() {
   const [search, setSearch] = useState("");
@@ -56,6 +57,7 @@ export default function PartnerHub() {
   // Navigation: "countries" (Level 1) | "country" (Level 2) | "list" (flat list)
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [showAI, setShowAI] = useState(false);
 
   const { data: countryStatsData } = useCountryStats();
 
@@ -390,7 +392,32 @@ export default function PartnerHub() {
               />
             </div>
           )}
+
+          {/* AI toggle */}
+          <Button
+            variant={showAI ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-7 w-7 p-0 shrink-0", showAI && "shadow-sm")}
+            onClick={() => setShowAI(!showAI)}
+            title="Assistente AI"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+          </Button>
         </div>
+
+        {/* AI Bar — collapsible */}
+        {showAI && (
+          <div className="px-3 py-2 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.04] to-purple-500/[0.03]">
+            <PartnerAIBar
+              viewContext={{
+                viewLevel,
+                selectedCountry,
+                totalPartners: filteredPartners?.length ?? 0,
+                selectedCount: selectedIds.size,
+              }}
+            />
+          </div>
+        )}
 
         {/* Filters bar (list view only) */}
         {viewLevel === "list" && (
