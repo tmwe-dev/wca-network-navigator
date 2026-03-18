@@ -96,8 +96,9 @@ export function ContactDetailPanel({ contact }: Props) {
   const [newOutcome, setNewOutcome] = useState("");
   const [aliasLoading, setAliasLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [justGenerated, setJustGenerated] = useState(false);
 
-  const needsAlias = !c.company_alias || !c.contact_alias;
+  const needsAlias = !justGenerated && (!c.company_alias || !c.contact_alias);
 
   const handleGenerateAlias = async () => {
     if (aliasLoading) return;
