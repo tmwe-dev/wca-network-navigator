@@ -335,6 +335,19 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
             className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500/40"
             style={{ minHeight: "36px", maxHeight: "100px" }}
           />
+          {hasSpeechAPI && (
+            <button
+              onClick={toggleListening}
+              className={`p-2 rounded-xl transition-all ${
+                isListening
+                  ? "bg-red-500/20 text-red-400 animate-pulse border border-red-500/30"
+                  : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+              }`}
+              title={isListening ? "Stop dettatura" : "Detta con microfono"}
+            >
+              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+            </button>
+          )}
           <button
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || isLoading}
