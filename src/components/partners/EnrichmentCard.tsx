@@ -106,8 +106,7 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                         <span>{label}{typeof a === "object" && a?.year ? ` (${a.year})` : ""}</span>
                       </div>
                     );
-                  }
-                  ))}
+                  })}
                 </div>
               )}
               {companyProfile.recent_news && (
