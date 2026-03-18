@@ -43,11 +43,22 @@ export function useDeepSearchRunner(): DeepSearchState {
     // Smart filter: check which already have deep_search_at
     let toProcess = ids;
     if (!force) {
-      const { data: alreadyDone } = await supabase
-        .from(tableName)
-        .select("id")
-        .in("id", ids)
-        .not("deep_search_at", "is", null);
+      let alreadyDone: any[] | null = null;
+      if (mode === "contact") {
+        const { data } = await supabase
+          .from("imported_contacts")
+          .select("id")
+          .in("id", ids)
+          .not("deep_search_at", "is", null);
+        alreadyDone = data;
+      } else {
+        // For partners, deep_search_at lives inside enrichment_data JSON
+        const { data } = await supabase
+          .from("partners")
+          .select("id, enrichment_data")
+          .in("id", ids);
+        alreadyDone = (data || []).filter((p: any) => p.enrichment_data?.deep_search_at);
+      }
 
       const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
       toProcess = ids.filter(id => !doneSet.has(id));
