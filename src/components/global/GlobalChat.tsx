@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Loader2, Sparkles, Trash2, Rocket, Clock } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, Trash2, Rocket, Clock, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
