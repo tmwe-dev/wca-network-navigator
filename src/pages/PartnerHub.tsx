@@ -54,7 +54,7 @@ export default function PartnerHub() {
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
-  const [aiOpen, setAiOpen] = useState(false);
+  
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
 
