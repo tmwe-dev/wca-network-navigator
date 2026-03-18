@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles
+  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality } from "./contactHelpers";
