@@ -39,6 +39,8 @@ export function PartnerListItem({
     ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
+  const enrichment = asEnrichment(partner.enrichment_data);
+  const hasDeepSearch = !!enrichment?.deep_search_at;
   const contacts = partner.partner_contacts || [];
   const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
