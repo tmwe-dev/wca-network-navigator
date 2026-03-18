@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu, Bot, Send, Calendar } from "lucide-react";
+import { Search, Menu, Bot, Send, Calendar, Layers } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,15 @@ export function AppLayout() {
                 </div>
                 <div className="flex items-center gap-1">
                   <CreditCounter />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/workspace")}
+                    aria-label="Workspace"
+                  >
+                    <Layers className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
