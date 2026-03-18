@@ -195,6 +195,8 @@ export function ContactFiltersBar({
         </Button>
 
         <Separator orientation="vertical" className="h-4 mx-0.5" />
+
+        <Select value={sortKey} onValueChange={onSortChange}>
           <SelectTrigger className="h-6 text-[10px] w-auto min-w-[90px] px-2 gap-1">
             <ArrowUpAZ className="w-3 h-3 shrink-0 text-muted-foreground" />
             <SelectValue />
