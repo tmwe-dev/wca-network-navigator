@@ -29,6 +29,7 @@ export function PartnerListItem({
   isSelected,
   isChecked,
   socialLinks,
+  hasBusinessCard,
   onSelect,
   onToggleSelection,
   index,
