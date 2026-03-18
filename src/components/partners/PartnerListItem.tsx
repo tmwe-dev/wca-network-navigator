@@ -163,6 +163,14 @@ export function PartnerListItem({
           )}
         </div>
         <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+          {hasBusinessCard && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Handshake className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_3px_rgba(52,211,153,0.4)]" />
+              </TooltipTrigger>
+              <TooltipContent>Incontrato personalmente</TooltipContent>
+            </Tooltip>
+          )}
           {hasDeepSearch && (
             <Tooltip>
               <TooltipTrigger>
