@@ -196,17 +196,36 @@ export default function PartnerHub() {
   const handleSendToWorkspace = useCallback(async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+
+    // Check which partners have at least one email (partner email or contact email)
+    const allPartners = filteredPartners || [];
+    const selected = allPartners.filter((p: any) => ids.includes(p.id));
+    const withEmail = selected.filter((p: any) => {
+      if (p.email) return true;
+      const contacts = p.partner_contacts || [];
+      return contacts.some((c: any) => c.email);
+    });
+    const withoutEmail = selected.length - withEmail.length;
+
+    if (withEmail.length === 0) {
+      toast.error("Nessun partner selezionato ha un indirizzo email disponibile");
+      return;
+    }
+    if (withoutEmail > 0) {
+      toast.warning(`${withoutEmail} partner esclusi perché senza email`);
+    }
+
     setSendingToWorkspace(true);
     try {
       await createActivities.mutateAsync(
-        ids.map((partnerId) => ({
-          partner_id: partnerId,
+        withEmail.map((p: any) => ({
+          partner_id: p.id,
           activity_type: "send_email" as const,
           title: "Outreach email",
           priority: "medium",
         }))
       );
-      toast.success(`${ids.length} attività create — apertura Workspace...`);
+      toast.success(`${withEmail.length} attività create — apertura Workspace...`);
       setSelectedIds(new Set());
       navigate("/workspace");
     } catch (e) {
@@ -214,7 +233,7 @@ export default function PartnerHub() {
     } finally {
       setSendingToWorkspace(false);
     }
-  }, [selectedIds, createActivities, navigate]);
+  }, [selectedIds, filteredPartners, createActivities, navigate]);
 
   const handleCountrySelect = (countryCode: string) => {
     setSelectedCountry(countryCode);
