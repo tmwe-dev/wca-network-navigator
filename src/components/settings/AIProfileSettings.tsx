@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +10,18 @@ import {
 import {
   Brain, Building2, BookOpen, MessageSquareText, Globe2,
   Save, Loader2, User, Mail, Phone, Briefcase, TrendingUp, RotateCcw,
+  Upload, Trash2, Image as ImageIcon,
 } from "lucide-react";
 import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/data/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const AI_KEYS = [
   "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_alias",
   "ai_contact_role", "ai_email_signature", "ai_phone_signature",
   "ai_email_signature_block",
+  "ai_signature_image_url", "ai_footer_image_url",
   "ai_knowledge_base",
   "ai_sales_knowledge_base",
   "ai_tone", "ai_language", "ai_style_instructions",
@@ -28,6 +31,58 @@ const AI_KEYS = [
 type AIFields = Record<(typeof AI_KEYS)[number], string>;
 
 const EMPTY: AIFields = Object.fromEntries(AI_KEYS.map(k => [k, ""])) as AIFields;
+
+/* ── Image Upload Sub-component ── */
+function ImageUploadField({ label, value, onChange, hint }: {
+  label: string; value: string; onChange: (url: string) => void; hint: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Seleziona un file immagine"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `email-images/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("templates").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("templates").getPublicUrl(path);
+      onChange(publicUrl);
+      toast.success("Immagine caricata");
+    } catch (err: any) {
+      toast.error(err.message || "Errore upload");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> {label}</Label>
+      {value ? (
+        <div className="space-y-2">
+          <img src={value} alt={label} className="max-h-24 rounded border border-border object-contain bg-muted p-1" />
+          <Button variant="outline" size="sm" onClick={() => onChange("")}>
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Rimuovi
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+            {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+            Carica immagine
+          </Button>
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
 
 export default function AIProfileSettings() {
   const { data: settings } = useAppSettings();
@@ -135,6 +190,21 @@ export default function AIProfileSettings() {
             <p className="text-[11px] text-muted-foreground">
               Se lasciato vuoto, la firma viene generata automaticamente dai campi sopra (alias, ruolo, azienda, telefono, email).
             </p>
+          </div>
+          {/* Signature & Footer images */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border/50">
+            <ImageUploadField
+              label="Immagine Firma"
+              value={fields.ai_signature_image_url}
+              onChange={url => set("ai_signature_image_url", url)}
+              hint="Logo o immagine inserita sotto la firma testuale nelle email."
+            />
+            <ImageUploadField
+              label="Immagine Piè di Pagina"
+              value={fields.ai_footer_image_url}
+              onChange={url => set("ai_footer_image_url", url)}
+              hint="Banner visibile in fondo a tutte le email inviate."
+            />
           </div>
         </CardContent>
       </Card>

@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
       .in("key", [
         "smtp_host", "smtp_port", "smtp_user", "smtp_password",
         "default_sender_email", "default_sender_name",
+        "ai_signature_image_url", "ai_footer_image_url",
       ]);
 
     const s: Record<string, string> = {};
