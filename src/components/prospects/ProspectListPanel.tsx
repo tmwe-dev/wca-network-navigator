@@ -277,6 +277,12 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
         partnerNames={Object.fromEntries(
           (filtered || []).filter(p => selectedIds.has(p.id)).map(p => [p.id, p.company_name])
         )}
+        partnerContactInfo={(filtered || []).filter(p => selectedIds.has(p.id)).map(p => ({
+          id: p.id,
+          name: p.company_name,
+          hasEmail: !!(p.email || p.pec),
+          hasPhone: !!p.phone,
+        }))}
         sourceType="prospect"
         extraSourceMeta={Object.fromEntries(
           (filtered || []).filter(p => selectedIds.has(p.id)).map(p => [p.id, {
