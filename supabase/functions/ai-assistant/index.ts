@@ -441,6 +441,100 @@ const tools = [
       },
     },
   },
+  // ━━━ NEW: Writing Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "update_partner",
+      description: "Update specific fields of a partner. Supports: is_favorite, lead_status, rating, company_alias. Resolves company_name to partner_id automatically.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to search (if ID not known)" },
+          is_favorite: { type: "boolean", description: "Set as favorite" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"], description: "Lead status" },
+          rating: { type: "number", description: "Rating 0-5" },
+          company_alias: { type: "string", description: "Short alias for the company" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_partner_note",
+      description: "Add a note or interaction log to a partner. Creates an entry in the interactions table.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to search (if ID not known)" },
+          subject: { type: "string", description: "Note subject/title" },
+          notes: { type: "string", description: "Note content" },
+          interaction_type: { type: "string", enum: ["note", "email", "phone_call", "meeting", "other"], description: "Type of interaction (default: note)" },
+        },
+        required: ["subject"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_reminder",
+      description: "Create a reminder/task associated with a partner. Sets a due date and priority.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to search (if ID not known)" },
+          title: { type: "string", description: "Reminder title" },
+          description: { type: "string", description: "Reminder description" },
+          due_date: { type: "string", description: "Due date in YYYY-MM-DD format" },
+          priority: { type: "string", enum: ["low", "medium", "high"], description: "Priority level (default: medium)" },
+        },
+        required: ["title", "due_date"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_lead_status",
+      description: "Update lead status of imported contacts. Can target specific IDs or filter by company_name/country.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_ids: { type: "array", items: { type: "string" }, description: "Array of contact UUIDs" },
+          company_name: { type: "string", description: "Filter contacts by company name (partial match)" },
+          country: { type: "string", description: "Filter contacts by country" },
+          status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"], description: "New lead status" },
+        },
+        required: ["status"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "bulk_update_partners",
+      description: "Update multiple partners at once. Filter by country_code or provide partner_ids. Supports updating is_favorite and lead_status.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "ISO 2-letter country code to filter" },
+          partner_ids: { type: "array", items: { type: "string" }, description: "Array of partner UUIDs" },
+          is_favorite: { type: "boolean", description: "Set favorite status" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"], description: "Set lead status" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
