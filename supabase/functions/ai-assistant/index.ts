@@ -1284,6 +1284,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "create_reminder": return executeCreateReminder(args);
     case "update_lead_status": return executeUpdateLeadStatus(args);
     case "bulk_update_partners": return executeBulkUpdatePartners(args);
+    // Business card tools
+    case "search_business_cards": return executeSearchBusinessCards(args);
+    case "link_business_card": return executeLinkBusinessCard(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
