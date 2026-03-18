@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu, Bot } from "lucide-react";
+import { Search, Menu, Bot, Send, Calendar } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
