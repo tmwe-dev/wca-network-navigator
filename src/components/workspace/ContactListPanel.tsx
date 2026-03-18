@@ -428,7 +428,7 @@ export default function ContactListPanel({
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
                             {hasGeneratedEmail && (
-                              <Sparkles className="w-3 h-3 text-success shrink-0" title="Email generata" />
+                              <span title="Email generata"><Sparkles className="w-3 h-3 text-success shrink-0" /></span>
                             )}
                             {d.hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
                             {linkedinUrl && (

@@ -138,6 +138,8 @@ export interface AllActivity {
     title: string | null;
     contact_alias: string | null;
   } | null;
+  email_subject: string | null;
+  email_body: string | null;
 }
 
 export function useAllActivities() {
