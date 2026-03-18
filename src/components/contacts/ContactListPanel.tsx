@@ -93,7 +93,19 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         const { data, error } = await supabase.functions.invoke("deep-search-contact", {
           body: { contactId: id },
         });
-        if (error) { errors++; continue; }
+        // Handle insufficient credits — stop the whole loop
+        if (error) {
+          const errMsg = typeof error === "object" && error?.message ? error.message : String(error);
+          if (errMsg.includes("402") || errMsg.includes("Crediti insufficienti")) {
+            toast({ title: "Crediti insufficienti", description: "Acquista crediti per continuare con la Deep Search.", variant: "destructive" });
+            break;
+          }
+          errors++; continue;
+        }
+        if (data?.success === false && data?.error?.includes?.("Crediti")) {
+          toast({ title: "Crediti insufficienti", description: "Acquista crediti per continuare con la Deep Search.", variant: "destructive" });
+          break;
+        }
         if (data?.success) success++;
         else errors++;
       } catch {
