@@ -1,82 +1,131 @@
 
 
-## Analisi Comparativa: Contatti vs Rubrica Partner
+# Piano Completo di Correzione e Code Quality — WCA Network Navigator
 
-### Cosa ha Contatti che Rubrica NON ha
+Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
 
-| Funzione | Contatti | Rubrica |
-|---|---|---|
-| **AI Assistant** (barra comandi naturali) | Si — filtra, ordina, seleziona, esporta via linguaggio naturale | No |
-| **Raggruppamento flessibile** (Paese/Origine/Status/Data) | Si — 4 modalità con accordion | No — solo Paese (CountryCards + Workbench) |
-| **Holding Pattern** (In circuito / Da lavorare) | Si — toggle dedicato | No |
-| **Import baskets** (Cestini di importazione) | Si — dropdown per filtrare per batch di import | No (non applicabile) |
-| **Date picker range** (filtra per data importazione) | Si | No |
-| **Esporta CSV** via AI | Si | No |
-| **Timeline interazioni** nel dettaglio | Si — con dialog per aggiungerne di nuove | No (ha interactions ma in altro formato) |
+---
 
-### Cosa ha Rubrica che Contatti NON ha
+## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
 
-| Funzione | Rubrica | Contatti |
-|---|---|---|
-| **Pannelli ridimensionabili** (ResizablePanel) | Si | No — larghezza fissa 420px |
-| **UnifiedActionBar** contestuale (singolo/bulk) | Si — barra sopra i pannelli | No — bulk bar inline semplice |
-| **Deep Search integrata** con progresso | Si — con start/stop e progress bar | No — solo placeholder toast |
-| **CountryWorkbench** (drill-down per paese) | Si — ordinamento multi-criterio, filtri servizi, icone | No |
-| **PartnerDetailFull** premium (glassmorphism) | Si | No — detail panel basico |
-| **Filtri avanzati** (servizi, network, certificazioni, rating, anni, filiali, scadenze) | Si — PartnerFiltersSheet | No |
-| **Send to Workspace** funzionante | Si — crea attività + naviga | Si ma meno integrato |
+Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
 
-### Cosa migliorare — Il Piano
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
+| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
+| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
+| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
+| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
 
-#### 1. Layout ridimensionabile (come Rubrica)
-Sostituire il layout fisso `w-[420px]` con `ResizablePanelGroup` identico alla Rubrica.
+I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
 
-**File:** `src/pages/Contacts.tsx`
+---
 
-#### 2. Compattare e riorganizzare la FilterBar
-L'attuale `ContactFiltersBar` ha 4 righe dense (cestino, AI, ricerca, raggruppamento, 3 dropdown, 2 date picker + sort). Troppo verticale.
+## Fase 2 — N+1 Query Fix (CardSocialIcons)
 
-Nuovo layout:
-- **Riga 1 (header fisso)**: Contatore totale + Ricerca (come Rubrica)
-- **Riga 2**: Raggruppamento icone (Paese/Origine/Status/Data) + Holding Pattern toggle + Sort dropdown — tutto compatto nella stessa riga
-- **Sezione collassabile "Filtri"**: Cestino import, Paese, Origine, Status, Date range — visibili solo on-demand con un bottone Filter (come PartnerFiltersSheet)
-- **AI Bar**: resta ma spostata sotto la ricerca, con toggle per mostrarla/nasconderla
+**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
 
-**File:** `src/components/contacts/ContactFiltersBar.tsx`
+**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
 
-#### 3. Bulk Action Bar allineata a UnifiedActionBar
-Trasformare la barra bulk attuale (inline con 5 bottoni testo) in una barra compatta con icone + tooltip, stesso stile dell'UnifiedActionBar della Rubrica. Posizionarla come header globale sopra entrambi i pannelli.
+| File | Modifica |
+|------|----------|
+| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
+| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
+| Callers di CardSocialIcons | Passare link dal batch hook |
 
-**File:** `src/pages/Contacts.tsx`, `src/components/contacts/ContactListPanel.tsx`
+---
 
-#### 4. Migliorare il DetailPanel
-Il pannello destro è basico. Allinearlo allo stile glassmorphism della Rubrica:
-- Header con company name + alias prominenti
-- Quick actions come bottoni con icona (stile Rubrica)
-- Sezione Holding Pattern con indicator visivo migliorato
-- Timeline con stile più premium
+## Fase 3 — Null Safety (crash preventions)
 
-**File:** `src/components/contacts/ContactDetailPanel.tsx`
+Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
 
-#### 5. Card dei contatti più pulite
-Le `ContactCard` mostrano troppi dati inline. Allineare alla densità della `PartnerListItem`:
-- Rimuovere email/telefono dalla card (visibili solo nel dettaglio, come in Rubrica)
-- Mantenere: azienda, nome/ruolo, città, badge origine, indicatore interazioni
-- Aggiungere indice progressivo (#1, #2...) come in Rubrica
+| File | Fix |
+|------|-----|
+| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
+| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
+| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
+| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
 
-**File:** `src/components/contacts/ContactCard.tsx`
+---
 
-### Riepilogo file da modificare
+## Fase 4 — Riduzione `as any` nei file principali
 
-1. `src/pages/Contacts.tsx` — ResizablePanel + bulk bar globale
-2. `src/components/contacts/ContactFiltersBar.tsx` — compattamento, collapsible filters
-3. `src/components/contacts/ContactListPanel.tsx` — estrazione bulk bar, pulizia
-4. `src/components/contacts/ContactDetailPanel.tsx` — stile premium allineato a Rubrica
-5. `src/components/contacts/ContactCard.tsx` — semplificazione, rimozione email/phone dalla card
+663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
 
-### Cosa portare da Contatti a Rubrica (fase successiva)
-- AI Assistant (ContactAIBar) — adattarlo anche per Rubrica
-- Raggruppamento flessibile (non solo per paese)
-- Esporta CSV
-- Date range filter
+**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
+
+| Gruppo | File principali | Fix |
+|--------|----------------|-----|
+| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
+| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
+| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
+| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
+
+---
+
+## Fase 5 — Splitting Componenti Grandi
+
+### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
+
+```text
+src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
+src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
+src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
+src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
+```
+
+### 5B. `Settings.tsx` (851 righe → ~5 file)
+
+```text
+src/pages/Settings.tsx                     (~100 righe — tabs container)
+src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
+src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
+src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
+src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
+```
+I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
+
+### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
+
+```text
+src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
+src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
+src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
+```
+
+### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
+
+```text
+src/pages/EmailComposer.tsx                (~150 righe — page container)
+src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
+src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
+```
+
+---
+
+## Fase 6 — Lock File + Varie
+
+| Issue | Fix |
+|-------|-----|
+| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
+| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
+| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
+
+---
+
+## Riepilogo Esecuzione
+
+| Fase | Scope | File stimati | Rischio |
+|------|-------|-------------|---------|
+| 1 — Console cleanup | 5 file | 5 | Basso |
+| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
+| 3 — Null safety | 4 file | 4 | Basso |
+| 4 — Type safety | 10-15 file | 15 | Medio |
+| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
+| 6 — Varie | 2 file | 2 | Basso |
+
+**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
+
+Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
 

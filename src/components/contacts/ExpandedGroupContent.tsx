@@ -38,7 +38,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
 
   return (
     <div className="p-2 space-y-1">
-      {contacts.map((c: any) => (
+      {contacts.map((c: any, i: number) => (
         <ContactCard
           key={c.id}
           c={c}
@@ -46,6 +46,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
           isSelected={selection.selectedIds.has(c.id)}
           onSelect={() => onSelect(c)}
           onToggle={() => selection.toggle(c.id)}
+          index={page * pageSize + i}
         />
       ))}
       {totalPages > 1 && (
