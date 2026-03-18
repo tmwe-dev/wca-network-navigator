@@ -40,6 +40,7 @@ import { CountryWorkbench } from "@/components/partners/CountryWorkbench";
 import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { PartnerAIBar } from "@/components/partners/PartnerAIBar";
 
 export default function PartnerHub() {
