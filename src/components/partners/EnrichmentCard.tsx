@@ -98,12 +98,15 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               )}
               {companyProfile.awards?.length > 0 && (
                 <div className="space-y-1">
-                  {companyProfile.awards.map((a: string, i: number) => (
-                    <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
-                      <Award className="w-3 h-3 text-amber-500" />
-                      <span>{a}</span>
-                    </div>
-                  ))}
+                  {companyProfile.awards.map((a: any, i: number) => {
+                    const label = typeof a === "string" ? a : (a?.name || a?.recipient || JSON.stringify(a));
+                    return (
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
+                        <Award className="w-3 h-3 text-amber-500" />
+                        <span>{label}{typeof a === "object" && a?.year ? ` (${a.year})` : ""}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               {companyProfile.recent_news && (
