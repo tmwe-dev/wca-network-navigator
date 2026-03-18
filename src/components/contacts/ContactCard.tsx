@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag
+  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality } from "./contactHelpers";
@@ -23,7 +23,11 @@ export function ContactCard({ c, isActive, isSelected, onSelect, onToggle, index
   const cCity = clean(c.city);
   const cOrigin = clean(c.origin);
   const quality = getContactQuality(c);
-  const displayCompany = cName || "Senza azienda";
+  const cCompanyAlias = clean(c.company_alias);
+  const cContactAlias = clean(c.contact_alias);
+  const hasAlias = !!cCompanyAlias || !!cContactAlias;
+
+  const displayCompany = cCompanyAlias || cName || "Senza azienda";
 
   return (
     <div
@@ -54,19 +58,28 @@ export function ContactCard({ c, isActive, isSelected, onSelect, onToggle, index
           {/* Company */}
           <div className="flex items-center gap-1.5">
             <Building2 className="w-3 h-3 text-primary shrink-0" />
-            <span className={`font-bold truncate ${!cName ? "text-muted-foreground italic" : "text-foreground"}`}>
+            <span className={`font-bold truncate ${!cName && !cCompanyAlias ? "text-muted-foreground italic" : "text-foreground"}`}>
               {displayCompany}
             </span>
+            {hasAlias && <Sparkles className="w-3 h-3 text-accent-foreground shrink-0 opacity-70" />}
             {quality === "poor" && (
               <span title="Dati incompleti"><AlertTriangle className="w-3 h-3 text-destructive shrink-0" /></span>
             )}
           </div>
 
+          {/* Show original name if alias replaced it */}
+          {cCompanyAlias && cName && cCompanyAlias !== cName && (
+            <span className="text-[10px] text-muted-foreground ml-[18px] truncate block">{cName}</span>
+          )}
+
           {/* Contact name + position */}
-          {cContact && (
+          {(cContact || cContactAlias) && (
             <div className="flex items-center gap-1.5 text-foreground/80">
               <User className="w-3 h-3 shrink-0 text-muted-foreground" />
-              <span className="truncate">{cContact}</span>
+              <span className="truncate">{cContactAlias || cContact}</span>
+              {cContactAlias && cContact && cContactAlias !== cContact && (
+                <span className="text-[10px] text-muted-foreground truncate">({cContact})</span>
+              )}
               {cPosition && <span className="text-[10px] text-primary font-medium">• {cPosition}</span>}
             </div>
           )}
