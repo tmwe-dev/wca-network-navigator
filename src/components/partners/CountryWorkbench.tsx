@@ -1,22 +1,25 @@
 import { useState, useMemo, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
   ArrowLeft, Phone, Mail, CheckSquare, MapPin,
-  Send, Star, Package, X, User,
+  Send, Star, Package, X, User, Search, ArrowUpDown,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
-import { format } from "date-fns";
 
 /* ── Helpers ── */
 const hasPhone = (p: any) =>
@@ -28,6 +31,7 @@ const hasServices = (p: any) => (p.partner_services || []).length > 0;
 const hasRating3Plus = (p: any) => (p.rating || 0) >= 3;
 
 type FilterTag = "with_phone" | "with_email" | "deep_search" | "rating_3" | "with_services";
+type SortBy = "name_asc" | "name_desc" | "rating_desc" | "years_desc" | "city_asc";
 
 const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
   with_phone: hasPhone,
@@ -35,6 +39,22 @@ const FILTER_FNS: Record<FilterTag, (p: any) => boolean> = {
   deep_search: hasDeepSearch,
   rating_3: hasRating3Plus,
   with_services: hasServices,
+};
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: "name_asc", label: "Nome A-Z" },
+  { value: "name_desc", label: "Nome Z-A" },
+  { value: "rating_desc", label: "Rating ↓" },
+  { value: "years_desc", label: "Anni WCA ↓" },
+  { value: "city_asc", label: "Città A-Z" },
+];
+
+const sortFns: Record<SortBy, (a: any, b: any) => number> = {
+  name_asc: (a, b) => (a.company_name || "").localeCompare(b.company_name || ""),
+  name_desc: (a, b) => (b.company_name || "").localeCompare(a.company_name || ""),
+  rating_desc: (a, b) => (b.rating || 0) - (a.rating || 0) || (a.company_name || "").localeCompare(b.company_name || ""),
+  years_desc: (a, b) => getYearsMember(b.member_since) - getYearsMember(a.member_since) || (a.company_name || "").localeCompare(b.company_name || ""),
+  city_asc: (a, b) => (a.city || "").localeCompare(b.city || ""),
 };
 
 interface CountryWorkbenchProps {
@@ -53,6 +73,8 @@ export function CountryWorkbench({
   selectedId, selectedIds, onToggleSelection, onSelectAllFiltered,
 }: CountryWorkbenchProps) {
   const [activeFilters, setActiveFilters] = useState<Set<FilterTag>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("name_asc");
 
   const toggleFilter = useCallback((tag: FilterTag) => {
     setActiveFilters((prev) => {
@@ -73,6 +95,7 @@ export function CountryWorkbench({
   const dynamicCounts = useMemo(() => {
     const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
       let list = countryPartners;
+      if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
       for (const tag of activeFilters) {
         if (tag === excludeTag) continue;
         list = list.filter(FILTER_FNS[tag]);
@@ -86,13 +109,14 @@ export function CountryWorkbench({
       rating_3: countFor("rating_3", hasRating3Plus),
       with_services: countFor("with_services", hasServices),
     };
-  }, [countryPartners, activeFilters]);
+  }, [countryPartners, activeFilters, searchTerm]);
 
   const filteredPartners = useMemo(() => {
     let list = countryPartners;
+    if (searchTerm) list = list.filter((p) => (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase()));
     for (const tag of activeFilters) list = list.filter(FILTER_FNS[tag]);
-    return list.sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0) || a.company_name.localeCompare(b.company_name));
-  }, [countryPartners, activeFilters]);
+    return list.sort(sortFns[sortBy]);
+  }, [countryPartners, activeFilters, searchTerm, sortBy]);
 
   const allSelected = filteredPartners.length > 0 && filteredPartners.every((p: any) => selectedIds.has(p.id));
 
@@ -100,18 +124,18 @@ export function CountryWorkbench({
     onSelectAllFiltered(allSelected ? [] : filteredPartners.map((p: any) => p.id));
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
-  const filterChips: { key: FilterTag; label: string; icon: typeof Phone; color: string; activeColor: string; count: number }[] = [
-    { key: "with_phone", label: "Telefono", icon: Phone, color: "text-emerald-500", activeColor: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400", count: dynamicCounts.with_phone },
-    { key: "with_email", label: "Email", icon: Mail, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.with_email },
-    { key: "deep_search", label: "Deep Search", icon: Send, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.deep_search },
-    { key: "rating_3", label: "Rating 3+", icon: Star, color: "text-amber-500", activeColor: "bg-amber-500/15 border-amber-500/40 text-amber-400", count: dynamicCounts.rating_3 },
-    { key: "with_services", label: "Servizi", icon: Package, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.with_services },
+  const filterChips: { key: FilterTag; label: string; icon: typeof Phone; activeColor: string; inactiveIcon: string; count: number }[] = [
+    { key: "with_phone", label: "Telefono", icon: Phone, activeColor: "bg-emerald-500/25 border-emerald-500/60 text-emerald-300", inactiveIcon: "text-emerald-500", count: dynamicCounts.with_phone },
+    { key: "with_email", label: "Email", icon: Mail, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.with_email },
+    { key: "deep_search", label: "Deep Search", icon: Send, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.deep_search },
+    { key: "rating_3", label: "Rating 3+", icon: Star, activeColor: "bg-amber-500/25 border-amber-500/60 text-amber-300", inactiveIcon: "text-amber-500", count: dynamicCounts.rating_3 },
+    { key: "with_services", label: "Servizi", icon: Package, activeColor: "bg-sky-500/25 border-sky-500/60 text-sky-300", inactiveIcon: "text-sky-500", count: dynamicCounts.with_services },
   ];
 
   return (
     <div className="flex flex-col h-full">
       {/* ═══ HEADER ═══ */}
-      <div className="px-4 py-3 border-b border-border/40 bg-card/30">
+      <div className="px-4 py-3 border-b border-border/60 bg-card/30">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all">
             <ArrowLeft className="w-4 h-4" />
@@ -126,24 +150,49 @@ export function CountryWorkbench({
         </div>
       </div>
 
+      {/* ═══ SEARCH + SORT ═══ */}
+      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Cerca partner..."
+            className="h-8 pl-8 text-xs bg-muted/50 border-border/60"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <SelectTrigger className="h-8 w-[130px] text-xs bg-muted/50 border-border/60 shrink-0">
+            <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* ═══ FILTER CHIPS ═══ */}
-      <div className="px-4 py-2 border-b border-border/30">
+      <div className="px-4 py-2 border-b border-border/40">
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {filterChips.map((f) => {
             const Icon = f.icon;
+            const isActive = activeFilters.has(f.key);
             return (
               <button key={f.key} onClick={() => toggleFilter(f.key)}
                 className={cn(
                   "flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full border transition-all whitespace-nowrap font-medium",
-                  activeFilters.has(f.key)
+                  isActive
                     ? f.activeColor
-                    : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    : "bg-muted/80 border-border/60 text-foreground/80 hover:bg-accent/50 hover:text-foreground"
                 )}>
-                <Icon className={cn("w-3.5 h-3.5", activeFilters.has(f.key) ? "" : f.color)} strokeWidth={1.8} />
+                <Icon className={cn("w-3.5 h-3.5", isActive ? "" : f.inactiveIcon)} strokeWidth={1.8} />
                 {f.label}
                 <span className={cn(
                   "min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
-                  activeFilters.has(f.key) ? "bg-white/10" : "bg-muted-foreground/10"
+                  isActive ? "bg-white/15 text-foreground" : "bg-foreground/10 text-foreground/70"
                 )}>
                   {f.count}
                 </span>
@@ -152,7 +201,7 @@ export function CountryWorkbench({
           })}
           {activeFilters.size > 0 && (
             <button onClick={() => setActiveFilters(new Set())}
-              className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+              className="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-full text-foreground/70 hover:text-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
               <X className="w-3 h-3" /> Reset
             </button>
           )}
@@ -160,10 +209,10 @@ export function CountryWorkbench({
       </div>
 
       {/* ═══ LIST HEADER ═══ */}
-      <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/20">
+      <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/30">
         <span className="text-[11px] text-muted-foreground font-medium">
           <span className="font-bold text-foreground">{filteredPartners.length}</span>
-          {activeFilters.size > 0 && <span> / {countryPartners.length}</span>}
+          {(activeFilters.size > 0 || searchTerm) && <span> / {countryPartners.length}</span>}
           {" "}partner
         </span>
         <button onClick={handleSelectAll}
@@ -194,13 +243,13 @@ export function CountryWorkbench({
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
                 className={cn(
-                  "mx-2 mb-1 px-3 py-2.5 cursor-pointer transition-all rounded-xl flex items-start gap-2",
+                  "mx-2 mb-1 px-3 py-3 cursor-pointer transition-all rounded-xl flex items-start gap-2",
                   "hover:bg-accent/40",
                   selectedId === partner.id && "bg-accent/60 shadow-sm",
                   isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
                 )}>
                 {/* Progressive number */}
-                <span className="text-[10px] text-muted-foreground/50 font-mono w-5 shrink-0 text-right mt-2.5">
+                <span className="text-[10px] text-muted-foreground/60 font-mono w-5 shrink-0 text-right mt-2.5">
                   {index + 1}
                 </span>
 
@@ -210,7 +259,7 @@ export function CountryWorkbench({
                 </div>
 
                 {/* Logo */}
-                <div className="w-9 h-9 shrink-0 mt-0.5 rounded-lg overflow-hidden bg-muted/30 border border-border/30 flex items-center justify-center">
+                <div className="w-9 h-9 shrink-0 mt-0.5 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center">
                   {getRealLogoUrl(partner.logo_url) ? (
                     <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
                   ) : (
@@ -219,30 +268,43 @@ export function CountryWorkbench({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {/* Row 1: Name + rating */}
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="text-[13px] font-semibold truncate leading-tight">{partner.company_name}</p>
-                    {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                  </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  {/* Row 1: Name */}
+                  <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
 
-                  {/* Row 2: City + years */}
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                  {/* Row 2: Rating */}
+                  {partner.rating > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <MiniStars rating={Number(partner.rating)} />
+                      <span className="text-[11px] font-medium text-amber-400">{Number(partner.rating).toFixed(1)}</span>
+                    </div>
+                  )}
+
+                  {/* Row 3: City + Years */}
+                  <div className="flex items-center gap-2 text-[11px] text-foreground/80">
                     <span className="flex items-center gap-0.5 truncate">
-                      <MapPin className="w-3 h-3 shrink-0 opacity-50" />{partner.city}
+                      <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />{partner.city}
                     </span>
-                    {years > 0 && <TrophyRow years={years} />}
+                    {years > 0 && (
+                      <>
+                        <span className="text-muted-foreground">·</span>
+                        <TrophyRow years={years} />
+                      </>
+                    )}
                   </div>
 
-                  {/* Row 3: Contact info — always visible */}
-                  <div className="mt-1.5 space-y-0.5">
+                  {/* Separator */}
+                  <div className="border-t border-border/30" />
+
+                  {/* Row 4: Contact info */}
+                  <div className="space-y-0.5">
                     {primaryContact ? (
                       <>
                         <div className="flex items-center gap-1.5 text-[11px]">
-                          <User className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                          <User className="w-3 h-3 text-muted-foreground shrink-0" />
                           <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
                           {(partner.partner_contacts || []).length > 1 && (
-                            <span className="text-[10px] text-muted-foreground">+{(partner.partner_contacts || []).length - 1}</span>
+                            <span className="text-[10px] text-foreground/60">+{(partner.partner_contacts || []).length - 1}</span>
                           )}
                         </div>
                         {contactEmail && (
@@ -259,42 +321,42 @@ export function CountryWorkbench({
                         )}
                       </>
                     ) : (
-                      <span className="text-[10px] italic text-destructive/60">Nessun contatto</span>
+                      <span className="text-[10px] italic text-destructive/80">Nessun contatto</span>
                     )}
                   </div>
 
-                  {/* Row 4: Service icons */}
-                  {allServices.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {allServices.slice(0, 6).map((s: any, i: number) => {
-                        const Icon = getServiceIcon(s.service_category);
-                        return (
-                          <Tooltip key={i}>
-                            <TooltipTrigger>
-                              <Icon className="w-3.5 h-3.5 text-sky-500/70" strokeWidth={1.5} />
-                            </TooltipTrigger>
-                            <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                      {allServices.length > 6 && (
-                        <span className="text-[9px] text-muted-foreground">+{allServices.length - 6}</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Row 5: Networks (compact) */}
-                  {networks.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1.5">
-                      {networks.slice(0, 3).map((n: any) => (
-                        <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/[0.08] text-amber-500/80 font-medium truncate max-w-[80px]">
-                          {n.network_name.replace("WCA ", "").substring(0, 10)}
-                        </span>
-                      ))}
-                      {networks.length > 3 && (
-                        <span className="text-[9px] text-muted-foreground/60">+{networks.length - 3}</span>
-                      )}
-                    </div>
+                  {/* Row 5: Services + Networks (combined) */}
+                  {(allServices.length > 0 || networks.length > 0) && (
+                    <>
+                      <div className="border-t border-border/30" />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {allServices.slice(0, 5).map((s: any, i: number) => {
+                          const Icon = getServiceIcon(s.service_category);
+                          return (
+                            <Tooltip key={i}>
+                              <TooltipTrigger>
+                                <Icon className="w-3.5 h-3.5 text-sky-400/80" strokeWidth={1.5} />
+                              </TooltipTrigger>
+                              <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                        {allServices.length > 5 && (
+                          <span className="text-[9px] text-foreground/60">+{allServices.length - 5}</span>
+                        )}
+                        {allServices.length > 0 && networks.length > 0 && (
+                          <span className="text-muted-foreground">·</span>
+                        )}
+                        {networks.slice(0, 2).map((n: any) => (
+                          <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium truncate max-w-[80px]">
+                            {n.network_name.replace("WCA ", "").substring(0, 10)}
+                          </span>
+                        ))}
+                        {networks.length > 2 && (
+                          <span className="text-[9px] text-foreground/60">+{networks.length - 2}</span>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
