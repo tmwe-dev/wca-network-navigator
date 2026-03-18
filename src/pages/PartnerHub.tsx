@@ -502,6 +502,15 @@ export default function PartnerHub() {
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
         partnerIds={Array.from(selectedIds)}
+        partnerNames={Object.fromEntries(
+          (filteredPartners || []).filter((p: any) => selectedIds.has(p.id)).map((p: any) => [p.id, p.company_alias || p.company_name])
+        )}
+        partnerContactInfo={(filteredPartners || []).filter((p: any) => selectedIds.has(p.id)).map((p: any) => ({
+          id: p.id,
+          name: p.company_alias || p.company_name,
+          hasEmail: !!(p.email || (p.partner_contacts || []).some((c: any) => c.email)),
+          hasPhone: !!((p.partner_contacts || []).some((c: any) => c.mobile || c.direct_phone) || p.phone || p.mobile),
+        }))}
         onSuccess={() => setSelectedIds(new Set())}
       />
       </ResizablePanel>

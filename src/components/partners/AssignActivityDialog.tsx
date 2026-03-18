@@ -5,53 +5,53 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useCreateActivities } from "@/hooks/useActivities";
-import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { toast } from "sonner";
 import {
   Mail, Phone, CalendarClock, Users, Loader2, CheckCircle2,
-  ClipboardList, Calendar, Flag, UserCheck, MessageSquare,
+  ClipboardList, Calendar, MessageSquare, AlertTriangle, XCircle,
 } from "lucide-react";
+
+export interface PartnerContactInfo {
+  id: string;
+  name: string;
+  hasEmail: boolean;
+  hasPhone: boolean;
+}
 
 interface AssignActivityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   partnerIds: string[];
   partnerNames?: Record<string, string>;
+  /** Contact availability per partner */
+  partnerContactInfo?: PartnerContactInfo[];
   onSuccess: () => void;
-  /** Override source_type (default: "partner") */
   sourceType?: "partner" | "prospect" | "contact";
-  /** Extra source_meta fields merged per-item */
   extraSourceMeta?: Record<string, Record<string, any>>;
 }
 
 type ActivityTypeValue = "send_email" | "phone_call" | "meeting" | "follow_up" | "other";
 
 const activityTypes = [
-  { value: "send_email" as const, label: "Invia Email", icon: Mail },
-  { value: "phone_call" as const, label: "Telefonata", icon: Phone },
-  { value: "meeting" as const, label: "Meeting", icon: Users },
-  { value: "follow_up" as const, label: "Follow-up", icon: CalendarClock },
-  { value: "other" as const, label: "Altro", icon: ClipboardList },
+  { value: "send_email" as const, label: "Email", icon: Mail, requires: "email" as const },
+  { value: "phone_call" as const, label: "Telefonata", icon: Phone, requires: "phone" as const },
+  { value: "meeting" as const, label: "Meeting", icon: Users, requires: null },
+  { value: "follow_up" as const, label: "Follow-up", icon: CalendarClock, requires: null },
+  { value: "other" as const, label: "Altro", icon: ClipboardList, requires: null },
 ];
 
-const priorities = [
-  { value: "low", label: "Bassa", color: "text-muted-foreground" },
-  { value: "medium", label: "Media", color: "text-yellow-500" },
-  { value: "high", label: "Alta", color: "text-destructive" },
-];
-
-export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNames, onSuccess, sourceType = "partner", extraSourceMeta }: AssignActivityDialogProps) {
+export function AssignActivityDialog({
+  open, onOpenChange, partnerIds, partnerNames, partnerContactInfo,
+  onSuccess, sourceType = "partner", extraSourceMeta,
+}: AssignActivityDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [activityType, setActivityType] = useState<ActivityTypeValue>("follow_up");
-  const [assignedTo, setAssignedTo] = useState<string>("");
-  const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [useCampaignBatch, setUseCampaignBatch] = useState(false);
@@ -59,10 +59,8 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
   const [creating, setCreating] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
-  const { data: members = [] } = useTeamMembers();
   const createActivities = useCreateActivities();
 
-  // Auto-generate title based on type
   const autoTitle = useMemo(() => {
     const typeLabel = activityTypes.find(t => t.value === activityType)?.label || "";
     return `${typeLabel} — ${new Date().toLocaleDateString("it-IT")}`;
@@ -73,17 +71,54 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
     ? (campaignBatchId.trim() || `batch_${Date.now()}`)
     : null;
 
+  // Compute valid/rejected based on activity type requirements
+  const { validIds, rejectedPartners } = useMemo(() => {
+    const typeDef = activityTypes.find(t => t.value === activityType);
+    const requirement = typeDef?.requires;
+
+    if (!requirement || !partnerContactInfo?.length) {
+      return { validIds: partnerIds, rejectedPartners: [] as PartnerContactInfo[] };
+    }
+
+    const valid: string[] = [];
+    const rejected: PartnerContactInfo[] = [];
+
+    for (const id of partnerIds) {
+      const info = partnerContactInfo.find(p => p.id === id);
+      if (!info) {
+        // No info available, assume valid
+        valid.push(id);
+        continue;
+      }
+      if (requirement === "email" && !info.hasEmail) {
+        rejected.push(info);
+      } else if (requirement === "phone" && !info.hasPhone) {
+        rejected.push(info);
+      } else {
+        valid.push(id);
+      }
+    }
+
+    return { validIds: valid, rejectedPartners: rejected };
+  }, [activityType, partnerIds, partnerContactInfo]);
+
+  const requirementLabel = activityType === "send_email" ? "email" : activityType === "phone_call" ? "telefono" : null;
+
   const handleSubmit = async () => {
+    if (validIds.length === 0) {
+      toast.error("Nessun partner valido per questo tipo di attività");
+      return;
+    }
+
     setCreating(true);
-    setProgress({ done: 0, total: partnerIds.length });
+    setProgress({ done: 0, total: validIds.length });
 
     try {
-      // Create in chunks of 50 to avoid hitting limits
       const CHUNK = 50;
       let done = 0;
 
-      for (let i = 0; i < partnerIds.length; i += CHUNK) {
-        const chunk = partnerIds.slice(i, i + CHUNK);
+      for (let i = 0; i < validIds.length; i += CHUNK) {
+        const chunk = validIds.slice(i, i + CHUNK);
         const activities = chunk.map((pid) => ({
           partner_id: sourceType === "partner" ? pid : null,
           source_type: sourceType,
@@ -91,8 +126,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           activity_type: activityType as any,
           title: effectiveTitle,
           description: description.trim() || null,
-          assigned_to: assignedTo && assignedTo !== "none" ? assignedTo : null,
-          priority,
+          priority: "medium",
           due_date: dueDate || null,
           scheduled_at: scheduledAt || null,
           campaign_batch_id: batchId,
@@ -104,10 +138,13 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
 
         await createActivities.mutateAsync(activities);
         done += chunk.length;
-        setProgress({ done, total: partnerIds.length });
+        setProgress({ done, total: validIds.length });
       }
 
-      toast.success(`${partnerIds.length} attività create`);
+      const rejectedMsg = rejectedPartners.length > 0
+        ? ` (${rejectedPartners.length} esclusi per mancanza ${requirementLabel})`
+        : "";
+      toast.success(`${validIds.length} attività create${rejectedMsg}`);
       resetForm();
       onOpenChange(false);
       onSuccess();
@@ -122,8 +159,6 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
     setTitle("");
     setDescription("");
     setActivityType("follow_up");
-    setAssignedTo("");
-    setPriority("medium");
     setDueDate("");
     setScheduledAt("");
     setUseCampaignBatch(false);
@@ -156,6 +191,34 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
             </Tabs>
           </div>
 
+          {/* Validation warning */}
+          {rejectedPartners.length > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="text-sm font-medium">
+                  {rejectedPartners.length} partner senza {requirementLabel}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Questi partner verranno esclusi dalla creazione. 
+                {validIds.length > 0
+                  ? ` Verranno create attività solo per i ${validIds.length} partner validi.`
+                  : " Nessun partner valido per questo tipo di attività."}
+              </p>
+              <ScrollArea className="max-h-[100px]">
+                <div className="flex flex-wrap gap-1">
+                  {rejectedPartners.map((p) => (
+                    <Badge key={p.id} variant="outline" className="text-[10px] gap-1 border-destructive/30 text-destructive">
+                      <XCircle className="w-2.5 h-2.5" />
+                      {p.name}
+                    </Badge>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Titolo</Label>
@@ -177,44 +240,6 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[60px] text-sm"
             />
-          </div>
-
-          {/* Priority + Assignment row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Flag className="w-3 h-3" /> Priorità
-              </Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorities.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      <span className={p.color}>{p.label}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <UserCheck className="w-3 h-3" /> Assegna a
-              </Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Nessuno" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nessuno</SelectItem>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Dates row */}
@@ -262,20 +287,23 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
             />
           )}
 
-          {/* Partner preview */}
-          {partnerNames && Object.keys(partnerNames).length > 0 && (
+          {/* Valid partner preview */}
+          {partnerNames && validIds.length > 0 && (
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Partner selezionati</Label>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                {validIds.length} partner validi
+              </Label>
               <ScrollArea className="h-[80px] border rounded-md p-2">
                 <div className="flex flex-wrap gap-1">
-                  {partnerIds.slice(0, 30).map((id) => (
+                  {validIds.slice(0, 30).map((id) => (
                     <Badge key={id} variant="secondary" className="text-[10px]">
                       {partnerNames[id] || id.slice(0, 8)}
                     </Badge>
                   ))}
-                  {partnerIds.length > 30 && (
+                  {validIds.length > 30 && (
                     <Badge variant="outline" className="text-[10px]">
-                      +{partnerIds.length - 30} altri
+                      +{validIds.length - 30} altri
                     </Badge>
                   )}
                 </div>
@@ -294,7 +322,7 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
           )}
 
           {/* Submit */}
-          <Button onClick={handleSubmit} disabled={creating} className="w-full">
+          <Button onClick={handleSubmit} disabled={creating || validIds.length === 0} className="w-full">
             {creating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -303,7 +331,12 @@ export function AssignActivityDialog({ open, onOpenChange, partnerIds, partnerNa
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Crea {partnerIds.length} Attività
+                Crea {validIds.length} Attività
+                {rejectedPartners.length > 0 && (
+                  <span className="ml-1 text-destructive-foreground/70">
+                    ({rejectedPartners.length} esclusi)
+                  </span>
+                )}
               </>
             )}
           </Button>
