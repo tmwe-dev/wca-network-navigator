@@ -36,36 +36,75 @@ export function useDeepSearchRunner(): DeepSearchState {
   const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
     if (running || ids.length === 0) return;
 
-    const tableName = mode === "contact" ? "imported_contacts" : "partners";
     const fnName = mode === "contact" ? "deep-search-contact" : "deep-search-partner";
     const bodyKey = mode === "contact" ? "contactId" : "partnerId";
 
+    // ── Pre-check: for partners, detect missing profiles ──
+    let noProfileIds: string[] = [];
+    if (mode === "partner") {
+      // Fetch in batches of 100 to handle large selections
+      const batchSize = 100;
+      const allPartnerData: any[] = [];
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const { data } = await supabase
+          .from("partners")
+          .select("id, raw_profile_html, enrichment_data")
+          .in("id", batch);
+        if (data) allPartnerData.push(...data);
+      }
+
+      noProfileIds = allPartnerData
+        .filter((p: any) => !p.raw_profile_html)
+        .map((p: any) => p.id);
+
+      if (noProfileIds.length > 0 && noProfileIds.length === ids.length) {
+        toast.warning(
+          `Tutti i ${ids.length} partner sono senza profilo WCA. Scarica prima i profili dal Download Center, poi esegui la Deep Search.`,
+          { id: "deep-search-global", duration: 8000 }
+        );
+        return;
+      }
+
+      if (noProfileIds.length > 0) {
+        const withProfile = ids.length - noProfileIds.length;
+        toast.warning(
+          `${noProfileIds.length} partner senza profilo WCA (saltati). Deep Search su ${withProfile} con profilo.`,
+          { id: "deep-search-global", duration: 6000 }
+        );
+      }
+    }
+
     // Smart filter: check which already have deep_search_at
-    let toProcess = ids;
+    let toProcess = mode === "partner" 
+      ? ids.filter(id => !noProfileIds.includes(id))
+      : [...ids];
+
     if (!force) {
       let alreadyDone: any[] | null = null;
       if (mode === "contact") {
         const { data } = await supabase
           .from("imported_contacts")
           .select("id")
-          .in("id", ids)
+          .in("id", toProcess)
           .not("deep_search_at", "is", null);
         alreadyDone = data;
       } else {
-        // For partners, deep_search_at lives inside enrichment_data JSON
         const { data } = await supabase
           .from("partners")
           .select("id, enrichment_data")
-          .in("id", ids);
+          .in("id", toProcess);
         alreadyDone = (data || []).filter((p: any) => p.enrichment_data?.deep_search_at);
       }
 
       const doneSet = new Set((alreadyDone || []).map((p: any) => p.id));
-      toProcess = ids.filter(id => !doneSet.has(id));
-      const skipped = ids.length - toProcess.length;
+      const beforeCount = toProcess.length;
+      toProcess = toProcess.filter(id => !doneSet.has(id));
+      const skipped = beforeCount - toProcess.length;
 
       if (toProcess.length === 0) {
-        toast.info(`Tutti i ${ids.length} record hanno già la Deep Search`, { id: "deep-search-global" });
+        const noProfileMsg = noProfileIds.length > 0 ? ` (${noProfileIds.length} senza profilo)` : "";
+        toast.info(`Tutti i record hanno già la Deep Search${noProfileMsg}`, { id: "deep-search-global" });
         return;
       }
       if (skipped > 0) {
