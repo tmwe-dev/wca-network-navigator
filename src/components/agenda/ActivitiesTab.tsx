@@ -42,6 +42,22 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
     return list;
   }, [activities, search, statusFilter, batchFilter]);
 
+  const { selectedIds, toggle, isAllSelected, toggleAll, clear, count } = useSelection(filtered);
+
+  const filtered = useMemo(() => {
+    let list = activities || [];
+    if (batchFilter) list = list.filter(a => a.campaign_batch_id === batchFilter);
+    if (statusFilter !== "all") list = list.filter(a => a.status === statusFilter);
+    if (search.length >= 2) {
+      const q = search.toLowerCase();
+      list = list.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        a.partners?.company_name?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [activities, search, statusFilter, batchFilter]);
+
   const handleComplete = (id: string) => {
     updateActivity.mutate(
       { id, status: "completed", completed_at: new Date().toISOString() },
