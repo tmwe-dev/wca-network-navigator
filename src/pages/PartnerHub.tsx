@@ -41,6 +41,8 @@ import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { PartnerAIBar } from "@/components/partners/PartnerAIBar";
+import { cn } from "@/lib/utils";
 
 export default function PartnerHub() {
   const [search, setSearch] = useState("");
