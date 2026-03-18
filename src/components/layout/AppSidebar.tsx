@@ -13,39 +13,19 @@ import { useState } from "react";
 
 const navSections = [
   {
-    label: "Panoramica",
+    label: "Ambienti",
     items: [
-      { title: "Super Home", url: "/", icon: Home },
-      { title: "Global", url: "/global", icon: Sparkles },
-    ],
-  },
-  {
-    label: "WCA Network",
-    items: [
-      { title: "Download WCA", url: "/operations", icon: Download },
-      { title: "Rubrica Partner", url: "/partner-hub", icon: Users },
-    ],
-  },
-  {
-    label: "Commerciale",
-    items: [
-      { title: "Contatti CRM", url: "/contacts", icon: UserCheck },
-      { title: "Cockpit", url: "/cockpit", icon: Rocket },
-    ],
-  },
-  {
-    label: "Attività",
-    items: [
-      { title: "Campagne", url: "/campaigns", icon: Mail },
-      { title: "Operations", url: "/hub", icon: Zap },
+      { title: "Dashboard", url: "/", icon: Home },
+      { title: "Network", url: "/network", icon: Globe },
+      { title: "CRM", url: "/crm", icon: UserCheck },
+      { title: "Outreach", url: "/outreach", icon: Rocket },
+      { title: "Agenda", url: "/agenda", icon: Calendar },
     ],
   },
   {
     label: "Sistema",
     items: [
       { title: "Impostazioni", url: "/settings", icon: Settings },
-      { title: "Diagnostica", url: "/diagnostics", icon: Microscope },
-      { title: "Guida", url: "/guida", icon: BookOpen },
     ],
   },
 ];
