@@ -413,26 +413,22 @@ export function CountryWorkbench({
                   selectedId === partner.id && "bg-accent/60 shadow-sm",
                   isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
                 )}>
-                {/* Progressive number */}
-                <span className="text-[10px] text-muted-foreground/60 font-mono w-5 shrink-0 text-right mt-2.5">
-                  {index + 1}
-                </span>
-
-                {/* Checkbox */}
-                <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1.5">
-                  <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                {/* Left: number + checkbox + flag stacked */}
+                <div className="flex flex-col items-center shrink-0 gap-0.5">
+                  <span className="text-[10px] text-muted-foreground/60 font-mono">{index + 1}</span>
+                  <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }}>
+                    <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                  </div>
+                  <span className="text-xs leading-none">{flag}</span>
                 </div>
 
-                {/* Flag top-left + Logo centered */}
-                <div className="flex flex-col items-center shrink-0 gap-1 self-center">
-                  <span className="text-base leading-none self-start">{flag}</span>
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center">
-                    {getRealLogoUrl(partner.logo_url) ? (
-                      <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
-                    ) : (
-                      <span className="text-2xl opacity-50">{flag}</span>
-                    )}
-                  </div>
+                {/* Logo standalone */}
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center shrink-0 self-center">
+                  {getRealLogoUrl(partner.logo_url) ? (
+                    <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
+                  ) : (
+                    <span className="text-2xl opacity-50">{flag}</span>
+                  )}
                 </div>
 
                 {/* Content */}
