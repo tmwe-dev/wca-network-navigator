@@ -518,7 +518,7 @@ export default function PartnerHub() {
         onClose={() => setAiOpen(false)}
         context={{
           selectedCountries: selectedCountry
-            ? [{ code: selectedCountry, name: partners?.find((p: any) => p.country_code === selectedCountry)?.country_name || selectedCountry }]
+            ? [{ code: selectedCountry, name: (partners?.find((p: any) => p.country_code === selectedCountry) as any)?.country_name || selectedCountry }]
             : [],
           filterMode: viewLevel,
         }}

@@ -110,7 +110,7 @@ export function AppLayout() {
         <AiAssistantDialog
           open={aiOpen}
           onClose={() => setAiOpen(false)}
-          context={{ filterMode: currentPath }}
+          context={{ selectedCountries: [], filterMode: currentPath }}
         />
       </div>
     </DeepSearchContext.Provider>
