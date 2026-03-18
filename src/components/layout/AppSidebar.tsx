@@ -4,7 +4,7 @@ import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles,
   Users, Command, Upload, UserCheck, Zap,
-  Rocket, Microscope, Compass,
+  Rocket, Microscope, Download, Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,22 +20,24 @@ const navSections = [
     ],
   },
   {
-    label: "Origini Dati",
+    label: "WCA Network",
     items: [
-      { title: "Acquisition", url: "/operations", icon: Globe },
+      { title: "Download WCA", url: "/operations", icon: Download },
       { title: "Rubrica Partner", url: "/partner-hub", icon: Users },
-      { title: "Contatti", url: "/contacts", icon: UserCheck },
-      { title: "Import", url: "/import", icon: Upload },
     ],
   },
   {
-    label: "Operativo",
+    label: "Commerciale",
     items: [
+      { title: "Contatti CRM", url: "/contacts", icon: UserCheck },
       { title: "Cockpit", url: "/cockpit", icon: Rocket },
-      { title: "Campaigns", url: "/campaigns", icon: Mail },
-      { title: "Email", url: "/email-composer", icon: Send },
+    ],
+  },
+  {
+    label: "Attività",
+    items: [
+      { title: "Campagne", url: "/campaigns", icon: Mail },
       { title: "Operations", url: "/hub", icon: Zap },
-      { title: "Agenda", url: "/reminders", icon: Calendar },
     ],
   },
   {

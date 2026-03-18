@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu, Bot } from "lucide-react";
+import { Search, Menu, Bot, Send, Calendar } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
 
   useEffect(() => {
@@ -68,8 +69,26 @@ export function AppLayout() {
                   <ActiveProcessIndicator />
                   <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-3" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <CreditCounter />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/email-composer")}
+                    aria-label="Email"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate("/reminders")}
+                    aria-label="Agenda"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
