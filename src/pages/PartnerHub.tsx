@@ -35,7 +35,6 @@ import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import { CountryCards } from "@/components/partners/CountryCards";
 import { CountryWorkbench } from "@/components/partners/CountryWorkbench";
-import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
