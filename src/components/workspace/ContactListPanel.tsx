@@ -3,7 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Phone, User, Building2, ChevronRight, AlertTriangle, Globe, Linkedin, MessageCircle, Send, UserCheck } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Mail, Phone, User, Building2, ChevronRight, AlertTriangle,
+  Globe, Linkedin, MessageCircle, Send, ChevronDown, SlidersHorizontal,
+  Sparkles, FileText,
+} from "lucide-react";
 import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
 import { useAllActivities, type AllActivity } from "@/hooks/useActivities";
@@ -13,20 +18,45 @@ import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
-type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
+/* ── Filter types ── */
 
-const FILTER_CHIPS: { key: FilterKey; label: string; variant: "green" | "red" }[] = [
-  { key: "with_email", label: "Con email", variant: "green" },
-  { key: "no_email", label: "Senza email", variant: "red" },
-  { key: "with_contact", label: "Con contatto", variant: "green" },
-  { key: "no_contact", label: "Senza contatto", variant: "red" },
-  { key: "with_alias", label: "Con alias", variant: "green" },
-  { key: "no_alias", label: "Senza alias", variant: "red" },
-  { key: "enriched", label: "Arricchito", variant: "green" },
-  { key: "not_enriched", label: "Non arricchito", variant: "red" },
+type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
+type EmailGenFilter = "all" | "generated" | "to_generate";
+
+interface FilterSection {
+  label: string;
+  chips: { key: FilterKey; label: string; variant: "green" | "red" }[];
+}
+
+const FILTER_SECTIONS: FilterSection[] = [
+  {
+    label: "Dati Contatto",
+    chips: [
+      { key: "with_email", label: "Con email", variant: "green" },
+      { key: "no_email", label: "Senza email", variant: "red" },
+      { key: "with_contact", label: "Con contatto", variant: "green" },
+      { key: "no_contact", label: "Senza contatto", variant: "red" },
+    ],
+  },
+  {
+    label: "Arricchimento",
+    chips: [
+      { key: "enriched", label: "Arricchito", variant: "green" },
+      { key: "not_enriched", label: "Non arricchito", variant: "red" },
+      { key: "with_alias", label: "Con alias", variant: "green" },
+      { key: "no_alias", label: "Senza alias", variant: "red" },
+    ],
+  },
 ];
 
-/** Resolve display fields from partners join OR source_meta fallback */
+const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string; icon: typeof Mail }[] = [
+  { key: "all", label: "Tutte", icon: FileText },
+  { key: "generated", label: "Generata", icon: Sparkles },
+  { key: "to_generate", label: "Da generare", icon: Mail },
+];
+
+/* ── Helpers ── */
+
 function getDisplayFields(a: AllActivity) {
   const p = a.partners;
   const m = a.source_meta || {};
@@ -77,6 +107,8 @@ function useLinkedInLinks(partnerIds: string[]) {
   });
 }
 
+/* ── Component ── */
+
 interface ContactListPanelProps {
   selectedActivityId: string | null;
   onSelect: (activity: AllActivity) => void;
@@ -95,6 +127,9 @@ export default function ContactListPanel({
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [emailGenFilter, setEmailGenFilter] = useState<EmailGenFilter>("all");
+  const [selectedCountries, setSelectedCountries] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string } | null>(null);
 
   const emailActivities = useMemo(() => {
@@ -106,6 +141,19 @@ export default function ContactListPanel({
 
   const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
+
+  // Available countries for filter
+  const availableCountries = useMemo(() => {
+    const map = new Map<string, { code: string; name: string; count: number }>();
+    for (const a of emailActivities) {
+      const d = getDisplayFields(a);
+      const key = d.countryCode;
+      const existing = map.get(key);
+      if (existing) existing.count++;
+      else map.set(key, { code: key, name: d.countryName, count: 1 });
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count);
+  }, [emailActivities]);
 
   const searched = useMemo(() => {
     if (!search.trim()) return emailActivities;
@@ -122,17 +170,45 @@ export default function ContactListPanel({
   }, [emailActivities, search]);
 
   const filtered = useMemo(() => {
-    if (activeFilters.size === 0) return searched;
-    return searched.filter((a) => {
-      for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
-      return true;
-    });
-  }, [searched, activeFilters]);
+    let result = searched;
+
+    // Chip filters
+    if (activeFilters.size > 0) {
+      result = result.filter((a) => {
+        for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
+        return true;
+      });
+    }
+
+    // Email generation filter
+    if (emailGenFilter === "generated") {
+      result = result.filter((a) => !!a.email_subject);
+    } else if (emailGenFilter === "to_generate") {
+      result = result.filter((a) => !a.email_subject);
+    }
+
+    // Country filter
+    if (selectedCountries.size > 0) {
+      result = result.filter((a) => {
+        const d = getDisplayFields(a);
+        return selectedCountries.has(d.countryCode);
+      });
+    }
+
+    return result;
+  }, [searched, activeFilters, emailGenFilter, selectedCountries]);
 
   const filterCounts = useMemo(() => {
     const counts = {} as Record<FilterKey, number>;
-    for (const chip of FILTER_CHIPS) { counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length; }
+    const allChips = FILTER_SECTIONS.flatMap((s) => s.chips);
+    for (const chip of allChips) { counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length; }
     return counts;
+  }, [searched]);
+
+  // Email gen counts
+  const emailGenCounts = useMemo(() => {
+    const generated = searched.filter((a) => !!a.email_subject).length;
+    return { all: searched.length, generated, to_generate: searched.length - generated };
   }, [searched]);
 
   const grouped = useMemo(
@@ -144,10 +220,25 @@ export default function ContactListPanel({
     setActiveFilters((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   }, []);
 
-  const clearFilters = useCallback(() => setActiveFilters(new Set()), []);
+  const clearFilters = useCallback(() => {
+    setActiveFilters(new Set());
+    setEmailGenFilter("all");
+    setSelectedCountries(new Set());
+  }, []);
+
+  const toggleCountry = useCallback((code: string) => {
+    setSelectedCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }, []);
 
   const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
+
+  const activeFilterCount = activeFilters.size + (emailGenFilter !== "all" ? 1 : 0) + selectedCountries.size;
 
   useEffect(() => {
     onFilteredIdsChange?.(filteredIds);
@@ -165,50 +256,133 @@ export default function ContactListPanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-border space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Checkbox checked={allSelected}
-              onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll(filteredIds)} />
-            <p className="text-[11px] text-muted-foreground font-medium">
-              {selectedIds.size > 0 ? (
-                <span className="text-primary">{selectedIds.size} selezionati</span>
-              ) : (
-                <>{filtered.length} attività · {grouped.length} paesi</>
-              )}
-            </p>
-          </div>
+      {/* Header with select-all and counts */}
+      <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={allSelected}
+            onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll(filteredIds)} />
+          <p className="text-[11px] text-muted-foreground font-medium">
+            {selectedIds.size > 0 ? (
+              <span className="text-primary font-bold">{selectedIds.size} selezionati</span>
+            ) : (
+              <>{filtered.length} attività · {grouped.length} paesi</>
+            )}
+          </p>
         </div>
-        {/* Filter chips */}
-        <div className="flex flex-wrap gap-1">
-          <button onClick={clearFilters}
-            className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
-              activeFilters.size === 0
-                ? "micro-badge-blue ring-1 ring-current shadow-[0_0_8px_currentColor]"
-                : "micro-badge-blue"
-            )}>
-            Tutti
-          </button>
-          {FILTER_CHIPS.map((chip) => {
-            const isActive = activeFilters.has(chip.key);
-            const badgeClass = chip.variant === "green" ? "micro-badge-green" : "micro-badge-red";
-            return (
-              <button key={chip.key} onClick={() => toggleFilter(chip.key)}
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
-                  badgeClass,
-                  isActive && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
-                )}>
-                {chip.label}
-                <span className="ml-1 opacity-60">{filterCounts[chip.key]}</span>
-              </button>
-            );
-          })}
+        {/* Email gen mini-counters */}
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className="text-success font-medium" title="Email generate">
+            <Sparkles className="w-3 h-3 inline mr-0.5" />{emailGenCounts.generated}
+          </span>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-warning font-medium" title="Da generare">
+            <Mail className="w-3 h-3 inline mr-0.5" />{emailGenCounts.to_generate}
+          </span>
         </div>
       </div>
 
+      {/* Collapsible Filters */}
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-1.5 border-b border-border/30 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            <SlidersHorizontal className="w-3 h-3" />
+            <span>Filtri</span>
+            {activeFilterCount > 0 && (
+              <Badge className="h-4 px-1.5 text-[9px] bg-primary/20 text-primary hover:bg-primary/20 border-0">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </div>
+          <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", filtersOpen && "rotate-180")} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 py-2 border-b border-border/30 space-y-2.5">
+
+            {/* Email generation status */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Stato Email</p>
+              <div className="flex gap-1">
+                {EMAIL_GEN_OPTIONS.map((opt) => {
+                  const isActive = emailGenFilter === opt.key;
+                  const count = emailGenCounts[opt.key];
+                  return (
+                    <button key={opt.key} onClick={() => setEmailGenFilter(opt.key)}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all",
+                        isActive
+                          ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      )}>
+                      <opt.icon className="w-3 h-3" />
+                      {opt.label}
+                      <span className="opacity-60">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Filter sections in 2-column grid */}
+            {FILTER_SECTIONS.map((section) => (
+              <div key={section.label}>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{section.label}</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {section.chips.map((chip) => {
+                    const isActive = activeFilters.has(chip.key);
+                    return (
+                      <button key={chip.key} onClick={() => toggleFilter(chip.key)}
+                        className={cn(
+                          "flex items-center justify-between px-2 py-1 rounded-md text-[10px] font-medium transition-all",
+                          chip.variant === "green"
+                            ? isActive ? "bg-success/15 text-success ring-1 ring-success/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                            : isActive ? "bg-destructive/15 text-destructive ring-1 ring-destructive/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}>
+                        <span className="truncate">{chip.label}</span>
+                        <span className="opacity-60 ml-1 shrink-0">{filterCounts[chip.key]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Country filter */}
+            {availableCountries.length > 1 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Paese</p>
+                <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
+                  {availableCountries.map((c) => {
+                    const isActive = selectedCountries.has(c.code);
+                    return (
+                      <button key={c.code} onClick={() => toggleCountry(c.code)}
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all",
+                          isActive
+                            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}>
+                        <span>{getCountryFlag(c.code)}</span>
+                        <span className="truncate max-w-[60px]">{c.name}</span>
+                        <span className="opacity-50">{c.count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Clear all */}
+            {activeFilterCount > 0 && (
+              <button onClick={clearFilters}
+                className="text-[10px] text-destructive hover:underline">
+                ✕ Rimuovi tutti i filtri
+              </button>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* List */}
       <ScrollArea className="flex-1">
         <div className="p-1.5 space-y-0.5">
           {grouped.map(({ countryCode, countryName, items }) => (
@@ -229,6 +403,7 @@ export default function ContactListPanel({
                 const displayName = d.contactName;
                 const companyDisplay = d.companyName;
                 const linkedinUrl = activity.partner_id ? linkedinMap?.[activity.partner_id] : undefined;
+                const hasGeneratedEmail = !!activity.email_subject;
 
                 return (
                   <div key={activity.id}
@@ -252,6 +427,9 @@ export default function ContactListPanel({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
+                            {hasGeneratedEmail && (
+                              <Sparkles className="w-3 h-3 text-success shrink-0" title="Email generata" />
+                            )}
                             {d.hasWebsite && <Globe className="w-3 h-3 text-primary/60 shrink-0" />}
                             {linkedinUrl && (
                               <>
