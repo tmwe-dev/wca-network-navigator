@@ -1038,6 +1038,137 @@ function executeUiAction(args: Record<string, unknown>) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WRITING TOOLS — Partner Updates, Notes, Reminders
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
+  if (args.partner_id) {
+    const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
+    return data ? { id: data.id, name: data.company_name } : null;
+  }
+  if (args.company_name) {
+    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).single();
+    return data ? { id: data.id, name: data.company_name } : null;
+  }
+  return null;
+}
+
+async function executeUpdatePartner(args: Record<string, unknown>) {
+  const partner = await resolvePartnerId(args);
+  if (!partner) return { error: "Partner non trovato" };
+
+  const updates: Record<string, unknown> = {};
+  const changes: string[] = [];
+
+  if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
+  if (args.lead_status) { updates.lead_status = args.lead_status; changes.push(`lead status: ${args.lead_status}`); }
+  if (args.rating !== undefined) { updates.rating = Math.min(5, Math.max(0, Number(args.rating))); changes.push(`rating: ${updates.rating}`); }
+  if (args.company_alias) { updates.company_alias = args.company_alias; changes.push(`alias: ${args.company_alias}`); }
+
+  if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare specificato" };
+
+  updates.updated_at = new Date().toISOString();
+  const { error } = await supabase.from("partners").update(updates).eq("id", partner.id);
+  if (error) return { error: error.message };
+
+  return { success: true, partner_id: partner.id, company_name: partner.name, changes, message: `Partner "${partner.name}" aggiornato: ${changes.join(", ")}` };
+}
+
+async function executeAddPartnerNote(args: Record<string, unknown>) {
+  const partner = await resolvePartnerId(args);
+  if (!partner) return { error: "Partner non trovato" };
+
+  const { error } = await supabase.from("interactions").insert({
+    partner_id: partner.id,
+    interaction_type: String(args.interaction_type || "note"),
+    subject: String(args.subject),
+    notes: args.notes ? String(args.notes) : null,
+  });
+  if (error) return { error: error.message };
+
+  return { success: true, partner_id: partner.id, company_name: partner.name, message: `Nota aggiunta a "${partner.name}": ${args.subject}` };
+}
+
+async function executeCreateReminder(args: Record<string, unknown>) {
+  const partner = await resolvePartnerId(args);
+  if (!partner) return { error: "Partner non trovato. Specifica partner_id o company_name." };
+
+  const { error } = await supabase.from("reminders").insert({
+    partner_id: partner.id,
+    title: String(args.title),
+    description: args.description ? String(args.description) : null,
+    due_date: String(args.due_date),
+    priority: String(args.priority || "medium"),
+  });
+  if (error) return { error: error.message };
+
+  return { success: true, partner_id: partner.id, company_name: partner.name, due_date: args.due_date, priority: args.priority || "medium", message: `Reminder creato per "${partner.name}": "${args.title}" (scadenza: ${args.due_date})` };
+}
+
+async function executeUpdateLeadStatus(args: Record<string, unknown>) {
+  const status = String(args.status);
+
+  if (args.contact_ids && Array.isArray(args.contact_ids) && args.contact_ids.length > 0) {
+    const ids = args.contact_ids as string[];
+    const updates: Record<string, unknown> = { lead_status: status };
+    if (status === "converted") updates.converted_at = new Date().toISOString();
+    const { error, count } = await supabase.from("imported_contacts").update(updates).in("id", ids);
+    if (error) return { error: error.message };
+    return { success: true, updated_count: count || ids.length, status, message: `${count || ids.length} contatti aggiornati a "${status}"` };
+  }
+
+  // Filter-based update
+  let query = supabase.from("imported_contacts").select("id", { count: "exact" });
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.country) query = query.ilike("country", `%${args.country}%`);
+
+  const { data: matches, count } = await query.limit(200);
+  if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
+
+  if (matches.length > 5) {
+    return { needs_confirmation: true, count: count || matches.length, status, message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?` };
+  }
+
+  const ids = matches.map((c: any) => c.id);
+  const updates: Record<string, unknown> = { lead_status: status };
+  if (status === "converted") updates.converted_at = new Date().toISOString();
+  const { error } = await supabase.from("imported_contacts").update(updates).in("id", ids);
+  if (error) return { error: error.message };
+  return { success: true, updated_count: ids.length, status, message: `${ids.length} contatti aggiornati a "${status}"` };
+}
+
+async function executeBulkUpdatePartners(args: Record<string, unknown>) {
+  const updates: Record<string, unknown> = {};
+  const changes: string[] = [];
+  if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
+  if (args.lead_status) { updates.lead_status = args.lead_status; changes.push(`lead status: ${args.lead_status}`); }
+  if (Object.keys(updates).length === 0) return { error: "Nessun aggiornamento specificato" };
+  updates.updated_at = new Date().toISOString();
+
+  // Count first
+  let countQuery = supabase.from("partners").select("id", { count: "exact", head: true });
+  if (args.partner_ids && Array.isArray(args.partner_ids)) countQuery = countQuery.in("id", args.partner_ids as string[]);
+  else if (args.country_code) countQuery = countQuery.eq("country_code", String(args.country_code).toUpperCase());
+  else return { error: "Specifica country_code o partner_ids" };
+
+  const { count } = await countQuery;
+  if (!count || count === 0) return { error: "Nessun partner trovato" };
+
+  if (count > 5) {
+    return { needs_confirmation: true, count, changes, message: `Trovati ${count} partner. Confermi l'aggiornamento: ${changes.join(", ")}?` };
+  }
+
+  // Execute
+  let updateQuery = supabase.from("partners").update(updates);
+  if (args.partner_ids && Array.isArray(args.partner_ids)) updateQuery = updateQuery.in("id", args.partner_ids as string[]);
+  else if (args.country_code) updateQuery = updateQuery.eq("country_code", String(args.country_code).toUpperCase());
+  const { error } = await updateQuery;
+  if (error) return { error: error.message };
+
+  return { success: true, updated_count: count, changes, message: `${count} partner aggiornati: ${changes.join(", ")}` };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UNIFIED TOOL DISPATCHER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1053,7 +1184,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "list_reminders": return executeListReminders(args);
     case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
     case "create_download_job": return executeCreateDownloadJob(args);
-    // New memory & plan tools
+    // Memory & plan tools
     case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
     case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
     case "create_work_plan": return userId ? executeCreateWorkPlan(args, userId) : { error: "Auth required" };
@@ -1062,6 +1193,12 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "save_as_template": return userId ? executeSaveAsTemplate(args, userId) : { error: "Auth required" };
     case "search_templates": return userId ? executeSearchTemplates(args, userId) : { error: "Auth required" };
     case "execute_ui_action": return executeUiAction(args);
+    // Writing tools
+    case "update_partner": return executeUpdatePartner(args);
+    case "add_partner_note": return executeAddPartnerNote(args);
+    case "create_reminder": return executeCreateReminder(args);
+    case "update_lead_status": return executeUpdateLeadStatus(args);
+    case "bulk_update_partners": return executeBulkUpdatePartners(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
