@@ -344,57 +344,48 @@ export function CountryWorkbench({
         )}
       </div>
 
-      {/* ═══ DROPDOWN FILTERS: Network + Branch Country ═══ */}
-      {(availableNetworks.length > 0 || availableBranchCountries.length > 0) && (
-        <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2">
-          {availableNetworks.length > 0 && (
-            <Select
-              value={networkFilter || "__all__"}
-              onValueChange={(v) => setNetworkFilter(v === "__all__" ? null : v)}
-            >
-              <SelectTrigger className="h-7 text-[11px] w-auto min-w-[120px] max-w-[180px] bg-muted/50 border-border/60">
-                <SelectValue placeholder="Network" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__" className="text-xs">Tutti i network</SelectItem>
-                {availableNetworks.map((n) => (
-                  <SelectItem key={n} value={n} className="text-xs">{n.replace("WCA ", "")}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {availableBranchCountries.length > 0 && (
-            <Select
-              value={branchCountryFilter || "__all__"}
-              onValueChange={(v) => setBranchCountryFilter(v === "__all__" ? null : v)}
-            >
-              <SelectTrigger className="h-7 text-[11px] w-auto min-w-[120px] max-w-[180px] bg-muted/50 border-border/60">
-                <SelectValue placeholder="Filiali" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__" className="text-xs">Tutte le filiali</SelectItem>
-                {availableBranchCountries.map((b) => (
-                  <SelectItem key={b.code} value={b.code} className="text-xs">
-                    {getCountryFlag(b.code)} {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+      {/* ═══ BRANCH FILTER (if available) ═══ */}
+      {availableBranchCountries.length > 0 && (
+        <div className="px-4 py-1.5 border-b border-border/40 flex items-center gap-2">
+          <Select
+            value={branchCountryFilter || "__all__"}
+            onValueChange={(v) => setBranchCountryFilter(v === "__all__" ? null : v)}
+          >
+            <SelectTrigger className="h-7 text-[11px] w-auto min-w-[120px] max-w-[180px] bg-muted/50 border-border/60">
+              <SelectValue placeholder="Filiali" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__" className="text-xs">Tutte le filiali</SelectItem>
+              {availableBranchCountries.map((b) => (
+                <SelectItem key={b.code} value={b.code} className="text-xs">
+                  {getCountryFlag(b.code)} {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
-      {/* ═══ SELECT ALL ═══ */}
-      <div className="px-4 py-1.5 border-b border-border/30">
-        <div className="flex items-center gap-2 pl-[2px]">
+      {/* ═══ SELECT ALL + SEARCH ═══ */}
+      <div className="px-4 py-1.5 border-b border-border/30 flex items-center gap-3">
+        <div className="flex items-center gap-2 pl-[2px] shrink-0">
           <Checkbox
             checked={allSelected}
             onCheckedChange={handleSelectAll}
             className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
-          <span className="text-[10px] text-muted-foreground select-none">
-            {allSelected ? "Deseleziona tutti" : "Seleziona tutti"}
+          <span className="text-[10px] text-muted-foreground select-none whitespace-nowrap">
+            {allSelected ? "Deseleziona" : "Sel. tutti"}
           </span>
+        </div>
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Cerca partner..."
+            className="h-7 pl-7 text-[11px] bg-muted/50 border-border/60"
+          />
         </div>
       </div>
 
