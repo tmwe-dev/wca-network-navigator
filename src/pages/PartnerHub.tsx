@@ -330,27 +330,16 @@ export default function PartnerHub() {
           </div>
         </div>
 
-        {/* Search + filters bar (list view only) */}
+        {/* Filters bar (list view only) */}
         {viewLevel === "list" && (
-          <div className="px-4 py-2.5 border-b border-white/[0.06] space-y-2">
+          <div className="px-4 py-2 border-b border-border/30 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <Input
-                  placeholder="Cerca partner..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-8 text-[13px] rounded-lg bg-white/[0.05] border-white/10 placeholder:text-white/30 focus:border-blue-500/50 focus:ring-0 focus:bg-white/[0.07]"
-                />
-              </div>
               <PartnerFiltersSheet
                 filters={filters}
                 setFilters={setFilters}
                 countries={countryOptions}
                 activeFilterCount={activeFilterCount}
               />
-            </div>
-            <div className="flex items-center justify-between gap-2">
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                 <SelectTrigger className="h-7 text-xs w-[140px] rounded-md">
                   <SelectValue placeholder="Ordina..." />
@@ -365,6 +354,8 @@ export default function PartnerHub() {
                   <SelectItem value="contacts_desc">Contatti completi</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleSelectAll}
                 className={cn(
