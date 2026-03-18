@@ -18,6 +18,7 @@ interface PartnerListItemProps {
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
+  hasBusinessCard?: boolean;
   onSelect: (id: string) => void;
   onToggleSelection: (id: string, e?: React.MouseEvent) => void;
   index?: number;
