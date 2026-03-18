@@ -46,7 +46,7 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
           isSelected={selection.selectedIds.has(c.id)}
           onSelect={() => onSelect(c)}
           onToggle={() => selection.toggle(c.id)}
-          index={page * PAGE_SIZE + i}
+          index={page * pageSize + i}
         />
       ))}
       {totalPages > 1 && (
