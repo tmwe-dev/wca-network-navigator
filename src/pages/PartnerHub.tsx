@@ -282,7 +282,7 @@ export default function PartnerHub() {
         {/* Header — glass bar */}
         <div className="h-[52px] flex items-center gap-3 px-4 border-b border-white/[0.06] glass-panel shrink-0">
           <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow shrink-0" />
-          <span className="text-gradient-blue font-semibold text-sm">Partner Hub</span>
+          <span className="text-gradient-blue font-semibold text-sm">Rubrica Partner</span>
           <span className="glass-panel-blue text-blue-300 text-xs font-mono px-2 py-0.5 rounded-full glow-blue">
             {isLoading ? "…" : filteredPartners.length}
           </span>

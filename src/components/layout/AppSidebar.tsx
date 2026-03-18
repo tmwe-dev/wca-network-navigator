@@ -17,7 +17,7 @@ const navSections = [
     items: [
       { title: "Super Home", url: "/", icon: Home },
       { title: "Acquisition", url: "/operations", icon: Globe },
-      { title: "Network", url: "/partner-hub", icon: Users },
+      { title: "Rubrica Partner", url: "/partner-hub", icon: Users },
       { title: "Global", url: "/global", icon: Sparkles },
     ],
   },
