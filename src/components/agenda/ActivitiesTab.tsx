@@ -4,11 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Check, Search, Trash2 } from "lucide-react";
 import { useAllActivities, useUpdateActivity, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
+import { useSelection } from "@/hooks/useSelection";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -40,6 +42,11 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
     return list;
   }, [activities, search, statusFilter, batchFilter]);
 
+  const { selectedIds, toggle, isAllSelected, toggleAll, clear, count } = useSelection(filtered);
+
+
+
+
   const handleComplete = (id: string) => {
     updateActivity.mutate(
       { id, status: "completed", completed_at: new Date().toISOString() },
@@ -49,8 +56,29 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
   const handleDelete = (ids: string[]) => {
     deleteActivities.mutate(ids, {
-      onSuccess: () => toast.success(`${ids.length} attività eliminate`),
+      onSuccess: () => {
+        toast.success(`${ids.length} attività eliminate`);
+        clear();
+      },
     });
+  };
+
+  const handleBulkComplete = () => {
+    const ids = Array.from(selectedIds);
+    const pending = filtered.filter(a => ids.includes(a.id) && a.status !== "completed");
+    if (!pending.length) return toast.info("Nessuna attività da completare nella selezione");
+    Promise.all(
+      pending.map(a =>
+        updateActivity.mutateAsync({ id: a.id, status: "completed", completed_at: new Date().toISOString() })
+      )
+    ).then(() => {
+      toast.success(`${pending.length} attività completate`);
+      clear();
+    });
+  };
+
+  const handleBulkDelete = () => {
+    handleDelete(Array.from(selectedIds));
   };
 
   if (isLoading) {
@@ -67,7 +95,14 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Attività ({filtered.length})</CardTitle>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={isAllSelected}
+              onCheckedChange={(checked) => toggleAll(!!checked)}
+              aria-label="Seleziona tutti"
+            />
+            <CardTitle className="text-lg">Attività ({filtered.length})</CardTitle>
+          </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -91,6 +126,18 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
             </Select>
           </div>
         </div>
+        {count > 0 && (
+          <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50 border">
+            <span className="text-xs font-medium">{count} selezionati</span>
+            <div className="flex-1" />
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkComplete}>
+              <Check className="w-3 h-3" /> Completa
+            </Button>
+            <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+              <Trash2 className="w-3 h-3" /> Elimina
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {filtered.length === 0 ? (
@@ -103,6 +150,8 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
               <ActivityRow
                 key={a.id}
                 activity={a}
+                selected={selectedIds.has(a.id)}
+                onToggle={() => toggle(a.id)}
                 onComplete={() => handleComplete(a.id)}
                 onDelete={() => handleDelete([a.id])}
               />
@@ -116,10 +165,14 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
 function ActivityRow({
   activity: a,
+  selected,
+  onToggle,
   onComplete,
   onDelete,
 }: {
   activity: AllActivity;
+  selected: boolean;
+  onToggle: () => void;
   onComplete: () => void;
   onDelete: () => void;
 }) {
@@ -140,7 +193,12 @@ function ActivityRow({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+    <div className={cn("flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors", selected && "bg-primary/5 border-primary/30")}>
+      <Checkbox
+        checked={selected}
+        onCheckedChange={onToggle}
+        className="shrink-0"
+      />
       {a.partners && (
         <span className="text-lg shrink-0">{getCountryFlag(a.partners.country_code)}</span>
       )}
