@@ -9,7 +9,7 @@ import {
   Users, User, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
   MessageSquare, Clock,
-  Hash, ChevronDown,
+  Hash, ChevronDown, Brain,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { PartnerRating } from "@/components/partners/PartnerRating";
@@ -116,6 +116,16 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-foreground truncate">{partner.company_name}</h2>
+              {enrichment?.deep_search_at && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Deep Search — {format(new Date(enrichment.deep_search_at), "d MMM yyyy", { locale: it })}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={onToggleFavorite}

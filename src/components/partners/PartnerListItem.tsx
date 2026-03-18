@@ -1,8 +1,11 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, Phone, ChevronRight, User } from "lucide-react";
+import { Mail, Phone, ChevronRight, User, Brain } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
+import { asEnrichment } from "@/lib/partnerUtils";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
@@ -36,6 +39,8 @@ export function PartnerListItem({
     ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category)),
   ];
   const branchCountries = getBranchCountries(partner);
+  const enrichment = asEnrichment(partner.enrichment_data);
+  const hasDeepSearch = !!enrichment?.deep_search_at;
   const contacts = partner.partner_contacts || [];
   const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
   const contactEmail = primaryContact?.email;
@@ -155,7 +160,19 @@ export function PartnerListItem({
             </div>
           )}
         </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+        <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+          {hasDeepSearch && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
+              </TooltipTrigger>
+              <TooltipContent>
+                Deep Search — {format(new Date(enrichment!.deep_search_at!), "d MMM yyyy", { locale: it })}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
       </div>
     </div>
   );
