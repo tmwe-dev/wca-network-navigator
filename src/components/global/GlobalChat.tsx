@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Loader2, Sparkles, Trash2, Rocket, Clock } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, Trash2, Rocket, Clock, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
@@ -86,6 +86,9 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -202,6 +205,29 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
     [messages, isLoading]
   );
 
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) return;
+    const recognition = new SR();
+    recognition.lang = "it-IT";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) sendMessage(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [isListening, sendMessage]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -309,6 +335,19 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
             className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500/40"
             style={{ minHeight: "36px", maxHeight: "100px" }}
           />
+          {hasSpeechAPI && (
+            <button
+              onClick={toggleListening}
+              className={`p-2 rounded-xl transition-all ${
+                isListening
+                  ? "bg-red-500/20 text-red-400 animate-pulse border border-red-500/30"
+                  : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+              }`}
+              title={isListening ? "Stop dettatura" : "Detta con microfono"}
+            >
+              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+            </button>
+          )}
           <button
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || isLoading}
