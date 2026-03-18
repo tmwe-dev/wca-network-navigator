@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Globe, MapPin, Users,
-  Filter, CheckSquare, Loader2, Bot,
+  Filter, CheckSquare, Loader2,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -35,7 +35,6 @@ import { PartnerFilters } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import { CountryCards } from "@/components/partners/CountryCards";
 import { CountryWorkbench } from "@/components/partners/CountryWorkbench";
-import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { sortPartners, type SortOption } from "@/lib/partnerUtils";
 import { PartnerListItem } from "@/components/partners/PartnerListItem";
 import { useBatchSocialLinks } from "@/hooks/useSocialLinks";
@@ -54,7 +53,7 @@ export default function PartnerHub() {
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
-  const [aiOpen, setAiOpen] = useState(false);
+  
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
 
@@ -289,19 +288,6 @@ export default function PartnerHub() {
 
           <div className="flex-1" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={() => setAiOpen(true)}
-              >
-                <Bot className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Assistente AI</TooltipContent>
-          </Tooltip>
 
           <div className="flex items-center gap-0.5 rounded-md border border-white/[0.08] p-0.5">
             <button
@@ -512,17 +498,6 @@ export default function PartnerHub() {
       </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* AI Assistant */}
-      <AiAssistantDialog
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        context={{
-          selectedCountries: selectedCountry
-            ? [{ code: selectedCountry, name: partners?.find((p: any) => p.country_code === selectedCountry)?.country_name || selectedCountry }]
-            : [],
-          filterMode: viewLevel,
-        }}
-      />
     </div>
     </TooltipProvider>
   );

@@ -5,8 +5,8 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import {
-  ArrowLeft, Phone, Mail, CheckSquare, MapPin, Linkedin, ClipboardList, Coins,
-  Globe, Send, Star, Package, X,
+  ArrowLeft, Phone, Mail, CheckSquare, MapPin,
+  Send, Star, Package, X, User,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -14,11 +14,9 @@ import {
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getServiceIcon, TRANSPORT_SERVICES, SPECIALTY_SERVICES } from "@/components/partners/shared/ServiceIcons";
-import { getYearsMember, formatServiceCategory, getServiceIconColor } from "@/lib/countries";
+import { getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { getRealLogoUrl, asEnrichment } from "@/lib/partnerUtils";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 /* ── Helpers ── */
 const hasPhone = (p: any) =>
@@ -72,47 +70,6 @@ export function CountryWorkbench({
     [partners, countryCode]
   );
 
-  const totalAiCredits = useMemo(() => {
-    return countryPartners.reduce((sum: number, p: any) => {
-      const credits = asEnrichment(p.enrichment_data)?.tokens_used?.credits_consumed || 0;
-      return sum + credits;
-    }, 0);
-  }, [countryPartners]);
-
-  const partnerIds = useMemo(() => countryPartners.map((p: any) => p.id), [countryPartners]);
-  const { data: linkedinMap } = useQuery({
-    queryKey: ["linkedin-links-hub", countryCode, partnerIds],
-    queryFn: async () => {
-      if (!partnerIds.length) return {} as Record<string, string>;
-      const { data, error } = await supabase
-        .from("partner_social_links")
-        .select("partner_id, url")
-        .eq("platform", "linkedin")
-        .in("partner_id", partnerIds);
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      (data || []).forEach((r) => { map[r.partner_id] = r.url; });
-      return map;
-    },
-    enabled: partnerIds.length > 0,
-    staleTime: 30_000,
-  });
-
-  const { data: activityPartnerIds } = useQuery({
-    queryKey: ["activity-partner-ids", countryCode, partnerIds],
-    queryFn: async () => {
-      if (!partnerIds.length) return new Set<string>();
-      const { data, error } = await supabase
-        .from("activities")
-        .select("partner_id")
-        .in("partner_id", partnerIds);
-      if (error) throw error;
-      return new Set((data || []).map((r) => r.partner_id));
-    },
-    enabled: partnerIds.length > 0,
-    staleTime: 30_000,
-  });
-
   const dynamicCounts = useMemo(() => {
     const countFor = (excludeTag: FilterTag, predicate: (p: any) => boolean) => {
       let list = countryPartners;
@@ -144,11 +101,11 @@ export function CountryWorkbench({
   }, [allSelected, filteredPartners, onSelectAllFiltered]);
 
   const filterChips: { key: FilterTag; label: string; icon: typeof Phone; color: string; activeColor: string; count: number }[] = [
-    { key: "with_phone", label: "Telefono", icon: Phone, color: "text-emerald-500", activeColor: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_hsl(142_71%_45%/0.12)]", count: dynamicCounts.with_phone },
-    { key: "with_email", label: "Email", icon: Mail, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400 shadow-[0_0_10px_hsl(199_89%_48%/0.12)]", count: dynamicCounts.with_email },
-    { key: "deep_search", label: "Deep Search", icon: Send, color: "text-violet-500", activeColor: "bg-violet-500/15 border-violet-500/40 text-violet-400 shadow-[0_0_10px_hsl(258_90%_66%/0.12)]", count: dynamicCounts.deep_search },
-    { key: "rating_3", label: "Rating 3+", icon: Star, color: "text-amber-500", activeColor: "bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_10px_hsl(38_92%_50%/0.12)]", count: dynamicCounts.rating_3 },
-    { key: "with_services", label: "Servizi", icon: Package, color: "text-primary", activeColor: "bg-primary/15 border-primary/40 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.12)]", count: dynamicCounts.with_services },
+    { key: "with_phone", label: "Telefono", icon: Phone, color: "text-emerald-500", activeColor: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400", count: dynamicCounts.with_phone },
+    { key: "with_email", label: "Email", icon: Mail, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.with_email },
+    { key: "deep_search", label: "Deep Search", icon: Send, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.deep_search },
+    { key: "rating_3", label: "Rating 3+", icon: Star, color: "text-amber-500", activeColor: "bg-amber-500/15 border-amber-500/40 text-amber-400", count: dynamicCounts.rating_3 },
+    { key: "with_services", label: "Servizi", icon: Package, color: "text-sky-500", activeColor: "bg-sky-500/15 border-sky-500/40 text-sky-400", count: dynamicCounts.with_services },
   ];
 
   return (
@@ -162,16 +119,10 @@ export function CountryWorkbench({
           <span className="text-2xl">{flag}</span>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-[11px] text-muted-foreground font-medium">{countryPartners.length} partner</span>
-              {totalAiCredits > 0 && (
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Coins className="w-3 h-3 text-amber-500" />
-                  {totalAiCredits}
-                </span>
-              )}
-            </div>
           </div>
+          <span className="text-lg font-bold text-foreground tabular-nums bg-muted/60 px-3 py-0.5 rounded-lg">
+            {countryPartners.length}
+          </span>
         </div>
       </div>
 
@@ -192,9 +143,7 @@ export function CountryWorkbench({
                 {f.label}
                 <span className={cn(
                   "min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
-                  activeFilters.has(f.key)
-                    ? "bg-white/10"
-                    : "bg-muted-foreground/10"
+                  activeFilters.has(f.key) ? "bg-white/10" : "bg-muted-foreground/10"
                 )}>
                   {f.count}
                 </span>
@@ -212,7 +161,11 @@ export function CountryWorkbench({
 
       {/* ═══ LIST HEADER ═══ */}
       <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/20">
-        <span className="text-[11px] text-muted-foreground font-medium">{filteredPartners.length} risultati</span>
+        <span className="text-[11px] text-muted-foreground font-medium">
+          <span className="font-bold text-foreground">{filteredPartners.length}</span>
+          {activeFilters.size > 0 && <span> / {countryPartners.length}</span>}
+          {" "}partner
+        </span>
         <button onClick={handleSelectAll}
           className={cn(
             "flex items-center gap-1 text-[11px] px-2 py-1 rounded-full transition-all font-medium",
@@ -228,15 +181,12 @@ export function CountryWorkbench({
       {/* ═══ PARTNER LIST ═══ */}
       <ScrollArea className="flex-1">
         <div className="py-1">
-          {filteredPartners.map((partner: any) => {
+          {filteredPartners.map((partner: any, index: number) => {
             const isSelected = selectedIds.has(partner.id);
             const years = getYearsMember(partner.member_since);
             const services = partner.partner_services || [];
-            const transportServices = services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category));
-            const specialtyServices = services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category));
+            const allServices = [...services.filter((s: any) => TRANSPORT_SERVICES.includes(s.service_category)), ...services.filter((s: any) => SPECIALTY_SERVICES.includes(s.service_category))];
             const networks = partner.partner_networks || [];
-            const linkedinUrl = linkedinMap?.[partner.id];
-            const hasActivity = activityPartnerIds?.has(partner.id);
             const primaryContact = (partner.partner_contacts || []).find((c: any) => c.is_primary) || (partner.partner_contacts || [])[0];
             const contactEmail = primaryContact?.email;
             const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
@@ -244,12 +194,16 @@ export function CountryWorkbench({
             return (
               <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
                 className={cn(
-                  "mx-2 mb-1 px-3 py-2.5 cursor-pointer transition-all rounded-xl flex items-start gap-2.5 group/item",
+                  "mx-2 mb-1 px-3 py-2.5 cursor-pointer transition-all rounded-xl flex items-start gap-2",
                   "hover:bg-accent/40",
                   selectedId === partner.id && "bg-accent/60 shadow-sm",
                   isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
-                  hasActivity && "border-l-[3px] border-l-violet-500/70",
                 )}>
+                {/* Progressive number */}
+                <span className="text-[10px] text-muted-foreground/50 font-mono w-5 shrink-0 text-right mt-2.5">
+                  {index + 1}
+                </span>
+
                 {/* Checkbox */}
                 <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }} className="shrink-0 mt-1.5">
                   <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
@@ -266,26 +220,10 @@ export function CountryWorkbench({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  {/* Row 1: Name + badges */}
+                  {/* Row 1: Name + rating */}
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-[13px] font-semibold truncate leading-tight">{partner.company_name}</p>
                     {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} />}
-                    {hasDeepSearch(partner) && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="w-[18px] h-[18px] bg-sky-500/20 text-sky-400 text-[8px] font-bold rounded flex items-center justify-center shrink-0">D</span>
-                        </TooltipTrigger>
-                        <TooltipContent>Deep Search – {format(new Date(asEnrichment(partner.enrichment_data)!.deep_search_at!), "dd/MM/yyyy")}</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {hasActivity && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <ClipboardList className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent>Ha attività assegnate</TooltipContent>
-                      </Tooltip>
-                    )}
                   </div>
 
                   {/* Row 2: City + years */}
@@ -296,13 +234,42 @@ export function CountryWorkbench({
                     {years > 0 && <TrophyRow years={years} />}
                   </div>
 
-                  {/* Row 3: Service icons */}
-                  {(transportServices.length > 0 || specialtyServices.length > 0) && (
+                  {/* Row 3: Contact info — always visible */}
+                  <div className="mt-1.5 space-y-0.5">
+                    {primaryContact ? (
+                      <>
+                        <div className="flex items-center gap-1.5 text-[11px]">
+                          <User className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                          <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
+                          {(partner.partner_contacts || []).length > 1 && (
+                            <span className="text-[10px] text-muted-foreground">+{(partner.partner_contacts || []).length - 1}</span>
+                          )}
+                        </div>
+                        {contactEmail && (
+                          <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 text-[11px] text-sky-400 hover:underline truncate ml-[18px]">
+                            <Mail className="w-3 h-3 shrink-0" />{contactEmail}
+                          </a>
+                        )}
+                        {contactPhone && (
+                          <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 text-[11px] text-emerald-400 truncate ml-[18px]">
+                            <Phone className="w-3 h-3 shrink-0" />{contactPhone}
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[10px] italic text-destructive/60">Nessun contatto</span>
+                    )}
+                  </div>
+
+                  {/* Row 4: Service icons */}
+                  {allServices.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      {transportServices.slice(0, 5).map((s: any, i: number) => {
+                      {allServices.slice(0, 6).map((s: any, i: number) => {
                         const Icon = getServiceIcon(s.service_category);
                         return (
-                          <Tooltip key={`t${i}`}>
+                          <Tooltip key={i}>
                             <TooltipTrigger>
                               <Icon className="w-3.5 h-3.5 text-sky-500/70" strokeWidth={1.5} />
                             </TooltipTrigger>
@@ -310,28 +277,17 @@ export function CountryWorkbench({
                           </Tooltip>
                         );
                       })}
-                      {specialtyServices.length > 0 && transportServices.length > 0 && (
-                        <span className="w-px h-3 bg-border/50" />
+                      {allServices.length > 6 && (
+                        <span className="text-[9px] text-muted-foreground">+{allServices.length - 6}</span>
                       )}
-                      {specialtyServices.slice(0, 3).map((s: any, i: number) => {
-                        const Icon = getServiceIcon(s.service_category);
-                        return (
-                          <Tooltip key={`s${i}`}>
-                            <TooltipTrigger>
-                              <Icon className="w-3.5 h-3.5 text-violet-400/70" strokeWidth={1.5} />
-                            </TooltipTrigger>
-                            <TooltipContent>{formatServiceCategory(s.service_category)}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
                     </div>
                   )}
 
-                  {/* Row 4: Networks (compact) */}
+                  {/* Row 5: Networks (compact) */}
                   {networks.length > 0 && (
                     <div className="flex items-center gap-1 mt-1.5">
                       {networks.slice(0, 3).map((n: any) => (
-                        <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/[0.08] text-primary/80 font-medium truncate max-w-[80px]">
+                        <span key={n.id} className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/[0.08] text-amber-500/80 font-medium truncate max-w-[80px]">
                           {n.network_name.replace("WCA ", "").substring(0, 10)}
                         </span>
                       ))}
@@ -340,35 +296,6 @@ export function CountryWorkbench({
                       )}
                     </div>
                   )}
-
-                  {/* Row 5: QUICK ACTIONS — inline */}
-                  <div className="flex items-center gap-1 mt-2 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                    {contactEmail && (
-                      <a href={`mailto:${contactEmail}`} onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors">
-                        <Mail className="w-3 h-3" /> Email
-                      </a>
-                    )}
-                    {contactPhone && (
-                      <a href={`tel:${contactPhone}`} onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors">
-                        <Phone className="w-3 h-3" /> Chiama
-                      </a>
-                    )}
-                    {linkedinUrl && (
-                      <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors">
-                        <Linkedin className="w-3 h-3" /> LinkedIn
-                      </a>
-                    )}
-                    {partner.website && (
-                      <a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`}
-                        target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground hover:bg-accent/50 transition-colors">
-                        <Globe className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
             );

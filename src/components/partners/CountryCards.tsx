@@ -5,7 +5,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
-import { Search, ArrowUpDown, Star } from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -95,34 +95,30 @@ export function CountryCards({ onSelectCountry }: CountryCardsProps) {
           </Select>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{totalCountries} paesi</span>
-            <span>{totalPartners} partner</span>
+            <span className="font-bold text-foreground">{totalPartners.toLocaleString()} partner</span>
           </div>
         </div>
       </div>
 
       {/* Country grid */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
+        <div className="p-3 space-y-1.5">
           {filtered.map((country) => (
             <div
               key={country.country_code}
               onClick={() => onSelectCountry(country.country_code)}
               className={cn(
-                "p-3 rounded-xl border cursor-pointer transition-all",
+                "px-3 py-2.5 rounded-xl border cursor-pointer transition-all",
                 "hover:bg-accent/50 hover:shadow-md hover:scale-[1.01]",
                 "bg-card border-border/50",
               )}
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl shrink-0">{country.flag}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm truncate">{country.name}</p>
-                    <span className="text-sm font-bold text-foreground shrink-0 ml-2">
-                      {country.total_partners}
-                    </span>
-                  </div>
-                </div>
+                <p className="font-semibold text-sm truncate flex-1 min-w-0">{country.name}</p>
+                <span className="text-base font-bold text-foreground shrink-0 tabular-nums bg-muted/60 px-2.5 py-0.5 rounded-lg">
+                  {country.total_partners.toLocaleString()}
+                </span>
               </div>
             </div>
           ))}

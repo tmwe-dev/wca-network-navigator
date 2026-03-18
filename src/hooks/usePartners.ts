@@ -44,46 +44,61 @@ export interface PartnerFilters {
   favorites?: boolean;
 }
 
+/** Fetch all rows by iterating with .range() in blocks of 1000 */
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => any): Promise<T[]> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await buildQuery(offset, offset + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    offset += PAGE;
+  }
+  return all;
+}
+
 export function usePartners(filters?: PartnerFilters) {
   return useQuery({
     queryKey: ["partners", filters],
     queryFn: async () => {
-      let query = supabase
-        .from("partners")
-        .select(`
-          *,
-          partner_services (service_category),
-          partner_certifications (certification),
-          partner_networks (id, network_name, expires),
-          partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias)
-        `)
-        .eq("is_active", true);
+      return fetchAllRows((from, to) => {
+        let query = supabase
+          .from("partners")
+          .select(`
+            *,
+            partner_services (service_category),
+            partner_certifications (certification),
+            partner_networks (id, network_name, expires),
+            partner_contacts (id, name, title, email, direct_phone, mobile, is_primary, contact_alias)
+          `)
+          .eq("is_active", true);
 
-      if (filters?.search) {
-        const s = sanitizeSearchTerm(filters.search);
-        if (s) query = query.ilike("company_name", `%${s}%`);
-      }
+        if (filters?.search) {
+          const s = sanitizeSearchTerm(filters.search);
+          if (s) query = query.ilike("company_name", `%${s}%`);
+        }
 
-      if (filters?.countries && filters.countries.length > 0) {
-        query = query.in("country_code", filters.countries);
-      }
+        if (filters?.countries && filters.countries.length > 0) {
+          query = query.in("country_code", filters.countries);
+        }
 
-      if (filters?.cities && filters.cities.length > 0) {
-        query = query.in("city", filters.cities);
-      }
+        if (filters?.cities && filters.cities.length > 0) {
+          query = query.in("city", filters.cities);
+        }
 
-      if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
-        query = query.in("partner_type", filters.partnerTypes as any);
-      }
+        if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
+          query = query.in("partner_type", filters.partnerTypes as any);
+        }
 
-      if (filters?.favorites) {
-        query = query.eq("is_favorite", true);
-      }
+        if (filters?.favorites) {
+          query = query.eq("is_favorite", true);
+        }
 
-      const { data, error } = await query.order("company_name").limit(2000);
-
-      if (error) throw error;
-      return data;
+        return query.order("company_name").range(from, to);
+      });
     },
     staleTime: 30_000,
   });
@@ -94,21 +109,20 @@ export function usePartnersByCountry(countryCode: string | null) {
     queryKey: ["partners-by-country", countryCode],
     queryFn: async () => {
       if (!countryCode) return [];
-      
-      const { data, error } = await supabase
-        .from("partners")
-        .select(`
-          *,
-          partner_services (service_category),
-          partner_certifications (certification)
-        `)
-        .eq("is_active", true)
-        .eq("country_code", countryCode)
-        .order("company_name")
-        .limit(2000);
 
-      if (error) throw error;
-      return data;
+      return fetchAllRows((from, to) =>
+        supabase
+          .from("partners")
+          .select(`
+            *,
+            partner_services (service_category),
+            partner_certifications (certification)
+          `)
+          .eq("is_active", true)
+          .eq("country_code", countryCode)
+          .order("company_name")
+          .range(from, to)
+      );
     },
     enabled: !!countryCode,
     staleTime: 30_000,
@@ -165,18 +179,18 @@ export function usePartnerStats() {
   return useQuery({
     queryKey: ["partner-stats"],
     queryFn: async () => {
-      const { data: partners, error } = await supabase
-        .from("partners")
-        .select("id, country_code, country_name, partner_type, member_since")
-        .eq("is_active", true)
-        .limit(5000);
+      const partners = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("partners")
+          .select("id, country_code, country_name, partner_type, member_since")
+          .eq("is_active", true)
+          .range(from, to)
+      );
 
-      if (error) throw error;
+      const totalPartners = partners.length;
 
-      const totalPartners = partners?.length || 0;
-      
       const countryCounts: Record<string, { name: string; count: number }> = {};
-      partners?.forEach((p) => {
+      partners.forEach((p) => {
         if (!countryCounts[p.country_code]) {
           countryCounts[p.country_code] = { name: p.country_name, count: 0 };
         }
@@ -184,7 +198,7 @@ export function usePartnerStats() {
       });
 
       const typeCounts: Record<string, number> = {};
-      partners?.forEach((p) => {
+      partners.forEach((p) => {
         if (p.partner_type) {
           typeCounts[p.partner_type] = (typeCounts[p.partner_type] || 0) + 1;
         }

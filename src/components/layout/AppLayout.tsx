@@ -4,14 +4,16 @@ import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, Bot } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const location = useLocation();
   const deepSearch = useDeepSearchRunner();
 
@@ -68,6 +70,15 @@ export function AppLayout() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CreditCounter />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => setAiOpen(true)}
+                    aria-label="AI Assistant"
+                  >
+                    <Bot className="h-4 w-4" />
+                  </Button>
                   {!isCampaignsPage && (
                     <button
                       onClick={() => setCommandOpen(true)}
@@ -96,6 +107,11 @@ export function AppLayout() {
         </div>
 
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+        <AiAssistantDialog
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          context={{ selectedCountries: [], filterMode: currentPath }}
+        />
       </div>
     </DeepSearchContext.Provider>
   );
