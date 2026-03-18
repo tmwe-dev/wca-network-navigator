@@ -16,6 +16,7 @@ export interface ContactFilters {
   holdingPattern?: "out" | "in" | "all";
   groupBy?: "country" | "origin" | "status" | "date";
   importLogId?: string;
+  metPersonally?: boolean;
   page?: number;
   pageSize?: number;
 }

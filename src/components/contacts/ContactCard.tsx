@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles
+  AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality } from "./contactHelpers";
@@ -11,12 +11,13 @@ interface ContactCardProps {
   c: any;
   isActive: boolean;
   isSelected: boolean;
+  hasBusinessCard?: boolean;
   onSelect: () => void;
   onToggle: () => void;
   index?: number;
 }
 
-export function ContactCard({ c, isActive, isSelected, onSelect, onToggle, index }: ContactCardProps) {
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index }: ContactCardProps) {
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
   const cPosition = clean(c.position);
@@ -98,6 +99,11 @@ export function ContactCard({ c, isActive, isSelected, onSelect, onToggle, index
               </Badge>
             )}
             <div className="ml-auto flex items-center gap-1.5">
+              {hasBusinessCard && (
+                <span title="Incontrato personalmente">
+                  <Handshake className="w-3 h-3 text-emerald-400" />
+                </span>
+              )}
               <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full ${
                 c.interaction_count > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"

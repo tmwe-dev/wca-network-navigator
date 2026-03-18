@@ -42,6 +42,7 @@ export interface PartnerFilters {
   hasBranches?: boolean;
   expiresWithinMonths?: number | "active";
   favorites?: boolean;
+  metPersonally?: boolean;
 }
 
 /** Fetch all rows by iterating with .range() in blocks of 1000 */

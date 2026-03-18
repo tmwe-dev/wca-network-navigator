@@ -326,6 +326,90 @@ export type Database = {
         }
         Relationships: []
       }
+      business_cards: {
+        Row: {
+          company_name: string | null
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          event_name: string | null
+          id: string
+          location: string | null
+          match_confidence: number | null
+          match_status: string
+          matched_contact_id: string | null
+          matched_partner_id: string | null
+          met_at: string | null
+          mobile: string | null
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          position: string | null
+          raw_data: Json | null
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          event_name?: string | null
+          id?: string
+          location?: string | null
+          match_confidence?: number | null
+          match_status?: string
+          matched_contact_id?: string | null
+          matched_partner_id?: string | null
+          met_at?: string | null
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position?: string | null
+          raw_data?: Json | null
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          event_name?: string | null
+          id?: string
+          location?: string | null
+          match_confidence?: number | null
+          match_status?: string
+          matched_contact_id?: string | null
+          matched_partner_id?: string | null
+          met_at?: string | null
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position?: string | null
+          raw_data?: Json | null
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_cards_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "imported_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cards_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_jobs: {
         Row: {
           assigned_to: string | null

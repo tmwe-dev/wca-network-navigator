@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, Phone, ChevronRight, User, Brain } from "lucide-react";
+import { Mail, Phone, ChevronRight, User, Brain, Handshake } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getCountryFlag, getYearsMember, formatServiceCategory } from "@/lib/countries";
 import { asEnrichment } from "@/lib/partnerUtils";
@@ -18,6 +18,7 @@ interface PartnerListItemProps {
   isSelected: boolean;
   isChecked: boolean;
   socialLinks: SocialLink[];
+  hasBusinessCard?: boolean;
   onSelect: (id: string) => void;
   onToggleSelection: (id: string, e?: React.MouseEvent) => void;
   index?: number;
@@ -28,6 +29,7 @@ export function PartnerListItem({
   isSelected,
   isChecked,
   socialLinks,
+  hasBusinessCard,
   onSelect,
   onToggleSelection,
   index,
@@ -161,6 +163,14 @@ export function PartnerListItem({
           )}
         </div>
         <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+          {hasBusinessCard && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Handshake className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_3px_rgba(52,211,153,0.4)]" />
+              </TooltipTrigger>
+              <TooltipContent>Incontrato personalmente</TooltipContent>
+            </Tooltip>
+          )}
           {hasDeepSearch && (
             <Tooltip>
               <TooltipTrigger>

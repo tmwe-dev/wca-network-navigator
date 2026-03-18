@@ -535,6 +535,42 @@ const tools = [
       },
     },
   },
+  // ━━━ Business Card Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_business_cards",
+      description: "Search business cards by event, date, name, or company. Returns matched partner/contact info.",
+      parameters: {
+        type: "object",
+        properties: {
+          event_name: { type: "string", description: "Event name (partial match)" },
+          company_name: { type: "string", description: "Company name (partial match)" },
+          contact_name: { type: "string", description: "Contact name (partial match)" },
+          match_status: { type: "string", enum: ["pending", "matched", "unmatched", "manual"], description: "Match status filter" },
+          limit: { type: "number", description: "Max results (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_business_card",
+      description: "Manually link a business card to a partner or contact. Overrides automatic matching.",
+      parameters: {
+        type: "object",
+        properties: {
+          card_id: { type: "string", description: "UUID of the business card" },
+          partner_id: { type: "string", description: "UUID of the partner to link" },
+          contact_id: { type: "string", description: "UUID of the imported contact to link" },
+        },
+        required: ["card_id"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1169,6 +1205,55 @@ async function executeBulkUpdatePartners(args: Record<string, unknown>) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BUSINESS CARD TOOLS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function executeSearchBusinessCards(args: Record<string, unknown>) {
+  let query = supabase.from("business_cards")
+    .select("id, company_name, contact_name, email, phone, event_name, met_at, location, match_status, match_confidence, matched_partner_id, matched_contact_id, tags, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Number(args.limit) || 20);
+
+  if (args.event_name) query = query.ilike("event_name", `%${args.event_name}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.contact_name) query = query.ilike("contact_name", `%${args.contact_name}%`);
+  if (args.match_status) query = query.eq("match_status", args.match_status);
+
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+
+  // Resolve matched partner names
+  const partnerIds = [...new Set((data || []).filter((c: any) => c.matched_partner_id).map((c: any) => c.matched_partner_id))];
+  let partnerNames: Record<string, string> = {};
+  if (partnerIds.length > 0) {
+    const { data: partners } = await supabase.from("partners").select("id, company_name").in("id", partnerIds);
+    for (const p of (partners || []) as any[]) partnerNames[p.id] = p.company_name;
+  }
+
+  return {
+    count: data?.length || 0,
+    cards: (data || []).map((c: any) => ({
+      id: c.id, company_name: c.company_name, contact_name: c.contact_name, email: c.email,
+      event_name: c.event_name, met_at: c.met_at, location: c.location,
+      match_status: c.match_status, match_confidence: c.match_confidence,
+      matched_partner: c.matched_partner_id ? partnerNames[c.matched_partner_id] || c.matched_partner_id : null,
+      tags: c.tags,
+    })),
+  };
+}
+
+async function executeLinkBusinessCard(args: Record<string, unknown>) {
+  const updates: Record<string, unknown> = { match_status: "manual", match_confidence: 100 };
+  if (args.partner_id) updates.matched_partner_id = args.partner_id;
+  if (args.contact_id) updates.matched_contact_id = args.contact_id;
+
+  const { error } = await supabase.from("business_cards").update(updates).eq("id", args.card_id);
+  if (error) return { error: error.message };
+
+  return { success: true, card_id: args.card_id, message: "Biglietto da visita collegato manualmente." };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UNIFIED TOOL DISPATCHER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1199,6 +1284,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "create_reminder": return executeCreateReminder(args);
     case "update_lead_status": return executeUpdateLeadStatus(args);
     case "bulk_update_partners": return executeBulkUpdatePartners(args);
+    // Business card tools
+    case "search_business_cards": return executeSearchBusinessCards(args);
+    case "link_business_card": return executeLinkBusinessCard(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }

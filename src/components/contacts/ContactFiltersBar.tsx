@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Search, FolderOpen, Globe, MapPin, Tag, CalendarIcon, Plane, PlaneLanding, List,
-  ArrowUpAZ, X, Filter, ChevronDown, Sparkles
+  ArrowUpAZ, X, Filter, ChevronDown, Sparkles, Handshake
 } from "lucide-react";
 import type { ContactFilters, LeadStatus } from "@/hooks/useContacts";
 import type { ImportGroup } from "@/hooks/useImportGroups";
@@ -119,8 +119,8 @@ export function ContactFiltersBar({
     else if (g.group_type === "status") statusCounts[g.group_key] = g.contact_count;
   });
 
-  const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId);
-  const activeFilterCount = [filters.country, filters.origin, filters.leadStatus, filters.dateFrom, filters.dateTo, filters.importLogId].filter(Boolean).length;
+  const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId || filters.metPersonally);
+  const activeFilterCount = [filters.country, filters.origin, filters.leadStatus, filters.dateFrom, filters.dateTo, filters.importLogId, filters.metPersonally].filter(Boolean).length;
 
   const activeGroup = importGroups?.find((g) => g.id === filters.importLogId);
   const [basketOpen, setBasketOpen] = useState(false);
@@ -183,6 +183,19 @@ export function ContactFiltersBar({
 
         <Separator orientation="vertical" className="h-4 mx-0.5" />
 
+        {/* Met personally toggle */}
+        <Button
+          variant={filters.metPersonally ? "default" : "ghost"}
+          size="sm"
+          className={cn("h-6 px-1.5 gap-1 text-[10px]", filters.metPersonally && "shadow-sm")}
+          onClick={() => onChange({ metPersonally: !filters.metPersonally || undefined })}
+          title="Incontrati personalmente"
+        >
+          <Handshake className="w-3 h-3" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-4 mx-0.5" />
+
         <Select value={sortKey} onValueChange={onSortChange}>
           <SelectTrigger className="h-6 text-[10px] w-auto min-w-[90px] px-2 gap-1">
             <ArrowUpAZ className="w-3 h-3 shrink-0 text-muted-foreground" />
@@ -230,7 +243,8 @@ export function ContactFiltersBar({
               className="h-6 px-1.5 text-[10px] text-destructive hover:text-destructive"
               onClick={() => onChange({
                 country: undefined, origin: undefined, leadStatus: undefined,
-                dateFrom: undefined, dateTo: undefined, importLogId: undefined, search: ""
+                dateFrom: undefined, dateTo: undefined, importLogId: undefined,
+                metPersonally: undefined, search: ""
               })}
               title="Reset filtri"
             >
