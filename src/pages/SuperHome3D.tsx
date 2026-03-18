@@ -306,13 +306,7 @@ export default function SuperHome3D() {
                 </div>
               </div>
 
-              <div
-                className="relative isolate h-full w-full"
-                onWheel={(event) => {
-                  event.preventDefault();
-                  setActiveIndex((current) => (event.deltaY > 0 ? (current + 1) % worlds.length : (current - 1 + worlds.length) % worlds.length));
-                }}
-              >
+              <div className="relative isolate h-full w-full">
                 {worlds.map((world, index) => {
                   const offset = (index - activeIndex + worlds.length) % worlds.length;
                   const normalizedOffset = offset > worlds.length / 2 ? offset - worlds.length : offset;
