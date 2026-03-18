@@ -392,7 +392,32 @@ export default function PartnerHub() {
               />
             </div>
           )}
+
+          {/* AI toggle */}
+          <Button
+            variant={showAI ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-7 w-7 p-0 shrink-0", showAI && "shadow-sm")}
+            onClick={() => setShowAI(!showAI)}
+            title="Assistente AI"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+          </Button>
         </div>
+
+        {/* AI Bar — collapsible */}
+        {showAI && (
+          <div className="px-3 py-2 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.04] to-purple-500/[0.03]">
+            <PartnerAIBar
+              viewContext={{
+                viewLevel,
+                selectedCountry,
+                totalPartners: filteredPartners?.length ?? 0,
+                selectedCount: selectedIds.size,
+              }}
+            />
+          </div>
+        )}
 
         {/* Filters bar (list view only) */}
         {viewLevel === "list" && (
