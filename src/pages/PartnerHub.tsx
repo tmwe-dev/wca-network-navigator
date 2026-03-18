@@ -419,23 +419,8 @@ export default function PartnerHub() {
           </div>
         )}
 
-        {/* Bulk action bar — top position */}
-        <BulkActionBar
-          count={selectedIds.size}
-          onClear={() => setSelectedIds(new Set())}
-          onAssignActivity={() => setAssignDialogOpen(true)}
-          onDeepSearch={handleBulkDeepSearch}
-          onStopDeepSearch={handleStopDeepSearch}
-          onEmail={handleBulkEmail}
-          onSendToWorkspace={handleSendToWorkspace}
-          sendingToWorkspace={sendingToWorkspace}
-          deepSearching={deepSearch.running}
-          deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
-          partnerIds={Array.from(selectedIds)}
-        />
 
-        {/* Active events bar */}
-        {renderEventsBar()}
+
 
         {/* Content based on viewLevel */}
         {viewLevel === "countries" ? (
