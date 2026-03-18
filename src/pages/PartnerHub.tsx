@@ -307,7 +307,7 @@ export default function PartnerHub() {
                 "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all font-medium tabular-nums",
                 viewLevel === "list"
                   ? "bg-accent text-accent-foreground"
-                  : countrySortBy === "total" && viewLevel !== "list"
+                  : countrySortBy === "total"
                     ? "bg-accent/60 text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               )}
