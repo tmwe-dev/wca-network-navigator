@@ -63,57 +63,9 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
   );
 }
 
-export function PartnerDetailFull({ partner, onToggleFavorite, onAssignActivity, onSendToWorkspace, onEmail }: PartnerDetailFullProps) {
-  const [deepSearching, setDeepSearching] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [showNoteInput, setShowNoteInput] = useState(false);
-  const [savingNote, setSavingNote] = useState(false);
-  const queryClient = useQueryClient();
+export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFullProps) {
   const { data: blacklistEntries = [] } = useBlacklistForPartner(partner.id);
   const isBlacklisted = blacklistEntries.length > 0;
-
-  const handleDeepSearch = useCallback(async () => {
-    setDeepSearching(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("deep-search-partner", {
-        body: { partnerId: partner.id },
-      });
-      if (error) throw error;
-      if (data?.success) {
-        toast.success(`Deep Search completata: ${data.socialLinksFound} social trovati${data.logoFound ? ", logo trovato" : ""}`);
-        queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
-        queryClient.invalidateQueries({ queryKey: ["social-links", partner.id] });
-      } else {
-        toast.error(data?.error || "Errore nella Deep Search");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Errore nella Deep Search");
-    } finally {
-      setDeepSearching(false);
-    }
-  }, [partner.id, queryClient]);
-
-  const handleSaveNote = useCallback(async () => {
-    if (!noteText.trim()) return;
-    setSavingNote(true);
-    try {
-      const { error } = await supabase.from("interactions").insert({
-        partner_id: partner.id,
-        interaction_type: "note",
-        subject: noteText.trim().slice(0, 80),
-        notes: noteText.trim(),
-      });
-      if (error) throw error;
-      toast.success("Nota salvata");
-      setNoteText("");
-      setShowNoteInput(false);
-      queryClient.invalidateQueries({ queryKey: ["partner", partner.id] });
-    } catch (e: any) {
-      toast.error("Errore salvataggio nota");
-    } finally {
-      setSavingNote(false);
-    }
-  }, [noteText, partner.id, queryClient]);
 
   const hasBranches = Array.isArray(partner.branch_cities) && partner.branch_cities.length > 0;
   const branchCountries = getBranchCountries(partner);
