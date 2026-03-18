@@ -255,27 +255,10 @@ export default function PartnerHub() {
     }
   }, [queryClient]);
 
-  // Active events bar
-  const renderEventsBar = () => {
-    if (!deepSearch.running || !deepSearch.current) return null;
-    const { index, total } = deepSearch.current;
-    return (
-      <div className="px-4 py-2 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2 text-xs">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-          <span className="font-medium">
-            Deep Search {index}/{total}...
-          </span>
-          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${(index / total) * 100}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Single partner deep search handler
+  const handleSingleDeepSearch = useCallback(async (partnerId: string) => {
+    deepSearch.start([partnerId]);
+  }, [deepSearch]);
 
   return (
     <TooltipProvider delayDuration={200}>
