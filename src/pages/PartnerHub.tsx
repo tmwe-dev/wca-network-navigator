@@ -292,6 +292,13 @@ export default function PartnerHub() {
     if (selectedIds.size > 0) {
       handleSendToWorkspace();
     } else if (selectedId) {
+      // Check email for single partner
+      const partner = (filteredPartners || []).find((p: any) => p.id === selectedId);
+      const hasEmail = partner?.email || (partner?.partner_contacts || []).some((c: any) => c.email);
+      if (!hasEmail) {
+        toast.error("Questo partner non ha un indirizzo email disponibile");
+        return;
+      }
       setSendingToWorkspace(true);
       try {
         await createActivities.mutateAsync([{
@@ -305,7 +312,7 @@ export default function PartnerHub() {
       } catch { toast.error("Errore"); }
       finally { setSendingToWorkspace(false); }
     }
-  }, [selectedIds, selectedId, createActivities, navigate, handleSendToWorkspace]);
+  }, [selectedIds, selectedId, filteredPartners, createActivities, navigate, handleSendToWorkspace]);
 
   const handleUnifiedAssignActivity = useCallback(() => {
     if (selectedIds.size === 0 && selectedId) {
