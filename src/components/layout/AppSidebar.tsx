@@ -13,30 +13,34 @@ import { useState } from "react";
 
 const navSections = [
   {
-    label: "Mission Control",
+    label: "Panoramica",
     items: [
       { title: "Super Home", url: "/", icon: Home },
-      { title: "Acquisition", url: "/operations", icon: Globe },
-      { title: "Rubrica Partner", url: "/partner-hub", icon: Users },
       { title: "Global", url: "/global", icon: Sparkles },
     ],
   },
   {
-    label: "Execution",
+    label: "Origini Dati",
+    items: [
+      { title: "Acquisition", url: "/operations", icon: Globe },
+      { title: "Rubrica Partner", url: "/partner-hub", icon: Users },
+      { title: "Contatti", url: "/contacts", icon: UserCheck },
+      { title: "Import", url: "/import", icon: Upload },
+    ],
+  },
+  {
+    label: "Operativo",
     items: [
       { title: "Cockpit", url: "/cockpit", icon: Rocket },
       { title: "Campaigns", url: "/campaigns", icon: Mail },
       { title: "Email", url: "/email-composer", icon: Send },
       { title: "Operations", url: "/hub", icon: Zap },
+      { title: "Agenda", url: "/reminders", icon: Calendar },
     ],
   },
   {
-    label: "Data & System",
+    label: "Sistema",
     items: [
-      { title: "Prospects", url: "/prospects", icon: Compass },
-      { title: "Contatti", url: "/contacts", icon: UserCheck },
-      { title: "Agenda", url: "/reminders", icon: Calendar },
-      { title: "Import", url: "/import", icon: Upload },
       { title: "Impostazioni", url: "/settings", icon: Settings },
       { title: "Diagnostica", url: "/diagnostics", icon: Microscope },
       { title: "Guida", url: "/guida", icon: BookOpen },
