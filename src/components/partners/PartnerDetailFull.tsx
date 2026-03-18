@@ -196,59 +196,6 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         </div>
       </div>
 
-      {/* ═══ ACTION BAR ═══ */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-500/5 to-purple-500/5 backdrop-blur-sm border border-violet-500/10">
-        {onAssignActivity && (
-          <Button size="sm" variant="ghost" onClick={() => onAssignActivity(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <ClipboardList className="w-3.5 h-3.5" /> Attività
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={handleDeepSearch} disabled={deepSearching}
-          className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-          {deepSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          Deep Search
-        </Button>
-        {onSendToWorkspace && (
-          <Button size="sm" variant="ghost" onClick={() => onSendToWorkspace(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <Briefcase className="w-3.5 h-3.5" /> Workspace
-          </Button>
-        )}
-        {onEmail && (
-          <Button size="sm" variant="ghost" onClick={() => onEmail(partner.id)}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground">
-            <Send className="w-3.5 h-3.5" /> Email
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={() => setShowNoteInput(!showNoteInput)}
-          className={cn("h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground",
-            showNoteInput && "bg-violet-500/10 text-foreground")}>
-          <StickyNote className="w-3.5 h-3.5" /> Note
-        </Button>
-      </div>
-
-      {/* ═══ NOTE INPUT ═══ */}
-      {showNoteInput && (
-        <Section>
-          <SectionTitle icon={StickyNote}>Nuova Nota</SectionTitle>
-          <Textarea
-            placeholder="Scrivi una nota su questo partner..."
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            className="min-h-[60px] bg-card/60 border-violet-500/10 text-sm"
-            rows={2}
-          />
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}
-              className="h-7 px-3 text-xs gap-1.5">
-              {savingNote ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Salva
-            </Button>
-          </div>
-        </Section>
-      )}
-
       {/* ═══ ENRICHMENT — priority position ═══ */}
       <EnrichmentCard partner={partner} />
 
