@@ -7,10 +7,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 import {
   Star, StarOff, Phone, Mail, Globe, MapPin, Calendar,
-  Users, User, Sparkles, Loader2, Building2,
+  Users, User, Building2,
   ArrowUpRight, ShieldCheck, ShieldAlert, FileText,
-  MessageSquare, Clock, ClipboardList, Briefcase, Send,
-  Hash, ChevronDown, StickyNote, Save,
+  MessageSquare, Clock,
+  Hash, ChevronDown,
 } from "lucide-react";
 import { useBlacklistForPartner } from "@/hooks/useBlacklist";
 import { supabase } from "@/integrations/supabase/client";
