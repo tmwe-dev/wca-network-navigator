@@ -535,6 +535,42 @@ const tools = [
       },
     },
   },
+  // ━━━ Business Card Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_business_cards",
+      description: "Search business cards by event, date, name, or company. Returns matched partner/contact info.",
+      parameters: {
+        type: "object",
+        properties: {
+          event_name: { type: "string", description: "Event name (partial match)" },
+          company_name: { type: "string", description: "Company name (partial match)" },
+          contact_name: { type: "string", description: "Contact name (partial match)" },
+          match_status: { type: "string", enum: ["pending", "matched", "unmatched", "manual"], description: "Match status filter" },
+          limit: { type: "number", description: "Max results (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_business_card",
+      description: "Manually link a business card to a partner or contact. Overrides automatic matching.",
+      parameters: {
+        type: "object",
+        properties: {
+          card_id: { type: "string", description: "UUID of the business card" },
+          partner_id: { type: "string", description: "UUID of the partner to link" },
+          contact_id: { type: "string", description: "UUID of the imported contact to link" },
+        },
+        required: ["card_id"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
