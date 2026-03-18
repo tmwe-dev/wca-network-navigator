@@ -11,12 +11,13 @@ interface ContactCardProps {
   c: any;
   isActive: boolean;
   isSelected: boolean;
+  hasBusinessCard?: boolean;
   onSelect: () => void;
   onToggle: () => void;
   index?: number;
 }
 
-export function ContactCard({ c, isActive, isSelected, onSelect, onToggle, index }: ContactCardProps) {
+export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index }: ContactCardProps) {
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
   const cPosition = clean(c.position);
