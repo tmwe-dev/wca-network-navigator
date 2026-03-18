@@ -194,7 +194,7 @@ export default function PartnerFiltersSheet({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* ── Quick Filters (favorites, deep search) ── */}
+          {/* ── Quick Filters (favorites, met personally) ── */}
           <div className="space-y-2">
             <FilterChip
               active={filters.favorites || false}
@@ -202,6 +202,13 @@ export default function PartnerFiltersSheet({
               label="Solo preferiti"
               onClick={() => setFilters((p) => ({ ...p, favorites: !p.favorites || undefined }))}
               color="amber"
+            />
+            <FilterChip
+              active={filters.metPersonally || false}
+              icon={Handshake}
+              label="Incontrati personalmente"
+              onClick={() => setFilters((p) => ({ ...p, metPersonally: !p.metPersonally || undefined }))}
+              color="emerald"
             />
           </div>
 

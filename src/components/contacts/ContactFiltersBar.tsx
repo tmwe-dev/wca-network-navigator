@@ -119,8 +119,8 @@ export function ContactFiltersBar({
     else if (g.group_type === "status") statusCounts[g.group_key] = g.contact_count;
   });
 
-  const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId);
-  const activeFilterCount = [filters.country, filters.origin, filters.leadStatus, filters.dateFrom, filters.dateTo, filters.importLogId].filter(Boolean).length;
+  const hasActiveFilters = !!(filters.country || filters.origin || filters.leadStatus || filters.dateFrom || filters.dateTo || filters.importLogId || filters.metPersonally);
+  const activeFilterCount = [filters.country, filters.origin, filters.leadStatus, filters.dateFrom, filters.dateTo, filters.importLogId, filters.metPersonally].filter(Boolean).length;
 
   const activeGroup = importGroups?.find((g) => g.id === filters.importLogId);
   const [basketOpen, setBasketOpen] = useState(false);
