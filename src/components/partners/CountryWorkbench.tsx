@@ -223,7 +223,9 @@ export function CountryWorkbench({
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
           </div>
           <span className="text-lg font-bold text-foreground tabular-nums bg-muted/60 px-3 py-0.5 rounded-lg">
-            {countryPartners.length}
+            {(hasAnyFilter || searchTerm)
+              ? <>{filteredPartners.length} <span className="text-muted-foreground font-normal text-sm">/ {countryPartners.length}</span></>
+              : countryPartners.length}
           </span>
         </div>
       </div>
@@ -369,23 +371,18 @@ export function CountryWorkbench({
         </div>
       )}
 
-      {/* ═══ LIST HEADER ═══ */}
-      <div className="px-4 py-1.5 flex items-center justify-between border-b border-border/30">
-        <span className="text-[11px] text-muted-foreground font-medium">
-          <span className="font-bold text-foreground">{filteredPartners.length}</span>
-          {(hasAnyFilter || searchTerm) && <span> / {countryPartners.length}</span>}
-          {" "}partner
-        </span>
-        <button onClick={handleSelectAll}
-          className={cn(
-            "flex items-center gap-1 text-[11px] px-2 py-1 rounded-full transition-all font-medium",
-            allSelected
-              ? "bg-primary/15 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-          )}>
-          <CheckSquare className="w-3 h-3" />
-          {allSelected ? "Deseleziona" : "Sel. tutti"}
-        </button>
+      {/* ═══ SELECT ALL ═══ */}
+      <div className="px-4 py-1.5 border-b border-border/30">
+        <div className="flex items-center gap-2 pl-[2px]">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={handleSelectAll}
+            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <span className="text-[10px] text-muted-foreground select-none">
+            {allSelected ? "Deseleziona tutti" : "Seleziona tutti"}
+          </span>
+        </div>
       </div>
 
       {/* ═══ PARTNER LIST ═══ */}
