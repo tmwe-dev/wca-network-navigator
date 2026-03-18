@@ -1,10 +1,9 @@
-import { useState, useCallback, Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { getRealLogoUrl, getBranchCountries } from "@/lib/partnerUtils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Star, StarOff, Phone, Mail, Globe, MapPin, Calendar,
   Users, User, Building2,
