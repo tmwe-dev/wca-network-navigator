@@ -95,7 +95,14 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Attività ({filtered.length})</CardTitle>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={isAllSelected}
+              onCheckedChange={(checked) => toggleAll(!!checked)}
+              aria-label="Seleziona tutti"
+            />
+            <CardTitle className="text-lg">Attività ({filtered.length})</CardTitle>
+          </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -119,6 +126,18 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
             </Select>
           </div>
         </div>
+        {count > 0 && (
+          <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50 border">
+            <span className="text-xs font-medium">{count} selezionati</span>
+            <div className="flex-1" />
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkComplete}>
+              <Check className="w-3 h-3" /> Completa
+            </Button>
+            <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+              <Trash2 className="w-3 h-3" /> Elimina
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {filtered.length === 0 ? (
@@ -131,6 +150,8 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
               <ActivityRow
                 key={a.id}
                 activity={a}
+                selected={selectedIds.has(a.id)}
+                onToggle={() => toggle(a.id)}
                 onComplete={() => handleComplete(a.id)}
                 onDelete={() => handleDelete([a.id])}
               />
@@ -144,10 +165,14 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
 function ActivityRow({
   activity: a,
+  selected,
+  onToggle,
   onComplete,
   onDelete,
 }: {
   activity: AllActivity;
+  selected: boolean;
+  onToggle: () => void;
   onComplete: () => void;
   onDelete: () => void;
 }) {
