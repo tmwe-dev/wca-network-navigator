@@ -319,15 +319,17 @@ export default function PartnerHub() {
           </div>
 
           {/* Center: search */}
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              placeholder={viewLevel === "list" ? "Cerca partner..." : "Cerca paese..."}
-              value={viewLevel === "list" ? search : countrySearch}
-              onChange={(e) => viewLevel === "list" ? setSearch(e.target.value) : setCountrySearch(e.target.value)}
-              className="pl-9 h-8 text-[13px] rounded-lg border-border/40"
-            />
-          </div>
+          {viewLevel !== "country" && (
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder={viewLevel === "list" ? "Cerca partner..." : "Cerca paese..."}
+                value={viewLevel === "list" ? search : countrySearch}
+                onChange={(e) => viewLevel === "list" ? setSearch(e.target.value) : setCountrySearch(e.target.value)}
+                className="pl-9 h-8 text-[13px] rounded-lg border-border/40"
+              />
+            </div>
+          )}
         </div>
 
         {/* Filters bar (list view only) */}
