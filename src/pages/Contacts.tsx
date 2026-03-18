@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 
 export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
+
+  const handleContactUpdated = useCallback((updated: any) => {
+    setSelectedContact(updated);
+  }, []);
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
@@ -25,7 +29,11 @@ export default function Contacts() {
         <ResizablePanel defaultSize={62}>
           <div className="h-full bg-card">
             {selectedContact ? (
-              <ContactDetailPanel contact={selectedContact} />
+              <ContactDetailPanel
+                key={selectedContact.id}
+                contact={selectedContact}
+                onContactUpdated={handleContactUpdated}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
                 Seleziona un contatto per visualizzare i dettagli

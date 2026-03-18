@@ -15,13 +15,29 @@ interface ExpandedGroupContentProps {
   selection: ReturnType<typeof useSelection>;
   holdingPattern?: "out" | "in" | "all";
   sortKey: SortKey;
+  searchFilter?: string;
 }
 
-export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern, sortKey }: ExpandedGroupContentProps) {
+export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect, selection, holdingPattern, sortKey, searchFilter }: ExpandedGroupContentProps) {
   const [page, setPage] = useState(0);
   const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
   const rawContacts = data?.items ?? [];
-  const contacts = useMemo(() => sortContacts(rawContacts, sortKey), [rawContacts, sortKey]);
+
+  // Client-side text search within loaded contacts
+  const filtered = useMemo(() => {
+    const search = searchFilter?.trim().toLowerCase();
+    if (!search) return rawContacts;
+    return rawContacts.filter((c: any) =>
+      (c.company_name || "").toLowerCase().includes(search) ||
+      (c.name || "").toLowerCase().includes(search) ||
+      (c.email || "").toLowerCase().includes(search) ||
+      (c.city || "").toLowerCase().includes(search) ||
+      (c.company_alias || "").toLowerCase().includes(search) ||
+      (c.contact_alias || "").toLowerCase().includes(search)
+    );
+  }, [rawContacts, searchFilter]);
+
+  const contacts = useMemo(() => sortContacts(filtered, sortKey), [filtered, sortKey]);
   const totalCount = data?.totalCount ?? 0;
   const pageSize = data?.pageSize ?? 200;
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -49,6 +65,9 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
           index={page * pageSize + i}
         />
       ))}
+      {contacts.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-2">Nessun risultato</p>
+      )}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 pt-1 text-[10px] text-muted-foreground">
           <Button variant="ghost" size="icon" className="h-5 w-5" disabled={page === 0} onClick={() => setPage(page - 1)}>

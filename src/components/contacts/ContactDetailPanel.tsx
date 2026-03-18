@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ interface Contact {
 
 interface Props {
   contact: Contact;
+  onContactUpdated?: (updatedContact: Contact) => void;
 }
 
 const INTERACTION_TYPES = [
@@ -83,8 +84,8 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
   );
 }
 
-export function ContactDetailPanel({ contact }: Props) {
-  const c = contact;
+export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
+  const [c, setC] = useState<Contact>(contact);
   const { data: interactions = [] } = useContactInteractions(c.id);
   const updateStatus = useUpdateLeadStatus();
   const createInteraction = useCreateContactInteraction();
@@ -96,9 +97,13 @@ export function ContactDetailPanel({ contact }: Props) {
   const [newOutcome, setNewOutcome] = useState("");
   const [aliasLoading, setAliasLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [justGenerated, setJustGenerated] = useState(false);
 
-  const needsAlias = !justGenerated && (!c.company_alias || !c.contact_alias);
+  // Sync with external prop changes (e.g. user clicks different contact)
+  useEffect(() => {
+    setC(contact);
+  }, [contact]);
+
+  const needsAlias = !c.company_alias && !c.contact_alias;
 
   const handleGenerateAlias = async () => {
     if (aliasLoading) return;
@@ -114,9 +119,21 @@ export function ContactDetailPanel({ contact }: Props) {
       } else {
         toast({ title: "✨ Alias generato", description: `${processed} contatti elaborati con successo` });
       }
-      setJustGenerated(true);
-      await queryClient.refetchQueries({ queryKey: ["contact-group-counts"] });
-      await queryClient.refetchQueries({ queryKey: ["contact-group-items"] });
+
+      // Refetch the contact from DB to update the panel
+      const { data: updated } = await supabase
+        .from("imported_contacts")
+        .select("*")
+        .eq("id", c.id)
+        .single();
+
+      if (updated) {
+        setC(updated as Contact);
+        onContactUpdated?.(updated as Contact);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-by-group"] });
     } catch (e: any) {
       toast({ title: "Errore", description: e.message, variant: "destructive" });
     } finally {
@@ -127,7 +144,12 @@ export function ContactDetailPanel({ contact }: Props) {
   const handleStatusChange = (s: LeadStatus) => {
     updateStatus.mutate(
       { ids: [c.id], status: s },
-      { onSuccess: () => toast({ title: "Status aggiornato" }) }
+      {
+        onSuccess: () => {
+          toast({ title: "Status aggiornato" });
+          setC((prev) => ({ ...prev, lead_status: s }));
+        },
+      }
     );
   };
 
@@ -148,6 +170,7 @@ export function ContactDetailPanel({ contact }: Props) {
           setNewTitle("");
           setNewDesc("");
           setNewOutcome("");
+          setC((prev) => ({ ...prev, interaction_count: prev.interaction_count + 1 }));
         },
       }
     );
@@ -166,24 +189,27 @@ export function ContactDetailPanel({ contact }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-bold text-foreground truncate">
-              {c.company_name || "Senza azienda"}
+              {c.company_alias || c.company_name || "Senza azienda"}
             </h2>
-            {c.company_alias && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <Sparkles className="w-3 h-3 text-violet-400" />
-                <span className="text-[11px] text-violet-300 italic">{c.company_alias}</span>
-              </div>
+            {c.company_alias && c.company_name && c.company_alias !== c.company_name && (
+              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.company_name}</p>
             )}
           </div>
         </div>
 
-        {c.name && (
+        {(c.name || c.contact_alias) && (
           <div className="flex items-center gap-2 ml-[52px]">
             <User className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
             <p className="text-sm text-foreground/80">
-              {c.name}
+              {c.contact_alias || c.name}
+              {c.contact_alias && c.name && c.contact_alias !== c.name && (
+                <span className="text-muted-foreground text-xs ml-1">({c.name})</span>
+              )}
               {c.position && <span className="text-violet-400"> • {c.position}</span>}
             </p>
+            {(c.company_alias || c.contact_alias) && (
+              <Sparkles className="w-3 h-3 text-violet-400 shrink-0" />
+            )}
           </div>
         )}
 
