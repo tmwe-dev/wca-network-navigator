@@ -160,7 +160,19 @@ export function PartnerListItem({
             </div>
           )}
         </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+        <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+          {hasDeepSearch && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Brain className="w-4 h-4 text-amber-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.4)]" />
+              </TooltipTrigger>
+              <TooltipContent>
+                Deep Search — {format(new Date(enrichment!.deep_search_at!), "d MMM yyyy", { locale: it })}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
       </div>
     </div>
   );
