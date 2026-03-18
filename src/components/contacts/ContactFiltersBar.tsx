@@ -241,7 +241,8 @@ export function ContactFiltersBar({
               className="h-6 px-1.5 text-[10px] text-destructive hover:text-destructive"
               onClick={() => onChange({
                 country: undefined, origin: undefined, leadStatus: undefined,
-                dateFrom: undefined, dateTo: undefined, importLogId: undefined, search: ""
+                dateFrom: undefined, dateTo: undefined, importLogId: undefined,
+                metPersonally: undefined, search: ""
               })}
               title="Reset filtri"
             >
