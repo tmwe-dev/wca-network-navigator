@@ -45,6 +45,8 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 export default function PartnerHub() {
   const [search, setSearch] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countrySortBy, setCountrySortBy] = useState<CountrySortBy>("total");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -55,6 +57,8 @@ export default function PartnerHub() {
   // Navigation: "countries" (Level 1) | "country" (Level 2) | "list" (flat list)
   const [viewLevel, setViewLevel] = useState<"countries" | "country" | "list">("countries");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
+  const { data: countryStatsData } = useCountryStats();
 
   
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);

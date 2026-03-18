@@ -77,6 +77,5 @@ export function CountryCards({ onSelectCountry, search, sortBy }: CountryCardsPr
           ))}
         </div>
       </ScrollArea>
-    </div>
   );
 }
