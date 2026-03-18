@@ -15,6 +15,7 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
 
   useEffect(() => {
