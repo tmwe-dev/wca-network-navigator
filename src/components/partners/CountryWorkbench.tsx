@@ -223,7 +223,9 @@ export function CountryWorkbench({
             <h2 className="text-sm font-bold leading-tight truncate">{countryName}</h2>
           </div>
           <span className="text-lg font-bold text-foreground tabular-nums bg-muted/60 px-3 py-0.5 rounded-lg">
-            {countryPartners.length}
+            {(hasAnyFilter || searchTerm)
+              ? <>{filteredPartners.length} <span className="text-muted-foreground font-normal text-sm">/ {countryPartners.length}</span></>
+              : countryPartners.length}
           </span>
         </div>
       </div>
