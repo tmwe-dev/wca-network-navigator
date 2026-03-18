@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback, useContext } from "react";
-import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Volume2, VolumeX, Mic, MicOff, ListChecks } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { ActivePlansBadge } from "./ai/ActivePlansBadge";
 
 const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
 const JOB_CREATED_DELIMITER = "---JOB_CREATED---";
+const UI_ACTIONS_DELIMITER = "---UI_ACTIONS---";
 
 export interface JobCreatedInfo {
   job_id: string;
@@ -18,10 +20,32 @@ export interface JobCreatedInfo {
   estimated_time_minutes: number;
 }
 
-function parseStructuredMessage(content: string): { text: string; partners: StructuredPartner[]; jobCreated: JobCreatedInfo | null } {
+export interface UiAction {
+  action_type: "navigate" | "show_toast" | "apply_filters" | "open_dialog";
+  path?: string;
+  message?: string;
+  toast_type?: "default" | "success" | "error";
+  filters?: Record<string, unknown>;
+  dialog?: string;
+}
+
+function parseStructuredMessage(content: string): {
+  text: string;
+  partners: StructuredPartner[];
+  jobCreated: JobCreatedInfo | null;
+  uiActions: UiAction[];
+} {
   let text = content;
   let partners: StructuredPartner[] = [];
   let jobCreated: JobCreatedInfo | null = null;
+  let uiActions: UiAction[] = [];
+
+  const uiIdx = text.indexOf(UI_ACTIONS_DELIMITER);
+  if (uiIdx !== -1) {
+    const jsonStr = text.substring(uiIdx + UI_ACTIONS_DELIMITER.length).trim();
+    text = text.substring(0, uiIdx).trim();
+    try { uiActions = JSON.parse(jsonStr.split("\n\n")[0]); } catch { /* ignore */ }
+  }
 
   const jobIdx = text.indexOf(JOB_CREATED_DELIMITER);
   if (jobIdx !== -1) {
@@ -40,7 +64,7 @@ function parseStructuredMessage(content: string): { text: string; partners: Stru
     } catch { /* ignore */ }
   }
 
-  return { text, partners, jobCreated };
+  return { text, partners, jobCreated, uiActions };
 }
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -48,12 +72,38 @@ type Msg = { role: "user" | "assistant"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
-const QUICK_PROMPTS = [
-  "Riepilogo globale del database",
-  "Paesi con più profili mancanti",
-  "Job attivi in questo momento",
-  "Partner con rating più alto",
-];
+const PAGE_QUICK_PROMPTS: Record<string, string[]> = {
+  default: [
+    "Riepilogo globale del database",
+    "Paesi con più profili mancanti",
+    "Job attivi in questo momento",
+    "Partner con rating più alto",
+  ],
+  "/partner-hub": [
+    "Mostra partner per rating",
+    "Paesi con gap nella directory",
+    "Partner senza email",
+    "Verifica blacklist",
+  ],
+  "/contacts": [
+    "Contatti importati per origine",
+    "Contatti senza email",
+    "Statistiche per paese",
+    "Contatti più recenti",
+  ],
+  "/import": [
+    "Ultimo import effettuato",
+    "Errori di importazione",
+    "Contatti da trasferire",
+    "Statistiche import",
+  ],
+  "/workspace": [
+    "Genera email di presentazione",
+    "Partner con email per campagna",
+    "Top partner per servizi",
+    "Template disponibili",
+  ],
+};
 
 const VOICES = [
   { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", lang: "🇺🇸" },
@@ -96,15 +146,17 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
   const isDark = useContext(ThemeCtx);
   const th = t(isDark);
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [activePlans, setActivePlans] = useState<any[]>([]);
 
   // Voice state
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState(VOICES[1].id); // Laura default
+  const [selectedVoice, setSelectedVoice] = useState(VOICES[1].id);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenIdxRef = useRef(-1);
@@ -114,6 +166,10 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
   const recognitionRef = useRef<any>(null);
   const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
+  // Get quick prompts based on current page
+  const currentPage = location.pathname;
+  const quickPrompts = PAGE_QUICK_PROMPTS[currentPage] || PAGE_QUICK_PROMPTS.default;
+
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
@@ -122,80 +178,84 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // Auto-play TTS when new assistant message completes
+  // Load active plans on open
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      const { data } = await supabase.from("ai_work_plans")
+        .select("id, title, status, steps, current_step, tags")
+        .eq("user_id", session.user.id)
+        .in("status", ["running", "paused"])
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setActivePlans(data || []);
+    })();
+  }, [open, messages.length]);
+
+  // Handle UI actions dispatched by AI
+  const handleUiActions = useCallback((actions: UiAction[]) => {
+    for (const action of actions) {
+      switch (action.action_type) {
+        case "navigate":
+          if (action.path) {
+            navigate(action.path);
+            onClose();
+          }
+          break;
+        case "show_toast":
+          toast({
+            title: action.toast_type === "error" ? "⚠️ Errore" : action.toast_type === "success" ? "✅ Fatto" : "ℹ️ Info",
+            description: action.message || "",
+          });
+          break;
+        case "apply_filters":
+          window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: action.filters } }));
+          break;
+        case "open_dialog":
+          window.dispatchEvent(new CustomEvent("ai-ui-action", { detail: action }));
+          break;
+      }
+    }
+  }, [navigate, onClose]);
+
+  // Auto-play TTS
   useEffect(() => {
     if (!voiceEnabled || isLoading || messages.length === 0) return;
     const lastIdx = messages.length - 1;
     const last = messages[lastIdx];
     if (last.role !== "assistant" || lastIdx <= lastSpokenIdxRef.current) return;
     lastSpokenIdxRef.current = lastIdx;
-
     const { text } = parseStructuredMessage(last.content);
     if (!text || text.startsWith("⚠️")) return;
-
-    // Strip markdown for cleaner TTS
-    const cleanText = text
-      .replace(/[#*_`~\[\]()>|]/g, "")
-      .replace(/\n{2,}/g, ". ")
-      .replace(/\n/g, " ")
-      .trim();
-
+    const cleanText = text.replace(/[#*_`~\[\]()>|]/g, "").replace(/\n{2,}/g, ". ").replace(/\n/g, " ").trim();
     if (cleanText.length < 5) return;
-
     playTTS(cleanText);
-  }, [messages, isLoading, voiceEnabled, selectedVoice]);
+  }, [messages, isLoading, voiceEnabled]);
 
   const playTTS = useCallback(async (text: string) => {
-    // Stop any current audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setIsSpeaking(true);
     try {
       const response = await fetch(TTS_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({ text: text.slice(0, 2000), voiceId: selectedVoice }),
       });
-
-      if (!response.ok) {
-        console.error("TTS failed:", response.status);
-        setIsSpeaking(false);
-        return;
-      }
-
+      if (!response.ok) { setIsSpeaking(false); return; }
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-      audio.onended = () => {
-        setIsSpeaking(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-      };
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-      };
+      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
+      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
       await audio.play();
-    } catch (e) {
-      console.error("TTS playback error:", e);
-      setIsSpeaking(false);
-    }
+    } catch { setIsSpeaking(false); }
   }, [selectedVoice]);
 
   const stopSpeaking = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setIsSpeaking(false);
   }, []);
 
@@ -225,10 +285,15 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+        const enrichedContext = {
+          ...context,
+          currentPage: location.pathname,
+        };
+
         const resp = await fetch(CHAT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ messages: allMsgs, context }),
+          body: JSON.stringify({ messages: allMsgs, context: enrichedContext }),
         });
 
         if (!resp.ok) {
@@ -241,7 +306,11 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
         const contentType = resp.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           const data = await resp.json();
-          upsertAssistant(data.content || data.error || "Nessuna risposta");
+          const content = data.content || data.error || "Nessuna risposta";
+          upsertAssistant(content);
+          // Handle UI actions from JSON response
+          const { uiActions } = parseStructuredMessage(content);
+          if (uiActions.length > 0) handleUiActions(uiActions);
           setIsLoading(false);
           return;
         }
@@ -288,6 +357,10 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
             } catch { /* ignore */ }
           }
         }
+
+        // Check final message for UI actions
+        const { uiActions } = parseStructuredMessage(assistantSoFar);
+        if (uiActions.length > 0) handleUiActions(uiActions);
       } catch (e) {
         console.error("AI chat error:", e);
         upsertAssistant("⚠️ Errore di connessione. Riprova.");
@@ -295,25 +368,18 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
 
       setIsLoading(false);
     },
-    [messages, isLoading, context, stopSpeaking]
+    [messages, isLoading, context, stopSpeaking, location.pathname, handleUiActions]
   );
 
   const toggleListening = useCallback(() => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SR) return;
     const recognition = new SR();
     recognition.lang = "it-IT";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) sendMessage(transcript);
-    };
+    recognition.onresult = (event: any) => { const transcript = event.results[0][0].transcript; if (transcript) sendMessage(transcript); };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;
@@ -334,9 +400,12 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
             <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-500"}`} />
           </div>
           <div className="flex-1">
-            <h3 className={`text-sm font-semibold ${th.h2}`}>Assistente AI</h3>
-            <p className={`text-[10px] ${th.sub}`}>Interroga il database in linguaggio naturale</p>
+            <h3 className={`text-sm font-semibold ${th.h2}`}>Segretario Operativo AI</h3>
+            <p className={`text-[10px] ${th.sub}`}>Memoria persistente • Piani di lavoro • Azioni UI</p>
           </div>
+          {activePlans.length > 0 && (
+            <ActivePlansBadge plans={activePlans} isDark={isDark} />
+          )}
           {messages.length > 0 && (
             <button
               onClick={() => { setMessages([]); stopSpeaking(); lastSpokenIdxRef.current = -1; }}
@@ -360,10 +429,10 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
             <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
               <Bot className={`w-12 h-12 ${isDark ? "text-white/10" : "text-slate-200"}`} />
               <p className={`text-xs text-center ${th.sub}`}>
-                Chiedimi qualsiasi cosa sui partner,<br />paesi, download o statistiche.
+                Sono il tuo segretario operativo.<br />Ho memoria, creo piani e agisco sul sistema.
               </p>
               <div className="flex flex-wrap gap-1.5 justify-center">
-                {QUICK_PROMPTS.map((q) => (
+                {quickPrompts.map((q) => (
                   <button
                     key={q}
                     onClick={() => sendMessage(q)}
@@ -481,7 +550,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
               }}
-              placeholder="Chiedi qualcosa..."
+              placeholder="Chiedi qualcosa o dai un ordine operativo..."
               rows={1}
               className={`flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors ${
                 isDark

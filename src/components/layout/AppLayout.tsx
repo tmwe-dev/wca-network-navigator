@@ -9,6 +9,7 @@ import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRun
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
+import { toast } from "@/hooks/use-toast";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,6 +38,32 @@ export function AppLayout() {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
+
+  // Global listener for AI UI actions
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+
+      switch (detail.action_type) {
+        case "navigate":
+          if (detail.path) navigate(detail.path);
+          break;
+        case "show_toast":
+          toast({
+            title: detail.toast_type === "error" ? "⚠️ Errore" : detail.toast_type === "success" ? "✅ Fatto" : "ℹ️ Info",
+            description: detail.message || "",
+          });
+          break;
+        case "apply_filters":
+          window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
+          break;
+      }
+    };
+
+    window.addEventListener("ai-ui-action", handler);
+    return () => window.removeEventListener("ai-ui-action", handler);
+  }, [navigate]);
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>
