@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
@@ -7,6 +7,7 @@ import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
@@ -22,6 +23,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
+  const { startJob } = useDownloadProcessor();
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -66,12 +68,18 @@ export function AppLayout() {
         case "apply_filters":
           window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
           break;
+        case "start_download_job":
+          if (detail.job_id) {
+            console.log("[AppLayout] AI triggered download job:", detail.job_id);
+            startJob(detail.job_id);
+          }
+          break;
       }
     };
 
     window.addEventListener("ai-ui-action", handler);
     return () => window.removeEventListener("ai-ui-action", handler);
-  }, [navigate]);
+  }, [navigate, startJob]);
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>
