@@ -282,16 +282,6 @@ export default function SuperHome3D() {
           {/* Right: Carousel */}
           <section className="order-1 flex flex-col items-center justify-center lg:order-2 min-h-0">
             <div className="relative flex h-[300px] w-full max-w-[560px] items-center justify-center sm:h-[380px]">
-              {/* Central hub */}
-              <div className="pointer-events-none absolute z-30 h-32 w-32 rounded-full border border-primary/30 bg-background/80 shadow-[0_0_60px_hsl(var(--primary)/0.18)] backdrop-blur-3xl sm:h-40 sm:w-40">
-                <div className="flex h-full flex-col items-center justify-center text-center px-2">
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Sistema</div>
-                  <div className="mt-1 font-display text-3xl font-semibold text-foreground sm:text-4xl">
-                    {formatCompact(openActivities + activeJobs + campaignCount)}
-                  </div>
-                  <div className="mt-1 text-[10px] leading-tight text-muted-foreground">segnali attivi</div>
-                </div>
-              </div>
 
               {/* Cards */}
               <div className="relative isolate h-full w-full">
