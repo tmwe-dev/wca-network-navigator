@@ -439,10 +439,10 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
           {/* Top bar */}
           <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/40" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 3, repeat: Infinity }} />
-              <span className="text-[11px] text-muted-foreground/30 font-light tracking-wide">IntelliFlow · Sessione attiva</span>
+              <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/60" animate={{ opacity: [0.5, 0.9, 0.5] }} transition={{ duration: 3, repeat: Infinity }} />
+              <span className="text-[11px] text-muted-foreground font-light tracking-wide">IntelliFlow · Sessione attiva</span>
               {flowPhase !== "idle" && flowPhase !== "done" && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary/30 font-mono ml-2">
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary/70 font-mono ml-2">
                   {flowPhase === "thinking" ? "ELABORAZIONE" : flowPhase === "proposal" ? "PROPOSTA" : flowPhase === "approval" ? "IN ATTESA" : "ESECUZIONE"}
                 </motion.span>
               )}
