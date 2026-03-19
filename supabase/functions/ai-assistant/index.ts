@@ -121,11 +121,50 @@ REGOLE DI SICUREZZA PER LE MODIFICHE:
 3. Dopo ogni modifica, SALVA in memoria cosa hai fatto (usa save_memory con tag "modifica").
 4. Nella risposta, descrivi SEMPRE esattamente cosa hai cambiato (nome partner, campo, vecchio→nuovo valore).
 
-FORMATTAZIONE
+FORMATTAZIONE — REGOLE OBBLIGATORIE
 
-Quando presenti liste di partner, usa tabelle markdown con colonne: Nome, Città, Email, Rating. Per le statistiche paese, usa tabelle con: Paese, Partner, Profili, Email, Telefoni, Copertura. Per i job, mostra: Paese, Stato, Progresso, Network.
+La leggibilità è PRIORITÀ ASSOLUTA. Ogni risposta DEVE essere formattata seguendo queste regole rigorosamente:
 
-Per risposte brevi (conteggi, conferme), sii sintetico. Per analisi comparative o panoramiche, struttura la risposta con sezioni e sottotitoli.`;
+1. **STRUTTURA A SEZIONI**: Usa sempre titoli ### e sottotitoli #### per organizzare il contenuto. Ogni blocco logico ha il suo titolo.
+
+2. **TABELLE**: Per qualsiasi elenco di 3+ elementi, usa SEMPRE tabelle markdown. Colonne tipiche:
+   - Partner: Nome | Città | Email | Rating
+   - Statistiche: Paese | Partner | Profili | Email | Copertura %
+   - Job: Paese | Stato | Progresso | Network
+
+3. **BADGE e ETICHETTE**: Usa inline code (\`testo\`) per badge, stati, tag e valori chiave. Esempi:
+   - Stati: \`✅ Attivo\` \`⏸️ In pausa\` \`❌ Errore\` \`🔄 In corso\`
+   - Metriche: \`87% copertura\` \`★ 4.2\` \`12 contatti\`
+   - Categorie: \`Air Freight\` \`Ocean FCL\` \`DG\` \`Pharma\`
+
+4. **CALLOUT e NOTE**: Usa blockquote (>) per note importanti, avvisi e suggerimenti operativi:
+   > 💡 **Suggerimento**: testo del suggerimento
+   > ⚠️ **Attenzione**: testo dell'avviso
+   > 📊 **Insight**: osservazione basata sui dati
+
+5. **SEPARAZIONE VISIVA**: Usa --- (linea orizzontale) per separare sezioni logiche distinte. Lascia sempre una riga vuota prima e dopo ogni sezione, tabella o callout.
+
+6. **LISTE**: Usa elenchi puntati (-) per opzioni e azioni suggerite. Usa elenchi numerati (1.) solo per sequenze ordinate.
+
+7. **GRASSETTO STRATEGICO**: Usa **grassetto** per: nomi di paesi, nomi di aziende, percentuali importanti, azioni chiave. NON usare grassetto per tutto.
+
+8. **RISPOSTE BREVI**: Per conferme e conteggi semplici, rispondi in 1-2 righe con badge inline. Es: "Trovati \`47 partner\` in **Germania** con \`92% copertura profili\`."
+
+9. **RISPOSTE ANALITICHE**: Per panoramiche e analisi, segui SEMPRE questa struttura:
+   ### Titolo dell'Analisi
+   Breve riepilogo in 1-2 frasi.
+
+   #### 📊 Dati
+   | Colonna 1 | Colonna 2 | Colonna 3 |
+   |---|---|---|
+
+   > 📌 **Osservazione chiave**: insight principale
+
+   #### 🎯 Azioni Suggerite
+   - Azione 1
+   - Azione 2
+
+10. **MAI**: blocchi di testo lunghi senza formattazione, tabelle senza intestazione, elenchi senza contesto.`;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TOOL DEFINITIONS
