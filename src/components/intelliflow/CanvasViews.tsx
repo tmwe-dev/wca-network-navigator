@@ -1,44 +1,47 @@
-import { motion } from "framer-motion";
-import { Wand2, ThumbsUp, Download, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Wand2, ThumbsUp, Download, X, CheckCircle2, Upload, FileText, Users } from "lucide-react";
 import TemplateSuggest from "./TemplateSuggest";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
-/* ── Shell ── */
-const CanvasShell = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => (
-  <div className="h-full flex flex-col rounded-2xl p-6" style={{
-    background: "hsl(var(--background) / 0.5)",
-    backdropFilter: "blur(40px) saturate(1.1)",
-    border: "1px solid hsl(var(--foreground) / 0.04)",
-    boxShadow: "0 0 80px hsl(var(--primary) / 0.02), 0 30px 60px -20px hsl(0 0% 0% / 0.4)",
-  }}>
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-3">
-        <motion.div className="w-1.5 h-1.5 rounded-full bg-primary/40" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
-        <span className="text-[10px] text-muted-foreground/30 font-mono tracking-wider">{title}</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <button className="text-muted-foreground/15 hover:text-muted-foreground/30 transition-colors duration-500 p-1.5"><Download className="w-3 h-3" /></button>
-        <button onClick={onClose} className="text-muted-foreground/15 hover:text-muted-foreground/30 transition-colors duration-500 p-1.5"><X className="w-3.5 h-3.5" /></button>
-      </div>
-    </div>
-    <div className="flex-1 overflow-y-auto">{children}</div>
-  </div>
-);
-
 /* ── Table Canvas ── */
 interface TableRow { name: string; sector: string; revenue: string; days: string; churn: number }
 
-export const TableCanvas = ({ data, onClose, title = "ANALISI · PROPOSTA" }: { data: TableRow[]; onClose: () => void; title?: string }) => (
+export const TableCanvas = ({
+  data, onClose, title = "ANALISI · PROPOSTA"
+}: { data: TableRow[]; onClose: () => void; title?: string }) => (
   <CanvasShell onClose={onClose} title={title}>
     <div className="grid grid-cols-3 gap-3 mb-8">
-      {[{ label: "Account a rischio", value: "34" }, { label: "Fatturato esposto", value: "€4.2M" }, { label: "Score medio", value: "76" }].map((kpi, i) => (
-        <motion.div key={kpi.label} initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 0.4 + i * 0.1, duration: 0.5, ease }} className="p-4 rounded-xl text-center" style={{ background: "hsl(var(--background) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}>
+      {[
+        { label: "Account a rischio", value: "34" },
+        { label: "Fatturato esposto", value: "€4.2M" },
+        { label: "Score medio", value: "76" },
+      ].map((kpi, i) => (
+        <motion.div
+          key={kpi.label}
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.4 + i * 0.1, duration: 0.5, ease }}
+          className="p-4 rounded-xl text-center"
+          style={{ background: "hsl(var(--card) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}
+        >
           <div className="text-2xl font-extralight tracking-tight text-foreground/80">{kpi.value}</div>
           <div className="text-[9px] text-muted-foreground/25 mt-1.5 tracking-wider uppercase">{kpi.label}</div>
         </motion.div>
       ))}
     </div>
+
+    {/* Source indicator */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.3 }}
+      className="flex items-center gap-3 mb-4 px-1"
+    >
+      <span className="text-[8px] text-muted-foreground/15 tracking-[0.2em] uppercase font-mono">FONTE</span>
+      <span className="text-[9px] text-muted-foreground/20 font-light">Partner DB · Contact Import · Activity Engine · ML Scoring</span>
+    </motion.div>
+
     <table className="w-full">
       <thead>
         <tr className="text-[9px] text-muted-foreground/25 font-mono tracking-wider">
@@ -51,13 +54,23 @@ export const TableCanvas = ({ data, onClose, title = "ANALISI · PROPOSTA" }: { 
       </thead>
       <tbody>
         {data.map((row, i) => (
-          <motion.tr key={row.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 + i * 0.06, duration: 0.35, ease }} className="border-t border-border/[0.05] group cursor-pointer">
+          <motion.tr
+            key={row.name}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7 + i * 0.06, duration: 0.35, ease }}
+            className="border-t border-border/[0.05] group cursor-pointer"
+          >
             <td className="py-3 text-[13px] font-light text-foreground/60 group-hover:text-primary/70 transition-colors duration-500">{row.name}</td>
             <td className="py-3 text-[11px] text-muted-foreground/25">{row.sector}</td>
             <td className="py-3 text-[13px] text-right font-mono text-muted-foreground/40">{row.revenue}</td>
             <td className="py-3 text-[12px] text-right text-muted-foreground/25">{row.days} gg</td>
             <td className="py-3 text-right">
-              <span className={`text-[11px] font-mono px-2 py-0.5 rounded-lg ${row.churn >= 85 ? "text-destructive/50 bg-destructive/[0.04]" : row.churn >= 70 ? "text-warning/50 bg-warning/[0.04]" : "text-success/50 bg-success/[0.04]"}`}>{row.churn}</span>
+              <span className={`text-[11px] font-mono px-2 py-0.5 rounded-lg ${
+                row.churn >= 85 ? "text-destructive/50 bg-destructive/[0.04]"
+                : row.churn >= 70 ? "text-warning/50 bg-warning/[0.04]"
+                : "text-success/50 bg-success/[0.04]"
+              }`}>{row.churn}</span>
             </td>
           </motion.tr>
         ))}
@@ -71,24 +84,84 @@ export const TableCanvas = ({ data, onClose, title = "ANALISI · PROPOSTA" }: { 
 export const CampaignCanvas = ({ onClose }: { onClose: () => void }) => (
   <CanvasShell onClose={onClose} title="CAMPAGNA · ANTEPRIMA">
     <div className="grid grid-cols-2 gap-3 mb-6">
-      {[{ label: "Destinatari", value: "50 lead importati" }, { label: "Sorgente", value: "CRM Import · Network" }, { label: "Template base", value: "Re-engagement Q1" }, { label: "Personalizzazione", value: "Per contatto" }].map((item, i) => (
-        <motion.div key={item.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.08, ease }} className="p-3.5 rounded-xl" style={{ background: "hsl(var(--background) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}>
+      {[
+        { label: "Destinatari", value: "50 lead importati" },
+        { label: "Sorgente", value: "CRM Import · Network" },
+        { label: "Template base", value: "Re-engagement Q1" },
+        { label: "Personalizzazione", value: "Per contatto" },
+      ].map((item, i) => (
+        <motion.div
+          key={item.label}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 + i * 0.08, ease }}
+          className="p-3.5 rounded-xl"
+          style={{ background: "hsl(var(--card) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}
+        >
           <div className="text-[9px] text-muted-foreground/25 tracking-wider uppercase mb-1">{item.label}</div>
           <div className="text-[13px] font-light text-foreground/70">{item.value}</div>
         </motion.div>
       ))}
     </div>
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, ease }} className="rounded-xl p-5 mb-4" style={{ background: "hsl(var(--background) / 0.5)", border: "1px solid hsl(var(--foreground) / 0.02)" }}>
+
+    {/* Email preview */}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.8, ease }}
+      className="rounded-xl p-5 mb-4"
+      style={{ background: "hsl(var(--background) / 0.5)", border: "1px solid hsl(var(--foreground) / 0.02)" }}
+    >
       <div className="flex items-center justify-between mb-3">
         <span className="text-[9px] text-muted-foreground/25 tracking-wider uppercase">ANTEPRIMA BOZZA · 1 DI 50</span>
+        <span className="text-[8px] text-muted-foreground/15 font-mono">Email Draft #2847</span>
       </div>
       <div className="text-[11px] text-primary/40 mb-3 font-mono">A: marco.bianchi@techbridge.jp</div>
       <div className="text-[11px] text-foreground/40 mb-3 font-mono">Oggetto: È passato un po', Marco — aggiornamenti per TechBridge</div>
       <div className="text-[12px] text-foreground/50 leading-relaxed font-light space-y-2">
         <p>Gentile Marco,</p>
         <p>Sono passati 98 giorni dal nostro ultimo contatto. Nel frattempo, il settore Technology in Asia ha visto sviluppi significativi che potrebbero interessare TechBridge Japan.</p>
+        <p>Sulla base del vostro storico di acquisti nel segmento infrastrutture cloud, abbiamo preparato un'analisi dedicata che vorremmo condividere.</p>
+        <p className="text-muted-foreground/25 italic">— Bozza generata da Communication Agent · Dati da Contact Memory + Activity Engine</p>
       </div>
     </motion.div>
+
+    {/* Delivery plan */}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 1, ease }}
+      className="rounded-xl p-4 mb-4"
+      style={{ background: "hsl(var(--background) / 0.3)", border: "1px solid hsl(var(--foreground) / 0.015)" }}
+    >
+      <div className="text-[9px] text-muted-foreground/25 tracking-wider uppercase mb-3">PIANO DI INVIO</div>
+      <div className="space-y-2">
+        {[
+          { wave: "Wave 1", count: "17 email", time: "Immediato", targets: "Score ≥85 · Priorità alta" },
+          { wave: "Wave 2", count: "17 email", time: "+40 min", targets: "Score 70-84 · Priorità media" },
+          { wave: "Wave 3", count: "16 email", time: "+80 min", targets: "Score <70 · Nurturing" },
+        ].map((w) => (
+          <div key={w.wave} className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center gap-3">
+              <span className="text-foreground/40 font-light">{w.wave}</span>
+              <span className="text-muted-foreground/20 font-mono text-[9px]">{w.count}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground/15 text-[9px]">{w.targets}</span>
+              <span className="text-muted-foreground/20 font-mono text-[9px]">{w.time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+
+    <div className="flex items-start gap-3 mt-2">
+      <Wand2 className="w-3 h-3 text-primary/20 mt-0.5 flex-shrink-0" />
+      <p className="text-[11px] text-muted-foreground/30 leading-relaxed font-light">
+        Ogni email generata dal Communication Agent usando dati da Contact Memory, Activity Engine e Template Library. Governance check completato.
+      </p>
+    </div>
+
     <TemplateSuggest visible label="Salva questa campagna come template" />
   </CanvasShell>
 );
@@ -96,76 +169,179 @@ export const CampaignCanvas = ({ onClose }: { onClose: () => void }) => (
 /* ── Report Canvas ── */
 export const ReportCanvas = ({ onClose }: { onClose: () => void }) => (
   <CanvasShell onClose={onClose} title="REPORT · EXECUTIVE">
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, ease }} className="mb-8">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, ease }}
+      className="mb-8"
+    >
       <div className="text-[9px] text-muted-foreground/20 tracking-wider uppercase mb-4">PARTNER PERFORMANCE · ASIA PACIFIC · Q1 2026</div>
       <h3 className="text-xl font-extralight tracking-tight text-foreground/80 mb-1">Executive Summary</h3>
+      <p className="text-[12px] text-muted-foreground/35 font-light">
+        Generato da Data Analyst Agent · Fonti: Partner DB, Activity Engine, Campaign History
+      </p>
     </motion.div>
+
     <div className="grid grid-cols-4 gap-2.5 mb-8">
-      {[{ label: "Partner attivi", value: "23" }, { label: "Revenue YTD", value: "€8.7M" }, { label: "Crescita YoY", value: "+14%" }, { label: "NPS medio", value: "72" }].map((kpi, i) => (
-        <motion.div key={kpi.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.08, ease }} className="p-3 rounded-xl text-center" style={{ background: "hsl(var(--background) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}>
+      {[
+        { label: "Partner attivi", value: "23" },
+        { label: "Revenue YTD", value: "€8.7M" },
+        { label: "Crescita YoY", value: "+14%" },
+        { label: "NPS medio", value: "72" },
+      ].map((kpi, i) => (
+        <motion.div
+          key={kpi.label}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 + i * 0.08, ease }}
+          className="p-3 rounded-xl text-center"
+          style={{ background: "hsl(var(--card) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}
+        >
           <div className="text-lg font-extralight text-foreground/75">{kpi.value}</div>
           <div className="text-[8px] text-muted-foreground/20 mt-1 tracking-wider uppercase">{kpi.label}</div>
         </motion.div>
       ))}
     </div>
+
     {[
-      { title: "Performance", body: "Il portafoglio Asia (23 partner attivi) ha registrato una crescita del 14% YoY, trainata dal segmento Technology (+22%)." },
-      { title: "Rischi identificati", body: "3 partner con revenue >€400k mostrano segni di disengagement (NPS <50, attività in calo del 40%)." },
-      { title: "Raccomandazioni AI", body: "1) Avviare re-engagement per i 3 partner a rischio. 2) Intensificare il programma partner per il SEA. 3) Valutare l'ingresso nel mercato indiano." },
+      { title: "Performance", body: "Il portafoglio Asia (23 partner attivi) ha registrato una crescita del 14% YoY, trainata dal segmento Technology (+22%). Il Giappone resta il mercato più maturo con €3.1M di revenue e 8 partner. Il Sud-est Asiatico mostra il tasso di crescita più alto (+31%) con 6 partner in espansione." },
+      { title: "Rischi identificati", body: "3 partner con revenue >€400k mostrano segni di disengagement (NPS <50, attività in calo del 40% nel trimestre). TechBridge Japan ha ridotto il volume ordini del 28%. Nota: 2 dei 3 partner a rischio non hanno ricevuto campagne negli ultimi 90 giorni." },
+      { title: "Raccomandazioni AI", body: "1) Avviare re-engagement strutturato per i 3 partner a rischio — template già disponibile in Campaign Engine. 2) Intensificare il programma partner per il SEA — 4 prospect identificati da Deep Search. 3) Valutare l'ingresso nel mercato indiano tramite il partner Meridian." },
     ].map((section, i) => (
-      <motion.div key={section.title} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.15, ease }} className="mb-6">
+      <motion.div
+        key={section.title}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 + i * 0.15, ease }}
+        className="mb-6"
+      >
         <div className="text-[10px] text-primary/30 tracking-wider uppercase mb-2 font-mono">{section.title}</div>
         <p className="text-[12px] text-foreground/50 leading-[1.8] font-light">{section.body}</p>
       </motion.div>
     ))}
+
     <TemplateSuggest visible label="Salva questo formato report" />
   </CanvasShell>
 );
 
-/* ── Result Canvas ── */
+/* ── Execution Result Canvas (Scenario-Aware) ── */
+interface ResultCanvasProps {
+  onClose: () => void;
+  scenarioKey?: string;
+}
+
 const resultConfigs: Record<string, { title: string; subtitle: string; kpis: { label: string; value: string }[]; audit: { action: string; agent: string; time: string }[] }> = {
   import: {
-    title: "Importazione completata", subtitle: "287 contatti importati · 23 match WCA",
-    kpis: [{ label: "Importati", value: "287" }, { label: "Match WCA", value: "23" }, { label: "Arricchiti", value: "42" }],
-    audit: [{ action: "Parse Contact File", agent: "CRM Core Agent", time: "14:01" }, { action: "Update CRM Records", agent: "Automation Agent", time: "14:03" }],
+    title: "Importazione completata",
+    subtitle: "287 contatti importati · 23 match WCA · Audit log aggiornato",
+    kpis: [
+      { label: "Importati", value: "287" },
+      { label: "Match WCA", value: "23" },
+      { label: "Arricchiti", value: "42" },
+    ],
+    audit: [
+      { action: "Parse Contact File", agent: "CRM Core Agent", time: "14:01" },
+      { action: "Deduplicate & Merge", agent: "CRM Core Agent", time: "14:01" },
+      { action: "Deep Search enrichment", agent: "Data Agent", time: "14:02" },
+      { action: "Approvazione utente", agent: "Marco R.", time: "14:03" },
+      { action: "Update CRM Records", agent: "Automation Agent", time: "14:03" },
+      { action: "Audit Action registrato", agent: "Governance Agent", time: "14:03" },
+    ],
   },
   campaign: {
-    title: "Campagna avviata", subtitle: "50 email personalizzate in coda · 3 wave",
-    kpis: [{ label: "In coda", value: "50" }, { label: "Inviate", value: "0" }, { label: "Wave", value: "1/3" }],
-    audit: [{ action: "Proposta generata", agent: "Communication Agent", time: "14:02" }, { action: "Esecuzione avviata", agent: "Automation Agent", time: "14:03" }],
+    title: "Campagna avviata con successo",
+    subtitle: "50 email personalizzate in coda · 3 wave · Audit log aggiornato",
+    kpis: [
+      { label: "In coda", value: "50" },
+      { label: "Inviate", value: "0" },
+      { label: "Wave attiva", value: "1/3" },
+    ],
+    audit: [
+      { action: "Proposta generata", agent: "Communication Agent", time: "14:02" },
+      { action: "Governance check", agent: "Governance Agent", time: "14:02" },
+      { action: "Approvazione utente", agent: "Marco R.", time: "14:03" },
+      { action: "Esecuzione avviata", agent: "Automation Agent", time: "14:03" },
+    ],
   },
   batch: {
-    title: "Invio batch completato", subtitle: "120 email inviate · 4 wave",
-    kpis: [{ label: "Inviate", value: "120" }, { label: "Wave", value: "4/4" }, { label: "Errori", value: "0" }],
-    audit: [{ action: "Validazione contatti", agent: "CRM Core Agent", time: "14:01" }, { action: "Send Email Batch ×4", agent: "Automation Agent", time: "14:03" }],
+    title: "Invio batch completato",
+    subtitle: "120 email inviate · 4 wave · Governance verificata",
+    kpis: [
+      { label: "Inviate", value: "120" },
+      { label: "Wave", value: "4/4" },
+      { label: "Errori", value: "0" },
+    ],
+    audit: [
+      { action: "Validazione contatti", agent: "CRM Core Agent", time: "14:01" },
+      { action: "Governance pre-check", agent: "Governance Agent", time: "14:01" },
+      { action: "Approvazione step-by-step", agent: "Marco R.", time: "14:02" },
+      { action: "Send Email Batch ×4", agent: "Automation Agent", time: "14:03" },
+      { action: "Audit Action registrato", agent: "Governance Agent", time: "14:04" },
+    ],
   },
   template: {
-    title: "Template salvato", subtitle: "Disponibile in Template Library",
-    kpis: [{ label: "Template ID", value: "#T-0042" }, { label: "Step", value: "6" }, { label: "Stato", value: "Attivo" }],
-    audit: [{ action: "Template creato", agent: "Memory Agent", time: "14:02" }],
+    title: "Template salvato",
+    subtitle: "Disponibile in Template Library · Riutilizzabile",
+    kpis: [
+      { label: "Template ID", value: "#T-0042" },
+      { label: "Step", value: "6" },
+      { label: "Stato", value: "Attivo" },
+    ],
+    audit: [
+      { action: "Flusso analizzato", agent: "Orchestratore", time: "14:02" },
+      { action: "Template creato", agent: "Memory Agent", time: "14:02" },
+      { action: "Audit Action registrato", agent: "Governance Agent", time: "14:02" },
+    ],
   },
 };
 
-export const ResultCanvas = ({ onClose, scenarioKey }: { onClose: () => void; scenarioKey?: string }) => {
+export const ResultCanvas = ({ onClose, scenarioKey }: ResultCanvasProps) => {
   const config = resultConfigs[scenarioKey || ""] || resultConfigs.campaign;
+
   return (
     <CanvasShell onClose={onClose} title="ESECUZIONE · COMPLETATA">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, ease }} className="text-center py-8">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5, type: "spring", stiffness: 200 }} className="w-12 h-12 rounded-full bg-success/8 flex items-center justify-center mx-auto mb-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3, ease }}
+        className="text-center py-8"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+          className="w-12 h-12 rounded-full bg-success/8 flex items-center justify-center mx-auto mb-4"
+        >
           <ThumbsUp className="w-5 h-5 text-success/50" />
         </motion.div>
         <div className="text-lg font-extralight text-foreground/70 mb-2">{config.title}</div>
         <p className="text-[12px] text-muted-foreground/30 font-light">{config.subtitle}</p>
       </motion.div>
+
       <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
         {config.kpis.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.1, ease }} className="p-3 rounded-xl text-center" style={{ background: "hsl(var(--background) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}>
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 + i * 0.1, ease }}
+            className="p-3 rounded-xl text-center"
+            style={{ background: "hsl(var(--card) / 0.4)", border: "1px solid hsl(var(--foreground) / 0.02)" }}
+          >
             <div className="text-lg font-extralight text-foreground/70">{s.value}</div>
             <div className="text-[9px] text-muted-foreground/20 mt-1 tracking-wider uppercase">{s.label}</div>
           </motion.div>
         ))}
       </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="px-4 py-3 rounded-xl mb-4" style={{ background: "hsl(var(--background) / 0.3)", border: "1px solid hsl(var(--foreground) / 0.015)" }}>
+
+      {/* Audit trail */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="px-4 py-3 rounded-xl mb-4"
+        style={{ background: "hsl(var(--background) / 0.3)", border: "1px solid hsl(var(--foreground) / 0.015)" }}
+      >
         <div className="text-[9px] text-muted-foreground/20 tracking-wider uppercase mb-2">AUDIT TRAIL</div>
         <div className="space-y-1">
           {config.audit.map((log) => (
@@ -179,7 +355,38 @@ export const ResultCanvas = ({ onClose, scenarioKey }: { onClose: () => void; sc
           ))}
         </div>
       </motion.div>
+
       <TemplateSuggest visible label="Salva questo flusso come automazione ripetibile" />
     </CanvasShell>
   );
 };
+
+/* ── Shell ── */
+const CanvasShell = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => (
+  <div className="h-full flex flex-col rounded-2xl p-6" style={{
+    background: "hsl(var(--background) / 0.5)",
+    backdropFilter: "blur(40px) saturate(1.1)",
+    border: "1px solid hsl(var(--foreground) / 0.04)",
+    boxShadow: "0 0 80px hsl(var(--primary) / 0.02), 0 30px 60px -20px hsl(0 0% 0% / 0.4)",
+  }}>
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <motion.div
+          className="w-1.5 h-1.5 rounded-full bg-primary/40"
+          animate={{ opacity: [0.3, 0.7, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        <span className="text-[10px] text-muted-foreground/30 font-mono tracking-wider">{title}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button className="text-muted-foreground/15 hover:text-muted-foreground/30 transition-colors duration-500 p-1.5">
+          <Download className="w-3 h-3" />
+        </button>
+        <button onClick={onClose} className="text-muted-foreground/15 hover:text-muted-foreground/30 transition-colors duration-500 p-1.5">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+    <div className="flex-1 overflow-y-auto">{children}</div>
+  </div>
+);
