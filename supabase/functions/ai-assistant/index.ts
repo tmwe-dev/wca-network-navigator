@@ -1334,18 +1334,76 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// USER API KEY RESOLUTION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface ResolvedAiProvider {
+  url: string;
+  apiKey: string;
+  model: string;
+  isUserKey: boolean;
+}
+
+async function resolveAiProvider(userId: string): Promise<ResolvedAiProvider> {
+  // Check user's own keys: google first, then openai
+  const { data: userKeys } = await supabase
+    .from("user_api_keys")
+    .select("provider, api_key")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (userKeys && userKeys.length > 0) {
+    const googleKey = userKeys.find((k: any) => k.provider === "google");
+    if (googleKey?.api_key) {
+      console.log("[AI] Using user's Google API key");
+      return {
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        apiKey: googleKey.api_key,
+        model: "gemini-2.5-flash",
+        isUserKey: true,
+      };
+    }
+    const openaiKey = userKeys.find((k: any) => k.provider === "openai");
+    if (openaiKey?.api_key) {
+      console.log("[AI] Using user's OpenAI API key");
+      return {
+        url: "https://api.openai.com/v1/chat/completions",
+        apiKey: openaiKey.api_key,
+        model: "gpt-4o-mini",
+        isUserKey: true,
+      };
+    }
+    const anthropicKey = userKeys.find((k: any) => k.provider === "anthropic");
+    if (anthropicKey?.api_key) {
+      console.log("[AI] Using user's Anthropic API key (via OpenAI-compat)");
+      // Anthropic doesn't have OpenAI-compat endpoint, use gateway as fallback
+    }
+  }
+
+  // Fallback: Lovable AI Gateway
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+  console.log("[AI] Using Lovable AI Gateway");
+  return {
+    url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+    apiKey: LOVABLE_API_KEY,
+    model: "google/gemini-3-flash-preview",
+    isUserKey: false,
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CREDIT CONSUMPTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function consumeCredits(userId: string, usage: { prompt_tokens?: number; completion_tokens?: number }) {
+async function consumeCredits(userId: string, usage: { prompt_tokens?: number; completion_tokens?: number }, isUserKey: boolean) {
+  if (isUserKey) return; // User's own key — no credit deduction
   const inputTokens = usage.prompt_tokens || 0;
   const outputTokens = usage.completion_tokens || 0;
   if (inputTokens === 0 && outputTokens === 0) return;
   const rates = { input: 1, output: 2 };
   const totalCredits = Math.ceil(inputTokens / 1000 * rates.input) + Math.ceil(outputTokens / 1000 * rates.output);
   if (totalCredits <= 0) return;
-  const { data: apiKey } = await supabase.from("user_api_keys").select("api_key").eq("user_id", userId).eq("provider", "google").eq("is_active", true).maybeSingle();
-  if (apiKey?.api_key) return;
   const { data: deductResult } = await supabase.rpc("deduct_credits", {
     p_user_id: userId, p_amount: totalCredits, p_operation: "ai_call",
     p_description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
