@@ -144,7 +144,8 @@
   }
 
   .section-label {
-    @apply text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground;
+    @apply text-[10px] font-mono uppercase tracking-[0.2em];
+    color: hsl(var(--muted-foreground));
   }
 
   .text-gradient-hero {
