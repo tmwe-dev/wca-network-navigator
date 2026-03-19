@@ -20,7 +20,7 @@ export default function Global() {
   }, []);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* Left panel: Chat + Status */}
       <div className="w-[380px] flex-shrink-0 flex flex-col border-r border-white/10 bg-slate-950/80">
         {/* Chat — upper portion */}
