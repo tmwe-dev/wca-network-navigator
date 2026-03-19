@@ -100,7 +100,7 @@ export function HomeAIPrompt({ className }: Props) {
               </button>
             </div>
             <div className="ai-prose max-w-none">
-              <ReactMarkdown>{response}</ReactMarkdown>
+              <AIMarkdown content={response} />
             </div>
           </motion.div>
         )}

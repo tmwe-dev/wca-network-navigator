@@ -214,7 +214,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                           </div>
                         )}
                         <div className="ai-prose max-w-none">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <AIMarkdown content={msg.content} />
                         </div>
                         <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
                       </div>
