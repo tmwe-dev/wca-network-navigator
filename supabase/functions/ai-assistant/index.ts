@@ -115,6 +115,11 @@ Hai accesso a tool che MODIFICANO i dati. Usali quando l'utente chiede di:
 - Aggiornare lo stato lead di contatti importati: usa update_lead_status
 - Aggiornare più partner in blocco: usa bulk_update_partners
 
+REGOLA CRITICA PER I DOWNLOAD:
+- Se l'utente chiede di scaricare UN SINGOLO PARTNER specifico (per nome): usa **download_single_partner** — NON creare un piano multi-step e NON usare create_download_job che scarica l'intero paese!
+- Se l'utente chiede di scaricare TUTTI i partner di un paese o una categoria: usa create_download_job.
+- MAI scaricare un intero paese quando l'utente ha chiesto un singolo partner. È uno spreco enorme di risorse.
+
 REGOLE DI SICUREZZA PER LE MODIFICHE:
 1. Per operazioni su singolo partner: esegui direttamente e descrivi cosa hai modificato.
 2. Per operazioni bulk (>5 record): CHIEDI CONFERMA all'utente prima di eseguire. Mostra quanti record verranno modificati.
@@ -333,6 +338,24 @@ const tools = [
           delay_seconds: { type: "number" },
         },
         required: ["country_code", "country_name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "download_single_partner",
+      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. Searches the directory_cache or partners table to find the wca_id, then creates a minimal download job with just that one ID.",
+      parameters: {
+        type: "object",
+        properties: {
+          company_name: { type: "string", description: "Name of the company to download" },
+          city: { type: "string", description: "City (optional, helps narrow search)" },
+          country_code: { type: "string", description: "ISO 2-letter country code (optional)" },
+          wca_id: { type: "number", description: "If you already know the wca_id, pass it directly" },
+        },
+        required: ["company_name"],
         additionalProperties: false,
       },
     },
@@ -930,6 +953,90 @@ async function executeCreateDownloadJob(args: Record<string, unknown>) {
   };
 }
 
+async function executeDownloadSinglePartner(args: Record<string, unknown>) {
+  const companyName = String(args.company_name || "").trim();
+  const city = args.city ? String(args.city).trim() : null;
+  const countryCode = args.country_code ? String(args.country_code).toUpperCase() : null;
+  let wcaId = args.wca_id ? Number(args.wca_id) : null;
+
+  if (!companyName && !wcaId) return { error: "Serve almeno il nome dell'azienda o il wca_id." };
+
+  // Step 1: Try to find the partner in the DB
+  if (!wcaId) {
+    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${companyName}%`);
+    if (countryCode) query = query.eq("country_code", countryCode);
+    if (city) query = query.ilike("city", `%${city}%`);
+    const { data: found } = await query.limit(5);
+    
+    if (found && found.length > 0) {
+      // Exact or best match
+      const exact = found.find((p: any) => p.company_name.toLowerCase() === companyName.toLowerCase()) || found[0];
+      if (exact.raw_profile_html) {
+        return { success: true, already_downloaded: true, partner_id: exact.id, company_name: exact.company_name, city: exact.city, country_code: exact.country_code, message: `"${exact.company_name}" ha già il profilo scaricato. Non serve un nuovo download.` };
+      }
+      wcaId = exact.wca_id;
+      if (!wcaId) return { error: `"${exact.company_name}" trovata nel DB ma non ha un wca_id. Impossibile scaricare il profilo.` };
+    }
+  }
+
+  // Step 2: If not in DB, search directory_cache
+  if (!wcaId) {
+    let cacheQuery = supabase.from("directory_cache").select("members, country_code");
+    if (countryCode) cacheQuery = cacheQuery.eq("country_code", countryCode);
+    const { data: cacheRows } = await cacheQuery;
+    
+    if (cacheRows) {
+      for (const row of cacheRows) {
+        const members = row.members as any[];
+        if (!Array.isArray(members)) continue;
+        const match = members.find((m: any) => {
+          const name = typeof m === "object" ? (m.company_name || m.name || "") : "";
+          return name.toLowerCase().includes(companyName.toLowerCase());
+        });
+        if (match) {
+          wcaId = typeof match === "object" ? (match.wca_id || match.id) : match;
+          if (wcaId) break;
+        }
+      }
+    }
+  }
+
+  if (!wcaId) return { error: `"${companyName}" non trovata né nel database né nella directory cache. Prova a eseguire prima una scansione della directory per il paese corrispondente.` };
+
+  // Step 3: Check for active jobs
+  const { data: activeJobs } = await supabase.from("download_jobs").select("id, status").in("status", ["pending", "running"]).limit(5);
+  if (activeJobs && activeJobs.length >= 3) return { error: `Ci sono già ${activeJobs.length} job attivi. Attendi il completamento.` };
+
+  // Step 4: Determine country info
+  let jobCountryCode = countryCode || "";
+  let jobCountryName = "";
+  if (!jobCountryCode) {
+    const { data: p } = await supabase.from("partners").select("country_code, country_name").eq("wca_id", wcaId).single();
+    if (p) { jobCountryCode = p.country_code; jobCountryName = p.country_name; }
+    else { jobCountryCode = "XX"; jobCountryName = "Sconosciuto"; }
+  }
+  if (!jobCountryName) {
+    const { data: p } = await supabase.from("partners").select("country_name").eq("country_code", jobCountryCode).limit(1).single();
+    jobCountryName = p?.country_name || jobCountryCode;
+  }
+
+  // Step 5: Create a mini download job with just this one wca_id
+  const { data: job, error } = await supabase.from("download_jobs").insert({
+    country_code: jobCountryCode, country_name: jobCountryName, network_name: "Tutti",
+    wca_ids: [wcaId] as any, total_count: 1, delay_seconds: 10, status: "pending",
+    job_type: "download",
+  }).select("id").single();
+
+  if (error) return { error: `Errore creazione job: ${error.message}` };
+
+  return {
+    success: true, job_id: job.id, country: `${jobCountryName} (${jobCountryCode})`,
+    mode: "Singolo partner", total_partners: 1, wca_id: wcaId, delay_seconds: 10,
+    estimated_time_minutes: 1,
+    message: `Job creato per scaricare il profilo di "${companyName}" (WCA ID: ${wcaId}). Tempo stimato: ~1 minuto.`,
+  };
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // NEW TOOL EXECUTION — Memory, Plans, Templates, UI
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1311,6 +1418,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "list_reminders": return executeListReminders(args);
     case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
     case "create_download_job": return executeCreateDownloadJob(args);
+    case "download_single_partner": return executeDownloadSinglePartner(args);
     // Memory & plan tools
     case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
     case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
@@ -1588,7 +1696,7 @@ serve(async (req) => {
         }
 
         // Track job creation
-        if (tc.function.name === "create_download_job" && tr?.success && tr?.job_id) {
+        if ((tc.function.name === "create_download_job" || tc.function.name === "download_single_partner") && tr?.success && tr?.job_id) {
           lastJobCreated = { job_id: tr.job_id, country: tr.country, mode: tr.mode, total_partners: tr.total_partners, estimated_time_minutes: tr.estimated_time_minutes };
         }
 
