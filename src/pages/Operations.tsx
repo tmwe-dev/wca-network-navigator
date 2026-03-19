@@ -380,16 +380,16 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
         <button
           onClick={onClick}
           className={cn(
-            "flex flex-col items-center px-3 py-1 rounded-lg border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
+            "flex flex-col items-center px-2 py-0.5 rounded-md border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
             pillClass,
             active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
           )}
         >
-          <div className="flex items-center gap-1.5">
-            <Icon className="w-3.5 h-3.5" />
-            <span className="text-xl font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
+          <div className="flex items-center gap-1">
+            <Icon className="w-3 h-3" />
+            <span className="text-sm font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
           </div>
-          <span className="text-[10px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
+          <span className="text-[9px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs font-medium">

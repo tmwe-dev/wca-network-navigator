@@ -325,7 +325,7 @@ export default function PartnerHub() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden flex flex-col">
+    <div className="h-full relative overflow-hidden flex flex-col">
       {/* ═══ UNIFIED ACTION BAR ═══ */}
       <UnifiedActionBar
         selectedIds={selectedIds}
