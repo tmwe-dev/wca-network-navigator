@@ -659,6 +659,22 @@ const tools = [
       },
     },
   },
+  // ━━━ Verification / Status Check Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "check_job_status",
+      description: "Check the real-time status of a specific download job, or get a summary of all active background processes (download jobs, email queue). Use AFTER triggering any action to verify its outcome. MANDATORY after create_download_job, download_single_partner, bulk_update_partners, and any plan step execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          job_id: { type: "string", description: "UUID of a specific download job to check. If omitted, returns a summary of ALL active processes." },
+          include_email_queue: { type: "boolean", description: "Also check email campaign queue status (default: true)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
