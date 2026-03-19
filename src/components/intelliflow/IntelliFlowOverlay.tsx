@@ -610,7 +610,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     animate={{ boxShadow: inputFocused ? "0 0 0 1px hsl(var(--primary) / 0.08), 0 0 60px hsl(var(--primary) / 0.03)" : "0 0 0 0.5px hsl(0 0% 0% / 0.15)" }}
                     transition={{ duration: 0.6 }}
                     className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                    style={{ background: "hsl(var(--background) / 0.6)", backdropFilter: "blur(40px)", border: "1px solid hsl(var(--foreground) / 0.03)" }}
+                    style={{ background: "hsl(var(--background) / 0.6)", backdropFilter: "blur(40px)", border: "1px solid hsl(var(--foreground) / 0.08)" }}
                   >
                     <motion.button
                       onClick={() => { setMicActive(!micActive); setVoiceSpeaking(false); }}
