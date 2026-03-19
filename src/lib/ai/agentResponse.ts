@@ -1,3 +1,5 @@
+import type { AiOperation } from "@/components/ai/AiOperationCard";
+
 export interface JobCreatedInfo {
   job_id: string;
   country: string;
@@ -21,14 +23,16 @@ export interface ParsedAiAgentResponse<TPartner = unknown> {
   partners: TPartner[];
   jobCreated: JobCreatedInfo | null;
   uiActions: AiUiAction[];
+  operations: AiOperation[];
 }
 
 const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
 const JOB_CREATED_DELIMITER = "---JOB_CREATED---";
 const COMMAND_DELIMITER = "---COMMAND---";
 const UI_ACTIONS_DELIMITER = "---UI_ACTIONS---";
+const OPERATIONS_DELIMITER = "---OPERATIONS---";
 
-const HIDDEN_MARKER_PATTERN = /---(?:STRUCTURED_DATA|COMMAND|JOB_CREATED|UI_ACTIONS)---/i;
+const HIDDEN_MARKER_PATTERN = /---(?:STRUCTURED_DATA|COMMAND|JOB_CREATED|UI_ACTIONS|OPERATIONS)---/i;
 const RAW_UI_ACTIONS_PATTERN = /(?:^|\n)\s*(?:\[\s*\{[\s\S]*?"action_type"\s*:\s*"(?:navigate|show_toast|apply_filters|open_dialog|start_download_job)"[\s\S]*|\{[\s\S]*?"action_type"\s*:\s*"(?:navigate|show_toast|apply_filters|open_dialog|start_download_job)"[\s\S]*)$/i;
 
 function extractMarkerPayload(content: string, marker: string): string | null {
@@ -71,16 +75,35 @@ export function parseAiAgentResponse<TPartner = unknown>(content: string): Parse
   const partnersPayload = extractMarkerPayload(content, STRUCTURED_DELIMITER);
   const jobPayload = extractMarkerPayload(content, JOB_CREATED_DELIMITER);
   const uiPayload = extractMarkerPayload(content, UI_ACTIONS_DELIMITER);
+  const opsPayload = extractMarkerPayload(content, OPERATIONS_DELIMITER);
   extractMarkerPayload(content, COMMAND_DELIMITER);
 
   const structured = safeJsonParse<{ type?: string; data?: TPartner[] } | null>(partnersPayload, null);
   const partners = structured?.type === "partners" && Array.isArray(structured.data) ? structured.data : [];
 
+  const jobCreated = safeJsonParse<JobCreatedInfo | null>(jobPayload, null);
+  let operations = safeJsonParse<AiOperation[]>(opsPayload, []);
+
+  // Auto-generate operation card from jobCreated if no explicit one exists
+  if (jobCreated && !operations.some(o => o.job_id === jobCreated.job_id)) {
+    operations.push({
+      op_type: "download",
+      status: "running",
+      title: `Download ${jobCreated.mode}`,
+      target: jobCreated.country,
+      count: jobCreated.total_partners,
+      eta_minutes: jobCreated.estimated_time_minutes,
+      job_id: jobCreated.job_id,
+      source: "WCA Directory",
+    });
+  }
+
   return {
     text: sanitizeVisibleAiText(content),
     partners,
-    jobCreated: safeJsonParse<JobCreatedInfo | null>(jobPayload, null),
+    jobCreated,
     uiActions: safeJsonParse<AiUiAction[]>(uiPayload, []),
+    operations,
   };
 }
 
