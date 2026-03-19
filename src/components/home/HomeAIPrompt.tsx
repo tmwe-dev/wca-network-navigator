@@ -99,7 +99,7 @@ export function HomeAIPrompt({ className }: Props) {
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="text-sm text-foreground prose prose-sm prose-p:my-1 prose-li:my-0 max-w-none">
+            <div className="ai-prose max-w-none">
               <ReactMarkdown>{response}</ReactMarkdown>
             </div>
           </motion.div>
