@@ -571,7 +571,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                                    <span className="text-[8px] text-muted-foreground/50 font-mono">{msg.governance}</span>
                                  </motion.div>
                               )}
-                              <span className="text-[9px] text-muted-foreground/15 mt-2 block">{msg.timestamp}</span>
+                              <span className="text-[9px] text-muted-foreground/50 mt-2 block">{msg.timestamp}</span>
                             </motion.div>
                           </motion.div>
                         )}
