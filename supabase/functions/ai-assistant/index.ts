@@ -1634,20 +1634,40 @@ serve(async (req) => {
 
     const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
-    // First call with tools
+    // First call with tools — with retry and model fallback
     const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
-    let response = await fetch(provider.url, {
-      method: "POST",
-      headers: aiHeaders,
-      body: JSON.stringify({ model: provider.model, messages: allMessages, tools }),
-    });
+    const fallbackModels = provider.isUserKey
+      ? [provider.model]
+      : [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
-    if (!response.ok) {
-      const status = response.status;
-      const text = await response.text();
-      console.error("AI gateway error:", status, text);
-      const errorMsg = status === 429 ? "Troppe richieste, riprova tra poco." : status === 402 ? "Crediti AI esauriti." : "Errore AI gateway";
-      return new Response(JSON.stringify({ error: errorMsg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    let response: Response | null = null;
+    for (const tryModel of fallbackModels) {
+      console.log(`[AI] Trying model: ${tryModel}`);
+      response = await fetch(provider.url, {
+        method: "POST",
+        headers: aiHeaders,
+        body: JSON.stringify({ model: tryModel, messages: allMessages, tools }),
+      });
+      if (response.ok) {
+        if (tryModel !== provider.model) console.log(`[AI] Fallback model ${tryModel} succeeded`);
+        break;
+      }
+      const errStatus = response.status;
+      const errText = await response.text();
+      console.error(`AI gateway error (${tryModel}):`, errStatus, errText);
+      if (errStatus === 429 || errStatus === 402) {
+        const errorMsg = errStatus === 429 ? "Troppe richieste, riprova tra poco." : "Crediti AI esauriti.";
+        return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // For 503/500 try next model
+      if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
+        return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    if (!response || !response.ok) {
+      console.error("[AI] All models failed");
+      return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let result = await response.json();
