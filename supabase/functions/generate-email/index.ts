@@ -148,6 +148,40 @@ function isValidPublicUrl(url: string): boolean {
   }
 }
 
+/** Generate aliases inline via AI if missing — lightweight single-item call */
+async function generateAliasesInline(
+  apiKey: string,
+  companyName: string,
+  contactName: string | null,
+  contactTitle: string | null,
+): Promise<{ company_alias: string; contact_alias: string }> {
+  const prompt = `Genera alias per:
+- Azienda: "${companyName}" → rimuovi suffissi legali (SRL, LLC, Ltd, GmbH, etc.) e città dal nome
+- Contatto: "${contactName || ""}" (ruolo: ${contactTitle || "N/A"}) → usa SOLO il cognome, rimuovi titoli (Mr., Mrs., Dr., etc.). Se sembra un ruolo e non un nome di persona, restituisci ""
+
+Rispondi SOLO con JSON: {"company_alias":"...","contact_alias":"..."}`;
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+      }),
+    });
+    if (!resp.ok) return { company_alias: "", contact_alias: "" };
+    const result = await resp.json();
+    const text = result.choices?.[0]?.message?.content || "";
+    const jsonMatch = text.match(/\{[^}]+\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.error("Inline alias generation failed:", e);
+  }
+  return { company_alias: "", contact_alias: "" };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
