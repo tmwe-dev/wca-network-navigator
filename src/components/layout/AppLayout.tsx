@@ -38,6 +38,10 @@ export function AppLayout() {
         e.preventDefault();
         setCommandOpen((o) => !o);
       }
+      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setAiOpen((o) => !o);
+      }
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
