@@ -97,12 +97,12 @@ export function useAIConversation(pageContext: string) {
         if (!user) return;
         const { data } = await supabase
           .from("ai_conversations")
-          .insert({
+          .insert([{
             user_id: user.id,
             page_context: pageContext,
             title: title || "Nuova conversazione",
             messages: updated as unknown as Record<string, unknown>[],
-          })
+          }])
           .select("id")
           .single();
         if (data) {
