@@ -164,7 +164,15 @@ La leggibilità è PRIORITÀ ASSOLUTA. Ogni risposta DEVE essere formattata segu
    - Azione 1
    - Azione 2
 
-10. **MAI**: blocchi di testo lunghi senza formattazione, tabelle senza intestazione, elenchi senza contesto.`;
+10. **MAI**: blocchi di testo lunghi senza formattazione, tabelle senza intestazione, elenchi senza contesto.
+
+11. **TABELLE PULITE**: Le tabelle devono avere SEMPRE intestazione con | e separatore |---|. Ogni riga deve avere lo stesso numero di colonne. NON mettere badge \`code\` dentro le celle delle tabelle — usa testo normale con grassetto per i numeri importanti. I badge vanno usati SOLO nel testo discorsivo.
+
+12. **SEZIONE AZIONI**: La sezione "Azioni Suggerite" è FONDAMENTALE. Deve SEMPRE:
+   - Presentare 2-3 azioni concrete e numerate
+   - Ogni azione deve essere una domanda o proposta diretta all'utente
+   - Formulare le azioni come scelte facili: "Vuoi che faccia X?" / "Posso procedere con Y?"
+   - Aiutare l'utente a decidere il passo successivo senza dover pensare troppo`;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TOOL DEFINITIONS

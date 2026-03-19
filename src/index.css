@@ -169,25 +169,41 @@
     @apply my-3 border-border;
   }
   .ai-prose table {
-    @apply w-full text-xs my-3 border-collapse;
-  }
-  .ai-prose thead th {
-    @apply text-left px-3 py-2 font-semibold text-foreground border-b border-border;
-    background: hsl(var(--muted) / 0.5);
+    @apply w-full text-xs my-3 border-separate;
+    border-spacing: 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border) / 0.6);
+    background: hsl(var(--muted) / 0.25);
     backdrop-filter: blur(12px);
   }
+  .ai-prose thead th {
+    @apply text-left px-3 py-2.5 font-semibold text-foreground;
+    background: hsl(var(--muted) / 0.7);
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+  }
+  .ai-prose thead th:not(:last-child) {
+    border-right: 1px solid hsl(var(--border) / 0.3);
+  }
   .ai-prose tbody td {
-    @apply px-3 py-2 border-b border-border/50 text-foreground;
+    @apply px-3 py-2 text-foreground;
+    border-bottom: 1px solid hsl(var(--border) / 0.3);
+  }
+  .ai-prose tbody td:not(:last-child) {
+    border-right: 1px solid hsl(var(--border) / 0.15);
+  }
+  .ai-prose tbody tr:last-child td {
+    border-bottom: none;
   }
   .ai-prose tbody tr:hover {
-    background: hsl(var(--muted) / 0.3);
+    background: hsl(var(--muted) / 0.35);
   }
   .ai-prose code:not(pre code) {
-    @apply text-[11px] font-medium px-2 py-0.5 rounded-full;
-    background: hsl(var(--primary) / 0.12);
+    @apply text-[11px] font-bold px-2.5 py-1 rounded-full;
+    background: hsl(var(--primary) / 0.15);
     color: hsl(var(--primary));
     backdrop-filter: blur(8px);
-    border: 1px solid hsl(var(--primary) / 0.15);
+    border: 1px solid hsl(var(--primary) / 0.2);
   }
   .ai-prose blockquote {
     @apply my-3 px-4 py-3 rounded-xl text-sm text-foreground;
@@ -195,6 +211,39 @@
     backdrop-filter: blur(16px);
     border: 1px solid hsl(var(--border) / 0.6);
     border-left: 3px solid hsl(var(--primary) / 0.5);
+  }
+  /* Azioni Suggerite section — brown/amber callout */
+  .ai-prose h4:has(+ ul),
+  .ai-prose h3:has(+ ul) {
+    /* detected by proximity — styled via JS wrapper below */
+  }
+  .ai-actions-callout {
+    @apply my-3 px-4 py-3 rounded-xl text-sm;
+    background: hsl(30 60% 12% / 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(38 80% 40% / 0.3);
+    border-left: 3px solid hsl(38 92% 50%);
+  }
+  .ai-actions-callout h3,
+  .ai-actions-callout h4 {
+    color: hsl(38 92% 60%) !important;
+    @apply mb-2;
+  }
+  .ai-actions-callout li,
+  .ai-actions-callout p {
+    color: hsl(40 80% 75%) !important;
+  }
+  .ai-actions-callout a {
+    color: hsl(38 92% 65%) !important;
+    text-decoration: underline;
+  }
+  .ai-actions-callout strong {
+    color: hsl(38 100% 70%) !important;
+  }
+  .ai-actions-callout code:not(pre code) {
+    background: hsl(38 80% 40% / 0.2) !important;
+    color: hsl(38 92% 65%) !important;
+    border-color: hsl(38 80% 40% / 0.3) !important;
   }
   .ai-prose blockquote p {
     @apply my-0;
