@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 
-/* ─── Types ─── */
 interface Message {
   id: number;
   role: "user" | "assistant";
@@ -15,7 +14,6 @@ interface Message {
   timestamp: string;
 }
 
-/* ─── Real stats hook ─── */
 function useSystemStats() {
   return useQuery({
     queryKey: ["intelliflow-stats"],
@@ -46,7 +44,6 @@ const QUICK_PROMPTS = [
   "Genera report executive",
 ];
 
-/* ─── Component ─── */
 interface IntelliFlowOverlayProps {
   open: boolean;
   onClose: () => void;
@@ -69,7 +66,6 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Web Speech API
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
@@ -126,7 +122,6 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     }
   }, [input, loading, messages]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -134,7 +129,6 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  // Focus input when opened
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
@@ -151,41 +145,36 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[100] flex flex-col"
-          style={{
-            background: "hsl(var(--background) / 0.97)",
-            backdropFilter: "blur(40px) saturate(1.1)",
-          }}
+          className="fixed inset-0 z-[100] flex flex-col bg-background"
         >
           {/* Top bar */}
-          <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border/70 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-              <span className="text-[11px] text-muted-foreground font-light tracking-wide">IntelliFlow · Sessione attiva</span>
+              <div className="w-2 h-2 rounded-full bg-primary" />
+              <span className="text-xs text-foreground font-medium tracking-wide">IntelliFlow · Sessione attiva</span>
               {loading && (
-                <span className="text-[9px] text-primary/70 font-mono ml-2">ELABORAZIONE</span>
+                <span className="text-[10px] text-primary font-mono ml-2 font-semibold">ELABORAZIONE</span>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-wider">{statsLine}</span>
-              <button onClick={onClose} className="text-muted-foreground/60 hover:text-foreground/80 transition-colors duration-300 p-1.5 rounded-lg hover:bg-secondary/20">
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] text-muted-foreground font-mono tracking-wider">{statsLine}</span>
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-secondary/30">
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Main */}
-          <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-            {/* Conversation */}
+          <div className="flex-1 flex flex-col overflow-hidden">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center px-8">
                 <div className="mb-8">
                   <AiEntity size="lg" />
                 </div>
-                <h2 className="text-2xl font-extralight tracking-tight text-foreground/80 mb-2">
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-3">
                   Cosa vuoi ottenere?
                 </h2>
-                <p className="text-[13px] text-muted-foreground/60 font-light mb-10 text-center max-w-sm">
+                <p className="text-sm text-muted-foreground mb-10 text-center max-w-sm">
                   {statsLine}
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 max-w-lg">
@@ -193,7 +182,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     <button
                       key={p}
                       onClick={() => sendMessage(p)}
-                      className="text-[12px] px-4 py-2 rounded-full border border-border/50 text-muted-foreground/70 hover:text-foreground hover:bg-secondary/15 transition-colors"
+                      className="text-xs px-4 py-2.5 rounded-full border border-border bg-card/80 text-foreground/80 hover:text-foreground hover:bg-card transition-colors font-medium"
                     >
                       {p}
                     </button>
@@ -212,23 +201,22 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                         <div className="flex-shrink-0 mt-1"><AiEntity size="sm" pulse={false} /></div>
                       )}
                       <div
-                        className={`max-w-[85%] px-5 py-4 rounded-2xl ${msg.role === "user" ? "rounded-br-lg" : "rounded-bl-lg"}`}
-                        style={{
-                          background: msg.role === "assistant" ? "hsl(var(--background) / 0.7)" : "hsl(var(--secondary) / 0.4)",
-                          border: `1px solid hsl(var(--foreground) / ${msg.role === "assistant" ? "0.08" : "0.06"})`,
-                          backdropFilter: "blur(40px)",
-                        }}
+                        className={`max-w-[85%] px-5 py-4 rounded-2xl border border-border/70 ${
+                          msg.role === "user"
+                            ? "rounded-br-lg bg-secondary/60"
+                            : "rounded-bl-lg bg-card/80"
+                        }`}
                       >
                         {msg.role === "assistant" && (
-                          <div className="flex items-center gap-1.5 mb-2 text-[9px] text-primary/70 font-mono tracking-[0.2em] uppercase">
+                          <div className="flex items-center gap-1.5 mb-2 text-[10px] text-primary font-mono tracking-[0.2em] uppercase font-semibold">
                             <Bot className="w-3 h-3" />
                             Segretario Operativo
                           </div>
                         )}
-                        <div className="text-[14px] leading-[1.7] font-light text-foreground/90 prose prose-sm prose-p:my-1 prose-li:my-0 max-w-none">
+                        <div className="text-sm leading-relaxed text-foreground prose prose-sm prose-p:my-1 prose-li:my-0 max-w-none">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
-                        <span className="text-[9px] text-muted-foreground/40 mt-2 block">{msg.timestamp}</span>
+                        <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
                       </div>
                     </div>
                   ))}
@@ -237,8 +225,8 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-1"><AiEntity size="sm" /></div>
                       <div className="flex items-center gap-2 px-5 py-4">
-                        <Loader2 className="w-4 h-4 text-primary/50 animate-spin" />
-                        <span className="text-[11px] text-muted-foreground/60 font-light">Elaborazione in corso…</span>
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        <span className="text-xs text-muted-foreground">Elaborazione in corso…</span>
                       </div>
                     </div>
                   )}
@@ -248,23 +236,29 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
               </div>
             )}
 
-            {/* Voice presence */}
             <VoicePresence active={micActive} listening={micActive} speaking={false} />
 
-            {/* Input */}
-            <div className="px-8 pb-8 pt-2 flex-shrink-0">
+            {/* Input bar */}
+            <div className="px-8 pb-8 pt-3 flex-shrink-0">
               <div className="max-w-2xl mx-auto">
                 <motion.div
-                  animate={{ boxShadow: inputFocused ? "0 0 0 1px hsl(var(--primary) / 0.08), 0 0 60px hsl(var(--primary) / 0.03)" : "0 0 0 0.5px hsl(0 0% 0% / 0.15)" }}
-                  transition={{ duration: 0.6 }}
-                  className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: "hsl(var(--background) / 0.6)", backdropFilter: "blur(40px)", border: "1px solid hsl(var(--foreground) / 0.08)" }}
+                  animate={{
+                    boxShadow: inputFocused
+                      ? "0 0 0 2px hsl(var(--primary) / 0.2), 0 4px 24px hsl(var(--primary) / 0.08)"
+                      : "0 0 0 1px hsl(var(--border))"
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-card border border-border"
                 >
                   <button
                     onClick={toggleMic}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 ${micActive ? "bg-destructive/15 text-destructive ring-2 ring-destructive/30" : "text-muted-foreground/50 hover:text-muted-foreground/70"}`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+                      micActive
+                        ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                    }`}
                   >
-                    {micActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {micActive ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
                   <input
                     ref={inputRef}
@@ -276,14 +270,14 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
                     disabled={loading}
-                    className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/50 font-light text-foreground/90"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
                   />
                   <button
                     onClick={() => sendMessage()}
                     disabled={!input.trim() || loading}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/12 text-primary/60 hover:bg-primary/20 hover:text-primary/80 transition-all duration-300 disabled:opacity-20 flex-shrink-0"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/15 text-primary hover:bg-primary/25 transition-all disabled:opacity-30 flex-shrink-0"
                   >
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </motion.div>
               </div>

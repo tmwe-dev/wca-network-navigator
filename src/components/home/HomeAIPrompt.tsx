@@ -26,7 +26,6 @@ export function HomeAIPrompt({ className }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Web Speech API
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
@@ -89,7 +88,7 @@ export function HomeAIPrompt({ className }: Props) {
             initial={{ opacity: 0, y: 12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
-            className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-glass backdrop-blur-2xl"
+            className="rounded-2xl border border-border bg-card p-4 shadow-glass backdrop-blur-2xl"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -108,56 +107,53 @@ export function HomeAIPrompt({ className }: Props) {
       </AnimatePresence>
 
       {/* Prompt bar */}
-      <div className="relative rounded-2xl border border-border/70 bg-card/65 shadow-glass backdrop-blur-2xl overflow-hidden">
+      <div className="relative rounded-2xl border border-border bg-card shadow-glass backdrop-blur-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
-          {/* Mic button */}
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              "h-9 w-9 shrink-0 rounded-full transition-all",
+              "h-10 w-10 shrink-0 rounded-full transition-all",
               listening
-                ? "bg-destructive/15 text-destructive ring-2 ring-destructive/30"
+                ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={toggleMic}
             aria-label={listening ? "Stop ascolto" : "Parla"}
           >
             {listening ? (
-              <MicOff className="h-4 w-4 animate-pulse" />
+              <MicOff className="h-5 w-5 animate-pulse" />
             ) : (
-              <Mic className="h-4 w-4" />
+              <Mic className="h-5 w-5" />
             )}
           </Button>
 
-          {/* Input */}
           <input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Chiedi al sistema qualsiasi cosa…"
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             disabled={loading}
           />
 
-          {/* Send button */}
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              "h-9 w-9 shrink-0 rounded-full",
+              "h-10 w-10 shrink-0 rounded-full",
               input.trim()
-                ? "text-primary hover:bg-primary/10"
+                ? "text-primary hover:bg-primary/15"
                 : "text-muted-foreground"
             )}
             onClick={() => send()}
             disabled={loading || !input.trim()}
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
             )}
           </Button>
         </div>
@@ -165,12 +161,12 @@ export function HomeAIPrompt({ className }: Props) {
         {/* Quick prompts */}
         {!response && !loading && (
           <div className="flex items-center gap-1.5 px-3 pb-2.5 sm:px-4 sm:pb-3 flex-wrap">
-            <Sparkles className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+            <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
             {QUICK_PROMPTS.map((q) => (
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+                className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors font-medium"
               >
                 {q}
               </button>
@@ -179,14 +175,13 @@ export function HomeAIPrompt({ className }: Props) {
         )}
       </div>
 
-      {/* Listening indicator */}
       <AnimatePresence>
         {listening && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center justify-center gap-2 text-xs text-destructive"
+            className="flex items-center justify-center gap-2 text-xs text-destructive font-medium"
           >
             <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
             Ascolto in corso…

@@ -244,7 +244,7 @@ export default function SuperHome3D() {
                   <span className="block text-muted-foreground">{activeWorld.outcome}</span>
                 </h2>
 
-                <p className="mt-3 max-w-lg text-sm leading-6 text-foreground/85">{activeWorld.description}</p>
+                <p className="mt-3 max-w-lg text-sm leading-6 text-foreground">{activeWorld.description}</p>
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <div className="rounded-xl border border-border/70 bg-background/65 p-3">
@@ -326,7 +326,7 @@ export default function SuperHome3D() {
                       {/* Card body */}
                       <div>
                         <div className="text-lg font-semibold leading-tight text-foreground">{world.action}</div>
-                        <div className="text-sm text-foreground/70">{world.outcome}</div>
+                        <div className="text-sm text-muted-foreground">{world.outcome}</div>
                       </div>
 
                       {/* Card footer */}
