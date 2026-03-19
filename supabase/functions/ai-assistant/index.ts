@@ -1664,7 +1664,7 @@ serve(async (req) => {
       finalText += `\n\n---UI_ACTIONS---\n${JSON.stringify(uiActions)}`;
     }
 
-    if (userId) await consumeCredits(userId, totalUsage);
+    if (userId) await consumeCredits(userId, totalUsage, provider.isUserKey);
     return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-assistant error:", e);
