@@ -1442,6 +1442,106 @@ async function executeLinkBusinessCard(args: Record<string, unknown>) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// VERIFICATION / STATUS CHECK TOOL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function executeCheckJobStatus(args: Record<string, unknown>) {
+  const result: Record<string, unknown> = {};
+
+  // Specific job check
+  if (args.job_id) {
+    const { data: job, error } = await supabase.from("download_jobs")
+      .select("id, country_code, country_name, status, job_type, current_index, total_count, contacts_found_count, contacts_missing_count, created_at, updated_at, completed_at, last_processed_company, error_message, network_name")
+      .eq("id", args.job_id)
+      .single();
+    if (error || !job) {
+      result.job = { error: "Job non trovato", job_id: args.job_id };
+    } else {
+      const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
+      const elapsed = job.updated_at && job.created_at
+        ? Math.round((new Date(job.updated_at).getTime() - new Date(job.created_at).getTime()) / 60000)
+        : null;
+      result.job = {
+        id: job.id,
+        country: `${job.country_name} (${job.country_code})`,
+        status: job.status,
+        type: job.job_type,
+        progress_percent: progress,
+        current: job.current_index,
+        total: job.total_count,
+        contacts_found: job.contacts_found_count,
+        contacts_missing: job.contacts_missing_count,
+        last_company: job.last_processed_company,
+        error: job.error_message || null,
+        elapsed_minutes: elapsed,
+        completed_at: job.completed_at,
+        is_finished: ["completed", "cancelled", "failed"].includes(job.status),
+        verdict: job.status === "completed"
+          ? `✅ Completato: ${job.contacts_found_count} contatti trovati, ${job.contacts_missing_count} mancanti`
+          : job.status === "running"
+          ? `⏳ In corso: ${progress}% (${job.current_index}/${job.total_count})`
+          : job.status === "failed" || job.error_message
+          ? `❌ Errore: ${job.error_message || "sconosciuto"}`
+          : `🕐 ${job.status}`,
+      };
+    }
+  }
+
+  // Active jobs summary (always included when no specific job_id or alongside it)
+  const { data: activeJobs } = await supabase.from("download_jobs")
+    .select("id, country_name, country_code, status, current_index, total_count, job_type, last_processed_company, error_message, created_at")
+    .in("status", ["running", "pending", "paused"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  result.active_downloads = {
+    count: activeJobs?.length || 0,
+    jobs: (activeJobs || []).map((j: any) => ({
+      id: j.id,
+      country: `${j.country_name} (${j.country_code})`,
+      status: j.status,
+      progress: j.total_count > 0 ? `${Math.round((j.current_index / j.total_count) * 100)}%` : "0%",
+      detail: `${j.current_index}/${j.total_count}`,
+      last_company: j.last_processed_company,
+      error: j.error_message,
+    })),
+  };
+
+  // Recently completed jobs (last 5)
+  const { data: recentJobs } = await supabase.from("download_jobs")
+    .select("id, country_name, country_code, status, current_index, total_count, contacts_found_count, contacts_missing_count, completed_at, error_message")
+    .in("status", ["completed", "cancelled", "failed"])
+    .order("completed_at", { ascending: false })
+    .limit(5);
+
+  result.recently_completed = {
+    count: recentJobs?.length || 0,
+    jobs: (recentJobs || []).map((j: any) => ({
+      id: j.id,
+      country: `${j.country_name} (${j.country_code})`,
+      status: j.status,
+      processed: `${j.current_index}/${j.total_count}`,
+      contacts_found: j.contacts_found_count,
+      contacts_missing: j.contacts_missing_count,
+      completed_at: j.completed_at,
+      error: j.error_message,
+    })),
+  };
+
+  // Email queue status
+  if (args.include_email_queue !== false) {
+    const { data: emailQueue } = await supabase.from("email_campaign_queue")
+      .select("status")
+      .in("status", ["pending", "sending"]);
+    const pending = (emailQueue || []).filter((r: any) => r.status === "pending").length;
+    const sending = (emailQueue || []).filter((r: any) => r.status === "sending").length;
+    result.email_queue = { pending, sending, total: pending + sending };
+  }
+
+  return result;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UNIFIED TOOL DISPATCHER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1476,6 +1576,8 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     // Business card tools
     case "search_business_cards": return executeSearchBusinessCards(args);
     case "link_business_card": return executeLinkBusinessCard(args);
+    // Verification tool
+    case "check_job_status": return executeCheckJobStatus(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
