@@ -500,7 +500,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                   {/* Capability hint */}
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-12">
                     {["Source Unification", "Search Contacts", "Parse Cards", "Create Draft", "Send Batch", "Read Aloud", "Audit Action"].map((cap, i) => (
-                      <motion.span key={cap} className="text-[9px] text-muted-foreground/12 font-light" animate={{ opacity: [0.08, 0.18, 0.08] }} transition={{ duration: 4, repeat: Infinity, delay: i * 0.5 }}>
+                      <motion.span key={cap} className="text-[9px] text-muted-foreground/50 font-light" animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 4, repeat: Infinity, delay: i * 0.5 }}>
                         {cap}
                       </motion.span>
                     ))}
