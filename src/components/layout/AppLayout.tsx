@@ -30,7 +30,7 @@ export function AppLayout() {
   const currentPath = location.pathname;
   const isHomeRoute = currentPath === "/";
   const isCampaignsPage = currentPath === "/campaigns";
-  const isOperationsRoute = currentPath === "/operations";
+  const isFullscreenRoute = ["/", "/network", "/crm", "/outreach", "/agenda", "/operations", "/global"].includes(currentPath);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
