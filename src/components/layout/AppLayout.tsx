@@ -19,6 +19,7 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
