@@ -343,9 +343,9 @@
 
   /* Micro badges */
   .micro-badge-blue { @apply bg-blue-500/20 text-blue-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-amber { @apply bg-amber-500/20 text-amber-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-green { @apply bg-emerald-500/20 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-red { @apply bg-red-500/20 text-red-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-amber { @apply bg-amber-500/20 text-amber-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-green { @apply bg-emerald-500/20 text-emerald-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-red { @apply bg-red-500/20 text-red-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
   .micro-badge-purple { @apply bg-purple-500/20 text-purple-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
 
   /* Alert boxes */
