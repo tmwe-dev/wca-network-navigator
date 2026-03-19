@@ -637,7 +637,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     >
                       {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                     </motion.button>
-                    <motion.button onClick={() => sendMessage()} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/8 text-primary/40 hover:bg-primary/12 hover:text-primary/70 transition-all duration-500 disabled:opacity-10">
+                    <motion.button onClick={() => sendMessage()} disabled={!input.trim()} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/12 text-primary/60 hover:bg-primary/20 hover:text-primary/80 transition-all duration-500 disabled:opacity-20">
                       <Send className="w-3.5 h-3.5" />
                     </motion.button>
                   </motion.div>
