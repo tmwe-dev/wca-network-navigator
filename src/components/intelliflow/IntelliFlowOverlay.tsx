@@ -542,7 +542,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                               className={`max-w-[85%] relative ${msg.role === "user" ? "px-5 py-4 rounded-2xl rounded-br-lg" : "px-5 py-4 rounded-2xl rounded-bl-lg"}`}
                               style={{
                                 background: msg.role === "assistant" ? "hsl(var(--background) / 0.7)" : "hsl(var(--secondary) / 0.4)",
-                                border: `1px solid hsl(var(--foreground) / ${msg.role === "assistant" ? "0.05" : "0.03"})`,
+                                border: `1px solid hsl(var(--foreground) / ${msg.role === "assistant" ? "0.08" : "0.06"})`,
                                 backdropFilter: "blur(40px)",
                                 boxShadow: msg.role === "assistant" ? "0 0 60px hsl(var(--primary) / 0.03), 0 20px 50px -20px hsl(0 0% 0% / 0.4)" : "none",
                               }}
