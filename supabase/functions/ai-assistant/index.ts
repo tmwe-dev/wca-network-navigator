@@ -1329,6 +1329,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "list_reminders": return executeListReminders(args);
     case "get_partners_without_contacts": return executePartnersWithoutContacts(args);
     case "create_download_job": return executeCreateDownloadJob(args);
+    case "download_single_partner": return executeDownloadSinglePartner(args);
     // Memory & plan tools
     case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
     case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
