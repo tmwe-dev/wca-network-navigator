@@ -1,131 +1,75 @@
 
 
-# Piano Completo di Correzione e Code Quality — WCA Network Navigator
+# Piano: Miglioramento Home Page + Architettura Agenti AI
 
-Il piano è organizzato in 6 fasi sequenziali per massimizzare l'impatto e minimizzare i rischi di regressione.
+## Analisi del Problema Attuale
+
+La home page (SuperHome3D) e' un carosello di "mondi" senza campo di input AI ne microfono. L'utente non capisce dove interagire con l'intelligenza artificiale. Il prompt e il microfono esistono solo in due posti separati:
+1. **AiAssistantDialog** (pannello laterale, aperto dal bottone Bot nell'header -- ma l'header e' nascosto nella home)
+2. **IntelliFlowOverlay** (overlay full-screen, aperto dal bottone Sparkles flottante in basso a destra)
+
+## Architettura Agenti AI Esistente
+
+### Dove si trovano i prompt e i compiti degli agenti
+
+| Agente / Funzione | File Backend | Prompt di Sistema |
+|---|---|---|
+| **Segretario Operativo** (agente principale) | `supabase/functions/ai-assistant/index.ts` (1574 righe) | Riga 19-128: prompt completo con ruolo, memoria, piani, tool di scrittura, azioni UI |
+| **Cockpit Assistant** (outreach) | `supabase/functions/cockpit-assistant/index.ts` | Riga 9-51: comandi strutturati per filtro, selezione, bulk actions nel cockpit |
+| **Contacts Assistant** | `supabase/functions/contacts-assistant/index.ts` | Gestisce filtri, ordinamento, selezione contatti, export CSV |
+| **Import Assistant** | `supabase/functions/import-assistant/index.ts` | Analisi struttura file, mapping colonne |
+
+### Tool disponibili nel Segretario Operativo (ai-assistant)
+
+**Lettura:** search_partners, get_country_overview, get_directory_status, list_jobs, get_partner_detail, get_global_summary, check_blacklist, list_reminders, get_partners_without_contacts, search_business_cards
+
+**Scrittura:** update_partner, add_partner_note, create_reminder, update_lead_status, bulk_update_partners, create_download_job
+
+**Memoria & Piani:** save_memory, search_memory, create_work_plan, execute_plan_step, get_active_plans, save_as_template, search_templates
+
+**UI:** execute_ui_action (navigate, show_toast, apply_filters, open_dialog)
+
+### I 7 "Agenti" di IntelliFlow (solo demo visiva)
+
+IntelliFlowOverlay mostra 7 agenti (`agentDots`) ma sono **puramente decorativi** -- non corrispondono a backend reali separati. Sono: Orchestratore, CRM Core, Data Analyst, Communication, Voice, Automation, Governance.
 
 ---
 
-## Fase 1 — Console Cleanup (86 console.log + 161 console.warn/error)
+## Piano di Implementazione
 
-Rimuovere tutti i `console.log` di debug. Mantenere solo i `console.error` nei catch block critici (GlobalErrorBoundary, download pipeline).
+### 1. Aggiungere Prompt AI + Microfono nella Home Page
 
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Rimuovere 12 console.log di step logging |
-| `src/pages/Import.tsx` | Rimuovere 5 console.log di mapping debug |
-| `src/hooks/useDownloadProcessor.ts` | Rimuovere 1 console.log |
-| `src/hooks/useDownloadJobs.ts` | Rimuovere 2 console.log |
-| `src/lib/wcaCheckpoint.ts` | Rimuovere 1 console.log |
+Trasformare la parte inferiore della home (SuperHome3D) da semplici dots di navigazione a un **campo prompt dominante** con microfono, integrato con il Segretario Operativo reale (`ai-assistant`).
 
-I `console.error` nei catch (GlobalErrorBoundary, ImportAssistant, GlobalChat, CSVImport, etc.) restano — sono logging legittimo di errori.
+**Cosa cambia in `SuperHome3D.tsx`:**
+- Aggiungere un input bar glassmorphism sotto il carosello con: icona Mic, campo testo "Chiedi al sistema...", pulsante Send
+- Il microfono usa Web Speech API (gia implementata in AiAssistantDialog)
+- I messaggi vanno all'edge function `ai-assistant` con streaming
+- Le risposte appaiono in un pannello semi-trasparente che si sovrappone elegantemente al contenuto
+- I quick prompts del carosello diventano suggerimenti contestuali sotto il campo
 
----
+### 2. Rendere il campo AI visibile e accessibile ovunque
 
-## Fase 2 — N+1 Query Fix (CardSocialIcons)
+- Nella home: prompt centrale dominante (il cambiamento principale)
+- Nelle altre pagine: l'header gia ha il bottone Bot -- ma aggiungeremo anche un **shortcut tastiera** (es. `/` o `Ctrl+J`) per aprire rapidamente l'assistente
 
-**Problema**: `CardSocialIcons` esegue una query `useSocialLinks(partnerId)` per ogni card nella lista partner — N+1 classico.
+### 3. Migliorare la responsiveness della Home
 
-**Fix**: Creare un hook `useBatchSocialLinks(partnerIds: string[])` che carica tutti i social links in una singola query con `.in("partner_id", ids)`, poi distribuisce i risultati per partner_id. `CardSocialIcons` riceve i link come prop invece di fare fetch autonomo.
+- KPI strip: `grid-cols-4` su desktop, `grid-cols-2` su tablet, `grid-cols-2` su mobile con dimensioni ridotte
+- Carosello: ridurre dimensioni card e offset su schermi piccoli
+- Campo prompt: full-width su mobile
+
+### 4. File da modificare
 
 | File | Modifica |
-|------|----------|
-| `src/hooks/useSocialLinks.ts` | Aggiungere `useBatchSocialLinks(ids)` |
-| `src/components/partners/shared/CardSocialIcons.tsx` | Accettare `links` come prop, rimuovere hook interno |
-| Callers di CardSocialIcons | Passare link dal batch hook |
+|---|---|
+| `src/pages/SuperHome3D.tsx` | Aggiungere AI prompt bar con mic, streaming, risposte inline. Ridurre la dot navigation. Responsive KPI. |
+| `src/components/layout/AppLayout.tsx` | Aggiungere shortcut tastiera `/` o `Ctrl+J` per aprire AI assistant da qualsiasi pagina |
 
----
+### Note Tecniche
 
-## Fase 3 — Null Safety (crash preventions)
-
-Aggiungere optional chaining e guard dove ci sono accessi non sicuri su valori potenzialmente null/undefined.
-
-| File | Fix |
-|------|-----|
-| `src/hooks/usePartnerListStats.ts:48-66` | `(p.enrichment_data as any)?.deep_search_at` — già safe con `?.`, ma rimuovere `as any` con tipo appropriato |
-| `src/components/partners/CountryWorkbench.tsx:28,77,278` | Stesso pattern `enrichment_data as any` |
-| `src/components/import/CompactContactCard.tsx:65-66` | `(c as any).position` → tipizzare prop |
-| `src/components/download/JobDataViewer.tsx:98` | `entry.members as any[]` → tipizzare |
-
----
-
-## Fase 4 — Riduzione `as any` nei file principali
-
-663 occorrenze in 53 file. Priorità ai file con più utilizzi e impatto maggiore.
-
-**Strategia**: Per i cast `supabase.from("table" as any)` — questi sono causati da tipi Supabase auto-generati che non includono tutte le tabelle. Non possiamo modificare `types.ts`. La soluzione è creare helper tipizzati per le tabelle mancanti in un file `src/lib/supabaseHelpers.ts`.
-
-| Gruppo | File principali | Fix |
-|--------|----------------|-----|
-| Supabase casts | `useEmailDrafts.ts`, `useSortingJobs.ts`, `useActivities.ts` | Creare type assertion helper: `typedFrom<T>(table)` |
-| Enrichment data | `CountryWorkbench.tsx`, `usePartnerListStats.ts` | Definire `EnrichmentData` interface in `src/lib/partnerUtils.ts` |
-| Component props | `CompactContactCard.tsx`, `Contacts.tsx` | Tipizzare le props correttamente |
-| Workspace | `Workspace.tsx:179` | `v as any` → tipizzare `sourceTab` |
-
----
-
-## Fase 5 — Splitting Componenti Grandi
-
-### 5A. `AcquisizionePartner.tsx` (1.234 righe → ~4 file)
-
-```text
-src/pages/AcquisizionePartner.tsx          (~200 righe — orchestrator)
-src/hooks/useAcquisitionPipeline.ts        (~400 righe — state + logic)
-src/hooks/useAcquisitionResume.ts          (~150 righe — resume/recover logic)  
-src/components/acquisition/PipelineControls.tsx (~200 righe — UI bottoni/toolbar)
-```
-
-### 5B. `Settings.tsx` (851 righe → ~5 file)
-
-```text
-src/pages/Settings.tsx                     (~100 righe — tabs container)
-src/components/settings/GeneralSettings.tsx (~150 righe — email, API keys)
-src/components/settings/WcaSettings.tsx    (~100 righe — WCA credentials)
-src/components/settings/RASettings.tsx     (~80 righe — ReportAziende)
-src/components/settings/DataManagement.tsx (~200 righe — export/import/danger zone)
-```
-I componenti `SubscriptionPanel`, `AIProfileSettings`, `BlacklistManager`, `TemplateManager`, `ContentManager` sono già estratti.
-
-### 5C. `PartnerHub.tsx` (692 righe → ~3 file)
-
-```text
-src/pages/PartnerHub.tsx                   (~150 righe — layout + state)
-src/components/partners/PartnerListView.tsx (~250 righe — list rendering)
-src/hooks/usePartnerHubState.ts            (~200 righe — filters, sorting, selection)
-```
-
-### 5D. `EmailComposer.tsx` (656 righe → ~3 file)
-
-```text
-src/pages/EmailComposer.tsx                (~150 righe — page container)
-src/components/campaigns/DraftEditor.tsx   (~250 righe — form + preview)
-src/components/campaigns/RecipientSelector.tsx (~200 righe — recipient logic)
-```
-
----
-
-## Fase 6 — Lock File + Varie
-
-| Issue | Fix |
-|-------|-----|
-| Due lock file (`package-lock.json` + `bun.lockb`) | Rimuovere `bun.lockb` (il progetto usa npm) |
-| `handleConfirmMapping` in Import.tsx | Già fixato nella sessione precedente |
-| Portal target in Campaigns.tsx | Aggiungere guard `document.getElementById` |
-
----
-
-## Riepilogo Esecuzione
-
-| Fase | Scope | File stimati | Rischio |
-|------|-------|-------------|---------|
-| 1 — Console cleanup | 5 file | 5 | Basso |
-| 2 — N+1 query | 3 file + callers | 4-5 | Medio |
-| 3 — Null safety | 4 file | 4 | Basso |
-| 4 — Type safety | 10-15 file | 15 | Medio |
-| 5 — Component splitting | 4 pagine → ~15 file | 15 | Alto |
-| 6 — Varie | 2 file | 2 | Basso |
-
-**Totale**: ~45 file modificati/creati, in 6 fasi implementative.
-
-Le fasi 1-3 sono a basso rischio e verranno eseguite per prime. Le fasi 4-5 richiedono attenzione per evitare regressioni.
+- Il campo prompt nella home riutilizza la stessa logica di `AiAssistantDialog` (fetch a `ai-assistant`, streaming SSE, TTS opzionale)
+- Non viene creato nessun nuovo backend -- si riusa `ai-assistant` che e' gia il piu completo
+- IntelliFlow resta come overlay separato per i flow demo avanzati (approvazione, esecuzione, canvas)
+- I prompt degli agenti si trovano e si modificano direttamente nei file delle edge functions elencati sopra
 
