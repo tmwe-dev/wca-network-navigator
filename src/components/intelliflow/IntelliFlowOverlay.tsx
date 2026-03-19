@@ -453,7 +453,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                 {agentDots.map((a) => (
                   <motion.div
                     key={a.agent}
-                    className={`w-1.5 h-1.5 rounded-full ${a.status === "done" ? "bg-success/30" : a.status === "running" ? "bg-primary/40" : "bg-muted-foreground/10"}`}
+                    className={`w-1.5 h-1.5 rounded-full ${a.status === "done" ? "bg-success/50" : a.status === "running" ? "bg-primary/60" : "bg-muted-foreground/25"}`}
                     animate={a.status === "running" ? { opacity: [0.3, 0.8, 0.3] } : {}}
                     transition={{ duration: 1.5, repeat: Infinity }}
                     title={a.agent}
