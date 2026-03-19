@@ -364,6 +364,38 @@ serve(async (req) => {
       );
     }
 
+    // ── AUTO-GENERATE ALIASES IF MISSING ──
+    const needsCompanyAlias = !partner.company_alias;
+    const needsContactAlias = contact && !contact.contact_alias;
+
+    if (needsCompanyAlias || needsContactAlias) {
+      console.log(`Auto-generating aliases for ${partner.company_name} (company: ${needsCompanyAlias}, contact: ${needsContactAlias})`);
+      const generated = await generateAliasesInline(
+        LOVABLE_API_KEY,
+        partner.company_name,
+        contact?.name || null,
+        contact?.title || null,
+      );
+
+      if (generated.company_alias && needsCompanyAlias) {
+        partner.company_alias = generated.company_alias;
+        if (sourceType === "partner") {
+          await supabase.from("partners").update({ company_alias: generated.company_alias }).eq("id", partner.id);
+        } else if (sourceType === "contact") {
+          await supabase.from("imported_contacts").update({ company_alias: generated.company_alias }).eq("id", partner.id);
+        }
+      }
+      if (generated.contact_alias && needsContactAlias && contact) {
+        contact.contact_alias = generated.contact_alias;
+        if (sourceType === "partner") {
+          await supabase.from("partner_contacts").update({ contact_alias: generated.contact_alias }).eq("id", contact.id);
+        } else if (sourceType === "contact") {
+          await supabase.from("imported_contacts").update({ contact_alias: generated.contact_alias }).eq("id", contact.id);
+        }
+      }
+      console.log(`Aliases generated — company: "${generated.company_alias}", contact: "${generated.contact_alias}"`);
+    }
+
     // Fetch partner networks, services, social links, settings in parallel
     const isPartnerSource = sourceType === "partner" && activity.partner_id;
     const [networksRes, servicesRes, settingsRes, socialRes] = await Promise.all([
