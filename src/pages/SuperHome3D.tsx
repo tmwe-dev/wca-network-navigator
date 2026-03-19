@@ -347,48 +347,41 @@ export default function SuperHome3D() {
           </section>
         </div>
 
-        {/* Bottom navigation bar */}
-        <div className="flex-shrink-0 flex items-center justify-center gap-3 pb-2">
-          <button
-            onClick={goPrev}
-            className="rounded-full border border-border/70 bg-card/60 p-2 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors backdrop-blur-xl"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+        {/* AI Prompt + compact nav */}
+        <div className="flex-shrink-0 space-y-3 pb-3">
+          <HomeAIPrompt />
 
-          <div className="flex items-center gap-1.5">
-            {worlds.map((world, i) => (
-              <button
-                key={world.key}
-                onClick={() => setActiveIndex(i)}
-                className="group relative flex flex-col items-center gap-1"
-              >
-                <div
+          {/* Compact dot nav */}
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={goPrev}
+              className="rounded-full border border-border/70 bg-card/60 p-1.5 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors backdrop-blur-xl"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="flex items-center gap-1">
+              {worlds.map((world, i) => (
+                <button
+                  key={world.key}
+                  onClick={() => setActiveIndex(i)}
                   className={cn(
-                    "h-2 rounded-full transition-all duration-300",
+                    "h-1.5 rounded-full transition-all duration-300",
                     i === activeIndex
-                      ? "w-8 bg-primary"
-                      : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      ? "w-6 bg-primary"
+                      : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
                   )}
                 />
-                <span
-                  className={cn(
-                    "text-[8px] font-semibold uppercase tracking-[0.15em] transition-all duration-200",
-                    i === activeIndex ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"
-                  )}
-                >
-                  {world.title}
-                </span>
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <button
-            onClick={goNext}
-            className="rounded-full border border-border/70 bg-card/60 p-2 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors backdrop-blur-xl"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+            <button
+              onClick={goNext}
+              className="rounded-full border border-border/70 bg-card/60 p-1.5 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors backdrop-blur-xl"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
