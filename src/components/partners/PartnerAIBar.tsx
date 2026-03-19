@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 
 interface Props {
   viewContext?: {
