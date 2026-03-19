@@ -113,9 +113,9 @@
 @layer components {
   .float-panel {
     @apply relative rounded-2xl;
-    background: hsl(var(--card) / 0.6);
+    background: hsl(var(--card) / 0.7);
     backdrop-filter: blur(40px) saturate(1.1);
-    border: 1px solid hsl(var(--foreground) / 0.04);
+    border: 1px solid hsl(var(--foreground) / 0.08);
     box-shadow:
       0 0 0 0.5px hsl(0 0% 0% / 0.2),
       0 20px 60px -15px hsl(0 0% 0% / 0.5);
@@ -123,9 +123,9 @@
 
   .float-panel-subtle {
     @apply relative rounded-xl;
-    background: hsl(var(--card) / 0.4);
+    background: hsl(var(--card) / 0.5);
     backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--foreground) / 0.03);
+    border: 1px solid hsl(var(--foreground) / 0.06);
   }
 
   .float-panel-interactive {
