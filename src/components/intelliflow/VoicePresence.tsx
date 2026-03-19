@@ -22,7 +22,7 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
       <div className="flex flex-col items-center gap-3 py-4">
         <motion.div className="flex items-center gap-2" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
           <div className={`w-2 h-2 rounded-full ${speaking ? "bg-accent/50" : "bg-primary/40"}`} />
-          <span className="text-[10px] text-muted-foreground/30 tracking-[0.15em] uppercase font-mono">
+          <span className="text-[10px] text-muted-foreground/60 tracking-[0.15em] uppercase font-mono">
             {speaking ? "ASSISTENTE PARLA" : listening ? "IN ASCOLTO" : "VOCE ATTIVA"}
           </span>
         </motion.div>

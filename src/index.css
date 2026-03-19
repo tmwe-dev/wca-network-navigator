@@ -57,7 +57,7 @@
     --secondary: 215 25% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 216 34% 14%;
-    --muted-foreground: 215 20% 55%;
+    --muted-foreground: 215 20% 65%;
     --accent: 262 71% 40%;
     --accent-foreground: 213 31% 91%;
     --destructive: 0 63% 31%;
@@ -105,17 +105,17 @@
 ::-webkit-scrollbar-thumb:hover { background: hsl(0 0% 30%); }
 
 ::selection {
-  background: hsl(var(--primary) / 0.15);
-  color: hsl(0 0% 95%);
+  background: hsl(var(--primary) / 0.25);
+  color: hsl(0 0% 98%);
 }
 
 /* ── IntelliFlow utility classes ── */
 @layer components {
   .float-panel {
     @apply relative rounded-2xl;
-    background: hsl(var(--card) / 0.6);
+    background: hsl(var(--card) / 0.7);
     backdrop-filter: blur(40px) saturate(1.1);
-    border: 1px solid hsl(var(--foreground) / 0.04);
+    border: 1px solid hsl(var(--foreground) / 0.08);
     box-shadow:
       0 0 0 0.5px hsl(0 0% 0% / 0.2),
       0 20px 60px -15px hsl(0 0% 0% / 0.5);
@@ -123,9 +123,9 @@
 
   .float-panel-subtle {
     @apply relative rounded-xl;
-    background: hsl(var(--card) / 0.4);
+    background: hsl(var(--card) / 0.5);
     backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--foreground) / 0.03);
+    border: 1px solid hsl(var(--foreground) / 0.06);
   }
 
   .float-panel-interactive {
@@ -144,7 +144,8 @@
   }
 
   .section-label {
-    @apply text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground;
+    @apply text-[10px] font-mono uppercase tracking-[0.2em];
+    color: hsl(var(--muted-foreground));
   }
 
   .text-gradient-hero {
@@ -229,34 +230,34 @@
 
   /* Glass panels */
   .glass-panel {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
   }
   .glass-panel-blue {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(56,139,253,0.18);
+    border: 1px solid rgba(56,139,253,0.22);
   }
   .glass-panel-green {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     -webkit-backdrop-filter: blur(24px) saturate(200%);
     backdrop-filter: blur(24px) saturate(200%);
-    border: 1px solid rgba(34,197,94,0.18);
+    border: 1px solid rgba(34,197,94,0.22);
   }
   .glass-panel-amber {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     -webkit-backdrop-filter: blur(24px) saturate(200%);
     backdrop-filter: blur(24px) saturate(200%);
-    border: 1px solid rgba(245,158,11,0.18);
+    border: 1px solid rgba(245,158,11,0.22);
   }
   .glass-panel-purple {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     -webkit-backdrop-filter: blur(24px);
     backdrop-filter: blur(24px);
-    border: 1px solid rgba(138,75,255,0.18);
+    border: 1px solid rgba(138,75,255,0.22);
   }
 
   /* Gradient text */
@@ -342,9 +343,9 @@
 
   /* Micro badges */
   .micro-badge-blue { @apply bg-blue-500/20 text-blue-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-amber { @apply bg-amber-500/20 text-amber-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-green { @apply bg-emerald-500/20 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
-  .micro-badge-red { @apply bg-red-500/20 text-red-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-amber { @apply bg-amber-500/20 text-amber-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-green { @apply bg-emerald-500/20 text-emerald-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
+  .micro-badge-red { @apply bg-red-500/20 text-red-400 text-[11px] font-medium px-2 py-0.5 rounded-full; }
   .micro-badge-purple { @apply bg-purple-500/20 text-purple-300 text-[11px] font-medium px-2 py-0.5 rounded-full; }
 
   /* Alert boxes */
@@ -364,9 +365,9 @@
   /* Mission tabs */
   .mission-tab {
     @apply text-xs px-3 py-1 rounded-full relative transition-all duration-200 cursor-pointer;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.55);
   }
-  .mission-tab:hover { color: rgba(255,255,255,0.7); }
+  .mission-tab:hover { color: rgba(255,255,255,0.8); }
   .mission-tab[data-state="active"] {
     color: #c4b5fd;
     font-weight: 500;
@@ -437,18 +438,18 @@
   }
   .glass-card {
     @apply backdrop-blur-xl border rounded-xl;
-    background: hsl(0 0% 100% / 0.05);
-    border-color: hsl(0 0% 100% / 0.1);
+    background: hsl(0 0% 100% / 0.06);
+    border-color: hsl(0 0% 100% / 0.12);
   }
   .glass-badge {
     @apply backdrop-blur-md rounded-lg px-3 py-2;
-    background: hsl(0 0% 100% / 0.08);
-    border: 1px solid hsl(0 0% 100% / 0.12);
+    background: hsl(0 0% 100% / 0.1);
+    border: 1px solid hsl(0 0% 100% / 0.14);
   }
   .glass-section {
     @apply backdrop-blur-md rounded-xl p-4;
-    background: hsl(0 0% 100% / 0.03);
-    border: 1px solid hsl(0 0% 100% / 0.08);
+    background: hsl(0 0% 100% / 0.04);
+    border: 1px solid hsl(0 0% 100% / 0.1);
   }
 
   /* Skeleton loading transitions */

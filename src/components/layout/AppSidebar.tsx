@@ -79,7 +79,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-4">
         {navSections.map((section) => (
           <div key={section.label}>
-            <span className="block px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+            <span className="block px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               {section.label}
             </span>
             <div className="space-y-px">
@@ -108,7 +108,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                           "w-4 h-4 flex-shrink-0 transition-all duration-150",
                           isActive
                             ? "text-sidebar-primary"
-                            : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 group-hover:scale-110"
+                            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80 group-hover:scale-110"
                         )}
                       />
                       <span className="truncate">{item.title}</span>

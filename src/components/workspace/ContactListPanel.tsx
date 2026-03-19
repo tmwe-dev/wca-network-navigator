@@ -492,7 +492,7 @@ export default function ContactListPanel({
                           </div>
                         </div>
                         <ChevronRight className={cn(
-                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/30",
+                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/50",
                           isSelected && "text-primary rotate-90"
                         )} />
                       </div>

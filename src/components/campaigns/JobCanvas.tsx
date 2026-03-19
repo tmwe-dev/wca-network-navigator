@@ -48,7 +48,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
         )}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <FileText className="w-16 h-16 mx-auto text-muted-foreground/30" />
+            <FileText className="w-16 h-16 mx-auto text-muted-foreground/50" />
             <p className="text-muted-foreground">
               {hasBulkSelection
                 ? `${bulkCount} contatti selezionati — usa le azioni in alto`
