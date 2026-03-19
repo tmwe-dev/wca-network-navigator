@@ -1,46 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, Rocket, Clock } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
-
-const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
-const JOB_CREATED_DELIMITER = "---JOB_CREATED---";
-
-export interface JobCreatedInfo {
-  job_id: string;
-  country: string;
-  mode: string;
-  total_partners: number;
-  estimated_time_minutes: number;
-}
+import AIMarkdown from "@/components/intelliflow/AIMarkdown";
+import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
 
 function parseStructuredMessage(content: string): { text: string; partners: StructuredPartner[]; jobCreated: JobCreatedInfo | null } {
-  let text = content;
-  let partners: StructuredPartner[] = [];
-  let jobCreated: JobCreatedInfo | null = null;
-
-  const jobIdx = text.indexOf(JOB_CREATED_DELIMITER);
-  if (jobIdx !== -1) {
-    const jsonStr = text.substring(jobIdx + JOB_CREATED_DELIMITER.length).trim();
-    text = text.substring(0, jobIdx).trim();
-    try { jobCreated = JSON.parse(jsonStr.split("\n")[0]); } catch { /* ignore */ }
-  }
-
-  const idx = text.indexOf(STRUCTURED_DELIMITER);
-  if (idx !== -1) {
-    const jsonStr = text.substring(idx + STRUCTURED_DELIMITER.length).trim();
-    text = text.substring(0, idx).trim();
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (parsed?.type === "partners" && Array.isArray(parsed.data)) partners = parsed.data;
-    } catch { /* ignore */ }
-  }
-
-  return { text, partners, jobCreated };
+  const parsed = parseAiAgentResponse<StructuredPartner>(content);
+  return {
+    text: parsed.text,
+    partners: parsed.partners,
+    jobCreated: parsed.jobCreated,
+  };
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
@@ -90,7 +64,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
 
-  // Detect job created in last message
   useEffect(() => {
     if (!onJobCreated || messages.length === 0) return;
     const last = messages[messages.length - 1];
@@ -178,10 +151,11 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         assistantContent = "⚠️ Errore di connessione. Riprova.";
       }
 
+      dispatchAiAgentEffects(parseAiAgentResponse(assistantContent));
       await addMessages([{ role: "assistant", content: assistantContent }]);
       setIsLoading(false);
     },
-    [messages, isLoading, addMessages]
+    [messages, isLoading, addMessages],
   );
 
   const toggleListening = useCallback(() => {
@@ -202,7 +176,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
         <div className="p-1.5 rounded-lg bg-violet-500/20"><Sparkles className="w-4 h-4 text-violet-400" /></div>
         <div className="flex-1">
@@ -216,7 +189,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         )}
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
@@ -244,16 +216,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
                 return (
                   <>
                     <div className="prose prose-xs prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5">
-                      <ReactMarkdown
-                        components={{
-                          a: ({ href, children }) => {
-                            if (href?.startsWith("/")) {
-                              return <button className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-medium" onClick={() => navigate(href!)}>{children}</button>;
-                            }
-                            return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-                          }
-                        }}
-                      >{text}</ReactMarkdown>
+                      <AIMarkdown content={text} />
                     </div>
                     {partners.length > 0 && <AiResultsPanel partners={partners} />}
                     {jobCreated && <JobCreatedBadge job={jobCreated} />}
@@ -273,7 +236,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         )}
       </div>
 
-      {/* Input */}
       <div className="px-3 py-2.5 border-t border-white/10">
         <div className="flex items-end gap-2">
           <textarea

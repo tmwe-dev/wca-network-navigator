@@ -5,7 +5,7 @@ import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
-import { dispatchAiAgentEffects } from "@/lib/ai/agentResponse";
+import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 
 interface Props {
   viewContext?: {
