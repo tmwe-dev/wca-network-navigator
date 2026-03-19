@@ -566,10 +566,10 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                                  </motion.div>
                               )}
                               {msg.governance && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-2 mt-1.5">
-                                  <div className="w-1 h-1 rounded-full bg-success/30" />
-                                  <span className="text-[8px] text-muted-foreground/15 font-mono">{msg.governance}</span>
-                                </motion.div>
+                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-2 mt-1.5">
+                                   <div className="w-1 h-1 rounded-full bg-success/50" />
+                                   <span className="text-[8px] text-muted-foreground/50 font-mono">{msg.governance}</span>
+                                 </motion.div>
                               )}
                               <span className="text-[9px] text-muted-foreground/15 mt-2 block">{msg.timestamp}</span>
                             </motion.div>
