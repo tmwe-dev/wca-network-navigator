@@ -1,18 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, X, Bot, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2 } from "lucide-react";
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 import AIMarkdown from "./AIMarkdown";
-
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-}
+import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
+import { useQuery } from "@tanstack/react-query";
 
 function useSystemStats() {
   return useQuery({
@@ -50,11 +44,16 @@ interface IntelliFlowOverlayProps {
 }
 
 export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlayProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    messages, addMessages, newConversation,
+    conversations, resumeConversation, deleteConversation,
+  } = useAIConversation("intelliflow");
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [micActive, setMicActive] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,13 +84,8 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
 
   const toggleMic = useCallback(() => {
     if (!recognitionRef.current) return;
-    if (micActive) {
-      recognitionRef.current.stop();
-      setMicActive(false);
-    } else {
-      recognitionRef.current.start();
-      setMicActive(true);
-    }
+    if (micActive) { recognitionRef.current.stop(); setMicActive(false); }
+    else { recognitionRef.current.start(); setMicActive(true); }
   }, [micActive]);
 
   const ts = () => new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
@@ -100,12 +94,14 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     const content = (text || input).trim();
     if (!content || loading) return;
 
-    const userMsg: Message = { id: Date.now(), role: "user", content, timestamp: ts() };
-    setMessages(prev => [...prev, userMsg]);
+    const userMsg: ConversationMessage = { role: "user", content, timestamp: ts() };
+    // Optimistic update
+    const prevMessages = [...messages, userMsg];
+    await addMessages([userMsg]);
     setInput("");
     setLoading(true);
 
-    const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+    const history = prevMessages.map(m => ({ role: m.role, content: m.content }));
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
@@ -113,14 +109,16 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
       });
       if (error) throw error;
       const raw = data?.content || data?.message || "";
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: "assistant", content: raw, timestamp: ts() }]);
+      const assistantMsg: ConversationMessage = { role: "assistant", content: raw, timestamp: ts() };
+      await addMessages([assistantMsg]);
     } catch (e: any) {
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: "assistant", content: "⚠️ " + (e.message || "Errore di comunicazione"), timestamp: ts() }]);
+      const errMsg: ConversationMessage = { role: "assistant", content: "⚠️ " + (e.message || "Errore di comunicazione"), timestamp: ts() };
+      await addMessages([errMsg]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, addMessages]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,8 +154,24 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                 <span className="text-[10px] text-primary font-mono ml-2 font-semibold">ELABORAZIONE</span>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] text-muted-foreground font-mono tracking-wider">{statsLine}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { newConversation(); setShowHistory(false); }}
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-secondary/30"
+                title="Nuova conversazione"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nuova</span>
+              </button>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className={`flex items-center gap-1.5 text-[10px] transition-colors px-2 py-1.5 rounded-lg ${showHistory ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"}`}
+                title="Cronologia chat"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Cronologia</span>
+              </button>
+              <span className="text-[10px] text-muted-foreground font-mono tracking-wider hidden lg:block">{statsLine}</span>
               <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-secondary/30">
                 <X className="w-4 h-4" />
               </button>
@@ -165,121 +179,150 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
           </div>
 
           {/* Main */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {isEmpty ? (
-              <div className="flex-1 flex flex-col items-center justify-center px-8">
-                <div className="mb-8">
-                  <AiEntity size="lg" />
-                </div>
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-3">
-                  Cosa vuoi ottenere?
-                </h2>
-                <p className="text-sm text-muted-foreground mb-10 text-center max-w-sm">
-                  {statsLine}
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                  {QUICK_PROMPTS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => sendMessage(p)}
-                      className="text-xs px-4 py-2.5 rounded-full border border-border bg-card/80 text-foreground/80 hover:text-foreground hover:bg-card transition-colors font-medium"
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto px-8 py-6">
-                <div className="max-w-2xl mx-auto space-y-4">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
-                    >
-                      {msg.role === "assistant" && (
-                        <div className="flex-shrink-0 mt-1"><AiEntity size="sm" pulse={false} /></div>
-                      )}
-                      <div
-                        className={`max-w-[85%] px-5 py-4 rounded-2xl border border-border/70 ${
-                          msg.role === "user"
-                            ? "rounded-br-lg bg-secondary/60"
-                            : "rounded-bl-lg bg-card/80"
-                        }`}
-                      >
-                        {msg.role === "assistant" && (
-                          <div className="flex items-center gap-1.5 mb-2 text-[10px] text-primary font-mono tracking-[0.2em] uppercase font-semibold">
-                            <Bot className="w-3 h-3" />
-                            Segretario Operativo
-                          </div>
-                        )}
-                        <div className="ai-prose max-w-none">
-                          <AIMarkdown content={msg.content} />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {loading && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-1"><AiEntity size="sm" /></div>
-                      <div className="flex items-center gap-2 px-5 py-4">
-                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                        <span className="text-xs text-muted-foreground">Elaborazione in corso…</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div ref={chatEndRef} />
-                </div>
-              </div>
-            )}
-
-            <VoicePresence active={micActive} listening={micActive} speaking={false} />
-
-            {/* Input bar */}
-            <div className="px-8 pb-8 pt-3 flex-shrink-0">
-              <div className="max-w-2xl mx-auto">
+          <div className="flex-1 flex min-h-0">
+            {/* History sidebar */}
+            <AnimatePresence>
+              {showHistory && (
                 <motion.div
-                  animate={{
-                    boxShadow: inputFocused
-                      ? "0 0 0 2px hsl(var(--primary) / 0.2), 0 4px 24px hsl(var(--primary) / 0.08)"
-                      : "0 0 0 1px hsl(var(--border))"
-                  }}
-                  transition={{ duration: 0.3 }}
-                  className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-card border border-border"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 260, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-r border-border/70 overflow-hidden flex-shrink-0"
                 >
-                  <button
-                    onClick={toggleMic}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                      micActive
-                        ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                    }`}
-                  >
-                    {micActive ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                  </button>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Scrivi un obiettivo…"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
-                    disabled={loading}
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
-                  />
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || loading}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/15 text-primary hover:bg-primary/25 transition-all disabled:opacity-30 flex-shrink-0"
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
+                  <div className="w-[260px] h-full overflow-y-auto py-3 px-2 space-y-1">
+                    <p className="text-[10px] text-muted-foreground font-medium px-2 mb-2 uppercase tracking-wider">Conversazioni recenti</p>
+                    {conversations.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground/60 px-2">Nessuna conversazione salvata</p>
+                    )}
+                    {conversations.map((c) => (
+                      <div
+                        key={c.id}
+                        className="group flex items-center gap-1 rounded-lg px-2 py-2 cursor-pointer hover:bg-secondary/40 transition-colors"
+                        onClick={() => { resumeConversation(c.id); setShowHistory(false); }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-foreground/80 truncate">{c.title}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(c.updated_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Chat area */}
+            <div className="flex-1 flex flex-col min-h-0">
+              {isEmpty ? (
+                <div className="flex-1 flex flex-col items-center justify-center px-8">
+                  <div className="mb-8"><AiEntity size="lg" /></div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-3">Cosa vuoi ottenere?</h2>
+                  <p className="text-sm text-muted-foreground mb-10 text-center max-w-sm">{statsLine}</p>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                    {QUICK_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => sendMessage(p)}
+                        className="text-xs px-4 py-2.5 rounded-full border border-border bg-card/80 text-foreground/80 hover:text-foreground hover:bg-card transition-colors font-medium"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto px-8 py-6">
+                  <div className="max-w-2xl mx-auto space-y-4">
+                    {messages.map((msg, i) => (
+                      <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+                        {msg.role === "assistant" && (
+                          <div className="flex-shrink-0 mt-1"><AiEntity size="sm" pulse={false} /></div>
+                        )}
+                        <div
+                          className={`max-w-[85%] px-5 py-4 rounded-2xl border border-border/70 ${
+                            msg.role === "user" ? "rounded-br-lg bg-secondary/60" : "rounded-bl-lg bg-card/80"
+                          }`}
+                        >
+                          {msg.role === "assistant" && (
+                            <div className="flex items-center gap-1.5 mb-2 text-[10px] text-primary font-mono tracking-[0.2em] uppercase font-semibold">
+                              <Bot className="w-3 h-3" />Segretario Operativo
+                            </div>
+                          )}
+                          <div className="ai-prose max-w-none">
+                            <AIMarkdown content={msg.content} />
+                          </div>
+                          {msg.timestamp && <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>}
+                        </div>
+                      </div>
+                    ))}
+                    {loading && (
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-1"><AiEntity size="sm" /></div>
+                        <div className="flex items-center gap-2 px-5 py-4">
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          <span className="text-xs text-muted-foreground">Elaborazione in corso…</span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                </div>
+              )}
+
+              <VoicePresence active={micActive} listening={micActive} speaking={false} />
+
+              {/* Input bar */}
+              <div className="px-8 pb-8 pt-3 flex-shrink-0">
+                <div className="max-w-2xl mx-auto">
+                  <motion.div
+                    animate={{
+                      boxShadow: inputFocused
+                        ? "0 0 0 2px hsl(var(--primary) / 0.2), 0 4px 24px hsl(var(--primary) / 0.08)"
+                        : "0 0 0 1px hsl(var(--border))"
+                    }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-card border border-border"
+                  >
+                    <button
+                      onClick={toggleMic}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+                        micActive
+                          ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                      }`}
+                    >
+                      {micActive ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    </button>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Scrivi un obiettivo…"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      onFocus={() => setInputFocused(true)}
+                      onBlur={() => setInputFocused(false)}
+                      disabled={loading}
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
+                    />
+                    <button
+                      onClick={() => sendMessage()}
+                      disabled={!input.trim() || loading}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/15 text-primary hover:bg-primary/25 transition-all disabled:opacity-30 flex-shrink-0"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  </motion.div>
+                </div>
               </div>
             </div>
           </div>

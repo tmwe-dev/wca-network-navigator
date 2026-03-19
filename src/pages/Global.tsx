@@ -2,18 +2,22 @@ import { useState, useCallback } from "react";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { GlobalChat, type JobCreatedInfo } from "@/components/global/GlobalChat";
 import { DownloadStatusPanel } from "@/components/global/DownloadStatusPanel";
+import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 
 export default function Global() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const { startJob } = useDownloadProcessor();
 
   const handleActiveCountry = useCallback((code: string | null) => {
     if (code) setSelectedCountry(code);
   }, []);
 
   const handleJobCreated = useCallback((job: JobCreatedInfo) => {
-    // Extract country code from job info — the AI returns country name,
-    // but the download_jobs table has country_code which DownloadStatusPanel uses
-  }, []);
+    // Auto-start the download job created by the AI assistant
+    if (job.job_id) {
+      startJob(job.job_id);
+    }
+  }, [startJob]);
 
   const handleCountrySelect = useCallback((code: string | null) => {
     setSelectedCountry(code);
