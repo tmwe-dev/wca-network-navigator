@@ -4,10 +4,11 @@ import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
+import { AiOperationCards } from "@/components/ai/AiOperationCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ActivePlansBadge } from "./ai/ActivePlansBadge";
-
+import { parseAiAgentResponse } from "@/lib/ai/agentResponse";
 const STRUCTURED_DELIMITER = "---STRUCTURED_DATA---";
 const JOB_CREATED_DELIMITER = "---JOB_CREATED---";
 const UI_ACTIONS_DELIMITER = "---UI_ACTIONS---";
@@ -455,7 +456,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                   : isDark ? "bg-white/5 text-slate-200 border border-white/5" : "bg-slate-50 text-slate-800 border border-slate-200"
               }`}>
                 {msg.role === "assistant" ? (() => {
-                  const { text, partners, jobCreated } = parseStructuredMessage(msg.content);
+                  const parsed = parseAiAgentResponse<StructuredPartner>(msg.content);
                   return (
                     <>
                       <div className="prose prose-xs prose-slate dark:prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
@@ -472,10 +473,10 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                               return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
                             }
                           }}
-                        >{text}</ReactMarkdown>
+                        >{parsed.text}</ReactMarkdown>
                       </div>
-                      {partners.length > 0 && <AiResultsPanel partners={partners} />}
-                      {jobCreated && <JobCreatedBadge job={jobCreated} isDark={isDark} />}
+                      {parsed.operations.length > 0 && <AiOperationCards operations={parsed.operations} />}
+                      {parsed.partners.length > 0 && <AiResultsPanel partners={parsed.partners} />}
                     </>
                   );
                 })() : msg.content}
