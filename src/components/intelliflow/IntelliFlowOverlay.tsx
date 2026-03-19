@@ -627,7 +627,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                       onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                       onFocus={() => setInputFocused(true)}
                       onBlur={() => setInputFocused(false)}
-                      className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/20 font-light text-foreground/90"
+                      className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/50 font-light text-foreground/90"
                     />
                     <motion.button
                       onClick={() => setVoiceSpeaking(!voiceSpeaking)}
