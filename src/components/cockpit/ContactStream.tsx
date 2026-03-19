@@ -70,8 +70,8 @@ export function ContactStream({
   if (contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
-        <Users className="w-12 h-12 text-muted-foreground/40" />
-        <h3 className="text-sm font-semibold text-foreground/70">Nessun contatto</h3>
+        <Users className="w-12 h-12 text-muted-foreground/60" />
+        <h3 className="text-sm font-semibold text-foreground/80">Nessun contatto</h3>
         <p className="text-xs text-muted-foreground max-w-[240px]">
           Importa contatti, scarica da WCA o aggiungi prospect per popolare il Cockpit.
         </p>

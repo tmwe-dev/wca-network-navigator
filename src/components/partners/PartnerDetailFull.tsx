@@ -141,9 +141,9 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
             <div className="flex items-center gap-1.5 mt-1 text-xs text-foreground/80 flex-wrap">
               <span className="text-base leading-none">{getCountryFlag(partner.country_code)}</span>
               <span>{partner.country_name}</span>
-              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/60">·</span>
               <span>{partner.city}</span>
-              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/60">·</span>
               <PartnerTypeIcon className="w-3.5 h-3.5 opacity-60" strokeWidth={1.5} />
               <span>{formatPartnerType(partner.partner_type)}</span>
               {partner.office_type && (

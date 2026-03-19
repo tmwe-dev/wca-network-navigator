@@ -296,7 +296,7 @@ export default function EmailCanvas({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center p-8">
-            <Wand2 className="w-10 h-10 text-muted-foreground/20" />
+            <Wand2 className="w-10 h-10 text-muted-foreground/40" />
             {/* Contact picker for partner-source activities */}
             {sourceType === "partner" && partnerId && (
               <div className="w-full max-w-xs mb-2">

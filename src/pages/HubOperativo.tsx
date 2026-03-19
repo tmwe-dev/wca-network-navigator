@@ -207,7 +207,7 @@ function SourcePanel({ source, activities, navigate }: {
       <ScrollArea className="flex-1 px-1">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <cfg.icon className="w-8 h-8 mb-2 opacity-30" />
+            <cfg.icon className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-xs">Nessuna attività {statusFilter === "active" ? "attiva" : ""}</p>
             <p className="text-[10px] mt-1">{cfg.description}</p>
           </div>

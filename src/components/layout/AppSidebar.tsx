@@ -108,7 +108,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                           "w-4 h-4 flex-shrink-0 transition-all duration-150",
                           isActive
                             ? "text-sidebar-primary"
-                            : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 group-hover:scale-110"
+                            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80 group-hover:scale-110"
                         )}
                       />
                       <span className="truncate">{item.title}</span>

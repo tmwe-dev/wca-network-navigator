@@ -43,7 +43,7 @@ const SERVICE_LABELS: Record<string, string> = {
 };
 
 function RatingStars({ rating }: { rating: number | null | undefined }) {
-  if (rating == null) return <span className="text-[9px] opacity-40">N/A</span>;
+  if (rating == null) return <span className="text-[9px] opacity-60">N/A</span>;
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
   return (

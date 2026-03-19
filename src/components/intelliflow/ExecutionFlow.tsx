@@ -41,7 +41,7 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
                 transition={{ duration: 0.8, ease }}
               />
             </div>
-            <div className="text-[9px] text-muted-foreground/20 mt-1.5 text-right font-mono">{progress}%</div>
+            <div className="text-[9px] text-muted-foreground/50 mt-1.5 text-right font-mono">{progress}%</div>
           </div>
         )}
 
