@@ -632,7 +632,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     <motion.button
                       onClick={() => setVoiceSpeaking(!voiceSpeaking)}
                       whileTap={{ scale: 0.9 }}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-accent/10 text-accent/60" : "text-muted-foreground/10 hover:text-muted-foreground/25"}`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${voiceSpeaking ? "bg-accent/15 text-accent/80" : "text-muted-foreground/40 hover:text-muted-foreground/60"}`}
                       title="Lettura vocale"
                     >
                       {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
