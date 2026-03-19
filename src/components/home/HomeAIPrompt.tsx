@@ -4,7 +4,7 @@ import { Mic, MicOff, Send, Loader2, Bot, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import ReactMarkdown from "react-markdown";
+import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 
 interface Props {
   className?: string;
@@ -100,7 +100,7 @@ export function HomeAIPrompt({ className }: Props) {
               </button>
             </div>
             <div className="ai-prose max-w-none">
-              <ReactMarkdown>{response}</ReactMarkdown>
+              <AIMarkdown content={response} />
             </div>
           </motion.div>
         )}

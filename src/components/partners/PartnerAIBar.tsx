@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 
 interface Props {
   viewContext?: {
@@ -104,8 +104,8 @@ export function PartnerAIBar({ viewContext }: Props) {
             {expanded ? <ChevronUp className="w-3 h-3 ml-auto" /> : <ChevronDown className="w-3 h-3 ml-auto" />}
           </button>
           {expanded && (
-            <div className="mt-1 text-[11px] text-foreground prose prose-sm prose-p:my-0.5 prose-li:my-0 max-w-none">
-              <ReactMarkdown>{lastResponse}</ReactMarkdown>
+            <div className="mt-1 text-[11px] text-foreground prose prose-sm prose-p:my-0.5 prose-li:my-0 max-w-none ai-prose">
+              <AIMarkdown content={lastResponse} />
             </div>
           )}
         </div>
