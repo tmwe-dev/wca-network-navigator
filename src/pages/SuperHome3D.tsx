@@ -167,13 +167,14 @@ export default function SuperHome3D() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeWorld.route, navigate, goNext, goPrev]);
 
-  // Wheel navigation with debounce
+  // Wheel navigation with debounce — block ALL wheel events to prevent browser gestures
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (scrollCooldown.current) return;
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (Math.abs(delta) < 15) return;
-      e.preventDefault();
       scrollCooldown.current = true;
       if (delta > 0) goNext();
       else goPrev();
