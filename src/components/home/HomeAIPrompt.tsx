@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
-import { dispatchAiUiActions, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { dispatchAiAgentEffects } from "@/lib/ai/agentResponse";
 
 interface Props {
   className?: string;
@@ -70,7 +70,7 @@ export function HomeAIPrompt({ className }: Props) {
       });
       if (error) throw error;
       const raw = data?.content || data?.message || "";
-      dispatchAiUiActions(parseAiAgentResponse(raw).uiActions);
+      dispatchAiAgentEffects(parseAiAgentResponse(raw));
       setResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
     } catch (e: any) {

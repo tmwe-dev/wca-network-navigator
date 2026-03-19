@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
-import { dispatchAiAgentEffects } from "@/lib/ai/agentResponse";
+import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 
 function useSystemStats() {
   return useQuery({
