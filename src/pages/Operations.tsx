@@ -159,7 +159,7 @@ export default function Operations() {
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
-          <div className="flex items-center justify-between px-4 h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
+          <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
             {/* Left: Title + active badge */}
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
