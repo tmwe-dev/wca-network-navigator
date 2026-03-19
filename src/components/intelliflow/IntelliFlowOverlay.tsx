@@ -476,12 +476,12 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                   <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.5, ease }} className="mb-10">
                     <AiEntity size="lg" />
                   </motion.div>
-                  <motion.h2 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, ease }} className="text-2xl font-extralight tracking-tight text-foreground/70 mb-2">
-                    Cosa vuoi ottenere?
-                  </motion.h2>
-                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-[13px] text-muted-foreground/30 font-light mb-10 text-center max-w-sm">
-                    14 sorgenti unificate · 12.847 contatti · 234 partner WCA · 1.420 business card
-                  </motion.p>
+                   <motion.h2 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, ease }} className="text-2xl font-extralight tracking-tight text-foreground/80 mb-2">
+                     Cosa vuoi ottenere?
+                   </motion.h2>
+                   <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-[13px] text-muted-foreground font-light mb-10 text-center max-w-sm">
+                     14 sorgenti unificate · 12.847 contatti · 234 partner WCA · 1.420 business card
+                   </motion.p>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} className="flex flex-col items-center gap-2">
                     {quickPrompts.map((p, i) => (
                       <motion.button
