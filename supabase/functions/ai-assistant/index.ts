@@ -1637,10 +1637,10 @@ serve(async (req) => {
     }
 
     allMessages.push(assistantMessage);
-    const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const finalResponse = await fetch(provider.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages }),
+      headers: aiHeaders,
+      body: JSON.stringify({ model: provider.model, messages: allMessages }),
     });
 
     if (!finalResponse.ok) {
