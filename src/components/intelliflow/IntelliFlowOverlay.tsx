@@ -555,7 +555,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                               <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground/90">
                                 {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
                                   part.startsWith("**") && part.endsWith("**")
-                                    ? <span key={i} className="text-primary/50 font-mono text-[12px]">{part.slice(2, -2)}</span>
+                                    ? <span key={i} className="text-primary/70 font-mono text-[12px]">{part.slice(2, -2)}</span>
                                     : <span key={i}>{part}</span>
                                 )}
                               </div>
