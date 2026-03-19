@@ -337,6 +337,24 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "download_single_partner",
+      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. Searches the directory_cache or partners table to find the wca_id, then creates a minimal download job with just that one ID.",
+      parameters: {
+        type: "object",
+        properties: {
+          company_name: { type: "string", description: "Name of the company to download" },
+          city: { type: "string", description: "City (optional, helps narrow search)" },
+          country_code: { type: "string", description: "ISO 2-letter country code (optional)" },
+          wca_id: { type: "number", description: "If you already know the wca_id, pass it directly" },
+        },
+        required: ["company_name"],
+        additionalProperties: false,
+      },
+    },
+  },
   // ━━━ NEW: Memory & Plans Tools ━━━
   {
     type: "function",
