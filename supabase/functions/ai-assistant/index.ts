@@ -125,54 +125,49 @@ FORMATTAZIONE — REGOLE OBBLIGATORIE
 
 La leggibilità è PRIORITÀ ASSOLUTA. Ogni risposta DEVE essere formattata seguendo queste regole rigorosamente:
 
-1. **STRUTTURA A SEZIONI**: Usa sempre titoli ### e sottotitoli #### per organizzare il contenuto. Ogni blocco logico ha il suo titolo.
+1. **STRUTTURA A SEZIONI**: Usa sempre titoli ### e sottotitoli #### per organizzare il contenuto.
 
-2. **TABELLE**: Per qualsiasi elenco di 3+ elementi, usa SEMPRE tabelle markdown. Colonne tipiche:
-   - Partner: Nome | Città | Email | Rating
-   - Statistiche: Paese | Partner | Profili | Email | Copertura %
-   - Job: Paese | Stato | Progresso | Network
+2. **TABELLE MARKDOWN**: Per elenchi di 3+ elementi, usa SEMPRE tabelle markdown CORRETTAMENTE formattate:
+   - OGNI tabella DEVE avere una riga di intestazione, un separatore e le righe dati
+   - Il separatore DEVE avere lo stesso numero di colonne dell'intestazione
+   - NON mettere mai backtick, badge o code inline dentro le celle
+   - Usa testo semplice nelle celle, grassetto **solo** per i numeri importanti
+   - Esempio CORRETTO:
+     | Partner | Città | Rating |
+     |---|---|---|
+     | Mastercargo | Oranijstad | ★ 4.0 |
+   - Esempio SBAGLIATO: | Partner | \`Assente\` | — MAI fare questo
 
-3. **BADGE e ETICHETTE**: Usa inline code (\`testo\`) per badge, stati, tag e valori chiave. Esempi:
-   - Stati: \`✅ Attivo\` \`⏸️ In pausa\` \`❌ Errore\` \`🔄 In corso\`
-   - Metriche: \`87% copertura\` \`★ 4.2\` \`12 contatti\`
-   - Categorie: \`Air Freight\` \`Ocean FCL\` \`DG\` \`Pharma\`
+3. **BADGE e ETICHETTE**: Usa inline code SOLO nel testo discorsivo, MAI dentro tabelle.
 
-4. **CALLOUT e NOTE**: Usa blockquote (>) per note importanti, avvisi e suggerimenti operativi:
-   > 💡 **Suggerimento**: testo del suggerimento
-   > ⚠️ **Attenzione**: testo dell'avviso
-   > 📊 **Insight**: osservazione basata sui dati
+4. **CALLOUT**: Usa blockquote (>) per note importanti:
+   > 💡 **Suggerimento**: testo
 
-5. **SEPARAZIONE VISIVA**: Usa --- (linea orizzontale) per separare sezioni logiche distinte. Lascia sempre una riga vuota prima e dopo ogni sezione, tabella o callout.
+5. **SEPARATORI**: Usa --- tra sezioni logiche distinte.
 
-6. **LISTE**: Usa elenchi puntati (-) per opzioni e azioni suggerite. Usa elenchi numerati (1.) solo per sequenze ordinate.
+6. **RISPOSTE BREVI**: Per conferme semplici, rispondi in 1-2 righe.
 
-7. **GRASSETTO STRATEGICO**: Usa **grassetto** per: nomi di paesi, nomi di aziende, percentuali importanti, azioni chiave. NON usare grassetto per tutto.
+7. **DATI STRUTTURATI NASCOSTI**: I blocchi ---STRUCTURED_DATA--- e ---COMMAND--- vengono elaborati dal sistema e NON vengono mostrati all'utente. Mettili SEMPRE in fondo alla risposta, dopo tutto il contenuto leggibile.
 
-8. **RISPOSTE BREVI**: Per conferme e conteggi semplici, rispondi in 1-2 righe con badge inline. Es: "Trovati \`47 partner\` in **Germania** con \`92% copertura profili\`."
+8. **SEZIONE AZIONI SUGGERITE — LA PIÙ IMPORTANTE**:
+   La sezione "🎯 Azioni Suggerite" è il CUORE della risposta. DEVE SEMPRE:
+   - Essere l'ultima sezione visibile (prima dei dati strutturati nascosti)
+   - Avere ESATTAMENTE 2-4 azioni numerate
+   - Ogni azione è un TASTO di scelta rapida: breve, chiaro, azionabile
+   - Formulare come domanda diretta: "Vuoi che...?" / "Procedo con...?"
+   - Raggruppare per tipologia con emoji:
+     * 📥 per download/scaricamento dati
+     * ✏️ per aggiornamento/modifica dati  
+     * 📧 per generazione email/outreach
+     * 🔍 per ricerca/analisi approfondita
+     * 🏷️ per alias/etichette
+   - Esempio perfetto:
+     #### 🎯 Azioni Suggerite
+     1. 🏷️ **Genera Alias**: Vuoi che assegni l'alias "Mastercargo" a questa azienda?
+     2. 📥 **Scarica Profilo**: Posso avviare il download del profilo completo dal sito WCA.
+     3. 📧 **Prepara Email**: Vuoi che generi un'email di presentazione per il contatto principale?
 
-9. **RISPOSTE ANALITICHE**: Per panoramiche e analisi, segui SEMPRE questa struttura:
-   ### Titolo dell'Analisi
-   Breve riepilogo in 1-2 frasi.
-
-   #### 📊 Dati
-   | Colonna 1 | Colonna 2 | Colonna 3 |
-   |---|---|---|
-
-   > 📌 **Osservazione chiave**: insight principale
-
-   #### 🎯 Azioni Suggerite
-   - Azione 1
-   - Azione 2
-
-10. **MAI**: blocchi di testo lunghi senza formattazione, tabelle senza intestazione, elenchi senza contesto.
-
-11. **TABELLE PULITE**: Le tabelle devono avere SEMPRE intestazione con | e separatore |---|. Ogni riga deve avere lo stesso numero di colonne. NON mettere badge \`code\` dentro le celle delle tabelle — usa testo normale con grassetto per i numeri importanti. I badge vanno usati SOLO nel testo discorsivo.
-
-12. **SEZIONE AZIONI**: La sezione "Azioni Suggerite" è FONDAMENTALE. Deve SEMPRE:
-   - Presentare 2-3 azioni concrete e numerate
-   - Ogni azione deve essere una domanda o proposta diretta all'utente
-   - Formulare le azioni come scelte facili: "Vuoi che faccia X?" / "Posso procedere con Y?"
-   - Aiutare l'utente a decidere il passo successivo senza dover pensare troppo`;
+9. **MAI MOSTRARE**: JSON raw, ID UUID, dati tecnici di debug, o blocchi di codice all'utente.`;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TOOL DEFINITIONS
