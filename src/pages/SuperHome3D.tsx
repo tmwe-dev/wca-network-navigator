@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
