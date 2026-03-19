@@ -491,7 +491,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                         transition={{ delay: 1 + i * 0.1, ease }}
                         onClick={() => sendMessage(p)}
                         whileHover={{ x: 4 }}
-                        className="text-[12px] px-4 py-2.5 rounded-2xl text-muted-foreground/25 hover:text-muted-foreground/50 hover:bg-secondary/[0.04] transition-all duration-700 text-left"
+                        className="text-[12px] px-4 py-2.5 rounded-2xl text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary/10 transition-all duration-700 text-left"
                       >
                         → {p}
                       </motion.button>
