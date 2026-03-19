@@ -460,8 +460,8 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                   />
                 ))}
               </div>
-              <span className="text-[8px] text-muted-foreground/12 font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
-              <button onClick={onClose} className="text-muted-foreground/30 hover:text-foreground/60 transition-colors duration-300 p-1.5 rounded-lg hover:bg-secondary/10">
+              <span className="text-[9px] text-muted-foreground/70 font-mono tracking-wider">14 fonti · 12.8k contatti · 234 partner · 7 agenti</span>
+              <button onClick={onClose} className="text-muted-foreground/60 hover:text-foreground/80 transition-colors duration-300 p-1.5 rounded-lg hover:bg-secondary/20">
                 <X className="w-4 h-4" />
               </button>
             </div>
