@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useCallback } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Globe } from "lucide-react";
 
@@ -11,9 +11,25 @@ function TabFallback() {
 
 export default function Dashboard() {
   const [tab, setTab] = useState("home");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Block horizontal swipe / trackpad gestures that trigger browser back/forward
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const blockGesture = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 5) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("wheel", blockGesture, { passive: false });
+    return () => el.removeEventListener("wheel", blockGesture);
+  }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div ref={containerRef} className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden overscroll-none">
       <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="bg-muted/50">
@@ -29,7 +45,7 @@ export default function Dashboard() {
         </Tabs>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden overscroll-none">
         {tab === "home" && (
           <Suspense fallback={<TabFallback />}>
             <SuperHome3D />
