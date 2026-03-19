@@ -1,20 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { motion } from "framer-motion";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu, Bot, Send, Calendar, Layers } from "lucide-react";
+import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { toast } from "@/hooks/use-toast";
 
+const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
+
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [intelliflowOpen, setIntelliflowOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
@@ -167,6 +171,26 @@ export function AppLayout() {
           onClose={() => setAiOpen(false)}
           context={{ selectedCountries: [], filterMode: currentPath }}
         />
+
+        {/* IntelliFlow floating trigger */}
+        <motion.button
+          onClick={() => setIntelliflowOpen(true)}
+          className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300"
+          style={{
+            background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.1))",
+            border: "1px solid hsl(var(--primary) / 0.2)",
+            boxShadow: "0 0 30px hsl(var(--primary) / 0.1), 0 8px 32px -8px hsl(0 0% 0% / 0.4)",
+          }}
+          whileHover={{ scale: 1.1, boxShadow: "0 0 40px hsl(var(--primary) / 0.2)" }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="IntelliFlow Workspace"
+        >
+          <Sparkles className="w-5 h-5 text-primary/70" />
+        </motion.button>
+
+        <Suspense fallback={null}>
+          <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+        </Suspense>
       </div>
     </DeepSearchContext.Provider>
   );
