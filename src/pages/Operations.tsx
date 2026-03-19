@@ -195,7 +195,7 @@ export default function Operations() {
               const missingEmail = contextStats.totalPartners - contextStats.withEmail;
               const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
-                <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+                <div className="hidden lg:flex items-center gap-1 flex-wrap">
                   <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
