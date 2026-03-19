@@ -127,6 +127,15 @@ function getChannelInstructions(channel: Channel): string {
   }
 }
 
+/** Strip common legal suffixes from company names (fast, no AI needed) */
+function cleanCompanyName(name: string): string {
+  if (!name) return name;
+  return name
+    .replace(/\b(s\.?r\.?l\.?|s\.?p\.?a\.?|s\.?a\.?s\.?|s\.?n\.?c\.?|llc|ltd\.?|inc\.?|gmbh|d\.?o\.?o\.?|corp\.?|pty\.?|plc\.?|co\.?\s*ltd\.?|pvt\.?\s*ltd\.?|s\.?a\.?|ag|ab|as|aps|bv|nv|oy|kft|sro|spol|eirl|sarl|sas|eurl|sl|sa de cv)\b\.?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -218,9 +227,11 @@ STILE:
 - Tono: ${settings.ai_tone || "professionale"}
 `;
 
+    const cleanedCompany = cleanCompanyName(company_name || "");
+
     const recipientContext = `
 DESTINATARIO:
-- Azienda: ${company_name || "N/A"}
+- Azienda: ${cleanedCompany || company_name || "N/A"}
 - Paese: ${country_code || "N/A"}
 ${recipientName ? `- Nome: ${recipientName} (IMPORTANTE: usa SOLO il nome di battesimo nel saluto)` : `- ATTENZIONE: nessun nome persona disponibile. Usa saluto generico ("Gentile responsabile" o equivalente).`}
 ${contact_email ? `- Email: ${contact_email}` : ""}
