@@ -1632,7 +1632,7 @@ serve(async (req) => {
     }
 
     if (finalContent) {
-      if (userId) await consumeCredits(userId, totalUsage);
+      if (userId) await consumeCredits(userId, totalUsage, provider.isUserKey);
       return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
