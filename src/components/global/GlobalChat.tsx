@@ -151,7 +151,11 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         assistantContent = "⚠️ Errore di connessione. Riprova.";
       }
 
-      dispatchAiAgentEffects(parseAiAgentResponse(assistantContent));
+      const parsed = parseAiAgentResponse<StructuredPartner>(assistantContent);
+      dispatchAiAgentEffects(parsed);
+      if (parsed.jobCreated && onJobCreated) {
+        onJobCreated(parsed.jobCreated);
+      }
       await addMessages([{ role: "assistant", content: assistantContent }]);
       setIsLoading(false);
     },
