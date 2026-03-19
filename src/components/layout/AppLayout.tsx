@@ -158,7 +158,7 @@ export function AppLayout() {
           <main
             className={cn(
               "flex-1 min-h-0",
-              isHomeRoute ? "overflow-hidden" : isOperationsRoute ? "overflow-hidden" : "overflow-auto p-4"
+              isFullscreenRoute ? "overflow-hidden" : "overflow-auto p-4"
             )}
           >
             <Outlet />
