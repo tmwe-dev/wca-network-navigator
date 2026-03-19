@@ -326,7 +326,7 @@ export default function SuperHome3D() {
                       {/* Card body */}
                       <div>
                         <div className="text-lg font-semibold leading-tight text-foreground">{world.action}</div>
-                        <div className="text-sm text-foreground/70">{world.outcome}</div>
+                        <div className="text-sm text-muted-foreground">{world.outcome}</div>
                       </div>
 
                       {/* Card footer */}
