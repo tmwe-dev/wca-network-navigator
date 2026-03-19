@@ -1482,22 +1482,20 @@ serve(async (req) => {
     }
     const userId: string = claimsData.claims.sub as string;
 
-    // Credit check
-    if (userId) {
-      const { data: apiKey } = await supabase.from("user_api_keys").select("api_key").eq("user_id", userId).eq("provider", "google").eq("is_active", true).maybeSingle();
-      if (!apiKey?.api_key) {
-        const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
-        if (credits && credits.balance <= 0) {
-          return new Response(JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+    // Resolve AI provider (user key or gateway)
+    const provider = await resolveAiProvider(userId);
+
+    // Credit check (only when using gateway credits)
+    if (!provider.isUserKey) {
+      const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
+      if (credits && credits.balance <= 0) {
+        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
     const { messages, context } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     // Build system prompt with memory context
     let systemPrompt = SYSTEM_PROMPT;
