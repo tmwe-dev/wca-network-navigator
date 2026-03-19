@@ -5,6 +5,7 @@ import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
+import { dispatchAiUiActions, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 
 interface Props {
   viewContext?: {
@@ -55,6 +56,7 @@ export function PartnerAIBar({ viewContext }: Props) {
       }
 
       const raw = data?.content || "";
+      dispatchAiUiActions(parseAiAgentResponse(raw).uiActions);
       setLastResponse(raw);
       setHistory([...newMessages, { role: "assistant", content: raw }]);
       setExpanded(true);
