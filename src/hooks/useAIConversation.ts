@@ -56,7 +56,7 @@ export function useAIConversation(pageContext: string) {
         .single();
       if (data) {
         setConversationId(data.id);
-        setMessages((data.messages as ConversationMessage[]) || []);
+        setMessages((data.messages as unknown as ConversationMessage[]) || []);
       }
       await loadList();
       setLoading(false);
