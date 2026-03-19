@@ -11,7 +11,7 @@ export default function Contacts() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="h-full overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left panel — list */}
         <ResizablePanel defaultSize={38} minSize={25} maxSize={55}>

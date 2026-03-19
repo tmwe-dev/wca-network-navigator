@@ -159,7 +159,7 @@ export default function Operations() {
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
-          <div className="flex items-center justify-between px-4 h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
+          <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
             {/* Left: Title + active badge */}
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
@@ -195,7 +195,7 @@ export default function Operations() {
               const missingEmail = contextStats.totalPartners - contextStats.withEmail;
               const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
-                <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+                <div className="hidden lg:flex items-center gap-1 flex-wrap">
                   <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
@@ -380,16 +380,16 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
         <button
           onClick={onClick}
           className={cn(
-            "flex flex-col items-center px-3 py-1 rounded-lg border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
+            "flex flex-col items-center px-2 py-0.5 rounded-md border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
             pillClass,
             active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
           )}
         >
-          <div className="flex items-center gap-1.5">
-            <Icon className="w-3.5 h-3.5" />
-            <span className="text-xl font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
+          <div className="flex items-center gap-1">
+            <Icon className="w-3 h-3" />
+            <span className="text-sm font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
           </div>
-          <span className="text-[10px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
+          <span className="text-[9px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs font-medium">

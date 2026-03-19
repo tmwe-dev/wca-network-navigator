@@ -16,7 +16,7 @@ export default function Agenda() {
   const [tab, setTab] = useState(initialTab);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="bg-muted/50">
