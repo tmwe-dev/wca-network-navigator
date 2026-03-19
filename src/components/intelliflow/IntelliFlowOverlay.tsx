@@ -560,10 +560,10 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                                 )}
                               </div>
                               {msg.meta && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center gap-2 mt-3 pt-2 border-t border-border/[0.04]">
-                                  <Wand2 className="w-2.5 h-2.5 text-primary/15" />
-                                  <span className="text-[9px] text-muted-foreground/20 font-light font-mono">{msg.meta}</span>
-                                </motion.div>
+                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center gap-2 mt-3 pt-2 border-t border-border/10">
+                                   <Wand2 className="w-2.5 h-2.5 text-primary/40" />
+                                   <span className="text-[9px] text-muted-foreground/60 font-light font-mono">{msg.meta}</span>
+                                 </motion.div>
                               )}
                               {msg.governance && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-2 mt-1.5">
