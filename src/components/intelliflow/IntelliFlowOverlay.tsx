@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
+import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 
 function useSystemStats() {
   return useQuery({
@@ -95,7 +96,6 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     if (!content || loading) return;
 
     const userMsg: ConversationMessage = { role: "user", content, timestamp: ts() };
-    // Optimistic update
     const prevMessages = [...messages, userMsg];
     await addMessages([userMsg]);
     setInput("");
@@ -109,6 +109,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
       });
       if (error) throw error;
       const raw = data?.content || data?.message || "";
+      dispatchAiAgentEffects(parseAiAgentResponse(raw));
       const assistantMsg: ConversationMessage = { role: "assistant", content: raw, timestamp: ts() };
       await addMessages([assistantMsg]);
     } catch (e: any) {

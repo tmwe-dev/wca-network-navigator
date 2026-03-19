@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
-import { GlobalChat, type JobCreatedInfo } from "@/components/global/GlobalChat";
+import { GlobalChat } from "@/components/global/GlobalChat";
+import type { JobCreatedInfo } from "@/lib/ai/agentResponse";
 import { DownloadStatusPanel } from "@/components/global/DownloadStatusPanel";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 
