@@ -1691,7 +1691,7 @@ serve(async (req) => {
         }
 
         // Track job creation
-        if (tc.function.name === "create_download_job" && tr?.success && tr?.job_id) {
+        if ((tc.function.name === "create_download_job" || tc.function.name === "download_single_partner") && tr?.success && tr?.job_id) {
           lastJobCreated = { job_id: tr.job_id, country: tr.country, mode: tr.mode, total_partners: tr.total_partners, estimated_time_minutes: tr.estimated_time_minutes };
         }
 
