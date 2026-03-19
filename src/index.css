@@ -365,9 +365,9 @@
   /* Mission tabs */
   .mission-tab {
     @apply text-xs px-3 py-1 rounded-full relative transition-all duration-200 cursor-pointer;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.55);
   }
-  .mission-tab:hover { color: rgba(255,255,255,0.7); }
+  .mission-tab:hover { color: rgba(255,255,255,0.8); }
   .mission-tab[data-state="active"] {
     color: #c4b5fd;
     font-weight: 500;
