@@ -165,7 +165,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
           </div>
 
           {/* Main */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center px-8">
                 <div className="mb-8">
