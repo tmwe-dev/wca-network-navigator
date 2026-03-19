@@ -40,10 +40,27 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   const [showLiAt, setShowLiAt] = useState(false);
   const [savingLi, setSavingLi] = useState(false);
 
+  // Load WCA credentials from user_wca_credentials (per-user)
+  useEffect(() => {
+    async function loadWcaCreds() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_wca_credentials")
+        .select("wca_username, wca_password")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        setWcaUser(data.wca_username || "");
+        setWcaPass(data.wca_password || "");
+      }
+    }
+    loadWcaCreds();
+  }, []);
+
+  // Load other settings from app_settings
   useEffect(() => {
     if (settings) {
-      setWcaUser(settings["wca_username"] || "");
-      setWcaPass(settings["wca_password"] || "");
       setLiAtCookie(settings["linkedin_li_at"] || "");
       setLiEmail(settings["linkedin_email"] || "");
       setLiPass(settings["linkedin_password"] || "");
@@ -53,10 +70,31 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   const handleSaveWcaCreds = async () => {
     setSavingWcaCreds(true);
     try {
-      await updateSetting.mutateAsync({ key: "wca_username", value: wcaUser.trim() });
-      await updateSetting.mutateAsync({ key: "wca_password", value: wcaPass.trim() });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non autenticato");
+
+      // Upsert into user_wca_credentials
+      const { data: existing } = await supabase
+        .from("user_wca_credentials")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("user_wca_credentials")
+          .update({ wca_username: wcaUser.trim(), wca_password: wcaPass.trim(), updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("user_wca_credentials")
+          .insert({ user_id: user.id, wca_username: wcaUser.trim(), wca_password: wcaPass.trim() });
+        if (error) throw error;
+      }
+
       toast.success("Credenziali WCA salvate!");
-    } catch { toast.error("Errore nel salvataggio"); }
+    } catch (e: any) { toast.error("Errore: " + (e.message || "Sconosciuto")); }
     finally { setSavingWcaCreds(false); }
   };
 
