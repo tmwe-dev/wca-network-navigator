@@ -37,7 +37,7 @@ export function useAIConversation(pageContext: string) {
       .eq("page_context", pageContext)
       .order("updated_at", { ascending: false })
       .limit(30);
-    if (data) setConversations(data as Conversation[]);
+    if (data) setConversations(data as unknown as Conversation[]);
   }, [pageContext]);
 
   // Load most recent conversation on mount
