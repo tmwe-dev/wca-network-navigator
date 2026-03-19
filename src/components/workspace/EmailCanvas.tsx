@@ -142,7 +142,7 @@ export default function EmailCanvas({
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <Mail className="w-10 h-10 text-muted-foreground/20 mb-3" />
+        <Mail className="w-10 h-10 text-muted-foreground/40 mb-3" />
         <h3 className="text-sm font-medium text-foreground">Seleziona un contatto</h3>
         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
           Scegli un'attività dalla lista per generare un'email personalizzata
