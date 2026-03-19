@@ -1527,10 +1527,11 @@ serve(async (req) => {
     const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
     // First call with tools
-    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    let response = await fetch(provider.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools }),
+      headers: aiHeaders,
+      body: JSON.stringify({ model: provider.model, messages: allMessages, tools }),
     });
 
     if (!response.ok) {
