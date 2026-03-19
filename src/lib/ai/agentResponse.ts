@@ -71,7 +71,7 @@ export function parseAiAgentResponse<TPartner = unknown>(content: string): Parse
   const partnersPayload = extractMarkerPayload(content, STRUCTURED_DELIMITER);
   const jobPayload = extractMarkerPayload(content, JOB_CREATED_DELIMITER);
   const uiPayload = extractMarkerPayload(content, UI_ACTIONS_DELIMITER);
-  const commandPayload = extractMarkerPayload(content, COMMAND_DELIMITER);
+  extractMarkerPayload(content, COMMAND_DELIMITER);
 
   const structured = safeJsonParse<{ type?: string; data?: TPartner[] } | null>(partnersPayload, null);
   const partners = structured?.type === "partners" && Array.isArray(structured.data) ? structured.data : [];
@@ -89,4 +89,19 @@ export function dispatchAiUiActions(actions: AiUiAction[]) {
   for (const action of actions) {
     window.dispatchEvent(new CustomEvent("ai-ui-action", { detail: action }));
   }
+}
+
+export function dispatchAiAgentEffects(parsed: ParsedAiAgentResponse<any>) {
+  const actions = [...parsed.uiActions];
+
+  if (parsed.jobCreated?.job_id && !actions.some((action) => action.action_type === "start_download_job" && action.job_id === parsed.jobCreated?.job_id)) {
+    actions.push({
+      action_type: "start_download_job",
+      job_id: parsed.jobCreated.job_id,
+      message: `Avvio job ${parsed.jobCreated.job_id}`,
+      toast_type: "success",
+    });
+  }
+
+  dispatchAiUiActions(actions);
 }
