@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { toast } from "@/hooks/use-toast";
+import { lazy, Suspense } from "react";
+import { Sparkles } from "lucide-react";
+
+const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
