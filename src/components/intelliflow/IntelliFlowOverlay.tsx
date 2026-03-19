@@ -213,7 +213,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                             Segretario Operativo
                           </div>
                         )}
-                        <div className="text-sm leading-relaxed text-foreground prose prose-sm prose-p:my-1 prose-li:my-0 max-w-none">
+                        <div className="ai-prose max-w-none">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                         <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
