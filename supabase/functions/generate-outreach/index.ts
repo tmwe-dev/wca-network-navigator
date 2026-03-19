@@ -227,9 +227,11 @@ STILE:
 - Tono: ${settings.ai_tone || "professionale"}
 `;
 
+    const cleanedCompany = cleanCompanyName(company_name || "");
+
     const recipientContext = `
 DESTINATARIO:
-- Azienda: ${company_name || "N/A"}
+- Azienda: ${cleanedCompany || company_name || "N/A"}
 - Paese: ${country_code || "N/A"}
 ${recipientName ? `- Nome: ${recipientName} (IMPORTANTE: usa SOLO il nome di battesimo nel saluto)` : `- ATTENZIONE: nessun nome persona disponibile. Usa saluto generico ("Gentile responsabile" o equivalente).`}
 ${contact_email ? `- Email: ${contact_email}` : ""}
