@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
-import { dispatchAiAgentEffects } from "@/lib/ai/agentResponse";
+import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
 
 interface Props {
   className?: string;
