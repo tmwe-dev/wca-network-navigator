@@ -1334,18 +1334,76 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// USER API KEY RESOLUTION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface ResolvedAiProvider {
+  url: string;
+  apiKey: string;
+  model: string;
+  isUserKey: boolean;
+}
+
+async function resolveAiProvider(userId: string): Promise<ResolvedAiProvider> {
+  // Check user's own keys: google first, then openai
+  const { data: userKeys } = await supabase
+    .from("user_api_keys")
+    .select("provider, api_key")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (userKeys && userKeys.length > 0) {
+    const googleKey = userKeys.find((k: any) => k.provider === "google");
+    if (googleKey?.api_key) {
+      console.log("[AI] Using user's Google API key");
+      return {
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        apiKey: googleKey.api_key,
+        model: "gemini-2.5-flash",
+        isUserKey: true,
+      };
+    }
+    const openaiKey = userKeys.find((k: any) => k.provider === "openai");
+    if (openaiKey?.api_key) {
+      console.log("[AI] Using user's OpenAI API key");
+      return {
+        url: "https://api.openai.com/v1/chat/completions",
+        apiKey: openaiKey.api_key,
+        model: "gpt-4o-mini",
+        isUserKey: true,
+      };
+    }
+    const anthropicKey = userKeys.find((k: any) => k.provider === "anthropic");
+    if (anthropicKey?.api_key) {
+      console.log("[AI] Using user's Anthropic API key (via OpenAI-compat)");
+      // Anthropic doesn't have OpenAI-compat endpoint, use gateway as fallback
+    }
+  }
+
+  // Fallback: Lovable AI Gateway
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+  console.log("[AI] Using Lovable AI Gateway");
+  return {
+    url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+    apiKey: LOVABLE_API_KEY,
+    model: "google/gemini-3-flash-preview",
+    isUserKey: false,
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CREDIT CONSUMPTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function consumeCredits(userId: string, usage: { prompt_tokens?: number; completion_tokens?: number }) {
+async function consumeCredits(userId: string, usage: { prompt_tokens?: number; completion_tokens?: number }, isUserKey: boolean) {
+  if (isUserKey) return; // User's own key — no credit deduction
   const inputTokens = usage.prompt_tokens || 0;
   const outputTokens = usage.completion_tokens || 0;
   if (inputTokens === 0 && outputTokens === 0) return;
   const rates = { input: 1, output: 2 };
   const totalCredits = Math.ceil(inputTokens / 1000 * rates.input) + Math.ceil(outputTokens / 1000 * rates.output);
   if (totalCredits <= 0) return;
-  const { data: apiKey } = await supabase.from("user_api_keys").select("api_key").eq("user_id", userId).eq("provider", "google").eq("is_active", true).maybeSingle();
-  if (apiKey?.api_key) return;
   const { data: deductResult } = await supabase.rpc("deduct_credits", {
     p_user_id: userId, p_amount: totalCredits, p_operation: "ai_call",
     p_description: `AI Assistant: ${inputTokens} in + ${outputTokens} out tokens (${totalCredits} crediti)`,
@@ -1424,22 +1482,20 @@ serve(async (req) => {
     }
     const userId: string = claimsData.claims.sub as string;
 
-    // Credit check
-    if (userId) {
-      const { data: apiKey } = await supabase.from("user_api_keys").select("api_key").eq("user_id", userId).eq("provider", "google").eq("is_active", true).maybeSingle();
-      if (!apiKey?.api_key) {
-        const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
-        if (credits && credits.balance <= 0) {
-          return new Response(JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+    // Resolve AI provider (user key or gateway)
+    const provider = await resolveAiProvider(userId);
+
+    // Credit check (only when using gateway credits)
+    if (!provider.isUserKey) {
+      const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
+      if (credits && credits.balance <= 0) {
+        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
     const { messages, context } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     // Build system prompt with memory context
     let systemPrompt = SYSTEM_PROMPT;
@@ -1471,10 +1527,11 @@ serve(async (req) => {
     const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
     // First call with tools
-    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiHeaders = { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" };
+    let response = await fetch(provider.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools }),
+      headers: aiHeaders,
+      body: JSON.stringify({ model: provider.model, messages: allMessages, tools }),
     });
 
     if (!response.ok) {
@@ -1543,10 +1600,10 @@ serve(async (req) => {
       allMessages.push(assistantMessage);
       allMessages.push(...toolResults);
 
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      response = await fetch(provider.url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools }),
+        headers: aiHeaders,
+        body: JSON.stringify({ model: provider.model, messages: allMessages, tools }),
       });
 
       if (!response.ok) {
@@ -1575,15 +1632,15 @@ serve(async (req) => {
     }
 
     if (finalContent) {
-      if (userId) await consumeCredits(userId, totalUsage);
+      if (userId) await consumeCredits(userId, totalUsage, provider.isUserKey);
       return new Response(JSON.stringify({ content: finalContent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     allMessages.push(assistantMessage);
-    const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const finalResponse = await fetch(provider.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages }),
+      headers: aiHeaders,
+      body: JSON.stringify({ model: provider.model, messages: allMessages }),
     });
 
     if (!finalResponse.ok) {
@@ -1607,7 +1664,7 @@ serve(async (req) => {
       finalText += `\n\n---UI_ACTIONS---\n${JSON.stringify(uiActions)}`;
     }
 
-    if (userId) await consumeCredits(userId, totalUsage);
+    if (userId) await consumeCredits(userId, totalUsage, provider.isUserKey);
     return new Response(JSON.stringify({ content: finalText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-assistant error:", e);
