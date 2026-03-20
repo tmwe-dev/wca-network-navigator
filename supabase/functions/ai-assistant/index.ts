@@ -2362,6 +2362,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "manage_partner_contact": return executeManagePartnerContact(args);
     case "update_reminder": return executeUpdateReminder(args);
     case "delete_records": return executeDeleteRecords(args);
+    case "get_procedure": return executeGetProcedure(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
