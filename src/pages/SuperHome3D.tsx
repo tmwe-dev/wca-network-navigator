@@ -230,7 +230,11 @@ export default function SuperHome3D() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
-          <HomeAIPrompt />
+          <HomeAIPrompt systemStats={{
+            activeJobs,
+            pendingActivities: openActivities,
+            totalPartners: partnerCount,
+          }} />
         </section>
 
         {/* Active downloads — always visible when jobs exist */}
