@@ -1,57 +1,29 @@
 
 
-## Piano: Notifiche proattive per job in pausa e feedback di progresso
+## Piano: Terminale Download come Dialog/Popup
 
 ### Problema
-Quando si avvia un download (es. Ungheria), il job viene creato ma se la sessione WCA non e' verificabile (estensione non disponibile, timeout, login fallito), il job passa silenziosamente a "paused" senza alcuna notifica all'utente. Il `useJobHealthMonitor` rileva solo stati `failed`, `running` (stalled) e `completed`, ma ignora completamente `paused`. L'utente vede "Download Ungheria" nell'header ma nessun progresso e nessuna spiegazione.
-
-### Causa tecnica
-1. `useDownloadProcessor.startJob()` chiama `verifyWcaSession()` — se fallisce, setta `status: "paused"` con un `error_message` ma non emette toast
-2. `useJobHealthMonitor` non gestisce lo stato `paused`
-3. L'`ActiveProcessIndicator` mostra il job come "in coda" ma non comunica il motivo del blocco
+Il `DownloadTerminal` è attualmente inline in fondo alla colonna dei paesi o sotto il pannello partner — posizione scomoda, l'utente non può seguire il progresso del download senza scrollare in basso.
 
 ### Soluzione
+Trasformare il terminale in un **Dialog popup** (come già fatto per `JobTerminalViewer`), rimuovendo le istanze inline e aggiungendo un pulsante per aprirlo.
 
-**File 1: `src/hooks/useJobHealthMonitor.ts`**
-- Aggiungere rilevamento dei job `paused` — quando un job transita a `paused`, mostrare un toast con il `error_message` (es. "Sessione WCA non attiva", "Rate-limit attivo")
-- Il toast indica chiaramente all'utente cosa fare (verificare sessione/estensione)
+### Modifiche
 
-**File 2: `src/components/layout/ActiveProcessIndicator.tsx`**
-- Nella `ProcessRow`, quando il job e' `paused` e ha un `error_message`, mostrare il messaggio di errore sotto la barra di progresso in rosso/ambra
-- Questo richiede che `ActiveProcess` porti anche il campo `errorMessage`
+**File 1: `src/components/download/DownloadTerminal.tsx`**
+- Wrappare il contenuto esistente in un `Dialog` con `DialogContent`
+- Esportare come `DownloadTerminalDialog` con props `open` / `onOpenChange`
+- Stile: `max-w-2xl`, sfondo `bg-slate-950`, altezza terminale generosa (~400px)
+- Riutilizzare tutta la logica log/auto-scroll già presente
 
-**File 3: `src/hooks/useActiveProcesses.ts`**
-- Estendere l'interfaccia `ActiveProcess` con campo opzionale `errorMessage?: string`
-- Passare `job.error_message` nel mapping dei download jobs
+**File 2: `src/pages/Operations.tsx`**
+- Rimuovere le 3 istanze inline di `<DownloadTerminal />` (righe 283, 339, e nel PartnerListPanel)
+- Aggiungere stato `terminalOpen` e un pulsante `Terminal` nella top bar (accanto ai filtri o nell'ActiveJobBar) che apre il dialog
+- Renderizzare `<DownloadTerminalDialog open={terminalOpen} onOpenChange={setTerminalOpen} />` una sola volta a livello pagina
 
-### Dettaglio tecnico
+**File 3: `src/components/operations/PartnerListPanel.tsx`**
+- Rimuovere l'import e l'istanza di `<DownloadTerminal />` (riga 323)
 
-```typescript
-// useJobHealthMonitor.ts — aggiungere dopo il blocco "completed"
-if (job.status === "paused" && !notifiedRef.current.has(`pause-${job.id}`)) {
-  notifiedRef.current.add(`pause-${job.id}`);
-  toast({
-    title: `⏸️ Download ${job.country_name} in pausa`,
-    description: job.error_message || "Verifica la sessione WCA e riprendi.",
-    variant: "destructive",
-  });
-}
-```
-
-```typescript
-// useActiveProcesses.ts — nel mapping download jobs
-errorMessage: job.error_message || undefined,
-```
-
-```typescript
-// ActiveProcessIndicator.tsx — nella ProcessRow, sotto la progress bar
-{process.errorMessage && isPaused && (
-  <p className="text-[10px] text-amber-500 mt-0.5 truncate">{process.errorMessage}</p>
-)}
-```
-
-### File da modificare
-1. `src/hooks/useJobHealthMonitor.ts` — aggiungere notifica paused
-2. `src/hooks/useActiveProcesses.ts` — estendere interfaccia + passare errorMessage
-3. `src/components/layout/ActiveProcessIndicator.tsx` — mostrare errorMessage nella ProcessRow
+### Risultato
+Il terminale diventa un overlay accessibile da qualsiasi punto della pagina, apribile con un click sul pulsante Terminal nella barra superiore, senza occupare spazio nel layout.
 
