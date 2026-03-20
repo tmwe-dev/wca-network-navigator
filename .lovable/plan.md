@@ -1,41 +1,32 @@
 
 
-## Piano: Layout a 3 Colonne per Network
-
-### Situazione attuale
-La pagina Network usa un layout a 2 colonne: paesi a sinistra (280px fisso), lista partner a destra. Il dettaglio partner è un **overlay assoluto** che copre completamente la lista partner — l'utente perde il contesto della lista.
+## Piano: Riordinare e distanziare le Stat Pill
 
 ### Cambio richiesto
-Passare a un layout a **3 colonne affiancate**: Paesi | Lista Partner | Dettaglio Partner. Quando si seleziona un partner dalla lista, il dettaglio appare nella terza colonna senza nascondere la lista.
-
-### Design
-
-```text
-┌──────────┬─────────────────────┬─────────────────────┐
-│  Paesi   │   Lista Partner     │  Dettaglio Partner   │
-│  (220px) │   (flex, min)       │  (flex, ~40%)        │
-│          │                     │                      │
-│  scroll  │   scroll            │  scroll              │
-│          │   click → evidenzia │  PartnerDetailCompact│
-└──────────┴─────────────────────┴─────────────────────┘
-```
-
-- **Senza selezione partner**: 2 colonne (paesi + lista) — la terza non appare
-- **Con selezione partner**: 3 colonne — la lista si comprime ma resta visibile e navigabile
-- **Colonna paesi**: ridotta da 280px a 220px quando il dettaglio è aperto, per recuperare spazio
-- **Mobile**: invariato (colonna singola con overlay)
+1. **Nuovo ordine**: Directory → Selezionati/Paesi → Partner → [spazio] → No Profilo → No Email → No Tel
+2. **Breakpoint**: `hidden lg:flex` → `hidden md:flex` per visibilità a 833px
+3. **Separatore visivo**: aggiungere un `div` spacer tra il gruppo "dati" e il gruppo "mancanze"
+4. **Colori differenziati**: le pill "info" (Directory, Paesi, Partner) usano blu; le pill "warn/ok" (No Profilo, No Email, No Tel) mantengono il tri-state rosso/ambra/verde — già così nel codice, ma verificheremo che i colori siano distinti
 
 ### File da modificare
+**`src/pages/Operations.tsx`** — righe 203-210:
 
-**`src/pages/Operations.tsx`** — unico file:
+```tsx
+<div className="hidden md:flex items-center gap-1 flex-wrap">
+  {/* Gruppo info */}
+  <StatPill icon={FolderOpen} value={contextStats.totalDirectory} label="Directory" ... variant="info" />
+  <StatPill icon={Globe} value={contextStats.scannedCountries} label={...} ... variant="info" />
+  <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" ... variant="info" />
+  
+  {/* Separatore */}
+  <div className="w-px h-5 bg-border/50 mx-1" />
+  
+  {/* Gruppo mancanze */}
+  <StatPill icon={FileX} value={missingProfile} label="No Profilo" ... variant={...} />
+  <StatPill icon={MailX} value={missingEmail} label="No Email" ... variant={...} />
+  <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" ... variant={...} />
+</div>
+```
 
-1. Rimuovere l'overlay `absolute inset-0` del dettaglio partner (righe 304-321)
-2. Sostituire con una **terza colonna** nel flex layout principale:
-   - Colonna paesi: `w-[220px]` (o `w-[280px]` se no detail)
-   - Colonna lista: `flex-1 min-w-0`
-   - Colonna dettaglio: `w-[380px]` condizionale, visibile solo quando `selectedPartnerId && selectedPartner`
-3. Aggiungere animazione `animate-in slide-in-from-right` sulla terza colonna
-4. La lista partner (colonna 2) mantiene l'evidenziazione del partner selezionato tramite `selectedPartnerId` già passato a `PartnerListPanel`
-
-Nessun altro file da toccare — `PartnerDetailCompact` e `PartnerListPanel` restano invariati.
+Un solo file, una sola modifica.
 
