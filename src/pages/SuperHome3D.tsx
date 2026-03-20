@@ -160,9 +160,9 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
                 </div>
               )}
 
-              {lastLog && isActive && (
+              {job.last_contact_result && isActive && (
                 <div className="text-[10px] text-muted-foreground/70 truncate font-mono">
-                  {lastLog}
+                  Ultimo risultato: {job.last_contact_result}
                 </div>
               )}
 
