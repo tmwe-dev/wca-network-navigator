@@ -1,106 +1,104 @@
 
 
-# Piano: Configurazione individuale di tutti gli 11 agenti
+# Piano: Architettura di Comando Agenti con Luca come Direttore
 
-## Team attuale
+## Problema attuale
 
-| # | Nome | Ruolo | Prompt | Tools | ElevenLabs |
-|---|------|-------|--------|-------|------------|
-| 1 | Luca | Account | Template generico | 12 generici | ❌ |
-| 2 | Marco | Strategy | Template generico | 9 generici | ❌ |
-| 3 | Gianfranco | Account | Template generico | 12 generici | ❌ |
-| 4 | Imane | Research | Template generico | 12 generici | ❌ |
-| 5 | Gigi | Research | Template generico | 12 generici | ❌ |
-| 6 | Felice | Download | Template generico | 9 generici | ❌ |
-| 7 | Robin | Outreach | Template generico | 11 generici | ❌ |
-| 8 | Bruce | Outreach | Template generico | 11 generici | ❌ |
-| 9 | Renato | Outreach | Template generico | 11 generici | ❌ |
-| 10 | Carlo | Outreach | Template generico | 11 generici | ❌ |
-| 11 | Leonardo | Outreach | Template generico | 11 generici | ❌ |
+`agent-execute` e' un wrapper semplice: manda il prompt all'LLM e restituisce testo. **Non esegue nessun tool reale** — non puo' cercare partner, inviare email, creare download, fare deep search. Gli agenti "parlano" ma non "agiscono".
 
-## Configurazione dedicata per agente
+L'`ai-assistant` invece ha 2700+ righe con 42 tool definitions e logica di esecuzione completa. Gli agenti devono accedere a questa stessa infrastruttura.
 
-### 1. Luca — Account Manager Senior (Clienti Premium)
-- **Focus**: Gestione top-tier clienti convertiti, upselling, retention
-- **Prompt**: Specializzato su relazioni VIP, check-in periodici, analisi satisfaction
-- **Tools**: 14 (aggiunge `update_lead_status`, `get_global_summary`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+## Soluzione: agent-execute con Tool-Calling reale
 
-### 2. Marco — Chief Strategy Officer
-- **Focus**: Analisi macro, copertura mondiale, allocazione risorse, briefing team
-- **Prompt**: KPI-driven, genera report settimanali, identifica gap geografici, propone priorità
-- **Tools**: 11 (aggiunge `search_contacts`, `search_prospects`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+### Fase 1 — Potenziare agent-execute
 
-### 3. Gianfranco — Account Manager (Re-engagement)
-- **Focus**: Recupero clienti persi/inattivi, promozioni rientro, analisi churn
-- **Prompt**: Specializzato su ex-clienti e clienti dormienti, strategie win-back
-- **Tools**: 14 (aggiunge `check_blacklist`, `update_lead_status`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+**File: `supabase/functions/agent-execute/index.ts`** — Riscrittura completa
 
-### 4. Imane — Research Analyst (Market Intelligence)
-- **Focus**: Analisi mercato, identificazione target per settore/paese, ranking aziende
-- **Prompt**: Data-driven, crea report di opportunità, valuta quality score partner
-- **Tools**: 14 (aggiunge `create_reminder`, `get_global_summary`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+Importare le stesse definizioni di tool e la logica di esecuzione dall'`ai-assistant`, ma filtrandoli per `agent.assigned_tools`. Il flusso diventa:
 
-### 5. Gigi — Research Operative (Enrichment)
-- **Focus**: Arricchimento profili, deep search massivo, pulizia dati, alias generation
-- **Prompt**: Operativo puro, esegue batch di enrichment, verifica completezza
-- **Tools**: 14 (aggiunge `update_partner`, `manage_partner_contact`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+```text
+1. Carica agente (prompt + KB + tools assegnati)
+2. Filtra TOOL_DEFINITIONS per includere solo quelli in assigned_tools
+3. Chiama LLM con tool-calling (function calling)
+4. Esegui i tool chiamati dall'LLM sul database
+5. Loop fino a risposta finale (max 10 iterazioni)
+6. Ritorna risultato
+```
 
-### 6. Felice — Download Controller
-- **Focus**: Gestione download WCA, monitoraggio job, retry, verifica completezza
-- **Prompt**: Prudente su rate-limit, prioritizza paesi strategici, gestisce code
-- **Tools**: 11 (aggiunge `create_activity`, `save_memory`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+Questo significa estrarre le tool definitions e le funzioni di esecuzione in un modulo condiviso che entrambe le edge functions possono importare.
 
-### 7. Robin — Sales Hunter (Primo contatto)
-- **Ruolo cambiato**: outreach → **sales**
-- **Focus**: Primo contatto freddo, qualificazione lead, apertura conversazione
-- **Prompt**: Chris Voss hook + calibrated questions, specializzato in cold outreach
-- **Tools**: 18 (template sales completo)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+**Nuovo file: `supabase/functions/_shared/tool-definitions.ts`** — Definizioni tool condivise
+**Nuovo file: `supabase/functions/_shared/tool-executor.ts`** — Logica di esecuzione tool condivisa
 
-### 8. Bruce — Sales Closer (Chiusura contratti)
-- **Ruolo cambiato**: outreach → **sales**
-- **Focus**: Negoziazione finale, gestione obiezioni, chiusura deal
-- **Prompt**: Tecniche di chiusura avanzate, urgenza controllata, proposta contrattuale
-- **Tools**: 18 (template sales + focus su update_lead_status)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+### Fase 2 — Luca come Direttore Operativo
 
-### 9. Renato — Outreach Europa
-- **Focus**: Outreach specializzato per mercato europeo (IT, DE, FR, ES, UK, NL)
-- **Prompt**: Multilingue europeo, conosce specificità culturali, regolamenti UE
-- **Tools**: 13 (aggiunge `list_activities`, `update_activity`)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+Aggiornare il `system_prompt` e i `assigned_tools` di Luca nel database per riflettere il suo ruolo di CEO/Direttore:
 
-### 10. Carlo — Outreach Asia/Middle East
-- **Focus**: Outreach per mercati asiatici e mediorientali
-- **Prompt**: Adattato a culture business asiatiche, formalità, relazioni lunghe
-- **Tools**: 13 (come Renato)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+**Prompt specializzato** che include:
+- Visione completa del team (nomi, ruoli, competenze di ogni agente)
+- Capacita' di creare task per gli altri agenti via tool `create_agent_task`
+- Capacita' di leggere lo stato dei task di tutti gli agenti via `list_agent_tasks`
+- Capacita' di analizzare le performance del team via `get_team_status`
+- Istruzioni su come delegare: chi fa cosa, quando escalare
 
-### 11. Leonardo — Outreach Americas/Africa
-- **Focus**: Outreach per Americhe e Africa
-- **Prompt**: English-first, adattato a mercati emergenti e consolidati
-- **Tools**: 13 (come Renato)
-- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
+**Nuovi tool specifici per il direttore:**
+- `create_agent_task` — Crea un compito per un agente specifico (by name/role)
+- `list_agent_tasks` — Vede tutti i task di tutti gli agenti
+- `get_team_status` — Riepilogo performance team (tasks completati, in corso, falliti per agente)
+- `update_agent_prompt` — Aggiorna il prompt di un agente subordinato
+- `add_agent_kb_entry` — Aggiunge un documento alla KB di un agente
 
-## Implementazione
+**Tools totali di Luca**: Tutti i 42 tool operativi + i 5 tool di management = 47 tool
 
-### Cosa viene fatto
-- **11 UPDATE** sulla tabella `agents` via insert tool — uno per agente, ciascuno con:
-  - `system_prompt` dedicato e personalizzato (non il template generico)
-  - `assigned_tools` ottimizzato per la specializzazione
-  - `elevenlabs_agent_id` = `agent_3801k1xqxat6et78e3z2a36h579c`
-  - `avatar_emoji` aggiornato dove il ruolo cambia
-  - `role` aggiornato per Robin e Bruce (→ sales)
+### Fase 3 — Gerarchia e flusso operativo
 
-### File da modificare
-Nessun file di codice viene toccato. Solo dati nel database.
+```text
+┌─────────────────────────────────────┐
+│         LUCA (Direttore)            │
+│  - Visione globale                  │
+│  - Crea task per il team            │
+│  - Monitora performance             │
+│  - Aggiorna prompt/KB subordinati   │
+├─────────┬───────────┬───────────────┤
+│         │           │               │
+│  MARCO  │ ROBIN     │ FELICE        │
+│  (CSO)  │ (Sales)   │ (Download)    │
+│         │ BRUCE     │               │
+│ IMANE   │ (Sales)   │ RENATO        │
+│ (Intel) │           │ CARLO         │
+│ GIGI    │ GIANFR.   │ LEONARDO      │
+│ (Enrich)│ (Winback) │ (Outreach x3) │
+└─────────┴───────────┴───────────────┘
+```
 
-### Risultato
-Ogni agente avrà un'identità unica con prompt specializzato, tool calibrati per il suo ruolo specifico e voce ElevenLabs collegata. Robin e Bruce diventano i 2 agenti vendita dedicati richiesti.
+### Fase 4 — Aggiornamento UI
+
+**File: `src/components/agents/AgentDetail.tsx`**
+- Aggiungere tab "Team" visibile solo per agenti con ruolo `account` (Luca) che mostra:
+  - Lista agenti subordinati con stato e ultimo task
+  - Pulsante "Crea task per [agente]"
+  - Riepilogo performance team
+
+**File: `src/components/agents/AgentTaskList.tsx`**
+- Per Luca: mostrare anche i task creati per altri agenti con indicazione del destinatario
+
+## File da creare/modificare
+
+| File | Azione |
+|------|--------|
+| `supabase/functions/_shared/tool-definitions.ts` | Creare — estratto da ai-assistant |
+| `supabase/functions/_shared/tool-executor.ts` | Creare — estratto da ai-assistant |
+| `supabase/functions/agent-execute/index.ts` | Riscrivere — con tool-calling reale |
+| `supabase/functions/ai-assistant/index.ts` | Refactorare — importa da _shared |
+| Database: agente Luca | UPDATE — nuovo prompt + 47 tool + ruolo elevato |
+| `src/data/agentTemplates.ts` | Aggiungere tool di management alla lista AVAILABLE_TOOLS |
+| `src/components/agents/AgentDetail.tsx` | Aggiungere tab "Team" per il direttore |
+
+## Risultato atteso
+
+- Ogni agente puo' **agire realmente** sul database (non solo parlare)
+- Luca puo' creare task per qualsiasi agente, monitorare il team, aggiornare i loro prompt e KB
+- L'utente parla con Luca in chat, Luca delega ai subordinati creando task
+- I task vengono poi eseguiti dai singoli agenti con i loro tool specifici
+- Zero duplicazione di codice: tool definitions e executor condivisi tra ai-assistant e agent-execute
 
