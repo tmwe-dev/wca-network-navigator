@@ -277,9 +277,10 @@ export default function Operations() {
               )}
             </div>
 
-            {/* CENTER: Partner List + Detail overlay */}
-            {hasSelection && (
-              <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
+            {/* RIGHT: Partner List + Detail overlay */}
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
+            {hasSelection ? (
+              <>
                 <ActiveJobBar />
                 <div className={cn(
                   "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
