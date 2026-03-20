@@ -2266,7 +2266,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
     case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
     case "create_work_plan": return userId ? executeCreateWorkPlan(args, userId) : { error: "Auth required" };
-    case "execute_plan_step": return userId ? executeExecutePlanStep(args, userId) : { error: "Auth required" };
+    case "execute_plan_step": return userId ? executeExecutePlanStep(args, userId, authHeader) : { error: "Auth required" };
     case "get_active_plans": return userId ? executeGetActivePlans(userId) : { error: "Auth required" };
     case "save_as_template": return userId ? executeSaveAsTemplate(args, userId) : { error: "Auth required" };
     case "search_templates": return userId ? executeSearchTemplates(args, userId) : { error: "Auth required" };
