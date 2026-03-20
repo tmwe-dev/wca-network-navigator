@@ -111,6 +111,13 @@ export function PartnerListPanel({
     if (onSelectPartner) onSelectPartner(id);
   }, [onSelectPartner]);
 
+  // Auto-select first partner when list loads and nothing is selected
+  useEffect(() => {
+    if (!selectedPartnerId && filteredPartners.length > 0 && onSelectPartner) {
+      onSelectPartner(filteredPartners[0].id);
+    }
+  }, [filteredPartners, selectedPartnerId, onSelectPartner]);
+
   const toggleProgressFilter = (key: ProgressFilterKey) => {
     setProgressFilter(prev => prev === key ? null : key);
   };
