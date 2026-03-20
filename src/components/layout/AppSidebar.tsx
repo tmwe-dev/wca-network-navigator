@@ -20,6 +20,7 @@ const navSections = [
       { title: "CRM", url: "/crm", icon: UserCheck },
       { title: "Outreach", url: "/outreach", icon: Rocket },
       { title: "Agenda", url: "/agenda", icon: Calendar },
+      { title: "Agenti", url: "/agents", icon: Bot },
     ],
   },
   {

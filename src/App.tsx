@@ -71,6 +71,7 @@ const App = () => (
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/agents" element={<Agents />} />
                   <Route path="/settings" element={<Settings />} />
 
                   {/* ── Legacy pages kept alive ── */}
