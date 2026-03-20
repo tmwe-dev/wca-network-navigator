@@ -481,9 +481,7 @@ export default function EmailComposer() {
             </div>
         </div>
 
-        {/* Queue delay control */}
-        <Card>
-          <CardContent className="pt-4 space-y-3">
+        <div className="float-panel-subtle p-4 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium flex items-center gap-2">
                 <ListOrdered className="w-4 h-4 text-muted-foreground" />
@@ -498,8 +496,7 @@ export default function EmailComposer() {
               max={30}
               step={1}
             />
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Action buttons */}
         <div className="flex gap-3">
