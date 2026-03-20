@@ -245,11 +245,15 @@ export default function HubOperativo() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)] bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 h-12 border-b border-border shrink-0">
-        <Zap className="w-4.5 h-4.5 text-primary" />
-        <h1 className="text-sm font-semibold text-foreground">Hub Operativo</h1>
-        <span className="text-xs text-muted-foreground">Centro di smistamento job e campagne</span>
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Zap className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Hub Operativo</h1>
+            <p className="text-[11px] text-muted-foreground">Centro di smistamento job e campagne</p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
