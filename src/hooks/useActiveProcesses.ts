@@ -11,6 +11,7 @@ export interface ActiveProcess {
   status: "running" | "pending" | "paused";
   progress?: number; // 0-100
   detail?: string;
+  errorMessage?: string;
 }
 
 /**
@@ -66,6 +67,7 @@ export function useActiveProcesses() {
           status: job.status === "paused" ? "paused" : job.status === "running" ? "running" : "pending",
           progress,
           detail: `${job.current_index}/${job.total_count}`,
+          errorMessage: job.error_message || undefined,
         });
       }
     });

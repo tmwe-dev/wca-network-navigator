@@ -40,7 +40,17 @@ export function useJobHealthMonitor() {
         stallCheckRef.current.delete(job.id);
       }
 
-      // 3. Notify on completion
+      // 3. Notify on pause (session issues, rate-limit, etc.)
+      if (job.status === "paused" && !notifiedRef.current.has(`pause-${job.id}`)) {
+        notifiedRef.current.add(`pause-${job.id}`);
+        toast({
+          title: `⏸️ Download ${job.country_name} in pausa`,
+          description: job.error_message || "Verifica la sessione WCA e riprendi.",
+          variant: "destructive",
+        });
+      }
+
+      // 4. Notify on completion
       if (job.status === "completed" && !notifiedRef.current.has(`done-${job.id}`)) {
         notifiedRef.current.add(`done-${job.id}`);
         toast({
