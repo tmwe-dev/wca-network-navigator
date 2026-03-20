@@ -1,130 +1,106 @@
 
 
-# Piano: Sezione Agenti Virtuali
+# Piano: Configurazione individuale di tutti gli 11 agenti
 
-## Visione
+## Team attuale
 
-Creare un nuovo ambiente **Agenti** (`/agents`) nella sidebar, dove l'utente configura, monitora e gestisce agenti AI autonomi. Ogni agente ha identità, voce ElevenLabs, knowledge base, prompt personalizzabili, tool assegnati e compiti schedulati. Gli agenti operano sul database esistente usando gli stessi tool dell'ai-assistant attuale, senza modificare il motore sottostante.
+| # | Nome | Ruolo | Prompt | Tools | ElevenLabs |
+|---|------|-------|--------|-------|------------|
+| 1 | Luca | Account | Template generico | 12 generici | ❌ |
+| 2 | Marco | Strategy | Template generico | 9 generici | ❌ |
+| 3 | Gianfranco | Account | Template generico | 12 generici | ❌ |
+| 4 | Imane | Research | Template generico | 12 generici | ❌ |
+| 5 | Gigi | Research | Template generico | 12 generici | ❌ |
+| 6 | Felice | Download | Template generico | 9 generici | ❌ |
+| 7 | Robin | Outreach | Template generico | 11 generici | ❌ |
+| 8 | Bruce | Outreach | Template generico | 11 generici | ❌ |
+| 9 | Renato | Outreach | Template generico | 11 generici | ❌ |
+| 10 | Carlo | Outreach | Template generico | 11 generici | ❌ |
+| 11 | Leonardo | Outreach | Template generico | 11 generici | ❌ |
 
-## Architettura
+## Configurazione dedicata per agente
 
-```text
-┌─────────────────────────────────────────────────┐
-│                   /agents                        │
-│  ┌──────────┐  ┌─────────────────────────────┐  │
-│  │ Lista    │  │  Dettaglio Agente           │  │
-│  │ Agenti   │  │  ┌─ Identità & Voce        │  │
-│  │          │  │  ├─ Prompt Editor           │  │
-│  │ + Nuovo  │  │  ├─ Knowledge Base          │  │
-│  │          │  │  ├─ Tool Assegnati          │  │
-│  │ Outreach │  │  ├─ Compiti / Schedule      │  │
-│  │ Analisi  │  │  ├─ Log Attività            │  │
-│  │ Ricerca  │  │  └─ Chat Diretta (voce)     │  │
-│  │ Account  │  │                             │  │
-│  │ Strategy │  └─────────────────────────────┘  │
-│  └──────────┘                                   │
-└─────────────────────────────────────────────────┘
-```
+### 1. Luca — Account Manager Senior (Clienti Premium)
+- **Focus**: Gestione top-tier clienti convertiti, upselling, retention
+- **Prompt**: Specializzato su relazioni VIP, check-in periodici, analisi satisfaction
+- **Tools**: 14 (aggiunge `update_lead_status`, `get_global_summary`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-## Tipologie di Agenti Predefiniti
+### 2. Marco — Chief Strategy Officer
+- **Focus**: Analisi macro, copertura mondiale, allocazione risorse, briefing team
+- **Prompt**: KPI-driven, genera report settimanali, identifica gap geografici, propone priorità
+- **Tools**: 11 (aggiunge `search_contacts`, `search_prospects`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-1. **Outreach Agent** -- Contatta partner via email, verifica holding pattern, programma follow-up, escalation a telefonate
-2. **Download/Sync Agent** -- Gestisce download WCA, verifica completezza directory, retry profili mancanti
-3. **Research Agent** -- Analizza LinkedIn, Report Aziende, decide quali aziende importare, crea elenchi di lavoro
-4. **Account Manager Agent** -- Monitora clienti attivi, verifica utilizzo servizi, propone promozioni per ri-engagement
-5. **Strategy Agent** -- Analizza copertura mondiale, istruisce gli altri agenti, ottimizza priorità di contatto
+### 3. Gianfranco — Account Manager (Re-engagement)
+- **Focus**: Recupero clienti persi/inattivi, promozioni rientro, analisi churn
+- **Prompt**: Specializzato su ex-clienti e clienti dormienti, strategie win-back
+- **Tools**: 14 (aggiunge `check_blacklist`, `update_lead_status`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-## Database (2 nuove tabelle)
+### 4. Imane — Research Analyst (Market Intelligence)
+- **Focus**: Analisi mercato, identificazione target per settore/paese, ranking aziende
+- **Prompt**: Data-driven, crea report di opportunità, valuta quality score partner
+- **Tools**: 14 (aggiunge `create_reminder`, `get_global_summary`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-### Tabella `agents`
-| Colonna | Tipo | Note |
-|---------|------|------|
-| id | uuid PK | |
-| user_id | uuid | RLS per utente |
-| name | text | Nome dell'agente |
-| role | text | outreach, download, research, account, strategy |
-| avatar_emoji | text | Emoji identificativa |
-| system_prompt | text | Prompt personalizzabile |
-| knowledge_base | jsonb | Array di documenti/testi di riferimento |
-| elevenlabs_agent_id | text | ID agente ElevenLabs (opzionale) |
-| elevenlabs_voice_id | text | ID voce ElevenLabs |
-| assigned_tools | jsonb | Array di nomi tool abilitati |
-| schedule_config | jsonb | Configurazione esecuzione (cron, trigger, manuale) |
-| is_active | boolean | Attivo/Disattivo |
-| stats | jsonb | Contatori (tasks completati, email inviate, ecc.) |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+### 5. Gigi — Research Operative (Enrichment)
+- **Focus**: Arricchimento profili, deep search massivo, pulizia dati, alias generation
+- **Prompt**: Operativo puro, esegue batch di enrichment, verifica completezza
+- **Tools**: 14 (aggiunge `update_partner`, `manage_partner_contact`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-### Tabella `agent_tasks`
-| Colonna | Tipo | Note |
-|---------|------|------|
-| id | uuid PK | |
-| agent_id | uuid FK | Riferimento agente |
-| user_id | uuid | RLS |
-| task_type | text | download, outreach, research, analysis, call |
-| description | text | Descrizione del compito |
-| target_filters | jsonb | Filtri target (paese, status, ecc.) |
-| status | text | pending, running, completed, failed, paused |
-| result_summary | text | Riepilogo risultato |
-| execution_log | jsonb | Log dettagliato esecuzione |
-| scheduled_at | timestamptz | Quando eseguire |
-| started_at | timestamptz | |
-| completed_at | timestamptz | |
-| created_at | timestamptz | |
+### 6. Felice — Download Controller
+- **Focus**: Gestione download WCA, monitoraggio job, retry, verifica completezza
+- **Prompt**: Prudente su rate-limit, prioritizza paesi strategici, gestisce code
+- **Tools**: 11 (aggiunge `create_activity`, `save_memory`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-RLS: `auth.uid() = user_id` su entrambe.
+### 7. Robin — Sales Hunter (Primo contatto)
+- **Ruolo cambiato**: outreach → **sales**
+- **Focus**: Primo contatto freddo, qualificazione lead, apertura conversazione
+- **Prompt**: Chris Voss hook + calibrated questions, specializzato in cold outreach
+- **Tools**: 18 (template sales completo)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-## File da creare (nessun file esistente viene toccato)
+### 8. Bruce — Sales Closer (Chiusura contratti)
+- **Ruolo cambiato**: outreach → **sales**
+- **Focus**: Negoziazione finale, gestione obiezioni, chiusura deal
+- **Prompt**: Tecniche di chiusura avanzate, urgenza controllata, proposta contrattuale
+- **Tools**: 18 (template sales + focus su update_lead_status)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-### Frontend
-- **`src/pages/Agents.tsx`** -- Pagina principale con lista agenti + dettaglio
-- **`src/components/agents/AgentCard.tsx`** -- Card agente nella lista
-- **`src/components/agents/AgentDetail.tsx`** -- Pannello dettaglio con tabs
-- **`src/components/agents/AgentPromptEditor.tsx`** -- Editor prompt con preview
-- **`src/components/agents/AgentToolSelector.tsx`** -- Selezione tool abilitati (checkbox dei 42 tool esistenti)
-- **`src/components/agents/AgentKnowledgeBase.tsx`** -- Gestione documenti KB dell'agente
-- **`src/components/agents/AgentTaskList.tsx`** -- Lista compiti assegnati con stato
-- **`src/components/agents/AgentVoiceConfig.tsx`** -- Configurazione voce ElevenLabs (agent_id + voice_id)
-- **`src/components/agents/AgentChat.tsx`** -- Chat diretta con l'agente (testo + voce ElevenLabs)
-- **`src/components/agents/CreateAgentDialog.tsx`** -- Dialog creazione nuovo agente con template predefiniti
-- **`src/hooks/useAgents.ts`** -- Hook CRUD agenti
-- **`src/hooks/useAgentTasks.ts`** -- Hook CRUD task agenti
+### 9. Renato — Outreach Europa
+- **Focus**: Outreach specializzato per mercato europeo (IT, DE, FR, ES, UK, NL)
+- **Prompt**: Multilingue europeo, conosce specificità culturali, regolamenti UE
+- **Tools**: 13 (aggiunge `list_activities`, `update_activity`)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-### Backend
-- **`supabase/functions/agent-execute/index.ts`** -- Edge function che esegue un task per conto di un agente. Riceve agent_id + task_id, carica il prompt e i tool dell'agente, esegue la logica usando lo stesso motore AI dell'ai-assistant (riuso pattern tool-calling), salva risultati in agent_tasks.
+### 10. Carlo — Outreach Asia/Middle East
+- **Focus**: Outreach per mercati asiatici e mediorientali
+- **Prompt**: Adattato a culture business asiatiche, formalità, relazioni lunghe
+- **Tools**: 13 (come Renato)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-### Routing
-- Aggiunta route `/agents` in `App.tsx`
-- Aggiunta voce "Agenti" nella sidebar con icona `Bot`
+### 11. Leonardo — Outreach Americas/Africa
+- **Focus**: Outreach per Americhe e Africa
+- **Prompt**: English-first, adattato a mercati emergenti e consolidati
+- **Tools**: 13 (come Renato)
+- **ElevenLabs**: `agent_3801k1xqxat6et78e3z2a36h579c`
 
-## Flusso Operativo
+## Implementazione
 
-1. L'utente crea un agente (es. "Marco - Outreach Italia") selezionando un template predefinito
-2. Personalizza il prompt, assegna tool specifici, collega voce ElevenLabs
-3. Assegna compiti: "Contatta tutti i partner italiani senza email con deep search, poi genera email di presentazione"
-4. L'agente esegue il compito chiamando `agent-execute`, che usa gli stessi tool dell'ai-assistant
-5. L'utente monitora il progresso in tempo reale nel log del task
-6. Può parlare direttamente con l'agente tramite la chat vocale integrata (ElevenLabs Conversational AI)
+### Cosa viene fatto
+- **11 UPDATE** sulla tabella `agents` via insert tool — uno per agente, ciascuno con:
+  - `system_prompt` dedicato e personalizzato (non il template generico)
+  - `assigned_tools` ottimizzato per la specializzazione
+  - `elevenlabs_agent_id` = `agent_3801k1xqxat6et78e3z2a36h579c`
+  - `avatar_emoji` aggiornato dove il ruolo cambia
+  - `role` aggiornato per Robin e Bruce (→ sales)
 
-## Integrazione ElevenLabs
+### File da modificare
+Nessun file di codice viene toccato. Solo dati nel database.
 
-- **Voce TTS**: Usa l'edge function `elevenlabs-tts` esistente per leggere le risposte dell'agente
-- **Agente Conversazionale**: Usa `@elevenlabs/react` con `useConversation` per chat vocale bidirezionale, collegando l'`elevenlabs_agent_id` configurato dall'utente
-- **Token Server-Side**: Nuova edge function `elevenlabs-conversation-token` per generare token sicuri
-
-## Risultato Atteso
-
-- Nuova sezione "Agenti" nella sidebar con interfaccia premium glassmorphism
-- 5 template agenti predefiniti pronti all'uso
-- Ogni agente ha prompt editabile, tool selezionabili, voce configurabile
-- Gli agenti eseguono task reali sul database usando l'infrastruttura esistente
-- Chat vocale bidirezionale con ogni agente tramite ElevenLabs
-- Zero modifiche ai file esistenti -- tutto il codice è nuovo e additivo
-
-## Dettagli Tecnici
-
-- L'edge function `agent-execute` importa la stessa logica di tool-calling dell'`ai-assistant` ma con prompt e tool filtrati per agente
-- I task vengono eseguiti on-demand (l'utente clicca "Esegui") o schedulati tramite pg_cron
-- Il log di esecuzione è in tempo reale tramite polling su `agent_tasks.execution_log`
-- La KB dell'agente viene iniettata nel system prompt come contesto aggiuntivo
+### Risultato
+Ogni agente avrà un'identità unica con prompt specializzato, tool calibrati per il suo ruolo specifico e voce ElevenLabs collegata. Robin e Bruce diventano i 2 agenti vendita dedicati richiesti.
 
