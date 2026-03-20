@@ -28,6 +28,7 @@ export function AppLayout() {
   const { startJob } = useDownloadProcessor();
   const { data: allJobs = [] } = useDownloadJobs();
   const autoStartedRef = useRef<Set<string>>(new Set());
+  useJobHealthMonitor();
 
   useEffect(() => {
     setSidebarOpen(false);
