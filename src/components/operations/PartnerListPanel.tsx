@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { t } from "@/components/download/theme";
-import { DownloadTerminal } from "@/components/download/DownloadTerminal";
+
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
