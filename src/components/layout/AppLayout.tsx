@@ -84,6 +84,21 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate, startJob]);
 
+  // Safety net polling: auto-start any pending job if no running job exists
+  useEffect(() => {
+    const pendingJob = allJobs.find((j) => j.status === "pending");
+    const hasRunning = allJobs.some((j) => j.status === "running");
+    if (pendingJob && !hasRunning && !autoStartedRef.current.has(pendingJob.id)) {
+      const timer = setTimeout(() => {
+        if (!autoStartedRef.current.has(pendingJob.id)) {
+          autoStartedRef.current.add(pendingJob.id);
+          startJob(pendingJob.id);
+        }
+      }, 10000); // 10s grace period
+      return () => clearTimeout(timer);
+    }
+  }, [allJobs, startJob]);
+
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
