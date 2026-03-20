@@ -93,10 +93,27 @@ function statusLabel(status: string) {
 }
 
 function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("dismissed_job_cards");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const dismiss = useCallback((id: string) => {
+    setDismissedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem("dismissed_job_cards", JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
   const activeJobs = jobs.filter((j) => ["running", "pending"].includes(j.status));
   const recentCompleted = jobs.filter((j) => j.status === "completed").slice(0, 2);
   const recentFailed = jobs.filter((j) => j.status === "failed").slice(0, 2);
-  const displayJobs = [...activeJobs, ...recentFailed, ...recentCompleted].slice(0, 5);
+  const allDisplay = [...activeJobs, ...recentFailed, ...recentCompleted].slice(0, 5);
+  const displayJobs = allDisplay.filter(j => !dismissedIds.has(j.id) || ["running", "pending"].includes(j.status));
 
   if (displayJobs.length === 0) return null;
 
@@ -110,6 +127,7 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
         {displayJobs.map((job) => {
           const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
           const isActive = job.status === "running";
+          const isDismissable = ["completed", "failed", "cancelled"].includes(job.status);
 
           return (
             <div
@@ -145,6 +163,15 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
                   )}>
                     {statusLabel(job.status)}
                   </span>
+                  {isDismissable && (
+                    <button
+                      onClick={() => dismiss(job.id)}
+                      className="ml-1 p-0.5 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                      title="Chiudi notifica"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
