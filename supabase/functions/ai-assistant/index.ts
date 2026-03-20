@@ -693,6 +693,322 @@ const tools = [
       },
     },
   },
+  // ━━━ Contacts (imported_contacts) Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_contacts",
+      description: "Search imported contacts (CRM). Filter by name, company, country, email, origin, lead_status, group (import_log_id).",
+      parameters: {
+        type: "object",
+        properties: {
+          search_name: { type: "string", description: "Contact name (partial match)" },
+          company_name: { type: "string", description: "Company name (partial match)" },
+          country: { type: "string", description: "Country (partial match)" },
+          email: { type: "string", description: "Email (partial match)" },
+          origin: { type: "string", description: "Origin/source filter" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"] },
+          has_email: { type: "boolean" },
+          has_phone: { type: "boolean" },
+          limit: { type: "number", description: "Max results (default 20, max 50)" },
+          count_only: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_contact_detail",
+      description: "Get full details of an imported contact including interactions and enrichment data.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_id: { type: "string", description: "UUID of the contact" },
+          contact_name: { type: "string", description: "Name to search (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Prospects Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_prospects",
+      description: "Search Italian prospects (Report Aziende). Filter by company name, city, province, codice_ateco, fatturato range, lead_status.",
+      parameters: {
+        type: "object",
+        properties: {
+          company_name: { type: "string", description: "Company name (partial match)" },
+          city: { type: "string", description: "City (partial match)" },
+          province: { type: "string", description: "Province code" },
+          region: { type: "string", description: "Region" },
+          codice_ateco: { type: "string", description: "ATECO code (partial match)" },
+          min_fatturato: { type: "number", description: "Minimum revenue" },
+          max_fatturato: { type: "number", description: "Maximum revenue" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"] },
+          has_email: { type: "boolean" },
+          limit: { type: "number", description: "Max results (default 20)" },
+          count_only: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Activities Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "list_activities",
+      description: "List activities/tasks from the agenda. Filter by status, type, source, partner, due date.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["pending", "in_progress", "completed", "cancelled"] },
+          activity_type: { type: "string", enum: ["email", "phone_call", "meeting", "follow_up", "research", "linkedin_message", "whatsapp", "sms", "other"] },
+          source_type: { type: "string", enum: ["partner", "prospect", "contact"] },
+          partner_name: { type: "string", description: "Filter by partner company name" },
+          due_before: { type: "string", description: "Due date before (YYYY-MM-DD)" },
+          due_after: { type: "string", description: "Due date after (YYYY-MM-DD)" },
+          limit: { type: "number" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_activity",
+      description: "Create a new activity/task in the agenda. Can be linked to a partner, prospect, or contact.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Activity title" },
+          description: { type: "string" },
+          activity_type: { type: "string", enum: ["email", "phone_call", "meeting", "follow_up", "research", "linkedin_message", "whatsapp", "sms", "other"] },
+          source_type: { type: "string", enum: ["partner", "prospect", "contact"], description: "Entity type (default: partner)" },
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to resolve partner_id" },
+          due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          email_subject: { type: "string" },
+          email_body: { type: "string" },
+        },
+        required: ["title", "activity_type"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_activity",
+      description: "Update an activity's status, priority, due date, or mark as completed.",
+      parameters: {
+        type: "object",
+        properties: {
+          activity_id: { type: "string", description: "UUID of the activity" },
+          status: { type: "string", enum: ["pending", "in_progress", "completed", "cancelled"] },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          due_date: { type: "string" },
+        },
+        required: ["activity_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Email Generation & Sending Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "generate_outreach",
+      description: "Generate an outreach message (email, LinkedIn, WhatsApp, SMS) for a contact using AI. Returns subject + body ready to send or review.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel: { type: "string", enum: ["email", "linkedin", "whatsapp", "sms"], description: "Communication channel" },
+          contact_name: { type: "string", description: "Recipient name" },
+          contact_email: { type: "string", description: "Recipient email (for email channel)" },
+          company_name: { type: "string", description: "Recipient company" },
+          country_code: { type: "string", description: "ISO country code for language detection" },
+          language: { type: "string", description: "Override language (it, en, es, fr, de, pt)" },
+          goal: { type: "string", description: "Goal of the message (e.g. 'proposta di collaborazione')" },
+          base_proposal: { type: "string", description: "Base proposal text to include" },
+          quality: { type: "string", enum: ["fast", "standard", "premium"], description: "Generation quality" },
+        },
+        required: ["channel", "contact_name", "company_name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description: "Send an email to a partner contact. Requires recipient email, subject, and HTML body. The email is sent via the configured SMTP server.",
+      parameters: {
+        type: "object",
+        properties: {
+          to_email: { type: "string", description: "Recipient email address" },
+          to_name: { type: "string", description: "Recipient name" },
+          subject: { type: "string", description: "Email subject" },
+          html_body: { type: "string", description: "Email body in HTML format" },
+          partner_id: { type: "string", description: "Partner UUID (for tracking)" },
+        },
+        required: ["to_email", "subject", "html_body"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Deep Search & Enrichment Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "deep_search_partner",
+      description: "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Firecrawl. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (if ID not known)" },
+          force: { type: "boolean", description: "Force re-search even if already enriched" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "deep_search_contact",
+      description: "Run a Deep Search on an imported contact to find LinkedIn, social profiles, and additional info. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_id: { type: "string", description: "UUID of the imported contact" },
+          contact_name: { type: "string", description: "Contact name (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "enrich_partner_website",
+      description: "Scrape and analyze a partner's website to extract services, capabilities, and company description. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Directory Scanning Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "scan_directory",
+      description: "Scan the WCA directory for a specific country or search by company name/city. Updates the directory cache with member lists.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "ISO 2-letter country code" },
+          search_by: { type: "string", enum: ["CountryCode", "CompanyName", "City", "MemberID"], description: "Search mode (default: CountryCode)" },
+          company_name: { type: "string", description: "Company name (for CompanyName search)" },
+          city: { type: "string", description: "City (for City search)" },
+          member_id: { type: "number", description: "WCA Member ID (for MemberID search)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Alias Generation Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "generate_aliases",
+      description: "Generate short aliases for partner companies or contacts using AI. Can process single or batch.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_ids: { type: "array", items: { type: "string" }, description: "Array of partner UUIDs to generate aliases for" },
+          country_code: { type: "string", description: "Generate aliases for all partners in this country" },
+          type: { type: "string", enum: ["company", "contact"], description: "Alias type (default: company)" },
+          limit: { type: "number", description: "Max partners to process (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Partner Contact Management ━━━
+  {
+    type: "function",
+    function: {
+      name: "manage_partner_contact",
+      description: "Add, update, or delete a contact person for a partner.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["add", "update", "delete"], description: "Action to perform" },
+          contact_id: { type: "string", description: "UUID of existing contact (for update/delete)" },
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (to resolve partner_id)" },
+          name: { type: "string", description: "Contact full name" },
+          title: { type: "string", description: "Job title/role" },
+          email: { type: "string", description: "Email address" },
+          direct_phone: { type: "string", description: "Direct phone" },
+          mobile: { type: "string", description: "Mobile phone" },
+          is_primary: { type: "boolean", description: "Set as primary contact" },
+        },
+        required: ["action"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Reminder Management ━━━
+  {
+    type: "function",
+    function: {
+      name: "update_reminder",
+      description: "Update or complete/delete a reminder.",
+      parameters: {
+        type: "object",
+        properties: {
+          reminder_id: { type: "string", description: "UUID of the reminder" },
+          status: { type: "string", enum: ["pending", "completed"], description: "New status" },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
+          delete: { type: "boolean", description: "Delete the reminder" },
+        },
+        required: ["reminder_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Delete Operations ━━━
+  {
+    type: "function",
+    function: {
+      name: "delete_records",
+      description: "Delete records from the system. Supports partners, contacts, prospects, activities. ALWAYS ask for confirmation before deleting.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", enum: ["partners", "imported_contacts", "prospects", "activities", "reminders"], description: "Table to delete from" },
+          ids: { type: "array", items: { type: "string" }, description: "Array of UUIDs to delete" },
+        },
+        required: ["table", "ids"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
