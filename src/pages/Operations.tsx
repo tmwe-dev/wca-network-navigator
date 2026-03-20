@@ -116,8 +116,11 @@ export default function Operations() {
   }, []);
 
   const handleRemoveCountry = useCallback((code: string) => {
-    setSelectedCountries(prev => prev.filter(c => c.code !== code));
-    setSelectedPartnerId(null);
+    setSelectedCountries(prev => {
+      const next = prev.filter(c => c.code !== code);
+      if (next.length === 0) setSelectedPartnerId(null);
+      return next;
+    });
   }, []);
 
   const handleDeepSearch = useCallback((partnerIds: string[]) => {
