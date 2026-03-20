@@ -11,6 +11,7 @@ export interface ActiveProcess {
   status: "running" | "pending" | "paused";
   progress?: number; // 0-100
   detail?: string;
+  errorMessage?: string;
 }
 
 /**
