@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, Download, Wand2, Search, Mail, Pause, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, Download, Wand2, Search, Mail, Pause, Play, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useActiveProcesses, type ActiveProcess } from "@/hooks/useActiveProcesses";
+import { usePauseResumeJob } from "@/hooks/useDownloadJobs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +16,16 @@ const typeIcons: Record<ActiveProcess["type"], typeof Download> = {
 export function ActiveProcessIndicator() {
   const { processes, hasActive, runningCount, totalCount, overallProgress } = useActiveProcesses();
   const [expanded, setExpanded] = useState(false);
+  const pauseResume = usePauseResumeJob();
 
   const mainProcess = hasActive ? processes[0] : null;
   const Icon = mainProcess ? (typeIcons[mainProcess.type] || Activity) : Activity;
+
+  const handleAction = (proc: ActiveProcess, action: "pause" | "resume" | "cancel") => {
+    if (proc.type !== "download") return;
+    const jobId = proc.id.replace("dl-", "");
+    pauseResume.mutate({ jobId, action });
+  };
 
   return (
     <div className="relative">
@@ -81,14 +89,14 @@ export function ActiveProcessIndicator() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 mt-1 z-50 w-72 rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
+            className="absolute top-full left-0 mt-1 z-50 w-80 rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
           >
             <div className="px-3 py-2 border-b border-border bg-muted/50">
               <span className="text-[11px] font-semibold text-foreground">Processi Attivi</span>
             </div>
             <div className="max-h-60 overflow-auto divide-y divide-border">
               {processes.map((proc) => (
-                <ProcessRow key={proc.id} process={proc} />
+                <ProcessRow key={proc.id} process={proc} onAction={handleAction} />
               ))}
             </div>
           </motion.div>
@@ -98,9 +106,10 @@ export function ActiveProcessIndicator() {
   );
 }
 
-function ProcessRow({ process }: { process: ActiveProcess }) {
+function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (proc: ActiveProcess, action: "pause" | "resume" | "cancel") => void }) {
   const Icon = typeIcons[process.type] || Activity;
   const isPaused = process.status === "paused";
+  const isDownload = process.type === "download";
 
   return (
     <div className="flex items-center gap-2.5 px-3 py-2">
@@ -129,16 +138,39 @@ function ProcessRow({ process }: { process: ActiveProcess }) {
           </div>
         )}
       </div>
-      <span className={cn(
-        "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full",
-        isPaused
-          ? "bg-amber-500/15 text-amber-500"
-          : process.status === "running"
-            ? "bg-emerald-500/15 text-emerald-500"
-            : "bg-muted text-muted-foreground"
-      )}>
-        {isPaused ? "PAUSA" : process.status === "running" ? "ATTIVO" : "CODA"}
-      </span>
+
+      {/* Controls */}
+      {isDownload && (
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction(process, isPaused ? "resume" : "pause"); }}
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={isPaused ? "Riprendi" : "Pausa"}
+          >
+            {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction(process, "cancel"); }}
+            className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            title="Annulla"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {!isDownload && (
+        <span className={cn(
+          "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full",
+          isPaused
+            ? "bg-amber-500/15 text-amber-500"
+            : process.status === "running"
+              ? "bg-emerald-500/15 text-emerald-500"
+              : "bg-muted text-muted-foreground"
+        )}>
+          {isPaused ? "PAUSA" : process.status === "running" ? "ATTIVO" : "CODA"}
+        </span>
+      )}
     </div>
   );
 }
