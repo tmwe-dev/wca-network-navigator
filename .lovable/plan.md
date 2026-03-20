@@ -1,62 +1,94 @@
 
 
-## Conferma Architettura: Network → CRM → Outreach
+## Audit Uniformità Grafica della Piattaforma
 
-### Come Funziona Oggi
+### Classificazione delle Maschere per Qualità Visiva
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  NETWORK (/network)                                         │
-│  ├── Tab "Download WCA" → Scarica profili WCA               │
-│  │   Salva in: partners + partner_contacts                  │
-│  └── Tab "Rubrica Partner" → Consulta/gestisci partner WCA  │
-│       Legge da: partners + partner_contacts                 │
+│  TIER A — Premium (glassmorphism, animazioni, coerente)     │
 ├─────────────────────────────────────────────────────────────┤
-│  CRM (/crm)                                                 │
-│  ├── Tab "Contatti" → Contatti importati (file, biglietti)  │
-│  │   Legge da: imported_contacts + import_logs              │
-│  ├── Tab "Prospect" → Aziende italiane (Report Aziende)    │
-│  │   Legge da: prospects + prospect_contacts                │
-│  └── Tab "Import" → Importa nuovi file CSV/Excel           │
-│       Scrive in: imported_contacts                          │
+│  Cockpit        │ 3 colonne, glass panels, badge origine    │
+│  Operations     │ glass-panel, stat pills, gradient text    │
+│  Global AI      │ Chat + Globo 3D, dark immersivo          │
+│  SuperHome3D    │ Carosello 3D, prompt AI, dark-first       │
+│  ProspectCenter │ Glassmorphism, stat bar, ATECO grid       │
+│  PartnerHub     │ ResizablePanel, CountryCards, AI bar      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  TIER B — Funzionale ma visivamente più semplice            │
 ├─────────────────────────────────────────────────────────────┤
-│  OUTREACH (/outreach)                                       │
-│  ├── Tab "Cockpit AI" → Centro operativo outreach           │
-│  │   Legge da: TUTTE E TRE le sorgenti (useCockpitContacts)│
-│  │   ├── partner_contacts (origine: "wca")                  │
-│  │   ├── imported_contacts (origine: "import")              │
-│  │   └── prospect_contacts (origine: "report_aziende")      │
-│  ├── Tab "Workspace" → Composizione email con preset        │
-│  ├── Tab "Email Composer" → Editor email avanzato           │
-│  └── Tab "Campagne" → Invio massivo + globo 3D             │
+│  Contacts       │ ResizablePanel, pulito ma nessun effetto  │
+│  Workspace      │ ResizablePanel, GoalBar, nessun glass     │
+│  HubOperativo   │ Card standard shadcn, no glassmorphism    │
+│  EmailComposer  │ Card/Input standard, layout tradizionale  │
+│  Import         │ Card standard, spazio bianco, h1 bold     │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  TIER C — Disallineate o legacy                             │
+├─────────────────────────────────────────────────────────────┤
+│  Reminders      │ h1 "text-3xl", Card standard, testi EN,   │
+│                 │ layout con space-y-6 senza contenimento   │
+│  Settings       │ max-w-3xl, h1 "text-2xl", stile legacy   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Il Passaggio tra i Contenitori
+### Problemi Specifici di Disuniformità
 
-Il **Cockpit** (dentro Outreach) è il punto di convergenza. L'hook `useCockpitContacts` unifica automaticamente i contatti da tutte e tre le sorgenti:
+| Problema | Dove | Standard (Cockpit) |
+|---|---|---|
+| **Titolo pagina h1 text-3xl** | Reminders | Nessun h1 visibile, titolo integrato nella barra |
+| **Testi in inglese** | Reminders ("Track follow-ups", "Pending", "Completed", "Today") | Tutto in italiano |
+| **Layout `space-y-6` senza bordi** | Reminders, Settings | Layout a colonne con `border-border/50` |
+| **`max-w-3xl` che limita la larghezza** | Settings | Full width con pannelli |
+| **Nessun glassmorphism** | Contacts, Workspace, HubOperativo, Import, EmailComposer | `glass-panel`, `float-panel`, backdrop-blur |
+| **Nessuna stat bar / pills** | Contacts, Workspace, Reminders, Import | Stat pills contestuali nella top bar |
+| **Theme toggle autonomo** | Operations, ProspectCenter (proprio isDark) | Tema globale dalla root |
+| **Card shadcn nude** | HubOperativo, Import, Reminders | Card con `bg-card/70 backdrop-blur` |
+| **Nessuna AI bar / assistant** | Contacts, Reminders, Settings, Import (ha ImportAssistant ma separato) | AI integrata nella top bar o pannello laterale |
 
-1. **Da Network**: i `partner_contacts` (collegati ai `partners` WCA) appaiono nel Cockpit con badge blu "WCA"
-2. **Da CRM → Contatti**: gli `imported_contacts` appaiono con badge verde "Import"
-3. **Da CRM → Prospect**: i `prospect_contacts` appaiono con badge arancione "Report Aziende"
+### Le Maschere Più Eleganti
 
-**Non serve nessuna azione manuale** per "spostare" contatti da Network o CRM al Cockpit. Tutti i contatti con un nome valido vengono automaticamente aggregati.
+1. **Cockpit** — Lo standard di riferimento. Tre colonne, drag-and-drop, glassmorphism, badge cromatici, typewriter effect
+2. **Operations** — Stat pills interattive, CountryGrid con effetti hover, glass-panel nella top bar, DownloadTerminal
+3. **Global AI** — Immersivo: chat + globo 3D side-by-side, dark puro
+4. **ProspectCenter** — Gradient backgrounds animati, stat bar arrotondata, search con styling custom
 
-### Cosa NON Esiste Ancora (Potenziale Miglioramento)
+### Le Maschere Più Deboli
 
-Attualmente il Cockpit mostra **tutti** i contatti indistintamente. Non esiste un meccanismo di "selezione esplicita" tipo:
-- "Aggiungi questo partner al prossimo giro di outreach"
-- "Sposta questo prospect nel mio focus list"
+1. **Reminders** — La più disallineata. Testi in inglese, titolo gigante, nessun effetto glass, layout piatto con Card standard
+2. **Settings** — Max-width stretto, layout tradizionale, nessun effetto premium
+3. **Import** — Funzionale ma visivamente piatto, usa Card/Button standard senza glass
+4. **HubOperativo** — Card standard, nessun effetto, layout a lista semplice
 
-Se vuoi un flusso più controllato dove **decidi tu** quali contatti portare nel Cockpit (invece di vederli tutti), servirebbe un sistema di "staging" o "focus list". Ma al momento il design è: **tutto converge automaticamente nel Cockpit**, filtri e priorità ti aiutano a concentrarti.
+### La Piattaforma È Uniforme?
 
-### Riepilogo
+**No.** Esistono almeno 3 livelli grafici distinti. Le maschere del Tier A (Cockpit, Operations, Global) sono coerenti tra loro e seguono il design system premium. Le maschere del Tier B e C non adottano glassmorphism, stat pills, o AI bar integrata, risultando visivamente più piatte e datate.
 
-| Ambiente | Sorgente Dati | Direzione |
-|----------|--------------|-----------|
-| Network | `partners` + `partner_contacts` | Acquisizione WCA |
-| CRM | `imported_contacts` + `prospects` + `prospect_contacts` | Gestione contatti non-WCA |
-| Outreach (Cockpit) | Tutte e tre le sorgenti via `useCockpitContacts` | Azione commerciale |
+### Piano di Armonizzazione
 
-Il sistema è già funzionante così. Se vuoi aggiungere un livello di selezione esplicita (focus list / staging), posso pianificarlo come prossimo step.
+Per portare tutte le maschere al livello del Cockpit servirebbe:
+
+**Priorità 1 — Reminders (la più critica)**
+- Tradurre tutti i testi in italiano
+- Rimuovere h1 text-3xl, adottare top bar con glass-panel
+- Applicare glassmorphism alle Card del calendario
+- Aggiungere stat pills (reminder pendenti, completati, scaduti)
+
+**Priorità 2 — Settings**
+- Rimuovere max-w-3xl, adottare layout full-width con pannello laterale
+- Applicare glass panels ai contenitori delle sezioni
+
+**Priorità 3 — Import / EmailComposer / HubOperativo**
+- Sostituire Card standard con float-panel o glass-panel
+- Aggiungere top bar con stat pills contestuali
+- Allineare lo stile degli input (rounded-xl, bg-white/5)
+
+**Priorità 4 — Contacts / Workspace**
+- Applicare glassmorphism ai pannelli ResizablePanel
+- Aggiungere stat bar sopra la lista contatti
+
+Questo intervento richiederebbe la modifica di circa 6-8 file pagina e relativi componenti. Vuoi procedere con una priorità specifica?
 
