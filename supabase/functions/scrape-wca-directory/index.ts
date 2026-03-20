@@ -118,11 +118,24 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { countryCode, network, pageIndex, pageSize } = await req.json()
+    const { countryCode, network, pageIndex, pageSize, searchBy, companyName, city, memberId } = await req.json()
 
-    if (!countryCode) {
+    // Supported WCA search modes:
+    // - CountryCode (default): search by country ISO code
+    // - CompanyName: search by company name text
+    // - City: search by city name
+    // - MemberID: search by WCA member ID number
+    const searchMode = searchBy || 'CountryCode'
+
+    if (searchMode === 'CountryCode' && !countryCode) {
       return new Response(
-        JSON.stringify({ success: false, error: 'countryCode is required (e.g. "AL")' }),
+        JSON.stringify({ success: false, error: 'countryCode is required when searching by CountryCode' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (searchMode === 'CompanyName' && !companyName) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'companyName is required when searching by CompanyName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -136,11 +149,23 @@ Deno.serve(async (req) => {
     params.set('siteID', '24')
     params.set('pageIndex', String(currentPage))
     params.set('pageSize', String(size))
-    params.set('searchby', 'CountryCode')
-    params.set('country', countryCode)
+    params.set('searchby', searchMode)
     params.set('orderby', 'CountryCity')
     params.set('layout', 'v1')
     params.set('submitted', 'search')
+
+    // Set search value based on mode
+    if (searchMode === 'CountryCode') {
+      params.set('country', countryCode)
+    } else if (searchMode === 'CompanyName') {
+      params.set('company', companyName)
+      if (countryCode) params.set('country', countryCode)
+    } else if (searchMode === 'City') {
+      params.set('city', city || '')
+      if (countryCode) params.set('country', countryCode)
+    } else if (searchMode === 'MemberID') {
+      params.set('memberid', String(memberId || ''))
+    }
     
     const networkParams = networkIds.map(id => `networkIds=${id}`).join('&')
     const url = `https://www.wcaworld.com/Directory?${params.toString()}&${networkParams}`
