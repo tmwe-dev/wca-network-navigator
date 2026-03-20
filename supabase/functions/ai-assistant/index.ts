@@ -1066,9 +1066,14 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 
   if (!wcaId) return { error: `"${companyName}" non trovata né nel database né nella directory cache. Prova a eseguire prima una scansione della directory per il paese corrispondente.` };
 
-  // Step 3: Check for active jobs
-  const { data: activeJobs } = await supabase.from("download_jobs").select("id, status").in("status", ["pending", "running"]).limit(5);
-  if (activeJobs && activeJobs.length >= 3) return { error: `Ci sono già ${activeJobs.length} job attivi. Attendi il completamento.` };
+  // Step 3: Check dead IDs
+  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
+  const deadIdSet = new Set((deadRows || []).map((r: any) => Number(r.wca_id)));
+  if (deadIdSet.has(Number(wcaId))) return { error: `"${companyName}" (WCA ID: ${wcaId}) è nella lista "senza contatti". Probabilmente non ha dati utili.` };
+
+  // Step 4: Check for active jobs — limit 1 (aligned with UI)
+  const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, country_code").in("status", ["pending", "running"]).limit(5);
+  if (activeJobs && activeJobs.length >= 1) return { error: `C'è già un job attivo. Attendi il completamento prima di avviarne un altro.`, active_job_id: activeJobs[0].id };
 
   // Step 4: Determine country info
   let jobCountryCode = countryCode || "";
