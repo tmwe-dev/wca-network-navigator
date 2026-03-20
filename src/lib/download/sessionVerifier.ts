@@ -1,12 +1,10 @@
 import { appendLog } from "./terminalLog";
-import { supabase } from "@/integrations/supabase/client";
 
 /**
- * V3: Session verification with aggressive auto-login.
+ * V4: Session verification extension-first only.
  * 1. Try extension verify (local cookie check)
- * 2. If no extension → DB fallback (app_settings wca_session_status)
- * 3. If session not active → auto-login via extension
- * 4. If auto-login fails → try DB fallback as last resort
+ * 2. If session not active → auto-login via extension
+ * 3. No server-side fallback: the browser extension is the only source of truth
  */
 
 function sendToExtension(action: string, payload: Record<string, any> = {}, timeoutMs = 15_000): Promise<any> {
@@ -32,19 +30,6 @@ function sendToExtension(action: string, payload: Record<string, any> = {}, time
       window.location.origin
     );
   });
-}
-
-async function checkDbSessionStatus(): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "wca_session_status")
-      .maybeSingle();
-    return data?.value === "ok";
-  } catch {
-    return false;
-  }
 }
 
 async function attemptAutoLogin(jobId: string): Promise<boolean> {
@@ -90,14 +75,7 @@ export async function verifyWcaSession(
   const extOk = isAvailable || await checkAvailable();
 
   if (!extOk) {
-    await appendLog(jobId, "WARN", "⚠️ Estensione Chrome non rilevata — controllo sessione server...");
-    // DB fallback when no extension
-    const dbOk = await checkDbSessionStatus();
-    if (dbOk) {
-      await appendLog(jobId, "INFO", "✅ Sessione WCA attiva (verificata lato server)");
-      return true;
-    }
-    await appendLog(jobId, "WARN", "❌ Sessione WCA non attiva e estensione non disponibile");
+    await appendLog(jobId, "WARN", "❌ Estensione Chrome non rilevata — i download WCA richiedono il browser reale");
     return false;
   }
 
@@ -111,13 +89,6 @@ export async function verifyWcaSession(
   // Step 3: Auto-login attempt
   const loginOk = await attemptAutoLogin(jobId);
   if (loginOk) return true;
-
-  // Step 4: Last resort — check DB
-  const dbFallback = await checkDbSessionStatus();
-  if (dbFallback) {
-    await appendLog(jobId, "INFO", "✅ Sessione WCA attiva (fallback server)");
-    return true;
-  }
 
   await appendLog(jobId, "WARN", "❌ Sessione WCA non attivabile — login manuale richiesto");
   return false;

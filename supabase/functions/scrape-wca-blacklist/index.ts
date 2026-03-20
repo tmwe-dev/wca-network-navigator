@@ -39,11 +39,6 @@ Deno.serve(async (req) => {
     console.log("Testing WCA session...");
     const authenticated = await testCookie(cookie);
     if (!authenticated) {
-      // Update status
-      await supabase.from("app_settings").upsert(
-        { key: "wca_session_status", value: "expired", updated_at: new Date().toISOString() },
-        { onConflict: "key" }
-      );
       return new Response(
         JSON.stringify({ success: false, error: "WCA session expired. Please update your cookie in Settings." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }

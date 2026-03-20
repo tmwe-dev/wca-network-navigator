@@ -138,11 +138,6 @@ Deno.serve(async (req) => {
 
     if (!hasAuthCookie) {
       console.log('wca-auto-login: FAILED — no auth cookie found after login')
-      const now = new Date().toISOString()
-      await supabase.from('app_settings').upsert(
-        { key: 'wca_session_status', value: 'expired', updated_at: now },
-        { onConflict: 'key' }
-      )
       return respond({ 
         success: false, 
         authenticated: false, 
@@ -183,11 +178,6 @@ Deno.serve(async (req) => {
         debug: { hasAspxAuth, hasWcaCookie, redirectCount, cookieCount: currentCookies.length },
       })
     } else {
-      await supabase.from('app_settings').upsert(
-        { key: 'wca_session_status', value: 'expired', updated_at: now },
-        { onConflict: 'key' }
-      )
-      
       console.log('wca-auto-login: FAILED — auth cookie present but private contacts not visible')
       return respond({ 
         success: false, 
