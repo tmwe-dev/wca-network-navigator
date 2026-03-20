@@ -149,6 +149,7 @@ export default function Operations() {
   }, [aliasGenerating, queryClient]);
 
   const th = t(isDark);
+  const hasDetailOpen = !isMobile && !!selectedPartnerId && !!selectedPartner;
 
   return (
     <ThemeCtx.Provider value={isDark}>
@@ -246,17 +247,17 @@ export default function Operations() {
           </div>
           </TooltipProvider>
 
-          {/* ═══ MAIN: Country Grid + Partner List + Detail ═══ */}
+          {/* ═══ MAIN: 3-column layout ═══ */}
           <div className={cn(
             "flex-1 min-h-0 px-4 pb-3 gap-3",
             isMobile ? "flex flex-col overflow-y-auto" : "flex"
           )}>
-            {/* LEFT: Country Grid — always single column */}
+            {/* COL 1: Country Grid */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
               isMobile
                 ? (hasSelection ? "max-h-[35vh]" : "")
-                : "w-[280px]"
+                : (hasDetailOpen ? "w-[220px]" : "w-[280px]")
             )}>
               <CountryGrid
                 selected={selectedCountries}
@@ -277,7 +278,7 @@ export default function Operations() {
               )}
             </div>
 
-            {/* RIGHT: Partner List + Detail overlay */}
+            {/* COL 2: Partner List */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
             {hasSelection ? (
               <>
@@ -300,26 +301,6 @@ export default function Operations() {
                     onSelectPartner={setSelectedPartnerId}
                     selectedPartnerId={selectedPartnerId}
                   />
-
-                  {/* Detail overlay slide-in */}
-                  {selectedPartnerId && selectedPartner && (
-                    <div className="absolute inset-0 z-20 flex flex-col animate-in slide-in-from-right-8 duration-200 bg-background/95 backdrop-blur-md">
-                      <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
-                        <button onClick={() => setSelectedPartnerId(null)}
-                          className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted">
-                          <X className="w-4 h-4" /> Chiudi
-                        </button>
-                      </div>
-                      <div className="flex-1 min-h-0 overflow-auto">
-                        <PartnerDetailCompact
-                          partner={selectedPartner}
-                          onBack={() => setSelectedPartnerId(null)}
-                          onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-                          isDark={isDark}
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   {/* Deep Search Canvas overlay */}
                   <DeepSearchCanvas
@@ -359,6 +340,26 @@ export default function Operations() {
               </div>
             )}
             </div>
+
+            {/* COL 3: Partner Detail — separate column */}
+            {hasDetailOpen && (
+              <div className="w-[380px] flex-shrink-0 min-h-0 flex flex-col rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden animate-in slide-in-from-right-8 duration-200">
+                <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
+                  <button onClick={() => setSelectedPartnerId(null)}
+                    className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted">
+                    <X className="w-4 h-4" /> Chiudi
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-auto">
+                  <PartnerDetailCompact
+                    partner={selectedPartner}
+                    onBack={() => setSelectedPartnerId(null)}
+                    onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                    isDark={isDark}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
