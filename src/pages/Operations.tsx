@@ -12,7 +12,7 @@ import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
-import { DownloadTerminal } from "@/components/download/DownloadTerminal";
+import { DownloadTerminalDialog } from "@/components/download/DownloadTerminal";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
@@ -280,7 +280,6 @@ export default function Operations() {
               {(activeJobs.length > 0 || showTerminal) && !hasSelection && !isMobile && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <ActiveJobBar />
-                  {showTerminal && <DownloadTerminal />}
                   <JobMonitor />
                 </div>
               )}
@@ -333,12 +332,8 @@ export default function Operations() {
                   />
                 </div>
 
-                {/* Terminal below partner panel */}
-                {showTerminal && (
-                  <div className="flex-shrink-0">
-                    <DownloadTerminal />
-                  </div>
-                )}
+
+
               </>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
@@ -378,6 +373,7 @@ export default function Operations() {
         </div>
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
+      <DownloadTerminalDialog open={showTerminal} onOpenChange={setShowTerminal} />
     </ThemeCtx.Provider>
   );
 }
