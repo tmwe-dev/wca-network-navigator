@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Globe, Rocket } from "lucide-react";
 
@@ -14,51 +14,13 @@ export default function Dashboard() {
   const [tab, setTab] = useState("home");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Block wheel / trackpad gestures inside dashboard
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const blockWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > 2) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    const blockTouchMove = (e: TouchEvent) => {
-      if (e.touches.length >= 2) {
-        e.preventDefault();
-      }
-    };
-
-    el.addEventListener("wheel", blockWheel, { passive: false });
-    el.addEventListener("touchmove", blockTouchMove, { passive: false });
-
-    return () => {
-      el.removeEventListener("wheel", blockWheel);
-      el.removeEventListener("touchmove", blockTouchMove);
-    };
-  }, []);
-
-  // Hard-lock browser back/forward gestures while inside Dashboard
-  useEffect(() => {
-    const stateMarker = { dashboardLock: true, ts: Date.now() };
-    window.history.pushState(stateMarker, "", window.location.href);
-
-    const handlePopState = () => {
-      window.history.pushState(stateMarker, "", window.location.href);
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  // No wheel/popstate hijacking needed with clean scroll layout
 
   return (
     <div
       ref={containerRef}
       className="flex flex-col h-full overflow-hidden"
-      style={{ overscrollBehavior: "none", touchAction: "none" }}
+      style={{ overscrollBehavior: "none" }}
     >
       <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
         <Tabs value={tab} onValueChange={setTab}>
