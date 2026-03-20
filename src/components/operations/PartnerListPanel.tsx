@@ -114,7 +114,7 @@ export function PartnerListPanel({
   // Auto-select first partner when list loads and nothing is selected
   useEffect(() => {
     if (!selectedPartnerId && filteredPartners.length > 0 && onSelectPartner) {
-      onSelectPartner(filteredPartners[0].id);
+      onSelectPartner((filteredPartners[0] as any).id);
     }
   }, [filteredPartners, selectedPartnerId, onSelectPartner]);
 
