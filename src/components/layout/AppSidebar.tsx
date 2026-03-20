@@ -4,7 +4,7 @@ import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, BookOpen, Send, Sparkles, Bot,
   Users, Command, Upload, UserCheck, Zap,
-  Rocket, Microscope, Download, Briefcase,
+  Rocket, Microscope, Download, Briefcase, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +21,7 @@ const navSections = [
       { title: "Outreach", url: "/outreach", icon: Rocket },
       { title: "Agenda", url: "/agenda", icon: Calendar },
       { title: "Agenti", url: "/agents", icon: Bot },
+      { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
     ],
   },
   {

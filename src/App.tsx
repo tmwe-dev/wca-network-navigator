@@ -18,6 +18,7 @@ const CRM = lazy(() => import("./pages/CRM"));
 const Outreach = lazy(() => import("./pages/Outreach"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Agents = lazy(() => import("./pages/Agents"));
+const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
 
 // ── Standalone pages ──
 const Auth = lazy(() => import("./pages/Auth"));
@@ -72,6 +73,7 @@ const App = () => (
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
                   <Route path="/agents" element={<Agents />} />
+                  <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
 
                   {/* ── Legacy pages kept alive ── */}
