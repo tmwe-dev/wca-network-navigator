@@ -25,6 +25,8 @@ export function AppLayout() {
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
   const { startJob } = useDownloadProcessor();
+  const { data: allJobs = [] } = useDownloadJobs();
+  const autoStartedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setSidebarOpen(false);
