@@ -601,10 +601,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         }
 
         // Open WCA login page in background tab
-        var tab = await chrome.tabs.create({
-          url: "https://www.wcaworld.com/Account/Login",
-          active: false,
-        });
+        var tab = await safeCreateTab("https://www.wcaworld.com/Account/Login");
 
         await waitForTabLoad(tab.id, 20000);
 
@@ -631,7 +628,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         });
         var formResult = injRes[0] && injRes[0].result;
         if (!formResult || !formResult.success) {
-          try { chrome.tabs.remove(tab.id); } catch (e) {}
+          safeRemoveTab(tab.id);
           sendResponse({ success: false, error: (formResult && formResult.error) || "Form non trovato" });
           return;
         }
@@ -653,7 +650,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         // Sync cookies after login
         await syncWcaCookiesToServer();
 
-        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        safeRemoveTab(tab.id);
         sendResponse({ success: true });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
