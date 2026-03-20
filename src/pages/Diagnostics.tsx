@@ -337,7 +337,7 @@ export default function Diagnostics() {
           }
         };
         window.addEventListener("message", handler);
-        window.postMessage({ direction: "from-webapp", action: "ping", requestId: reqId }, "*");
+        window.postMessage({ direction: "from-webapp", action: "ping", requestId: reqId }, window.location.origin);
       });
       upsert({ id, name: "Estensione WCA", category: "Estensioni Browser", status: ok ? "pass" : "warn", message: ok ? "Connessa" : "Non rilevata (timeout)" });
     } catch {

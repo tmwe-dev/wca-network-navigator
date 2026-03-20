@@ -77,7 +77,7 @@ export function useLinkedInExtensionBridge() {
           resolve(response);
         });
 
-        window.postMessage({ direction: "from-webapp-li", action, requestId, ...payload }, "*");
+        window.postMessage({ direction: "from-webapp-li", action, requestId, ...payload }, window.location.origin);
       });
     },
     []

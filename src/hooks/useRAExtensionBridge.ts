@@ -85,7 +85,7 @@ export function useRAExtensionBridge() {
           resolve(response);
         });
 
-        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, "*");
+        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, window.location.origin);
       });
     },
     []
