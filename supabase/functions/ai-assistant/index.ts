@@ -106,14 +106,46 @@ Quando suggerisci un'azione, fornisci SEMPRE un link diretto:
 
 Formatta i link così: [Nome Pagina](/percorso).
 
-TOOL DI SCRITTURA
+TOOL DI SCRITTURA E AZIONE
 
-Hai accesso a tool che MODIFICANO i dati. Usali quando l'utente chiede di:
-- Aggiornare un partner (rating, preferiti, lead status, alias): usa update_partner
-- Aggiungere una nota a un partner: usa add_partner_note
-- Creare un reminder/promemoria: usa create_reminder
-- Aggiornare lo stato lead di contatti importati: usa update_lead_status
-- Aggiornare più partner in blocco: usa bulk_update_partners
+Hai accesso a tool che LEGGONO E MODIFICANO i dati. Puoi fare TUTTO quello che può fare un utente umano:
+
+GESTIONE PARTNER:
+- Cercare, filtrare, aggiornare partner (rating, preferiti, lead status, alias): search_partners, update_partner
+- Aggiungere note/interazioni: add_partner_note
+- Gestire contatti di un partner (aggiungere, modificare, eliminare): manage_partner_contact
+- Aggiornare più partner in blocco: bulk_update_partners
+
+GESTIONE CONTATTI CRM (imported_contacts):
+- Cercare contatti importati: search_contacts, get_contact_detail
+- Aggiornare lo stato lead: update_lead_status
+
+GESTIONE PROSPECT (Report Aziende):
+- Cercare prospect italiani: search_prospects
+
+ATTIVITÀ E AGENDA:
+- Creare attività (email, telefonate, meeting, follow-up, research): create_activity
+- Elencare e filtrare attività: list_activities
+- Aggiornare stato attività: update_activity
+- Creare e gestire reminder: create_reminder, update_reminder, list_reminders
+
+EMAIL E OUTREACH:
+- Generare messaggi outreach multi-canale (email, LinkedIn, WhatsApp, SMS): generate_outreach
+- Inviare email direttamente: send_email
+
+RICERCA E ARRICCHIMENTO:
+- Deep Search partner (logo, social, info web): deep_search_partner
+- Deep Search contatto (LinkedIn, social): deep_search_contact
+- Arricchimento sito web partner: enrich_partner_website
+- Generare alias company/contact: generate_aliases
+
+DIRECTORY WCA:
+- Scansionare directory per paese, nome, città o ID: scan_directory
+- Scaricare profili singoli o per paese: download_single_partner, create_download_job
+
+OPERAZIONI DISTRUTTIVE:
+- Eliminare record (partner, contatti, prospect, attività, reminder): delete_records
+- CHIEDI SEMPRE CONFERMA prima di eliminare!
 
 REGOLA CRITICA PER I DOWNLOAD:
 - Se l'utente chiede di scaricare UN SINGOLO PARTNER specifico (per nome): usa **download_single_partner** — NON creare un piano multi-step e NON usare create_download_job che scarica l'intero paese!
@@ -693,6 +725,322 @@ const tools = [
       },
     },
   },
+  // ━━━ Contacts (imported_contacts) Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_contacts",
+      description: "Search imported contacts (CRM). Filter by name, company, country, email, origin, lead_status, group (import_log_id).",
+      parameters: {
+        type: "object",
+        properties: {
+          search_name: { type: "string", description: "Contact name (partial match)" },
+          company_name: { type: "string", description: "Company name (partial match)" },
+          country: { type: "string", description: "Country (partial match)" },
+          email: { type: "string", description: "Email (partial match)" },
+          origin: { type: "string", description: "Origin/source filter" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"] },
+          has_email: { type: "boolean" },
+          has_phone: { type: "boolean" },
+          limit: { type: "number", description: "Max results (default 20, max 50)" },
+          count_only: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_contact_detail",
+      description: "Get full details of an imported contact including interactions and enrichment data.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_id: { type: "string", description: "UUID of the contact" },
+          contact_name: { type: "string", description: "Name to search (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Prospects Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "search_prospects",
+      description: "Search Italian prospects (Report Aziende). Filter by company name, city, province, codice_ateco, fatturato range, lead_status.",
+      parameters: {
+        type: "object",
+        properties: {
+          company_name: { type: "string", description: "Company name (partial match)" },
+          city: { type: "string", description: "City (partial match)" },
+          province: { type: "string", description: "Province code" },
+          region: { type: "string", description: "Region" },
+          codice_ateco: { type: "string", description: "ATECO code (partial match)" },
+          min_fatturato: { type: "number", description: "Minimum revenue" },
+          max_fatturato: { type: "number", description: "Maximum revenue" },
+          lead_status: { type: "string", enum: ["new", "contacted", "in_progress", "negotiation", "converted", "lost"] },
+          has_email: { type: "boolean" },
+          limit: { type: "number", description: "Max results (default 20)" },
+          count_only: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Activities Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "list_activities",
+      description: "List activities/tasks from the agenda. Filter by status, type, source, partner, due date.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["pending", "in_progress", "completed", "cancelled"] },
+          activity_type: { type: "string", enum: ["email", "phone_call", "meeting", "follow_up", "research", "linkedin_message", "whatsapp", "sms", "other"] },
+          source_type: { type: "string", enum: ["partner", "prospect", "contact"] },
+          partner_name: { type: "string", description: "Filter by partner company name" },
+          due_before: { type: "string", description: "Due date before (YYYY-MM-DD)" },
+          due_after: { type: "string", description: "Due date after (YYYY-MM-DD)" },
+          limit: { type: "number" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_activity",
+      description: "Create a new activity/task in the agenda. Can be linked to a partner, prospect, or contact.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Activity title" },
+          description: { type: "string" },
+          activity_type: { type: "string", enum: ["email", "phone_call", "meeting", "follow_up", "research", "linkedin_message", "whatsapp", "sms", "other"] },
+          source_type: { type: "string", enum: ["partner", "prospect", "contact"], description: "Entity type (default: partner)" },
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name to resolve partner_id" },
+          due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          email_subject: { type: "string" },
+          email_body: { type: "string" },
+        },
+        required: ["title", "activity_type"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_activity",
+      description: "Update an activity's status, priority, due date, or mark as completed.",
+      parameters: {
+        type: "object",
+        properties: {
+          activity_id: { type: "string", description: "UUID of the activity" },
+          status: { type: "string", enum: ["pending", "in_progress", "completed", "cancelled"] },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          due_date: { type: "string" },
+        },
+        required: ["activity_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Email Generation & Sending Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "generate_outreach",
+      description: "Generate an outreach message (email, LinkedIn, WhatsApp, SMS) for a contact using AI. Returns subject + body ready to send or review.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel: { type: "string", enum: ["email", "linkedin", "whatsapp", "sms"], description: "Communication channel" },
+          contact_name: { type: "string", description: "Recipient name" },
+          contact_email: { type: "string", description: "Recipient email (for email channel)" },
+          company_name: { type: "string", description: "Recipient company" },
+          country_code: { type: "string", description: "ISO country code for language detection" },
+          language: { type: "string", description: "Override language (it, en, es, fr, de, pt)" },
+          goal: { type: "string", description: "Goal of the message (e.g. 'proposta di collaborazione')" },
+          base_proposal: { type: "string", description: "Base proposal text to include" },
+          quality: { type: "string", enum: ["fast", "standard", "premium"], description: "Generation quality" },
+        },
+        required: ["channel", "contact_name", "company_name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description: "Send an email to a partner contact. Requires recipient email, subject, and HTML body. The email is sent via the configured SMTP server.",
+      parameters: {
+        type: "object",
+        properties: {
+          to_email: { type: "string", description: "Recipient email address" },
+          to_name: { type: "string", description: "Recipient name" },
+          subject: { type: "string", description: "Email subject" },
+          html_body: { type: "string", description: "Email body in HTML format" },
+          partner_id: { type: "string", description: "Partner UUID (for tracking)" },
+        },
+        required: ["to_email", "subject", "html_body"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Deep Search & Enrichment Tools ━━━
+  {
+    type: "function",
+    function: {
+      name: "deep_search_partner",
+      description: "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Firecrawl. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (if ID not known)" },
+          force: { type: "boolean", description: "Force re-search even if already enriched" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "deep_search_contact",
+      description: "Run a Deep Search on an imported contact to find LinkedIn, social profiles, and additional info. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_id: { type: "string", description: "UUID of the imported contact" },
+          contact_name: { type: "string", description: "Contact name (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "enrich_partner_website",
+      description: "Scrape and analyze a partner's website to extract services, capabilities, and company description. Costs credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (if ID not known)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Directory Scanning Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "scan_directory",
+      description: "Scan the WCA directory for a specific country or search by company name/city. Updates the directory cache with member lists.",
+      parameters: {
+        type: "object",
+        properties: {
+          country_code: { type: "string", description: "ISO 2-letter country code" },
+          search_by: { type: "string", enum: ["CountryCode", "CompanyName", "City", "MemberID"], description: "Search mode (default: CountryCode)" },
+          company_name: { type: "string", description: "Company name (for CompanyName search)" },
+          city: { type: "string", description: "City (for City search)" },
+          member_id: { type: "number", description: "WCA Member ID (for MemberID search)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Alias Generation Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "generate_aliases",
+      description: "Generate short aliases for partner companies or contacts using AI. Can process single or batch.",
+      parameters: {
+        type: "object",
+        properties: {
+          partner_ids: { type: "array", items: { type: "string" }, description: "Array of partner UUIDs to generate aliases for" },
+          country_code: { type: "string", description: "Generate aliases for all partners in this country" },
+          type: { type: "string", enum: ["company", "contact"], description: "Alias type (default: company)" },
+          limit: { type: "number", description: "Max partners to process (default 20)" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Partner Contact Management ━━━
+  {
+    type: "function",
+    function: {
+      name: "manage_partner_contact",
+      description: "Add, update, or delete a contact person for a partner.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["add", "update", "delete"], description: "Action to perform" },
+          contact_id: { type: "string", description: "UUID of existing contact (for update/delete)" },
+          partner_id: { type: "string", description: "UUID of the partner" },
+          company_name: { type: "string", description: "Company name (to resolve partner_id)" },
+          name: { type: "string", description: "Contact full name" },
+          title: { type: "string", description: "Job title/role" },
+          email: { type: "string", description: "Email address" },
+          direct_phone: { type: "string", description: "Direct phone" },
+          mobile: { type: "string", description: "Mobile phone" },
+          is_primary: { type: "boolean", description: "Set as primary contact" },
+        },
+        required: ["action"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Reminder Management ━━━
+  {
+    type: "function",
+    function: {
+      name: "update_reminder",
+      description: "Update or complete/delete a reminder.",
+      parameters: {
+        type: "object",
+        properties: {
+          reminder_id: { type: "string", description: "UUID of the reminder" },
+          status: { type: "string", enum: ["pending", "completed"], description: "New status" },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
+          delete: { type: "boolean", description: "Delete the reminder" },
+        },
+        required: ["reminder_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Delete Operations ━━━
+  {
+    type: "function",
+    function: {
+      name: "delete_records",
+      description: "Delete records from the system. Supports partners, contacts, prospects, activities. ALWAYS ask for confirmation before deleting.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", enum: ["partners", "imported_contacts", "prospects", "activities", "reminders"], description: "Table to delete from" },
+          ids: { type: "array", items: { type: "string" }, description: "Array of UUIDs to delete" },
+        },
+        required: ["table", "ids"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1190,7 +1538,7 @@ async function executeCreateWorkPlan(args: Record<string, unknown>, userId: stri
   return { success: true, plan: data, message: `Piano "${args.title}" creato con ${steps.length} step. Eseguirò gli step progressivamente.` };
 }
 
-async function executeExecutePlanStep(args: Record<string, unknown>, userId: string) {
+async function executeExecutePlanStep(args: Record<string, unknown>, userId: string, authHeader?: string) {
   const { data: plan, error } = await supabase.from("ai_work_plans").select("*")
     .eq("id", args.plan_id).eq("user_id", userId).single();
   if (error || !plan) return { error: "Piano non trovato" };
@@ -1215,7 +1563,7 @@ async function executeExecutePlanStep(args: Record<string, unknown>, userId: str
       // UI actions are returned to frontend, not executed server-side
       stepResult = { ui_action: step.params, message: "Azione UI da eseguire sul frontend" };
     } else {
-      stepResult = await executeTool(step.action, step.params || {});
+      stepResult = await executeTool(step.action, step.params || {}, userId, authHeader);
     }
     step.status = "done";
     step.result = stepResult;
@@ -1500,8 +1848,306 @@ async function executeLinkBusinessCard(args: Record<string, unknown>) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// VERIFICATION / STATUS CHECK TOOL
+// NEW TOOLS — Contacts, Prospects, Activities, Email, Deep Search, Directory, Aliases, Contact Mgmt
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function executeSearchContacts(args: Record<string, unknown>) {
+  const isCount = !!args.count_only;
+  let query = supabase.from("imported_contacts").select(
+    isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
+    isCount ? { count: "exact", head: true } : undefined
+  );
+  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.email) query = query.ilike("email", `%${args.email}%`);
+  if (args.origin) query = query.ilike("origin", `%${args.origin}%`);
+  if (args.lead_status) query = query.eq("lead_status", args.lead_status);
+  if (args.has_email === true) query = query.not("email", "is", null);
+  if (args.has_email === false) query = query.is("email", null);
+  if (args.has_phone === true) query = query.or("phone.not.is.null,mobile.not.is.null");
+  // Quality filter
+  query = query.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+  query = query.order("created_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+  const { data, error, count } = await query;
+  if (error) return { error: error.message };
+  if (isCount) return { count };
+  return { count: data?.length || 0, contacts: data || [] };
+}
+
+async function executeGetContactDetail(args: Record<string, unknown>) {
+  let contact: any = null;
+  if (args.contact_id) {
+    const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
+    contact = data;
+  } else if (args.contact_name) {
+    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    contact = data;
+  }
+  if (!contact) return { error: "Contatto non trovato" };
+  const { data: interactions } = await supabase.from("contact_interactions").select("*").eq("contact_id", contact.id).order("created_at", { ascending: false }).limit(10);
+  return { ...contact, interactions: interactions || [] };
+}
+
+async function executeSearchProspects(args: Record<string, unknown>) {
+  const isCount = !!args.count_only;
+  let query = supabase.from("prospects").select(
+    isCount ? "id" : "id, company_name, city, province, region, codice_ateco, descrizione_ateco, fatturato, dipendenti, email, phone, pec, website, lead_status, partita_iva, forma_giuridica, rating_affidabilita, created_at",
+    isCount ? { count: "exact", head: true } : undefined
+  );
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.city) query = query.ilike("city", `%${args.city}%`);
+  if (args.province) query = query.ilike("province", `%${args.province}%`);
+  if (args.region) query = query.ilike("region", `%${args.region}%`);
+  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${args.codice_ateco}%`);
+  if (args.min_fatturato) query = query.gte("fatturato", Number(args.min_fatturato));
+  if (args.max_fatturato) query = query.lte("fatturato", Number(args.max_fatturato));
+  if (args.lead_status) query = query.eq("lead_status", args.lead_status);
+  if (args.has_email === true) query = query.not("email", "is", null);
+  query = query.order("fatturato", { ascending: false, nullsFirst: false }).limit(Math.min(Number(args.limit) || 20, 50));
+  const { data, error, count } = await query;
+  if (error) return { error: error.message };
+  if (isCount) return { count };
+  return { count: data?.length || 0, prospects: data || [] };
+}
+
+async function executeListActivities(args: Record<string, unknown>) {
+  let query = supabase.from("activities").select("id, title, description, activity_type, status, priority, due_date, source_type, source_meta, partner_id, created_at, completed_at, email_subject")
+    .order("due_date", { ascending: true, nullsFirst: false }).limit(Number(args.limit) || 30);
+  if (args.status) query = query.eq("status", args.status);
+  if (args.activity_type) query = query.eq("activity_type", args.activity_type);
+  if (args.source_type) query = query.eq("source_type", args.source_type);
+  if (args.due_before) query = query.lte("due_date", args.due_before);
+  if (args.due_after) query = query.gte("due_date", args.due_after);
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+  let results = data || [];
+  if (args.partner_name) {
+    const search = String(args.partner_name).toLowerCase();
+    results = results.filter((a: any) => {
+      const meta = a.source_meta as any;
+      return meta?.company_name?.toLowerCase().includes(search) || false;
+    });
+  }
+  return { count: results.length, activities: results.map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+}
+
+async function executeCreateActivity(args: Record<string, unknown>) {
+  let partnerId = args.partner_id as string | null;
+  let companyName = args.company_name as string || "";
+  if (!partnerId && companyName) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) { partnerId = resolved.id; companyName = resolved.name; }
+  }
+  const sourceType = String(args.source_type || "partner");
+  const sourceId = partnerId || crypto.randomUUID();
+  const { data, error } = await supabase.from("activities").insert({
+    title: String(args.title),
+    description: args.description ? String(args.description) : null,
+    activity_type: String(args.activity_type),
+    source_type: sourceType,
+    source_id: sourceId,
+    partner_id: partnerId,
+    due_date: args.due_date ? String(args.due_date) : null,
+    priority: String(args.priority || "medium"),
+    email_subject: args.email_subject ? String(args.email_subject) : null,
+    email_body: args.email_body ? String(args.email_body) : null,
+    source_meta: { company_name: companyName } as any,
+  }).select("id").single();
+  if (error) return { error: error.message };
+  return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
+}
+
+async function executeUpdateActivity(args: Record<string, unknown>) {
+  const updates: Record<string, unknown> = {};
+  if (args.status) {
+    updates.status = args.status;
+    if (args.status === "completed") updates.completed_at = new Date().toISOString();
+  }
+  if (args.priority) updates.priority = args.priority;
+  if (args.due_date) updates.due_date = args.due_date;
+  if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare" };
+  const { error } = await supabase.from("activities").update(updates).eq("id", args.activity_id);
+  if (error) return { error: error.message };
+  return { success: true, activity_id: args.activity_id, message: `Attività aggiornata.` };
+}
+
+async function executeGenerateOutreach(args: Record<string, unknown>, authHeader: string) {
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(args),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore generazione outreach" };
+  return { success: true, channel: data.channel, subject: data.subject, body: data.body, language: data.language, message: `Messaggio ${args.channel} generato per ${args.contact_name} (${args.company_name}).` };
+}
+
+async function executeSendEmail(args: Record<string, unknown>, authHeader: string) {
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore invio email" };
+  // Log interaction if partner_id provided
+  if (args.partner_id) {
+    await supabase.from("interactions").insert({ partner_id: args.partner_id, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
+  }
+  return { success: true, message: `Email inviata a ${args.to_email} con oggetto "${args.subject}".` };
+}
+
+async function executeDeepSearchPartner(args: Record<string, unknown>, authHeader: string) {
+  let partnerId = args.partner_id as string;
+  if (!partnerId && args.company_name) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) partnerId = resolved.id;
+  }
+  if (!partnerId) return { error: "Partner non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-partner`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ partner_id: partnerId, force: !!args.force }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore Deep Search" };
+  return { success: true, partner_id: partnerId, ...data, message: `Deep Search completato per il partner.` };
+}
+
+async function executeDeepSearchContact(args: Record<string, unknown>, authHeader: string) {
+  let contactId = args.contact_id as string;
+  if (!contactId && args.contact_name) {
+    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    if (data) contactId = data.id;
+  }
+  if (!contactId) return { error: "Contatto non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ contact_id: contactId }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore Deep Search contatto" };
+  return { success: true, contact_id: contactId, ...data, message: `Deep Search completato per il contatto.` };
+}
+
+async function executeEnrichPartnerWebsite(args: Record<string, unknown>, authHeader: string) {
+  let partnerId = args.partner_id as string;
+  if (!partnerId && args.company_name) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) partnerId = resolved.id;
+  }
+  if (!partnerId) return { error: "Partner non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ partner_id: partnerId }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore enrichment" };
+  return { success: true, partner_id: partnerId, ...data, message: `Enrichment website completato.` };
+}
+
+async function executeScanDirectory(args: Record<string, unknown>, authHeader: string) {
+  const body: Record<string, unknown> = {};
+  if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
+  if (args.search_by) body.searchBy = args.search_by;
+  if (args.company_name) body.companyName = args.company_name;
+  if (args.city) body.city = args.city;
+  if (args.member_id) body.memberId = args.member_id;
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/scrape-wca-directory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore scansione directory" };
+  return { success: true, ...data, message: `Scansione directory completata: ${data.total_results || 0} risultati trovati.` };
+}
+
+async function executeGenerateAliases(args: Record<string, unknown>, authHeader: string) {
+  const body: Record<string, unknown> = { type: args.type || "company" };
+  if (args.partner_ids) body.partner_ids = args.partner_ids;
+  if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
+  body.limit = Number(args.limit) || 20;
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-aliases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore generazione alias" };
+  return { success: true, ...data, message: `Alias generati con successo.` };
+}
+
+async function executeManagePartnerContact(args: Record<string, unknown>) {
+  const action = String(args.action);
+  if (action === "delete" && args.contact_id) {
+    const { error } = await supabase.from("partner_contacts").delete().eq("id", args.contact_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Contatto eliminato." };
+  }
+  if (action === "update" && args.contact_id) {
+    const updates: Record<string, unknown> = {};
+    if (args.name) updates.name = args.name;
+    if (args.title) updates.title = args.title;
+    if (args.email) updates.email = args.email;
+    if (args.direct_phone) updates.direct_phone = args.direct_phone;
+    if (args.mobile) updates.mobile = args.mobile;
+    if (args.is_primary !== undefined) updates.is_primary = args.is_primary;
+    const { error } = await supabase.from("partner_contacts").update(updates).eq("id", args.contact_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Contatto aggiornato." };
+  }
+  if (action === "add") {
+    let partnerId = args.partner_id as string;
+    if (!partnerId && args.company_name) {
+      const resolved = await resolvePartnerId(args);
+      if (resolved) partnerId = resolved.id;
+    }
+    if (!partnerId) return { error: "Partner non trovato" };
+    if (!args.name) return { error: "Il nome del contatto è obbligatorio" };
+    const { data, error } = await supabase.from("partner_contacts").insert({
+      partner_id: partnerId, name: String(args.name), title: args.title ? String(args.title) : null,
+      email: args.email ? String(args.email) : null, direct_phone: args.direct_phone ? String(args.direct_phone) : null,
+      mobile: args.mobile ? String(args.mobile) : null, is_primary: !!args.is_primary,
+    }).select("id").single();
+    if (error) return { error: error.message };
+    return { success: true, contact_id: data.id, message: `Contatto "${args.name}" aggiunto.` };
+  }
+  return { error: "Azione non valida" };
+}
+
+async function executeUpdateReminder(args: Record<string, unknown>) {
+  if (args.delete) {
+    const { error } = await supabase.from("reminders").delete().eq("id", args.reminder_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Reminder eliminato." };
+  }
+  const updates: Record<string, unknown> = {};
+  if (args.status) updates.status = args.status;
+  if (args.priority) updates.priority = args.priority;
+  if (args.due_date) updates.due_date = args.due_date;
+  updates.updated_at = new Date().toISOString();
+  const { error } = await supabase.from("reminders").update(updates).eq("id", args.reminder_id);
+  if (error) return { error: error.message };
+  return { success: true, message: "Reminder aggiornato." };
+}
+
+async function executeDeleteRecords(args: Record<string, unknown>) {
+  const table = String(args.table);
+  const ids = args.ids as string[];
+  if (!ids || ids.length === 0) return { error: "Nessun ID specificato" };
+  if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
+  const validTables = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+  if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
+  const { error } = await supabase.from(table as any).delete().in("id", ids);
+  if (error) return { error: error.message };
+  return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
+}
+
+
 
 async function executeCheckJobStatus(args: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
@@ -1603,7 +2249,7 @@ async function executeCheckJobStatus(args: Record<string, unknown>) {
 // UNIFIED TOOL DISPATCHER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function executeTool(name: string, args: Record<string, unknown>, userId?: string): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, userId?: string, authHeader?: string): Promise<unknown> {
   switch (name) {
     case "search_partners": return executeSearchPartners(args);
     case "get_country_overview": return executeCountryOverview(args);
@@ -1620,7 +2266,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "save_memory": return userId ? executeSaveMemory(args, userId) : { error: "Auth required" };
     case "search_memory": return userId ? executeSearchMemory(args, userId) : { error: "Auth required" };
     case "create_work_plan": return userId ? executeCreateWorkPlan(args, userId) : { error: "Auth required" };
-    case "execute_plan_step": return userId ? executeExecutePlanStep(args, userId) : { error: "Auth required" };
+    case "execute_plan_step": return userId ? executeExecutePlanStep(args, userId, authHeader) : { error: "Auth required" };
     case "get_active_plans": return userId ? executeGetActivePlans(userId) : { error: "Auth required" };
     case "save_as_template": return userId ? executeSaveAsTemplate(args, userId) : { error: "Auth required" };
     case "search_templates": return userId ? executeSearchTemplates(args, userId) : { error: "Auth required" };
@@ -1636,6 +2282,23 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "link_business_card": return executeLinkBusinessCard(args);
     // Verification tool
     case "check_job_status": return executeCheckJobStatus(args);
+    // ━━━ NEW: Contacts, Prospects, Activities, Email, Deep Search, Directory, Aliases ━━━
+    case "search_contacts": return executeSearchContacts(args);
+    case "get_contact_detail": return executeGetContactDetail(args);
+    case "search_prospects": return executeSearchProspects(args);
+    case "list_activities": return executeListActivities(args);
+    case "create_activity": return executeCreateActivity(args);
+    case "update_activity": return executeUpdateActivity(args);
+    case "generate_outreach": return authHeader ? executeGenerateOutreach(args, authHeader) : { error: "Auth required" };
+    case "send_email": return authHeader ? executeSendEmail(args, authHeader) : { error: "Auth required" };
+    case "deep_search_partner": return authHeader ? executeDeepSearchPartner(args, authHeader) : { error: "Auth required" };
+    case "deep_search_contact": return authHeader ? executeDeepSearchContact(args, authHeader) : { error: "Auth required" };
+    case "enrich_partner_website": return authHeader ? executeEnrichPartnerWebsite(args, authHeader) : { error: "Auth required" };
+    case "scan_directory": return authHeader ? executeScanDirectory(args, authHeader) : { error: "Auth required" };
+    case "generate_aliases": return authHeader ? executeGenerateAliases(args, authHeader) : { error: "Auth required" };
+    case "manage_partner_contact": return executeManagePartnerContact(args);
+    case "update_reminder": return executeUpdateReminder(args);
+    case "delete_records": return executeDeleteRecords(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
@@ -1891,7 +2554,7 @@ serve(async (req) => {
       for (const tc of assistantMessage.tool_calls) {
         console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
         const args = JSON.parse(tc.function.arguments || "{}");
-        const toolResult = await executeTool(tc.function.name, args, userId);
+        const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
         console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
 
