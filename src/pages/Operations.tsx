@@ -350,8 +350,15 @@ export default function Operations() {
                     <DownloadTerminal />
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
+                <Globe className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                <p className="text-sm text-muted-foreground/60 font-medium">Seleziona un paese per vedere i partner</p>
+                <p className="text-xs text-muted-foreground/40 mt-1">Clicca su uno o più paesi dall'elenco a sinistra</p>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
