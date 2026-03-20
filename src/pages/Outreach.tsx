@@ -30,10 +30,6 @@ export default function Outreach() {
               <Mail className="w-3.5 h-3.5" />
               Email Composer
             </TabsTrigger>
-            <TabsTrigger value="campaigns" className="gap-1.5 text-xs">
-              <Globe className="w-3.5 h-3.5" />
-              Campagne
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
