@@ -137,6 +137,9 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
             />
           </div>
         )}
+        {process.errorMessage && isPaused && (
+          <p className="text-[10px] text-amber-500 mt-0.5 truncate">{process.errorMessage}</p>
+        )}
       </div>
 
       {/* Controls */}
