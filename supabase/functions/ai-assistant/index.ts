@@ -245,7 +245,54 @@ La leggibilità è PRIORITÀ ASSOLUTA. Ogni risposta DEVE essere formattata segu
      2. 📥 **Scarica Profilo**: Posso avviare il download del profilo completo dal sito WCA.
      3. 📧 **Prepara Email**: Vuoi che generi un'email di presentazione per il contatto principale?
 
-10. **MAI MOSTRARE**: JSON raw, ID UUID, dati tecnici di debug, o blocchi di codice all'utente.`;
+10. **MAI MOSTRARE**: JSON raw, ID UUID, dati tecnici di debug, o blocchi di codice all'utente.
+
+PROCEDURE OPERATIVE (KNOWLEDGE BASE)
+
+Quando l'utente chiede di fare qualcosa, CONSULTA questa sezione per:
+1. Identificare la procedura corretta tramite i tag
+2. Verificare i prerequisiti (e avvisare se mancano)
+3. Guidare l'utente step-by-step seguendo l'ordine degli step
+4. Usare i tool giusti nell'ordine giusto
+5. Dopo ogni azione, suggerire il prossimo step della procedura
+
+Se una procedura ha prerequisiti non soddisfatti, AVVISA l'utente e indica come risolverli (es. "Devi prima configurare il profilo AI in Impostazioni").
+
+Usa il tool get_procedure per ottenere i dettagli completi di una procedura specifica quando serve.
+
+CATALOGO PROCEDURE:
+
+OUTREACH:
+- email_single: Email singola a un partner/contatto. Tags: email, singola, outreach. Prerequisiti: profilo AI, email destinatario, obiettivo. Steps: identifica destinatario → verifica blacklist → carica profilo AI → genera messaggio → revisiona → invia → registra.
+- email_campaign: Campagna email massiva. Tags: campagna, massiva, bulk. Steps: seleziona destinatari → blacklist → obiettivo → genera modello → approva → monitora coda.
+- linkedin_message: Messaggio LinkedIn. Tags: linkedin, social, dm. Steps: identifica contatto → verifica LinkedIn → genera messaggio → mostra per copia → registra attività.
+- whatsapp_message: Messaggio WhatsApp. Tags: whatsapp, mobile. Steps: cerca contatto con mobile → genera messaggio → mostra.
+- sms_message: SMS breve. Tags: sms, testo. Steps: cerca contatto → genera SMS → mostra.
+- multi_channel_sequence: Sequenza multi-canale (email→LinkedIn→WhatsApp→follow-up). Tags: sequenza, nurturing, pipeline. Steps: verifica canali → email giorno 1 → LinkedIn giorno 3 → WhatsApp giorno 7 → reminder giorno 14.
+
+NETWORK:
+- scan_country: Scansione directory paese. Tags: scan, directory, paese, wca. Prerequisiti: sessione WCA. Steps: verifica cache → scansiona → confronta → suggerisci download.
+- download_profiles: Download profili paese. Tags: download, profili, bulk. Prerequisiti: WCA, directory scansionata. Steps: verifica prerequisiti → controlla job → scegli mode → crea job → verifica.
+- download_single: Download singolo partner. Tags: download, singolo. Steps: cerca partner → download_single_partner → verifica.
+- deep_search_partner: Deep Search partner. Tags: deep, search, logo, social. Prerequisiti: partner esiste, crediti. Steps: dettagli → deep search → verifica risultati.
+- enrich_website: Arricchimento sito web. Tags: enrich, sito, website. Prerequisiti: partner ha website, crediti. Steps: verifica website → enrichment → mostra risultati.
+
+CRM:
+- import_contacts: Importazione contatti da file. Tags: import, csv, excel. Steps: carica file → analizza → mappa colonne → importa → verifica.
+- deep_search_contact: Deep Search contatto. Tags: deep, search, contatto, linkedin. Steps: identifica → deep search → verifica.
+- update_lead_status: Aggiornamento stato lead. Tags: lead, status, pipeline. Steps: filtra → conferma → aggiorna.
+- export_contacts: Esportazione contatti CSV. Tags: export, csv. Steps: filtra → export dalla UI.
+- assign_activity: Assegnazione attività. Tags: attività, task, team. Steps: identifica target → crea attività → conferma.
+
+AGENDA:
+- create_followup: Follow-up dopo interazione. Tags: follow-up, promemoria. Steps: identifica partner → crea attività → crea reminder.
+- schedule_meeting: Pianificazione meeting. Tags: meeting, riunione, call. Steps: identifica partecipanti → crea attività → email invito.
+- manage_reminders: Gestione reminder. Tags: reminder, scadenza. Steps: elenca → crea/aggiorna → completa.
+
+SISTEMA:
+- generate_aliases: Generazione alias AI. Tags: alias, nome, etichetta. Steps: seleziona target → genera → verifica.
+- blacklist_check: Verifica blacklist. Tags: blacklist, affidabilità, rischio. Steps: cerca → mostra risultati.
+- bulk_update: Aggiornamento massivo. Tags: bulk, massivo, batch. Steps: filtra → conferma (OBBLIGATORIO) → aggiorna → verifica.`;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TOOL DEFINITIONS
@@ -1037,6 +1084,22 @@ const tools = [
           ids: { type: "array", items: { type: "string" }, description: "Array of UUIDs to delete" },
         },
         required: ["table", "ids"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ━━━ Procedure Knowledge Base Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "get_procedure",
+      description: "Get detailed step-by-step procedure from the Operations Knowledge Base. Use when the user asks how to do something or when you need to follow a specific workflow. Returns prerequisites, ordered steps with tool mapping, and tips.",
+      parameters: {
+        type: "object",
+        properties: {
+          procedure_id: { type: "string", description: "Procedure ID (e.g. 'email_single', 'download_profiles', 'deep_search_partner')" },
+          search_tags: { type: "array", items: { type: "string" }, description: "Tags to search for matching procedures (e.g. ['email', 'campagna'])" },
+        },
         additionalProperties: false,
       },
     },
@@ -2147,9 +2210,56 @@ async function executeDeleteRecords(args: Record<string, unknown>) {
   return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PROCEDURE KNOWLEDGE BASE TOOL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const PROCEDURES_DB: Record<string, any> = {
+  email_single: { id: "email_single", name: "Email Singola", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "Email destinatario valida", "Obiettivo definito"], steps: [{ order: 1, action: "Identifica destinatario", tool: "search_partners" }, { order: 2, action: "Recupera dati completi", tool: "get_partner_detail" }, { order: 3, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 4, action: "Carica profilo AI e KB", tool: "search_memory" }, { order: 5, action: "Genera messaggio", tool: "generate_outreach" }, { order: 6, action: "Revisiona con utente", tool: null }, { order: 7, action: "Invia email", tool: "send_email" }, { order: 8, action: "Registra interazione", tool: "add_partner_note" }], tips: ["Quality 'premium' per email strategiche", "Personalizza con 3+ dati partner"] },
+  email_campaign: { id: "email_campaign", name: "Campagna Email Massiva", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "5+ destinatari con email", "Obiettivo definito"], steps: [{ order: 1, action: "Seleziona destinatari", tool: "search_partners" }, { order: 2, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 3, action: "Definisci obiettivo", tool: null }, { order: 4, action: "Genera email modello", tool: "generate_outreach" }, { order: 5, action: "Approva e lancia coda", tool: null }, { order: 6, action: "Monitora invio", tool: "check_job_status" }], tips: ["Limita a 50-100 destinatari", "Delay 30-60s tra invii"] },
+  linkedin_message: { id: "linkedin_message", name: "Messaggio LinkedIn", category: "outreach", channels: ["linkedin"], prerequisites: ["Profilo AI configurato", "Contatto identificato"], steps: [{ order: 1, action: "Identifica contatto", tool: "search_partners" }, { order: 2, action: "Verifica LinkedIn", tool: "get_partner_detail" }, { order: 3, action: "Genera messaggio", tool: "generate_outreach" }, { order: 4, action: "Mostra per copia", tool: null }, { order: 5, action: "Registra attività", tool: "create_activity" }], tips: ["Max 300 char", "Menziona collegamento in comune"] },
+  whatsapp_message: { id: "whatsapp_message", name: "Messaggio WhatsApp", category: "outreach", channels: ["whatsapp"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto con mobile", tool: "search_partners" }, { order: 2, action: "Genera messaggio", tool: "generate_outreach" }, { order: 3, action: "Mostra per invio", tool: null }, { order: 4, action: "Registra attività", tool: "create_activity" }], tips: ["Tono informale ma professionale"] },
+  sms_message: { id: "sms_message", name: "SMS", category: "outreach", channels: ["sms"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto", tool: "search_partners" }, { order: 2, action: "Genera SMS", tool: "generate_outreach" }, { order: 3, action: "Mostra", tool: null }], tips: ["Max 160 caratteri"] },
+  multi_channel_sequence: { id: "multi_channel_sequence", name: "Sequenza Multi-Canale", category: "outreach", channels: ["email", "linkedin", "whatsapp"], prerequisites: ["Profilo AI", "Email destinatario", "Obiettivo"], steps: [{ order: 1, action: "Verifica canali disponibili", tool: "get_partner_detail" }, { order: 2, action: "Email giorno 1", tool: "generate_outreach" }, { order: 3, action: "Pianifica LinkedIn giorno 3", tool: "create_activity" }, { order: 4, action: "Genera LinkedIn", tool: "generate_outreach" }, { order: 5, action: "Pianifica WhatsApp giorno 7", tool: "create_activity" }, { order: 6, action: "Reminder giorno 14", tool: "create_reminder" }], tips: ["Email→3gg→LinkedIn→4gg→WhatsApp", "Max 3 touchpoint senza risposta"] },
+  scan_country: { id: "scan_country", name: "Scansione Directory Paese", category: "network", prerequisites: ["Sessione WCA attiva"], steps: [{ order: 1, action: "Verifica cache", tool: "get_directory_status" }, { order: 2, action: "Scansiona", tool: "scan_directory" }, { order: 3, action: "Confronta con DB", tool: "get_country_overview" }, { order: 4, action: "Suggerisci download", tool: null }], tips: ["Scansiona ogni 2-4 settimane"] },
+  download_profiles: { id: "download_profiles", name: "Download Profili Paese", category: "network", prerequisites: ["Sessione WCA", "Directory scansionata", "No job attivi"], steps: [{ order: 1, action: "Verifica prerequisiti", tool: "get_directory_status" }, { order: 2, action: "Controlla job attivi", tool: "list_jobs" }, { order: 3, action: "Scegli mode", tool: null }, { order: 4, action: "Crea job", tool: "create_download_job" }, { order: 5, action: "Verifica avvio", tool: "check_job_status" }], tips: ["Mode 'no_profile' per completare paesi parziali", "Delay 30-45s"] },
+  download_single: { id: "download_single", name: "Download Singolo Partner", category: "network", prerequisites: ["Sessione WCA"], steps: [{ order: 1, action: "Cerca partner", tool: "search_partners" }, { order: 2, action: "Download", tool: "download_single_partner" }, { order: 3, action: "Verifica", tool: "check_job_status" }], tips: ["NON usare create_download_job per singolo partner"] },
+  deep_search_partner: { id: "deep_search_partner", name: "Deep Search Partner", category: "enrichment", prerequisites: ["Partner esiste", "Crediti sufficienti"], steps: [{ order: 1, action: "Dettagli partner", tool: "get_partner_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_partner" }, { order: 3, action: "Verifica risultati", tool: "get_partner_detail" }], tips: ["Più efficace con sito web"] },
+  enrich_website: { id: "enrich_website", name: "Arricchimento Sito Web", category: "enrichment", prerequisites: ["Partner ha website", "Crediti"], steps: [{ order: 1, action: "Verifica website", tool: "get_partner_detail" }, { order: 2, action: "Enrichment", tool: "enrich_partner_website" }, { order: 3, action: "Mostra risultati", tool: "get_partner_detail" }], tips: ["Combina con Deep Search"] },
+  import_contacts: { id: "import_contacts", name: "Importazione Contatti", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Carica file", tool: null }, { order: 2, action: "Analizza struttura", tool: null }, { order: 3, action: "Mappa colonne", tool: null }, { order: 4, action: "Importa", tool: null }, { order: 5, action: "Verifica", tool: "search_contacts" }], tips: ["Supporta CSV, Excel, TSV"] },
+  deep_search_contact: { id: "deep_search_contact", name: "Deep Search Contatto", category: "crm", prerequisites: ["Contatto esiste", "Crediti"], steps: [{ order: 1, action: "Identifica", tool: "get_contact_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_contact" }, { order: 3, action: "Verifica", tool: "get_contact_detail" }], tips: ["Meglio con nome+azienda+paese"] },
+  update_lead_status: { id: "update_lead_status", name: "Aggiornamento Stato Lead", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Filtra record", tool: "search_contacts" }, { order: 2, action: "Conferma selezione", tool: null }, { order: 3, action: "Aggiorna", tool: "update_lead_status" }], tips: ["Conferma per >5 record"] },
+  assign_activity: { id: "assign_activity", name: "Assegnazione Attività", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Identifica target", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Conferma", tool: "list_activities" }], tips: ["Due date realistica"] },
+  create_followup: { id: "create_followup", name: "Creazione Follow-up", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partner", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Crea reminder", tool: "create_reminder" }], tips: ["Follow-up ideale entro 3 giorni"] },
+  schedule_meeting: { id: "schedule_meeting", name: "Pianificazione Meeting", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partecipanti", tool: "get_partner_detail" }, { order: 2, action: "Crea attività meeting", tool: "create_activity" }, { order: 3, action: "Email invito", tool: "generate_outreach" }], tips: ["Specifica orario, luogo/link, agenda"] },
+  manage_reminders: { id: "manage_reminders", name: "Gestione Reminder", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Elenca reminder", tool: "list_reminders" }, { order: 2, action: "Crea/aggiorna", tool: "create_reminder" }, { order: 3, action: "Completa", tool: "update_reminder" }], tips: ["Priorità 'high' per scadenze critiche"] },
+  generate_aliases: { id: "generate_aliases", name: "Generazione Alias AI", category: "system", prerequisites: [], steps: [{ order: 1, action: "Seleziona target", tool: "search_partners" }, { order: 2, action: "Genera", tool: "generate_aliases" }, { order: 3, action: "Verifica", tool: "search_partners" }], tips: ["Max 20 per batch"] },
+  blacklist_check: { id: "blacklist_check", name: "Verifica Blacklist", category: "system", prerequisites: [], steps: [{ order: 1, action: "Cerca", tool: "check_blacklist" }, { order: 2, action: "Mostra risultati", tool: null }], tips: ["Verifica SEMPRE prima di collaborare"] },
+  bulk_update: { id: "bulk_update", name: "Aggiornamento Massivo", category: "system", prerequisites: [], steps: [{ order: 1, action: "Filtra", tool: "search_partners" }, { order: 2, action: "Conferma (OBBLIGATORIO)", tool: null }, { order: 3, action: "Aggiorna", tool: "bulk_update_partners" }, { order: 4, action: "Verifica", tool: "search_partners" }], tips: ["SEMPRE conferma per >5 record"] },
+};
+
+function executeGetProcedure(args: Record<string, unknown>) {
+  // Search by ID
+  if (args.procedure_id) {
+    const proc = PROCEDURES_DB[String(args.procedure_id)];
+    if (proc) return { procedure: proc };
+    return { error: `Procedura '${args.procedure_id}' non trovata. Procedure disponibili: ${Object.keys(PROCEDURES_DB).join(", ")}` };
+  }
+  // Search by tags
+  if (args.search_tags && Array.isArray(args.search_tags)) {
+    const tags = (args.search_tags as string[]).map(t => t.toLowerCase());
+    const matches = Object.values(PROCEDURES_DB).filter((p: any) => {
+      const procText = `${p.id} ${p.name} ${p.category} ${(p.channels || []).join(" ")}`.toLowerCase();
+      return tags.some(t => procText.includes(t));
+    });
+    if (matches.length > 0) return { procedures: matches, count: matches.length };
+    return { procedures: [], count: 0, available: Object.keys(PROCEDURES_DB) };
+  }
+  // Return all
+  return { procedures: Object.values(PROCEDURES_DB), count: Object.keys(PROCEDURES_DB).length };
+}
 
 
-async function executeCheckJobStatus(args: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
 
   // Specific job check
@@ -2299,6 +2409,7 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "manage_partner_contact": return executeManagePartnerContact(args);
     case "update_reminder": return executeUpdateReminder(args);
     case "delete_records": return executeDeleteRecords(args);
+    case "get_procedure": return executeGetProcedure(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }

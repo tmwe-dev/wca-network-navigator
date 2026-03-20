@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Send, Loader2, Bot, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,52 @@ import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResp
 
 interface Props {
   className?: string;
+  systemStats?: {
+    partnersWithoutContacts?: number;
+    partnersWithoutEmail?: number;
+    activeJobs?: number;
+    pendingActivities?: number;
+    pendingReminders?: number;
+    totalPartners?: number;
+  };
 }
 
-const QUICK_PROMPTS = [
-  "Riepilogo del giorno",
-  "Partner senza contatti",
-  "Campagne attive",
-  "Attività in scadenza",
-];
+interface SmartPrompt {
+  label: string;
+  prompt: string;
+  icon: string;
+}
 
-export function HomeAIPrompt({ className }: Props) {
+function buildSmartPrompts(stats?: Props["systemStats"]): SmartPrompt[] {
+  const prompts: SmartPrompt[] = [];
+  
+  if (stats?.pendingActivities && stats.pendingActivities > 0) {
+    prompts.push({ label: `${stats.pendingActivities} attività aperte`, prompt: "Mostrami le attività in scadenza e suggeriscimi come procedere", icon: "📋" });
+  }
+  if (stats?.partnersWithoutEmail && stats.partnersWithoutEmail > 20) {
+    prompts.push({ label: "Partner senza email", prompt: `Ho ${stats.partnersWithoutEmail} partner senza email. Avvia una Deep Search per i più importanti`, icon: "🔍" });
+  }
+  if (stats?.pendingReminders && stats.pendingReminders > 0) {
+    prompts.push({ label: `${stats.pendingReminders} reminder`, prompt: "Mostrami i reminder in scadenza", icon: "⏰" });
+  }
+  if (stats?.activeJobs && stats.activeJobs > 0) {
+    prompts.push({ label: `${stats.activeJobs} job attivi`, prompt: "Qual è lo stato dei download attivi?", icon: "📥" });
+  }
+  
+  // Fallback defaults if no contextual ones
+  if (prompts.length === 0) {
+    prompts.push(
+      { label: "Riepilogo del giorno", prompt: "Riepilogo del giorno", icon: "📊" },
+      { label: "Partner senza contatti", prompt: "Partner senza contatti", icon: "👥" },
+      { label: "Campagne attive", prompt: "Campagne attive", icon: "📧" },
+      { label: "Attività in scadenza", prompt: "Attività in scadenza", icon: "📋" },
+    );
+  }
+  
+  return prompts.slice(0, 4);
+}
+
+export function HomeAIPrompt({ className, systemStats }: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -26,6 +62,8 @@ export function HomeAIPrompt({ className }: Props) {
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  const smartPrompts = useMemo(() => buildSmartPrompts(systemStats), [systemStats]);
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -160,17 +198,17 @@ export function HomeAIPrompt({ className }: Props) {
           </Button>
         </div>
 
-        {/* Quick prompts */}
+        {/* Smart contextual prompts */}
         {!response && !loading && (
           <div className="flex items-center gap-1.5 px-3 pb-2.5 sm:px-4 sm:pb-3 flex-wrap">
             <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
-            {QUICK_PROMPTS.map((q) => (
+            {smartPrompts.map((q) => (
               <button
-                key={q}
-                onClick={() => send(q)}
+                key={q.label}
+                onClick={() => send(q.prompt)}
                 className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors font-medium"
               >
-                {q}
+                {q.icon} {q.label}
               </button>
             ))}
           </div>
