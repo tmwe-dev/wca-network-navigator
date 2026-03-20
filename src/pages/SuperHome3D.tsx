@@ -110,9 +110,6 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
         {displayJobs.map((job) => {
           const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
           const isActive = job.status === "running";
-          const lastLog = Array.isArray(job.terminal_log) && job.terminal_log.length > 0
-            ? (job.terminal_log[job.terminal_log.length - 1] as any)?.msg
-            : null;
 
           return (
             <div
