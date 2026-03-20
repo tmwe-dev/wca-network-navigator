@@ -74,6 +74,7 @@ MODELLI GOLD STANDARD:
       "update_lead_status", "get_global_summary",
     ],
   },
+  download: {
     name: "Agente Download",
     system_prompt: `Sei un agente specializzato nella gestione dei download dal sistema WCA. Il tuo compito è mantenere aggiornata la directory dei partner, verificare la completezza dei profili scaricati e gestire i retry per i profili mancanti.
 
