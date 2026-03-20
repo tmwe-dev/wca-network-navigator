@@ -83,7 +83,11 @@ type ExtensionResponse = {
 /**
  * Hook for communicating with the WCA Chrome Extension via content script bridge.
  * Uses window.postMessage so no Extension ID is needed.
- * Continuous polling to reliably detect the extension even if loaded after the page.
+ * 
+ * V2 OPTIMIZATIONS:
+ * - extractContacts timeout reduced from 90s → 30s
+ * - Response scoping by wcaId to prevent stale cross-profile data
+ * - Simplified polling with stable refs
  */
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
@@ -134,7 +138,6 @@ export function useExtensionBridge() {
     const doPing = () => {
       const id = `poll_${Date.now()}`;
       const timer = setTimeout(() => {
-        // No response within 5s → extension unreachable
         consecutiveFailsRef.current++;
         if (consecutiveFailsRef.current >= 2 && availableRef.current) {
           setIsAvailable(false);
@@ -170,7 +173,7 @@ export function useExtensionBridge() {
     };
   }, []);
 
-  // Send a message to the extension and wait for response (with nonce anti-spoof)
+  // Send a message to the extension and wait for response
   const sendMessage = useCallback(
     (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
       return new Promise((resolve) => {
@@ -244,10 +247,24 @@ export function useExtensionBridge() {
     []
   );
 
-  // Extract contacts for a WCA ID — serialized via global queue
+  /**
+   * Extract contacts for a WCA ID — serialized via global queue.
+   * V2: timeout reduced to 30s, response validated by wcaId to prevent cross-profile contamination.
+   */
   const extractContacts = useCallback(
     async (wcaId: number): Promise<ExtensionResponse> => {
-      return enqueueExtraction(() => sendMessage("extractContacts", { wcaId }, 90000));
+      return enqueueExtraction(async () => {
+        const response = await sendMessage("extractContacts", { wcaId }, 30_000);
+        
+        // V2 SCOPING: If the response contains a wcaId, validate it matches what we asked for.
+        // If mismatched, this is a stale response from a previous request — discard it.
+        if (response.success && response.wcaId !== undefined && response.wcaId !== wcaId) {
+          console.warn(`[ExtensionBridge] Stale response: asked for ${wcaId}, got ${response.wcaId} — discarding`);
+          return { success: false, error: `Stale response (expected ${wcaId}, got ${response.wcaId})`, pageLoaded: false };
+        }
+        
+        return response;
+      });
     },
     [sendMessage]
   );

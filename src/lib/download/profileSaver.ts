@@ -1,8 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Saves extracted profile data, contacts, and company name to the database.
- * Returns extraction result stats.
+ * V2: Saves extracted profile data with BATCHED operations.
+ * - Contacts: single batch insert instead of N individual inserts
+ * - Partner update: single unified UPDATE instead of 3-4 separate calls
+ * - Networks/Services/Certifications: batch inserts
  */
 export async function saveExtractionResult(
   partnerId: string,
@@ -17,7 +19,55 @@ export async function saveExtractionResult(
   let extractedEmailCount = 0;
   let extractedPhoneCount = 0;
 
-  // ── Save contacts (deduplicate by name) ──
+  // ── 1. Build unified partner update payload ──
+  const partnerUpdate: Record<string, any> = {};
+
+  // Company name
+  if (
+    result.companyName &&
+    !result.companyName.startsWith("WCA ") &&
+    !result.companyName.toLowerCase().includes("member not found")
+  ) {
+    companyName = result.companyName;
+    partnerUpdate.company_name = companyName;
+  }
+
+  // Profile data
+  if (result.profile) {
+    const p = result.profile;
+    if (p.address) partnerUpdate.address = p.address;
+    if (p.phone) partnerUpdate.phone = p.phone;
+    if (p.fax) partnerUpdate.fax = p.fax;
+    if (p.mobile) partnerUpdate.mobile = p.mobile;
+    if (p.emergencyPhone) partnerUpdate.emergency_phone = p.emergencyPhone;
+    if (p.email) partnerUpdate.email = p.email;
+    if (p.website) partnerUpdate.website = p.website;
+    if (p.description) partnerUpdate.profile_description = p.description;
+    if (p.memberSince) partnerUpdate.member_since = p.memberSince;
+    if (p.membershipExpires) partnerUpdate.membership_expires = p.membershipExpires;
+    if (p.officeType) {
+      const ot = p.officeType.toLowerCase();
+      if (ot.includes("head") || ot.includes("main")) partnerUpdate.office_type = "head_office";
+      else if (ot.includes("branch")) partnerUpdate.office_type = "branch";
+    }
+    if (p.branchCities?.length > 0) {
+      partnerUpdate.has_branches = true;
+      partnerUpdate.branch_cities = p.branchCities;
+    }
+  }
+
+  // Raw HTML
+  if (result.profileHtml) {
+    partnerUpdate.raw_profile_html = result.profileHtml;
+  }
+
+  // ── 2. Execute single partner UPDATE ──
+  if (Object.keys(partnerUpdate).length > 0) {
+    await supabase.from("partners").update(partnerUpdate).eq("id", partnerId);
+    profileSaved = true;
+  }
+
+  // ── 3. Batch save contacts ──
   if (result.success && result.contacts?.length > 0) {
     const { data: existingContacts } = await supabase
       .from("partner_contacts")
@@ -27,10 +77,13 @@ export async function saveExtractionResult(
       (existingContacts || []).map((c) => [c.name?.trim().toLowerCase(), c])
     );
 
+    const toInsert: any[] = [];
+    const toUpdate: Array<{ id: string; updates: Record<string, string> }> = [];
+
     for (const c of result.contacts) {
       const nameKey = (c.name || c.title || "Sconosciuto").trim().toLowerCase();
       if (!existingByName.has(nameKey)) {
-        await supabase.from("partner_contacts").insert({
+        toInsert.push({
           partner_id: partnerId,
           name: c.name || c.title || "Sconosciuto",
           title: c.title || null,
@@ -40,64 +93,29 @@ export async function saveExtractionResult(
         });
       } else {
         const ex = existingByName.get(nameKey)!;
-        const updates: Record<string, string> = {};
-        if (c.email && !ex.email) updates.email = c.email;
-        if (Object.keys(updates).length > 0)
-          await supabase.from("partner_contacts").update(updates).eq("id", ex.id);
+        if (c.email && !ex.email) {
+          toUpdate.push({ id: ex.id, updates: { email: c.email } });
+        }
       }
       if (c.email) hasEmail = true;
       if (c.phone || c.mobile) hasPhone = true;
     }
+
+    // Batch insert all new contacts at once
+    if (toInsert.length > 0) {
+      await supabase.from("partner_contacts").insert(toInsert);
+    }
+
+    // Update existing contacts (usually 0-1)
+    for (const { id, updates } of toUpdate) {
+      await supabase.from("partner_contacts").update(updates).eq("id", id);
+    }
+
     extractedEmailCount = result.contacts.filter((c: any) => c.email).length;
     extractedPhoneCount = result.contacts.filter((c: any) => c.phone || c.mobile).length;
   }
 
-  // ── Save company name (skip error messages) ──
-  if (
-    result.companyName &&
-    !result.companyName.startsWith("WCA ") &&
-    !result.companyName.toLowerCase().includes("member not found")
-  ) {
-    companyName = result.companyName;
-    await supabase.from("partners").update({ company_name: companyName }).eq("id", partnerId);
-  }
-
-  // ── Save profile data ──
-  if (result.profile) {
-    const p = result.profile;
-    const upd: Record<string, any> = {};
-    if (p.address) upd.address = p.address;
-    if (p.phone) upd.phone = p.phone;
-    if (p.fax) upd.fax = p.fax;
-    if (p.mobile) upd.mobile = p.mobile;
-    if (p.emergencyPhone) upd.emergency_phone = p.emergencyPhone;
-    if (p.email) upd.email = p.email;
-    if (p.website) upd.website = p.website;
-    if (p.description) upd.profile_description = p.description;
-    if (p.memberSince) upd.member_since = p.memberSince;
-    if (p.membershipExpires) upd.membership_expires = p.membershipExpires;
-    if (p.officeType) {
-      const ot = p.officeType.toLowerCase();
-      if (ot.includes("head") || ot.includes("main")) upd.office_type = "head_office";
-      else if (ot.includes("branch")) upd.office_type = "branch";
-    }
-    if (p.branchCities?.length > 0) {
-      upd.has_branches = true;
-      upd.branch_cities = p.branchCities;
-    }
-    if (Object.keys(upd).length > 0) {
-      await supabase.from("partners").update(upd).eq("id", partnerId);
-      profileSaved = true;
-    }
-  }
-
-  // Save raw HTML independently — even if structured profile is empty
-  if (result.profileHtml) {
-    await supabase.from("partners").update({ raw_profile_html: result.profileHtml }).eq("id", partnerId);
-    profileSaved = true;
-  }
-
-  // ── A) Save networks ──
+  // ── 4. Batch save networks ──
   if (result.profile?.networks?.length > 0) {
     const { data: existingNets } = await supabase
       .from("partner_networks").select("network_name").eq("partner_id", partnerId);
@@ -114,7 +132,7 @@ export async function saveExtractionResult(
     }
   }
 
-  // ── B) Save services ──
+  // ── 5. Batch save services ──
   if (result.profile?.services?.length > 0) {
     const serviceMap: Record<string, string> = {
       air: "air_freight", "air freight": "air_freight",
@@ -158,7 +176,7 @@ export async function saveExtractionResult(
     }
   }
 
-  // ── C) Save certifications ──
+  // ── 6. Batch save certifications ──
   if (result.profile?.certifications?.length > 0) {
     const validCerts = ["IATA", "BASC", "ISO", "C-TPAT", "AEO"] as const;
     const mapCert = (text: string): typeof validCerts[number] | null => {

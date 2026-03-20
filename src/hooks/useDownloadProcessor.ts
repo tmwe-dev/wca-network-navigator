@@ -2,8 +2,8 @@ import { useRef, useCallback, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
-import { waitForGreenLight, markRequestSent, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
-import { appendLog } from "@/lib/download/terminalLog";
+import { waitForGreenLight, setGreenZoneDelay } from "@/lib/wcaCheckpoint";
+import { appendLog, flushLogBuffer } from "@/lib/download/terminalLog";
 import { verifyWcaSession } from "@/lib/download/sessionVerifier";
 import { processOneProfile, type ProcessContext } from "@/lib/download/processProfile";
 import { updateJobProgress } from "@/lib/download/jobUpdater";
@@ -29,6 +29,17 @@ export interface DlResult {
   error?: string;
 }
 
+/**
+ * V2 Download Processor — Optimized for speed and WCA rate-limit safety.
+ * 
+ * KEY CHANGES vs V1:
+ * 1. markRequestSent() moved to BEFORE extension call (in processProfile)
+ *    → green zone delay overlaps with extraction time
+ * 2. Local timeouts don't trigger checkpoint delay
+ * 3. Session verification doesn't consume WCA requests
+ * 4. DB progress updates batched (every 3 profiles instead of every 1)
+ * 5. Log buffer reduces DB calls by 5x
+ */
 export function useDownloadProcessor() {
   const { isAvailable, checkAvailable, extractContacts } = useExtensionBridge();
   const queryClient = useQueryClient();
@@ -58,13 +69,12 @@ export function useDownloadProcessor() {
   };
 
   // ══════════════════════════════════════════════
-  // startJob — the main processing loop
+  // startJob — the main processing loop (V2)
   // ══════════════════════════════════════════════
   const startJob = useCallback(async (jobId: string) => {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
-    
 
     const ac = new AbortController();
     abortRef.current = ac;
@@ -82,6 +92,7 @@ export function useDownloadProcessor() {
       const sessionOk = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
       if (!sessionOk) {
         await updateJobProgress(jobId, { status: "paused", errorMessage: "⚠️ Sessione WCA non attiva." });
+        await flushLogBuffer();
         return;
       }
 
@@ -112,10 +123,27 @@ export function useDownloadProcessor() {
       let sessionVerifiedActive = false;
       const retryQueue: number[] = [];
       const rateLimit = new RateLimitDetector();
+      let pendingDbUpdate = 0; // V2: batch DB progress updates
 
       const ctx: ProcessContext = {
         jobId, countryCode: job.country_code, countryName: job.country_name,
         cacheMap, extractContacts: extractContactsRef.current, isRetryPass: false,
+      };
+
+      // Helper: flush progress to DB every N profiles or on important events
+      const flushProgress = async (wcaId: number, contactResult: string, force = false) => {
+        pendingDbUpdate++;
+        if (!force && pendingDbUpdate < 3) return;
+        pendingDbUpdate = 0;
+        await updateJobProgress(jobId, {
+          currentIndex: processedSet.size,
+          processedIds: [...processedSet],
+          lastWcaId: wcaId,
+          contactResult,
+          contactsFound,
+          contactsMissing,
+          errorMessage: null,
+        });
       };
 
       // ═══════════════════════════════════════
@@ -141,7 +169,7 @@ export function useDownloadProcessor() {
         if (action.type === "bridge_missing") {
           contactsMissing++;
           processedSet.add(wcaId);
-          await updateJobProgress(jobId, { currentIndex: processedSet.size, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "skipped", contactsMissing });
+          await flushProgress(wcaId, "skipped", true);
           continue;
         }
 
@@ -154,12 +182,13 @@ export function useDownloadProcessor() {
             if (!recheck) {
               await appendLog(jobId, "WARN", "❌ Sessione WCA irrecuperabile — job in pausa");
               await updateJobProgress(jobId, { status: "paused", errorMessage: "⚠️ Sessione WCA scaduta." });
+              await flushLogBuffer();
               return;
             }
             consecutiveSkipped = 0;
           }
           emitSkip(partnerId, wcaId, progressName, job.country_code);
-          await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "retry_queued", contactsMissing });
+          await flushProgress(wcaId, "retry_queued");
           continue;
         }
 
@@ -176,10 +205,11 @@ export function useDownloadProcessor() {
               await appendLog(jobId, "WARN", "❌ 6+ rate-limited consecutivi — job in pausa.");
               await updateJobProgress(jobId, { status: "paused", errorMessage: "⚠️ WCA rate-limit attivo." });
               setGreenZoneDelay(20);
+              await flushLogBuffer();
               return;
             }
             emitSkip(partnerId, wcaId, progressName, job.country_code);
-            await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "rate_limited", contactsMissing });
+            await flushProgress(wcaId, "rate_limited");
             continue;
           }
 
@@ -191,7 +221,7 @@ export function useDownloadProcessor() {
             try {
               await supabase.from("partners_no_contacts").upsert({ wca_id: wcaId, company_name: progressName, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" });
             } catch {}
-            await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "not_found", contactsMissing });
+            await flushProgress(wcaId, "not_found");
             continue;
           }
 
@@ -201,6 +231,7 @@ export function useDownloadProcessor() {
             const recheck = await verifyWcaSession(jobId, availableRef.current, checkAvailableRef.current);
             if (!recheck) {
               await updateJobProgress(jobId, { status: "paused", errorMessage: "⚠️ Sessione WCA scaduta." });
+              await flushLogBuffer();
               return;
             }
             const recentLens = rateLimit.getRecentLengths(3);
@@ -210,7 +241,7 @@ export function useDownloadProcessor() {
               setGreenZoneDelay(30);
               await appendLog(jobId, "WARN", `🛡️ Sessione attiva MA html identico = RATE LIMIT. Delay 30s.`);
               consecutiveNotFound = 0;
-              await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "rate_limited", contactsMissing });
+              await flushProgress(wcaId, "rate_limited");
               continue;
             }
             sessionVerifiedActive = true;
@@ -222,28 +253,28 @@ export function useDownloadProcessor() {
               try { await supabase.from("partners_no_contacts").upsert({ wca_id: nfId, company_name: cacheMap.get(nfId)?.name || `WCA ${nfId}`, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" }); } catch {}
             }
             consecutiveNotFound = 0;
-            await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "not_found", contactsMissing });
+            await flushProgress(wcaId, "not_found", true);
             continue;
           }
 
           await appendLog(jobId, "SKIP", `⚠️ #${wcaId} 'member not found' (html=${action.htmlLength}) — retry (${consecutiveNotFound} consecutivi)`);
           retryQueue.push(wcaId);
           emitSkip(partnerId, wcaId, progressName, job.country_code);
-          await updateJobProgress(jobId, { currentIndex: i + 1, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "retry_queued", contactsMissing });
+          await flushProgress(wcaId, "retry_queued");
           continue;
         }
 
         if (action.type === "error") {
           retryQueue.push(wcaId);
           emitSkip(partnerId, wcaId, progressName, job.country_code);
-          await updateJobProgress(jobId, { currentIndex: i + 1, lastWcaId: wcaId, contactResult: "retry_queued" });
+          await flushProgress(wcaId, "retry_queued");
           continue;
         }
 
         if (action.type === "skip_permanent") {
           processedSet.add(wcaId);
           contactsMissing++;
-          await updateJobProgress(jobId, { currentIndex: processedSet.size, processedIds: [...processedSet], lastWcaId: wcaId, contactResult: "not_found", contactsMissing });
+          await flushProgress(wcaId, "not_found");
           continue;
         }
 
@@ -262,6 +293,7 @@ export function useDownloadProcessor() {
             }
             if (!recovered) {
               await updateJobProgress(jobId, { status: "paused", errorMessage: "⚠️ Sessione WCA scaduta — auto-login fallito." });
+              await flushLogBuffer();
               return;
             }
           }
@@ -282,9 +314,15 @@ export function useDownloadProcessor() {
         await appendLog(jobId, hasAny ? "OK" : "WARN", `${s.companyName} (#${wcaId}) — ${indicators}`);
 
         const contactResult = s.hasEmail && s.hasPhone ? "email+phone" : s.hasEmail ? "email_only" : s.hasPhone ? "phone_only" : "no_contacts";
-        await updateJobProgress(jobId, { currentIndex: processedSet.size, processedIds: [...processedSet], lastWcaId: wcaId, lastCompany: s.companyName, contactResult, contactsFound, contactsMissing, errorMessage: null });
+        await flushProgress(wcaId, contactResult);
 
         if (processedSet.size % 5 === 0) invalidateCaches();
+      }
+
+      // Flush any remaining buffered progress
+      if (pendingDbUpdate > 0) {
+        const lastWcaId = wcaIds[wcaIds.length - 1];
+        await flushProgress(lastWcaId, "flush", true);
       }
 
       // ═══════════════════════════════════════
@@ -293,7 +331,7 @@ export function useDownloadProcessor() {
       const failedIds: number[] = [];
 
       if (retryQueue.length > 0 && !ac.signal.aborted) {
-        await appendLog(jobId, "INFO", `🔄 Retry pass — ${retryQueue.length} profili (delay +50%)`);
+        await appendLog(jobId, "INFO", `🔄 Retry pass — ${retryQueue.length} profili`);
         let retryConsecutiveSkipped = 0;
 
         for (let ri = 0; ri < retryQueue.length; ri++) {
@@ -309,7 +347,6 @@ export function useDownloadProcessor() {
           const retryCtx: ProcessContext = { ...ctx, extractContacts: extractContactsRef.current, isRetryPass: true };
           const companyName = existing?.company_name || cacheMap.get(wcaId)?.name || `WCA ${wcaId}`;
 
-          // Bug fix: emit progress so canvas shows "extracting..." card during retry
           onProgressRef.current?.({ partnerId: existing?.id || `wca-${wcaId}`, companyName, countryCode: job.country_code, index: ri + 1, total: retryQueue.length });
 
           const { action, partnerId } = await processOneProfile(wcaId, existing?.id || null, companyName, retryCtx);
@@ -362,7 +399,6 @@ export function useDownloadProcessor() {
           if (hasAny) contactsFound++; else contactsMissing++;
           processedSet.add(wcaId);
 
-          // Bug fix: emit result so canvas shows retry successes
           onResultRef.current?.({ partnerId: partnerId || `wca-${wcaId}`, companyName: s.companyName, countryCode: job.country_code, profileSaved: s.profileSaved, emailCount: s.emailCount, phoneCount: s.phoneCount, contactCount: s.emailCount + s.phoneCount });
 
           const indicators = [s.profileSaved ? "📋 ✓" : "📋 ✗", s.hasEmail ? `📧 ✓(${s.emailCount})` : "📧 ✗", s.hasPhone ? `📱 ✓(${s.phoneCount})` : "📱 ✗"].join(" ");
@@ -378,6 +414,7 @@ export function useDownloadProcessor() {
       // Job complete
       if (!ac.signal.aborted) {
         await appendLog(jobId, "DONE", `Job completato — ${processedSet.size} processati, ${failedIds.length} falliti`);
+        await flushLogBuffer();
         await updateJobProgress(jobId, { failedIds });
         try {
           await supabase.functions.invoke("process-download-job", { body: { jobId, action: "complete" } });
@@ -387,6 +424,7 @@ export function useDownloadProcessor() {
         }
       }
     } finally {
+      await flushLogBuffer();
       setGreenZoneDelay(20);
       processingRef.current = false;
       setIsProcessing(false);

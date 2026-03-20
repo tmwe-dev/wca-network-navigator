@@ -1,10 +1,12 @@
 import { appendLog } from "./terminalLog";
-import { markRequestSent } from "@/lib/wcaCheckpoint";
 
 /**
- * Strict session verification for download processor.
- * Extension-only — no server-side fallback.
- * Returns true only if extension is present AND session is authenticated.
+ * V2: Session verification — lightweight, no WCA calls.
+ * Uses extension's verifySession which checks cookies locally,
+ * only falls back to auto-login if needed.
+ * 
+ * REMOVED: markRequestSent() calls — session verification doesn't
+ * hit WCA profile pages, so it shouldn't trigger the checkpoint delay.
  */
 export async function verifyWcaSession(
   jobId: string,
@@ -18,11 +20,11 @@ export async function verifyWcaSession(
     return false;
   }
 
-  // Verify session via extension
+  // Verify session via extension (local cookie check — no WCA call)
   const verify = () =>
     new Promise<any>((resolve) => {
       const requestId = `verifySession_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const timer = setTimeout(() => resolve({ success: false }), 30000);
+      const timer = setTimeout(() => resolve({ success: false }), 15_000);
       const handler = (event: MessageEvent) => {
         if (
           event.source !== window ||
@@ -38,7 +40,6 @@ export async function verifyWcaSession(
     });
 
   const result = await verify();
-  markRequestSent();
   if (result.success && result.authenticated) {
     await appendLog(jobId, "INFO", "✅ Sessione WCA attiva");
     return true;
@@ -69,11 +70,9 @@ export async function verifyWcaSession(
           "*"
         );
       });
-      markRequestSent();
 
       if (loginOk) {
         const retry = await verify();
-        markRequestSent();
         if (retry.success && retry.authenticated) {
           await appendLog(jobId, "INFO", "✅ Sessione attiva dopo auto-login (estensione)");
           return true;
