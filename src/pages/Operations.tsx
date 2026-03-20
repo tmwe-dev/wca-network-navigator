@@ -332,12 +332,8 @@ export default function Operations() {
                   />
                 </div>
 
-                {/* Terminal below partner panel */}
-                {showTerminal && (
-                  <div className="flex-shrink-0">
-                    <DownloadTerminal />
-                  </div>
-                )}
+
+
               </>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
