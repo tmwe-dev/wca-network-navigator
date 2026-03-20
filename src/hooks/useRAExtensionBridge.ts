@@ -63,7 +63,7 @@ export function useRAExtensionBridge() {
   // Poll for RA extension every 5s
   useEffect(() => {
     const doPing = () => {
-      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, "*");
+      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, window.location.origin);
     };
     doPing();
     const interval = setInterval(doPing, 5000);
@@ -85,7 +85,7 @@ export function useRAExtensionBridge() {
           resolve(response);
         });
 
-        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, "*");
+        window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, window.location.origin);
       });
     },
     []
