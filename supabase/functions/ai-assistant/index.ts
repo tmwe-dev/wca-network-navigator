@@ -387,7 +387,7 @@ const tools = [
     type: "function",
     function: {
       name: "download_single_partner",
-      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. Searches the directory_cache or partners table to find the wca_id, then creates a minimal download job with just that one ID.",
+      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. First searches the local DB and cache, then searches the WCA directory directly by company name if not found locally. Supports WCA search fields: CompanyName, CountryCode, City, MemberID.",
       parameters: {
         type: "object",
         properties: {
@@ -1064,7 +1064,36 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
     }
   }
 
-  if (!wcaId) return { error: `"${companyName}" non trovata né nel database né nella directory cache. Prova a eseguire prima una scansione della directory per il paese corrispondente.` };
+  // Step 3: If still not found, search WCA directory directly by company name
+  if (!wcaId) {
+    try {
+      const { data: searchResult, error: searchErr } = await supabase.functions.invoke("scrape-wca-directory", {
+        body: { searchBy: "CompanyName", companyName, countryCode: countryCode || undefined },
+      });
+      if (!searchErr && searchResult?.members?.length > 0) {
+        // Find best match from results
+        const exactMatch = searchResult.members.find((m: any) => 
+          m.company_name?.toLowerCase() === companyName.toLowerCase()
+        );
+        const partialMatch = searchResult.members.find((m: any) =>
+          m.company_name?.toLowerCase().includes(companyName.toLowerCase()) || 
+          companyName.toLowerCase().includes(m.company_name?.toLowerCase())
+        );
+        const bestMatch = exactMatch || partialMatch || searchResult.members[0];
+        if (bestMatch?.wca_id) {
+          wcaId = bestMatch.wca_id;
+          // Also update country info if we got it
+          if (!countryCode && bestMatch.country_code) {
+            // countryCode will be resolved later
+          }
+        }
+      }
+    } catch (e) {
+      console.error("WCA directory search failed:", e);
+    }
+  }
+
+  if (!wcaId) return { error: `"${companyName}" non trovata nel database, nella directory cache, né cercando direttamente su WCA. Verifica il nome esatto dell'azienda.` };
 
   // Step 3: Check dead IDs
   const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
