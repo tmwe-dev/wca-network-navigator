@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Volume2, Loader2, Wrench, Circle } from "lucide-react";
+import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { AgentAvatarCarousel } from "@/components/agents/AgentAvatarCarousel";
+import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
@@ -14,16 +15,57 @@ interface Message {
   content: string;
 }
 
+// STT hook
+function useSpeechRecognition(onResult: (text: string) => void) {
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<any>(null);
+
+  const toggle = useCallback(() => {
+    if (listening && recRef.current) {
+      recRef.current.stop();
+      setListening(false);
+      return;
+    }
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = "it-IT";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e: any) => {
+      let final = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      }
+      if (final) onResult(final);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    rec.start();
+    recRef.current = rec;
+    setListening(true);
+  }, [listening, onResult]);
+
+  useEffect(() => () => { recRef.current?.stop(); }, []);
+
+  return { listening, toggle };
+}
+
 export default function AgentChatHub() {
   const { agents, isLoading } = useAgents();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [voiceCallOpen, setVoiceCallOpen] = useState(false);
   const chatMapRef = useRef<Map<string, Message[]>>(new Map());
   const [, forceRender] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-select first agent
+  const appendInput = useCallback((text: string) => {
+    setInput((prev) => (prev ? prev + " " + text : text));
+  }, []);
+  const { listening, toggle: toggleSTT } = useSpeechRecognition(appendInput);
+
   useEffect(() => {
     if (!activeId && agents.length > 0) setActiveId(agents[0].id);
   }, [agents, activeId]);
@@ -192,11 +234,45 @@ export default function AgentChatHub() {
             className="text-sm rounded-xl bg-background/60"
             disabled={sending || !activeAgent}
           />
+
+          {/* STT mic */}
+          <Button
+            size="icon"
+            variant={listening ? "destructive" : "outline"}
+            onClick={toggleSTT}
+            disabled={!activeAgent}
+            className={cn("rounded-xl relative", listening && "animate-pulse")}
+            title={listening ? "Stop dettatura" : "Dettatura vocale"}
+          >
+            {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {listening && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-ping" />
+            )}
+          </Button>
+
+          {/* Voice call */}
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setVoiceCallOpen(true)}
+            disabled={!activeAgent?.elevenlabs_agent_id}
+            className="rounded-xl"
+            title="Chiamata vocale"
+          >
+            <Phone className="w-4 h-4" />
+          </Button>
+
+          {/* Send */}
           <Button size="icon" onClick={send} disabled={!input.trim() || sending || !activeAgent} className="rounded-xl">
             <Send className="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      {/* Voice call overlay */}
+      {voiceCallOpen && activeAgent && (
+        <AgentVoiceCall agent={activeAgent} onClose={() => setVoiceCallOpen(false)} />
+      )}
     </div>
   );
 }
