@@ -1,25 +1,9 @@
 /**
- * WCA session hook — extension-first with DB fallback.
- * If extension ping fails, checks wca_session_status in app_settings.
+ * WCA session hook — extension-first only.
  * Exposes granular state: extensionAvailable, sessionActive, isChecking, lastError.
  */
 import { useState, useCallback, useRef } from "react";
 import { useExtensionBridge } from "./useExtensionBridge";
-import { supabase } from "@/integrations/supabase/client";
-
-async function checkServerSessionStatus(): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "wca_session_status")
-      .maybeSingle();
-    if (error || !data) return false;
-    return data.value === "ok";
-  } catch {
-    return false;
-  }
-}
 
 export function useWcaSession() {
   const [extensionAvailable, setExtensionAvailable] = useState<boolean | null>(null);
@@ -31,7 +15,7 @@ export function useWcaSession() {
 
   /**
    * Session verification for download operations.
-   * Extension-first with server-side DB fallback.
+   * Extension-first only: the browser extension is the source of truth.
    */
   const ensureSession = useCallback(async (): Promise<boolean> => {
     if (checkingRef.current) return sessionActive ?? false;
@@ -45,13 +29,7 @@ export function useWcaSession() {
       setExtensionAvailable(extOk);
 
       if (!extOk) {
-        // ── DB FALLBACK: extension not responding, check server-side session status ──
-        const serverOk = await checkServerSessionStatus();
-        if (serverOk) {
-          setSessionActive(true);
-          return true;
-        }
-        const msg = "Sessione WCA non attiva. Estensione non rilevata e sessione server scaduta.";
+        const msg = "Estensione WCA non rilevata. Per i download serve la sessione aperta nel browser reale.";
         setLastError(msg);
         setSessionActive(false);
         return false;
@@ -94,7 +72,7 @@ export function useWcaSession() {
             requestId,
             username: creds.username,
             password: creds.password,
-          }, "*");
+          }, window.location.origin);
         });
 
         // Step 4: Auto-login attempt
