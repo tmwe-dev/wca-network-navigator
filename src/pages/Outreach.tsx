@@ -1,11 +1,10 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, Mail, Globe } from "lucide-react";
+import { Rocket, Briefcase, Mail } from "lucide-react";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 const Workspace = lazy(() => import("./Workspace"));
 const EmailComposer = lazy(() => import("./EmailComposer"));
-const Campaigns = lazy(() => import("./Campaigns"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
