@@ -4,7 +4,7 @@ import { ThemeCtx, t } from "@/components/download/theme";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
-import { AiOperationCards } from "@/components/ai/AiOperationCard";
+import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ActivePlansBadge } from "./ai/ActivePlansBadge";
