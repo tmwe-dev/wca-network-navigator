@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
@@ -24,6 +25,8 @@ export function AppLayout() {
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
   const { startJob } = useDownloadProcessor();
+  const { data: allJobs = [] } = useDownloadJobs();
+  const autoStartedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -80,6 +83,21 @@ export function AppLayout() {
     window.addEventListener("ai-ui-action", handler);
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate, startJob]);
+
+  // Safety net polling: auto-start any pending job if no running job exists
+  useEffect(() => {
+    const pendingJob = allJobs.find((j) => j.status === "pending");
+    const hasRunning = allJobs.some((j) => j.status === "running");
+    if (pendingJob && !hasRunning && !autoStartedRef.current.has(pendingJob.id)) {
+      const timer = setTimeout(() => {
+        if (!autoStartedRef.current.has(pendingJob.id)) {
+          autoStartedRef.current.add(pendingJob.id);
+          startJob(pendingJob.id);
+        }
+      }, 10000); // 10s grace period
+      return () => clearTimeout(timer);
+    }
+  }, [allJobs, startJob]);
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>
