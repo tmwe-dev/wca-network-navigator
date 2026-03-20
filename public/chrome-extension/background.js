@@ -406,10 +406,18 @@ async function verifyWcaSession() {
       return { authenticated: true, reason: "aspxauth_cookie_present" };
     }
 
+    var wcaCookie = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: "wca" });
+    if (wcaCookie && wcaCookie.value) {
+      if (wcaCookie.expirationDate && wcaCookie.expirationDate * 1000 < Date.now()) {
+        return { authenticated: false, reason: "wca_cookie_expired" };
+      }
+      return { authenticated: true, reason: "wca_cookie_present" };
+    }
+
     // Fallback: check for ASP.NET session cookie
     var sessionCookie = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: "ASP.NET_SessionId" });
     if (sessionCookie && sessionCookie.value) {
-      return { authenticated: false, reason: "session_cookie_only_no_aspxauth" };
+      return { authenticated: false, reason: "session_cookie_only_no_auth_cookie" };
     }
 
     return { authenticated: false, reason: "no_wca_cookies" };
@@ -457,6 +465,7 @@ async function syncWcaCookiesToServer() {
 
     var cookieString = names.map(function (name) { return name + "=" + cookieMap[name]; }).join("; ");
     var hasAspxAuth = !!cookieMap[".ASPXAUTH"];
+    var hasWcaCookie = !!cookieMap["wca"];
 
     var res = await fetch(SUPABASE_URL + "/functions/v1/save-wca-cookie", {
       method: "POST",
@@ -468,7 +477,13 @@ async function syncWcaCookiesToServer() {
       body: JSON.stringify({ cookie: cookieString }),
     });
     var result = await res.json();
-    return { success: true, authenticated: result.authenticated, cookieLength: cookieString.length, hasAspxAuth: hasAspxAuth };
+    return {
+      success: true,
+      authenticated: result.authenticated,
+      cookieLength: cookieString.length,
+      hasAspxAuth: hasAspxAuth,
+      hasWcaCookie: hasWcaCookie,
+    };
   } catch (err) {
     return { success: false, error: err.message };
   }
