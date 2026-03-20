@@ -1563,7 +1563,7 @@ async function executeExecutePlanStep(args: Record<string, unknown>, userId: str
       // UI actions are returned to frontend, not executed server-side
       stepResult = { ui_action: step.params, message: "Azione UI da eseguire sul frontend" };
     } else {
-      stepResult = await executeTool(step.action, step.params || {});
+      stepResult = await executeTool(step.action, step.params || {}, userId, authHeader);
     }
     step.status = "done";
     step.result = stepResult;
