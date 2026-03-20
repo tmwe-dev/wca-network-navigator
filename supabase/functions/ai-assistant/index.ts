@@ -951,16 +951,22 @@ async function executeCreateDownloadJob(args: Record<string, unknown>) {
   const countryName = String(args.country_name || "");
   const mode = String(args.mode || "no_profile");
   const networkName = String(args.network_name || "Tutti");
-  const delaySec = Math.max(10, Number(args.delay_seconds) || 15);
+  // Enforce minimum 15s delay to stay in the safe "green zone" of wcaCheckpoint
+  const delaySec = Math.max(15, Number(args.delay_seconds) || 15);
 
   if (!countryCode || !countryName) return { error: "country_code e country_name sono obbligatori" };
 
+  // LIMIT: max 1 active job at a time (aligned with UI manual behavior)
   const { data: activeJobs } = await supabase.from("download_jobs").select("id, country_code, status").in("status", ["pending", "running"]).limit(5);
   if (activeJobs && activeJobs.length > 0) {
     const sameCountry = activeJobs.find((j: any) => j.country_code === countryCode);
     if (sameCountry) return { error: `Esiste già un job attivo per ${countryName} (${countryCode}).`, active_job_id: sameCountry.id };
-    if (activeJobs.length >= 3) return { error: `Ci sono già ${activeJobs.length} job attivi. Attendi il completamento.` };
+    if (activeJobs.length >= 1) return { error: `C'è già un job attivo (${activeJobs[0].country_code}). Attendi il completamento prima di avviarne un altro.`, active_job_id: activeJobs[0].id };
   }
+
+  // Load dead IDs from partners_no_contacts (same filter as useCreateDownloadJob in the UI)
+  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
+  const deadIdSet = new Set((deadRows || []).map((r: any) => Number(r.wca_id)));
 
   let wcaIds: number[] = [];
   if (mode === "new") {
@@ -970,7 +976,7 @@ async function executeCreateDownloadJob(args: Record<string, unknown>) {
     for (const row of cacheRows) { const members = row.members as any[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? m.wca_id || m.id : m; if (id) dirIds.push(Number(id)); } }
     const { data: existing } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null);
     const existingSet = new Set((existing || []).map((p: any) => p.wca_id));
-    wcaIds = [...new Set(dirIds)].filter(id => !existingSet.has(id));
+    wcaIds = [...new Set(dirIds)].filter(id => !existingSet.has(id) && !deadIdSet.has(id));
   } else if (mode === "no_profile") {
     const { data: noProfile } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null).is("raw_profile_html", null);
     wcaIds = (noProfile || []).map((p: any) => p.wca_id).filter(Boolean);
@@ -980,13 +986,13 @@ async function executeCreateDownloadJob(args: Record<string, unknown>) {
       const existingSet = new Set((allExisting || []).map((p: any) => p.wca_id));
       for (const row of cacheRows) { const members = row.members as any[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? m.wca_id || m.id : m; if (id && !existingSet.has(Number(id))) wcaIds.push(Number(id)); } }
     }
-    wcaIds = [...new Set(wcaIds)];
+    wcaIds = [...new Set(wcaIds)].filter(id => !deadIdSet.has(id));
   } else {
     const { data: dbPartners } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null);
     wcaIds = (dbPartners || []).map((p: any) => p.wca_id).filter(Boolean);
     const { data: cacheRows } = await supabase.from("directory_cache").select("members").eq("country_code", countryCode);
     if (cacheRows) for (const row of cacheRows) { const members = row.members as any[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? m.wca_id || m.id : m; if (id) wcaIds.push(Number(id)); } }
-    wcaIds = [...new Set(wcaIds)];
+    wcaIds = [...new Set(wcaIds)].filter(id => !deadIdSet.has(id));
   }
 
   if (wcaIds.length === 0) {
