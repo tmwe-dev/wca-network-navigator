@@ -34,8 +34,10 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString()
     const hasAspxAuth = cookie.includes('.ASPXAUTH=')
+    const hasWcaCookie = cookie.includes('wca=')
+    const isAuthenticated = hasAspxAuth || hasWcaCookie
 
-    console.log(`save-wca-cookie: received cookie (${cookie.length} chars), hasAspxAuth=${hasAspxAuth}`)
+    console.log(`save-wca-cookie: received cookie (${cookie.length} chars), hasAspxAuth=${hasAspxAuth}, hasWcaCookie=${hasWcaCookie}`)
 
     // Save cookie to both keys for compatibility
     await supabase.from('app_settings').upsert(
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
 
     // Determine status ONLY from cookie content — NO HTTP requests to WCA
     // If .ASPXAUTH is missing (likely HttpOnly), mark as "unknown" — real verification via extension will confirm
-    const status = hasAspxAuth ? 'ok' : 'unknown'
+    const status = isAuthenticated ? 'ok' : 'unknown'
 
     await supabase.from('app_settings').upsert(
       { key: 'wca_session_status', value: status, updated_at: now },
@@ -60,16 +62,17 @@ Deno.serve(async (req) => {
       { onConflict: 'key' }
     )
 
-    const message = hasAspxAuth
-      ? '✅ Cookie salvato! Sessione .ASPXAUTH attiva.'
-      : '⏳ Cookie salvato. .ASPXAUTH non visibile (probabilmente HttpOnly). Verifica sessione reale necessaria.'
+    const message = isAuthenticated
+      ? '✅ Cookie salvato! Sessione WCA attiva.'
+      : '⏳ Cookie salvato. Nessun cookie di autenticazione rilevato, verifica reale necessaria.'
 
     console.log(`save-wca-cookie: status=${status}, message=${message}`)
 
     return respond({
       success: true,
-      authenticated: hasAspxAuth,
+      authenticated: isAuthenticated,
       hasAspxAuth,
+      hasWcaCookie,
       message,
     })
   } catch (error) {
