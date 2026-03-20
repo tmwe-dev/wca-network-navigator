@@ -200,13 +200,17 @@ export default function Operations() {
               const missingEmail = contextStats.totalPartners - contextStats.withEmail;
               const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
-                <div className="hidden lg:flex items-center gap-1 flex-wrap">
+                <div className="hidden md:flex items-center gap-1 overflow-x-auto">
+                  {/* Gruppo info */}
+                  <StatPill icon={FolderOpen} value={contextStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
                   <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
+                  {/* Separatore */}
+                  <div className="w-px h-5 bg-border/50 mx-1 flex-shrink-0" />
+                  {/* Gruppo mancanze */}
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
                   <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} onClick={() => setFilterMode("no_email")} active={filterMode === "no_email"} variant={missingEmail > 0 ? "warn" : "ok"} />
                   <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} onClick={() => setFilterMode("no_phone")} active={filterMode === "no_phone"} variant={missingPhone > 0 ? "warn" : "ok"} />
-                  <StatPill icon={FolderOpen} value={contextStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
                 </div>
               );
             })()}
