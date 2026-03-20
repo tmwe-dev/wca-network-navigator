@@ -80,17 +80,8 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
-  const { emergencyStop, startJob: rawStartJob, onProgressRef, onResultRef } = useDownloadProcessor();
+  const { stop: emergencyStop, startJob: rawStartJob } = useDownloadEngine();
   const toggleFavorite = useToggleFavorite();
-
-  // Wire download canvas callbacks
-  onProgressRef.current = useCallback((p: DownloadCurrent) => {
-    setDlCurrent(p);
-    if (!dlCanvasOpen) setDlCanvasOpen(true);
-  }, [dlCanvasOpen]);
-  onResultRef.current = useCallback((r: DownloadResult) => {
-    setDlResults(prev => [...prev, r]);
-  }, []);
 
   const startJob = useCallback((jobId: string) => {
     setDlResults([]);
