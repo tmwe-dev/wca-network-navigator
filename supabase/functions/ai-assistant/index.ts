@@ -2259,7 +2259,7 @@ function executeGetProcedure(args: Record<string, unknown>) {
   return { procedures: Object.values(PROCEDURES_DB), count: Object.keys(PROCEDURES_DB).length };
 }
 
-
+async function executeCheckJobStatus(args: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
 
   // Specific job check
