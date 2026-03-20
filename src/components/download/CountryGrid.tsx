@@ -228,10 +228,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
 
       {/* ═══ COUNTRY LIST ═══ */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className={cn(
-          "gap-1 pr-1",
-          compact ? "flex flex-col" : "grid grid-cols-1 sm:grid-cols-2"
-        )}>
+        <div className="flex flex-col gap-1 pr-1">
           {filtered.map(c => (
             <CountryCard
               key={c.code}

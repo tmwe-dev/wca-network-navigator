@@ -251,12 +251,12 @@ export default function Operations() {
             "flex-1 min-h-0 px-4 pb-3 gap-3",
             isMobile ? "flex flex-col overflow-y-auto" : "flex"
           )}>
-            {/* LEFT: Country Grid */}
+            {/* LEFT: Country Grid — always single column */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
               isMobile
                 ? (hasSelection ? "max-h-[35vh]" : "")
-                : hasSelection ? "w-[260px]" : "max-w-[520px] mx-auto w-full"
+                : "w-[280px]"
             )}>
               <CountryGrid
                 selected={selectedCountries}
@@ -277,9 +277,10 @@ export default function Operations() {
               )}
             </div>
 
-            {/* CENTER: Partner List + Detail overlay */}
-            {hasSelection && (
-              <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
+            {/* RIGHT: Partner List + Detail overlay */}
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
+            {hasSelection ? (
+              <>
                 <ActiveJobBar />
                 <div className={cn(
                   "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
@@ -349,8 +350,15 @@ export default function Operations() {
                     <DownloadTerminal />
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
+                <Globe className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                <p className="text-sm text-muted-foreground/60 font-medium">Seleziona un paese per vedere i partner</p>
+                <p className="text-xs text-muted-foreground/40 mt-1">Clicca su uno o più paesi dall'elenco a sinistra</p>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
