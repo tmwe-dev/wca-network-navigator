@@ -202,7 +202,14 @@ export const AVAILABLE_TOOLS = [
   { name: "check_blacklist", label: "Verifica Blacklist", category: "Sistema" },
   { name: "get_global_summary", label: "Riepilogo Globale", category: "Sistema" },
   { name: "save_memory", label: "Salva in Memoria", category: "Sistema" },
+  { name: "search_memory", label: "Cerca in Memoria", category: "Sistema" },
   { name: "delete_records", label: "Elimina Record", category: "Sistema" },
-  { name: "get_procedure", label: "Consulta Procedura", category: "Sistema" },
+  { name: "search_business_cards", label: "Cerca Biglietti Visita", category: "Sistema" },
   { name: "execute_ui_action", label: "Azione UI", category: "Sistema" },
+  // Management Tools (Director)
+  { name: "create_agent_task", label: "Crea Task Agente", category: "Management" },
+  { name: "list_agent_tasks", label: "Lista Task Team", category: "Management" },
+  { name: "get_team_status", label: "Stato Team", category: "Management" },
+  { name: "update_agent_prompt", label: "Aggiorna Prompt Agente", category: "Management" },
+  { name: "add_agent_kb_entry", label: "Aggiungi KB Agente", category: "Management" },
 ];
