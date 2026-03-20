@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -110,6 +110,13 @@ export function PartnerListPanel({
   const handleSelectPartner = useCallback((id: string) => {
     if (onSelectPartner) onSelectPartner(id);
   }, [onSelectPartner]);
+
+  // Auto-select first partner when list loads and nothing is selected
+  useEffect(() => {
+    if (!selectedPartnerId && filteredPartners.length > 0 && onSelectPartner) {
+      onSelectPartner((filteredPartners[0] as any).id);
+    }
+  }, [filteredPartners, selectedPartnerId, onSelectPartner]);
 
   const toggleProgressFilter = (key: ProgressFilterKey) => {
     setProgressFilter(prev => prev === key ? null : key);

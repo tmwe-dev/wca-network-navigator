@@ -109,14 +109,18 @@ export default function Operations() {
   const handleCountryClick = useCallback((code: string, name: string) => {
     setSelectedCountries(prev => {
       const exists = prev.some(c => c.code === code);
-      return exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
+      const next = exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
+      if (next.length === 0) setSelectedPartnerId(null);
+      return next;
     });
-    setSelectedPartnerId(null);
   }, []);
 
   const handleRemoveCountry = useCallback((code: string) => {
-    setSelectedCountries(prev => prev.filter(c => c.code !== code));
-    setSelectedPartnerId(null);
+    setSelectedCountries(prev => {
+      const next = prev.filter(c => c.code !== code);
+      if (next.length === 0) setSelectedPartnerId(null);
+      return next;
+    });
   }, []);
 
   const handleDeepSearch = useCallback((partnerIds: string[]) => {
@@ -149,7 +153,7 @@ export default function Operations() {
   }, [aliasGenerating, queryClient]);
 
   const th = t(isDark);
-  const hasDetailOpen = !isMobile && !!selectedPartnerId && !!selectedPartner;
+  const hasDetailOpen = !isMobile && hasSelection;
 
   return (
     <ThemeCtx.Provider value={isDark}>
@@ -341,23 +345,29 @@ export default function Operations() {
             )}
             </div>
 
-            {/* COL 3: Partner Detail — separate column */}
+            {/* COL 3: Partner Detail — always visible when countries selected */}
             {hasDetailOpen && (
               <div className="w-[380px] flex-shrink-0 min-h-0 flex flex-col rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden animate-in slide-in-from-right-8 duration-200">
-                <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
-                  <button onClick={() => setSelectedPartnerId(null)}
-                    className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted">
-                    <X className="w-4 h-4" /> Chiudi
-                  </button>
-                </div>
-                <div className="flex-1 min-h-0 overflow-auto">
-                  <PartnerDetailCompact
-                    partner={selectedPartner}
-                    onBack={() => setSelectedPartnerId(null)}
-                    onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-                    isDark={isDark}
-                  />
-                </div>
+                {selectedPartnerId && selectedPartner ? (
+                  <>
+                    <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
+                      <span className="text-xs font-medium text-muted-foreground px-2 py-1">Dettaglio Partner</span>
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-auto">
+                      <PartnerDetailCompact
+                        partner={selectedPartner}
+                        onBack={() => setSelectedPartnerId(null)}
+                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                        isDark={isDark}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/40">
+                    <Users className="w-8 h-8 mb-2" />
+                    <p className="text-xs font-medium">Caricamento...</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
