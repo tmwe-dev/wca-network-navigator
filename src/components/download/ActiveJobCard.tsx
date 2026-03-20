@@ -87,8 +87,8 @@ export function ActiveJobCard({ job }: { job: DownloadJob }) {
 
       {job.error_message && <p className={`text-xs ${th.logErr}`}>⚠️ {job.error_message}</p>}
 
-      <JobDataViewer open={showViewer} onOpenChange={setShowViewer} processedIds={(job.processed_ids as number[]) || []} countryCode={job.country_code} />
-      <JobTerminalViewer open={showTerminal} onOpenChange={setShowTerminal} jobId={job.id} />
+      <JobDataViewer open={showViewer} onOpenChange={setShowViewer} processedIds={(job.processed_ids as number[]) || []} failedIds={(job.failed_ids as number[]) || []} countryCode={job.country_code} countryName={job.country_name} networkName={job.network_name} isDark={isDark} jobStatus={job.status} />
+      <JobTerminalViewer open={showTerminal} onOpenChange={setShowTerminal} jobId={job.id} jobStatus={job.status} countryName={job.country_name} isDark={isDark} />
     </div>
   );
 }
