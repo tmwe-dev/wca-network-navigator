@@ -1088,6 +1088,22 @@ const tools = [
       },
     },
   },
+  // ━━━ Procedure Knowledge Base Tool ━━━
+  {
+    type: "function",
+    function: {
+      name: "get_procedure",
+      description: "Get detailed step-by-step procedure from the Operations Knowledge Base. Use when the user asks how to do something or when you need to follow a specific workflow. Returns prerequisites, ordered steps with tool mapping, and tips.",
+      parameters: {
+        type: "object",
+        properties: {
+          procedure_id: { type: "string", description: "Procedure ID (e.g. 'email_single', 'download_profiles', 'deep_search_partner')" },
+          search_tags: { type: "array", items: { type: "string" }, description: "Tags to search for matching procedures (e.g. ['email', 'campagna'])" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
