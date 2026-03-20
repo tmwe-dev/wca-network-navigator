@@ -355,19 +355,24 @@ export default function EmailComposer() {
 
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] mx-auto">
+    <div className="flex flex-col h-full">
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Mail className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Email Composer</h1>
+            <p className="text-[11px] text-muted-foreground">Composizione e invio campagne email</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4">
+      <div className="flex flex-col lg:flex-row gap-4 max-w-[1600px]">
       {/* Left: Editor */}
       <div className="flex-1 space-y-4">
-        <div className="flex items-center gap-3">
-          <Mail className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Email Composer</h1>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Componi Email</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="float-panel p-5 space-y-4">
+          <h3 className="text-sm font-semibold">Componi Email</h3>
             {/* Category */}
             <div className="space-y-1">
               <label className="text-sm font-medium">Categoria</label>
@@ -474,12 +479,9 @@ export default function EmailComposer() {
                 <p className="text-xs text-muted-foreground">Nessun template caricato. Vai in Impostazioni → Template.</p>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </div>
 
-        {/* Queue delay control */}
-        <Card>
-          <CardContent className="pt-4 space-y-3">
+        <div className="float-panel-subtle p-4 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium flex items-center gap-2">
                 <ListOrdered className="w-4 h-4 text-muted-foreground" />
@@ -494,8 +496,7 @@ export default function EmailComposer() {
               max={30}
               step={1}
             />
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Action buttons */}
         <div className="flex gap-3">
@@ -523,16 +524,13 @@ export default function EmailComposer() {
 
         {/* Preview */}
         {previewOpen && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Anteprima</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="float-panel p-5">
+            <h3 className="text-sm font-semibold mb-3">Anteprima</h3>
               <div className="text-sm mb-2">
                 <strong>Oggetto:</strong> {subject.replace(/\{\{company_name\}\}/g, "Acme Logistics").replace(/\{\{contact_name\}\}/g, "John Doe").replace(/\{\{city\}\}/g, "Milano").replace(/\{\{country\}\}/g, "Italy")}
               </div>
               <div
-                className="border rounded p-4 text-sm prose prose-sm max-w-none"
+                className="border border-border/30 rounded-xl p-4 text-sm prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
                   __html: buildFinalHtml(
                     htmlBody,
@@ -541,8 +539,7 @@ export default function EmailComposer() {
                   ),
                 }}
               />
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
 
@@ -565,6 +562,8 @@ export default function EmailComposer() {
           recipientCount={recipients.length}
           recipientWithEmailCount={recipientsWithEmail.length}
         />
+      </div>
+      </div>
       </div>
     </div>
   );

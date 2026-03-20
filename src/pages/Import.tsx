@@ -39,13 +39,19 @@ export default function Import() {
   const w = useImportWizard();
 
   return (
-    <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Import Contatti</h1>
-          <p className="text-sm text-muted-foreground">Carica file o incolla testo — l'AI analizza e mappa automaticamente</p>
+    <div className="flex flex-col h-full">
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Upload className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Import Contatti</h1>
+            <p className="text-[11px] text-muted-foreground">Carica file o incolla testo — l'AI analizza e mappa automaticamente</p>
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-4">
 
       {/* ====== UPLOAD DIALOG ====== */}
       <Dialog open={w.uploadDialogOpen} onOpenChange={w.setUploadDialogOpen}>
@@ -158,11 +164,8 @@ export default function Import() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Left: Import history */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Storico Import</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
+        <div className="float-panel lg:col-span-1 p-3">
+          <h3 className="text-sm font-semibold mb-2 px-1">Storico Import</h3>
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-1">
                 {w.logs.map((log) => (
@@ -215,8 +218,7 @@ export default function Import() {
                 )}
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Right: Main content */}
         <div className="lg:col-span-3">
@@ -388,6 +390,7 @@ export default function Import() {
         activeLogId={w.activeLogId}
         activeFileName={w.activeLog?.file_name}
       />
+      </div>
     </div>
   );
 }

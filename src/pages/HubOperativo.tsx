@@ -113,30 +113,22 @@ function SourcePanel({ source, activities, navigate }: {
     <div className="flex flex-col h-full">
       {/* Stats cards */}
       <div className="grid grid-cols-4 gap-2 p-3">
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-foreground">{stats.total}</span>
-            <span className="text-[10px] text-muted-foreground">Totale</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-warning">{stats.pending}</span>
-            <span className="text-[10px] text-muted-foreground">In coda</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-success">{stats.completed}</span>
-            <span className="text-[10px] text-muted-foreground">Completate</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-primary">{stats.emails}</span>
-            <span className="text-[10px] text-muted-foreground">Email da fare</span>
-          </CardContent>
-        </Card>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-foreground">{stats.total}</span>
+          <span className="text-[10px] text-muted-foreground">Totale</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-warning">{stats.pending}</span>
+          <span className="text-[10px] text-muted-foreground">In coda</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-success">{stats.completed}</span>
+          <span className="text-[10px] text-muted-foreground">Completate</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-primary">{stats.emails}</span>
+          <span className="text-[10px] text-muted-foreground">Email da fare</span>
+        </div>
       </div>
 
       {/* Progress */}
@@ -245,11 +237,15 @@ export default function HubOperativo() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)] bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 h-12 border-b border-border shrink-0">
-        <Zap className="w-4.5 h-4.5 text-primary" />
-        <h1 className="text-sm font-semibold text-foreground">Hub Operativo</h1>
-        <span className="text-xs text-muted-foreground">Centro di smistamento job e campagne</span>
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Zap className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Hub Operativo</h1>
+            <p className="text-[11px] text-muted-foreground">Centro di smistamento job e campagne</p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
