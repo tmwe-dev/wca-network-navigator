@@ -524,16 +524,13 @@ export default function EmailComposer() {
 
         {/* Preview */}
         {previewOpen && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Anteprima</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="float-panel p-5">
+            <h3 className="text-sm font-semibold mb-3">Anteprima</h3>
               <div className="text-sm mb-2">
                 <strong>Oggetto:</strong> {subject.replace(/\{\{company_name\}\}/g, "Acme Logistics").replace(/\{\{contact_name\}\}/g, "John Doe").replace(/\{\{city\}\}/g, "Milano").replace(/\{\{country\}\}/g, "Italy")}
               </div>
               <div
-                className="border rounded p-4 text-sm prose prose-sm max-w-none"
+                className="border border-border/30 rounded-xl p-4 text-sm prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
                   __html: buildFinalHtml(
                     htmlBody,
@@ -542,8 +539,7 @@ export default function EmailComposer() {
                   ),
                 }}
               />
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
 
