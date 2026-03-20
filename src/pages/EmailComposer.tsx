@@ -371,11 +371,8 @@ export default function EmailComposer() {
       <div className="flex flex-col lg:flex-row gap-4 max-w-[1600px]">
       {/* Left: Editor */}
       <div className="flex-1 space-y-4">
-        <div className="float-panel">
-          <CardHeader>
-            <CardTitle className="text-base">Componi Email</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="float-panel p-5 space-y-4">
+          <h3 className="text-sm font-semibold">Componi Email</h3>
             {/* Category */}
             <div className="space-y-1">
               <label className="text-sm font-medium">Categoria</label>
@@ -482,8 +479,7 @@ export default function EmailComposer() {
                 <p className="text-xs text-muted-foreground">Nessun template caricato. Vai in Impostazioni → Template.</p>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Queue delay control */}
         <Card>

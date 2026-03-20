@@ -164,11 +164,8 @@ export default function Import() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Left: Import history */}
-        <div className="float-panel lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Storico Import</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
+        <div className="float-panel lg:col-span-1 p-3">
+          <h3 className="text-sm font-semibold mb-2 px-1">Storico Import</h3>
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-1">
                 {w.logs.map((log) => (
@@ -221,8 +218,7 @@ export default function Import() {
                 )}
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Right: Main content */}
         <div className="lg:col-span-3">
