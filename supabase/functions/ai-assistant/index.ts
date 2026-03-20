@@ -2217,7 +2217,7 @@ async function executeCheckJobStatus(args: Record<string, unknown>) {
 // UNIFIED TOOL DISPATCHER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-async function executeTool(name: string, args: Record<string, unknown>, userId?: string): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, userId?: string, authHeader?: string): Promise<unknown> {
   switch (name) {
     case "search_partners": return executeSearchPartners(args);
     case "get_country_overview": return executeCountryOverview(args);
@@ -2250,6 +2250,23 @@ async function executeTool(name: string, args: Record<string, unknown>, userId?:
     case "link_business_card": return executeLinkBusinessCard(args);
     // Verification tool
     case "check_job_status": return executeCheckJobStatus(args);
+    // ━━━ NEW: Contacts, Prospects, Activities, Email, Deep Search, Directory, Aliases ━━━
+    case "search_contacts": return executeSearchContacts(args);
+    case "get_contact_detail": return executeGetContactDetail(args);
+    case "search_prospects": return executeSearchProspects(args);
+    case "list_activities": return executeListActivities(args);
+    case "create_activity": return executeCreateActivity(args);
+    case "update_activity": return executeUpdateActivity(args);
+    case "generate_outreach": return authHeader ? executeGenerateOutreach(args, authHeader) : { error: "Auth required" };
+    case "send_email": return authHeader ? executeSendEmail(args, authHeader) : { error: "Auth required" };
+    case "deep_search_partner": return authHeader ? executeDeepSearchPartner(args, authHeader) : { error: "Auth required" };
+    case "deep_search_contact": return authHeader ? executeDeepSearchContact(args, authHeader) : { error: "Auth required" };
+    case "enrich_partner_website": return authHeader ? executeEnrichPartnerWebsite(args, authHeader) : { error: "Auth required" };
+    case "scan_directory": return authHeader ? executeScanDirectory(args, authHeader) : { error: "Auth required" };
+    case "generate_aliases": return authHeader ? executeGenerateAliases(args, authHeader) : { error: "Auth required" };
+    case "manage_partner_contact": return executeManagePartnerContact(args);
+    case "update_reminder": return executeUpdateReminder(args);
+    case "delete_records": return executeDeleteRecords(args);
     default: return { error: `Tool sconosciuto: ${name}` };
   }
 }
