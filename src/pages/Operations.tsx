@@ -373,6 +373,7 @@ export default function Operations() {
         </div>
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
+      <DownloadTerminalDialog open={showTerminal} onOpenChange={setShowTerminal} />
     </ThemeCtx.Provider>
   );
 }
