@@ -3,11 +3,11 @@ import { CampaignGlobe } from "@/components/campaigns/CampaignGlobe";
 import { GlobalChat } from "@/components/global/GlobalChat";
 import type { JobCreatedInfo } from "@/lib/ai/agentResponse";
 import { DownloadStatusPanel } from "@/components/global/DownloadStatusPanel";
-import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
+import { useDownloadEngine } from "@/hooks/useDownloadEngine";
 
 export default function Global() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const { startJob } = useDownloadProcessor();
+  const { startJob } = useDownloadEngine();
 
   const handleActiveCountry = useCallback((code: string | null) => {
     if (code) setSelectedCountry(code);

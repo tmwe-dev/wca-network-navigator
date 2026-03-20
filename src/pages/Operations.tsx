@@ -20,7 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
+import { useDownloadEngine } from "@/hooks/useDownloadEngine";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag } from "@/lib/countries";
@@ -80,17 +80,8 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
   const { data: jobs } = useDownloadJobs();
-  const { emergencyStop, startJob: rawStartJob, onProgressRef, onResultRef } = useDownloadProcessor();
+  const { stop: emergencyStop, startJob: rawStartJob } = useDownloadEngine();
   const toggleFavorite = useToggleFavorite();
-
-  // Wire download canvas callbacks
-  onProgressRef.current = useCallback((p: DownloadCurrent) => {
-    setDlCurrent(p);
-    if (!dlCanvasOpen) setDlCanvasOpen(true);
-  }, [dlCanvasOpen]);
-  onResultRef.current = useCallback((r: DownloadResult) => {
-    setDlResults(prev => [...prev, r]);
-  }, []);
 
   const startJob = useCallback((jobId: string) => {
     setDlResults([]);

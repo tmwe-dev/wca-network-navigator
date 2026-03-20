@@ -1,8 +1,7 @@
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pause, Play, X, Download, Mail, Phone, Users, Globe } from "lucide-react";
+import { Pause, Play, X, Download, Mail, Phone, Users } from "lucide-react";
 import { useDownloadJobs, usePauseResumeJob, type DownloadJob } from "@/hooks/useDownloadJobs";
-import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { Progress } from "@/components/ui/progress";
 
 function countryFlag(code: string) {
@@ -14,56 +13,30 @@ function countryFlag(code: string) {
 export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (code: string | null) => void }) {
   const { data: jobs = [] } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
-  const { startJob } = useDownloadProcessor();
-  const startedJobsRef = useRef<Set<string>>(new Set());
 
   const activeJob = useMemo(() => jobs.find((j) => j.status === "running" || j.status === "pending"), [jobs]);
   const completedJobs = useMemo(() => jobs.filter((j) => j.status === "completed"), [jobs]);
   const queuedJobs = useMemo(() => jobs.filter((j) => j.status === "pending" && j.id !== activeJob?.id), [jobs, activeJob]);
 
-  // Notify parent of active country
   useMemo(() => {
     onActiveCountry?.(activeJob?.country_code || null);
   }, [activeJob?.country_code, onActiveCountry]);
 
-  // Auto-start fallback: if a job stays "pending" and no job is "running", start it
-  useEffect(() => {
-    const pendingJob = jobs.find((j) => j.status === "pending");
-    const hasRunning = jobs.some((j) => j.status === "running");
-    if (pendingJob && !hasRunning && !startedJobsRef.current.has(pendingJob.id)) {
-      const timer = setTimeout(() => {
-        if (!startedJobsRef.current.has(pendingJob.id)) {
-          startedJobsRef.current.add(pendingJob.id);
-          startJob(pendingJob.id);
-        }
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [jobs, startJob]);
-
-  const totals = useMemo(() => {
-    return jobs.reduce(
-      (acc, j) => ({
-        processed: acc.processed + j.current_index,
-        emails: acc.emails + j.contacts_found_count,
-        phones: acc.phones + j.contacts_missing_count,
-      }),
-      { processed: 0, emails: 0, phones: 0 }
-    );
-  }, [jobs]);
+  const totals = useMemo(() => jobs.reduce(
+    (acc, j) => ({ processed: acc.processed + j.current_index, emails: acc.emails + j.contacts_found_count, phones: acc.phones + j.contacts_missing_count }),
+    { processed: 0, emails: 0, phones: 0 }
+  ), [jobs]);
 
   const progress = activeJob ? Math.round((activeJob.current_index / Math.max(activeJob.total_count, 1)) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-3 p-3">
-      {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         <StatCard icon={<Users className="w-3.5 h-3.5" />} label="Processati" value={totals.processed} />
         <StatCard icon={<Mail className="w-3.5 h-3.5" />} label="Contatti" value={totals.emails} />
         <StatCard icon={<Phone className="w-3.5 h-3.5" />} label="Mancanti" value={totals.phones} />
       </div>
 
-      {/* Active job */}
       {activeJob && (
         <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -71,22 +44,14 @@ export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (co
               <span className="text-lg">{countryFlag(activeJob.country_code)}</span>
               <div>
                 <p className="text-xs font-medium text-white">{activeJob.country_name}</p>
-                <p className="text-[10px] text-slate-400">
-                  {activeJob.current_index}/{activeJob.total_count} • {activeJob.last_processed_company || "In attesa..."}
-                </p>
+                <p className="text-[10px] text-slate-400">{activeJob.current_index}/{activeJob.total_count} • {activeJob.last_processed_company || "In attesa..."}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => pauseResume.mutate({ jobId: activeJob.id, action: activeJob.status === "running" ? "pause" : "resume" })}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition-colors"
-              >
+              <button onClick={() => pauseResume.mutate({ jobId: activeJob.id, action: activeJob.status === "running" ? "pause" : "resume" })} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition-colors">
                 {activeJob.status === "running" ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               </button>
-              <button
-                onClick={() => pauseResume.mutate({ jobId: activeJob.id, action: "cancel" })}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition-colors"
-              >
+              <button onClick={() => pauseResume.mutate({ jobId: activeJob.id, action: "cancel" })} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -96,7 +61,6 @@ export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (co
         </div>
       )}
 
-      {/* Queue */}
       {queuedJobs.length > 0 && (
         <div className="space-y-1">
           <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider px-1">In coda ({queuedJobs.length})</p>
@@ -110,23 +74,14 @@ export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (co
         </div>
       )}
 
-      {/* Completed flags grid */}
       {completedJobs.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider px-1">
-            Completati ({completedJobs.length})
-          </p>
+          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider px-1">Completati ({completedJobs.length})</p>
           <div className="flex flex-wrap gap-1">
             <AnimatePresence>
               {completedJobs.map((j) => (
-                <motion.div
-                  key={j.id}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400"
-                >
-                  <span>{countryFlag(j.country_code)}</span>
-                  <span>{j.country_code}</span>
+                <motion.div key={j.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400">
+                  <span>{countryFlag(j.country_code)}</span><span>{j.country_code}</span>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -134,13 +89,10 @@ export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (co
         </div>
       )}
 
-      {/* Empty state */}
       {jobs.length === 0 && (
         <div className="flex flex-col items-center justify-center py-6 gap-2">
           <Download className="w-8 h-8 text-white/10" />
-          <p className="text-[10px] text-slate-600 text-center">
-            Nessun download attivo.<br />Chiedi all'assistente di avviarne uno.
-          </p>
+          <p className="text-[10px] text-slate-600 text-center">Nessun download attivo.<br />Chiedi all'assistente di avviarne uno.</p>
         </div>
       )}
     </div>
