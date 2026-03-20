@@ -574,6 +574,8 @@ export default function EmailComposer() {
           recipientWithEmailCount={recipientsWithEmail.length}
         />
       </div>
+      </div>
+      </div>
     </div>
   );
 }

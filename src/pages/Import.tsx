@@ -394,6 +394,7 @@ export default function Import() {
         activeLogId={w.activeLogId}
         activeFileName={w.activeLog?.file_name}
       />
+      </div>
     </div>
   );
 }
