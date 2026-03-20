@@ -394,28 +394,27 @@ async function extractContactsForId(wcaId) {
   }
 }
 
-// ── Verify WCA session by opening a known profile ──
+// ── Verify WCA session via LOCAL cookie check (no WCA page hit) ──
 async function verifyWcaSession() {
-  var TEST_WCA_ID = 86580;
-  var tab = await chrome.tabs.create({
-    url: "https://www.wcaworld.com/directory/members/" + TEST_WCA_ID,
-    active: false,
-  });
-
   try {
-    await waitForTabLoad(tab.id, 15000);
+    var aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
+    if (aspxAuth && aspxAuth.value) {
+      // Check if cookie is not expired
+      if (aspxAuth.expirationDate && aspxAuth.expirationDate * 1000 < Date.now()) {
+        return { authenticated: false, reason: "aspxauth_expired" };
+      }
+      return { authenticated: true, reason: "aspxauth_cookie_present" };
+    }
 
-    var results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: checkSessionOnPage,
-    });
+    // Fallback: check for ASP.NET session cookie
+    var sessionCookie = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: "ASP.NET_SessionId" });
+    if (sessionCookie && sessionCookie.value) {
+      return { authenticated: false, reason: "session_cookie_only_no_aspxauth" };
+    }
 
-    var sessionResult = results[0] && results[0].result;
-    return sessionResult || { authenticated: false, reason: "no_result" };
+    return { authenticated: false, reason: "no_wca_cookies" };
   } catch (err) {
-    return { authenticated: false, reason: "error: " + err.message };
-  } finally {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    return { authenticated: false, reason: "cookie_check_error: " + err.message };
   }
 }
 

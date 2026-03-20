@@ -97,3 +97,15 @@ export async function appendLog(jobId: string, type: string, msg: string) {
 export async function flushLogBuffer(): Promise<void> {
   await flushBuffer();
 }
+
+// Register beforeunload handler to flush on tab close
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    const buf = getBuffer();
+    if (buf.entries.length > 0 && buf.jobId) {
+      // Use sendBeacon as last resort (navigator.sendBeacon doesn't support JSON well,
+      // so we do a sync-ish flush via the existing mechanism)
+      flushBuffer().catch(() => {});
+    }
+  });
+}

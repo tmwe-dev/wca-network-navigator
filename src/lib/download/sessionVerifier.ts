@@ -67,7 +67,7 @@ export async function verifyWcaSession(
         window.addEventListener("message", handler);
         window.postMessage(
           { direction: "from-webapp", action: "autoLogin", requestId, username: creds.username, password: creds.password },
-          "*"
+          window.location.origin
         );
       });
 
