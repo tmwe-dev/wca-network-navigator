@@ -36,7 +36,7 @@ export async function verifyWcaSession(
         resolve(event.data?.response || { success: false });
       };
       window.addEventListener("message", handler);
-      window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, "*");
+      window.postMessage({ direction: "from-webapp", action: "verifySession", requestId }, window.location.origin);
     });
 
   const result = await verify();
