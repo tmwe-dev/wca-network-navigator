@@ -475,7 +475,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
                           }}
                         >{parsed.text}</ReactMarkdown>
                       </div>
-                      {parsed.operations.length > 0 && <AiOperationCards operations={parsed.operations} />}
+                      {parsed.operations.length > 0 && <LiveOperationCards operations={parsed.operations} />}
                       {parsed.partners.length > 0 && <AiResultsPanel partners={parsed.partners} />}
                     </>
                   );
