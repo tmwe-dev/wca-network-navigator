@@ -1,31 +1,62 @@
 
 
-## Status: Piano Già Implementato
+## Conferma Architettura: Network → CRM → Outreach
 
-Dopo aver analizzato i tre file del piano approvato, confermo che **tutte le modifiche sono già state applicate** nelle iterazioni precedenti:
+### Come Funziona Oggi
 
-### Verifiche Completate
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  NETWORK (/network)                                         │
+│  ├── Tab "Download WCA" → Scarica profili WCA               │
+│  │   Salva in: partners + partner_contacts                  │
+│  └── Tab "Rubrica Partner" → Consulta/gestisci partner WCA  │
+│       Legge da: partners + partner_contacts                 │
+├─────────────────────────────────────────────────────────────┤
+│  CRM (/crm)                                                 │
+│  ├── Tab "Contatti" → Contatti importati (file, biglietti)  │
+│  │   Legge da: imported_contacts + import_logs              │
+│  ├── Tab "Prospect" → Aziende italiane (Report Aziende)    │
+│  │   Legge da: prospects + prospect_contacts                │
+│  └── Tab "Import" → Importa nuovi file CSV/Excel           │
+│       Scrive in: imported_contacts                          │
+├─────────────────────────────────────────────────────────────┤
+│  OUTREACH (/outreach)                                       │
+│  ├── Tab "Cockpit AI" → Centro operativo outreach           │
+│  │   Legge da: TUTTE E TRE le sorgenti (useCockpitContacts)│
+│  │   ├── partner_contacts (origine: "wca")                  │
+│  │   ├── imported_contacts (origine: "import")              │
+│  │   └── prospect_contacts (origine: "report_aziende")      │
+│  ├── Tab "Workspace" → Composizione email con preset        │
+│  ├── Tab "Email Composer" → Editor email avanzato           │
+│  └── Tab "Campagne" → Invio massivo + globo 3D             │
+└─────────────────────────────────────────────────────────────┘
+```
 
-| Step | File | Stato |
-|------|------|-------|
-| Step 1: Filtro dead IDs + limite 1 job | `ai-assistant/index.ts` | ✅ Implementato (righe 967-989, 1070-1076) |
-| Step 2: Auto-start fallback 5s | `DownloadStatusPanel.tsx` | ✅ Implementato (righe 30-42) |
-| Step 3: Safety net polling 10s | `AppLayout.tsx` | ✅ Implementato (righe 88-100) |
+### Il Passaggio tra i Contenitori
 
-### Dettaglio Tecnico
+Il **Cockpit** (dentro Outreach) è il punto di convergenza. L'hook `useCockpitContacts` unifica automaticamente i contatti da tutte e tre le sorgenti:
 
-- **`executeCreateDownloadJob`**: filtra `partners_no_contacts` con `resolved=false`, limita a 1 job attivo, forza delay minimo 15s
-- **`executeDownloadSinglePartner`**: stessi filtri dead IDs, stesso limite 1 job, verifica profilo già scaricato
-- **`AppLayout`**: polling ogni 10s rileva job `pending` senza job `running` e li avvia
-- **`DownloadStatusPanel`**: fallback 5s locale con ref per evitare doppie esecuzioni
+1. **Da Network**: i `partner_contacts` (collegati ai `partners` WCA) appaiono nel Cockpit con badge blu "WCA"
+2. **Da CRM → Contatti**: gli `imported_contacts` appaiono con badge verde "Import"
+3. **Da CRM → Prospect**: i `prospect_contacts` appaiono con badge arancione "Report Aziende"
 
-### Cosa Resta da Fare (dal messaggio precedente)
+**Non serve nessuna azione manuale** per "spostare" contatti da Network o CRM al Cockpit. Tutti i contatti con un nome valido vengono automaticamente aggregati.
 
-Le tre aree ancora mancanti identificate nell'analisi precedente sono:
+### Cosa NON Esiste Ancora (Potenziale Miglioramento)
 
-1. **Controlli pausa/stop globali** -- attualmente solo nel `DownloadStatusPanel`, non accessibili da ogni pagina
-2. **Monitoraggio proattivo AI** -- l'AI non controlla autonomamente lo stato dei job dopo la creazione (il tool `check_job_status` esiste ma non viene chiamato automaticamente in background)
-3. **Progresso live nella chat** -- le `AiOperationCard` mostrano stato statico, non aggiornano in tempo reale
+Attualmente il Cockpit mostra **tutti** i contatti indistintamente. Non esiste un meccanismo di "selezione esplicita" tipo:
+- "Aggiungi questo partner al prossimo giro di outreach"
+- "Sposta questo prospect nel mio focus list"
 
-Se vuoi procedere con una di queste tre aree, indicami la priorità.
+Se vuoi un flusso più controllato dove **decidi tu** quali contatti portare nel Cockpit (invece di vederli tutti), servirebbe un sistema di "staging" o "focus list". Ma al momento il design è: **tutto converge automaticamente nel Cockpit**, filtri e priorità ti aiutano a concentrarti.
+
+### Riepilogo
+
+| Ambiente | Sorgente Dati | Direzione |
+|----------|--------------|-----------|
+| Network | `partners` + `partner_contacts` | Acquisizione WCA |
+| CRM | `imported_contacts` + `prospects` + `prospect_contacts` | Gestione contatti non-WCA |
+| Outreach (Cockpit) | Tutte e tre le sorgenti via `useCockpitContacts` | Azione commerciale |
+
+Il sistema è già funzionante così. Se vuoi aggiungere un livello di selezione esplicita (focus list / staging), posso pianificarlo come prossimo step.
 
