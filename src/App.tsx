@@ -18,6 +18,7 @@ const CRM = lazy(() => import("./pages/CRM"));
 const Outreach = lazy(() => import("./pages/Outreach"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Agents = lazy(() => import("./pages/Agents"));
+const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
 
 // ── Standalone pages ──
 const Auth = lazy(() => import("./pages/Auth"));
