@@ -387,7 +387,7 @@ const tools = [
     type: "function",
     function: {
       name: "download_single_partner",
-      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. Searches the directory_cache or partners table to find the wca_id, then creates a minimal download job with just that one ID.",
+      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. First searches the local DB and cache, then searches the WCA directory directly by company name if not found locally. Supports WCA search fields: CompanyName, CountryCode, City, MemberID.",
       parameters: {
         type: "object",
         properties: {
