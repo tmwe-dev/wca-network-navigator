@@ -25,7 +25,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 
 // ── Legacy pages kept alive for direct access / deep links ──
 const Global = lazy(() => import("./pages/Global"));
-const Campaigns = lazy(() => import("./pages/Campaigns"));
+
 const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
@@ -74,7 +74,7 @@ const App = () => (
 
                   {/* ── Legacy pages kept alive ── */}
                   <Route path="/global" element={<Global />} />
-                  <Route path="/campaigns" element={<Campaigns />} />
+                  <Route path="/campaigns" element={<Navigate to="/" replace />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />

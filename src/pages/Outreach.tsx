@@ -1,11 +1,10 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, Mail, Globe } from "lucide-react";
+import { Rocket, Briefcase, Mail } from "lucide-react";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 const Workspace = lazy(() => import("./Workspace"));
 const EmailComposer = lazy(() => import("./EmailComposer"));
-const Campaigns = lazy(() => import("./Campaigns"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
@@ -31,10 +30,6 @@ export default function Outreach() {
               <Mail className="w-3.5 h-3.5" />
               Email Composer
             </TabsTrigger>
-            <TabsTrigger value="campaigns" className="gap-1.5 text-xs">
-              <Globe className="w-3.5 h-3.5" />
-              Campagne
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -53,11 +48,6 @@ export default function Outreach() {
         {tab === "composer" && (
           <Suspense fallback={<TabFallback />}>
             <EmailComposer />
-          </Suspense>
-        )}
-        {tab === "campaigns" && (
-          <Suspense fallback={<TabFallback />}>
-            <Campaigns />
           </Suspense>
         )}
       </div>
