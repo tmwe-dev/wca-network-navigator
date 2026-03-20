@@ -20,7 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
+import { useDownloadEngine } from "@/hooks/useDownloadEngine";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag } from "@/lib/countries";
