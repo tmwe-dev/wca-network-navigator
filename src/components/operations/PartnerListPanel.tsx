@@ -320,7 +320,6 @@ export function PartnerListPanel({
               )}
             </div>
             <div className="max-h-24 overflow-auto space-y-1 mt-1.5">
-              <DownloadTerminal />
               <JobMonitor />
             </div>
           </div>
