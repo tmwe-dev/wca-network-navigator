@@ -1,104 +1,67 @@
 
 
-# Piano: Architettura di Comando Agenti con Luca come Direttore
+# Piano: Agent Chat Hub — Pagina dedicata con Carousel
 
-## Problema attuale
+## Cosa viene creato
 
-`agent-execute` e' un wrapper semplice: manda il prompt all'LLM e restituisce testo. **Non esegue nessun tool reale** — non puo' cercare partner, inviare email, creare download, fare deep search. Gli agenti "parlano" ma non "agiscono".
+Una nuova pagina `/agent-chat` con un'interfaccia immersiva full-screen dove l'utente naviga tra gli agenti tramite un carousel orizzontale di avatar e chatta con ciascuno. Design premium glassmorphism, dark-first.
 
-L'`ai-assistant` invece ha 2700+ righe con 42 tool definitions e logica di esecuzione completa. Gli agenti devono accedere a questa stessa infrastruttura.
-
-## Soluzione: agent-execute con Tool-Calling reale
-
-### Fase 1 — Potenziare agent-execute
-
-**File: `supabase/functions/agent-execute/index.ts`** — Riscrittura completa
-
-Importare le stesse definizioni di tool e la logica di esecuzione dall'`ai-assistant`, ma filtrandoli per `agent.assigned_tools`. Il flusso diventa:
+## Layout
 
 ```text
-1. Carica agente (prompt + KB + tools assegnati)
-2. Filtra TOOL_DEFINITIONS per includere solo quelli in assigned_tools
-3. Chiama LLM con tool-calling (function calling)
-4. Esegui i tool chiamati dall'LLM sul database
-5. Loop fino a risposta finale (max 10 iterazioni)
-6. Ritorna risultato
+┌──────────────────────────────────────────────────┐
+│  ◄  🎯 Luca  🧠 Marco  💰 Robin  💰 Bruce ...  ►  │  ← Carousel avatar (scroll orizzontale)
+│     ^^^^^^^^                                      │    Agente selezionato = evidenziato + grande
+├──────────────────────────────────────────────────┤
+│                                                    │
+│   🎯 Luca — Account Manager Senior                │  ← Header agente con ruolo + status
+│   "Direttore Operativo · 47 tool · Attivo"        │
+│                                                    │
+│  ┌──────────────────────────────────────────┐     │
+│  │  [messaggi chat con markdown + TTS]       │     │  ← Area chat espansa (70vh)
+│  │                                            │     │
+│  │  Luca: Ecco il report del team...         │  🔊 │
+│  │                                            │     │
+│  │  Tu: Fammi vedere lo stato di Robin        │     │
+│  │                                            │     │
+│  └──────────────────────────────────────────┘     │
+│  [ Scrivi un messaggio...          ] [📎] [🎤] [➤] │  ← Input con TTS + send
+└──────────────────────────────────────────────────┘
 ```
 
-Questo significa estrarre le tool definitions e le funzioni di esecuzione in un modulo condiviso che entrambe le edge functions possono importare.
+## File da creare
 
-**Nuovo file: `supabase/functions/_shared/tool-definitions.ts`** — Definizioni tool condivise
-**Nuovo file: `supabase/functions/_shared/tool-executor.ts`** — Logica di esecuzione tool condivisa
+### 1. `src/pages/AgentChatHub.tsx`
+- Pagina full-height che carica tutti gli agenti via `useAgents()`
+- Carousel orizzontale di avatar nella top bar (emoji + nome, click per selezionare)
+- Frecce sx/dx per navigare, animazione di transizione tra agenti
+- Header con nome, ruolo, conteggio tool, stato attivo/inattivo
+- Chat integrata (logica riutilizzata da `AgentChat.tsx`) con:
+  - Area messaggi con scroll, markdown rendering, TTS button
+  - Input bar con send + volume
+- Ogni agente mantiene la propria cronologia messaggi nella sessione (Map di conversazioni)
+- Framer Motion per transizioni fluide tra agenti
 
-### Fase 2 — Luca come Direttore Operativo
+### 2. `src/components/agents/AgentAvatarCarousel.tsx`
+- Componente carousel con gli avatar degli agenti
+- Avatar selezionato: scala maggiore, bordo primary, glow
+- Avatar non selezionato: scala ridotta, opacità 60%
+- Scroll orizzontale nativo con snap, frecce ai lati
+- Badge ruolo colorato sotto ogni avatar
 
-Aggiornare il `system_prompt` e i `assigned_tools` di Luca nel database per riflettere il suo ruolo di CEO/Direttore:
+## File da modificare
 
-**Prompt specializzato** che include:
-- Visione completa del team (nomi, ruoli, competenze di ogni agente)
-- Capacita' di creare task per gli altri agenti via tool `create_agent_task`
-- Capacita' di leggere lo stato dei task di tutti gli agenti via `list_agent_tasks`
-- Capacita' di analizzare le performance del team via `get_team_status`
-- Istruzioni su come delegare: chi fa cosa, quando escalare
+### 3. `src/App.tsx`
+- Aggiungere route `/agent-chat` con lazy import di `AgentChatHub`
 
-**Nuovi tool specifici per il direttore:**
-- `create_agent_task` — Crea un compito per un agente specifico (by name/role)
-- `list_agent_tasks` — Vede tutti i task di tutti gli agenti
-- `get_team_status` — Riepilogo performance team (tasks completati, in corso, falliti per agente)
-- `update_agent_prompt` — Aggiorna il prompt di un agente subordinato
-- `add_agent_kb_entry` — Aggiunge un documento alla KB di un agente
+### 4. `src/components/layout/AppSidebar.tsx`
+- Aggiungere voce "Chat Agenti" sotto "Agenti" con icona `MessageCircle`
 
-**Tools totali di Luca**: Tutti i 42 tool operativi + i 5 tool di management = 47 tool
+## Dettagli tecnici
 
-### Fase 3 — Gerarchia e flusso operativo
-
-```text
-┌─────────────────────────────────────┐
-│         LUCA (Direttore)            │
-│  - Visione globale                  │
-│  - Crea task per il team            │
-│  - Monitora performance             │
-│  - Aggiorna prompt/KB subordinati   │
-├─────────┬───────────┬───────────────┤
-│         │           │               │
-│  MARCO  │ ROBIN     │ FELICE        │
-│  (CSO)  │ (Sales)   │ (Download)    │
-│         │ BRUCE     │               │
-│ IMANE   │ (Sales)   │ RENATO        │
-│ (Intel) │           │ CARLO         │
-│ GIGI    │ GIANFR.   │ LEONARDO      │
-│ (Enrich)│ (Winback) │ (Outreach x3) │
-└─────────┴───────────┴───────────────┘
-```
-
-### Fase 4 — Aggiornamento UI
-
-**File: `src/components/agents/AgentDetail.tsx`**
-- Aggiungere tab "Team" visibile solo per agenti con ruolo `account` (Luca) che mostra:
-  - Lista agenti subordinati con stato e ultimo task
-  - Pulsante "Crea task per [agente]"
-  - Riepilogo performance team
-
-**File: `src/components/agents/AgentTaskList.tsx`**
-- Per Luca: mostrare anche i task creati per altri agenti con indicazione del destinatario
-
-## File da creare/modificare
-
-| File | Azione |
-|------|--------|
-| `supabase/functions/_shared/tool-definitions.ts` | Creare — estratto da ai-assistant |
-| `supabase/functions/_shared/tool-executor.ts` | Creare — estratto da ai-assistant |
-| `supabase/functions/agent-execute/index.ts` | Riscrivere — con tool-calling reale |
-| `supabase/functions/ai-assistant/index.ts` | Refactorare — importa da _shared |
-| Database: agente Luca | UPDATE — nuovo prompt + 47 tool + ruolo elevato |
-| `src/data/agentTemplates.ts` | Aggiungere tool di management alla lista AVAILABLE_TOOLS |
-| `src/components/agents/AgentDetail.tsx` | Aggiungere tab "Team" per il direttore |
-
-## Risultato atteso
-
-- Ogni agente puo' **agire realmente** sul database (non solo parlare)
-- Luca puo' creare task per qualsiasi agente, monitorare il team, aggiornare i loro prompt e KB
-- L'utente parla con Luca in chat, Luca delega ai subordinati creando task
-- I task vengono poi eseguiti dai singoli agenti con i loro tool specifici
-- Zero duplicazione di codice: tool definitions e executor condivisi tra ai-assistant e agent-execute
+- Le conversazioni sono mantenute in un `useRef<Map<string, Message[]>>` per persistere tra switch di agente senza perdere la cronologia
+- Il carousel usa scroll-snap CSS nativo (no libreria embla necessaria per questa UX)
+- La chat riusa la stessa logica `supabase.functions.invoke("agent-execute")` dell'`AgentChat` esistente
+- TTS riusa la stessa logica `elevenlabs-tts` esistente
+- Nessun file esistente viene eliminato — la pagina Agents originale resta intatta per configurazione
 
