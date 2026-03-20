@@ -9,6 +9,7 @@ import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-reac
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { useDownloadProcessor } from "@/hooks/useDownloadProcessor";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
@@ -27,6 +28,7 @@ export function AppLayout() {
   const { startJob } = useDownloadProcessor();
   const { data: allJobs = [] } = useDownloadJobs();
   const autoStartedRef = useRef<Set<string>>(new Set());
+  useJobHealthMonitor();
 
   useEffect(() => {
     setSidebarOpen(false);

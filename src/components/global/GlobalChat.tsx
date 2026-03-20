@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, Rocket, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
-import { AiOperationCards } from "@/components/ai/AiOperationCard";
+import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
@@ -160,7 +160,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         <div className="prose prose-xs prose-invert max-w-none [&_table]:text-[10px] [&_th]:px-2 [&_td]:px-2 [&_p]:my-1 [&_li]:my-0.5">
           <AIMarkdown content={parsed.text} />
         </div>
-        {parsed.operations.length > 0 && <AiOperationCards operations={parsed.operations} />}
+        {parsed.operations.length > 0 && <LiveOperationCards operations={parsed.operations} />}
         {parsed.partners.length > 0 && <AiResultsPanel partners={parsed.partners} />}
       </>
     );
