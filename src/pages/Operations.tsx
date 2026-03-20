@@ -150,7 +150,7 @@ export default function Operations() {
   }, [aliasGenerating, queryClient]);
 
   const th = t(isDark);
-  const hasDetailOpen = !isMobile && !!selectedPartnerId && !!selectedPartner;
+  const hasDetailOpen = !isMobile && hasSelection;
 
   return (
     <ThemeCtx.Provider value={isDark}>
