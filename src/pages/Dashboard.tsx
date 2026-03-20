@@ -20,7 +20,7 @@ export default function Dashboard() {
     <div
       ref={containerRef}
       className="flex flex-col h-full overflow-hidden"
-      style={{ overscrollBehavior: "none", touchAction: "none" }}
+      style={{ overscrollBehavior: "none" }}
     >
       <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
         <Tabs value={tab} onValueChange={setTab}>
