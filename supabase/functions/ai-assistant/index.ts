@@ -2701,15 +2701,37 @@ serve(async (req) => {
       allMessages.push(assistantMessage);
       allMessages.push(...toolResults);
 
-      response = await fetch(provider.url, {
-        method: "POST",
-        headers: aiHeaders,
-        body: JSON.stringify({ model: provider.model, messages: allMessages, tools }),
-      });
-
-      if (!response.ok) {
-        console.error("AI error on tool response:", response.status, await response.text());
-        return new Response(JSON.stringify({ error: "Errore durante l'elaborazione" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Retry with fallback models on tool-loop calls too
+      let toolLoopOk = false;
+      for (const tryModel of fallbackModels) {
+        response = await fetch(provider.url, {
+          method: "POST",
+          headers: aiHeaders,
+          body: JSON.stringify({ model: tryModel, messages: allMessages, tools }),
+        });
+        if (response.ok) {
+          toolLoopOk = true;
+          break;
+        }
+        const errStatus = response.status;
+        const errText = await response.text();
+        console.error(`AI tool-loop error (${tryModel}):`, errStatus, errText);
+        if (errStatus === 429 || errStatus === 402) {
+          // For user's own key, no fallback available — return immediately
+          if (provider.isUserKey) {
+            const errorMsg = errStatus === 429 ? "Troppe richieste al provider AI, riprova tra poco." : "Crediti AI esauriti.";
+            return new Response(JSON.stringify({ error: errorMsg }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+          // For gateway, try next model
+          continue;
+        }
+        if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
+          return new Response(JSON.stringify({ error: "Errore AI gateway" }), { status: errStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+      if (!toolLoopOk) {
+        console.error("[AI] All models failed in tool loop");
+        return new Response(JSON.stringify({ error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       result = await response.json();
