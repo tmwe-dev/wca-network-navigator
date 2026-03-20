@@ -39,13 +39,19 @@ export default function Import() {
   const w = useImportWizard();
 
   return (
-    <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Import Contatti</h1>
-          <p className="text-sm text-muted-foreground">Carica file o incolla testo — l'AI analizza e mappa automaticamente</p>
+    <div className="flex flex-col h-full">
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Upload className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Import Contatti</h1>
+            <p className="text-[11px] text-muted-foreground">Carica file o incolla testo — l'AI analizza e mappa automaticamente</p>
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-4">
 
       {/* ====== UPLOAD DIALOG ====== */}
       <Dialog open={w.uploadDialogOpen} onOpenChange={w.setUploadDialogOpen}>
