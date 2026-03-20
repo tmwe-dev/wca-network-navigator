@@ -1091,7 +1091,7 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
   // Step 5: Create a mini download job with just this one wca_id
   const { data: job, error } = await supabase.from("download_jobs").insert({
     country_code: jobCountryCode, country_name: jobCountryName, network_name: "Tutti",
-    wca_ids: [wcaId] as any, total_count: 1, delay_seconds: 10, status: "pending",
+    wca_ids: [wcaId] as any, total_count: 1, delay_seconds: 15, status: "pending",
     job_type: "download",
   }).select("id").single();
 
@@ -1099,7 +1099,7 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 
   return {
     success: true, job_id: job.id, country: `${jobCountryName} (${jobCountryCode})`,
-    mode: "Singolo partner", total_partners: 1, wca_id: wcaId, delay_seconds: 10,
+    mode: "Singolo partner", total_partners: 1, wca_id: wcaId, delay_seconds: 15,
     estimated_time_minutes: 1,
     message: `Job creato per scaricare il profilo di "${companyName}" (WCA ID: ${wcaId}). Tempo stimato: ~1 minuto.`,
   };
