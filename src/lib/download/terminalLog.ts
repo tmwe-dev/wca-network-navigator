@@ -49,7 +49,7 @@ async function flushBuffer(): Promise<void> {
       .select("terminal_log")
       .eq("id", jobId)
       .single();
-    const current = (data?.terminal_log as LogEntry[] || []);
+    const current = (data?.terminal_log as unknown as LogEntry[] || []);
     const updated = [...current, ...toFlush].slice(-150);
     await supabase
       .from("download_jobs")
