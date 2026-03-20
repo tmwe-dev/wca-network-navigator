@@ -50,11 +50,6 @@ export default function Outreach() {
             <EmailComposer />
           </Suspense>
         )}
-        {tab === "campaigns" && (
-          <Suspense fallback={<TabFallback />}>
-            <Campaigns />
-          </Suspense>
-        )}
       </div>
     </div>
   );

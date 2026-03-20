@@ -90,6 +90,11 @@ export default function Dashboard() {
             <GlobalPage />
           </Suspense>
         )}
+        {tab === "campaigns" && (
+          <Suspense fallback={<TabFallback />}>
+            <Campaigns />
+          </Suspense>
+        )}
       </div>
     </div>
   );
