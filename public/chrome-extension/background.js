@@ -347,13 +347,41 @@ function checkPageLoaded() {
 }
 
 // ── Extract FULL PROFILE for a single WCA ID ──
+// ── Resilient tab create/remove with retry on "Tabs cannot be edited" ──
+async function safeCreateTab(url, retries) {
+  retries = retries || 3;
+  for (var attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await chrome.tabs.create({ url: url, active: false });
+    } catch (e) {
+      if (attempt < retries - 1 && e.message && e.message.indexOf("cannot be edited") >= 0) {
+        await new Promise(function(r) { setTimeout(r, 500 + attempt * 500); });
+      } else {
+        throw e;
+      }
+    }
+  }
+}
+
+async function safeRemoveTab(tabId) {
+  for (var attempt = 0; attempt < 3; attempt++) {
+    try {
+      await chrome.tabs.remove(tabId);
+      return;
+    } catch (e) {
+      if (attempt < 2 && e.message && e.message.indexOf("cannot be edited") >= 0) {
+        await new Promise(function(r) { setTimeout(r, 300 + attempt * 300); });
+      } else {
+        return; // silently fail on final attempt
+      }
+    }
+  }
+}
+
 async function extractContactsForId(wcaId) {
   var tab = null;
   try {
-    tab = await chrome.tabs.create({
-      url: "https://www.wcaworld.com/directory/members/" + wcaId,
-      active: false,
-    });
+    tab = await safeCreateTab("https://www.wcaworld.com/directory/members/" + wcaId);
 
     await waitForTabLoad(tab.id, 30000);
 
@@ -389,7 +417,7 @@ async function extractContactsForId(wcaId) {
     return { wcaId: wcaId, contacts: [], profile: {}, pageLoaded: false, error: err.message };
   } finally {
     if (tab) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeRemoveTab(tab.id);
     }
   }
 }
