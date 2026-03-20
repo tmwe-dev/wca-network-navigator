@@ -14,6 +14,8 @@ function countryFlag(code: string) {
 export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (code: string | null) => void }) {
   const { data: jobs = [] } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
+  const { startJob } = useDownloadProcessor();
+  const startedJobsRef = useRef<Set<string>>(new Set());
 
   const activeJob = useMemo(() => jobs.find((j) => j.status === "running" || j.status === "pending"), [jobs]);
   const completedJobs = useMemo(() => jobs.filter((j) => j.status === "completed"), [jobs]);
@@ -23,6 +25,21 @@ export function DownloadStatusPanel({ onActiveCountry }: { onActiveCountry?: (co
   useMemo(() => {
     onActiveCountry?.(activeJob?.country_code || null);
   }, [activeJob?.country_code, onActiveCountry]);
+
+  // Auto-start fallback: if a job stays "pending" and no job is "running", start it
+  useEffect(() => {
+    const pendingJob = jobs.find((j) => j.status === "pending");
+    const hasRunning = jobs.some((j) => j.status === "running");
+    if (pendingJob && !hasRunning && !startedJobsRef.current.has(pendingJob.id)) {
+      const timer = setTimeout(() => {
+        if (!startedJobsRef.current.has(pendingJob.id)) {
+          startedJobsRef.current.add(pendingJob.id);
+          startJob(pendingJob.id);
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [jobs, startJob]);
 
   const totals = useMemo(() => {
     return jobs.reduce(
