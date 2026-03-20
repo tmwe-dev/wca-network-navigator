@@ -109,9 +109,10 @@ export default function Operations() {
   const handleCountryClick = useCallback((code: string, name: string) => {
     setSelectedCountries(prev => {
       const exists = prev.some(c => c.code === code);
-      return exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
+      const next = exists ? prev.filter(c => c.code !== code) : [...prev, { code, name }];
+      if (next.length === 0) setSelectedPartnerId(null);
+      return next;
     });
-    setSelectedPartnerId(null);
   }, []);
 
   const handleRemoveCountry = useCallback((code: string) => {
