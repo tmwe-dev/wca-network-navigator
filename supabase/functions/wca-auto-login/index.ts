@@ -131,11 +131,13 @@ Deno.serve(async (req) => {
 
     const finalCookieStr = currentCookies.join('; ')
     const hasAspxAuth = currentCookies.some(c => c.startsWith('.ASPXAUTH=') || c.startsWith('.AspNet.ApplicationCookie='))
+    const hasWcaCookie = currentCookies.some(c => c.startsWith('wca='))
+    const hasAuthCookie = hasAspxAuth || hasWcaCookie
 
-    console.log(`Final: hasAspxAuth=${hasAspxAuth}, totalCookies=${currentCookies.length}, redirects=${redirectCount}`)
+    console.log(`Final: hasAspxAuth=${hasAspxAuth}, hasWcaCookie=${hasWcaCookie}, totalCookies=${currentCookies.length}, redirects=${redirectCount}`)
 
-    if (!hasAspxAuth) {
-      console.log('wca-auto-login: FAILED — .ASPXAUTH not found after all redirects')
+    if (!hasAuthCookie) {
+      console.log('wca-auto-login: FAILED — no auth cookie found after login')
       const now = new Date().toISOString()
       await supabase.from('app_settings').upsert(
         { key: 'wca_session_status', value: 'expired', updated_at: now },
@@ -144,7 +146,7 @@ Deno.serve(async (req) => {
       return respond({ 
         success: false, 
         authenticated: false, 
-        message: '❌ Login eseguito ma .ASPXAUTH non ottenuto. Possibile blocco WAF/Cloudflare. Usa l\'estensione Chrome.',
+        message: '❌ Login eseguito ma nessun cookie di autenticazione WCA è stato ottenuto.',
         debug: { redirectCount, cookieCount: currentCookies.length, cookieNames: currentCookies.map(c => c.split('=')[0]) }
       })
     }
@@ -178,6 +180,7 @@ Deno.serve(async (req) => {
         authenticated: true, 
         message: '✅ Login automatico riuscito! Contatti personali visibili.',
         diagnostics: testResult.diagnostics,
+        debug: { hasAspxAuth, hasWcaCookie, redirectCount, cookieCount: currentCookies.length },
       })
     } else {
       await supabase.from('app_settings').upsert(
@@ -185,12 +188,13 @@ Deno.serve(async (req) => {
         { onConflict: 'key' }
       )
       
-      console.log('wca-auto-login: FAILED — .ASPXAUTH present but private contacts not visible')
+      console.log('wca-auto-login: FAILED — auth cookie present but private contacts not visible')
       return respond({ 
         success: false, 
         authenticated: false, 
-        message: '⚠️ Login eseguito con .ASPXAUTH ma i contatti personali non sono visibili. Account potrebbe non avere i permessi.',
+        message: '⚠️ Login eseguito con cookie autenticato ma i contatti personali non sono visibili. Account potrebbe non avere i permessi o servire il browser reale.',
         diagnostics: testResult.diagnostics,
+        debug: { hasAspxAuth, hasWcaCookie, redirectCount, cookieCount: currentCookies.length },
       })
     }
   } catch (error) {
