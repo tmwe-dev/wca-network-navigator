@@ -2210,9 +2210,56 @@ async function executeDeleteRecords(args: Record<string, unknown>) {
   return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PROCEDURE KNOWLEDGE BASE TOOL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const PROCEDURES_DB: Record<string, any> = {
+  email_single: { id: "email_single", name: "Email Singola", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "Email destinatario valida", "Obiettivo definito"], steps: [{ order: 1, action: "Identifica destinatario", tool: "search_partners" }, { order: 2, action: "Recupera dati completi", tool: "get_partner_detail" }, { order: 3, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 4, action: "Carica profilo AI e KB", tool: "search_memory" }, { order: 5, action: "Genera messaggio", tool: "generate_outreach" }, { order: 6, action: "Revisiona con utente", tool: null }, { order: 7, action: "Invia email", tool: "send_email" }, { order: 8, action: "Registra interazione", tool: "add_partner_note" }], tips: ["Quality 'premium' per email strategiche", "Personalizza con 3+ dati partner"] },
+  email_campaign: { id: "email_campaign", name: "Campagna Email Massiva", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "5+ destinatari con email", "Obiettivo definito"], steps: [{ order: 1, action: "Seleziona destinatari", tool: "search_partners" }, { order: 2, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 3, action: "Definisci obiettivo", tool: null }, { order: 4, action: "Genera email modello", tool: "generate_outreach" }, { order: 5, action: "Approva e lancia coda", tool: null }, { order: 6, action: "Monitora invio", tool: "check_job_status" }], tips: ["Limita a 50-100 destinatari", "Delay 30-60s tra invii"] },
+  linkedin_message: { id: "linkedin_message", name: "Messaggio LinkedIn", category: "outreach", channels: ["linkedin"], prerequisites: ["Profilo AI configurato", "Contatto identificato"], steps: [{ order: 1, action: "Identifica contatto", tool: "search_partners" }, { order: 2, action: "Verifica LinkedIn", tool: "get_partner_detail" }, { order: 3, action: "Genera messaggio", tool: "generate_outreach" }, { order: 4, action: "Mostra per copia", tool: null }, { order: 5, action: "Registra attività", tool: "create_activity" }], tips: ["Max 300 char", "Menziona collegamento in comune"] },
+  whatsapp_message: { id: "whatsapp_message", name: "Messaggio WhatsApp", category: "outreach", channels: ["whatsapp"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto con mobile", tool: "search_partners" }, { order: 2, action: "Genera messaggio", tool: "generate_outreach" }, { order: 3, action: "Mostra per invio", tool: null }, { order: 4, action: "Registra attività", tool: "create_activity" }], tips: ["Tono informale ma professionale"] },
+  sms_message: { id: "sms_message", name: "SMS", category: "outreach", channels: ["sms"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto", tool: "search_partners" }, { order: 2, action: "Genera SMS", tool: "generate_outreach" }, { order: 3, action: "Mostra", tool: null }], tips: ["Max 160 caratteri"] },
+  multi_channel_sequence: { id: "multi_channel_sequence", name: "Sequenza Multi-Canale", category: "outreach", channels: ["email", "linkedin", "whatsapp"], prerequisites: ["Profilo AI", "Email destinatario", "Obiettivo"], steps: [{ order: 1, action: "Verifica canali disponibili", tool: "get_partner_detail" }, { order: 2, action: "Email giorno 1", tool: "generate_outreach" }, { order: 3, action: "Pianifica LinkedIn giorno 3", tool: "create_activity" }, { order: 4, action: "Genera LinkedIn", tool: "generate_outreach" }, { order: 5, action: "Pianifica WhatsApp giorno 7", tool: "create_activity" }, { order: 6, action: "Reminder giorno 14", tool: "create_reminder" }], tips: ["Email→3gg→LinkedIn→4gg→WhatsApp", "Max 3 touchpoint senza risposta"] },
+  scan_country: { id: "scan_country", name: "Scansione Directory Paese", category: "network", prerequisites: ["Sessione WCA attiva"], steps: [{ order: 1, action: "Verifica cache", tool: "get_directory_status" }, { order: 2, action: "Scansiona", tool: "scan_directory" }, { order: 3, action: "Confronta con DB", tool: "get_country_overview" }, { order: 4, action: "Suggerisci download", tool: null }], tips: ["Scansiona ogni 2-4 settimane"] },
+  download_profiles: { id: "download_profiles", name: "Download Profili Paese", category: "network", prerequisites: ["Sessione WCA", "Directory scansionata", "No job attivi"], steps: [{ order: 1, action: "Verifica prerequisiti", tool: "get_directory_status" }, { order: 2, action: "Controlla job attivi", tool: "list_jobs" }, { order: 3, action: "Scegli mode", tool: null }, { order: 4, action: "Crea job", tool: "create_download_job" }, { order: 5, action: "Verifica avvio", tool: "check_job_status" }], tips: ["Mode 'no_profile' per completare paesi parziali", "Delay 30-45s"] },
+  download_single: { id: "download_single", name: "Download Singolo Partner", category: "network", prerequisites: ["Sessione WCA"], steps: [{ order: 1, action: "Cerca partner", tool: "search_partners" }, { order: 2, action: "Download", tool: "download_single_partner" }, { order: 3, action: "Verifica", tool: "check_job_status" }], tips: ["NON usare create_download_job per singolo partner"] },
+  deep_search_partner: { id: "deep_search_partner", name: "Deep Search Partner", category: "enrichment", prerequisites: ["Partner esiste", "Crediti sufficienti"], steps: [{ order: 1, action: "Dettagli partner", tool: "get_partner_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_partner" }, { order: 3, action: "Verifica risultati", tool: "get_partner_detail" }], tips: ["Più efficace con sito web"] },
+  enrich_website: { id: "enrich_website", name: "Arricchimento Sito Web", category: "enrichment", prerequisites: ["Partner ha website", "Crediti"], steps: [{ order: 1, action: "Verifica website", tool: "get_partner_detail" }, { order: 2, action: "Enrichment", tool: "enrich_partner_website" }, { order: 3, action: "Mostra risultati", tool: "get_partner_detail" }], tips: ["Combina con Deep Search"] },
+  import_contacts: { id: "import_contacts", name: "Importazione Contatti", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Carica file", tool: null }, { order: 2, action: "Analizza struttura", tool: null }, { order: 3, action: "Mappa colonne", tool: null }, { order: 4, action: "Importa", tool: null }, { order: 5, action: "Verifica", tool: "search_contacts" }], tips: ["Supporta CSV, Excel, TSV"] },
+  deep_search_contact: { id: "deep_search_contact", name: "Deep Search Contatto", category: "crm", prerequisites: ["Contatto esiste", "Crediti"], steps: [{ order: 1, action: "Identifica", tool: "get_contact_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_contact" }, { order: 3, action: "Verifica", tool: "get_contact_detail" }], tips: ["Meglio con nome+azienda+paese"] },
+  update_lead_status: { id: "update_lead_status", name: "Aggiornamento Stato Lead", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Filtra record", tool: "search_contacts" }, { order: 2, action: "Conferma selezione", tool: null }, { order: 3, action: "Aggiorna", tool: "update_lead_status" }], tips: ["Conferma per >5 record"] },
+  assign_activity: { id: "assign_activity", name: "Assegnazione Attività", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Identifica target", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Conferma", tool: "list_activities" }], tips: ["Due date realistica"] },
+  create_followup: { id: "create_followup", name: "Creazione Follow-up", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partner", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Crea reminder", tool: "create_reminder" }], tips: ["Follow-up ideale entro 3 giorni"] },
+  schedule_meeting: { id: "schedule_meeting", name: "Pianificazione Meeting", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partecipanti", tool: "get_partner_detail" }, { order: 2, action: "Crea attività meeting", tool: "create_activity" }, { order: 3, action: "Email invito", tool: "generate_outreach" }], tips: ["Specifica orario, luogo/link, agenda"] },
+  manage_reminders: { id: "manage_reminders", name: "Gestione Reminder", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Elenca reminder", tool: "list_reminders" }, { order: 2, action: "Crea/aggiorna", tool: "create_reminder" }, { order: 3, action: "Completa", tool: "update_reminder" }], tips: ["Priorità 'high' per scadenze critiche"] },
+  generate_aliases: { id: "generate_aliases", name: "Generazione Alias AI", category: "system", prerequisites: [], steps: [{ order: 1, action: "Seleziona target", tool: "search_partners" }, { order: 2, action: "Genera", tool: "generate_aliases" }, { order: 3, action: "Verifica", tool: "search_partners" }], tips: ["Max 20 per batch"] },
+  blacklist_check: { id: "blacklist_check", name: "Verifica Blacklist", category: "system", prerequisites: [], steps: [{ order: 1, action: "Cerca", tool: "check_blacklist" }, { order: 2, action: "Mostra risultati", tool: null }], tips: ["Verifica SEMPRE prima di collaborare"] },
+  bulk_update: { id: "bulk_update", name: "Aggiornamento Massivo", category: "system", prerequisites: [], steps: [{ order: 1, action: "Filtra", tool: "search_partners" }, { order: 2, action: "Conferma (OBBLIGATORIO)", tool: null }, { order: 3, action: "Aggiorna", tool: "bulk_update_partners" }, { order: 4, action: "Verifica", tool: "search_partners" }], tips: ["SEMPRE conferma per >5 record"] },
+};
+
+function executeGetProcedure(args: Record<string, unknown>) {
+  // Search by ID
+  if (args.procedure_id) {
+    const proc = PROCEDURES_DB[String(args.procedure_id)];
+    if (proc) return { procedure: proc };
+    return { error: `Procedura '${args.procedure_id}' non trovata. Procedure disponibili: ${Object.keys(PROCEDURES_DB).join(", ")}` };
+  }
+  // Search by tags
+  if (args.search_tags && Array.isArray(args.search_tags)) {
+    const tags = (args.search_tags as string[]).map(t => t.toLowerCase());
+    const matches = Object.values(PROCEDURES_DB).filter((p: any) => {
+      const procText = `${p.id} ${p.name} ${p.category} ${(p.channels || []).join(" ")}`.toLowerCase();
+      return tags.some(t => procText.includes(t));
+    });
+    if (matches.length > 0) return { procedures: matches, count: matches.length };
+    return { procedures: [], count: 0, available: Object.keys(PROCEDURES_DB) };
+  }
+  // Return all
+  return { procedures: Object.values(PROCEDURES_DB), count: Object.keys(PROCEDURES_DB).length };
+}
 
 
-async function executeCheckJobStatus(args: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
 
   // Specific job check
