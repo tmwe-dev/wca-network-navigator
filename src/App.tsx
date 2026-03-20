@@ -73,6 +73,7 @@ const App = () => (
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
                   <Route path="/agents" element={<Agents />} />
+                  <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
 
                   {/* ── Legacy pages kept alive ── */}

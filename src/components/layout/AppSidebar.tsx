@@ -21,6 +21,7 @@ const navSections = [
       { title: "Outreach", url: "/outreach", icon: Rocket },
       { title: "Agenda", url: "/agenda", icon: Calendar },
       { title: "Agenti", url: "/agents", icon: Bot },
+      { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
     ],
   },
   {
