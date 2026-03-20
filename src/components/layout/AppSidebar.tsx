@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
-  Wifi, WifiOff, BookOpen, Send, Sparkles,
+  Wifi, WifiOff, BookOpen, Send, Sparkles, Bot,
   Users, Command, Upload, UserCheck, Zap,
   Rocket, Microscope, Download, Briefcase,
 } from "lucide-react";
@@ -20,6 +20,7 @@ const navSections = [
       { title: "CRM", url: "/crm", icon: UserCheck },
       { title: "Outreach", url: "/outreach", icon: Rocket },
       { title: "Agenda", url: "/agenda", icon: Calendar },
+      { title: "Agenti", url: "/agents", icon: Bot },
     ],
   },
   {

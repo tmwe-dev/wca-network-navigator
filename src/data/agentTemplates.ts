@@ -1,0 +1,164 @@
+export const AGENT_ROLES = [
+  { value: "outreach", label: "Outreach", emoji: "📧", color: "text-blue-400" },
+  { value: "download", label: "Download/Sync", emoji: "📥", color: "text-emerald-400" },
+  { value: "research", label: "Ricerca", emoji: "🔍", color: "text-amber-400" },
+  { value: "account", label: "Account Manager", emoji: "🤝", color: "text-purple-400" },
+  { value: "strategy", label: "Strategia", emoji: "🧠", color: "text-rose-400" },
+] as const;
+
+export const AGENT_TEMPLATES: Record<string, { name: string; system_prompt: string; assigned_tools: string[] }> = {
+  outreach: {
+    name: "Agente Outreach",
+    system_prompt: `Sei un agente specializzato nell'outreach commerciale. Il tuo compito è contattare partner e potenziali clienti via email, verificare lo stato del contatto (holding pattern), programmare follow-up e, se necessario, escalare a telefonate dirette.
+
+FLUSSO OPERATIVO:
+1. Analizza il target: verifica se il partner ha email, contatti, profilo scaricato
+2. Se mancano dati, esegui deep search per arricchire
+3. Genera email di presentazione personalizzata basata sul profilo
+4. Dopo l'invio, crea un reminder per follow-up a 7 giorni
+5. Se nessuna risposta dopo 2 follow-up, proponi contatto telefonico
+6. Registra ogni interazione nel sistema
+
+REGOLE:
+- Verifica SEMPRE la blacklist prima di contattare
+- Personalizza ogni messaggio basandoti sul profilo e i servizi del partner
+- Tono professionale ma caldo, in italiano o inglese secondo il paese
+- Traccia tutto: email inviate, risposte, follow-up programmati`,
+    assigned_tools: [
+      "search_partners", "get_partner_detail", "deep_search_partner", "deep_search_contact",
+      "generate_outreach", "send_email", "create_activity", "create_reminder",
+      "check_blacklist", "update_partner", "list_reminders",
+    ],
+  },
+  download: {
+    name: "Agente Download",
+    system_prompt: `Sei un agente specializzato nella gestione dei download dal sistema WCA. Il tuo compito è mantenere aggiornata la directory dei partner, verificare la completezza dei profili scaricati e gestire i retry per i profili mancanti.
+
+FLUSSO OPERATIVO:
+1. Analizza lo stato della directory per paese usando get_country_overview
+2. Identifica paesi con profili mancanti o non aggiornati
+3. Crea download job per i paesi prioritari
+4. Monitora lo stato dei job attivi
+5. Gestisci i retry per partner senza contatti
+6. Verifica la completezza dopo ogni download
+
+REGOLE:
+- Non creare job se ce n'è già uno attivo per lo stesso paese
+- Prioritizza paesi con più partner ma meno profili scaricati
+- Usa delay_seconds appropriato per evitare rate limiting (minimo 30s)
+- Dopo ogni download, verifica che i dati siano stati salvati correttamente`,
+    assigned_tools: [
+      "get_country_overview", "get_directory_status", "list_jobs", "create_download_job",
+      "download_single_partner", "scan_directory", "check_job_status",
+      "get_partners_without_contacts", "search_partners",
+    ],
+  },
+  research: {
+    name: "Agente Ricerca",
+    system_prompt: `Sei un agente specializzato nella ricerca e analisi di aziende. Il tuo compito è identificare potenziali partner attraverso LinkedIn, report aziendali e altre fonti, decidere quali aziende importare nel sistema e creare elenchi di lavoro.
+
+FLUSSO OPERATIVO:
+1. Analizza le richieste di ricerca (paese, settore, tipo di servizio)
+2. Cerca nel database esistente per evitare duplicati
+3. Esegui deep search per arricchire i profili esistenti
+4. Analizza i risultati e valuta la qualità dei partner
+5. Proponi una lista prioritizzata di aziende da contattare
+6. Crea attività di follow-up per i risultati più promettenti
+
+REGOLE:
+- Verifica sempre la blacklist prima di proporre un partner
+- Valuta la qualità basandoti su: servizi offerti, certificazioni, rating, completezza profilo
+- Crea report strutturati con ranking e motivazioni
+- Salva le scoperte importanti in memoria per riferimento futuro`,
+    assigned_tools: [
+      "search_partners", "get_partner_detail", "deep_search_partner", "deep_search_contact",
+      "enrich_partner_website", "generate_aliases", "search_contacts", "search_prospects",
+      "check_blacklist", "get_country_overview", "scan_directory", "create_activity",
+    ],
+  },
+  account: {
+    name: "Agente Account Manager",
+    system_prompt: `Sei un agente Account Manager specializzato nel mantenere e sviluppare le relazioni con i clienti esistenti. Il tuo compito è monitorare l'attività dei clienti, verificare l'utilizzo dei servizi e proporre strategie di ri-engagement per clienti inattivi.
+
+FLUSSO OPERATIVO:
+1. Analizza i partner con status 'converted' (clienti attivi)
+2. Verifica le ultime interazioni per ogni cliente
+3. Identifica clienti inattivi (nessuna interazione da 30+ giorni)
+4. Per clienti inattivi: proponi promozioni, check-in call, email di cortesia
+5. Per clienti attivi: verifica soddisfazione, proponi upselling
+6. Crea reminder per follow-up periodici
+
+REGOLE:
+- Prioritizza clienti con rating alto e lunga storia
+- Usa un tono personale e di relazione, non commerciale
+- Monitora i reminder scaduti e proponi azioni immediate
+- Registra ogni interazione per mantenere lo storico aggiornato`,
+    assigned_tools: [
+      "search_partners", "get_partner_detail", "list_reminders", "create_reminder",
+      "update_reminder", "create_activity", "list_activities", "update_activity",
+      "generate_outreach", "send_email", "add_partner_note", "update_partner",
+    ],
+  },
+  strategy: {
+    name: "Agente Strategia",
+    system_prompt: `Sei un agente Strategico che analizza la copertura mondiale, le performance operative e ottimizza le priorità di contatto per l'intero team. Il tuo compito è istruire gli altri agenti e garantire che le risorse vengano allocate in modo intelligente.
+
+FLUSSO OPERATIVO:
+1. Analizza la copertura globale: paesi coperti vs non coperti
+2. Valuta l'efficacia dell'outreach: tasso di risposta, conversioni
+3. Identifica gap nella strategia: paesi trascurati, segmenti non serviti
+4. Proponi priorità di lavoro per gli altri agenti
+5. Analizza trend: quali paesi crescono, quali declinano
+6. Genera report settimanali con KPI e raccomandazioni
+
+REGOLE:
+- Basa le decisioni SOLO su dati reali, mai su stime
+- Considera sempre il rapporto costo/beneficio delle operazioni
+- Proponi azioni concrete e misurabili
+- Salva le analisi strategiche in memoria per tracking nel tempo`,
+    assigned_tools: [
+      "get_global_summary", "get_country_overview", "get_directory_status",
+      "search_partners", "list_jobs", "list_activities", "list_reminders",
+      "check_blacklist", "save_memory",
+    ],
+  },
+};
+
+export const AVAILABLE_TOOLS = [
+  { name: "search_partners", label: "Cerca Partner", category: "Partner" },
+  { name: "get_partner_detail", label: "Dettaglio Partner", category: "Partner" },
+  { name: "update_partner", label: "Aggiorna Partner", category: "Partner" },
+  { name: "add_partner_note", label: "Aggiungi Nota", category: "Partner" },
+  { name: "manage_partner_contact", label: "Gestisci Contatti", category: "Partner" },
+  { name: "bulk_update_partners", label: "Aggiornamento Massivo", category: "Partner" },
+  { name: "get_country_overview", label: "Overview Paese", category: "Network" },
+  { name: "get_directory_status", label: "Stato Directory", category: "Network" },
+  { name: "scan_directory", label: "Scansiona Directory", category: "Network" },
+  { name: "create_download_job", label: "Crea Download Job", category: "Network" },
+  { name: "download_single_partner", label: "Download Singolo", category: "Network" },
+  { name: "list_jobs", label: "Lista Job", category: "Network" },
+  { name: "check_job_status", label: "Stato Job", category: "Network" },
+  { name: "get_partners_without_contacts", label: "Partner Senza Contatti", category: "Network" },
+  { name: "deep_search_partner", label: "Deep Search Partner", category: "Ricerca" },
+  { name: "deep_search_contact", label: "Deep Search Contatto", category: "Ricerca" },
+  { name: "enrich_partner_website", label: "Arricchisci Sito Web", category: "Ricerca" },
+  { name: "generate_aliases", label: "Genera Alias", category: "Ricerca" },
+  { name: "search_contacts", label: "Cerca Contatti CRM", category: "CRM" },
+  { name: "get_contact_detail", label: "Dettaglio Contatto", category: "CRM" },
+  { name: "update_lead_status", label: "Aggiorna Lead Status", category: "CRM" },
+  { name: "search_prospects", label: "Cerca Prospect", category: "CRM" },
+  { name: "generate_outreach", label: "Genera Outreach", category: "Outreach" },
+  { name: "send_email", label: "Invia Email", category: "Outreach" },
+  { name: "create_activity", label: "Crea Attività", category: "Agenda" },
+  { name: "list_activities", label: "Lista Attività", category: "Agenda" },
+  { name: "update_activity", label: "Aggiorna Attività", category: "Agenda" },
+  { name: "create_reminder", label: "Crea Reminder", category: "Agenda" },
+  { name: "update_reminder", label: "Aggiorna Reminder", category: "Agenda" },
+  { name: "list_reminders", label: "Lista Reminder", category: "Agenda" },
+  { name: "check_blacklist", label: "Verifica Blacklist", category: "Sistema" },
+  { name: "get_global_summary", label: "Riepilogo Globale", category: "Sistema" },
+  { name: "save_memory", label: "Salva in Memoria", category: "Sistema" },
+  { name: "delete_records", label: "Elimina Record", category: "Sistema" },
+  { name: "get_procedure", label: "Consulta Procedura", category: "Sistema" },
+  { name: "execute_ui_action", label: "Azione UI", category: "Sistema" },
+];

@@ -108,6 +108,116 @@ export type Database = {
           },
         ]
       }
+      agent_tasks: {
+        Row: {
+          agent_id: string
+          completed_at: string | null
+          created_at: string
+          description: string
+          execution_log: Json
+          id: string
+          result_summary: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          target_filters: Json
+          task_type: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          execution_log?: Json
+          id?: string
+          result_summary?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          target_filters?: Json
+          task_type?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          execution_log?: Json
+          id?: string
+          result_summary?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          target_filters?: Json
+          task_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tasks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agents: {
+        Row: {
+          assigned_tools: Json
+          avatar_emoji: string
+          created_at: string
+          elevenlabs_agent_id: string | null
+          elevenlabs_voice_id: string | null
+          id: string
+          is_active: boolean
+          knowledge_base: Json
+          name: string
+          role: string
+          schedule_config: Json
+          stats: Json
+          system_prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_tools?: Json
+          avatar_emoji?: string
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          is_active?: boolean
+          knowledge_base?: Json
+          name: string
+          role?: string
+          schedule_config?: Json
+          stats?: Json
+          system_prompt?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_tools?: Json
+          avatar_emoji?: string
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          is_active?: boolean
+          knowledge_base?: Json
+          name?: string
+          role?: string
+          schedule_config?: Json
+          stats?: Json
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string

@@ -17,6 +17,7 @@ const NetworkPage = lazy(() => import("./pages/Network"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Outreach = lazy(() => import("./pages/Outreach"));
 const Agenda = lazy(() => import("./pages/Agenda"));
+const Agents = lazy(() => import("./pages/Agents"));
 
 // ── Standalone pages ──
 const Auth = lazy(() => import("./pages/Auth"));
@@ -70,6 +71,7 @@ const App = () => (
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/outreach" element={<Outreach />} />
                   <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/agents" element={<Agents />} />
                   <Route path="/settings" element={<Settings />} />
 
                   {/* ── Legacy pages kept alive ── */}
