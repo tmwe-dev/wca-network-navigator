@@ -2522,7 +2522,7 @@ serve(async (req) => {
       for (const tc of assistantMessage.tool_calls) {
         console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
         const args = JSON.parse(tc.function.arguments || "{}");
-        const toolResult = await executeTool(tc.function.name, args, userId);
+        const toolResult = await executeTool(tc.function.name, args, userId, authHeader);
         console.log(`Result ${tc.function.name}:`, JSON.stringify(toolResult).substring(0, 500));
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
 
