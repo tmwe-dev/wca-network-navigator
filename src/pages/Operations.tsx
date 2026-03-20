@@ -251,12 +251,12 @@ export default function Operations() {
             "flex-1 min-h-0 px-4 pb-3 gap-3",
             isMobile ? "flex flex-col overflow-y-auto" : "flex"
           )}>
-            {/* LEFT: Country Grid */}
+            {/* LEFT: Country Grid — always single column */}
             <div className={cn(
               "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
               isMobile
                 ? (hasSelection ? "max-h-[35vh]" : "")
-                : hasSelection ? "w-[260px]" : "max-w-[520px] mx-auto w-full"
+                : "w-[280px]"
             )}>
               <CountryGrid
                 selected={selectedCountries}
