@@ -1538,7 +1538,7 @@ async function executeCreateWorkPlan(args: Record<string, unknown>, userId: stri
   return { success: true, plan: data, message: `Piano "${args.title}" creato con ${steps.length} step. Eseguirò gli step progressivamente.` };
 }
 
-async function executeExecutePlanStep(args: Record<string, unknown>, userId: string) {
+async function executeExecutePlanStep(args: Record<string, unknown>, userId: string, authHeader?: string) {
   const { data: plan, error } = await supabase.from("ai_work_plans").select("*")
     .eq("id", args.plan_id).eq("user_id", userId).single();
   if (error || !plan) return { error: "Piano non trovato" };
