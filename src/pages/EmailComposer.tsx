@@ -355,15 +355,23 @@ export default function EmailComposer() {
 
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] mx-auto">
+    <div className="flex flex-col h-full">
+      {/* Glass top bar */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Mail className="w-4.5 h-4.5 text-primary" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground">Email Composer</h1>
+            <p className="text-[11px] text-muted-foreground">Composizione e invio campagne email</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4">
+      <div className="flex flex-col lg:flex-row gap-4 max-w-[1600px]">
       {/* Left: Editor */}
       <div className="flex-1 space-y-4">
-        <div className="flex items-center gap-3">
-          <Mail className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Email Composer</h1>
-        </div>
-
-        <Card>
+        <div className="float-panel">
           <CardHeader>
             <CardTitle className="text-base">Componi Email</CardTitle>
           </CardHeader>

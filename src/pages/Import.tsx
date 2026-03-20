@@ -164,7 +164,7 @@ export default function Import() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Left: Import history */}
-        <Card className="lg:col-span-1">
+        <div className="float-panel lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Storico Import</CardTitle>
           </CardHeader>

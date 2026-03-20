@@ -113,30 +113,22 @@ function SourcePanel({ source, activities, navigate }: {
     <div className="flex flex-col h-full">
       {/* Stats cards */}
       <div className="grid grid-cols-4 gap-2 p-3">
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-foreground">{stats.total}</span>
-            <span className="text-[10px] text-muted-foreground">Totale</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-warning">{stats.pending}</span>
-            <span className="text-[10px] text-muted-foreground">In coda</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-success">{stats.completed}</span>
-            <span className="text-[10px] text-muted-foreground">Completate</span>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 flex flex-col items-center">
-            <span className="text-lg font-bold text-primary">{stats.emails}</span>
-            <span className="text-[10px] text-muted-foreground">Email da fare</span>
-          </CardContent>
-        </Card>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-foreground">{stats.total}</span>
+          <span className="text-[10px] text-muted-foreground">Totale</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-warning">{stats.pending}</span>
+          <span className="text-[10px] text-muted-foreground">In coda</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-success">{stats.completed}</span>
+          <span className="text-[10px] text-muted-foreground">Completate</span>
+        </div>
+        <div className="float-panel-subtle p-3 flex flex-col items-center rounded-xl">
+          <span className="text-lg font-bold text-primary">{stats.emails}</span>
+          <span className="text-[10px] text-muted-foreground">Email da fare</span>
+        </div>
       </div>
 
       {/* Progress */}
