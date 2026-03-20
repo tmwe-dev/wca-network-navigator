@@ -1816,8 +1816,306 @@ async function executeLinkBusinessCard(args: Record<string, unknown>) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// VERIFICATION / STATUS CHECK TOOL
+// NEW TOOLS — Contacts, Prospects, Activities, Email, Deep Search, Directory, Aliases, Contact Mgmt
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function executeSearchContacts(args: Record<string, unknown>) {
+  const isCount = !!args.count_only;
+  let query = supabase.from("imported_contacts").select(
+    isCount ? "id" : "id, name, company_name, email, phone, mobile, country, city, origin, lead_status, position, deep_search_at, company_alias, contact_alias, created_at",
+    isCount ? { count: "exact", head: true } : undefined
+  );
+  if (args.search_name) query = query.ilike("name", `%${args.search_name}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.country) query = query.ilike("country", `%${args.country}%`);
+  if (args.email) query = query.ilike("email", `%${args.email}%`);
+  if (args.origin) query = query.ilike("origin", `%${args.origin}%`);
+  if (args.lead_status) query = query.eq("lead_status", args.lead_status);
+  if (args.has_email === true) query = query.not("email", "is", null);
+  if (args.has_email === false) query = query.is("email", null);
+  if (args.has_phone === true) query = query.or("phone.not.is.null,mobile.not.is.null");
+  // Quality filter
+  query = query.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
+  query = query.order("created_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+  const { data, error, count } = await query;
+  if (error) return { error: error.message };
+  if (isCount) return { count };
+  return { count: data?.length || 0, contacts: data || [] };
+}
+
+async function executeGetContactDetail(args: Record<string, unknown>) {
+  let contact: any = null;
+  if (args.contact_id) {
+    const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
+    contact = data;
+  } else if (args.contact_name) {
+    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    contact = data;
+  }
+  if (!contact) return { error: "Contatto non trovato" };
+  const { data: interactions } = await supabase.from("contact_interactions").select("*").eq("contact_id", contact.id).order("created_at", { ascending: false }).limit(10);
+  return { ...contact, interactions: interactions || [] };
+}
+
+async function executeSearchProspects(args: Record<string, unknown>) {
+  const isCount = !!args.count_only;
+  let query = supabase.from("prospects").select(
+    isCount ? "id" : "id, company_name, city, province, region, codice_ateco, descrizione_ateco, fatturato, dipendenti, email, phone, pec, website, lead_status, partita_iva, forma_giuridica, rating_affidabilita, created_at",
+    isCount ? { count: "exact", head: true } : undefined
+  );
+  if (args.company_name) query = query.ilike("company_name", `%${args.company_name}%`);
+  if (args.city) query = query.ilike("city", `%${args.city}%`);
+  if (args.province) query = query.ilike("province", `%${args.province}%`);
+  if (args.region) query = query.ilike("region", `%${args.region}%`);
+  if (args.codice_ateco) query = query.ilike("codice_ateco", `%${args.codice_ateco}%`);
+  if (args.min_fatturato) query = query.gte("fatturato", Number(args.min_fatturato));
+  if (args.max_fatturato) query = query.lte("fatturato", Number(args.max_fatturato));
+  if (args.lead_status) query = query.eq("lead_status", args.lead_status);
+  if (args.has_email === true) query = query.not("email", "is", null);
+  query = query.order("fatturato", { ascending: false, nullsFirst: false }).limit(Math.min(Number(args.limit) || 20, 50));
+  const { data, error, count } = await query;
+  if (error) return { error: error.message };
+  if (isCount) return { count };
+  return { count: data?.length || 0, prospects: data || [] };
+}
+
+async function executeListActivities(args: Record<string, unknown>) {
+  let query = supabase.from("activities").select("id, title, description, activity_type, status, priority, due_date, source_type, source_meta, partner_id, created_at, completed_at, email_subject")
+    .order("due_date", { ascending: true, nullsFirst: false }).limit(Number(args.limit) || 30);
+  if (args.status) query = query.eq("status", args.status);
+  if (args.activity_type) query = query.eq("activity_type", args.activity_type);
+  if (args.source_type) query = query.eq("source_type", args.source_type);
+  if (args.due_before) query = query.lte("due_date", args.due_before);
+  if (args.due_after) query = query.gte("due_date", args.due_after);
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+  let results = data || [];
+  if (args.partner_name) {
+    const search = String(args.partner_name).toLowerCase();
+    results = results.filter((a: any) => {
+      const meta = a.source_meta as any;
+      return meta?.company_name?.toLowerCase().includes(search) || false;
+    });
+  }
+  return { count: results.length, activities: results.map((a: any) => ({ ...a, company_name: (a.source_meta as any)?.company_name || null })) };
+}
+
+async function executeCreateActivity(args: Record<string, unknown>) {
+  let partnerId = args.partner_id as string | null;
+  let companyName = args.company_name as string || "";
+  if (!partnerId && companyName) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) { partnerId = resolved.id; companyName = resolved.name; }
+  }
+  const sourceType = String(args.source_type || "partner");
+  const sourceId = partnerId || crypto.randomUUID();
+  const { data, error } = await supabase.from("activities").insert({
+    title: String(args.title),
+    description: args.description ? String(args.description) : null,
+    activity_type: String(args.activity_type),
+    source_type: sourceType,
+    source_id: sourceId,
+    partner_id: partnerId,
+    due_date: args.due_date ? String(args.due_date) : null,
+    priority: String(args.priority || "medium"),
+    email_subject: args.email_subject ? String(args.email_subject) : null,
+    email_body: args.email_body ? String(args.email_body) : null,
+    source_meta: { company_name: companyName } as any,
+  }).select("id").single();
+  if (error) return { error: error.message };
+  return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
+}
+
+async function executeUpdateActivity(args: Record<string, unknown>) {
+  const updates: Record<string, unknown> = {};
+  if (args.status) {
+    updates.status = args.status;
+    if (args.status === "completed") updates.completed_at = new Date().toISOString();
+  }
+  if (args.priority) updates.priority = args.priority;
+  if (args.due_date) updates.due_date = args.due_date;
+  if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare" };
+  const { error } = await supabase.from("activities").update(updates).eq("id", args.activity_id);
+  if (error) return { error: error.message };
+  return { success: true, activity_id: args.activity_id, message: `Attività aggiornata.` };
+}
+
+async function executeGenerateOutreach(args: Record<string, unknown>, authHeader: string) {
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(args),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore generazione outreach" };
+  return { success: true, channel: data.channel, subject: data.subject, body: data.body, language: data.language, message: `Messaggio ${args.channel} generato per ${args.contact_name} (${args.company_name}).` };
+}
+
+async function executeSendEmail(args: Record<string, unknown>, authHeader: string) {
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore invio email" };
+  // Log interaction if partner_id provided
+  if (args.partner_id) {
+    await supabase.from("interactions").insert({ partner_id: args.partner_id, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
+  }
+  return { success: true, message: `Email inviata a ${args.to_email} con oggetto "${args.subject}".` };
+}
+
+async function executeDeepSearchPartner(args: Record<string, unknown>, authHeader: string) {
+  let partnerId = args.partner_id as string;
+  if (!partnerId && args.company_name) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) partnerId = resolved.id;
+  }
+  if (!partnerId) return { error: "Partner non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-partner`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ partner_id: partnerId, force: !!args.force }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore Deep Search" };
+  return { success: true, partner_id: partnerId, ...data, message: `Deep Search completato per il partner.` };
+}
+
+async function executeDeepSearchContact(args: Record<string, unknown>, authHeader: string) {
+  let contactId = args.contact_id as string;
+  if (!contactId && args.contact_name) {
+    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${args.contact_name}%`).limit(1).single();
+    if (data) contactId = data.id;
+  }
+  if (!contactId) return { error: "Contatto non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ contact_id: contactId }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore Deep Search contatto" };
+  return { success: true, contact_id: contactId, ...data, message: `Deep Search completato per il contatto.` };
+}
+
+async function executeEnrichPartnerWebsite(args: Record<string, unknown>, authHeader: string) {
+  let partnerId = args.partner_id as string;
+  if (!partnerId && args.company_name) {
+    const resolved = await resolvePartnerId(args);
+    if (resolved) partnerId = resolved.id;
+  }
+  if (!partnerId) return { error: "Partner non trovato" };
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({ partner_id: partnerId }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore enrichment" };
+  return { success: true, partner_id: partnerId, ...data, message: `Enrichment website completato.` };
+}
+
+async function executeScanDirectory(args: Record<string, unknown>, authHeader: string) {
+  const body: Record<string, unknown> = {};
+  if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
+  if (args.search_by) body.searchBy = args.search_by;
+  if (args.company_name) body.companyName = args.company_name;
+  if (args.city) body.city = args.city;
+  if (args.member_id) body.memberId = args.member_id;
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/scrape-wca-directory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore scansione directory" };
+  return { success: true, ...data, message: `Scansione directory completata: ${data.total_results || 0} risultati trovati.` };
+}
+
+async function executeGenerateAliases(args: Record<string, unknown>, authHeader: string) {
+  const body: Record<string, unknown> = { type: args.type || "company" };
+  if (args.partner_ids) body.partner_ids = args.partner_ids;
+  if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
+  body.limit = Number(args.limit) || 20;
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-aliases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) return { error: data.error || "Errore generazione alias" };
+  return { success: true, ...data, message: `Alias generati con successo.` };
+}
+
+async function executeManagePartnerContact(args: Record<string, unknown>) {
+  const action = String(args.action);
+  if (action === "delete" && args.contact_id) {
+    const { error } = await supabase.from("partner_contacts").delete().eq("id", args.contact_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Contatto eliminato." };
+  }
+  if (action === "update" && args.contact_id) {
+    const updates: Record<string, unknown> = {};
+    if (args.name) updates.name = args.name;
+    if (args.title) updates.title = args.title;
+    if (args.email) updates.email = args.email;
+    if (args.direct_phone) updates.direct_phone = args.direct_phone;
+    if (args.mobile) updates.mobile = args.mobile;
+    if (args.is_primary !== undefined) updates.is_primary = args.is_primary;
+    const { error } = await supabase.from("partner_contacts").update(updates).eq("id", args.contact_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Contatto aggiornato." };
+  }
+  if (action === "add") {
+    let partnerId = args.partner_id as string;
+    if (!partnerId && args.company_name) {
+      const resolved = await resolvePartnerId(args);
+      if (resolved) partnerId = resolved.id;
+    }
+    if (!partnerId) return { error: "Partner non trovato" };
+    if (!args.name) return { error: "Il nome del contatto è obbligatorio" };
+    const { data, error } = await supabase.from("partner_contacts").insert({
+      partner_id: partnerId, name: String(args.name), title: args.title ? String(args.title) : null,
+      email: args.email ? String(args.email) : null, direct_phone: args.direct_phone ? String(args.direct_phone) : null,
+      mobile: args.mobile ? String(args.mobile) : null, is_primary: !!args.is_primary,
+    }).select("id").single();
+    if (error) return { error: error.message };
+    return { success: true, contact_id: data.id, message: `Contatto "${args.name}" aggiunto.` };
+  }
+  return { error: "Azione non valida" };
+}
+
+async function executeUpdateReminder(args: Record<string, unknown>) {
+  if (args.delete) {
+    const { error } = await supabase.from("reminders").delete().eq("id", args.reminder_id);
+    if (error) return { error: error.message };
+    return { success: true, message: "Reminder eliminato." };
+  }
+  const updates: Record<string, unknown> = {};
+  if (args.status) updates.status = args.status;
+  if (args.priority) updates.priority = args.priority;
+  if (args.due_date) updates.due_date = args.due_date;
+  updates.updated_at = new Date().toISOString();
+  const { error } = await supabase.from("reminders").update(updates).eq("id", args.reminder_id);
+  if (error) return { error: error.message };
+  return { success: true, message: "Reminder aggiornato." };
+}
+
+async function executeDeleteRecords(args: Record<string, unknown>) {
+  const table = String(args.table);
+  const ids = args.ids as string[];
+  if (!ids || ids.length === 0) return { error: "Nessun ID specificato" };
+  if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
+  const validTables = ["partners", "imported_contacts", "prospects", "activities", "reminders"];
+  if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
+  const { error } = await supabase.from(table as any).delete().in("id", ids);
+  if (error) return { error: error.message };
+  return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
+}
+
+
 
 async function executeCheckJobStatus(args: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
