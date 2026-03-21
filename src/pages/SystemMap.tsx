@@ -86,14 +86,14 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={cn(
       "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-      status === "operational" && "bg-emerald-500/10 text-emerald-400",
-      status === "partial" && "bg-amber-500/10 text-amber-400",
+      status === "operational" && "bg-primary/10 text-primary",
+      status === "partial" && "bg-accent/40 text-accent-foreground",
       status === "planned" && "bg-muted text-muted-foreground",
     )}>
       <span className={cn(
         "h-1.5 w-1.5 rounded-full",
-        status === "operational" && "bg-emerald-400",
-        status === "partial" && "bg-amber-400",
+        status === "operational" && "bg-primary",
+        status === "partial" && "bg-accent-foreground",
         status === "planned" && "bg-muted-foreground",
       )} />
       {status}
