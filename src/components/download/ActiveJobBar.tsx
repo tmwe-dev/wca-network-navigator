@@ -59,6 +59,13 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 ATTIVO
               </span>
+            ) : isPending ? (
+              <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                isDark ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-blue-50 text-blue-700 border border-blue-200"
+              }`}>
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                IN ATTESA
+              </span>
             ) : isPaused ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
                 isDark ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "bg-yellow-50 text-yellow-700 border border-yellow-200"
