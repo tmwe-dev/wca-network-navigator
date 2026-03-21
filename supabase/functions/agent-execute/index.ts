@@ -466,6 +466,78 @@ const ALL_TOOLS: Record<string, any> = {
       },
     },
   },
+  // ━━━ Strategic Tools (Director only) ━━━
+  create_work_plan: {
+    type: "function",
+    function: {
+      name: "create_work_plan",
+      description: "Create a strategic work plan with multi-step objectives. Each step has a title, description, and status.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Plan title (e.g. 'Espansione Brasile Q2 2026')" },
+          description: { type: "string", description: "Plan description and objectives" },
+          steps: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" } } }, description: "Ordered list of steps" },
+          tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
+        },
+        required: ["title", "steps"],
+      },
+    },
+  },
+  list_work_plans: {
+    type: "function",
+    function: {
+      name: "list_work_plans",
+      description: "List work plans. Filter by status or tags.",
+      parameters: {
+        type: "object",
+        properties: { status: { type: "string", enum: ["draft", "active", "completed", "archived"] }, tag: { type: "string" }, limit: { type: "number" } },
+      },
+    },
+  },
+  update_work_plan: {
+    type: "function",
+    function: {
+      name: "update_work_plan",
+      description: "Update a work plan: advance step, change status, add notes.",
+      parameters: {
+        type: "object",
+        properties: {
+          plan_id: { type: "string" },
+          status: { type: "string", enum: ["draft", "active", "completed", "archived"] },
+          advance_step: { type: "boolean", description: "Move to next step" },
+          metadata_note: { type: "string", description: "Add a note to plan metadata" },
+        },
+        required: ["plan_id"],
+      },
+    },
+  },
+  manage_workspace_preset: {
+    type: "function",
+    function: {
+      name: "manage_workspace_preset",
+      description: "Create or update a workspace preset with commercial goals, base proposals, and email content templates.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["create", "update", "list", "delete"] },
+          preset_id: { type: "string" },
+          name: { type: "string", description: "Preset name (e.g. 'Campagna Brasile')" },
+          goal: { type: "string", description: "Commercial goal description" },
+          base_proposal: { type: "string", description: "Base email/proposal content template" },
+        },
+        required: ["action"],
+      },
+    },
+  },
+  get_system_analytics: {
+    type: "function",
+    function: {
+      name: "get_system_analytics",
+      description: "Get comprehensive system analytics: partner counts by status, contact stats, email campaign performance, agent productivity, conversion rates.",
+      parameters: { type: "object", properties: { focus: { type: "string", description: "Optional focus area: partners, contacts, emails, agents, conversions" } } },
+    },
+  },
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
