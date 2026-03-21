@@ -43,6 +43,18 @@ export function useDownloadEngine() {
       const claimed = await claimJob(jobId);
       if (!claimed) return;
 
+      // 2b. Safety: ensure download_job_items exist (edge functions may have missed them)
+      const { count: itemCount } = await supabase.from("download_job_items").select("id", { count: "exact", head: true }).eq("job_id", jobId);
+      if (!itemCount || itemCount === 0) {
+        const { data: jobData } = await supabase.from("download_jobs").select("wca_ids").eq("id", jobId).single();
+        if (jobData?.wca_ids && Array.isArray(jobData.wca_ids)) {
+          const items = (jobData.wca_ids as number[]).map((id, i) => ({ job_id: jobId, wca_id: id, position: i, status: "pending" }));
+          for (let i = 0; i < items.length; i += 500) {
+            await supabase.from("download_job_items").insert(items.slice(i, i + 500));
+          }
+        }
+      }
+
       // 3. Fetch job for delay
       const { data: job } = await supabase.from("download_jobs").select("delay_seconds, country_code, country_name").eq("id", jobId).single();
       if (!job) return;

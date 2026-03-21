@@ -718,6 +718,9 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       if (wcaIds.length === 0) return { error: `Nessun partner da scaricare per ${cn}.` };
       const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: cc, country_name: cn, wca_ids: wcaIds as any, total_count: wcaIds.length, delay_seconds: delay, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
+      // Create items for V4 item-level tracking
+      const jobItems = wcaIds.map((id: number, i: number) => ({ job_id: job.id, wca_id: id, position: i, status: "pending" }));
+      for (let i = 0; i < jobItems.length; i += 500) { await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500)); }
       return { success: true, job_id: job.id, total: wcaIds.length, message: `Job creato: ${wcaIds.length} partner per ${cn}.` };
     }
 
@@ -733,6 +736,8 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       if (active && active.length > 0) return { error: "C'è già un job attivo." };
       const { data: job, error } = await supabase.from("download_jobs").insert({ country_code: p.country_code, country_name: p.country_name, wca_ids: [p.wca_id] as any, total_count: 1, delay_seconds: 15, status: "pending" }).select("id").single();
       if (error) return { error: error.message };
+      // Create item for V4 tracking
+      await supabase.from("download_job_items").insert({ job_id: job.id, wca_id: p.wca_id, position: 0, status: "pending" });
       return { success: true, job_id: job.id, message: `Download avviato per "${p.company_name}".` };
     }
 
