@@ -278,4 +278,10 @@ export const AVAILABLE_TOOLS = [
   { name: "get_team_status", label: "Stato Team", category: "Management" },
   { name: "update_agent_prompt", label: "Aggiorna Prompt Agente", category: "Management" },
   { name: "add_agent_kb_entry", label: "Aggiungi KB Agente", category: "Management" },
+  // Strategic Tools (Director)
+  { name: "create_work_plan", label: "Crea Piano di Lavoro", category: "Strategia" },
+  { name: "list_work_plans", label: "Lista Piani", category: "Strategia" },
+  { name: "update_work_plan", label: "Aggiorna Piano", category: "Strategia" },
+  { name: "manage_workspace_preset", label: "Gestisci Preset/Goal", category: "Strategia" },
+  { name: "get_system_analytics", label: "Analytics Sistema", category: "Strategia" },
 ];
