@@ -143,6 +143,7 @@ export function useCreateDownloadJob() {
         return existing[0].id;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("download_jobs")
         .insert({
@@ -153,6 +154,7 @@ export function useCreateDownloadJob() {
           total_count: filteredIds.length,
           delay_seconds: params.delay_seconds,
           status: "pending",
+          user_id: user?.id,
         })
         .select("id")
         .single();

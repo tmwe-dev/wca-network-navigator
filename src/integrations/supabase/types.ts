@@ -37,6 +37,7 @@ export type Database = {
           source_type: string
           status: Database["public"]["Enums"]["activity_status"]
           title: string
+          user_id: string | null
         }
         Insert: {
           activity_type: Database["public"]["Enums"]["activity_type"]
@@ -60,6 +61,7 @@ export type Database = {
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
           title: string
+          user_id?: string | null
         }
         Update: {
           activity_type?: Database["public"]["Enums"]["activity_type"]
@@ -83,6 +85,7 @@ export type Database = {
           source_type?: string
           status?: Database["public"]["Enums"]["activity_status"]
           title?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -691,6 +694,7 @@ export type Database = {
           total_pages: number
           total_results: number
           updated_at: string
+          user_id: string | null
           verified_at: string | null
         }
         Insert: {
@@ -703,6 +707,7 @@ export type Database = {
           total_pages?: number
           total_results?: number
           updated_at?: string
+          user_id?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -715,6 +720,7 @@ export type Database = {
           total_pages?: number
           total_results?: number
           updated_at?: string
+          user_id?: string | null
           verified_at?: string | null
         }
         Relationships: []
@@ -840,6 +846,7 @@ export type Database = {
           terminal_log: Json
           total_count: number
           updated_at: string
+          user_id: string | null
           wca_ids: Json
         }
         Insert: {
@@ -864,6 +871,7 @@ export type Database = {
           terminal_log?: Json
           total_count?: number
           updated_at?: string
+          user_id?: string | null
           wca_ids?: Json
         }
         Update: {
@@ -888,6 +896,7 @@ export type Database = {
           terminal_log?: Json
           total_count?: number
           updated_at?: string
+          user_id?: string | null
           wca_ids?: Json
         }
         Relationships: []
@@ -1596,6 +1605,7 @@ export type Database = {
           raw_profile_html: string | null
           raw_profile_markdown: string | null
           updated_at: string | null
+          user_id: string | null
           wca_id: number | null
           website: string | null
         }
@@ -1635,6 +1645,7 @@ export type Database = {
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
           updated_at?: string | null
+          user_id?: string | null
           wca_id?: number | null
           website?: string | null
         }
@@ -1674,6 +1685,7 @@ export type Database = {
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
           updated_at?: string | null
+          user_id?: string | null
           wca_id?: number | null
           website?: string | null
         }

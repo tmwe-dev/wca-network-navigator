@@ -169,9 +169,11 @@ async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 async function ensurePartner(wcaId: number, companyName: string | null | undefined, countryCode: string, countryName: string): Promise<string | null> {
   const { data: existing } = await supabase.from("partners").select("id").eq("wca_id", wcaId).maybeSingle();
   if (existing) return existing.id;
+  const { data: { user } } = await supabase.auth.getUser();
   const { data: newP } = await supabase.from("partners").insert({
     wca_id: wcaId, company_name: companyName || `WCA ${wcaId}`,
     country_code: countryCode, country_name: countryName, city: "",
+    user_id: user?.id,
   }).select("id").single();
   return newP?.id || null;
 }
