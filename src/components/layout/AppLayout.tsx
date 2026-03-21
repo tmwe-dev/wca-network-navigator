@@ -7,7 +7,6 @@ import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
-import { useDownloadEngine } from "@/hooks/useDownloadEngine";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
