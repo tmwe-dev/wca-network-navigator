@@ -1,3 +1,7 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Agent Roles
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 export const AGENT_ROLES = [
   { value: "outreach", label: "Outreach", emoji: "📧", color: "text-blue-400" },
   { value: "sales", label: "Sales", emoji: "💰", color: "text-yellow-400" },
@@ -6,6 +10,41 @@ export const AGENT_ROLES = [
   { value: "account", label: "Account Manager", emoji: "🤝", color: "text-purple-400" },
   { value: "strategy", label: "Strategia", emoji: "🧠", color: "text-rose-400" },
 ] as const;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Full operational tool set (all agents get these)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const ALL_OPERATIONAL_TOOLS: string[] = [
+  // Partner
+  "search_partners", "get_partner_detail", "update_partner", "add_partner_note",
+  "manage_partner_contact", "bulk_update_partners",
+  // Network
+  "get_country_overview", "get_directory_status", "scan_directory", "create_download_job",
+  "download_single_partner", "list_jobs", "check_job_status", "get_partners_without_contacts",
+  // Ricerca
+  "deep_search_partner", "deep_search_contact", "enrich_partner_website", "generate_aliases",
+  // CRM
+  "search_contacts", "get_contact_detail", "update_lead_status", "search_prospects",
+  // Outreach
+  "generate_outreach", "send_email",
+  // Agenda
+  "create_activity", "list_activities", "update_activity",
+  "create_reminder", "update_reminder", "list_reminders",
+  // Sistema
+  "check_blacklist", "get_global_summary", "save_memory", "search_memory",
+  "delete_records", "search_business_cards", "execute_ui_action",
+];
+
+// Management tools — only for Director (Luca)
+const MANAGEMENT_TOOLS: string[] = [
+  "create_agent_task", "list_agent_tasks", "get_team_status",
+  "update_agent_prompt", "add_agent_kb_entry",
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Templates
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const AGENT_TEMPLATES: Record<string, { name: string; system_prompt: string; assigned_tools: string[] }> = {
   outreach: {
@@ -25,11 +64,7 @@ REGOLE:
 - Personalizza ogni messaggio basandoti sul profilo e i servizi del partner
 - Tono professionale ma caldo, in italiano o inglese secondo il paese
 - Traccia tutto: email inviate, risposte, follow-up programmati`,
-    assigned_tools: [
-      "search_partners", "get_partner_detail", "deep_search_partner", "deep_search_contact",
-      "generate_outreach", "send_email", "create_activity", "create_reminder",
-      "check_blacklist", "update_partner", "list_reminders",
-    ],
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   sales: {
     name: "Agente Vendite",
@@ -66,13 +101,7 @@ MODELLI GOLD STANDARD:
 - Follow-up: Riferimento alla conversazione precedente + nuovo valore
 - Obiezioni: Riformula come opportunità usando calibrated questions
 - Chiusura: Riepilogo benefici + proposta chiara + next step`,
-    assigned_tools: [
-      "search_partners", "get_partner_detail", "deep_search_partner", "deep_search_contact",
-      "generate_outreach", "send_email", "create_activity", "create_reminder",
-      "check_blacklist", "update_partner", "list_reminders", "list_activities",
-      "update_activity", "add_partner_note", "search_contacts", "get_contact_detail",
-      "update_lead_status", "get_global_summary",
-    ],
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   download: {
     name: "Agente Download",
@@ -91,11 +120,7 @@ REGOLE:
 - Prioritizza paesi con più partner ma meno profili scaricati
 - Usa delay_seconds appropriato per evitare rate limiting (minimo 30s)
 - Dopo ogni download, verifica che i dati siano stati salvati correttamente`,
-    assigned_tools: [
-      "get_country_overview", "get_directory_status", "list_jobs", "create_download_job",
-      "download_single_partner", "scan_directory", "check_job_status",
-      "get_partners_without_contacts", "search_partners",
-    ],
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   research: {
     name: "Agente Ricerca",
@@ -114,11 +139,7 @@ REGOLE:
 - Valuta la qualità basandoti su: servizi offerti, certificazioni, rating, completezza profilo
 - Crea report strutturati con ranking e motivazioni
 - Salva le scoperte importanti in memoria per riferimento futuro`,
-    assigned_tools: [
-      "search_partners", "get_partner_detail", "deep_search_partner", "deep_search_contact",
-      "enrich_partner_website", "generate_aliases", "search_contacts", "search_prospects",
-      "check_blacklist", "get_country_overview", "scan_directory", "create_activity",
-    ],
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   account: {
     name: "Agente Account Manager",
@@ -136,12 +157,10 @@ REGOLE:
 - Prioritizza clienti con rating alto e lunga storia
 - Usa un tono personale e di relazione, non commerciale
 - Monitora i reminder scaduti e proponi azioni immediate
-- Registra ogni interazione per mantenere lo storico aggiornato`,
-    assigned_tools: [
-      "search_partners", "get_partner_detail", "list_reminders", "create_reminder",
-      "update_reminder", "create_activity", "list_activities", "update_activity",
-      "generate_outreach", "send_email", "add_partner_note", "update_partner",
-    ],
+- Registra ogni interazione per mantenere lo storico aggiornato
+
+Sei anche il Director del team: puoi creare task per gli altri agenti, monitorare il loro stato e aggiornare i loro prompt e knowledge base.`,
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS, ...MANAGEMENT_TOOLS],
   },
   strategy: {
     name: "Agente Strategia",
@@ -160,13 +179,13 @@ REGOLE:
 - Considera sempre il rapporto costo/beneficio delle operazioni
 - Proponi azioni concrete e misurabili
 - Salva le analisi strategiche in memoria per tracking nel tempo`,
-    assigned_tools: [
-      "get_global_summary", "get_country_overview", "get_directory_status",
-      "search_partners", "list_jobs", "list_activities", "list_reminders",
-      "check_blacklist", "save_memory",
-    ],
+    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
 };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Available tools list (for UI selector)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const AVAILABLE_TOOLS = [
   { name: "search_partners", label: "Cerca Partner", category: "Partner" },
