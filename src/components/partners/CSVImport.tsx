@@ -412,4 +412,6 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       </CardContent>
     </Card>
   );
-}
+});
+
+CSVImport.displayName = "CSVImport";
