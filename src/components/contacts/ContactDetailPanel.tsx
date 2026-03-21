@@ -288,6 +288,12 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </Badge>
       </div>
 
+      {/* Enrichment Card */}
+      <ContactEnrichmentCard
+        enrichmentData={c.enrichment_data}
+        deepSearchAt={c.deep_search_at}
+      />
+
       {/* Collapsible details */}
       <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
         <CollapsibleTrigger asChild>
