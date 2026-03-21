@@ -254,7 +254,7 @@ export function useExtensionBridge() {
   const extractContacts = useCallback(
     async (wcaId: number): Promise<ExtensionResponse> => {
       return enqueueExtraction(async () => {
-        const response = await sendMessage("extractContacts", { wcaId }, 30_000);
+        const response = await sendMessage("extractContacts", { wcaId }, 60_000);
         
         // V2 SCOPING: If the response contains a wcaId, validate it matches what we asked for.
         // If mismatched, this is a stale response from a previous request — discard it.

@@ -383,7 +383,7 @@ async function extractContactsForId(wcaId) {
   try {
     tab = await safeCreateTab("https://www.wcaworld.com/directory/members/" + wcaId);
 
-    await waitForTabLoad(tab.id, 30000);
+    await waitForTabLoad(tab.id, 20000);
 
     // Check if page actually loaded
     var loadCheck = await chrome.scripting.executeScript({
