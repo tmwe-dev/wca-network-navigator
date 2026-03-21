@@ -12,7 +12,7 @@ import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Progress } from "@/components/ui/progress";
+import { ActiveJobsWidget } from "@/components/home/ActiveJobsWidget";
 
 function useCount(table: "partners" | "partner_contacts" | "email_drafts") {
   return useQuery({
@@ -32,182 +32,12 @@ function formatCompact(value: number) {
   return new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
-function countryFlag(code: string) {
-  if (!code || code.length < 2) return "🏳️";
-  const upper = code.toUpperCase().slice(0, 2);
-  return String.fromCodePoint(...[...upper].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
-}
-
 const NAV_CARDS = [
-  {
-    key: "outreach",
-    title: "Outreach",
-    description: "Cockpit AI, workspace e invio email",
-    route: "/outreach",
-    icon: Radar,
-  },
-  {
-    key: "network",
-    title: "Network",
-    description: "Rubrica partner e download directory",
-    route: "/network",
-    icon: Network,
-  },
-  {
-    key: "crm",
-    title: "CRM",
-    description: "Prospect, contatti e opportunità",
-    route: "/crm",
-    icon: Users,
-  },
-  {
-    key: "agenda",
-    title: "Agenda",
-    description: "Attività, scadenze e follow-up",
-    route: "/agenda",
-    icon: CalendarCheck,
-  },
+  { key: "outreach", title: "Outreach", description: "Cockpit AI, workspace e invio email", route: "/outreach", icon: Radar },
+  { key: "network", title: "Network", description: "Rubrica partner e download directory", route: "/network", icon: Network },
+  { key: "crm", title: "CRM", description: "Prospect, contatti e opportunità", route: "/crm", icon: Users },
+  { key: "agenda", title: "Agenda", description: "Attività, scadenze e follow-up", route: "/agenda", icon: CalendarCheck },
 ] as const;
-
-function JobStatusIcon({ status }: { status: string }) {
-  switch (status) {
-    case "running":
-      return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
-    case "completed":
-      return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
-    case "failed":
-      return <AlertTriangle className="h-4 w-4 text-destructive" />;
-    case "paused":
-      return <Pause className="h-4 w-4 text-amber-400" />;
-    default:
-      return <Download className="h-4 w-4 text-muted-foreground" />;
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "running": return "In corso";
-    case "completed": return "Completato";
-    case "failed": return "Errore";
-    case "paused": return "In pausa";
-    case "pending": return "In coda";
-    default: return status;
-  }
-}
-
-function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem("dismissed_job_cards");
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
-  });
-
-  const dismiss = useCallback((id: string) => {
-    setDismissedIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem("dismissed_job_cards", JSON.stringify([...next]));
-      return next;
-    });
-  }, []);
-
-  const activeJobs = jobs.filter((j) => ["running", "pending"].includes(j.status));
-  const recentCompleted = jobs.filter((j) => j.status === "completed").slice(0, 2);
-  const recentFailed = jobs.filter((j) => j.status === "failed").slice(0, 2);
-  const allDisplay = [...activeJobs, ...recentFailed, ...recentCompleted].slice(0, 5);
-  const displayJobs = allDisplay.filter(j => !dismissedIds.has(j.id) || ["running", "pending"].includes(j.status));
-
-  if (displayJobs.length === 0) return null;
-
-  return (
-    <section className="glass-panel rounded-xl border border-border/60 p-4 space-y-3">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        <Download className="h-3.5 w-3.5 text-primary/70" />
-        Download attivi
-      </div>
-      <div className="space-y-2.5">
-        {displayJobs.map((job) => {
-          const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
-          const isActive = job.status === "running";
-          const isDismissable = ["completed", "failed", "cancelled"].includes(job.status);
-
-          return (
-            <div
-              key={job.id}
-              className={cn(
-                "rounded-lg border p-3 space-y-2 transition-colors",
-                isActive ? "border-primary/30 bg-primary/5" : "border-border/40 bg-muted/20"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{countryFlag(job.country_code)}</span>
-                  <div>
-                    <div className="text-sm font-medium text-foreground">
-                      {job.country_name}
-                      {job.network_name && job.network_name !== "Tutti" && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">· {job.network_name}</span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {job.current_index}/{job.total_count} profili · {job.contacts_found_count} contatti trovati
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <JobStatusIcon status={job.status} />
-                  <span className={cn(
-                    "text-[10px] font-medium",
-                    job.status === "running" ? "text-primary" :
-                    job.status === "failed" ? "text-destructive" :
-                    job.status === "completed" ? "text-emerald-400" :
-                    "text-muted-foreground"
-                  )}>
-                    {statusLabel(job.status)}
-                  </span>
-                  {isDismissable && (
-                    <button
-                      onClick={() => dismiss(job.id)}
-                      className="ml-1 p-0.5 rounded hover:bg-muted/40 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      title="Chiudi notifica"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {(isActive || job.status === "pending") && (
-                <div className="space-y-1">
-                  <Progress value={progress} className="h-1.5" />
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>{progress}%</span>
-                    {job.last_processed_company && (
-                      <span className="truncate ml-2">{job.last_processed_company}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {job.last_contact_result && isActive && (
-                <div className="text-[10px] text-muted-foreground/70 truncate font-mono">
-                  Ultimo risultato: {job.last_contact_result}
-                </div>
-              )}
-
-              {job.error_message && (
-                <div className="text-[10px] text-destructive/80 truncate">
-                  ⚠️ {job.error_message}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 export default function SuperHome3D() {
   const navigate = useNavigate();
@@ -222,18 +52,9 @@ export default function SuperHome3D() {
 
   const [actionPrompt, setActionPrompt] = useState<string | null>(null);
 
-  const readyContacts = useMemo(
-    () => contacts.filter((c) => Boolean(c.email)).length,
-    [contacts]
-  );
-  const openActivities = useMemo(
-    () => activities.filter((a) => !["completed", "cancelled"].includes(a.status)).length,
-    [activities]
-  );
-  const activeJobs = useMemo(
-    () => jobs.filter((j) => ["pending", "running"].includes(j.status)).length,
-    [jobs]
-  );
+  const readyContacts = useMemo(() => contacts.filter((c) => Boolean(c.email)).length, [contacts]);
+  const openActivities = useMemo(() => activities.filter((a) => !["completed", "cancelled"].includes(a.status)).length, [activities]);
+  const activeJobs = useMemo(() => jobs.filter((j) => ["pending", "running"].includes(j.status)).length, [jobs]);
 
   const greeting = new Date().getHours() < 13 ? "Buongiorno" : "Buonasera";
 
@@ -261,7 +82,7 @@ export default function SuperHome3D() {
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-y-auto bg-background text-foreground">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
 
         {/* Greeting + AI Prompt */}
         <section className="space-y-3">
@@ -269,11 +90,7 @@ export default function SuperHome3D() {
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
           <HomeAIPrompt
-            systemStats={{
-              activeJobs,
-              pendingActivities: openActivities,
-              totalPartners: partnerCount,
-            }}
+            systemStats={{ activeJobs, pendingActivities: openActivities, totalPartners: partnerCount }}
             briefingActions={briefing?.actions}
             agents={briefing?.agentStatus}
             externalPrompt={actionPrompt}
@@ -281,20 +98,24 @@ export default function SuperHome3D() {
           />
         </section>
 
-        {/* Briefing Operativo */}
-        <OperativeBriefing
-          summary={briefing?.summary}
-          actions={briefing?.actions ?? []}
-          isLoading={briefingLoading}
-          onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
-          onAction={handleBriefingAction}
-        />
+        {/* Command Center: Briefing + Agents side by side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-3">
+            <OperativeBriefing
+              summary={briefing?.summary}
+              actions={briefing?.actions ?? []}
+              isLoading={briefingLoading}
+              onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
+              onAction={handleBriefingAction}
+            />
+          </div>
+          <div className="lg:col-span-2">
+            <AgentStatusPanel agents={briefing?.agentStatus ?? []} />
+          </div>
+        </div>
 
-        {/* Agent Status */}
-        <AgentStatusPanel agents={briefing?.agentStatus ?? []} />
-
-        {/* Active downloads — always visible when jobs exist */}
-        <ActiveJobsPanel jobs={jobs} />
+        {/* Active downloads */}
+        <ActiveJobsWidget jobs={jobs} />
 
         {/* Navigation cards */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
