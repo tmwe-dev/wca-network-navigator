@@ -247,7 +247,7 @@ export function OperationsCenter() {
   const [activeTab, setActiveTab] = useState("overview");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-background">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-background">
       {/* Stats Bar */}
       <div className="flex-shrink-0 p-4 border-b border-border/50">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
@@ -287,7 +287,7 @@ export function OperationsCenter() {
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 min-h-0 px-4 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -319,7 +319,7 @@ export function OperationsCenter() {
         {activeTab === "agents" && <AgentTasksPanel tasks={agentTasks} />}
         {activeTab === "emails" && <EmailQueuePanel emails={emailQueue} />}
         {activeTab === "activities" && <ActivitiesPanel activities={activities} />}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
