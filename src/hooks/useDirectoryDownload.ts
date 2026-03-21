@@ -302,6 +302,6 @@ export function useDirectoryDownload({
     networks, createJob,
     // Actions
     handleStartScan, handleStartDownload, stopScan, startScanThenDownload,
-    ensureSession,
+    // ensureSession removed
   };
 }

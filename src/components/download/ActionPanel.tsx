@@ -32,7 +32,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const th = t(isDark);
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { ensureSession } = useWcaSession();
+  // No session gate
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");

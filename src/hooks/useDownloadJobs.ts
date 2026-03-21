@@ -158,6 +158,25 @@ export function useCreateDownloadJob() {
         .single();
 
       if (error) throw error;
+
+      // Create individual items for item-level tracking
+      const items = filteredIds.map((id, i) => ({
+        job_id: data.id,
+        wca_id: id,
+        position: i,
+        status: "pending",
+      }));
+      // Batch insert in chunks of 500
+      for (let i = 0; i < items.length; i += 500) {
+        await supabase.from("download_job_items").insert(items.slice(i, i + 500));
+      }
+      // Emit creation event
+      await supabase.from("download_job_events").insert({
+        job_id: data.id,
+        event_type: "job_created",
+        payload: { total: filteredIds.length } as any,
+      });
+
       return data.id;
     },
     onSuccess: () => {
