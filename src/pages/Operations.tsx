@@ -270,7 +270,7 @@ export default function Operations() {
               />
               {(activeJobs.length > 0 || showTerminal) && !hasSelection && !isMobile && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
-                  <ActiveJobBar />
+                  <ActiveJobBar onStartJob={startJob} />
                   <JobMonitor />
                 </div>
               )}
