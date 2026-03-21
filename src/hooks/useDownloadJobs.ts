@@ -200,7 +200,11 @@ export function usePauseResumeJob() {
         await supabase.from("download_jobs").update({ status: "paused" }).eq("id", jobId);
       } else if (action === "cancel") {
         await supabase.from("download_jobs").update({ status: "cancelled" }).eq("id", jobId);
+        // Cancel remaining items
+        await supabase.from("download_job_items").update({ status: "cancelled" }).eq("job_id", jobId).eq("status", "pending");
       } else if (action === "resume") {
+        // Reset cancelled items back to pending so they can be reprocessed
+        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", jobId).in("status", ["cancelled", "temporary_error"]);
         await supabase.from("download_jobs").update({ status: "pending", error_message: null }).eq("id", jobId);
       }
     },
