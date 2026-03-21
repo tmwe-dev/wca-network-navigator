@@ -1,125 +1,173 @@
 
+Obiettivo: rifare davvero il flusso download in modo semplice e robusto, perché oggi il problema non è “il tempo”, ma il fatto che il sistema ha ancora troppi strati che si contraddicono tra loro.
 
-# Piano: Refactoring Completo del Flusso Download
+Stato reale che ho verificato:
+- L’ultimo job attivo è `Dominican Republic`, ora `paused` a `0/41` per `5 timeout consecutivi`.
+- Quindi il motore non sta fallendo “a metà”: in certi casi parte già con uno stato tecnico incoerente.
 
-## Problema
+Problemi trovati nel codice, file per file
 
-Il sistema download è un monolite da 473 righe (`useDownloadProcessor.ts`) con logica duplicata, 3 sistemi di auto-start concorrenti (hook, AppLayout, DownloadStatusPanel), e troppi strati di verifica sessione che si contraddicono a vicenda. Risultato: job che ripartono da soli, processi fantasma, e complessità ingestibile.
+1. `src/hooks/useDownloadEngine.ts`
+- Usa ancora logica a soglia (`5 timeout consecutivi`) invece di aspettare e diagnosticare il singolo profilo.
+- Ignora di fatto la velocità configurata del job: usa `waitForGreenLight()` globale, non `job.delay_seconds`.
+- `current_index: processedSet.size` è sbagliato: se salti profili o riprendi job, l’indice non rappresenta più la posizione reale nel vettore.
+- In retry salva solo se il partner esiste già; se non esiste, quel profilo fallisce anche quando l’estrazione va bene.
+- `completeJob()` non salva `processed_ids`, `current_index`, `contacts_found_count`, `contacts_missing_count`: quindi il job può risultare “completed” con stato interno incompleto.
+- `stop()` abortisce solo localmente: non porta il job in uno stato DB esplicito.
+- I casi `memberNotFound`, `retry`, `error` non vengono loggati/persistiti in modo coerente profilo per profilo.
 
-## Inventario file da rifattorizzare (solo download)
+2. `src/hooks/useExtensionBridge.ts`
+- Continua a fare polling ogni 3 secondi: è rumore tecnico costante, può creare falso “extension not responding” e non serve durante un job lineare.
+- `checkAvailable()` controlla solo se l’estensione risponde, non se l’estrazione WCA funziona davvero.
+- La gestione “stale response” esiste perché il contratto messaggi è fragile, non perché il dominio lo richieda.
+- Il bridge lato app usa `window.location.origin`, ma il content script risponde con `*`: è incoerente con la policy di sicurezza.
 
-| File | Righe | Azione |
-|------|-------|--------|
-| `src/hooks/useDownloadProcessor.ts` | 473 | Riscrivere e spezzare |
-| `public/chrome-extension/background.js` | 721 | Spezzare estrazione profilo |
-| `src/hooks/useDownloadJobs.ts` | 268 | Snellire (troppe mutation hooks) |
-| `src/hooks/useExtensionBridge.ts` | 296 | Snellire |
-| `src/lib/download/processProfile.ts` | 130 | Semplificare |
-| `src/lib/download/terminalLog.ts` | 111 | OK, tocco minimo |
-| `src/components/download/JobMonitor.tsx` | 375 | Spezzare in sotto-componenti |
-| `src/components/global/DownloadStatusPanel.tsx` | 158 | Rimuovere auto-start duplicato |
-| `src/components/layout/AppLayout.tsx` | 229 | Rimuovere auto-start duplicato |
+3. `public/chrome-extension/content.js`
+- Usa `window.postMessage(..., "*")` per tutte le risposte.
+- Non limita l’origine di ritorno.
+- È un relay minimale, ma oggi non porta abbastanza contesto per distinguere i tipi di errore.
 
-## Architettura nuova
+4. `public/chrome-extension/background.js`
+- È ancora un monolite enorme e mescola:
+  - estrazione DOM
+  - gestione tab
+  - verifica sessione
+  - auto-login
+  - sync cookie
+  - salvataggio server
+- `extractContacts` nel listener risponde quasi sempre con `success: true` anche quando `result.error` o `pageLoaded: false`: questo falsa il contratto con il frontend.
+- Non rimanda sempre `htmlLength` / `error` / motivazione reale al client, quindi il motore non può diagnosticare bene.
+- `verifyWcaSession()` controlla i cookie, non l’accesso reale al contenuto protetto.
+- `checkPageLoaded()` usa euristiche fragili (`html.length > 2000`, `h1`) che possono fallire su pagine valide.
+- Fa sia salvataggio lato estensione (`sendContactsToServer`) sia salvataggio lato app (`saveExtractionResult`): doppio percorso, doppia fonte di verità.
+- Continua ad avere `autoLogin`, che era esattamente una delle cause del casino.
 
+5. `src/hooks/useWcaSession.ts`
+- Contraddice il modello “manual-first”:
+  - verifica sessione
+  - prende credenziali
+  - tenta auto-login
+  - fa sync cookie
+- Quindi il sistema che doveva essere semplice continua ad avere un secondo flusso parallelo.
+
+6. `src/components/download/ActionPanel.tsx`
+7. `src/hooks/useDirectoryDownload.ts`
+8. `src/components/operations/PartnerListPanel.tsx`
+- Questi tre punti bloccano ancora i download con `ensureSession()` prima di creare il job.
+- Quindi anche se il motore download è stato “semplificato”, l’ingresso al flusso non lo è affatto.
+
+9. `src/components/layout/AppLayout.tsx` e `src/pages/Global.tsx`
+- C’è ancora auto-start:
+  - `ai-ui-action -> start_download_job`
+  - `Global.handleJobCreated -> startJob(job.job_id)`
+- Quindi il sistema non è davvero solo manuale.
+
+10. `src/hooks/useJobHealthMonitor.ts`
+- Continua a interpretare e notificare stall/sessione/errori globalmente.
+- Non è il problema principale, ma aggiunge un altro layer che osserva e interpreta lo stato.
+
+Soluzione definitiva che implementerei
+
+Fase 1 — Unica fonte di verità
+- Il download deve avere una sola catena:
 ```text
-┌────────────────────────────────────────────────┐
-│  useDownloadEngine.ts (< 80 righe)             │
-│  - startJob(id) / stop() / isProcessing        │
-│  - Nessun auto-start. L'utente avvia.          │
-│  - Loop semplice: fetch job → per ogni wcaId → │
-│    extractViaExtension → saveResult → next      │
-└────────────┬───────────────────────────────────┘
-             │
-  ┌──────────┴──────────┐
-  │                     │
-  ▼                     ▼
-extractProfile.ts    jobState.ts
-(< 60 righe)         (< 40 righe)
-Chiama estensione,   Aggiorna DB:
-gestisce timeout,    progress, status,
-ritorna risultato    contatori
-semplice
+UI crea job -> motore legge job -> estensione estrae -> app salva -> motore aggiorna stato
 ```
+- Tolgo completamente:
+  - auto-login
+  - verify session via cookie
+  - sync cookie come prerequisito al download
+  - doppio salvataggio estensione/server
 
-## Cosa cambia concretamente
-
-### 1. Eliminare auto-start multipli
-Oggi ci sono **3 posti** che auto-avviano job:
-- `useDownloadProcessor.ts` (polling ogni 10s)
-- `AppLayout.tsx` (polling ogni 10s)  
-- `DownloadStatusPanel.tsx` (timer 5s)
-
-**Azione**: Rimuovere TUTTI e tre. I job partono solo quando l'utente clicca Start o l'AI lo richiede esplicitamente.
-
-### 2. Riscrivere `useDownloadProcessor.ts` → `useDownloadEngine.ts`
-Da 473 righe a < 80. Struttura:
-
+Fase 2 — Nuovo contratto estensione/app
+- `background.js` deve restituire sempre una risposta strutturata vera:
+```text
+{
+  success,
+  wcaId,
+  state: "ok" | "member_not_found" | "not_loaded" | "bridge_error",
+  companyName,
+  contacts,
+  profile,
+  profileHtml,
+  htmlLength,
+  error
+}
 ```
-startJob(jobId):
-  1. Fetch job dal DB
-  2. Verifica estensione (1 chiamata, niente auto-login)
-  3. Loop semplice: per ogni wcaId non processato
-     - extractContacts via estensione
-     - Se successo → salva, aggiorna contatori
-     - Se timeout → aggiungi a retry queue
-     - Se "member not found" → segna come inesistente
-     - Ogni 3 profili → flush progress al DB
-  4. Se retry queue non vuota → secondo giro
-  5. Segna job completato
-```
+- Nessun `success: true` se la pagina non è leggibile.
+- L’estensione non salva più nulla nel backend: estrae e basta.
 
-Niente: rate-limit detector complesso, session re-verify durante il loop, auto-login, checkpoint delay overlap, contatori consecutiveEmpty/consecutiveSkipped/consecutiveNotFound.
+Fase 3 — Motore lineare senza euristiche tossiche
+- `useDownloadEngine` va riscritto per:
+  - usare la posizione reale del loop, non `processedSet.size`
+  - persistere ogni profilo processato
+  - salvare sempre stato finale coerente
+  - distinguere:
+    - `member_not_found`
+    - `page_not_loaded`
+    - `temporary_error`
+    - `cancelled`
+- Niente pausa automatica dopo 5 timeout come regola principale.
+- Se un profilo non risponde:
+  - lo marchi come errore tecnico
+  - passi avanti
+  - fai un retry finale
+- Il job si ferma solo per:
+  - stop utente
+  - estensione non disponibile
+  - errore strutturale ripetuto dell’intero bridge, non del singolo profilo
 
-Se l'estensione smette di rispondere → job in pausa con messaggio chiaro. L'utente decide cosa fare.
+Fase 4 — Ingresso download pulito
+- Rimuovere `ensureSession()` come gate in:
+  - `ActionPanel`
+  - `useDirectoryDownload`
+  - `PartnerListPanel`
+- Il job deve partire sempre.
+- Se WCA non è accessibile, sarà l’estrazione del singolo profilo a restituire il motivo reale.
 
-### 3. Semplificare `processProfile.ts` → inline nel loop
-La funzione `processOneProfile` con 7 tipi di ritorno diversi viene eliminata. La logica diventa un semplice if/else nel loop principale.
+Fase 5 — Eliminare gli automatismi residui
+- Rimuovere auto-start in:
+  - `AppLayout`
+  - `Global`
+- Lasciare solo:
+  - Start
+  - Pause
+  - Resume
+  - Stop
+  espliciti dall’utente o da un singolo entrypoint controllato.
 
-### 4. Rimuovere `rateLimitDetector.ts`
-Troppo complesso e causa falsi positivi. Se il profilo non esiste → skip. Se 5+ timeout consecutivi → pausa job. Fine.
+Fase 6 — Spezzare davvero l’estensione
+- `background.js` va diviso almeno in:
+  - `tabManager.js`
+  - `pageChecks.js`
+  - `profileExtractor.js`
+  - `messageRouter.js`
+- Così si isola subito dove si rompe:
+  - apertura tab
+  - attesa caricamento
+  - lettura DOM
+  - ritorno messaggio
 
-### 5. Rimuovere `sessionVerifier.ts`
-La verifica sessione diventa una singola chiamata all'estensione all'inizio del job. Se fallisce → job non parte. Durante il job, se l'estensione smette di rispondere → pausa. Niente auto-login, niente re-verify durante il loop.
+File che toccherei nel refactor
+- `src/hooks/useDownloadEngine.ts`
+- `src/hooks/useExtensionBridge.ts`
+- `src/hooks/useWcaSession.ts`
+- `src/hooks/useDirectoryDownload.ts`
+- `src/components/download/ActionPanel.tsx`
+- `src/components/operations/PartnerListPanel.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `src/pages/Global.tsx`
+- `src/hooks/useJobHealthMonitor.ts`
+- `public/chrome-extension/background.js`
+- `public/chrome-extension/content.js`
+- nuovi moduli estensione estratti dal background
 
-### 6. Snellire `background.js`
-Estrarre `extractFullProfileFromPage` (247 righe) in un file separato `profileExtractor.js` iniettato come content script. Il background.js resta solo il message handler.
+Risultato atteso
+- Niente più “sessione WCA non attiva” come blocco preventivo sparso in giro.
+- Niente più doppio flusso app/estensione/backend.
+- Niente più job “completed” con stato interno sporco.
+- Niente più indice progresso falsato.
+- Ogni fallimento avrà una causa vera e tracciabile per profilo.
+- Il download diventa finalmente un flusso unico, leggibile e debuggabile.
 
-### 7. Spezzare `JobMonitor.tsx`
-Da 375 righe → 3 file:
-- `JobMonitor.tsx` (< 60) — orchestratore
-- `ActiveJobCard.tsx` (< 80) — card job attivo con controlli
-- `JobQueue.tsx` (< 40) — lista coda/cronologia
-
-### 8. Bloccare i processi ora
-Prima di tutto, cancellare tutti i job running/pending nel DB e rimuovere gli auto-start.
-
-## File da creare/modificare
-
-| File | Azione | Righe target |
-|------|--------|--------------|
-| `src/hooks/useDownloadEngine.ts` | Creare (sostituisce useDownloadProcessor) | < 80 |
-| `src/lib/download/extractProfile.ts` | Creare (logica estrazione semplificata) | < 60 |
-| `src/lib/download/jobState.ts` | Creare (aggiornamento stato job) | < 40 |
-| `src/hooks/useDownloadProcessor.ts` | Eliminare | — |
-| `src/lib/download/processProfile.ts` | Eliminare | — |
-| `src/lib/download/rateLimitDetector.ts` | Eliminare | — |
-| `src/lib/download/sessionVerifier.ts` | Eliminare | — |
-| `src/components/download/ActiveJobCard.tsx` | Creare | < 80 |
-| `src/components/download/JobQueue.tsx` | Creare | < 40 |
-| `src/components/download/JobMonitor.tsx` | Riscrivere | < 60 |
-| `src/components/global/DownloadStatusPanel.tsx` | Rimuovere auto-start | < 120 |
-| `src/components/layout/AppLayout.tsx` | Rimuovere auto-start + polling | < 200 |
-| `src/hooks/useDownloadJobs.ts` | Snellire | < 200 |
-| `public/chrome-extension/background.js` | Estrarre profilo extractor | < 400 |
-| `public/chrome-extension/profileExtractor.js` | Creare | < 250 |
-| Database | Cancellare job running/pending | — |
-
-## Risultato
-
-- Zero auto-start: l'utente controlla tutto
-- Ogni file < 80 righe (salvo background.js < 400 e DownloadJobs < 200)
-- Flusso lineare e leggibile: start → loop → save → done
-- Se qualcosa va storto → pausa con messaggio chiaro, l'utente decide
-- Nessun processo fantasma
-
+In sintesi: il problema principale non è WCA, ma il fatto che oggi convivono ancora 4 sistemi diversi nello stesso flusso: gate sessione, bridge, motore job, automatismi globali. La soluzione definitiva è togliere i gate e le scorciatoie, far parlare estensione e motore con un contratto pulito, e lasciare un solo percorso esecutivo end-to-end.
