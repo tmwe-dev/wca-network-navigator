@@ -118,12 +118,31 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     setLoading(true);
     setResponse(null);
 
-    const newMessages = [...history, { role: "user", content: msg }];
+    // Check for @AgentName routing
+    const agentMatch = msg.match(/^@(\w+)\s+(.+)/i);
+    let targetAgent: AgentStatusItem | undefined;
+    let cleanMsg = msg;
+    if (agentMatch && agents) {
+      const name = agentMatch[1].toLowerCase();
+      targetAgent = agents.find(a => a.name.toLowerCase() === name);
+      if (targetAgent) cleanMsg = agentMatch[2];
+    }
+
+    const newMessages = [...history, { role: "user", content: cleanMsg }];
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: newMessages },
-      });
+      let data: any, error: any;
+      if (targetAgent) {
+        // Route to agent-execute
+        ({ data, error } = await supabase.functions.invoke("agent-execute", {
+          body: { agent_id: targetAgent.id, messages: newMessages },
+        }));
+      } else {
+        // Default: ai-assistant
+        ({ data, error } = await supabase.functions.invoke("ai-assistant", {
+          body: { messages: newMessages },
+        }));
+      }
       if (error) throw error;
       const raw = data?.content || data?.message || "";
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
