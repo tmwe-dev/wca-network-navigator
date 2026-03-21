@@ -27,13 +27,14 @@ const ALL_OPERATIONAL_TOOLS: string[] = [
   // CRM
   "search_contacts", "get_contact_detail", "update_lead_status", "search_prospects",
   // Outreach
-  "generate_outreach", "send_email",
+  "generate_outreach", "send_email", "schedule_email",
   // Agenda
   "create_activity", "list_activities", "update_activity",
   "create_reminder", "update_reminder", "list_reminders",
   // Sistema
   "check_blacklist", "get_global_summary", "save_memory", "search_memory",
   "delete_records", "search_business_cards", "execute_ui_action",
+  "get_operations_dashboard",
 ];
 
 // Management tools — only for Director (Luca)
