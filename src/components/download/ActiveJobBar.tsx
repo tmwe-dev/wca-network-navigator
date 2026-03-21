@@ -35,7 +35,8 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
     mainJob.total_count > 0
       ? (mainJob.current_index / mainJob.total_count) * 100
       : 0;
-  const isRunning = mainJob.status === "running" || mainJob.status === "pending";
+  const isRunning = mainJob.status === "running";
+  const isPending = mainJob.status === "pending";
   const isPaused = mainJob.status === "paused";
 
   return (
