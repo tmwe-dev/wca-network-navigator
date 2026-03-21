@@ -319,7 +319,7 @@ export function OperationsCenter() {
         {activeTab === "agents" && <AgentTasksPanel tasks={agentTasks} />}
         {activeTab === "emails" && <EmailQueuePanel emails={emailQueue} />}
         {activeTab === "activities" && <ActivitiesPanel activities={activities} />}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
