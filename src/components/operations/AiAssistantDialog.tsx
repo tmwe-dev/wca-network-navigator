@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import { Bot, Send, X, Loader2, Sparkles, Trash2, Rocket, Clock, Volume2, VolumeX, Mic, MicOff, ListChecks } from "lucide-react";
 import { ThemeCtx, t } from "@/components/download/theme";
-import ReactMarkdown from "react-markdown";
+import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "./AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
