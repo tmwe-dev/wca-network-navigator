@@ -12,7 +12,11 @@ import {
 import { useTheme, t } from "./theme";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
-export function ActiveJobBar() {
+interface ActiveJobBarProps {
+  onStartJob?: (jobId: string) => void;
+}
+
+export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
   const isDark = useTheme();
   const th = t(isDark);
   const { data: jobs } = useDownloadJobs();
