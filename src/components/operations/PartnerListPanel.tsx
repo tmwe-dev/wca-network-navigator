@@ -30,6 +30,7 @@ import { getRealLogoUrl } from "@/lib/partnerUtils";
 import { useDirectoryDownload } from "@/hooks/useDirectoryDownload";
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
 import { IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar } from "./partner-list/SubComponents";
+import { PartnerVirtualList } from "./PartnerVirtualList";
 
 /* ── Props ── */
 interface PartnerListPanelProps {
