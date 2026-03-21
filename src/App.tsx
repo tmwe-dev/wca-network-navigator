@@ -83,6 +83,7 @@ const App = () => (
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
+                  <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
 
                   {/* ── Redirects from old routes to new environments ── */}
