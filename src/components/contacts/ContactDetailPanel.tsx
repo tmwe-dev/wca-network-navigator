@@ -101,6 +101,21 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const [aliasLoading, setAliasLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Query matched business card for this contact
+  const { data: matchedCard } = useQuery({
+    queryKey: ["business-card-for-contact", c.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("business_cards")
+        .select("*")
+        .eq("matched_contact_id", c.id)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+
   // Sync with external prop changes (e.g. user clicks different contact)
   useEffect(() => {
     setC(contact);
