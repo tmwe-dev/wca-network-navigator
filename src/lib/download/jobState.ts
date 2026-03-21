@@ -10,13 +10,26 @@ export async function updateJob(
   }
 }
 
-/** Mark job as completed. */
-export async function completeJob(jobId: string, failedIds: number[]): Promise<void> {
-  await supabase.from("download_jobs").update({
+/** Mark job as completed with full final state. */
+export async function completeJob(
+  jobId: string,
+  failedIds: number[],
+  processedSet?: Set<number>,
+  contactsFound?: number,
+  contactsMissing?: number,
+): Promise<void> {
+  const payload: Record<string, any> = {
     status: "completed",
     completed_at: new Date().toISOString(),
     failed_ids: failedIds as any,
-  }).eq("id", jobId);
+  };
+  if (processedSet) {
+    payload.processed_ids = [...processedSet] as any;
+    payload.current_index = processedSet.size;
+  }
+  if (contactsFound !== undefined) payload.contacts_found_count = contactsFound;
+  if (contactsMissing !== undefined) payload.contacts_missing_count = contactsMissing;
+  await supabase.from("download_jobs").update(payload).eq("id", jobId);
 }
 
 /** Mark job as paused with a reason. */

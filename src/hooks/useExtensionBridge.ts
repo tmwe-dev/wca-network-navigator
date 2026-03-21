@@ -1,296 +1,94 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { toast } from "sonner";
 
-// ── Global serial queue for extractContacts — safety net against concurrent extractions ──
-const EXTRACT_LOCK_KEY = '__extractContactsLock__';
-
-type ExtractLock = {
-  busy: boolean;
-  queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }>;
-};
-
-function getExtractLock(): ExtractLock {
-  if (!(window as any)[EXTRACT_LOCK_KEY]) {
-    (window as any)[EXTRACT_LOCK_KEY] = { busy: false, queue: [] };
-  }
-  return (window as any)[EXTRACT_LOCK_KEY];
-}
-
-async function enqueueExtraction<T>(fn: () => Promise<T>): Promise<T> {
-  const lock = getExtractLock();
-  return new Promise<T>((resolve) => {
-    const run = async () => {
-      lock.busy = true;
-      try {
-        const result = await fn();
-        resolve(result);
-      } catch (err) {
-        resolve({ success: false, error: String(err) } as any);
-      } finally {
-        lock.busy = false;
-        const next = lock.queue.shift();
-        if (next) next.fn().then(next.resolve);
-      }
-    };
-    if (!lock.busy) {
-      run();
-    } else {
-      console.warn("[ExtensionBridge] extractContacts queued — another extraction in progress");
-      lock.queue.push({ resolve, fn: run as any });
-    }
-  });
-}
-
-type ExtensionProfile = {
-  address?: string;
-  phone?: string;
-  fax?: string;
-  mobile?: string;
-  emergencyPhone?: string;
-  email?: string;
-  website?: string;
-  memberSince?: string;
-  membershipExpires?: string;
-  officeType?: string;
-  description?: string;
-  networks?: Array<{ name: string; id?: string; expires?: string | null }>;
-  services?: string[];
-  certifications?: string[];
-  branchCities?: string[];
-};
+/**
+ * V3: Simplified extension bridge.
+ * - No polling (demand-only ping)
+ * - No stale response handling (structured contract from extension)
+ * - Serial queue for extractContacts
+ */
 
 type ExtensionResponse = {
   success: boolean;
-  contacts?: Array<{
-    name?: string;
-    title?: string;
-    email?: string;
-    phone?: string;
-    mobile?: string;
-  }>;
-  companyName?: string;
   wcaId?: number;
-  error?: string;
-  version?: string;
+  state?: "ok" | "member_not_found" | "not_loaded" | "bridge_error" | "extraction_error";
+  contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
+  companyName?: string | null;
+  error?: string | null;
   authenticated?: boolean;
   reason?: string;
-  cookieLength?: number;
   pageLoaded?: boolean;
-  profile?: ExtensionProfile;
-  profileHtml?: string;
+  profile?: Record<string, any>;
+  profileHtml?: string | null;
+  htmlLength?: number;
 };
 
-/**
- * Hook for communicating with the WCA Chrome Extension via content script bridge.
- * Uses window.postMessage so no Extension ID is needed.
- * 
- * V2 OPTIMIZATIONS:
- * - extractContacts timeout reduced from 90s → 30s
- * - Response scoping by wcaId to prevent stale cross-profile data
- * - Simplified polling with stable refs
- */
+// Serial queue for extractions
+const LOCK_KEY = "__extractLock__";
+function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
+  if (!(window as any)[LOCK_KEY]) (window as any)[LOCK_KEY] = { busy: false, queue: [] };
+  return (window as any)[LOCK_KEY];
+}
+
+async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
+  const lock = getLock();
+  return new Promise<T>((resolve) => {
+    const run = async () => {
+      lock.busy = true;
+      try { resolve(await fn()); }
+      catch (err) { resolve({ success: false, error: String(err) } as any); }
+      finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
+    };
+    if (!lock.busy) run();
+    else lock.queue.push({ resolve, fn: run as any });
+  });
+}
+
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
-  const pendingRef = useRef<Map<string, (response: ExtensionResponse) => void>>(new Map());
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const availableRef = useRef(false);
+  const pendingRef = useRef<Map<string, (r: ExtensionResponse) => void>>(new Map());
 
-  // Keep ref in sync with state
+  // Listen for responses
   useEffect(() => {
-    availableRef.current = isAvailable;
-  }, [isAvailable]);
-
-  // Listen for responses from the content script
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
+    const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
       const data = event.data;
       if (!data || data.direction !== "from-extension") return;
-
-      // Content script loaded
-      if (data.action === "contentScriptReady") {
-        setIsAvailable(true);
-        return;
-      }
-
-      // Any successful ping response means extension is alive
-      if (data.action === "ping" && data.response?.success) {
-        setIsAvailable(true);
-        return;
-      }
-
-      // Response to a request
+      if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
         pendingRef.current.delete(data.requestId);
         resolve(data.response);
       }
-    }
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
   }, []);
 
-  // CONTINUOUS polling every 3s with watchdog
-  const consecutiveFailsRef = useRef(0);
-
-  useEffect(() => {
-    const doPing = () => {
-      const id = `poll_${Date.now()}`;
-      const timer = setTimeout(() => {
-        consecutiveFailsRef.current++;
-        if (consecutiveFailsRef.current >= 2 && availableRef.current) {
-          setIsAvailable(false);
-          toast.warning("Estensione browser non risponde", { id: "ext-watchdog", duration: 5000 });
-        }
-      }, 5000);
-
-      const handler = (e: MessageEvent) => {
-        if (e.data?.direction === "from-extension" && e.data?.requestId === id) {
-          clearTimeout(timer);
-          window.removeEventListener("message", handler);
-          consecutiveFailsRef.current = 0;
-          if (e.data?.response?.success) setIsAvailable(true);
-        }
-      };
-      window.addEventListener("message", handler);
-
-      const origin = window.location.origin;
-      window.postMessage(
-        { direction: "from-webapp", action: "ping", requestId: id },
-        origin || "*"
-      );
-    };
-
-    doPing();
-    pollRef.current = setInterval(doPing, 3000);
-
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
+  const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
+    return new Promise((resolve) => {
+      const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const timer = setTimeout(() => { pendingRef.current.delete(requestId); resolve({ success: false, error: "Timeout" }); }, timeoutMs);
+      pendingRef.current.set(requestId, (response) => { clearTimeout(timer); resolve(response); });
+      window.postMessage({ direction: "from-webapp", action, requestId, ...payload }, window.location.origin);
+    });
   }, []);
 
-  // Send a message to the extension and wait for response
-  const sendMessage = useCallback(
-    (action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
-      return new Promise((resolve) => {
-        const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        const nonce = crypto.randomUUID();
-
-        const timer = setTimeout(() => {
-          pendingRef.current.delete(requestId);
-          resolve({ success: false, error: "Timeout" });
-        }, timeoutMs);
-
-        pendingRef.current.set(requestId, (response) => {
-          clearTimeout(timer);
-          resolve(response);
-        });
-
-        const origin = window.location.origin;
-        window.postMessage(
-          {
-            direction: "from-webapp",
-            action,
-            requestId,
-            nonce,
-            ...payload,
-          },
-          origin || "*"
-        );
-      });
-    },
-    []
-  );
-
-  // Check if extension is available (with retries)
   const checkAvailable = useCallback(async (): Promise<boolean> => {
-    if (availableRef.current) return true;
-
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const response = await sendMessage("ping", {}, 3000);
-      if (response.success === true) {
-        setIsAvailable(true);
-        return true;
-      }
-      if (attempt < 4) await new Promise((r) => setTimeout(r, 1000));
+    for (let i = 0; i < 3; i++) {
+      const r = await sendMessage("ping", {}, 3000);
+      if (r.success) { setIsAvailable(true); return true; }
+      if (i < 2) await new Promise((r) => setTimeout(r, 800));
     }
     return false;
   }, [sendMessage]);
 
-  // Wait for extension to become available
-  const waitForExtension = useCallback(
-    (maxWaitMs = 10000): Promise<boolean> => {
-      return new Promise((resolve) => {
-        if (availableRef.current) {
-          resolve(true);
-          return;
-        }
+  const extractContacts = useCallback((wcaId: number): Promise<ExtensionResponse> => {
+    return serialExtract(() => sendMessage("extractContacts", { wcaId }, 60000));
+  }, [sendMessage]);
 
-        const start = Date.now();
-        const interval = setInterval(() => {
-          if (availableRef.current) {
-            clearInterval(interval);
-            resolve(true);
-            return;
-          }
-          if (Date.now() - start >= maxWaitMs) {
-            clearInterval(interval);
-            resolve(false);
-          }
-        }, 500);
-      });
-    },
-    []
-  );
+  const verifySession = useCallback((): Promise<ExtensionResponse> => {
+    return sendMessage("verifySession", {}, 10000);
+  }, [sendMessage]);
 
-  /**
-   * Extract contacts for a WCA ID — serialized via global queue.
-   * V2: timeout reduced to 30s, response validated by wcaId to prevent cross-profile contamination.
-   */
-  const extractContacts = useCallback(
-    async (wcaId: number): Promise<ExtensionResponse> => {
-      return enqueueExtraction(async () => {
-        const response = await sendMessage("extractContacts", { wcaId }, 60_000);
-        
-        // V2 SCOPING: If the response contains a wcaId, validate it matches what we asked for.
-        // If mismatched, this is a stale response from a previous request — discard it.
-        if (response.success && response.wcaId !== undefined && response.wcaId !== wcaId) {
-          console.warn(`[ExtensionBridge] Stale response: asked for ${wcaId}, got ${response.wcaId} — discarding`);
-          return { success: false, error: `Stale response (expected ${wcaId}, got ${response.wcaId})`, pageLoaded: false };
-        }
-        
-        return response;
-      });
-    },
-    [sendMessage]
-  );
-
-  // Verify WCA session is still authenticated
-  const verifySession = useCallback(
-    async (): Promise<ExtensionResponse> => {
-      return sendMessage("verifySession", {}, 30000);
-    },
-    [sendMessage]
-  );
-
-  // Sync WCA cookies to the database
-  const syncCookie = useCallback(
-    async (): Promise<ExtensionResponse> => {
-      return sendMessage("syncCookie", {}, 15000);
-    },
-    [sendMessage]
-  );
-
-  return {
-    isAvailable,
-    checkAvailable,
-    waitForExtension,
-    extractContacts,
-    verifySession,
-    syncCookie,
-  };
+  return { isAvailable, checkAvailable, extractContacts, verifySession };
 }
