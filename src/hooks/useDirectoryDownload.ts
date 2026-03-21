@@ -20,7 +20,7 @@ export function useDirectoryDownload({
 }: UseDirectoryDownloadArgs) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { ensureSession } = useWcaSession();
+  // No session gate
 
   const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
