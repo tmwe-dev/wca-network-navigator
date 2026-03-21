@@ -1,88 +1,54 @@
 
 
-# Piano: Sezione Biglietti da Visita Dedicata nel CRM
+# Piano: Tutti gli Agenti con Tutti i Tool
 
-## Stato attuale
+## Problema
 
-Il sistema ha gia':
-- Tabella `business_cards` con matching trigger automatico (partner + contatti)
-- Toggle "Biglietti da visita" nell'import (solo etichetta origine)
-- Filtro `metPersonally` con icona Handshake nella lista contatti
-- Hook `useBusinessCards` con CRUD completo
-- Campo `photo_url` nella tabella (mai usato)
+Oggi ogni template agente (`agentTemplates.ts`) assegna solo un sottoinsieme dei 41 tool disponibili. Quando un agente viene creato da template, riceve solo quei tool. Risultato: un agente Outreach non puo' fare Deep Search su un contatto, un agente Research non puo' inviare email, un agente Download non puo' creare attivita'.
 
-**Cosa manca**: una sezione dedicata per caricare **foto** di biglietti da visita, OCR/AI parsing dell'immagine, miniatura visibile nei contatti matchati, deep search automatica post-creazione.
+L'utente vuole che **tutti gli agenti abbiano accesso a tutti i tool**, come un operatore umano.
 
-## Soluzione: 4 interventi
+## Soluzione
 
-### 1. Nuovo tab "Biglietti" nel CRM
+### 1. Template: assegnare tutti i tool
 
-Aggiungere un quarto tab in `CRM.tsx` con icona `ContactRound`:
+In `src/data/agentTemplates.ts`, ogni template avra' `assigned_tools` con la lista completa di tutti i tool (esclusi i Management tools che restano solo per il Director/Luca).
 
-```text
-Contatti | Prospect | Import | Biglietti
+Tool completi per tutti (37 tool operativi):
+```
+search_partners, get_partner_detail, update_partner, add_partner_note,
+manage_partner_contact, bulk_update_partners, get_country_overview,
+get_directory_status, scan_directory, create_download_job,
+download_single_partner, list_jobs, check_job_status,
+get_partners_without_contacts, deep_search_partner, deep_search_contact,
+enrich_partner_website, generate_aliases, search_contacts,
+get_contact_detail, update_lead_status, search_prospects,
+generate_outreach, send_email, create_activity, list_activities,
+update_activity, create_reminder, update_reminder, list_reminders,
+check_blacklist, get_global_summary, save_memory, search_memory,
+delete_records, search_business_cards, execute_ui_action
 ```
 
-Lazy-load di un nuovo componente `BusinessCardsHub.tsx`.
+I 5 tool Management (`create_agent_task`, `list_agent_tasks`, `get_team_status`, `update_agent_prompt`, `add_agent_kb_entry`) restano assegnati solo al template "account" (Luca, il Director).
 
-### 2. Componente `BusinessCardsHub.tsx`
+### 2. Aggiornare gli agenti esistenti nel DB
 
-Interfaccia dedicata con:
+Il frontend `AgentToolSelector` permette gia' di selezionare/deselezionare tool manualmente. Ma i 6 template pre-compilano solo un sottoinsieme. Aggiornando i template, i **nuovi** agenti avranno tutto. Per gli agenti **gia' esistenti**, aggiungeremo un'azione nella UI o un hook che sincronizza automaticamente i tool mancanti.
 
-**Upload zona** — drag & drop immagini (JPG, PNG, HEIC). Le foto vengono caricate nello storage bucket `import-files` e il URL salvato in `photo_url`.
+### 3. Implementare `execute_ui_action` nel backend
 
-**AI Parsing** — Dopo upload, chiama una nuova edge function `parse-business-card` che:
-- Riceve l'URL dell'immagine
-- Usa Gemini 2.5 Flash (vision) per estrarre: company_name, contact_name, email, phone, mobile, position, address, website
-- Restituisce JSON strutturato
-- Il frontend crea il record in `business_cards` con i dati estratti + `photo_url`
+Questo tool e' definito nel frontend (`AVAILABLE_TOOLS`) ma **non ha implementazione** in `agent-execute`. Va aggiunto come tool che restituisce un'azione UI (navigazione, toast, filtri) al frontend.
 
-**Lista cards** — Mostra tutti i biglietti da visita con:
-- Miniatura della foto (aspect-ratio 16/9, rounded)
-- Nome contatto + azienda
-- Badge match status (matched/unmatched/pending)
-- Filtri per evento, status match
-- Bottone "Deep Search" per lanciare `deep-search-contact` sul contatto matchato
-
-**Form evento** — Campo evento (es. "Cosmoprof 2026"), data incontro, location, note. Compilabile prima o dopo l'upload.
-
-### 3. Edge function `parse-business-card`
-
-Nuova funzione che:
-- Riceve `{ imageUrl, userId }`
-- Scarica l'immagine dallo storage
-- Invia a Gemini 2.5 Flash con prompt vision: "Estrai i dati del biglietto da visita"
-- Restituisce JSON strutturato con i campi della tabella `business_cards`
-- Costo: 2 crediti
-
-### 4. Miniatura biglietto nel `ContactDetailPanel.tsx`
-
-Quando un contatto ha un `matched_contact_id` in `business_cards`:
-- Query per recuperare il business card matchato
-- Mostrare una card compatta con:
-  - Miniatura della foto del biglietto (se presente)
-  - Icona Handshake + nome evento + data incontro
-  - Link per vedere il biglietto completo
-
-Questo appare sopra la sezione enrichment nel pannello dettaglio.
-
-## File da creare/modificare
+## File da modificare
 
 | File | Azione |
 |------|--------|
-| `src/pages/CRM.tsx` | Aggiungere tab "Biglietti" |
-| `src/components/contacts/BusinessCardsHub.tsx` | Creare — hub completo biglietti |
-| `supabase/functions/parse-business-card/index.ts` | Creare — OCR via Gemini vision |
-| `src/components/contacts/ContactDetailPanel.tsx` | Modificare — mostrare miniatura biglietto matchato |
-| `src/hooks/useBusinessCards.ts` | Aggiungere hook per upload foto + parsing |
+| `src/data/agentTemplates.ts` | Tutti i template ricevono la lista completa dei tool operativi |
+| `supabase/functions/agent-execute/index.ts` | Aggiungere implementazione `execute_ui_action` |
 
-## Flusso utente
+## Risultato
 
-1. Vado su CRM → tab "Biglietti"
-2. Trascino la foto di un biglietto da visita
-3. L'AI estrae automaticamente nome, azienda, email, telefono
-4. Inserisco evento "Cosmoprof 2026" e data
-5. Il trigger DB fa il matching automatico con contatti/partner esistenti
-6. Il contatto matchato mostra la miniatura del biglietto nel suo pannello dettaglio
-7. Posso filtrare "Incontrati personalmente" nella lista contatti per vedere solo quelli con biglietto
+- Ogni agente puo' fare qualsiasi operazione: ricerca, download, deep search, email, attivita', reminder, blacklist, memoria
+- Il system prompt continua a guidare il **comportamento** dell'agente (come usa i tool), ma non limita piu' le **capacita'**
+- I Management tools restano esclusivi del Director per sicurezza gerarchica
 
