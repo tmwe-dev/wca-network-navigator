@@ -1,7 +1,8 @@
 // ══════════════════════════════════════════════════
-// WCA Content Script Bridge V3
+// WCA Content Script Bridge V4
 // Relays messages between webapp and background
 // Uses origin-scoped postMessage for security
+// Periodic heartbeat for reliability
 // ══════════════════════════════════════════════════
 
 (function () {
@@ -14,6 +15,15 @@
     var data = event.data;
     if (!data || data.direction !== "from-webapp") return;
 
+    // Handle ping locally for fastest response
+    if (data.action === "ping") {
+      window.postMessage({
+        direction: "from-extension", action: "ping", requestId: data.requestId,
+        response: { success: true, version: "content-bridge-v4" }
+      }, appOrigin);
+      return;
+    }
+
     var msg = { source: "wca-content-bridge" };
     var keys = Object.keys(data);
     for (var i = 0; i < keys.length; i++) {
@@ -25,23 +35,35 @@
         if (chrome.runtime.lastError) {
           window.postMessage({
             direction: "from-extension", action: data.action, requestId: data.requestId,
-            response: { success: false, error: "Extension context invalidated" }
+            response: { success: false, state: "bridge_error", errorCode: "EXT_CONTEXT_INVALIDATED", error: "Extension context invalidated" }
           }, appOrigin);
           return;
         }
         window.postMessage({
           direction: "from-extension", action: data.action, requestId: data.requestId,
-          response: response || { success: false, error: "No response from extension" }
+          response: response || { success: false, state: "bridge_error", errorCode: "EXT_NO_RESPONSE", error: "No response from extension" }
         }, appOrigin);
       });
     } catch (err) {
       window.postMessage({
         direction: "from-extension", action: data.action, requestId: data.requestId,
-        response: { success: false, error: "Extension context invalidated" }
+        response: { success: false, state: "bridge_error", errorCode: "EXT_CONTEXT_INVALIDATED", error: "Extension context invalidated" }
       }, appOrigin);
     }
   });
 
   // Announce content script loaded
   window.postMessage({ direction: "from-extension", action: "contentScriptReady" }, appOrigin);
+
+  // Periodic heartbeat every 10 seconds so the webapp knows we're alive
+  setInterval(function () {
+    try {
+      // Verify extension context is still valid before announcing
+      if (chrome.runtime && chrome.runtime.id) {
+        window.postMessage({ direction: "from-extension", action: "contentScriptReady" }, appOrigin);
+      }
+    } catch (e) {
+      // Extension context invalidated, stop heartbeat
+    }
+  }, 10000);
 })();
