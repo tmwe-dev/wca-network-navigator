@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
+import { OperativeBriefing } from "@/components/home/OperativeBriefing";
+import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs, type DownloadJob } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
-import { useQuery } from "@tanstack/react-query";
+import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 
@@ -208,12 +211,16 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
 
 export default function SuperHome3D() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const { data: activities = [] } = useAllActivities();
   const { data: jobs = [] } = useDownloadJobs();
   const { data: prospectStats } = useProspectStats();
   const { contacts = [] } = useCockpitContacts();
   const { data: partnerCount = 0 } = useCount("partners");
+  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
+
+  const [actionPrompt, setActionPrompt] = useState<string | null>(null);
 
   const readyContacts = useMemo(
     () => contacts.filter((c) => Boolean(c.email)).length,
@@ -248,6 +255,10 @@ export default function SuperHome3D() {
     return s;
   }, [activeJobs, readyContacts, openActivities]);
 
+  const handleBriefingAction = useCallback((action: BriefingAction) => {
+    setActionPrompt(action.prompt);
+  }, []);
+
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-y-auto bg-background text-foreground">
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
@@ -257,12 +268,30 @@ export default function SuperHome3D() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
-          <HomeAIPrompt systemStats={{
-            activeJobs,
-            pendingActivities: openActivities,
-            totalPartners: partnerCount,
-          }} />
+          <HomeAIPrompt
+            systemStats={{
+              activeJobs,
+              pendingActivities: openActivities,
+              totalPartners: partnerCount,
+            }}
+            briefingActions={briefing?.actions}
+            agents={briefing?.agentStatus}
+            externalPrompt={actionPrompt}
+            onExternalPromptConsumed={() => setActionPrompt(null)}
+          />
         </section>
+
+        {/* Briefing Operativo */}
+        <OperativeBriefing
+          summary={briefing?.summary}
+          actions={briefing?.actions ?? []}
+          isLoading={briefingLoading}
+          onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
+          onAction={handleBriefingAction}
+        />
+
+        {/* Agent Status */}
+        <AgentStatusPanel agents={briefing?.agentStatus ?? []} />
 
         {/* Active downloads — always visible when jobs exist */}
         <ActiveJobsPanel jobs={jobs} />
