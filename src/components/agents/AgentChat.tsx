@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Mic, MicOff, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Agent } from "@/hooks/useAgents";
-import ReactMarkdown from "react-markdown";
+import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 
 interface Message {

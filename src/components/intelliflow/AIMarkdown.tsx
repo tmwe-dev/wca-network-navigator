@@ -1,4 +1,4 @@
-import ReactMarkdown from "react-markdown";
+import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
 import { sanitizeVisibleAiText } from "@/lib/ai/agentResponse";
