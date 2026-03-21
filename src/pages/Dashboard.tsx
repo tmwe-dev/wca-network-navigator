@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Globe, Rocket } from "lucide-react";
+import { LayoutDashboard, Globe, Rocket, Gauge } from "lucide-react";
 
 const SuperHome3D = lazy(() => import("./SuperHome3D"));
 const GlobalPage = lazy(() => import("./Global"));
 const Campaigns = lazy(() => import("./Campaigns"));
+const OperationsCenterLazy = lazy(() => import("@/components/home/OperationsCenter").then(m => ({ default: m.OperationsCenter })));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
