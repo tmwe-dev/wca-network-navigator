@@ -1,173 +1,229 @@
 
-Obiettivo: rifare davvero il flusso download in modo semplice e robusto, perché oggi il problema non è “il tempo”, ma il fatto che il sistema ha ancora troppi strati che si contraddicono tra loro.
 
-Stato reale che ho verificato:
-- L’ultimo job attivo è `Dominican Republic`, ora `paused` a `0/41` per `5 timeout consecutivi`.
-- Quindi il motore non sta fallendo “a metà”: in certi casi parte già con uno stato tecnico incoerente.
+# Piano: Refactoring Deterministico del Download — State Machine + Item-Level Tracking
 
-Problemi trovati nel codice, file per file
+## Architettura target
 
-1. `src/hooks/useDownloadEngine.ts`
-- Usa ancora logica a soglia (`5 timeout consecutivi`) invece di aspettare e diagnosticare il singolo profilo.
-- Ignora di fatto la velocità configurata del job: usa `waitForGreenLight()` globale, non `job.delay_seconds`.
-- `current_index: processedSet.size` è sbagliato: se salti profili o riprendi job, l’indice non rappresenta più la posizione reale nel vettore.
-- In retry salva solo se il partner esiste già; se non esiste, quel profilo fallisce anche quando l’estrazione va bene.
-- `completeJob()` non salva `processed_ids`, `current_index`, `contacts_found_count`, `contacts_missing_count`: quindi il job può risultare “completed” con stato interno incompleto.
-- `stop()` abortisce solo localmente: non porta il job in uno stato DB esplicito.
-- I casi `memberNotFound`, `retry`, `error` non vengono loggati/persistiti in modo coerente profilo per profilo.
-
-2. `src/hooks/useExtensionBridge.ts`
-- Continua a fare polling ogni 3 secondi: è rumore tecnico costante, può creare falso “extension not responding” e non serve durante un job lineare.
-- `checkAvailable()` controlla solo se l’estensione risponde, non se l’estrazione WCA funziona davvero.
-- La gestione “stale response” esiste perché il contratto messaggi è fragile, non perché il dominio lo richieda.
-- Il bridge lato app usa `window.location.origin`, ma il content script risponde con `*`: è incoerente con la policy di sicurezza.
-
-3. `public/chrome-extension/content.js`
-- Usa `window.postMessage(..., "*")` per tutte le risposte.
-- Non limita l’origine di ritorno.
-- È un relay minimale, ma oggi non porta abbastanza contesto per distinguere i tipi di errore.
-
-4. `public/chrome-extension/background.js`
-- È ancora un monolite enorme e mescola:
-  - estrazione DOM
-  - gestione tab
-  - verifica sessione
-  - auto-login
-  - sync cookie
-  - salvataggio server
-- `extractContacts` nel listener risponde quasi sempre con `success: true` anche quando `result.error` o `pageLoaded: false`: questo falsa il contratto con il frontend.
-- Non rimanda sempre `htmlLength` / `error` / motivazione reale al client, quindi il motore non può diagnosticare bene.
-- `verifyWcaSession()` controlla i cookie, non l’accesso reale al contenuto protetto.
-- `checkPageLoaded()` usa euristiche fragili (`html.length > 2000`, `h1`) che possono fallire su pagine valide.
-- Fa sia salvataggio lato estensione (`sendContactsToServer`) sia salvataggio lato app (`saveExtractionResult`): doppio percorso, doppia fonte di verità.
-- Continua ad avere `autoLogin`, che era esattamente una delle cause del casino.
-
-5. `src/hooks/useWcaSession.ts`
-- Contraddice il modello “manual-first”:
-  - verifica sessione
-  - prende credenziali
-  - tenta auto-login
-  - fa sync cookie
-- Quindi il sistema che doveva essere semplice continua ad avere un secondo flusso parallelo.
-
-6. `src/components/download/ActionPanel.tsx`
-7. `src/hooks/useDirectoryDownload.ts`
-8. `src/components/operations/PartnerListPanel.tsx`
-- Questi tre punti bloccano ancora i download con `ensureSession()` prima di creare il job.
-- Quindi anche se il motore download è stato “semplificato”, l’ingresso al flusso non lo è affatto.
-
-9. `src/components/layout/AppLayout.tsx` e `src/pages/Global.tsx`
-- C’è ancora auto-start:
-  - `ai-ui-action -> start_download_job`
-  - `Global.handleJobCreated -> startJob(job.job_id)`
-- Quindi il sistema non è davvero solo manuale.
-
-10. `src/hooks/useJobHealthMonitor.ts`
-- Continua a interpretare e notificare stall/sessione/errori globalmente.
-- Non è il problema principale, ma aggiunge un altro layer che osserva e interpreta lo stato.
-
-Soluzione definitiva che implementerei
-
-Fase 1 — Unica fonte di verità
-- Il download deve avere una sola catena:
 ```text
-UI crea job -> motore legge job -> estensione estrae -> app salva -> motore aggiorna stato
+┌─────────────────────────────────────────────────────────┐
+│                    download_jobs                         │
+│  Stati: created → queued → running → completed          │
+│         ↘ paused ↗     ↘ completed_with_errors          │
+│         ↘ stopping → stopped                             │
+│         ↘ failed                                         │
+└────────────────────┬────────────────────────────────────┘
+                     │ 1:N
+┌────────────────────▼────────────────────────────────────┐
+│               download_job_items                         │
+│  Stati: pending → processing → success                   │
+│                              → member_not_found          │
+│                              → page_not_loaded           │
+│                              → temporary_error           │
+│                              → permanent_error           │
+│                              → cancelled                 │
+└────────────────────┬────────────────────────────────────┘
+                     │ append-only
+┌────────────────────▼────────────────────────────────────┐
+│              download_job_events                         │
+│  event_type: job_created, job_started, item_processing,  │
+│  item_success, item_failed, job_paused, job_completed    │
+└─────────────────────────────────────────────────────────┘
 ```
-- Tolgo completamente:
-  - auto-login
-  - verify session via cookie
-  - sync cookie come prerequisito al download
-  - doppio salvataggio estensione/server
 
-Fase 2 — Nuovo contratto estensione/app
-- `background.js` deve restituire sempre una risposta strutturata vera:
-```text
-{
-  success,
-  wcaId,
-  state: "ok" | "member_not_found" | "not_loaded" | "bridge_error",
-  companyName,
-  contacts,
-  profile,
-  profileHtml,
-  htmlLength,
-  error
+## Fase 1 — Modello dati (migrazione DB)
+
+### Tabella `download_job_items`
+```sql
+CREATE TABLE download_job_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES download_jobs(id) ON DELETE CASCADE,
+  wca_id integer NOT NULL,
+  position integer NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  attempt_count integer NOT NULL DEFAULT 0,
+  last_error_code text,
+  last_error_message text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  contacts_found integer NOT NULL DEFAULT 0,
+  contacts_missing integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_dji_job_status ON download_job_items(job_id, status);
+ALTER TABLE download_job_items ENABLE ROW LEVEL SECURITY;
+-- RLS: same as download_jobs
+```
+
+### Tabella `download_job_events`
+```sql
+CREATE TABLE download_job_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES download_jobs(id) ON DELETE CASCADE,
+  item_id uuid REFERENCES download_job_items(id),
+  event_type text NOT NULL,
+  payload jsonb DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_dje_job ON download_job_events(job_id, created_at);
+ALTER TABLE download_job_events ENABLE ROW LEVEL SECURITY;
+```
+
+### Aggiornamento `download_jobs`
+- Mantenere la tabella esistente ma il progresso diventa **derivato** da `download_job_items`
+- I campi `processed_ids`, `current_index`, `contacts_found_count`, `contacts_missing_count` restano per compatibilita' UI ma vengono aggiornati periodicamente come snapshot, non come fonte di verita'
+
+## Fase 2 — Contratto estensione (error codes stabili)
+
+### `public/chrome-extension/background.js`
+Risposta standardizzata con codici fissi:
+
+| state | errorCode | success |
+|-------|-----------|---------|
+| ok | null | true |
+| member_not_found | WCA_PROFILE_NOT_FOUND | false |
+| not_loaded | WCA_PAGE_NOT_READY | false |
+| login_required | WCA_LOGIN_REQUIRED | false |
+| extraction_error | WCA_DOM_PARSE_FAILED | false |
+| bridge_error | EXT_BRIDGE_ERROR | false |
+
+Aggiungere campo `debug` con `url`, `title`, `pageLoaded`, `loginDetected`, `domSignals`.
+
+**Regola aurea**: `success = true` solo se `state === "ok"`. Tutti gli altri casi: `success = false`.
+
+Aggiungere rilevamento login page: se il DOM contiene form di login o redirect a login, restituire `state: "login_required"`.
+
+## Fase 3 — Bridge health separato dal profile result
+
+### `src/hooks/useExtensionBridge.ts`
+Ogni chiamata restituisce due livelli:
+
+```typescript
+interface BridgeResult {
+  bridgeHealthy: boolean;      // canale funziona?
+  bridgeError?: string;        // EXT_BRIDGE_TIMEOUT, EXT_NO_CONTENT_SCRIPT
+  extraction: ExtractionResult | null;  // null se bridge morto
 }
 ```
-- Nessun `success: true` se la pagina non è leggibile.
-- L’estensione non salva più nulla nel backend: estrae e basta.
 
-Fase 3 — Motore lineare senza euristiche tossiche
-- `useDownloadEngine` va riscritto per:
-  - usare la posizione reale del loop, non `processedSet.size`
-  - persistere ogni profilo processato
-  - salvare sempre stato finale coerente
-  - distinguere:
-    - `member_not_found`
-    - `page_not_loaded`
-    - `temporary_error`
-    - `cancelled`
-- Niente pausa automatica dopo 5 timeout come regola principale.
-- Se un profilo non risponde:
-  - lo marchi come errore tecnico
-  - passi avanti
-  - fai un retry finale
-- Il job si ferma solo per:
-  - stop utente
-  - estensione non disponibile
-  - errore strutturale ripetuto dell’intero bridge, non del singolo profilo
+Il motore usa `bridgeHealthy` per decidere se il sistema e' sano. Usa `extraction.state` per decidere cosa fare col singolo profilo.
 
-Fase 4 — Ingresso download pulito
-- Rimuovere `ensureSession()` come gate in:
-  - `ActionPanel`
-  - `useDirectoryDownload`
-  - `PartnerListPanel`
-- Il job deve partire sempre.
-- Se WCA non è accessibile, sarà l’estrazione del singolo profilo a restituire il motivo reale.
+Rimuovere completamente il polling. Il bridge risponde solo on-demand.
 
-Fase 5 — Eliminare gli automatismi residui
-- Rimuovere auto-start in:
-  - `AppLayout`
-  - `Global`
-- Lasciare solo:
-  - Start
-  - Pause
-  - Resume
-  - Stop
-  espliciti dall’utente o da un singolo entrypoint controllato.
+## Fase 4 — Motore deterministico
 
-Fase 6 — Spezzare davvero l’estensione
-- `background.js` va diviso almeno in:
-  - `tabManager.js`
-  - `pageChecks.js`
-  - `profileExtractor.js`
-  - `messageRouter.js`
-- Così si isola subito dove si rompe:
-  - apertura tab
-  - attesa caricamento
-  - lettura DOM
-  - ritorno messaggio
+### `src/hooks/useDownloadEngine.ts` — Riscrittura
 
-File che toccherei nel refactor
-- `src/hooks/useDownloadEngine.ts`
-- `src/hooks/useExtensionBridge.ts`
-- `src/hooks/useWcaSession.ts`
-- `src/hooks/useDirectoryDownload.ts`
-- `src/components/download/ActionPanel.tsx`
-- `src/components/operations/PartnerListPanel.tsx`
-- `src/components/layout/AppLayout.tsx`
-- `src/pages/Global.tsx`
-- `src/hooks/useJobHealthMonitor.ts`
-- `public/chrome-extension/background.js`
-- `public/chrome-extension/content.js`
-- nuovi moduli estensione estratti dal background
+Responsabilita' esatte (e nient'altro):
+1. Prendere il prossimo item `pending` o `temporary_error` (se retry)
+2. Marcarlo `processing` nel DB
+3. Chiamare l'estensione
+4. Mappare il risultato a uno stato finale dell'item
+5. Salvare i dati estratti (solo se `ok`)
+6. Assegnare stato finale all'item
+7. Emettere evento nel log
+8. Passare al prossimo
 
-Risultato atteso
-- Niente più “sessione WCA non attiva” come blocco preventivo sparso in giro.
-- Niente più doppio flusso app/estensione/backend.
-- Niente più job “completed” con stato interno sporco.
-- Niente più indice progresso falsato.
-- Ogni fallimento avrà una causa vera e tracciabile per profilo.
-- Il download diventa finalmente un flusso unico, leggibile e debuggabile.
+**Non deve**: dedurre la sessione globale, avere logiche punitive, avere due verita' tra memoria e DB.
 
-In sintesi: il problema principale non è WCA, ma il fatto che oggi convivono ancora 4 sistemi diversi nello stesso flusso: gate sessione, bridge, motore job, automatismi globali. La soluzione definitiva è togliere i gate e le scorciatoie, far parlare estensione e motore con un contratto pulito, e lasciare un solo percorso esecutivo end-to-end.
+**Quando fermarsi**:
+- Stop utente → job `stopping` → finisce item corrente → `stopped`
+- Bridge morto (3 consecutive `bridgeHealthy: false`) → job `paused`
+- Errore DB grave → job `failed`
+- Nessun item processabile rimane → job `completed` o `completed_with_errors`
+
+### `src/lib/download/jobState.ts` — Riscrittura
+- `claimJob(jobId)`: status → running + evento
+- `updateItem(itemId, status, errorCode?, errorMessage?)`: aggiorna singolo item
+- `snapshotProgress(jobId)`: query aggregata da items → aggiorna contatori job
+- `finalizeJob(jobId)`: calcola stato finale da items
+- `emitEvent(jobId, itemId?, type, payload?)`: append-only log
+
+### `src/lib/download/profileSaver.ts` — Invariato
+Gia' pulito: riceve dati, salva nel DB. Unico writer.
+
+## Fase 5 — Eliminare gate e automatismi
+
+### Rimuovere `ensureSession()` come gate
+- `ActionPanel.tsx`: rimuovere import e uso di `useWcaSession`
+- `useDirectoryDownload.ts`: rimuovere import e uso di `useWcaSession`
+- Il job parte sempre. Se WCA non e' accessibile, l'item restituira' `login_required` o `not_loaded`
+
+### `useWcaSession.ts` — Eliminare
+Non serve piu'. La sessione emerge dai fatti dell'estrazione.
+
+### `useJobHealthMonitor.ts` — Ridurre a telemetria
+Puo' solo: leggere, mostrare toast, segnalare anomalie. Non deve mettere stati ne' decidere stop.
+
+## Fase 6 — Creazione job con items
+
+### `useDownloadJobs.ts` → `useCreateDownloadJob`
+Quando crea un job, crea anche tutte le righe `download_job_items`:
+
+```typescript
+// 1. Insert job
+const job = await supabase.from("download_jobs").insert({...}).select("id").single();
+// 2. Insert items (batch)
+const items = wcaIds.map((id, i) => ({
+  job_id: job.id, wca_id: id, position: i, status: "pending"
+}));
+await supabase.from("download_job_items").insert(items);
+// 3. Emit event
+await supabase.from("download_job_events").insert({
+  job_id: job.id, event_type: "job_created", payload: { total: wcaIds.length }
+});
+```
+
+## Fase 7 — Pause, Resume, Stop con semantiche dure
+
+| Azione | Comportamento |
+|--------|---------------|
+| **Pause** | Job finisce l'item corrente → items pending restano pending → job `paused` |
+| **Stop** | Job finisce item corrente → items pending → `cancelled` → job `stopped` |
+| **Resume** | Solo items `pending` + `temporary_error` → processabili. Job → `running` |
+
+## Fase 8 — Preflight check manuale
+
+Aggiungere bottone "Test accesso WCA" nella UI:
+- Apre un profilo noto via estensione
+- Restituisce: `ok`, `login_required`, `extension_unavailable`, `page_not_readable`
+- Non blocca nulla. Diagnosi per l'utente.
+
+## File da creare/modificare
+
+| File | Azione | Note |
+|------|--------|------|
+| Migrazione DB | Creare `download_job_items` + `download_job_events` | Con RLS e indici |
+| `public/chrome-extension/background.js` | Modificare | Aggiungere errorCode, debug, login detection |
+| `src/hooks/useExtensionBridge.ts` | Modificare | BridgeResult con health separato |
+| `src/hooks/useDownloadEngine.ts` | Riscrivere | Item-level loop deterministico |
+| `src/lib/download/jobState.ts` | Riscrivere | claimJob, updateItem, snapshotProgress, emitEvent |
+| `src/hooks/useDownloadJobs.ts` | Modificare | Creare items alla creazione job |
+| `src/hooks/useWcaSession.ts` | Eliminare | Gate rimosso |
+| `src/components/download/ActionPanel.tsx` | Modificare | Rimuovere ensureSession, aggiungere preflight |
+| `src/hooks/useDirectoryDownload.ts` | Modificare | Rimuovere ensureSession |
+| `src/hooks/useJobHealthMonitor.ts` | Semplificare | Solo osservazione |
+| `src/components/download/ActiveJobCard.tsx` | Modificare | Progress derivato da items |
+
+## Ordine di esecuzione
+
+1. Migrazione DB (tabelle + RLS)
+2. Contratto estensione (background.js)
+3. Bridge con health (useExtensionBridge)
+4. Job state helpers (jobState.ts)
+5. Creazione job con items (useDownloadJobs)
+6. Motore deterministico (useDownloadEngine)
+7. Eliminare gate (useWcaSession, ActionPanel, useDirectoryDownload)
+8. Ridurre monitor a telemetria
+9. Aggiornare UI (ActiveJobCard con progress da items)
+
+## Risultato
+
+- Ogni profilo ha il suo stato tracciabile nel DB
+- Il progresso e' derivato, non stimato
+- Il motore orchestra, non interpreta
+- Bridge health e profile result sono separati
+- Un solo writer verso il backend (l'app)
+- Zero gate preventivi, zero auto-start
+- Error codes stabili per debug serio
+- Event log append-only per ricostruzione flussi
+
