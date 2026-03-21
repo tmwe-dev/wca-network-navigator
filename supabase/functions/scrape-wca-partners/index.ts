@@ -794,7 +794,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    const url = `https://www.wcaworld.com/directory/members/${wcaId}`
+    // WCA has multiple sub-network domains. Members may only appear on specific ones.
+    const WCA_DOMAINS = [
+      'www.wcaworld.com',
+      'www.wcadangerousgoods.com',
+      'www.wcachinaglobal.com',
+      'www.wcafirst.com',
+      'www.wcatimecritical.com',
+      'www.wcaprojects.com',
+      'www.wcaperishables.com',
+      'www.wcaecommerce.com',
+      'www.wcapharma.com',
+    ]
+    let url = `https://${WCA_DOMAINS[0]}/directory/members/${wcaId}`
     console.log(`Scraping WCA member profile: ${url}`)
 
     // ── Step 1: Get WCA session cookie from app_settings ──
