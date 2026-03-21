@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
-import { useWcaSession } from "@/hooks/useWcaSession";
+// useWcaSession removed — no session gates
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 
 interface UseDirectoryDownloadArgs {
@@ -20,7 +20,7 @@ export function useDirectoryDownload({
 }: UseDirectoryDownloadArgs) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { ensureSession } = useWcaSession();
+  // No session gate
 
   const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
@@ -302,6 +302,6 @@ export function useDirectoryDownload({
     networks, createJob,
     // Actions
     handleStartScan, handleStartDownload, stopScan, startScanThenDownload,
-    ensureSession,
+    // ensureSession removed
   };
 }

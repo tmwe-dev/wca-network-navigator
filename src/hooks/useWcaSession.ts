@@ -1,9 +1,8 @@
 /**
- * V3: Minimal WCA session hook.
- * Only checks extension availability + cookie presence.
- * No auto-login. No sync cookie. No credential fetching.
+ * V4: WcaSession hook is now a thin wrapper.
+ * No session gates. Only provides status for UI indicators.
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useExtensionBridge } from "./useExtensionBridge";
 
 export function useWcaSession() {
@@ -11,45 +10,22 @@ export function useWcaSession() {
   const [sessionActive, setSessionActive] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
-  const checkingRef = useRef(false);
   const { checkAvailable, verifySession } = useExtensionBridge();
 
   const ensureSession = useCallback(async (): Promise<boolean> => {
-    if (checkingRef.current) return sessionActive ?? false;
-    checkingRef.current = true;
     setIsChecking(true);
     setLastError(null);
-
     try {
       const extOk = await checkAvailable();
       setExtensionAvailable(extOk);
-      if (!extOk) {
-        setLastError("Estensione Chrome non rilevata.");
-        setSessionActive(false);
-        return false;
-      }
-
+      if (!extOk) { setLastError("Estensione non rilevata."); setSessionActive(false); return false; }
       const result = await verifySession();
-      if (result.success && result.authenticated) {
-        setSessionActive(true);
-        return true;
-      }
+      const ok = !!(result.success && result.authenticated);
+      setSessionActive(ok);
+      if (!ok) setLastError("Sessione WCA non attiva.");
+      return ok;
+    } finally { setIsChecking(false); }
+  }, [checkAvailable, verifySession]);
 
-      setLastError("Sessione WCA scaduta. Effettua il login su wcaworld.com.");
-      setSessionActive(false);
-      return false;
-    } finally {
-      checkingRef.current = false;
-      setIsChecking(false);
-    }
-  }, [checkAvailable, verifySession, sessionActive]);
-
-  return {
-    extensionAvailable,
-    sessionActive,
-    isChecking,
-    lastError,
-    ensureSession,
-    isSessionActive: sessionActive,
-  };
+  return { extensionAvailable, sessionActive, isChecking, lastError, ensureSession, isSessionActive: sessionActive };
 }

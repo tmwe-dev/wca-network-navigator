@@ -1,28 +1,35 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
- * V3: Simplified extension bridge.
- * - No polling (demand-only ping)
- * - No stale response handling (structured contract from extension)
- * - Serial queue for extractContacts
+ * V4: Extension bridge with health separation.
+ * - No polling
+ * - Serial queue for extractions
+ * - Returns BridgeResult with bridgeHealthy flag
  */
 
-type ExtensionResponse = {
+export type ExtractionResult = {
   success: boolean;
   wcaId?: number;
-  state?: "ok" | "member_not_found" | "not_loaded" | "bridge_error" | "extraction_error";
-  contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
+  state: "ok" | "member_not_found" | "not_loaded" | "login_required" | "extraction_error" | "bridge_error";
+  errorCode?: string | null;
   companyName?: string | null;
-  error?: string | null;
-  authenticated?: boolean;
-  reason?: string;
-  pageLoaded?: boolean;
+  contacts?: Array<{ name?: string; title?: string; email?: string; phone?: string; mobile?: string }>;
   profile?: Record<string, any>;
   profileHtml?: string | null;
   htmlLength?: number;
+  error?: string | null;
+  debug?: Record<string, any>;
 };
 
-// Serial queue for extractions
+export type BridgeResult = {
+  bridgeHealthy: boolean;
+  bridgeError?: string;
+  extraction: ExtractionResult | null;
+};
+
+type RawResponse = ExtractionResult & { authenticated?: boolean; reason?: string; message?: string };
+
+// Serial queue
 const LOCK_KEY = "__extractLock__";
 function getLock(): { busy: boolean; queue: Array<{ resolve: (v: any) => void; fn: () => Promise<any> }> } {
   if (!(window as any)[LOCK_KEY]) (window as any)[LOCK_KEY] = { busy: false, queue: [] };
@@ -35,7 +42,7 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
     const run = async () => {
       lock.busy = true;
       try { resolve(await fn()); }
-      catch (err) { resolve({ success: false, error: String(err) } as any); }
+      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as any); }
       finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
     };
     if (!lock.busy) run();
@@ -45,9 +52,8 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
 
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
-  const pendingRef = useRef<Map<string, (r: ExtensionResponse) => void>>(new Map());
+  const pendingRef = useRef<Map<string, (r: RawResponse) => void>>(new Map());
 
-  // Listen for responses
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
@@ -64,10 +70,13 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<ExtensionResponse> => {
+  const sendMessage = useCallback((action: string, payload?: Record<string, any>, timeoutMs = 60000): Promise<RawResponse> => {
     return new Promise((resolve) => {
       const requestId = `${action}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const timer = setTimeout(() => { pendingRef.current.delete(requestId); resolve({ success: false, error: "Timeout" }); }, timeoutMs);
+      const timer = setTimeout(() => {
+        pendingRef.current.delete(requestId);
+        resolve({ success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_TIMEOUT", error: "Timeout" } as RawResponse);
+      }, timeoutMs);
       pendingRef.current.set(requestId, (response) => { clearTimeout(timer); resolve(response); });
       window.postMessage({ direction: "from-webapp", action, requestId, ...payload }, window.location.origin);
     });
@@ -82,13 +91,42 @@ export function useExtensionBridge() {
     return false;
   }, [sendMessage]);
 
-  const extractContacts = useCallback((wcaId: number): Promise<ExtensionResponse> => {
-    return serialExtract(() => sendMessage("extractContacts", { wcaId }, 60000));
+  const extractContacts = useCallback((wcaId: number): Promise<BridgeResult> => {
+    return serialExtract(async () => {
+      const raw = await sendMessage("extractContacts", { wcaId }, 60000);
+
+      // Bridge-level failure
+      if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT") {
+        return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
+      }
+
+      // Bridge worked, return extraction result
+      return {
+        bridgeHealthy: true,
+        extraction: {
+          success: raw.success ?? false,
+          wcaId: raw.wcaId,
+          state: raw.state || (raw.success ? "ok" : "not_loaded"),
+          errorCode: raw.errorCode || null,
+          companyName: raw.companyName || null,
+          contacts: raw.contacts || [],
+          profile: raw.profile || {},
+          profileHtml: raw.profileHtml || null,
+          htmlLength: raw.htmlLength || 0,
+          error: raw.error || null,
+          debug: raw.debug || {},
+        }
+      };
+    });
   }, [sendMessage]);
 
-  const verifySession = useCallback((): Promise<ExtensionResponse> => {
+  const verifySession = useCallback((): Promise<RawResponse> => {
     return sendMessage("verifySession", {}, 10000);
   }, [sendMessage]);
 
-  return { isAvailable, checkAvailable, extractContacts, verifySession };
+  const preflightTest = useCallback((): Promise<RawResponse> => {
+    return sendMessage("preflightTest", {}, 30000);
+  }, [sendMessage]);
+
+  return { isAvailable, checkAvailable, extractContacts, verifySession, preflightTest };
 }

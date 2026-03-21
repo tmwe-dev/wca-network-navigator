@@ -2,18 +2,15 @@ import { useRef, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
-import { updateJob, completeJob, pauseJob } from "@/lib/download/jobState";
+import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pauseJob, stopJob, emitEvent } from "@/lib/download/jobState";
 import { saveExtractionResult } from "@/lib/download/profileSaver";
-import { appendLog, flushLogBuffer } from "@/lib/download/terminalLog";
 
 /**
- * V3: Linear download engine.
- * - Uses real array index (not Set.size)
- * - Per-profile persistence
- * - Uses job.delay_seconds
- * - No auto-login, no session gate
- * - Errors on single profile → skip + retry later
- * - Bridge dead → pause (not 5-timeout heuristic)
+ * V4: Item-level deterministic download engine.
+ * - Reads items from download_job_items
+ * - Per-item state machine: pending → processing → success/error
+ * - Bridge health separated from extraction result
+ * - No session gates, no heuristics
  */
 export function useDownloadEngine() {
   const { extractContacts, checkAvailable } = useExtensionBridge();
@@ -38,114 +35,111 @@ export function useDownloadEngine() {
     abortRef.current = ac;
 
     try {
-      // 1. Fetch job
-      const { data: job } = await supabase.from("download_jobs").select("*").eq("id", jobId).single();
-      if (!job) return;
-
-      // 2. Check extension (no session gate — just "is extension alive?")
+      // 1. Check extension
       const extOk = await checkAvailable();
       if (!extOk) { await pauseJob(jobId, "Estensione Chrome non rilevata"); return; }
 
-      // 3. Claim job
-      const { data: claimed } = await supabase.from("download_jobs")
-        .update({ status: "running", error_message: null })
-        .eq("id", jobId).in("status", ["pending", "paused"]).select("id");
-      if (!claimed?.length) return;
+      // 2. Claim job
+      const claimed = await claimJob(jobId);
+      if (!claimed) return;
 
-      const wcaIds: number[] = (job.wca_ids as number[]) || [];
-      const processedSet = new Set<number>((job.processed_ids as number[]) || []);
-      let contactsFound = job.contacts_found_count || 0;
-      let contactsMissing = job.contacts_missing_count || 0;
-      const retryQueue: number[] = [];
-      const failedIds: number[] = [];
+      // 3. Fetch job for delay
+      const { data: job } = await supabase.from("download_jobs").select("delay_seconds, country_code, country_name").eq("id", jobId).single();
+      if (!job) return;
       const delayMs = Math.max((job.delay_seconds || 15), 5) * 1000;
-      let consecutiveBridgeErrors = 0;
+      let consecutiveBridgeFails = 0;
+      let itemsProcessed = 0;
 
-      await appendLog(jobId, "INFO", `Job avviato — ${wcaIds.length} profili, delay ${job.delay_seconds || 15}s`);
+      // 4. Main loop: fetch next pending item
+      while (!ac.signal.aborted) {
+        // Check for pause/stop requests
+        const { data: jobCheck } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
+        if (!jobCheck || jobCheck.status !== "running") break;
 
-      // 4. Main loop — real array index
-      for (let i = job.current_index || 0; i < wcaIds.length; i++) {
-        if (ac.signal.aborted) break;
-        const wcaId = wcaIds[i];
-        if (processedSet.has(wcaId)) continue;
+        // Get next item
+        const { data: nextItems } = await supabase
+          .from("download_job_items")
+          .select("id, wca_id, position")
+          .eq("job_id", jobId)
+          .in("status", ["pending", "temporary_error"])
+          .order("position", { ascending: true })
+          .limit(1);
+
+        if (!nextItems?.length) break; // No more items
+        const item = nextItems[0];
 
         // Delay between requests (skip first)
-        if (i > (job.current_index || 0)) {
+        if (itemsProcessed > 0) {
           await sleep(delayMs, ac.signal);
           if (ac.signal.aborted) break;
         }
 
-        const result = await extractRef.current(wcaId);
+        // Mark processing
+        await markProcessing(item.id);
+        await emitEvent(jobId, item.id, "item_processing", { wca_id: item.wca_id });
 
-        // Bridge completely dead → pause immediately
-        if (result.error === "Timeout" || result.error === "Extension context invalidated") {
-          consecutiveBridgeErrors++;
-          if (consecutiveBridgeErrors >= 3) {
+        // Extract
+        const result = await extractRef.current(item.wca_id);
+
+        // Bridge health check
+        if (!result.bridgeHealthy) {
+          consecutiveBridgeFails++;
+          await updateItem(item.id, "temporary_error", { errorCode: result.bridgeError || "EXT_BRIDGE_TIMEOUT", errorMessage: "Bridge not responding" });
+          await emitEvent(jobId, item.id, "item_failed", { errorCode: result.bridgeError });
+
+          if (consecutiveBridgeFails >= 3) {
             await pauseJob(jobId, "Estensione non risponde — verifica che sia attiva");
-            await flushLogBuffer();
-            return;
+            break;
           }
-          retryQueue.push(wcaId);
+          itemsProcessed++;
           continue;
         }
-        consecutiveBridgeErrors = 0;
+        consecutiveBridgeFails = 0;
 
-        // Handle structured states from extension
-        const state = result.state || (result.success ? "ok" : "not_loaded");
+        const ext = result.extraction!;
+        const state = ext.state;
 
-        if (state === "member_not_found") {
-          processedSet.add(wcaId);
-          contactsMissing++;
-          try { await supabase.from("partners_no_contacts").upsert({ wca_id: wcaId, company_name: result.companyName || `WCA ${wcaId}`, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" }); } catch {}
-          await persistProgress(jobId, i + 1, processedSet, wcaId, result.companyName, contactsFound, contactsMissing);
-          continue;
-        }
-
-        if (state === "not_loaded" || state === "extraction_error" || state === "bridge_error") {
-          retryQueue.push(wcaId);
-          continue;
-        }
-
-        // Success — save
-        const partnerId = await ensurePartner(wcaId, result.companyName, job.country_code, job.country_name);
-        if (partnerId) {
-          const saved = await saveExtractionResult(partnerId, wcaId, { success: true, ...result }, result.companyName || "");
-          if (saved.hasEmail || saved.hasPhone) contactsFound++; else contactsMissing++;
-        }
-        processedSet.add(wcaId);
-
-        // Persist every profile
-        await persistProgress(jobId, i + 1, processedSet, wcaId, result.companyName, contactsFound, contactsMissing);
-      }
-
-      // 5. Retry pass
-      if (retryQueue.length > 0 && !ac.signal.aborted) {
-        await appendLog(jobId, "INFO", `🔄 Retry — ${retryQueue.length} profili`);
-        for (const wcaId of retryQueue) {
-          if (ac.signal.aborted) break;
-          if (processedSet.has(wcaId)) continue;
-          await sleep(delayMs, ac.signal);
-          if (ac.signal.aborted) break;
-
-          const result = await extractRef.current(wcaId);
-          if (result.success || result.state === "ok") {
-            const partnerId = await ensurePartner(wcaId, result.companyName, job.country_code, job.country_name);
-            if (partnerId) await saveExtractionResult(partnerId, wcaId, { success: true, ...result }, result.companyName || "");
-            processedSet.add(wcaId);
-          } else {
-            failedIds.push(wcaId);
+        if (state === "ok") {
+          // Save data
+          const partnerId = await ensurePartner(item.wca_id, ext.companyName, job.country_code, job.country_name);
+          let cf = 0, cm = 0;
+          if (partnerId) {
+            const saved = await saveExtractionResult(partnerId, item.wca_id, { success: true, ...ext }, ext.companyName || "");
+            cf = (saved.hasEmail || saved.hasPhone) ? 1 : 0;
+            cm = cf ? 0 : 1;
           }
+          await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
+          await emitEvent(jobId, item.id, "item_success", { companyName: ext.companyName });
+        } else if (state === "member_not_found") {
+          await updateItem(item.id, "member_not_found", { errorCode: ext.errorCode || "WCA_PROFILE_NOT_FOUND" });
+          try { await supabase.from("partners_no_contacts").upsert({ wca_id: item.wca_id, company_name: ext.companyName || `WCA ${item.wca_id}`, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" }); } catch {}
+          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: ext.errorCode });
+        } else if (state === "login_required") {
+          await updateItem(item.id, "temporary_error", { errorCode: "WCA_LOGIN_REQUIRED", errorMessage: "Login richiesto" });
+          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: "WCA_LOGIN_REQUIRED" });
+          // Login required means all subsequent will fail too
+          await pauseJob(jobId, "Sessione WCA scaduta — effettua il login su wcaworld.com e riprendi");
+          break;
+        } else {
+          // not_loaded, extraction_error, bridge_error
+          await updateItem(item.id, "temporary_error", { errorCode: ext.errorCode || "UNKNOWN", errorMessage: ext.error || state });
+          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: ext.errorCode });
+        }
+
+        // Snapshot progress every 3 items
+        itemsProcessed++;
+        if (itemsProcessed % 3 === 0) {
+          await snapshotProgress(jobId, item.wca_id, ext.companyName);
+          invalidate();
         }
       }
 
-      // 6. Complete — save everything
+      // 5. Final snapshot + finalize
       if (!ac.signal.aborted) {
-        await appendLog(jobId, "DONE", `Completato — ${processedSet.size} processati, ${failedIds.length} falliti`);
-        await flushLogBuffer();
-        await completeJob(jobId, failedIds, processedSet, contactsFound, contactsMissing);
+        await snapshotProgress(jobId);
+        await finalizeJob(jobId);
       }
     } finally {
-      await flushLogBuffer();
       processingRef.current = false;
       setIsProcessing(false);
       abortRef.current = null;
@@ -155,9 +149,8 @@ export function useDownloadEngine() {
 
   const stop = useCallback(async () => {
     abortRef.current?.abort();
-    // Also update any running job in DB
     const { data: running } = await supabase.from("download_jobs").select("id").eq("status", "running").limit(1);
-    if (running?.[0]) await pauseJob(running[0].id, "Fermato dall'utente");
+    if (running?.[0]) await stopJob(running[0].id);
   }, []);
 
   return { startJob, stop, isProcessing };
@@ -181,19 +174,4 @@ async function ensurePartner(wcaId: number, companyName: string | null | undefin
     country_code: countryCode, country_name: countryName, city: "",
   }).select("id").single();
   return newP?.id || null;
-}
-
-async function persistProgress(
-  jobId: string, currentIndex: number, processedSet: Set<number>,
-  lastWcaId: number, lastCompany: string | null | undefined,
-  contactsFound: number, contactsMissing: number,
-) {
-  await updateJob(jobId, {
-    current_index: currentIndex,
-    processed_ids: [...processedSet] as any,
-    last_processed_wca_id: lastWcaId,
-    last_processed_company: lastCompany || null,
-    contacts_found_count: contactsFound,
-    contacts_missing_count: contactsMissing,
-  });
 }

@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { WCA_NETWORKS } from "@/data/wcaFilters";
 import { getCountryFlag } from "@/lib/countries";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
-import { useWcaSession } from "@/hooks/useWcaSession";
+// useWcaSession removed — no session gates
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 import { useTheme, t } from "./theme";
 // useScrapingSettings and useUpdateSetting removed — deprecated
@@ -32,7 +32,7 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   const th = t(isDark);
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { ensureSession } = useWcaSession();
+  // No session gate
 
   // Network selection
   const [selectedNetwork, setSelectedNetwork] = useState<string>("__all__");

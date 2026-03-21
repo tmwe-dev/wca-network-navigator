@@ -221,9 +221,10 @@ export function useAcquisitionPipeline() {
 
       if (extensionAvailable || await checkExtension()) {
         try {
-          const extResult = await extensionExtract(item.wca_id);
+          const bridgeResult = await extensionExtract(item.wca_id);
+          const extResult = bridgeResult.extraction;
 
-          if (extResult.pageLoaded === false) {
+          if (!bridgeResult.bridgeHealthy || !extResult || extResult.state === "not_loaded") {
             localStats = { ...localStats, failedLoads: localStats.failedLoads + 1 };
             setLiveStats(localStats);
             processedSet.add(item.wca_id);

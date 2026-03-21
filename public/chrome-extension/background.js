@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════
 // WCA Chrome Extension — Background Service Worker
-// V3: Extract-only. No server saving. Honest contract.
+// V4: Extract-only. Strict error codes. Login detection.
 // ══════════════════════════════════════════════════
 
 // ── Profile extraction function (injected into WCA tab) ──
@@ -16,18 +16,14 @@ function extractFullProfileFromPage() {
       }
     };
 
-    // WCA ID from URL
     var urlMatch = window.location.href.match(/\/directory\/members\/(\d+)/i);
     if (urlMatch) result.wcaId = parseInt(urlMatch[1]);
 
-    // Company name from H1
     var h1 = document.querySelector("h1");
     if (h1) result.companyName = h1.textContent.trim();
 
-    // Raw HTML
     result.profileHtml = document.body.innerHTML;
 
-    // ── Company-level profile_label / profile_val pairs ──
     var allLabels = document.querySelectorAll("[class*='profile_label']");
     for (var li = 0; li < allLabels.length; li++) {
       var label = allLabels[li];
@@ -67,7 +63,6 @@ function extractFullProfileFromPage() {
       else if (/^Office\s*Type$/i.test(labelText)) result.profile.officeType = value;
     }
 
-    // Description
     var descCandidates = document.querySelectorAll("[class*='profile_description'], [class*='company_description'], [class*='member_description']");
     for (var di = 0; di < descCandidates.length; di++) {
       var txt = descCandidates[di].textContent.trim();
@@ -78,7 +73,6 @@ function extractFullProfileFromPage() {
       for (var vi = 0; vi < allVals.length; vi++) { var vt = allVals[vi].textContent.trim(); if (vt.length > 200) { result.profile.description = vt; break; } }
     }
 
-    // Networks
     var networkEls = document.querySelectorAll("[class*='network'], [class*='membership']");
     for (var ni = 0; ni < networkEls.length; ni++) {
       var rows = networkEls[ni].querySelectorAll("tr, [class*='row']");
@@ -93,7 +87,6 @@ function extractFullProfileFromPage() {
       }
     }
 
-    // Services
     var serviceEls = document.querySelectorAll("[class*='service'], [class*='specialit'], [class*='capability']");
     for (var si = 0; si < serviceEls.length; si++) {
       var badges = serviceEls[si].querySelectorAll("span, li, a, div");
@@ -103,7 +96,6 @@ function extractFullProfileFromPage() {
       }
     }
 
-    // Certifications
     var certEls = document.querySelectorAll("[class*='certif'], [class*='accredit']");
     for (var ci = 0; ci < certEls.length; ci++) {
       var cBadges = certEls[ci].querySelectorAll("span, li, a, img, div");
@@ -113,7 +105,6 @@ function extractFullProfileFromPage() {
       }
     }
 
-    // Branch cities
     var branchEls = document.querySelectorAll("[class*='branch'], [class*='office_list']");
     for (var bri = 0; bri < branchEls.length; bri++) {
       var items = branchEls[bri].querySelectorAll("li, a, span, div");
@@ -123,7 +114,6 @@ function extractFullProfileFromPage() {
       }
     }
 
-    // ── Contacts ──
     var allRows = document.querySelectorAll("[class*='contactperson_row']");
     if (allRows.length === 0) {
       var allEls = document.querySelectorAll("*");
@@ -170,22 +160,40 @@ function extractFullProfileFromPage() {
   }
 }
 
-// ── Page load check (injected into WCA tab) ──
-function checkPageLoaded() {
+// ── Page inspection (injected into WCA tab) ──
+function inspectPage() {
   try {
     var len = (document.body && document.body.innerHTML) ? document.body.innerHTML.length : 0;
     var h1 = document.querySelector("h1");
     var h1Text = h1 ? h1.textContent.trim() : "";
-    var h1HasCompanyName = h1Text.length > 3 && !/error/i.test(h1Text) && !/login/i.test(h1Text) && !/not found/i.test(h1Text) && !/sign in/i.test(h1Text);
-    var memberNotFound = h1Text.toLowerCase().indexOf("member not found") >= 0 || h1Text.toLowerCase().indexOf("not found") >= 0;
-    var loaded = len > 2000 || (h1HasCompanyName && len > 500);
-    return { length: len, loaded: loaded, h1Text: h1Text, memberNotFound: memberNotFound };
+    var url = window.location.href;
+    var title = document.title || "";
+
+    // Login detection
+    var hasLoginForm = !!document.querySelector("input[type='password']");
+    var isLoginUrl = /\/login|\/signin|\/account\/log/i.test(url);
+    var loginDetected = hasLoginForm || isLoginUrl;
+
+    // Member not found
+    var memberNotFound = /member not found|not found/i.test(h1Text);
+
+    // Profile container
+    var hasProfileContainer = !!document.querySelector("[class*='profile_label']") || !!document.querySelector("[class*='contactperson_row']");
+
+    var h1Valid = h1Text.length > 3 && !/error|login|not found|sign in/i.test(h1Text);
+    var loaded = (len > 2000 || (h1Valid && len > 500)) && !loginDetected;
+
+    return {
+      length: len, loaded: loaded, h1Text: h1Text, memberNotFound: memberNotFound,
+      url: url, title: title, loginDetected: loginDetected,
+      hasProfileContainer: hasProfileContainer, hasNotFoundMarker: memberNotFound
+    };
   } catch (e) {
-    return { length: 0, loaded: false, h1Text: "", memberNotFound: false };
+    return { length: 0, loaded: false, h1Text: "", memberNotFound: false, url: "", title: "", loginDetected: false, hasProfileContainer: false, hasNotFoundMarker: false };
   }
 }
 
-// ── Tab management with retry on "Tabs cannot be edited" ──
+// ── Tab management with retry ──
 async function safeCreateTab(url, retries) {
   retries = retries || 3;
   for (var attempt = 0; attempt < retries; attempt++) {
@@ -223,31 +231,54 @@ function waitForTabLoad(tabId, ms) {
   });
 }
 
-// ── Core extraction: open tab → check page → extract → return structured result ──
+// ── Build standardized response ──
+function buildResponse(wcaId, state, errorCode, extra) {
+  extra = extra || {};
+  return {
+    success: state === "ok",
+    wcaId: wcaId,
+    state: state,
+    errorCode: errorCode || null,
+    companyName: extra.companyName || null,
+    contacts: extra.contacts || [],
+    profile: extra.profile || {},
+    profileHtml: extra.profileHtml || null,
+    htmlLength: extra.htmlLength || 0,
+    error: extra.error || null,
+    debug: extra.debug || {}
+  };
+}
+
+// ── Core extraction ──
 async function extractContactsForId(wcaId) {
   var tab = null;
   try {
     tab = await safeCreateTab("https://www.wcaworld.com/directory/members/" + wcaId);
     await waitForTabLoad(tab.id, 20000);
 
-    // Check page loaded
-    var loadCheck = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: checkPageLoaded });
-    var pageResult = loadCheck[0] && loadCheck[0].result;
+    // Inspect page
+    var inspectResult = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: inspectPage });
+    var page = inspectResult[0] && inspectResult[0].result;
+    var debug = {
+      url: page ? page.url : "", title: page ? page.title : "",
+      pageLoaded: page ? page.loaded : false, loginDetected: page ? page.loginDetected : false,
+      domSignals: { hasProfileContainer: page ? page.hasProfileContainer : false, hasNotFoundMarker: page ? page.hasNotFoundMarker : false }
+    };
 
-    if (!pageResult || !pageResult.loaded) {
-      return {
-        success: false, wcaId: wcaId, state: "not_loaded",
-        companyName: null, contacts: [], profile: {}, profileHtml: null,
-        htmlLength: pageResult ? pageResult.length : 0, error: "Page not loaded"
-      };
+    if (!page) {
+      return buildResponse(wcaId, "bridge_error", "EXT_BRIDGE_ERROR", { error: "Page inspection failed", debug: debug });
     }
 
-    if (pageResult.memberNotFound) {
-      return {
-        success: false, wcaId: wcaId, state: "member_not_found",
-        companyName: pageResult.h1Text || null, contacts: [], profile: {}, profileHtml: null,
-        htmlLength: pageResult.length, error: null
-      };
+    if (page.loginDetected) {
+      return buildResponse(wcaId, "login_required", "WCA_LOGIN_REQUIRED", { error: "Login page detected", debug: debug, htmlLength: page.length });
+    }
+
+    if (page.memberNotFound) {
+      return buildResponse(wcaId, "member_not_found", "WCA_PROFILE_NOT_FOUND", { companyName: page.h1Text, debug: debug, htmlLength: page.length });
+    }
+
+    if (!page.loaded) {
+      return buildResponse(wcaId, "not_loaded", "WCA_PAGE_NOT_READY", { error: "Page not loaded", debug: debug, htmlLength: page.length });
     }
 
     // Extract profile
@@ -255,38 +286,29 @@ async function extractContactsForId(wcaId) {
     var pageData = results[0] && results[0].result;
 
     if (!pageData || pageData.error) {
-      return {
-        success: false, wcaId: wcaId, state: "extraction_error",
-        companyName: null, contacts: [], profile: {}, profileHtml: null,
-        htmlLength: 0, error: pageData ? pageData.error : "No data returned"
-      };
+      return buildResponse(wcaId, "extraction_error", "WCA_DOM_PARSE_FAILED", {
+        error: pageData ? pageData.error : "No data returned", debug: debug
+      });
     }
 
-    // Check for member not found in extracted company name
     var cn = (pageData.companyName || "").toLowerCase();
     if (cn.indexOf("member not found") >= 0 || cn.indexOf("not found") >= 0) {
-      return {
-        success: false, wcaId: wcaId, state: "member_not_found",
-        companyName: pageData.companyName, contacts: [], profile: {}, profileHtml: pageData.profileHtml,
-        htmlLength: pageData.profileHtml ? pageData.profileHtml.length : 0, error: null
-      };
+      return buildResponse(wcaId, "member_not_found", "WCA_PROFILE_NOT_FOUND", {
+        companyName: pageData.companyName, profileHtml: pageData.profileHtml,
+        htmlLength: pageData.profileHtml ? pageData.profileHtml.length : 0, debug: debug
+      });
     }
 
-    return {
-      success: true, wcaId: wcaId, state: "ok",
-      companyName: pageData.companyName || null,
+    return buildResponse(wcaId, "ok", null, {
+      companyName: pageData.companyName,
       contacts: pageData.contacts || [],
       profile: pageData.profile || {},
       profileHtml: pageData.profileHtml || null,
       htmlLength: pageData.profileHtml ? pageData.profileHtml.length : 0,
-      error: null
-    };
+      debug: debug
+    });
   } catch (err) {
-    return {
-      success: false, wcaId: wcaId, state: "bridge_error",
-      companyName: null, contacts: [], profile: {}, profileHtml: null,
-      htmlLength: 0, error: err.message
-    };
+    return buildResponse(wcaId, "bridge_error", "EXT_BRIDGE_ERROR", { error: err.message });
   } finally {
     if (tab) safeRemoveTab(tab.id);
   }
@@ -297,28 +319,21 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.source !== "wca-content-bridge") return false;
 
   if (message.action === "ping") {
-    sendResponse({ success: true, version: "7.0" });
+    sendResponse({ success: true, version: "8.0" });
     return false;
   }
 
   if (message.action === "extractContacts") {
     var wcaId = message.wcaId;
-    if (!wcaId) { sendResponse({ success: false, error: "wcaId required" }); return false; }
-
+    if (!wcaId) { sendResponse(buildResponse(0, "bridge_error", "EXT_BRIDGE_ERROR", { error: "wcaId required" })); return false; }
     (async function () {
-      try {
-        var result = await extractContactsForId(wcaId);
-        // V3: NO server saving — return structured result only
-        sendResponse(result);
-      } catch (err) {
-        sendResponse({ success: false, wcaId: wcaId, state: "bridge_error", error: err.message, contacts: [], profile: {} });
-      }
+      try { sendResponse(await extractContactsForId(wcaId)); }
+      catch (err) { sendResponse(buildResponse(wcaId, "bridge_error", "EXT_BRIDGE_ERROR", { error: err.message })); }
     })();
     return true;
   }
 
   if (message.action === "verifySession") {
-    // Simple cookie check — no page hit
     (async function () {
       try {
         var aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
@@ -339,16 +354,31 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
-  // Removed: autoLogin, syncCookie — not needed in V3
+  // ── Preflight test: open a known profile and check accessibility ──
+  if (message.action === "preflightTest") {
+    (async function () {
+      try {
+        var testResult = await extractContactsForId(1); // WCA ID 1 as test
+        if (testResult.state === "ok" || testResult.state === "member_not_found") {
+          sendResponse({ success: true, state: "ok", message: "WCA accessible" });
+        } else {
+          sendResponse({ success: false, state: testResult.state, errorCode: testResult.errorCode, message: testResult.error || testResult.state });
+        }
+      } catch (err) {
+        sendResponse({ success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", message: err.message });
+      }
+    })();
+    return true;
+  }
+
   return false;
 });
 
-// ── On install — register extension ID ──
+// ── On install ──
 chrome.runtime.onInstalled.addListener(async function () {
   var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
   var extensionId = chrome.runtime.id;
-  console.log("[WCA Extension] Installed, ID:", extensionId);
   try {
     var res = await fetch(SUPABASE_URL + "/rest/v1/app_settings?key=eq.chrome_extension_id", {
       method: "GET", headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }

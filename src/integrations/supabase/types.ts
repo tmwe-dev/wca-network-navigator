@@ -719,6 +719,104 @@ export type Database = {
         }
         Relationships: []
       }
+      download_job_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          item_id: string | null
+          job_id: string
+          payload: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          item_id?: string | null
+          job_id: string
+          payload?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          item_id?: string | null
+          job_id?: string
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_job_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "download_job_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "download_job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "download_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      download_job_items: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          contacts_found: number
+          contacts_missing: number
+          created_at: string
+          id: string
+          job_id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          position: number
+          started_at: string | null
+          status: string
+          wca_id: number
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          contacts_found?: number
+          contacts_missing?: number
+          created_at?: string
+          id?: string
+          job_id: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          position: number
+          started_at?: string | null
+          status?: string
+          wca_id: number
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          contacts_found?: number
+          contacts_missing?: number
+          created_at?: string
+          id?: string
+          job_id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          position?: number
+          started_at?: string | null
+          status?: string
+          wca_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "download_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       download_jobs: {
         Row: {
           completed_at: string | null
