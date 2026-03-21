@@ -44,6 +44,7 @@ interface Contact {
   company_alias: string | null;
   contact_alias: string | null;
   note: string | null;
+  enrichment_data?: any;
 }
 
 interface Props {
