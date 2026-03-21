@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactEnrichmentCard } from "./ContactEnrichmentCard";

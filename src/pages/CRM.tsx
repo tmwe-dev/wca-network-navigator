@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCheck, Building2, Upload } from "lucide-react";
+import { UserCheck, Building2, Upload, ContactRound } from "lucide-react";
 
 const Contacts = lazy(() => import("./Contacts"));
 const ProspectCenter = lazy(() => import("./ProspectCenter"));
 const Import = lazy(() => import("./Import"));
+const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
@@ -30,6 +31,10 @@ export default function CRM() {
               <Upload className="w-3.5 h-3.5" />
               Import
             </TabsTrigger>
+            <TabsTrigger value="biglietti" className="gap-1.5 text-xs">
+              <ContactRound className="w-3.5 h-3.5" />
+              Biglietti
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -48,6 +53,11 @@ export default function CRM() {
         {tab === "import" && (
           <Suspense fallback={<TabFallback />}>
             <Import />
+          </Suspense>
+        )}
+        {tab === "biglietti" && (
+          <Suspense fallback={<TabFallback />}>
+            <BusinessCardsHub />
           </Suspense>
         )}
       </div>
