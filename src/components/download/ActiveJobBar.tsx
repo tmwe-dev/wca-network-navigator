@@ -12,7 +12,11 @@ import {
 import { useTheme, t } from "./theme";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 
-export function ActiveJobBar() {
+interface ActiveJobBarProps {
+  onStartJob?: (jobId: string) => void;
+}
+
+export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
   const isDark = useTheme();
   const th = t(isDark);
   const { data: jobs } = useDownloadJobs();
@@ -31,7 +35,8 @@ export function ActiveJobBar() {
     mainJob.total_count > 0
       ? (mainJob.current_index / mainJob.total_count) * 100
       : 0;
-  const isRunning = mainJob.status === "running" || mainJob.status === "pending";
+  const isRunning = mainJob.status === "running";
+  const isPending = mainJob.status === "pending";
   const isPaused = mainJob.status === "paused";
 
   return (
@@ -53,6 +58,13 @@ export function ActiveJobBar() {
               }`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 ATTIVO
+              </span>
+            ) : isPending ? (
+              <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                isDark ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-blue-50 text-blue-700 border border-blue-200"
+              }`}>
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                IN ATTESA
               </span>
             ) : isPaused ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -98,10 +110,23 @@ export function ActiveJobBar() {
                 </Button>
               </>
             )}
+            {isPending && onStartJob && (
+              <Button
+                size="sm"
+                onClick={() => onStartJob(mainJob.id)}
+                className={`h-7 text-xs px-3 ${th.btnResume}`}
+              >
+                <Play className="w-3.5 h-3.5 mr-1" /> Avvia
+              </Button>
+            )}
             {isPaused && (
               <Button
                 size="sm"
-                onClick={() => pauseResume.mutate({ jobId: mainJob.id, action: "resume" })}
+                onClick={() => {
+                  pauseResume.mutate({ jobId: mainJob.id, action: "resume" }, {
+                    onSuccess: () => { if (onStartJob) onStartJob(mainJob.id); }
+                  });
+                }}
                 className={`h-7 text-xs px-3 ${th.btnResume}`}
               >
                 <Play className="w-3.5 h-3.5 mr-1" /> Riprendi
