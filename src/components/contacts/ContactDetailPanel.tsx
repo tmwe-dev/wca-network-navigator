@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { ContactEnrichmentCard } from "./ContactEnrichmentCard";
@@ -22,7 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface Contact {
@@ -99,6 +100,21 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const [newOutcome, setNewOutcome] = useState("");
   const [aliasLoading, setAliasLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // Query matched business card for this contact
+  const { data: matchedCard } = useQuery({
+    queryKey: ["business-card-for-contact", c.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("business_cards")
+        .select("*")
+        .eq("matched_contact_id", c.id)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 120_000,
+  });
 
   // Sync with external prop changes (e.g. user clicks different contact)
   useEffect(() => {
@@ -287,6 +303,43 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
           {c.interaction_count} interazioni
         </Badge>
       </div>
+
+      {/* Business card miniature */}
+      {matchedCard && (
+        <Section>
+          <SectionTitle icon={Handshake}>Biglietto da visita</SectionTitle>
+          <div className="flex gap-3 items-start">
+            {matchedCard.photo_url && (
+              <div className="w-24 shrink-0 rounded-lg overflow-hidden border border-border/50">
+                <AspectRatio ratio={16 / 9}>
+                  <img
+                    src={matchedCard.photo_url}
+                    alt="Biglietto"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </AspectRatio>
+              </div>
+            )}
+            <div className="flex-1 min-w-0 space-y-1">
+              {matchedCard.event_name && (
+                <p className="text-xs font-medium text-foreground">{matchedCard.event_name}</p>
+              )}
+              {matchedCard.met_at && (
+                <p className="text-[10px] text-muted-foreground">
+                  Incontrato: {format(new Date(matchedCard.met_at), "dd MMM yyyy", { locale: it })}
+                </p>
+              )}
+              {matchedCard.location && (
+                <p className="text-[10px] text-muted-foreground">{matchedCard.location}</p>
+              )}
+              <Badge className="text-[9px] bg-emerald-500/15 text-emerald-400 border-0">
+                <Handshake className="w-2.5 h-2.5 mr-0.5" /> Incontrato personalmente
+              </Badge>
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* Enrichment Card */}
       <ContactEnrichmentCard
