@@ -21,26 +21,26 @@ export async function updateItem(
   status: string,
   extra?: { errorCode?: string; errorMessage?: string; contactsFound?: number; contactsMissing?: number },
 ): Promise<void> {
+  // Fetch current attempt_count and update atomically in one read + one write
+  const { data: current } = await supabase.from("download_job_items").select("attempt_count").eq("id", itemId).single();
+  const newAttempt = ((current?.attempt_count) || 0) + 1;
+
   const payload: Record<string, any> = {
     status,
-    attempt_count: supabase.rpc ? undefined : undefined, // increment handled separately
-    completed_at: ["success", "member_not_found", "permanent_error"].includes(status) ? new Date().toISOString() : undefined,
+    attempt_count: newAttempt,
   };
+
+  // Set completed_at for terminal states
+  if (["success", "member_not_found", "permanent_error"].includes(status)) {
+    payload.completed_at = new Date().toISOString();
+  }
+
   if (extra?.errorCode) payload.last_error_code = extra.errorCode;
   if (extra?.errorMessage) payload.last_error_message = extra.errorMessage;
   if (extra?.contactsFound !== undefined) payload.contacts_found = extra.contactsFound;
   if (extra?.contactsMissing !== undefined) payload.contacts_missing = extra.contactsMissing;
 
-  // Clean undefined
-  for (const k of Object.keys(payload)) { if (payload[k] === undefined) delete payload[k]; }
-
   await supabase.from("download_job_items").update(payload).eq("id", itemId);
-
-  // Increment attempt_count
-  const { data: item } = await supabase.from("download_job_items").select("attempt_count").eq("id", itemId).single();
-  if (item) {
-    await supabase.from("download_job_items").update({ attempt_count: (item.attempt_count || 0) + 1 }).eq("id", itemId);
-  }
 }
 
 /** Mark item as processing. */
