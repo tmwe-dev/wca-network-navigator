@@ -211,12 +211,16 @@ function ActiveJobsPanel({ jobs }: { jobs: DownloadJob[] }) {
 
 export default function SuperHome3D() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const { data: activities = [] } = useAllActivities();
   const { data: jobs = [] } = useDownloadJobs();
   const { data: prospectStats } = useProspectStats();
   const { contacts = [] } = useCockpitContacts();
   const { data: partnerCount = 0 } = useCount("partners");
+  const { data: briefing, isLoading: briefingLoading } = useDailyBriefing();
+
+  const [actionPrompt, setActionPrompt] = useState<string | null>(null);
 
   const readyContacts = useMemo(
     () => contacts.filter((c) => Boolean(c.email)).length,
@@ -251,6 +255,10 @@ export default function SuperHome3D() {
     return s;
   }, [activeJobs, readyContacts, openActivities]);
 
+  const handleBriefingAction = useCallback((action: BriefingAction) => {
+    setActionPrompt(action.prompt);
+  }, []);
+
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-y-auto bg-background text-foreground">
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
@@ -260,12 +268,30 @@ export default function SuperHome3D() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
-          <HomeAIPrompt systemStats={{
-            activeJobs,
-            pendingActivities: openActivities,
-            totalPartners: partnerCount,
-          }} />
+          <HomeAIPrompt
+            systemStats={{
+              activeJobs,
+              pendingActivities: openActivities,
+              totalPartners: partnerCount,
+            }}
+            briefingActions={briefing?.actions}
+            agents={briefing?.agentStatus}
+            externalPrompt={actionPrompt}
+            onExternalPromptConsumed={() => setActionPrompt(null)}
+          />
         </section>
+
+        {/* Briefing Operativo */}
+        <OperativeBriefing
+          summary={briefing?.summary}
+          actions={briefing?.actions ?? []}
+          isLoading={briefingLoading}
+          onRefresh={() => qc.invalidateQueries({ queryKey: ["daily-briefing"] })}
+          onAction={handleBriefingAction}
+        />
+
+        {/* Agent Status */}
+        <AgentStatusPanel agents={briefing?.agentStatus ?? []} />
 
         {/* Active downloads — always visible when jobs exist */}
         <ActiveJobsPanel jobs={jobs} />
