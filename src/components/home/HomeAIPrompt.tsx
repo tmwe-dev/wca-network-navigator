@@ -154,7 +154,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [input, loading, history]);
+  }, [input, loading, history, agents]);
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto space-y-3", className)}>
