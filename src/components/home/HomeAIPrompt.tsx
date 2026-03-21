@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
 
 interface Props {
   className?: string;
@@ -17,6 +18,10 @@ interface Props {
     pendingReminders?: number;
     totalPartners?: number;
   };
+  briefingActions?: BriefingAction[];
+  agents?: AgentStatusItem[];
+  externalPrompt?: string | null;
+  onExternalPromptConsumed?: () => void;
 }
 
 interface SmartPrompt {
@@ -25,9 +30,17 @@ interface SmartPrompt {
   icon: string;
 }
 
-function buildSmartPrompts(stats?: Props["systemStats"]): SmartPrompt[] {
+function buildSmartPrompts(stats?: Props["systemStats"], briefingActions?: BriefingAction[]): SmartPrompt[] {
+  // Use briefing actions if available
+  if (briefingActions && briefingActions.length > 0) {
+    return briefingActions.slice(0, 4).map((a) => ({
+      label: a.label,
+      prompt: a.prompt,
+      icon: a.agentName ? "🤖" : "⚡",
+    }));
+  }
+
   const prompts: SmartPrompt[] = [];
-  
   if (stats?.pendingActivities && stats.pendingActivities > 0) {
     prompts.push({ label: `${stats.pendingActivities} attività aperte`, prompt: "Mostrami le attività in scadenza e suggeriscimi come procedere", icon: "📋" });
   }
@@ -40,8 +53,6 @@ function buildSmartPrompts(stats?: Props["systemStats"]): SmartPrompt[] {
   if (stats?.activeJobs && stats.activeJobs > 0) {
     prompts.push({ label: `${stats.activeJobs} job attivi`, prompt: "Qual è lo stato dei download attivi?", icon: "📥" });
   }
-  
-  // Fallback defaults if no contextual ones
   if (prompts.length === 0) {
     prompts.push(
       { label: "Riepilogo del giorno", prompt: "Riepilogo del giorno", icon: "📊" },
@@ -50,7 +61,6 @@ function buildSmartPrompts(stats?: Props["systemStats"]): SmartPrompt[] {
       { label: "Attività in scadenza", prompt: "Attività in scadenza", icon: "📋" },
     );
   }
-  
   return prompts.slice(0, 4);
 }
 
