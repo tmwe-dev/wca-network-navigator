@@ -280,7 +280,7 @@ export default function Operations() {
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
             {hasSelection ? (
               <>
-                <ActiveJobBar />
+                <ActiveJobBar onStartJob={startJob} />
                 <div className={cn(
                   "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
                   "bg-card/50 backdrop-blur-sm border-border"
