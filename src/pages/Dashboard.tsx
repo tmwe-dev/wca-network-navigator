@@ -38,6 +38,10 @@ export default function Dashboard() {
               <Rocket className="w-3.5 h-3.5" />
               Campagne
             </TabsTrigger>
+            <TabsTrigger value="ops" className="gap-1.5 text-xs">
+              <Gauge className="w-3.5 h-3.5" />
+              Centro Operativo
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
