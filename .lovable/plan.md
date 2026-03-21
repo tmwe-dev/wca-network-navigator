@@ -1,86 +1,88 @@
 
 
-# Piano: Deep Search CRM al livello del Network + UI Enrichment per Contatti
+# Piano: Sezione Biglietti da Visita Dedicata nel CRM
 
-## Problema reale
+## Stato attuale
 
-Ci sono **due gap fondamentali** tra Network e CRM:
+Il sistema ha gia':
+- Tabella `business_cards` con matching trigger automatico (partner + contatti)
+- Toggle "Biglietti da visita" nell'import (solo etichetta origine)
+- Filtro `metPersonally` con icona Handshake nella lista contatti
+- Hook `useBusinessCards` con CRUD completo
+- Campo `photo_url` nella tabella (mai usato)
 
-### Gap 1: `deep-search-contact` e' una versione ridotta di `deep-search-partner`
+**Cosa manca**: una sezione dedicata per caricare **foto** di biglietti da visita, OCR/AI parsing dell'immagine, miniatura visibile nei contatti matchati, deep search automatica post-creazione.
 
-| Capacita' | deep-search-partner (783 righe) | deep-search-contact (218 righe) |
-|-----------|--------------------------------|-------------------------------|
-| LinkedIn personale | Si, con 3 tentativi di retry | Si, ma 1 solo tentativo generico |
-| Facebook/Instagram | Ricerca dedicata per contatto | Ricerca generica unica |
-| WhatsApp auto-link | Si, da mobile/phone | No |
-| Company LinkedIn | Si | No |
-| Company profile (awards, specialties, news) | Si | No |
-| Website discovery da email domain | Si | No |
-| Logo discovery + scraping sito | Si | No |
-| Website quality score AI | Si | No |
-| Rating calcolato (7 criteri pesati) | Si | No |
-| Profilo professionale per contatto | Si (background, seniority, interests, languages) | Solo summary generico |
-| Validazione AI per URL trovati | Si (AI pick URL) | No, tutto in un unico prompt |
+## Soluzione: 4 interventi
 
-In pratica `deep-search-contact` fa 4 ricerche generiche e un unico prompt AI che restituisce tutto. `deep-search-partner` fa 10-15 ricerche mirate con AI validation ad ogni step.
+### 1. Nuovo tab "Biglietti" nel CRM
 
-### Gap 2: La UI del CRM ignora completamente `enrichment_data`
+Aggiungere un quarto tab in `CRM.tsx` con icona `ContactRound`:
 
-Il `ContactDetailPanel.tsx` non legge MAI `enrichment_data`. Anche se la Deep Search trovasse dati, non li mostrerebbe. Il pannello Network ha `EnrichmentCard`, `SocialLinks`, `ActivityList`, `PartnerRating`, `TrophyRow` — il CRM non ha nessuno di questi.
+```text
+Contatti | Prospect | Import | Biglietti
+```
 
-## Soluzione
+Lazy-load di un nuovo componente `BusinessCardsHub.tsx`.
 
-### Fase 1 — Potenziare `deep-search-contact` (edge function)
+### 2. Componente `BusinessCardsHub.tsx`
 
-Riscrivere la funzione per avere le stesse capacita' del partner:
+Interfaccia dedicata con:
 
-1. **LinkedIn con retry intelligente** — 3 tentativi (nome+azienda, cognome+azienda, nome+citta')
-2. **Facebook e Instagram separati** — ricerche dedicate, non generiche
-3. **Company LinkedIn** — ricerca pagina aziendale
-4. **Website discovery** — da dominio email o ricerca web
-5. **Logo discovery** — scraping del sito + favicon fallback
-6. **Company profile AI** — awards, specialties, news, founded year, employees
-7. **Contact profile AI** — background, seniority, interests, languages
-8. **WhatsApp auto-link** — da numero mobile se presente
-9. **Salvataggio strutturato** — stessa struttura enrichment_data del partner (company_profile, contact_profiles, website_quality_score)
+**Upload zona** — drag & drop immagini (JPG, PNG, HEIC). Le foto vengono caricate nello storage bucket `import-files` e il URL salvato in `photo_url`.
 
-### Fase 2 — Creare `ContactEnrichmentCard.tsx`
+**AI Parsing** — Dopo upload, chiama una nuova edge function `parse-business-card` che:
+- Riceve l'URL dell'immagine
+- Usa Gemini 2.5 Flash (vision) per estrarre: company_name, contact_name, email, phone, mobile, position, address, website
+- Restituisce JSON strutturato
+- Il frontend crea il record in `business_cards` con i dati estratti + `photo_url`
 
-Componente che legge `enrichment_data` dal contatto e mostra:
-- Company profile (awards, specialties, news, founded year, employees)
-- Professional background della persona
-- Social links trovati (LinkedIn, Facebook, Instagram, WhatsApp)
-- Logo aziendale scoperto
-- Website quality score
-- Confidence level della ricerca
-- Crediti consumati
+**Lista cards** — Mostra tutti i biglietti da visita con:
+- Miniatura della foto (aspect-ratio 16/9, rounded)
+- Nome contatto + azienda
+- Badge match status (matched/unmatched/pending)
+- Filtri per evento, status match
+- Bottone "Deep Search" per lanciare `deep-search-contact` sul contatto matchato
 
-Basato sullo stesso design di `EnrichmentCard.tsx` del Network.
+**Form evento** — Campo evento (es. "Cosmoprof 2026"), data incontro, location, note. Compilabile prima o dopo l'upload.
 
-### Fase 3 — Aggiornare `ContactDetailPanel.tsx`
+### 3. Edge function `parse-business-card`
 
-Integrare:
-- `ContactEnrichmentCard` dopo la sezione header
-- Social links come bottoni azione (LinkedIn, Facebook, Instagram)
-- Logo aziendale nel header se disponibile
-- Website link se scoperto
-- Badge confidence (high/medium/low)
+Nuova funzione che:
+- Riceve `{ imageUrl, userId }`
+- Scarica l'immagine dallo storage
+- Invia a Gemini 2.5 Flash con prompt vision: "Estrai i dati del biglietto da visita"
+- Restituisce JSON strutturato con i campi della tabella `business_cards`
+- Costo: 2 crediti
 
-### Fase 4 — Salvare social links nel DB per i contatti
+### 4. Miniatura biglietto nel `ContactDetailPanel.tsx`
 
-Oggi i link social dei contatti vengono salvati solo dentro `enrichment_data` come JSON. Per coerenza con il Network (che usa `partner_social_links`), i link trovati andrebbero salvati in modo strutturato — ma per non complicare lo schema, useremo `enrichment_data` come source of truth e li mostriamo dalla UI.
+Quando un contatto ha un `matched_contact_id` in `business_cards`:
+- Query per recuperare il business card matchato
+- Mostrare una card compatta con:
+  - Miniatura della foto del biglietto (se presente)
+  - Icona Handshake + nome evento + data incontro
+  - Link per vedere il biglietto completo
+
+Questo appare sopra la sezione enrichment nel pannello dettaglio.
 
 ## File da creare/modificare
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/deep-search-contact/index.ts` | Riscrivere — stesse capacita' del partner |
-| `src/components/contacts/ContactEnrichmentCard.tsx` | Creare — mostra enrichment data |
-| `src/components/contacts/ContactDetailPanel.tsx` | Modificare — integrare enrichment card + social links |
+| `src/pages/CRM.tsx` | Aggiungere tab "Biglietti" |
+| `src/components/contacts/BusinessCardsHub.tsx` | Creare — hub completo biglietti |
+| `supabase/functions/parse-business-card/index.ts` | Creare — OCR via Gemini vision |
+| `src/components/contacts/ContactDetailPanel.tsx` | Modificare — mostrare miniatura biglietto matchato |
+| `src/hooks/useBusinessCards.ts` | Aggiungere hook per upload foto + parsing |
 
-## Risultato
+## Flusso utente
 
-- Deep Search su un contatto CRM produce gli stessi dati ricchi del Network
-- La UI mostra tutto: LinkedIn, company profile, logo, website, background professionale
-- L'utente puo' fare attivita' commerciale seria con dati completi anche dal CRM
+1. Vado su CRM → tab "Biglietti"
+2. Trascino la foto di un biglietto da visita
+3. L'AI estrae automaticamente nome, azienda, email, telefono
+4. Inserisco evento "Cosmoprof 2026" e data
+5. Il trigger DB fa il matching automatico con contatti/partner esistenti
+6. Il contatto matchato mostra la miniatura del biglietto nel suo pannello dettaglio
+7. Posso filtrare "Incontrati personalmente" nella lista contatti per vedere solo quelli con biglietto
 
