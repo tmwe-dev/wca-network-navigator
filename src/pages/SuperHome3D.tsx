@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
+import { OperativeBriefing } from "@/components/home/OperativeBriefing";
+import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
 import { useAllActivities } from "@/hooks/useActivities";
 import { useDownloadJobs, type DownloadJob } from "@/hooks/useDownloadJobs";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
-import { useQuery } from "@tanstack/react-query";
+import { useDailyBriefing, type BriefingAction } from "@/hooks/useDailyBriefing";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 
