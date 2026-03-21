@@ -388,6 +388,22 @@ const ALL_TOOLS: Record<string, any> = {
       parameters: { type: "object", properties: { event_name: { type: "string" }, company_name: { type: "string" }, contact_name: { type: "string" }, match_status: { type: "string" }, limit: { type: "number" } } },
     },
   },
+  execute_ui_action: {
+    type: "function",
+    function: {
+      name: "execute_ui_action",
+      description: "Execute a UI action: navigate to a page, show a toast notification, or apply filters. The result is returned to the user as a structured command.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["navigate", "toast", "filter"], description: "Type of UI action" },
+          target: { type: "string", description: "For navigate: route path (e.g. /crm, /network). For toast: message text. For filter: filter expression." },
+          params: { type: "object", description: "Additional parameters (e.g. toast type: success/error, filter values)" },
+        },
+        required: ["action", "target"],
+      },
+    },
+  },
   // ━━━ Management Tools (Director only) ━━━
   create_agent_task: {
     type: "function",
