@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
