@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,7 +24,6 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   const { data, isLoading } = useContactsByGroup(groupType, groupKey, page, 200, true, holdingPattern);
   const rawContacts = data?.items ?? [];
 
-  // Client-side text search within loaded contacts
   const filtered = useMemo(() => {
     const search = searchFilter?.trim().toLowerCase();
     if (!search) return rawContacts;
@@ -42,6 +42,14 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   const pageSize = data?.pageSize ?? 200;
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  });
+
   if (isLoading) {
     return (
       <div className="p-2 space-y-1">
@@ -53,18 +61,36 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   }
 
   return (
-    <div className="p-2 space-y-1">
-      {contacts.map((c: any, i: number) => (
-        <ContactCard
-          key={c.id}
-          c={c}
-          isActive={selectedId === c.id}
-          isSelected={selection.selectedIds.has(c.id)}
-          onSelect={() => onSelect(c)}
-          onToggle={() => selection.toggle(c.id)}
-          index={page * pageSize + i}
-        />
-      ))}
+    <div className="flex flex-col">
+      <div ref={parentRef} className="max-h-[400px] overflow-y-auto p-2">
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const c = contacts[virtualRow.index] as any;
+            return (
+              <div
+                key={c.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <ContactCard
+                  c={c}
+                  isActive={selectedId === c.id}
+                  isSelected={selection.selectedIds.has(c.id)}
+                  onSelect={() => onSelect(c)}
+                  onToggle={() => selection.toggle(c.id)}
+                  index={page * pageSize + virtualRow.index}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
       {contacts.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-2">Nessun risultato</p>
       )}
