@@ -110,10 +110,23 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
                 </Button>
               </>
             )}
+            {isPending && onStartJob && (
+              <Button
+                size="sm"
+                onClick={() => onStartJob(mainJob.id)}
+                className={`h-7 text-xs px-3 ${th.btnResume}`}
+              >
+                <Play className="w-3.5 h-3.5 mr-1" /> Avvia
+              </Button>
+            )}
             {isPaused && (
               <Button
                 size="sm"
-                onClick={() => pauseResume.mutate({ jobId: mainJob.id, action: "resume" })}
+                onClick={() => {
+                  pauseResume.mutate({ jobId: mainJob.id, action: "resume" }, {
+                    onSuccess: () => { if (onStartJob) onStartJob(mainJob.id); }
+                  });
+                }}
                 className={`h-7 text-xs px-3 ${th.btnResume}`}
               >
                 <Play className="w-3.5 h-3.5 mr-1" /> Riprendi
