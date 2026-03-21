@@ -294,7 +294,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
   }, []);
 
   return (
-    <Card>
+    <Card ref={ref}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="w-5 h-5" />
