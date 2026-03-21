@@ -1,13 +1,50 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import type { AgentStatusItem } from "@/hooks/useDailyBriefing";
 
 interface Props {
   agents: AgentStatusItem[];
 }
 
-export function AgentStatusPanel({ agents }: Props) {
+export function AgentStatusPanel({ agents: initialAgents }: Props) {
   const navigate = useNavigate();
+  const [agents, setAgents] = useState(initialAgents);
+
+  // Sync from parent
+  useEffect(() => { setAgents(initialAgents); }, [initialAgents]);
+
+  // Realtime subscription on agent_tasks
+  useEffect(() => {
+    if (!initialAgents || initialAgents.length === 0) return;
+
+    const channel = supabase
+      .channel("home-agent-tasks")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agent_tasks" },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row?.agent_id) return;
+          setAgents(prev =>
+            prev.map(a => {
+              if (a.id !== row.agent_id) return a;
+              if (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status))) {
+                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: row.description || a.lastTask };
+              }
+              if (payload.eventType === "UPDATE" && row.status === "completed") {
+                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: row.description || a.lastTask };
+              }
+              return a;
+            })
+          );
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [initialAgents]);
 
   if (!agents || agents.length === 0) return null;
 
@@ -16,7 +53,7 @@ export function AgentStatusPanel({ agents }: Props) {
       <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         👥 Team Agenti
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {agents.map((agent) => {
           const isWorking = agent.activeTasks > 0;
           return (
@@ -24,23 +61,36 @@ export function AgentStatusPanel({ agents }: Props) {
               key={agent.id}
               onClick={() => navigate(`/agent-chat?agent=${agent.id}`)}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:scale-105",
+                "flex flex-col gap-1 rounded-xl border p-3 text-left transition-all hover:scale-[1.02]",
                 isWorking
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border/50 bg-muted/30 text-muted-foreground hover:text-foreground"
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border/50 bg-muted/20 hover:bg-muted/30"
               )}
             >
-              <span className="text-base leading-none">{agent.emoji}</span>
-              <span>{agent.name}</span>
-              {isWorking && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-bold text-primary">
-                  {agent.activeTasks}
-                </span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg leading-none">{agent.emoji}</span>
+                <span className="text-xs font-semibold text-foreground truncate">{agent.name}</span>
+                {isWorking && (
+                  <span className="ml-auto flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                )}
+              </div>
+
+              {isWorking ? (
+                <div className="text-[10px] text-primary/80 truncate pl-7">
+                  {agent.activeTasks} task attivi
+                </div>
+              ) : agent.completedToday > 0 ? (
+                <div className="text-[10px] text-muted-foreground/70 truncate pl-7">
+                  ✓ {agent.completedToday} completati oggi
+                </div>
+              ) : (
+                <div className="text-[10px] text-muted-foreground/50 pl-7">Idle</div>
               )}
-              {!isWorking && agent.completedToday > 0 && (
-                <span className="text-[10px] text-muted-foreground/60">
-                  ✓{agent.completedToday}
-                </span>
+
+              {agent.lastTask && (
+                <div className="text-[10px] text-muted-foreground/60 truncate pl-7 italic">
+                  {agent.lastTask}
+                </div>
               )}
             </button>
           );
