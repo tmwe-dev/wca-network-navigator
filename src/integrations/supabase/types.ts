@@ -962,11 +962,14 @@ export type Database = {
           error_message: string | null
           html_body: string
           id: string
+          open_count: number | null
+          opened_at: string | null
           partner_id: string
           position: number
           recipient_email: string
           recipient_name: string | null
           retry_count: number
+          scheduled_at: string | null
           sent_at: string | null
           status: string
           subject: string
@@ -978,11 +981,14 @@ export type Database = {
           error_message?: string | null
           html_body: string
           id?: string
+          open_count?: number | null
+          opened_at?: string | null
           partner_id: string
           position?: number
           recipient_email: string
           recipient_name?: string | null
           retry_count?: number
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string
           subject: string
@@ -994,11 +1000,14 @@ export type Database = {
           error_message?: string | null
           html_body?: string
           id?: string
+          open_count?: number | null
+          opened_at?: string | null
           partner_id?: string
           position?: number
           recipient_email?: string
           recipient_name?: string | null
           retry_count?: number
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string
           subject?: string
