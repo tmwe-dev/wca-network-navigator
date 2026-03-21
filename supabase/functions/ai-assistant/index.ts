@@ -1418,6 +1418,12 @@ async function executeCreateDownloadJob(args: Record<string, unknown>) {
 
   if (error) return { error: `Errore creazione job: ${error.message}` };
 
+  // Create individual items for V4 item-level tracking
+  const jobItems = wcaIds.map((id: number, i: number) => ({ job_id: job.id, wca_id: id, position: i, status: "pending" }));
+  for (let i = 0; i < jobItems.length; i += 500) {
+    await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500));
+  }
+
   const modeLabels: Record<string, string> = { new: "Nuovi partner", no_profile: "Solo profili mancanti", all: "Aggiorna tutti" };
   return {
     success: true, job_id: job.id, country: `${countryName} (${countryCode})`, mode: modeLabels[mode] || mode,
