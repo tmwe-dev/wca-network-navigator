@@ -304,6 +304,43 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         </Badge>
       </div>
 
+      {/* Business card miniature */}
+      {matchedCard && (
+        <Section>
+          <SectionTitle icon={Handshake}>Biglietto da visita</SectionTitle>
+          <div className="flex gap-3 items-start">
+            {matchedCard.photo_url && (
+              <div className="w-24 shrink-0 rounded-lg overflow-hidden border border-border/50">
+                <AspectRatio ratio={16 / 9}>
+                  <img
+                    src={matchedCard.photo_url}
+                    alt="Biglietto"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </AspectRatio>
+              </div>
+            )}
+            <div className="flex-1 min-w-0 space-y-1">
+              {matchedCard.event_name && (
+                <p className="text-xs font-medium text-foreground">{matchedCard.event_name}</p>
+              )}
+              {matchedCard.met_at && (
+                <p className="text-[10px] text-muted-foreground">
+                  Incontrato: {format(new Date(matchedCard.met_at), "dd MMM yyyy", { locale: it })}
+                </p>
+              )}
+              {matchedCard.location && (
+                <p className="text-[10px] text-muted-foreground">{matchedCard.location}</p>
+              )}
+              <Badge className="text-[9px] bg-emerald-500/15 text-emerald-400 border-0">
+                <Handshake className="w-2.5 h-2.5 mr-0.5" /> Incontrato personalmente
+              </Badge>
+            </div>
+          </div>
+        </Section>
+      )}
+
       {/* Enrichment Card */}
       <ContactEnrichmentCard
         enrichmentData={c.enrichment_data}
