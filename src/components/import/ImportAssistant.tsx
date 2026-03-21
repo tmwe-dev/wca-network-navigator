@@ -7,7 +7,7 @@ import { Bot, Send, Loader2, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import ReactMarkdown from "react-markdown";
+import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 
 interface Message {
   role: "user" | "assistant";
