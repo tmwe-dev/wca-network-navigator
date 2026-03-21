@@ -62,6 +62,11 @@ export default function Dashboard() {
             <Campaigns />
           </Suspense>
         )}
+        {tab === "ops" && (
+          <Suspense fallback={<TabFallback />}>
+            <OperationsCenterLazy />
+          </Suspense>
+        )}
       </div>
     </div>
   );
