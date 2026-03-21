@@ -903,19 +903,90 @@ Deno.serve(async (req) => {
     const parsed = parseProfileFromContent(html, markdown, wcaId)
 
     if (!parsed || !parsed.company_name) {
-      const response: any = { success: true, found: false, wcaId, authStatus }
-      if (preview) {
-        response.authDetails = loginDetails
-        response.htmlSnippet = html.substring(0, 3000)
-        response.contactsFound = 0
+      // ── Fallback: try alternative WCA domains ──
+      let fallbackParsed: ReturnType<typeof parseProfileFromContent> = null
+      let fallbackDomain = ''
+      for (let di = 1; di < WCA_DOMAINS.length; di++) {
+        const altUrl = `https://${WCA_DOMAINS[di]}/directory/members/${wcaId}`
+        console.log(`Trying fallback domain: ${altUrl}`)
+        try {
+          let altHtml = ''
+          let altMarkdown = ''
+          if (wcaSessionCookie) {
+            const altResult = await directFetchPage(altUrl, wcaSessionCookie)
+            altHtml = altResult.html
+            if (altResult.contactsAuthenticated || (!altResult.membersOnly && !altResult.loginPrompt)) {
+              authStatus = 'authenticated'
+            }
+          }
+          if (!altHtml) {
+            const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
+            if (apiKey) {
+              const sr = await fetch('https://api.firecrawl.dev/v1/scrape', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: altUrl, formats: ['markdown', 'rawHtml'] }),
+              })
+              const sd = await sr.json()
+              if (sr.ok) {
+                altMarkdown = sd?.data?.markdown || sd?.markdown || ''
+                altHtml = sd?.data?.rawHtml || sd?.rawHtml || ''
+              }
+            }
+          }
+          if (altHtml && !altMarkdown) altMarkdown = htmlToSimpleMarkdown(altHtml)
+          const altParsed = parseProfileFromContent(altHtml, altMarkdown, wcaId)
+          if (altParsed?.company_name) {
+            fallbackParsed = altParsed
+            fallbackDomain = WCA_DOMAINS[di]
+            html = altHtml
+            markdown = altMarkdown
+            console.log(`Found on fallback domain: ${fallbackDomain}`)
+            break
+          }
+        } catch (e) {
+          console.error(`Fallback ${WCA_DOMAINS[di]} failed:`, e)
+        }
       }
-      return new Response(
-        JSON.stringify(response),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
 
-    console.log(`Parsed ID ${wcaId}: ${parsed.company_name} (${parsed.city}, ${parsed.country_code}) — ${parsed.contacts.length} contacts`)
+      if (!fallbackParsed) {
+        const response: any = { success: true, found: false, wcaId, authStatus }
+        if (preview) {
+          response.authDetails = loginDetails
+          response.htmlSnippet = html.substring(0, 3000)
+          response.contactsFound = 0
+        }
+        return new Response(
+          JSON.stringify(response),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Use fallback result
+      const contactsWithData = fallbackParsed.contacts.filter((c: any) => c.email || c.phone || c.mobile)
+      console.log(`Parsed ID ${wcaId} from ${fallbackDomain}: ${fallbackParsed.company_name} — ${fallbackParsed.contacts.length} contacts`)
+      
+      if (preview) {
+        return new Response(
+          JSON.stringify({
+            success: true, found: true, wcaId, authStatus,
+            authDetails: `Found on ${fallbackDomain}. ${loginDetails}`,
+            partner: {
+              company_name: fallbackParsed.company_name, city: fallbackParsed.city,
+              country: fallbackParsed.country, country_code: fallbackParsed.country_code,
+              office_type: fallbackParsed.office_type, email: fallbackParsed.email,
+              phone: fallbackParsed.phone, website: fallbackParsed.website,
+              networks: fallbackParsed.networks, contacts: fallbackParsed.contacts,
+            },
+            contactsFound: contactsWithData.length, totalContacts: fallbackParsed.contacts.length,
+            htmlSnippet: html.substring(0, 5000),
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, fallbackParsed, callerCountryCode, aiParse)
+    }
 
     // ── Preview mode: return data without saving ──
     if (preview) {
