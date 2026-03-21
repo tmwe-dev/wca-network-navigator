@@ -923,6 +923,19 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       return error ? { error: error.message } : { count: data?.length || 0, cards: data || [] };
     }
 
+    case "execute_ui_action": {
+      const action = String(args.action || "toast");
+      const target = String(args.target || "");
+      const params = (args.params || {}) as Record<string, unknown>;
+      return {
+        success: true,
+        ui_action: { action, target, params },
+        message: action === "navigate" ? `Navigazione a ${target}` :
+                 action === "toast" ? `Notifica: ${target}` :
+                 `Filtro applicato: ${target}`,
+      };
+    }
+
     // ━━━ Management Tools ━━━
     case "create_agent_task": {
       // Find agent by name or role
