@@ -6,11 +6,11 @@ import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pa
 import { saveExtractionResult } from "@/lib/download/profileSaver";
 
 /**
- * V4: Item-level deterministic download engine.
- * - Reads items from download_job_items
- * - Per-item state machine: pending → processing → success/error
- * - Bridge health separated from extraction result
- * - No session gates, no heuristics
+ * V5: Resilient download engine.
+ * - Backoff retry on bridge failures instead of immediate pause
+ * - Re-checks extension availability before each extraction
+ * - Auto-generates missing download_job_items
+ * - Data integrity guards (blocks invalid extractions)
  */
 export function useDownloadEngine() {
   const { extractContacts, checkAvailable } = useExtensionBridge();
@@ -43,7 +43,7 @@ export function useDownloadEngine() {
       const claimed = await claimJob(jobId);
       if (!claimed) return;
 
-      // 2b. Safety: ensure download_job_items exist (edge functions may have missed them)
+      // 2b. Safety: ensure download_job_items exist
       const { count: itemCount } = await supabase.from("download_job_items").select("id", { count: "exact", head: true }).eq("job_id", jobId);
       if (!itemCount || itemCount === 0) {
         const { data: jobData } = await supabase.from("download_jobs").select("wca_ids").eq("id", jobId).single();
@@ -93,16 +93,30 @@ export function useDownloadEngine() {
         // Extract
         const result = await extractRef.current(item.wca_id);
 
-        // Bridge health check
+        // Bridge health check with exponential backoff
         if (!result.bridgeHealthy) {
           consecutiveBridgeFails++;
           await updateItem(item.id, "temporary_error", { errorCode: result.bridgeError || "EXT_BRIDGE_TIMEOUT", errorMessage: "Bridge not responding" });
           await emitEvent(jobId, item.id, "item_failed", { errorCode: result.bridgeError });
 
-          if (consecutiveBridgeFails >= 3) {
-            await pauseJob(jobId, "Estensione non risponde — verifica che sia attiva");
+          if (consecutiveBridgeFails >= 5) {
+            await pauseJob(jobId, "Estensione non risponde — verifica che sia attiva e riprova");
             break;
           }
+
+          // Exponential backoff: 5s, 10s, 20s, 40s before retrying
+          const backoffMs = Math.min(5000 * Math.pow(2, consecutiveBridgeFails - 1), 40000);
+          console.log(`[DL-ENGINE] Bridge fail #${consecutiveBridgeFails}, backoff ${backoffMs}ms`);
+          await sleep(backoffMs, ac.signal);
+          if (ac.signal.aborted) break;
+
+          // Re-check extension availability after backoff
+          const stillAvailable = await checkAvailable();
+          if (!stillAvailable) {
+            await pauseJob(jobId, "Estensione Chrome disconnessa — ricarica la pagina e riprova");
+            break;
+          }
+
           itemsProcessed++;
           continue;
         }
@@ -111,17 +125,27 @@ export function useDownloadEngine() {
         const ext = result.extraction!;
         const state = ext.state;
 
+        // Data integrity guard: verify the extraction is genuinely valid
         if (state === "ok") {
-          // Save data
-          const partnerId = await ensurePartner(item.wca_id, ext.companyName, job.country_code, job.country_name);
-          let cf = 0, cm = 0;
-          if (partnerId) {
-            const saved = await saveExtractionResult(partnerId, item.wca_id, { success: true, ...ext }, ext.companyName || "");
-            cf = (saved.hasEmail || saved.hasPhone) ? 1 : 0;
-            cm = cf ? 0 : 1;
+          const cn = (ext.companyName || "").toLowerCase();
+          const isInvalidName = cn.includes("member not found") || cn.includes("not found") || cn.includes("please try again") || cn.length < 2;
+          
+          if (isInvalidName) {
+            // False positive — extraction reported ok but data is invalid
+            await updateItem(item.id, "member_not_found", { errorCode: "WCA_INVALID_EXTRACTION", errorMessage: `Invalid company name: ${ext.companyName}` });
+            await emitEvent(jobId, item.id, "item_failed", { state: "member_not_found", errorCode: "WCA_INVALID_EXTRACTION" });
+          } else {
+            // Genuine success — save data
+            const partnerId = await ensurePartner(item.wca_id, ext.companyName, job.country_code, job.country_name);
+            let cf = 0, cm = 0;
+            if (partnerId) {
+              const saved = await saveExtractionResult(partnerId, item.wca_id, { success: true, ...ext }, ext.companyName || "");
+              cf = (saved.hasEmail || saved.hasPhone) ? 1 : 0;
+              cm = cf ? 0 : 1;
+            }
+            await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
+            await emitEvent(jobId, item.id, "item_success", { companyName: ext.companyName });
           }
-          await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
-          await emitEvent(jobId, item.id, "item_success", { companyName: ext.companyName });
         } else if (state === "member_not_found") {
           await updateItem(item.id, "member_not_found", { errorCode: ext.errorCode || "WCA_PROFILE_NOT_FOUND" });
           try { await supabase.from("partners_no_contacts").upsert({ wca_id: item.wca_id, company_name: ext.companyName || `WCA ${item.wca_id}`, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" }); } catch {}
@@ -129,11 +153,10 @@ export function useDownloadEngine() {
         } else if (state === "login_required") {
           await updateItem(item.id, "temporary_error", { errorCode: "WCA_LOGIN_REQUIRED", errorMessage: "Login richiesto" });
           await emitEvent(jobId, item.id, "item_failed", { state, errorCode: "WCA_LOGIN_REQUIRED" });
-          // Login required means all subsequent will fail too
-          await pauseJob(jobId, "Sessione WCA scaduta — effettua il login su wcaworld.com e riprendi");
+          await pauseJob(jobId, "Sessione WCA scaduta — effettua il login su wcaworld.com e ripremi Avvia");
           break;
         } else {
-          // not_loaded, extraction_error, bridge_error
+          // not_loaded, extraction_error
           await updateItem(item.id, "temporary_error", { errorCode: ext.errorCode || "UNKNOWN", errorMessage: ext.error || state });
           await emitEvent(jobId, item.id, "item_failed", { state, errorCode: ext.errorCode });
         }

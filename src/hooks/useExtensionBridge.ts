@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
- * V4: Extension bridge with health separation.
- * - No polling
+ * V5: Extension bridge with improved reliability.
+ * - Content script handles ping locally (fast)
+ * - Heartbeat-based availability detection
  * - Serial queue for extractions
  * - Returns BridgeResult with bridgeHealthy flag
  */
@@ -53,13 +54,18 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
 export function useExtensionBridge() {
   const [isAvailable, setIsAvailable] = useState(false);
   const pendingRef = useRef<Map<string, (r: RawResponse) => void>>(new Map());
+  const lastHeartbeatRef = useRef<number>(0);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
       const data = event.data;
       if (!data || data.direction !== "from-extension") return;
-      if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
+      if (data.action === "contentScriptReady") {
+        setIsAvailable(true);
+        lastHeartbeatRef.current = Date.now();
+        return;
+      }
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
         pendingRef.current.delete(data.requestId);
@@ -83,9 +89,15 @@ export function useExtensionBridge() {
   }, []);
 
   const checkAvailable = useCallback(async (): Promise<boolean> => {
+    // Quick check: if heartbeat was recent, we're good
+    if (Date.now() - lastHeartbeatRef.current < 15000) {
+      setIsAvailable(true);
+      return true;
+    }
+    // Ping with retries
     for (let i = 0; i < 3; i++) {
       const r = await sendMessage("ping", {}, 3000);
-      if (r.success) { setIsAvailable(true); return true; }
+      if (r.success) { setIsAvailable(true); lastHeartbeatRef.current = Date.now(); return true; }
       if (i < 2) await new Promise((r) => setTimeout(r, 800));
     }
     return false;
@@ -96,7 +108,7 @@ export function useExtensionBridge() {
       const raw = await sendMessage("extractContacts", { wcaId }, 60000);
 
       // Bridge-level failure
-      if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT") {
+      if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT" || raw.errorCode === "EXT_CONTEXT_INVALIDATED") {
         return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
       }
 
