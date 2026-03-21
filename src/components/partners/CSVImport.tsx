@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ function rowToPartner(headers: string[], row: string[]): ParsedPartner | null {
   } as ParsedPartner;
 }
 
-export function CSVImport() {
+export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, ref) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ParsedPartner[]>([]);
   const [importing, setImporting] = useState(false);
@@ -294,7 +294,7 @@ export function CSVImport() {
   }, []);
 
   return (
-    <Card>
+    <Card ref={ref}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="w-5 h-5" />
@@ -412,4 +412,6 @@ export function CSVImport() {
       </CardContent>
     </Card>
   );
-}
+});
+
+CSVImport.displayName = "CSVImport";
