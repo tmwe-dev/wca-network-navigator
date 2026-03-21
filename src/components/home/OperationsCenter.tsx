@@ -247,7 +247,7 @@ export function OperationsCenter() {
   const [activeTab, setActiveTab] = useState("overview");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-background">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-background">
       {/* Stats Bar */}
       <div className="flex-shrink-0 p-4 border-b border-border/50">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
