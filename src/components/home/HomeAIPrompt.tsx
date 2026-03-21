@@ -64,7 +64,7 @@ function buildSmartPrompts(stats?: Props["systemStats"], briefingActions?: Brief
   return prompts.slice(0, 4);
 }
 
-export function HomeAIPrompt({ className, systemStats }: Props) {
+export function HomeAIPrompt({ className, systemStats, briefingActions, agents, externalPrompt, onExternalPromptConsumed }: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -73,7 +73,15 @@ export function HomeAIPrompt({ className, systemStats }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  const smartPrompts = useMemo(() => buildSmartPrompts(systemStats), [systemStats]);
+  const smartPrompts = useMemo(() => buildSmartPrompts(systemStats, briefingActions), [systemStats, briefingActions]);
+
+  // Handle external prompt from briefing actions
+  useEffect(() => {
+    if (externalPrompt) {
+      send(externalPrompt);
+      onExternalPromptConsumed?.();
+    }
+  }, [externalPrompt]);
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
