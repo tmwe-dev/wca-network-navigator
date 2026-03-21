@@ -42,6 +42,12 @@ const MANAGEMENT_TOOLS: string[] = [
   "update_agent_prompt", "add_agent_kb_entry",
 ];
 
+// Strategic tools — only for Director (Luca)
+const STRATEGIC_TOOLS: string[] = [
+  "create_work_plan", "list_work_plans", "update_work_plan",
+  "manage_workspace_preset", "get_system_analytics",
+];
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Templates
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
