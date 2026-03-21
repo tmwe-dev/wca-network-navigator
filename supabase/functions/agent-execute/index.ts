@@ -404,6 +404,33 @@ const ALL_TOOLS: Record<string, any> = {
       },
     },
   },
+  schedule_email: {
+    type: "function",
+    function: {
+      name: "schedule_email",
+      description: "Schedule an email to be sent at a specific date and time. The email is queued and will be sent automatically by the system even if the browser is closed.",
+      parameters: {
+        type: "object",
+        properties: {
+          to_email: { type: "string", description: "Recipient email address" },
+          to_name: { type: "string", description: "Recipient name" },
+          subject: { type: "string", description: "Email subject" },
+          html_body: { type: "string", description: "HTML body of the email" },
+          partner_id: { type: "string", description: "Partner ID (for tracking)" },
+          scheduled_at: { type: "string", description: "ISO 8601 datetime when to send (e.g. 2026-03-25T09:00:00Z)" },
+        },
+        required: ["to_email", "subject", "html_body", "scheduled_at"],
+      },
+    },
+  },
+  get_operations_dashboard: {
+    type: "function",
+    function: {
+      name: "get_operations_dashboard",
+      description: "Get a complete real-time overview of all system operations: active downloads, email queue, agent tasks, scheduled activities.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
   // ━━━ Management Tools (Director only) ━━━
   create_agent_task: {
     type: "function",
