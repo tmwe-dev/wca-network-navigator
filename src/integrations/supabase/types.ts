@@ -570,6 +570,7 @@ export type Database = {
           partner_id: string
           phone: string | null
           status: Database["public"]["Enums"]["campaign_job_status"]
+          user_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -587,6 +588,7 @@ export type Database = {
           partner_id: string
           phone?: string | null
           status?: Database["public"]["Enums"]["campaign_job_status"]
+          user_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -604,6 +606,7 @@ export type Database = {
           partner_id?: string
           phone?: string | null
           status?: Database["public"]["Enums"]["campaign_job_status"]
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -916,6 +919,7 @@ export type Database = {
           total_found: number
           total_processed: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           country_code: string
@@ -931,6 +935,7 @@ export type Database = {
           total_found?: number
           total_processed?: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           country_code?: string
@@ -946,6 +951,7 @@ export type Database = {
           total_found?: number
           total_processed?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -964,6 +970,7 @@ export type Database = {
           sent_at: string | null
           status: string
           subject: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -979,6 +986,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           subject: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -994,6 +1002,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           subject?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1234,6 +1243,7 @@ export type Database = {
           position: string | null
           raw_data: Json | null
           row_number: number
+          user_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -1264,6 +1274,7 @@ export type Database = {
           position?: string | null
           raw_data?: Json | null
           row_number?: number
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -1294,6 +1305,7 @@ export type Database = {
           position?: string | null
           raw_data?: Json | null
           row_number?: number
+          user_id?: string | null
           zip_code?: string | null
         }
         Relationships: [
@@ -1316,6 +1328,7 @@ export type Database = {
           notes: string | null
           partner_id: string
           subject: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1326,6 +1339,7 @@ export type Database = {
           notes?: string | null
           partner_id: string
           subject: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1336,6 +1350,7 @@ export type Database = {
           notes?: string | null
           partner_id?: string
           subject?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1392,18 +1407,21 @@ export type Database = {
           created_at: string | null
           id: string
           partner_id: string
+          user_id: string | null
         }
         Insert: {
           certification: Database["public"]["Enums"]["certification_type"]
           created_at?: string | null
           id?: string
           partner_id: string
+          user_id?: string | null
         }
         Update: {
           certification?: Database["public"]["Enums"]["certification_type"]
           created_at?: string | null
           id?: string
           partner_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1427,6 +1445,7 @@ export type Database = {
           name: string
           partner_id: string
           title: string | null
+          user_id: string | null
         }
         Insert: {
           contact_alias?: string | null
@@ -1439,6 +1458,7 @@ export type Database = {
           name: string
           partner_id: string
           title?: string | null
+          user_id?: string | null
         }
         Update: {
           contact_alias?: string | null
@@ -1451,6 +1471,7 @@ export type Database = {
           name?: string
           partner_id?: string
           title?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1470,6 +1491,7 @@ export type Database = {
           network_id: string | null
           network_name: string
           partner_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1478,6 +1500,7 @@ export type Database = {
           network_id?: string | null
           network_name: string
           partner_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1486,6 +1509,7 @@ export type Database = {
           network_id?: string | null
           network_name?: string
           partner_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1503,18 +1527,21 @@ export type Database = {
           id: string
           partner_id: string
           service_category: Database["public"]["Enums"]["service_category"]
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           partner_id: string
           service_category: Database["public"]["Enums"]["service_category"]
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           partner_id?: string
           service_category?: Database["public"]["Enums"]["service_category"]
+          user_id?: string | null
         }
         Relationships: [
           {
