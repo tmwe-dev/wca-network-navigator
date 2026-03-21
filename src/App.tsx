@@ -11,7 +11,7 @@ import { RuntimeDiagnosticPanel } from "@/components/system/RuntimeDiagnosticPan
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 
 
-// ── New consolidated pages ──
+// ── New consolidated pages (with prefetch for high-traffic routes) ──
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const NetworkPage = lazy(() => import("./pages/Network"));
 const CRM = lazy(() => import("./pages/CRM"));
@@ -19,6 +19,17 @@ const Outreach = lazy(() => import("./pages/Outreach"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Agents = lazy(() => import("./pages/Agents"));
 const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
+
+// Prefetch high-traffic routes after initial load
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      import("./pages/Network");
+      import("./pages/Outreach");
+      import("./pages/CRM");
+    }, 3000);
+  }, { once: true });
+}
 
 // ── Standalone pages ──
 const Auth = lazy(() => import("./pages/Auth"));
