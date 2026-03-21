@@ -1,20 +1,19 @@
 // ══════════════════════════════════════════════════
-// WCA Cookie Sync - Content Script Bridge
-// Injected into the webapp pages to relay messages
-// between window.postMessage (webapp) and chrome.runtime (background)
+// WCA Content Script Bridge V3
+// Relays messages between webapp and background
+// Uses origin-scoped postMessage for security
 // ══════════════════════════════════════════════════
 
 (function () {
-  // Guard: if extension context is already dead, bail out silently
   if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) return;
+
+  var appOrigin = window.location.origin;
 
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
-
     var data = event.data;
     if (!data || data.direction !== "from-webapp") return;
 
-    // Forward ALL fields from the webapp message (action, wcaId, username, password, etc.)
     var msg = { source: "wca-content-bridge" };
     var keys = Object.keys(data);
     for (var i = 0; i < keys.length; i++) {
@@ -22,59 +21,27 @@
     }
 
     try {
-      chrome.runtime.sendMessage(msg,
-        function (response) {
-          // Check for invalidated context inside callback too
-          if (chrome.runtime.lastError) {
-            console.warn("[WCA Content] Extension context lost:", chrome.runtime.lastError.message);
-            window.postMessage(
-              {
-                direction: "from-extension",
-                action: data.action,
-                requestId: data.requestId,
-                response: { success: false, error: "Extension context invalidated" },
-              },
-              "*"
-            );
-            return;
-          }
-
-          window.postMessage(
-            {
-              direction: "from-extension",
-              action: data.action,
-              requestId: data.requestId,
-              response: response || { success: false, error: "No response from extension" },
-            },
-            "*"
-          );
-
-          if (data.action === "ping") {
-            window.postMessage(
-              { direction: "from-extension", action: "contentScriptReady" },
-              "*"
-            );
-          }
+      chrome.runtime.sendMessage(msg, function (response) {
+        if (chrome.runtime.lastError) {
+          window.postMessage({
+            direction: "from-extension", action: data.action, requestId: data.requestId,
+            response: { success: false, error: "Extension context invalidated" }
+          }, appOrigin);
+          return;
         }
-      );
+        window.postMessage({
+          direction: "from-extension", action: data.action, requestId: data.requestId,
+          response: response || { success: false, error: "No response from extension" }
+        }, appOrigin);
+      });
     } catch (err) {
-      // Extension was unloaded/reloaded — fail gracefully
-      console.warn("[WCA Content] sendMessage failed (context invalidated):", err.message);
-      window.postMessage(
-        {
-          direction: "from-extension",
-          action: data.action,
-          requestId: data.requestId,
-          response: { success: false, error: "Extension context invalidated" },
-        },
-        "*"
-      );
+      window.postMessage({
+        direction: "from-extension", action: data.action, requestId: data.requestId,
+        response: { success: false, error: "Extension context invalidated" }
+      }, appOrigin);
     }
   });
 
-  // Announce that the content script is loaded
-  window.postMessage(
-    { direction: "from-extension", action: "contentScriptReady" },
-    "*"
-  );
+  // Announce content script loaded
+  window.postMessage({ direction: "from-extension", action: "contentScriptReady" }, appOrigin);
 })();

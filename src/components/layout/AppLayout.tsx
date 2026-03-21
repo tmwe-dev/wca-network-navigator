@@ -7,7 +7,6 @@ import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
-import { useDownloadEngine } from "@/hooks/useDownloadEngine";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,7 +23,6 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
-  const { startJob } = useDownloadEngine();
   useJobHealthMonitor();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
@@ -52,12 +50,12 @@ export function AppLayout() {
         case "navigate": if (detail.path) navigate(detail.path); break;
         case "show_toast": toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" }); break;
         case "apply_filters": window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } })); break;
-        case "start_download_job": if (detail.job_id) startJob(detail.job_id); break;
+        // V3: No auto-start downloads from AI — user starts manually
       }
     };
     window.addEventListener("ai-ui-action", handler);
     return () => window.removeEventListener("ai-ui-action", handler);
-  }, [navigate, startJob]);
+  }, [navigate]);
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>

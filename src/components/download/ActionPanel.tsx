@@ -388,12 +388,6 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
   }, [selectedCountries, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
   const handleStartDownload = async () => {
-    // Silent session check + auto-login
-    const sessionOk = await ensureSession();
-    if (!sessionOk) {
-      toast({ title: "Sessione WCA non attiva", description: "Effettua il login su wcaworld.com o verifica le credenziali nelle impostazioni.", variant: "destructive" });
-      return;
-    }
     await executeDownload();
   };
 

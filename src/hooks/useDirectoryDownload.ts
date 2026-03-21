@@ -20,7 +20,7 @@ export function useDirectoryDownload({
 }: UseDirectoryDownloadArgs) {
   const queryClient = useQueryClient();
   const createJob = useCreateDownloadJob();
-  const { ensureSession, lastError: wcaLastError } = useWcaSession();
+  const { ensureSession } = useWcaSession();
 
   const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
@@ -261,8 +261,6 @@ export function useDirectoryDownload({
 
   // ── Download ──
   const handleStartDownload = async () => {
-    const sessionOk = await ensureSession();
-    if (!sessionOk) { toast.error(wcaLastError || "Sessione WCA non attiva."); return; }
     await executeDownload();
   };
 
@@ -304,6 +302,6 @@ export function useDirectoryDownload({
     networks, createJob,
     // Actions
     handleStartScan, handleStartDownload, stopScan, startScanThenDownload,
-    ensureSession, wcaLastError,
+    ensureSession,
   };
 }

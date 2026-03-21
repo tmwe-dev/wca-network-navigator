@@ -222,8 +222,6 @@ export function PartnerListPanel({
               onDownload={async () => {
                 const filteredWcaIds = filteredPartners.map((p: any) => p.wca_id).filter((id: number | null): id is number => id != null);
                 if (filteredWcaIds.length === 0) { toast.error("Nessun partner filtrato ha un WCA ID"); return; }
-                const sessionOk = await dl.ensureSession();
-                if (!sessionOk) { toast.error("Sessione WCA non attiva."); return; }
                 const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
                 if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
                 const primaryCode = countryCodes[0] || "";
