@@ -943,9 +943,14 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
 
     case "scan_directory": {
       const body: Record<string, unknown> = {};
-      if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
+      if (args.country_code) body.countryCode = String(args.country_code).toUpperCase();
+      if (args.network) body.network = args.network;
       if (args.search_by) body.searchBy = args.search_by;
       if (args.company_name) body.companyName = args.company_name;
+      if (args.city) body.city = args.city;
+      if (args.member_id) body.memberId = args.member_id;
+      if (args.page_index) body.pageIndex = Number(args.page_index);
+      if (args.page_size) body.pageSize = Number(args.page_size);
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/scrape-wca-directory`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify(body),
