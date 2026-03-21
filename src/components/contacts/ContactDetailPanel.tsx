@@ -10,6 +10,7 @@ import {
   Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
+import { ContactEnrichmentCard } from "./ContactEnrichmentCard";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
 import {
   useContactInteractions,
@@ -44,6 +45,7 @@ interface Contact {
   company_alias: string | null;
   contact_alias: string | null;
   note: string | null;
+  enrichment_data?: any;
 }
 
 interface Props {
@@ -285,6 +287,12 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
           {c.interaction_count} interazioni
         </Badge>
       </div>
+
+      {/* Enrichment Card */}
+      <ContactEnrichmentCard
+        enrichmentData={c.enrichment_data}
+        deepSearchAt={c.deep_search_at}
+      />
 
       {/* Collapsible details */}
       <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
