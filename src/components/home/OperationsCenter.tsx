@@ -287,7 +287,7 @@ export function OperationsCenter() {
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 min-h-0 px-4 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-3">
