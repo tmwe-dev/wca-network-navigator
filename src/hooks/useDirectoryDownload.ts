@@ -261,8 +261,6 @@ export function useDirectoryDownload({
 
   // ── Download ──
   const handleStartDownload = async () => {
-    const sessionOk = await ensureSession();
-    if (!sessionOk) { toast.error(wcaLastError || "Sessione WCA non attiva."); return; }
     await executeDownload();
   };
 

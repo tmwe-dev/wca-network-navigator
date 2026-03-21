@@ -50,12 +50,12 @@ export function AppLayout() {
         case "navigate": if (detail.path) navigate(detail.path); break;
         case "show_toast": toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" }); break;
         case "apply_filters": window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } })); break;
-        case "start_download_job": if (detail.job_id) startJob(detail.job_id); break;
+        // V3: No auto-start downloads from AI — user starts manually
       }
     };
     window.addEventListener("ai-ui-action", handler);
     return () => window.removeEventListener("ai-ui-action", handler);
-  }, [navigate, startJob]);
+  }, [navigate]);
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>

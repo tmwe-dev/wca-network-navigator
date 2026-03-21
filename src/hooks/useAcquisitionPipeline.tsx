@@ -72,7 +72,17 @@ export function useAcquisitionPipeline() {
   const pollingAbortRef = useRef(false);
   const extensionWarningShown = useRef(false);
 
-  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, waitForExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
+  const { isAvailable: extensionAvailable, checkAvailable: checkExtension, extractContacts: extensionExtract, verifySession } = useExtensionBridge();
+  const waitForExtension = useCallback(async (maxWaitMs = 10000): Promise<boolean> => {
+    if (extensionAvailable) return true;
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      const ok = await checkExtension();
+      if (ok) return true;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return false;
+  }, [extensionAvailable, checkExtension]);
 
   // ── Resume from active job ──
   useAcquisitionResume({
