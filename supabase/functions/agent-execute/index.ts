@@ -1087,6 +1087,124 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       return { success: true, agent_name: agent.name, kb_entries: kb.length, message: `KB entry "${args.title}" aggiunta a ${agent.name}.` };
     }
 
+    // ━━━ Strategic Tools ━━━
+    case "create_work_plan": {
+      const steps = (args.steps as any[] || []).map((s: any, i: number) => ({
+        index: i, title: s.title || `Step ${i + 1}`, description: s.description || "", status: "pending",
+      }));
+      const { data, error } = await supabase.from("ai_work_plans").insert({
+        user_id: userId, title: String(args.title),
+        description: String(args.description || ""),
+        steps: steps as any, status: "active",
+        tags: (args.tags || []) as any,
+        metadata: { created_by: "luca_director", created_at: new Date().toISOString() } as any,
+      }).select("id, title").single();
+      if (error) return { error: error.message };
+      return { success: true, plan_id: data.id, title: data.title, total_steps: steps.length, message: `Piano "${data.title}" creato con ${steps.length} step.` };
+    }
+
+    case "list_work_plans": {
+      let query = supabase.from("ai_work_plans").select("id, title, description, status, current_step, steps, tags, created_at, completed_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
+      if (args.status) query = query.eq("status", args.status);
+      const { data, error } = await query;
+      if (error) return { error: error.message };
+      const plans = (data || []).map((p: any) => ({
+        ...p, total_steps: Array.isArray(p.steps) ? p.steps.length : 0,
+        completed_steps: Array.isArray(p.steps) ? p.steps.filter((s: any) => s.status === "completed").length : 0,
+      }));
+      if (args.tag) return { count: plans.filter((p: any) => p.tags?.includes(args.tag)).length, plans: plans.filter((p: any) => p.tags?.includes(args.tag)) };
+      return { count: plans.length, plans };
+    }
+
+    case "update_work_plan": {
+      const { data: plan, error: fetchErr } = await supabase.from("ai_work_plans").select("*").eq("id", args.plan_id).eq("user_id", userId).single();
+      if (fetchErr || !plan) return { error: "Piano non trovato" };
+      const updates: Record<string, unknown> = {};
+      if (args.status) updates.status = args.status;
+      if (args.advance_step) {
+        const steps = (plan.steps as any[]) || [];
+        if (plan.current_step < steps.length) {
+          steps[plan.current_step].status = "completed";
+          updates.steps = steps;
+          updates.current_step = plan.current_step + 1;
+          if (plan.current_step + 1 >= steps.length) { updates.status = "completed"; updates.completed_at = new Date().toISOString(); }
+        }
+      }
+      if (args.metadata_note) {
+        const meta = (plan.metadata as Record<string, unknown>) || {};
+        const notes = (meta.notes as string[]) || [];
+        notes.push(`[${new Date().toISOString()}] ${args.metadata_note}`);
+        meta.notes = notes;
+        updates.metadata = meta;
+      }
+      const { error } = await supabase.from("ai_work_plans").update(updates).eq("id", args.plan_id);
+      if (error) return { error: error.message };
+      return { success: true, message: `Piano aggiornato.`, updates: Object.keys(updates) };
+    }
+
+    case "manage_workspace_preset": {
+      const action = String(args.action);
+      if (action === "list") {
+        const { data, error } = await supabase.from("workspace_presets").select("id, name, goal, base_proposal, created_at").eq("user_id", userId).order("created_at", { ascending: false });
+        return error ? { error: error.message } : { count: data?.length || 0, presets: data || [] };
+      }
+      if (action === "create") {
+        const { data, error } = await supabase.from("workspace_presets").insert({
+          user_id: userId, name: String(args.name || "Nuovo preset"),
+          goal: String(args.goal || ""), base_proposal: String(args.base_proposal || ""),
+        }).select("id, name").single();
+        return error ? { error: error.message } : { success: true, preset_id: data.id, message: `Preset "${data.name}" creato.` };
+      }
+      if (action === "update" && args.preset_id) {
+        const updates: Record<string, unknown> = {};
+        if (args.name) updates.name = args.name;
+        if (args.goal) updates.goal = args.goal;
+        if (args.base_proposal) updates.base_proposal = args.base_proposal;
+        const { error } = await supabase.from("workspace_presets").update(updates).eq("id", args.preset_id).eq("user_id", userId);
+        return error ? { error: error.message } : { success: true, message: "Preset aggiornato." };
+      }
+      if (action === "delete" && args.preset_id) {
+        const { error } = await supabase.from("workspace_presets").delete().eq("id", args.preset_id).eq("user_id", userId);
+        return error ? { error: error.message } : { success: true, message: "Preset eliminato." };
+      }
+      return { error: "Azione non valida. Usa: create, list, update, delete." };
+    }
+
+    case "get_system_analytics": {
+      const results: Record<string, unknown> = {};
+      // Partners
+      const { count: totalPartners } = await supabase.from("partners").select("id", { count: "exact", head: true });
+      const { count: partnersWithEmail } = await supabase.from("partners").select("id", { count: "exact", head: true }).not("email", "is", null);
+      const { count: partnersWithProfile } = await supabase.from("partners").select("id", { count: "exact", head: true }).not("raw_profile_html", "is", null);
+      const { count: partnersConverted } = await supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "converted");
+      const { count: partnersContacted } = await supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "contacted");
+      results.partners = { total: totalPartners, with_email: partnersWithEmail, with_profile: partnersWithProfile, converted: partnersConverted, contacted: partnersContacted };
+      // Contacts
+      const { count: totalContacts } = await supabase.from("imported_contacts").select("id", { count: "exact", head: true });
+      const { count: contactsWithEmail } = await supabase.from("imported_contacts").select("id", { count: "exact", head: true }).not("email", "is", null);
+      results.contacts = { total: totalContacts, with_email: contactsWithEmail };
+      // Prospects
+      const { count: totalProspects } = await supabase.from("prospects").select("id", { count: "exact", head: true });
+      results.prospects = { total: totalProspects };
+      // Email queue
+      const { count: emailsPending } = await supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending");
+      const { count: emailsSent } = await supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent");
+      results.email_campaigns = { pending: emailsPending, sent: emailsSent };
+      // Agent tasks
+      const { data: taskData } = await supabase.from("agent_tasks").select("status").eq("user_id", userId);
+      const taskCounts: Record<string, number> = {};
+      for (const t of (taskData || []) as any[]) { taskCounts[t.status] = (taskCounts[t.status] || 0) + 1; }
+      results.agent_tasks = taskCounts;
+      // Activities
+      const { count: activitiesPending } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending");
+      const { count: activitiesOverdue } = await supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").lt("due_date", new Date().toISOString().split("T")[0]);
+      results.activities = { pending: activitiesPending, overdue: activitiesOverdue };
+      // Work plans
+      const { count: plansActive } = await supabase.from("ai_work_plans").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "active");
+      results.work_plans = { active: plansActive };
+      return results;
+    }
+
     default:
       return { error: `Tool sconosciuto: ${name}` };
   }
