@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateDownloadJob } from "@/hooks/useDownloadJobs";
-import { useWcaSession } from "@/hooks/useWcaSession";
+// useWcaSession removed — no session gates
 import { scrapeWcaDirectory, type DirectoryMember, type DirectoryResult } from "@/lib/api/wcaScraper";
 
 interface UseDirectoryDownloadArgs {
