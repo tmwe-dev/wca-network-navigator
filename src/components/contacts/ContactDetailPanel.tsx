@@ -10,6 +10,7 @@ import {
   Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown
 } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
+import { ContactEnrichmentCard } from "./ContactEnrichmentCard";
 import { ContactInteractionTimeline } from "./ContactInteractionTimeline";
 import {
   useContactInteractions,
