@@ -103,7 +103,7 @@ function rowToPartner(headers: string[], row: string[]): ParsedPartner | null {
   } as ParsedPartner;
 }
 
-export function CSVImport() {
+export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, ref) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ParsedPartner[]>([]);
   const [importing, setImporting] = useState(false);
