@@ -1543,6 +1543,9 @@ async function executeDownloadSinglePartner(args: Record<string, unknown>) {
 
   if (error) return { error: `Errore creazione job: ${error.message}` };
 
+  // Create item for V4 item-level tracking
+  await supabase.from("download_job_items").insert({ job_id: job.id, wca_id: wcaId, position: 0, status: "pending" });
+
   return {
     success: true, job_id: job.id, country: `${jobCountryName} (${jobCountryCode})`,
     mode: "Singolo partner", total_partners: 1, wca_id: wcaId, delay_seconds: 15,
