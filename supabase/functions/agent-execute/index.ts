@@ -1035,6 +1035,75 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       };
     }
 
+    case "schedule_email": {
+      const scheduledAt = String(args.scheduled_at);
+      const { data, error } = await supabase.from("email_campaign_queue").insert({
+        recipient_email: String(args.to_email),
+        recipient_name: args.to_name ? String(args.to_name) : null,
+        subject: String(args.subject),
+        html_body: String(args.html_body),
+        partner_id: args.partner_id ? String(args.partner_id) : "00000000-0000-0000-0000-000000000000",
+        scheduled_at: scheduledAt,
+        status: "pending",
+        user_id: userId,
+      } as any).select("id").single();
+      if (error) return { error: error.message };
+      // Also create an activity for tracking
+      await supabase.from("activities").insert({
+        title: `Email programmata: ${args.subject}`,
+        activity_type: "email",
+        source_type: "partner",
+        source_id: args.partner_id || crypto.randomUUID(),
+        partner_id: args.partner_id || null,
+        scheduled_at: scheduledAt,
+        status: "pending",
+        user_id: userId,
+        email_subject: String(args.subject),
+        email_body: String(args.html_body),
+        source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as any,
+      });
+      return { success: true, queue_id: data.id, scheduled_at: scheduledAt, message: `Email programmata per ${scheduledAt} a ${args.to_email}.` };
+    }
+
+    case "get_operations_dashboard": {
+      const [dlJobs, emailQ, agTasks, acts] = await Promise.all([
+        supabase.from("download_jobs").select("id, country_name, status, current_index, total_count, contacts_found_count, error_message, created_at").order("created_at", { ascending: false }).limit(10),
+        supabase.from("email_campaign_queue").select("id, status, scheduled_at, sent_at, recipient_email, subject").order("created_at", { ascending: false }).limit(20),
+        supabase.from("agent_tasks").select("id, agent_id, description, status, task_type, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(15),
+        supabase.from("activities").select("id, title, status, activity_type, scheduled_at, due_date").neq("status", "cancelled").order("created_at", { ascending: false }).limit(15),
+      ]);
+      
+      const downloads = dlJobs.data || [];
+      const emails = emailQ.data || [];
+      const tasks = agTasks.data || [];
+      const activities = acts.data || [];
+      
+      return {
+        downloads: {
+          active: downloads.filter((j: any) => ["running", "pending"].includes(j.status)).length,
+          completed: downloads.filter((j: any) => j.status === "completed").length,
+          failed: downloads.filter((j: any) => j.status === "failed").length,
+          jobs: downloads.map((j: any) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
+        },
+        emails: {
+          pending: emails.filter((e: any) => e.status === "pending").length,
+          sent: emails.filter((e: any) => e.status === "sent").length,
+          scheduled: emails.filter((e: any) => e.scheduled_at && e.status === "pending").length,
+          recent: emails.slice(0, 10).map((e: any) => ({ status: e.status, to: e.recipient_email, subject: e.subject, scheduled: e.scheduled_at })),
+        },
+        agent_tasks: {
+          running: tasks.filter((t: any) => ["pending", "running"].includes(t.status)).length,
+          completed: tasks.filter((t: any) => t.status === "completed").length,
+          recent: tasks.slice(0, 8),
+        },
+        activities: {
+          pending: activities.filter((a: any) => a.status === "pending").length,
+          scheduled: activities.filter((a: any) => a.scheduled_at).length,
+          recent: activities.slice(0, 8),
+        },
+      };
+    }
+
     // ━━━ Management Tools ━━━
     case "create_agent_task": {
       // Find agent by name or role
