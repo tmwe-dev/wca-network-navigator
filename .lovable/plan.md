@@ -1,101 +1,86 @@
 
 
-# Piano: Integrazione Agenti nel Mission Control
+# Piano: Deep Search CRM al livello del Network + UI Enrichment per Contatti
 
-## Stato attuale
+## Problema reale
 
-Mission Control (`SuperHome3D.tsx`) e' una dashboard statica con 4 card di navigazione, contatori aggregati, e un prompt AI generico. Gli 11 agenti esistono nel DB con tool-calling reale via `agent-execute` (1263 righe, 42+ tool), ma **non sono visibili ne' utilizzabili dalla Home**. Sono confinati in `/agent-chat` e `/agents`.
+Ci sono **due gap fondamentali** tra Network e CRM:
 
-L'infrastruttura agenti e' gia' solida:
-- `agent-execute` ha loop di tool-calling reale (10 iterazioni max)
-- 6 template con assigned_tools specifici per ruolo
-- `agent_tasks` nel DB per tracking task
-- Management tools per Luca (create_agent_task, get_team_status, etc.)
+### Gap 1: `deep-search-contact` e' una versione ridotta di `deep-search-partner`
 
-## Cosa manca
+| Capacita' | deep-search-partner (783 righe) | deep-search-contact (218 righe) |
+|-----------|--------------------------------|-------------------------------|
+| LinkedIn personale | Si, con 3 tentativi di retry | Si, ma 1 solo tentativo generico |
+| Facebook/Instagram | Ricerca dedicata per contatto | Ricerca generica unica |
+| WhatsApp auto-link | Si, da mobile/phone | No |
+| Company LinkedIn | Si | No |
+| Company profile (awards, specialties, news) | Si | No |
+| Website discovery da email domain | Si | No |
+| Logo discovery + scraping sito | Si | No |
+| Website quality score AI | Si | No |
+| Rating calcolato (7 criteri pesati) | Si | No |
+| Profilo professionale per contatto | Si (background, seniority, interests, languages) | Solo summary generico |
+| Validazione AI per URL trovati | Si (AI pick URL) | No, tutto in un unico prompt |
 
-1. **Nessun briefing operativo** — la Home non chiede all'AI "cosa sta succedendo?"
-2. **Nessuna visibilita' sugli agenti** — non si vede chi sta lavorando, chi e' idle
-3. **Nessun ponte Home → Agenti** — non posso dire "Luca, fammi un report" dalla Home
-4. **Il prompt della Home chiama `ai-assistant`, non gli agenti** — sono due mondi separati
+In pratica `deep-search-contact` fa 4 ricerche generiche e un unico prompt AI che restituisce tutto. `deep-search-partner` fa 10-15 ricerche mirate con AI validation ad ogni step.
 
-## Soluzione: 3 componenti + 1 edge function
+### Gap 2: La UI del CRM ignora completamente `enrichment_data`
 
-### 1. Edge function `daily-briefing`
+Il `ContactDetailPanel.tsx` non legge MAI `enrichment_data`. Anche se la Deep Search trovasse dati, non li mostrerebbe. Il pannello Network ha `EnrichmentCard`, `SocialLinks`, `ActivityList`, `PartnerRating`, `TrophyRow` — il CRM non ha nessuno di questi.
 
-Query aggregata sul DB reale:
-- `download_jobs`: completati/falliti/attivi ultime 24h
-- `partners`: count senza email, senza profilo
-- `activities`: in scadenza oggi, overdue
-- `agent_tasks`: per agente, status running/completed/pending
-- `email_campaign_queue`: pending/sent
+## Soluzione
 
-Passa i dati al LLM (Gemini Flash) con prompt: "Genera briefing operativo in italiano, max 5 punti, con azioni suggerite."
+### Fase 1 — Potenziare `deep-search-contact` (edge function)
 
-Risposta strutturata:
-```json
-{
-  "summary": "markdown del briefing",
-  "actions": [
-    { "label": "Deep Search top 10", "agentName": "Imane", "prompt": "..." },
-    { "label": "Report team", "agentName": "Luca", "prompt": "..." }
-  ],
-  "agentStatus": [
-    { "name": "Luca", "emoji": "🎯", "activeTasks": 0, "completedToday": 3 }
-  ]
-}
-```
+Riscrivere la funzione per avere le stesse capacita' del partner:
 
-### 2. Componente `OperativeBriefing.tsx`
+1. **LinkedIn con retry intelligente** — 3 tentativi (nome+azienda, cognome+azienda, nome+citta')
+2. **Facebook e Instagram separati** — ricerche dedicate, non generiche
+3. **Company LinkedIn** — ricerca pagina aziendale
+4. **Website discovery** — da dominio email o ricerca web
+5. **Logo discovery** — scraping del sito + favicon fallback
+6. **Company profile AI** — awards, specialties, news, founded year, employees
+7. **Contact profile AI** — background, seniority, interests, languages
+8. **WhatsApp auto-link** — da numero mobile se presente
+9. **Salvataggio strutturato** — stessa struttura enrichment_data del partner (company_profile, contact_profiles, website_quality_score)
 
-Card glassmorphism che mostra il briefing AI con:
-- Markdown renderizzato (punti prioritari)
-- Pulsanti azione che invocano direttamente l'agente giusto via `agent-execute`
-- Ogni azione specifica quale agente la esegue (es. "Imane: Deep Search" → crea task per Imane)
+### Fase 2 — Creare `ContactEnrichmentCard.tsx`
 
-### 3. Componente `AgentStatusPanel.tsx`
+Componente che legge `enrichment_data` dal contatto e mostra:
+- Company profile (awards, specialties, news, founded year, employees)
+- Professional background della persona
+- Social links trovati (LinkedIn, Facebook, Instagram, WhatsApp)
+- Logo aziendale scoperto
+- Website quality score
+- Confidence level della ricerca
+- Crediti consumati
 
-Pannello orizzontale sotto le nav cards:
-- Query `agent_tasks` raggruppata per `agent_id`
-- Mostra emoji + nome + stato (idle/working/N task in corso)
-- Click su agente → naviga a `/agent-chat` con quell'agente pre-selezionato
-- Badge per task completati oggi
+Basato sullo stesso design di `EnrichmentCard.tsx` del Network.
 
-### 4. Aggiornamento `SuperHome3D.tsx`
+### Fase 3 — Aggiornare `ContactDetailPanel.tsx`
 
-Layout aggiornato:
-```text
-Greeting + AI Prompt (con contesto briefing)
-Briefing Operativo (daily-briefing)
-Pannello Agenti (agent status live)
-Nav Cards (4 aree)
-Download attivi (esistente)
-Stato sistema (esistente)
-```
+Integrare:
+- `ContactEnrichmentCard` dopo la sezione header
+- Social links come bottoni azione (LinkedIn, Facebook, Instagram)
+- Logo aziendale nel header se disponibile
+- Website link se scoperto
+- Badge confidence (high/medium/low)
 
-### 5. Aggiornamento `HomeAIPrompt.tsx`
+### Fase 4 — Salvare social links nel DB per i contatti
 
-- Smart prompts derivati dal briefing (non hardcoded)
-- Possibilita' di indirizzare il messaggio a un agente specifico: se l'utente scrive "@Luca ..." o "@Robin ...", il prompt viene inoltrato a `agent-execute` con quell'agent_id invece di `ai-assistant`
-- Fallback: se nessun agente menzionato, usa `ai-assistant` come oggi
+Oggi i link social dei contatti vengono salvati solo dentro `enrichment_data` come JSON. Per coerenza con il Network (che usa `partner_social_links`), i link trovati andrebbero salvati in modo strutturato — ma per non complicare lo schema, useremo `enrichment_data` come source of truth e li mostriamo dalla UI.
 
 ## File da creare/modificare
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/daily-briefing/index.ts` | Creare — query DB + LLM briefing |
-| `src/hooks/useDailyBriefing.ts` | Creare — hook con cache 15min |
-| `src/components/home/OperativeBriefing.tsx` | Creare — card briefing con azioni |
-| `src/components/home/AgentStatusPanel.tsx` | Creare — stato live agenti |
-| `src/pages/SuperHome3D.tsx` | Modificare — integrare i 2 componenti |
-| `src/components/home/HomeAIPrompt.tsx` | Modificare — smart prompts dinamici + routing @agente |
+| `supabase/functions/deep-search-contact/index.ts` | Riscrivere — stesse capacita' del partner |
+| `src/components/contacts/ContactEnrichmentCard.tsx` | Creare — mostra enrichment data |
+| `src/components/contacts/ContactDetailPanel.tsx` | Modificare — integrare enrichment card + social links |
 
-## Flusso utente risultante
+## Risultato
 
-1. Apro la Home → briefing si carica automaticamente
-2. Vedo "47 partner senza email — suggerisco Deep Search top 10"
-3. Clicco il pulsante → crea task per Imane via `agent-execute`
-4. Sotto, vedo che Imane passa da "idle" a "1 task in corso"
-5. Scrivo nel prompt "@Luca report del team" → va direttamente a Luca
-6. Luca risponde con lo stato di tutti gli agenti usando `get_team_status`
+- Deep Search su un contatto CRM produce gli stessi dati ricchi del Network
+- La UI mostra tutto: LinkedIn, company profile, logo, website, background professionale
+- L'utente puo' fare attivita' commerciale seria con dati completi anche dal CRM
 
