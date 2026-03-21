@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateLeadStatus, type ContactFilters, type LeadStatus } from "@/hooks/useContacts";
 import { useSelection } from "@/hooks/useSelection";
-import type { AICommand } from "./ContactAIBar";
-import type { SortKey } from "./contactHelpers";
+import type { AICommand } from "@/components/contacts/ContactAIBar";
+import type { SortKey } from "@/components/contacts/contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 
 interface Deps {
