@@ -161,13 +161,28 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-        <div className="p-1.5 rounded-lg bg-violet-500/20"><Sparkles className="w-4 h-4 text-violet-400" /></div>
+        <div className="p-1.5 rounded-lg bg-primary/20"><Sparkles className="w-4 h-4 text-primary" /></div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-white">Assistente Download</h3>
-          <p className="text-[10px] text-slate-400">Chiedi cosa scaricare in linguaggio naturale</p>
+          <h3 className="text-sm font-semibold text-foreground">Assistente AI</h3>
+          <p className="text-[10px] text-muted-foreground">Operativo & Strategico</p>
+        </div>
+        {/* Mode toggle */}
+        <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5 text-[10px]">
+          <button
+            onClick={() => setMode("operational")}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "operational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Zap className="w-3 h-3" /> Operativo
+          </button>
+          <button
+            onClick={() => setMode("conversational")}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "conversational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <MessageSquare className="w-3 h-3" /> Strategico
+          </button>
         </div>
         {messages.length > 0 && (
-          <button onClick={newConversation} className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-slate-500" title="Nuova conversazione">
+          <button onClick={newConversation} className="p-1.5 rounded-lg transition-colors hover:bg-secondary/50 text-muted-foreground" title="Nuova conversazione">
             <Plus className="w-3.5 h-3.5" />
           </button>
         )}
