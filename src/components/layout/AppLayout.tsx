@@ -60,11 +60,9 @@ export function AppLayout() {
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {!isHomeRoute && (
-          <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
-            <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
-          </div>
-        )}
+        <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
+          <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
+        </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {!isHomeRoute && (
