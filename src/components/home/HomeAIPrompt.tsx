@@ -164,14 +164,14 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             size="icon"
             className={cn(
               "h-10 w-10 shrink-0 rounded-full transition-all",
-              listening
+              speech.listening
                 ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={toggleMic}
-            aria-label={listening ? "Stop ascolto" : "Parla"}
+            onClick={speech.toggle}
+            aria-label={speech.listening ? "Stop ascolto" : "Parla"}
           >
-            {listening ? (
+            {speech.listening ? (
               <MicOff className="h-5 w-5 animate-pulse" />
             ) : (
               <Mic className="h-5 w-5" />
