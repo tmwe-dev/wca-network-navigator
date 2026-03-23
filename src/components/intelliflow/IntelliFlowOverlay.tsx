@@ -53,42 +53,20 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [micActive, setMicActive] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [mode, setMode] = useState<"operational" | "conversational">("operational");
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: stats } = useSystemStats();
+
+  const speech = useContinuousSpeech((text) => setInput(text));
 
   const isEmpty = messages.length === 0;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setMicActive(false);
-    };
-    recognition.onerror = () => setMicActive(false);
-    recognition.onend = () => setMicActive(false);
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleMic = useCallback(() => {
-    if (!recognitionRef.current) return;
-    if (micActive) { recognitionRef.current.stop(); setMicActive(false); }
-    else { recognitionRef.current.start(); setMicActive(true); }
-  }, [micActive]);
 
   const ts = () => new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 
