@@ -258,7 +258,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                 </div>
               )}
 
-              <VoicePresence active={micActive} listening={micActive} speaking={false} />
+              <VoicePresence active={speech.listening} listening={speech.listening} speaking={false} />
 
               {/* Input bar */}
               <div className="px-8 pb-8 pt-3 flex-shrink-0">
