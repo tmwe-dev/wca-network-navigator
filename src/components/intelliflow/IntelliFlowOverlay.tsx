@@ -83,9 +83,11 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     const history = prevMessages.map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: history },
-      });
+      const fnName = mode === "conversational" ? "super-assistant" : "ai-assistant";
+      const body = mode === "conversational"
+        ? { messages: history, pageContext: "intelliflow", systemStats: stats }
+        : { messages: history };
+      const { data, error } = await supabase.functions.invoke(fnName, { body });
       if (error) throw error;
       const raw = data?.content || data?.message || "";
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
