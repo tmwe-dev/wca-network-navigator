@@ -28,7 +28,7 @@ export function AppLayout() {
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const currentPath = location.pathname;
-  const isHomeRoute = currentPath === "/";
+  
   const isCampaignsPage = currentPath === "/campaigns";
   const isFullscreenRoute = ["/", "/network", "/crm", "/outreach", "/agenda", "/operations", "/global", "/reminders", "/settings", "/import", "/hub-operativo", "/email-composer"].includes(currentPath);
 
@@ -60,37 +60,33 @@ export function AppLayout() {
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {!isHomeRoute && (
-          <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
-            <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
-          </div>
-        )}
+        <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
+          <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
+        </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {!isHomeRoute && (
-            <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
-              <div className="flex h-full items-center justify-between px-2 sm:px-4">
-                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
-                  <ActiveProcessIndicator />
-                  <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
-                </div>
-                <div className="flex items-center gap-0.5 sm:gap-1">
-                  <CreditCounter />
-                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/workspace")} aria-label="Workspace"><Layers className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/email-composer")} aria-label="Email"><Send className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/reminders")} aria-label="Agenda"><Calendar className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAiOpen(true)} aria-label="AI Assistant"><Bot className="h-4 w-4" /></Button>
-                  {!isCampaignsPage && (
-                    <button onClick={() => setCommandOpen(true)} className="hidden sm:flex h-8 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-[13px] text-muted-foreground transition-colors hover:bg-muted">
-                      <Search className="h-3.5 w-3.5" /><span className="hidden md:inline">Search…</span>
-                      <kbd className="hidden md:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] text-muted-foreground/70">⌘K</kbd>
-                    </button>
-                  )}
-                </div>
+          <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
+            <div className="flex h-full items-center justify-between px-2 sm:px-4">
+              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
+                <ActiveProcessIndicator />
+                <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
-            </header>
-          )}
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                <CreditCounter />
+                <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/workspace")} aria-label="Workspace"><Layers className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/email-composer")} aria-label="Email"><Send className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/reminders")} aria-label="Agenda"><Calendar className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAiOpen(true)} aria-label="AI Assistant"><Bot className="h-4 w-4" /></Button>
+                {!isCampaignsPage && (
+                  <button onClick={() => setCommandOpen(true)} className="hidden sm:flex h-8 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-[13px] text-muted-foreground transition-colors hover:bg-muted">
+                    <Search className="h-3.5 w-3.5" /><span className="hidden md:inline">Search…</span>
+                    <kbd className="hidden md:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] text-muted-foreground/70">⌘K</kbd>
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
 
           <main className={cn("flex-1 min-h-0", isFullscreenRoute ? "overflow-hidden" : "overflow-auto p-4")}>
             <Outlet />
