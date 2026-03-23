@@ -226,7 +226,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       </div>
 
       <AnimatePresence>
-        {listening && (
+        {speech.listening && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -234,7 +234,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             className="flex items-center justify-center gap-2 text-xs text-destructive font-medium"
           >
             <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
-            Ascolto in corso…
+            Ascolto in corso… (clicca il microfono per fermare)
           </motion.div>
         )}
       </AnimatePresence>
