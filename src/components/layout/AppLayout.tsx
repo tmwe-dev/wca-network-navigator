@@ -28,7 +28,7 @@ export function AppLayout() {
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const currentPath = location.pathname;
-  const isHomeRoute = currentPath === "/";
+  
   const isCampaignsPage = currentPath === "/campaigns";
   const isFullscreenRoute = ["/", "/network", "/crm", "/outreach", "/agenda", "/operations", "/global", "/reminders", "/settings", "/import", "/hub-operativo", "/email-composer"].includes(currentPath);
 
