@@ -69,10 +69,10 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
-  const [listening, setListening] = useState(false);
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+
+  const speech = useContinuousSpeech((text) => setInput(text));
 
   const smartPrompts = useMemo(() => buildSmartPrompts(systemStats, briefingActions), [systemStats, briefingActions]);
 
@@ -83,34 +83,6 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       onExternalPromptConsumed?.();
     }
   }, [externalPrompt]);
-
-  useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setListening(false);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleMic = useCallback(() => {
-    if (!recognitionRef.current) return;
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-    } else {
-      recognitionRef.current.start();
-      setListening(true);
-    }
-  }, [listening]);
 
   const send = useCallback(async (text?: string) => {
     const msg = (text || input).trim();
