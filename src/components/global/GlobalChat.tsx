@@ -236,9 +236,9 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
             className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500/40"
             style={{ minHeight: "36px", maxHeight: "100px" }}
           />
-          {hasSpeechAPI && (
-            <button onClick={toggleListening} className={`p-2 rounded-xl transition-all ${isListening ? "bg-red-500/20 text-red-400 animate-pulse border border-red-500/30" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"}`} title={isListening ? "Stop dettatura" : "Detta con microfono"}>
-              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+          {speech.hasSpeechAPI && (
+            <button onClick={speech.toggle} className={`p-2 rounded-xl transition-all ${speech.listening ? "bg-destructive/20 text-destructive animate-pulse border border-destructive/30" : "bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`} title={speech.listening ? "Stop dettatura" : "Detta con microfono"}>
+              {speech.listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
           )}
           <button onClick={() => sendMessage(input)} disabled={!input.trim() || isLoading} className={`p-2 rounded-xl transition-all ${input.trim() && !isLoading ? "bg-violet-600 hover:bg-violet-500 text-white" : "bg-white/5 text-slate-600"}`}>
