@@ -143,21 +143,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
     [messages, isLoading, addMessages],
   );
 
-  const toggleListening = useCallback(() => {
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event: any) => { const t = event.results[0][0].transcript; if (t) sendMessage(t); };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [isListening, sendMessage]);
+  // Old toggleListening removed — using useContinuousSpeech hook
 
   const renderAssistantMessage = (content: string) => {
     const parsed = parseAiAgentResponse<StructuredPartner>(content);
