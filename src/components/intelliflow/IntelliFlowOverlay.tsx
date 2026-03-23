@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2 } from "lucide-react";
+import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, MessageSquare } from "lucide-react";
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 function useSystemStats() {
   return useQuery({
@@ -52,42 +53,20 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [micActive, setMicActive] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [mode, setMode] = useState<"operational" | "conversational">("operational");
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: stats } = useSystemStats();
+
+  const speech = useContinuousSpeech((text) => setInput(text));
 
   const isEmpty = messages.length === 0;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setMicActive(false);
-    };
-    recognition.onerror = () => setMicActive(false);
-    recognition.onend = () => setMicActive(false);
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleMic = useCallback(() => {
-    if (!recognitionRef.current) return;
-    if (micActive) { recognitionRef.current.stop(); setMicActive(false); }
-    else { recognitionRef.current.start(); setMicActive(true); }
-  }, [micActive]);
 
   const ts = () => new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 
@@ -104,9 +83,11 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
     const history = prevMessages.map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: history },
-      });
+      const fnName = mode === "conversational" ? "super-assistant" : "ai-assistant";
+      const body = mode === "conversational"
+        ? { messages: history, pageContext: "intelliflow", systemStats: stats }
+        : { messages: history };
+      const { data, error } = await supabase.functions.invoke(fnName, { body });
       if (error) throw error;
       const raw = data?.content || data?.message || "";
       dispatchAiAgentEffects(parseAiAgentResponse(raw));
@@ -156,6 +137,21 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
               )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Mode toggle */}
+              <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5 text-[10px]">
+                <button
+                  onClick={() => setMode("operational")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "operational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Zap className="w-3 h-3" /> Operativo
+                </button>
+                <button
+                  onClick={() => setMode("conversational")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "conversational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <MessageSquare className="w-3 h-3" /> Strategico
+                </button>
+              </div>
               <button
                 onClick={() => { newConversation(); setShowHistory(false); }}
                 className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-secondary/30"
@@ -279,7 +275,7 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                 </div>
               )}
 
-              <VoicePresence active={micActive} listening={micActive} speaking={false} />
+              <VoicePresence active={speech.listening} listening={speech.listening} speaking={false} />
 
               {/* Input bar */}
               <div className="px-8 pb-8 pt-3 flex-shrink-0">
@@ -294,20 +290,20 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-card border border-border"
                   >
                     <button
-                      onClick={toggleMic}
+                      onClick={speech.toggle}
                       className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                        micActive
+                        speech.listening
                           ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
                           : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                       }`}
                     >
-                      {micActive ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                      {speech.listening ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
                     </button>
                     <input
                       ref={inputRef}
                       type="text"
-                      placeholder="Scrivi un obiettivo…"
-                      value={input}
+                      placeholder={speech.listening ? "🎙 Sto ascoltando…" : (mode === "conversational" ? "Discutiamo strategia…" : "Scrivi un obiettivo…")}
+                      value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                       onFocus={() => setInputFocused(true)}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, Rocket, Clock } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
@@ -8,8 +8,10 @@ import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/super-assistant`;
 
 const QUICK_PROMPTS = [
   "Scarica tutti i partner",
@@ -30,11 +32,11 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"operational" | "conversational">("operational");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+
+  const speech = useContinuousSpeech((text) => setInput(text));
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
@@ -63,10 +65,14 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-        const resp = await fetch(CHAT_URL, {
+        const url = mode === "conversational" ? SUPER_URL : CHAT_URL;
+
+        const resp = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ messages: allMsgs }),
+          body: JSON.stringify(mode === "conversational"
+            ? { messages: allMsgs, pageContext: "global-chat" }
+            : { messages: allMsgs }),
         });
 
         if (!resp.ok) {
@@ -137,21 +143,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
     [messages, isLoading, addMessages],
   );
 
-  const toggleListening = useCallback(() => {
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event: any) => { const t = event.results[0][0].transcript; if (t) sendMessage(t); };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [isListening, sendMessage]);
+  // Old toggleListening removed — using useContinuousSpeech hook
 
   const renderAssistantMessage = (content: string) => {
     const parsed = parseAiAgentResponse<StructuredPartner>(content);
@@ -169,13 +161,28 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-        <div className="p-1.5 rounded-lg bg-violet-500/20"><Sparkles className="w-4 h-4 text-violet-400" /></div>
+        <div className="p-1.5 rounded-lg bg-primary/20"><Sparkles className="w-4 h-4 text-primary" /></div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-white">Assistente Download</h3>
-          <p className="text-[10px] text-slate-400">Chiedi cosa scaricare in linguaggio naturale</p>
+          <h3 className="text-sm font-semibold text-foreground">Assistente AI</h3>
+          <p className="text-[10px] text-muted-foreground">Operativo & Strategico</p>
+        </div>
+        {/* Mode toggle */}
+        <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5 text-[10px]">
+          <button
+            onClick={() => setMode("operational")}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "operational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Zap className="w-3 h-3" /> Operativo
+          </button>
+          <button
+            onClick={() => setMode("conversational")}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "conversational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <MessageSquare className="w-3 h-3" /> Strategico
+          </button>
         </div>
         {messages.length > 0 && (
-          <button onClick={newConversation} className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-slate-500" title="Nuova conversazione">
+          <button onClick={newConversation} className="p-1.5 rounded-lg transition-colors hover:bg-secondary/50 text-muted-foreground" title="Nuova conversazione">
             <Plus className="w-3.5 h-3.5" />
           </button>
         )}
@@ -229,9 +236,9 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
             className="flex-1 resize-none rounded-xl px-3 py-2 text-xs outline-none transition-colors bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500/40"
             style={{ minHeight: "36px", maxHeight: "100px" }}
           />
-          {hasSpeechAPI && (
-            <button onClick={toggleListening} className={`p-2 rounded-xl transition-all ${isListening ? "bg-red-500/20 text-red-400 animate-pulse border border-red-500/30" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"}`} title={isListening ? "Stop dettatura" : "Detta con microfono"}>
-              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+          {speech.hasSpeechAPI && (
+            <button onClick={speech.toggle} className={`p-2 rounded-xl transition-all ${speech.listening ? "bg-destructive/20 text-destructive animate-pulse border border-destructive/30" : "bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`} title={speech.listening ? "Stop dettatura" : "Detta con microfono"}>
+              {speech.listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
           )}
           <button onClick={() => sendMessage(input)} disabled={!input.trim() || isLoading} className={`p-2 rounded-xl transition-all ${input.trim() && !isLoading ? "bg-violet-600 hover:bg-violet-500 text-white" : "bg-white/5 text-slate-600"}`}>

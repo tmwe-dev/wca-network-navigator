@@ -251,6 +251,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_daily_plans: {
+        Row: {
+          completed: Json
+          created_at: string | null
+          id: string
+          notes: string | null
+          objectives: Json
+          plan_date: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: Json
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          objectives?: Json
+          plan_date?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: Json
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          objectives?: Json
+          plan_date?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_memory: {
         Row: {
           content: string

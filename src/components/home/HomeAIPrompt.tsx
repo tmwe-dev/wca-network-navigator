@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
 
 interface Props {
@@ -68,10 +69,10 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
-  const [listening, setListening] = useState(false);
   const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+
+  const speech = useContinuousSpeech((text) => setInput(text));
 
   const smartPrompts = useMemo(() => buildSmartPrompts(systemStats, briefingActions), [systemStats, briefingActions]);
 
@@ -82,34 +83,6 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       onExternalPromptConsumed?.();
     }
   }, [externalPrompt]);
-
-  useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setListening(false);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleMic = useCallback(() => {
-    if (!recognitionRef.current) return;
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-    } else {
-      recognitionRef.current.start();
-      setListening(true);
-    }
-  }, [listening]);
 
   const send = useCallback(async (text?: string) => {
     const msg = (text || input).trim();
@@ -191,14 +164,14 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             size="icon"
             className={cn(
               "h-10 w-10 shrink-0 rounded-full transition-all",
-              listening
+              speech.listening
                 ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={toggleMic}
-            aria-label={listening ? "Stop ascolto" : "Parla"}
+            onClick={speech.toggle}
+            aria-label={speech.listening ? "Stop ascolto" : "Parla"}
           >
-            {listening ? (
+            {speech.listening ? (
               <MicOff className="h-5 w-5 animate-pulse" />
             ) : (
               <Mic className="h-5 w-5" />
@@ -207,10 +180,10 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
 
           <input
             ref={inputRef}
-            value={input}
+            value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Chiedi al sistema qualsiasi cosa…"
+            placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Chiedi al sistema qualsiasi cosa…"}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             disabled={loading}
           />
@@ -253,7 +226,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       </div>
 
       <AnimatePresence>
-        {listening && (
+        {speech.listening && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -261,7 +234,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             className="flex items-center justify-center gap-2 text-xs text-destructive font-medium"
           >
             <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
-            Ascolto in corso…
+            Ascolto in corso… (clicca il microfono per fermare)
           </motion.div>
         )}
       </AnimatePresence>
