@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2 } from "lucide-react";
+import { Send, Mic, MicOff, X, Bot, Loader2, Plus, History, Trash2, Zap, MessageSquare } from "lucide-react";
 import AiEntity from "./AiEntity";
 import VoicePresence from "./VoicePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import AIMarkdown from "./AIMarkdown";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import { useQuery } from "@tanstack/react-query";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 function useSystemStats() {
   return useQuery({
