@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, Rocket, Clock } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
@@ -8,8 +8,10 @@ import { toast } from "@/hooks/use-toast";
 import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConversation";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
+import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/super-assistant`;
 
 const QUICK_PROMPTS = [
   "Scarica tutti i partner",
