@@ -302,8 +302,8 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     <input
                       ref={inputRef}
                       type="text"
-                      placeholder="Scrivi un obiettivo…"
-                      value={input}
+                      placeholder={speech.listening ? "🎙 Sto ascoltando…" : (mode === "conversational" ? "Discutiamo strategia…" : "Scrivi un obiettivo…")}
+                      value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                       onFocus={() => setInputFocused(true)}
