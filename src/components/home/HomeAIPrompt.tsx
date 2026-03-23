@@ -180,10 +180,10 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
 
           <input
             ref={inputRef}
-            value={input}
+            value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Chiedi al sistema qualsiasi cosa…"
+            placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Chiedi al sistema qualsiasi cosa…"}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             disabled={loading}
           />
