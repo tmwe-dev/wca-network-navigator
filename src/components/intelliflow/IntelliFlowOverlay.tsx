@@ -137,6 +137,21 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
               )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Mode toggle */}
+              <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5 text-[10px]">
+                <button
+                  onClick={() => setMode("operational")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "operational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Zap className="w-3 h-3" /> Operativo
+                </button>
+                <button
+                  onClick={() => setMode("conversational")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all ${mode === "conversational" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <MessageSquare className="w-3 h-3" /> Strategico
+                </button>
+              </div>
               <button
                 onClick={() => { newConversation(); setShowHistory(false); }}
                 className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-secondary/30"
