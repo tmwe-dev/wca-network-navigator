@@ -1,7 +1,93 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
+
+const VERCEL_BASE = 'https://wca-app.vercel.app/api'
+
+// ─── Vercel API helpers ──────────────────────────────────────
+
+async function getVercelCookie(supabase: any, userId: string): Promise<string | null> {
+  // Check cached cookie
+  const { data: cached } = await supabase
+    .from('app_settings')
+    .select('value, updated_at')
+    .eq('key', 'vercel_wca_cookie')
+    .maybeSingle()
+
+  if (cached?.value) {
+    const age = Date.now() - new Date(cached.updated_at).getTime()
+    if (age < 3600_000) { // < 1 hour
+      console.log('Using cached Vercel WCA cookie')
+      return cached.value
+    }
+  }
+
+  // Get user credentials
+  const { data: creds } = await supabase
+    .from('user_wca_credentials')
+    .select('wca_username, wca_password')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (!creds?.wca_username || !creds?.wca_password) {
+    console.log('No WCA credentials found for user')
+    return null
+  }
+
+  // Login via Vercel API
+  console.log('Logging in via Vercel API...')
+  try {
+    const res = await fetch(`${VERCEL_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: creds.wca_username, password: creds.wca_password }),
+    })
+    const data = await res.json()
+    if (data.cookie) {
+      console.log('Vercel login OK, caching cookie')
+      // Cache cookie
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('key', 'vercel_wca_cookie')
+        .maybeSingle()
+      if (existing) {
+        await supabase.from('app_settings').update({ value: data.cookie }).eq('key', 'vercel_wca_cookie')
+      } else {
+        await supabase.from('app_settings').insert({ key: 'vercel_wca_cookie', value: data.cookie })
+      }
+      return data.cookie
+    }
+    console.error('Vercel login failed:', data)
+  } catch (e) {
+    console.error('Vercel login error:', e)
+  }
+  return null
+}
+
+async function discoverViaVercel(cookie: string, country: string, page: number): Promise<{ members: any[]; totalPages: number } | null> {
+  try {
+    const res = await fetch(`${VERCEL_BASE}/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country, page, cookie }),
+    })
+    if (!res.ok) {
+      console.error('Vercel discover error:', res.status)
+      return null
+    }
+    const data = await res.json()
+    return { members: data.members || [], totalPages: data.totalPages || 0 }
+  } catch (e) {
+    console.error('Vercel discover error:', e)
+    return null
+  }
+}
+
+// ─── Firecrawl Fallback (existing logic) ─────────────────────
 
 // Mapping from network display names to WCA numeric networkIds
 const NETWORK_ID_MAP: Record<string, number[]> = {
@@ -17,18 +103,11 @@ const NETWORK_ID_MAP: Record<string, number[]> = {
   'WCA Pharma': [18],
 }
 
-/**
- * Parse members from HTML content returned by Firecrawl.
- * WCA directory links have the format:
- *   <a href="/Directory/Members/12345">City - Company Name (City, Head Office)</a>
- * We parse out the wca_id, company_name, and city.
- */
 function parseMembersFromContent(html: string, markdown: string): { company_name: string; city?: string; country?: string; wca_id?: number }[] {
   const members: { company_name: string; city?: string; country?: string; wca_id?: number }[] = []
   const seen = new Set<number>()
   const content = html || markdown || ''
 
-  // Match member links: href="/Directory/Members/XXXXX" with link text
   const linkRegex = /href="[^"]*\/[Dd]irectory\/[Mm]embers\/(\d+)"[^>]*>([^<]+)</gi
   let match
   while ((match = linkRegex.exec(content)) !== null) {
@@ -36,30 +115,20 @@ function parseMembersFromContent(html: string, markdown: string): { company_name
     let rawText = match[2].trim()
     if (!wcaId || seen.has(wcaId) || rawText.length < 2) continue
     seen.add(wcaId)
-
-    // Decode HTML entities
     rawText = rawText.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
-
-    // Parse "City - Company Name (City, Head Office)" format
     let city: string | undefined
     let companyName = rawText
-
-    // Remove trailing "(City, Head Office)" or "(Head Office)" 
     companyName = companyName.replace(/\s*\([^)]*(?:Head Office|Branch)\)\s*$/i, '')
-
-    // Split "City - Company Name" 
     const dashIdx = companyName.indexOf(' - ')
     if (dashIdx > 0) {
       city = companyName.substring(0, dashIdx).trim()
       companyName = companyName.substring(dashIdx + 3).trim()
     }
-
     if (companyName.length > 0) {
       members.push({ company_name: companyName, city, wca_id: wcaId })
     }
   }
 
-  // Fallback: markdown links [text](/Directory/Members/12345)
   if (members.length === 0 && markdown) {
     const mdRegex = /\[([^\]]+)\]\([^)]*\/[Dd]irectory\/[Mm]embers\/(\d+)[^)]*\)/g
     while ((match = mdRegex.exec(markdown)) !== null) {
@@ -84,6 +153,47 @@ function parseMembersFromContent(html: string, markdown: string): { company_name
   return members
 }
 
+async function firecrawlFallback(countryCode: string, network: string, currentPage: number, size: number): Promise<{ members: any[]; hasNextPage: boolean } | null> {
+  const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
+  if (!apiKey) return null
+
+  const networkIds = NETWORK_ID_MAP[network || ''] || NETWORK_ID_MAP['']
+  const params = new URLSearchParams()
+  params.set('siteID', '24')
+  params.set('pageIndex', String(currentPage))
+  params.set('pageSize', String(size))
+  params.set('searchby', 'CountryCode')
+  params.set('orderby', 'CountryCity')
+  params.set('layout', 'v1')
+  params.set('submitted', 'search')
+  params.set('country', countryCode)
+  const networkParams = networkIds.map(id => `networkIds=${id}`).join('&')
+  const url = `https://www.wcaworld.com/Directory?${params.toString()}&${networkParams}`
+  console.log(`Firecrawl fallback: ${url}`)
+
+  try {
+    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, formats: ['markdown', 'rawHtml'], waitFor: 3000 }),
+    })
+    const scrapeData = await scrapeResponse.json()
+    if (!scrapeResponse.ok) {
+      console.error('Firecrawl error:', scrapeData)
+      return null
+    }
+    const markdown = scrapeData?.data?.markdown || ''
+    const html = scrapeData?.data?.rawHtml || ''
+    const members = parseMembersFromContent(html, markdown)
+    return { members, hasNextPage: members.length >= size }
+  } catch (e) {
+    console.error('Firecrawl error:', e)
+    return null
+  }
+}
+
+// ─── Main Handler ────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -97,35 +207,26 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
-    const authClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(authHeader.replace('Bearer ', ''))
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const userId = claimsData.claims.sub as string
 
-    const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl connector not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
+    const supabase = createClient(supabaseUrl, supabaseKey)
     const { countryCode, network, pageIndex, pageSize, searchBy, companyName, city, memberId } = await req.json()
-
-    // Supported WCA search modes:
-    // - CountryCode (default): search by country ISO code
-    // - CompanyName: search by company name text
-    // - City: search by city name
-    // - MemberID: search by WCA member ID number
     const searchMode = searchBy || 'CountryCode'
+    const currentPage = pageIndex || 1
+    const size = pageSize || 50
 
     if (searchMode === 'CountryCode' && !countryCode) {
       return new Response(
@@ -133,92 +234,65 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    if (searchMode === 'CompanyName' && !companyName) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'companyName is required when searching by CompanyName' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
 
-    const currentPage = pageIndex || 1
-    const size = pageSize || 50
-
-    const networkIds = NETWORK_ID_MAP[network || ''] || NETWORK_ID_MAP['']
-    
-    const params = new URLSearchParams()
-    params.set('siteID', '24')
-    params.set('pageIndex', String(currentPage))
-    params.set('pageSize', String(size))
-    params.set('searchby', searchMode)
-    params.set('orderby', 'CountryCity')
-    params.set('layout', 'v1')
-    params.set('submitted', 'search')
-
-    // Set search value based on mode
+    // ── Primary: Vercel API ──
     if (searchMode === 'CountryCode') {
-      params.set('country', countryCode)
-    } else if (searchMode === 'CompanyName') {
-      params.set('company', companyName)
-      if (countryCode) params.set('country', countryCode)
-    } else if (searchMode === 'City') {
-      params.set('city', city || '')
-      if (countryCode) params.set('country', countryCode)
-    } else if (searchMode === 'MemberID') {
-      params.set('memberid', String(memberId || ''))
+      const cookie = await getVercelCookie(supabase, userId)
+      if (cookie) {
+        console.log(`Vercel discover: country=${countryCode}, page=${currentPage}`)
+        const result = await discoverViaVercel(cookie, countryCode, currentPage)
+        if (result && result.members.length > 0) {
+          // Map Vercel format to our format
+          const members = result.members.map((m: any) => ({
+            company_name: m.companyName || m.company_name || m.name || '',
+            city: m.city || undefined,
+            wca_id: m.id || m.wcaId || m.wca_id || undefined,
+          })).filter((m: any) => m.company_name)
+
+          console.log(`Vercel: ${members.length} members for ${countryCode} (page ${currentPage}/${result.totalPages})`)
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              members,
+              pagination: {
+                total_results: members.length,
+                current_page: currentPage,
+                total_pages: result.totalPages,
+                has_next_page: currentPage < result.totalPages,
+              },
+              source: 'vercel',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        console.log('Vercel returned 0 members, falling back to Firecrawl')
+      }
     }
-    
-    const networkParams = networkIds.map(id => `networkIds=${id}`).join('&')
-    const url = `https://www.wcaworld.com/Directory?${params.toString()}&${networkParams}`
-    console.log(`Scraping WCA directory: ${url}`)
 
-    // Use markdown+html instead of extract (LLM) — much faster (~5s vs ~40s)
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url,
-        formats: ['markdown', 'rawHtml'],
-        waitFor: 3000,
-      }),
-    })
-
-    const scrapeData = await scrapeResponse.json()
-
-    if (!scrapeResponse.ok) {
-      console.error('Firecrawl error:', scrapeData)
+    // ── Fallback: Firecrawl ──
+    console.log('Using Firecrawl fallback...')
+    const fallback = await firecrawlFallback(countryCode || '', network || '', currentPage, size)
+    if (fallback) {
+      console.log(`Firecrawl: ${fallback.members.length} members for ${countryCode} (page ${currentPage})`)
       return new Response(
-        JSON.stringify({ success: false, error: `Firecrawl error: ${scrapeData?.error || scrapeResponse.status}` }),
+        JSON.stringify({
+          success: true,
+          members: fallback.members,
+          pagination: {
+            total_results: fallback.members.length,
+            current_page: currentPage,
+            total_pages: 0,
+            has_next_page: fallback.hasNextPage,
+          },
+          source: 'firecrawl',
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || ''
-    const html = scrapeData?.data?.rawHtml || scrapeData?.rawHtml || ''
-
-    console.log(`Got content: markdown=${markdown.length} chars, html=${html.length} chars`)
-
-    // Parse members from content using regex
-    const members = parseMembersFromContent(html, markdown)
-
-    console.log(`Parsed ${members.length} members for ${countryCode} (page ${currentPage})${network ? ` [${network}]` : ''}`)
-
-    // Deterministic pagination
-    const hasNextPage = members.length >= size
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        members,
-        pagination: {
-          total_results: members.length,
-          current_page: currentPage,
-          total_pages: 0, // unknown without LLM
-          has_next_page: hasNextPage,
-        },
-      }),
+      JSON.stringify({ success: false, error: 'No scraping method available (Vercel API and Firecrawl both failed)', members: [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
