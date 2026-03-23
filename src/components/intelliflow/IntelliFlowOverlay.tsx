@@ -273,14 +273,14 @@ export default function IntelliFlowOverlay({ open, onClose }: IntelliFlowOverlay
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-card border border-border"
                   >
                     <button
-                      onClick={toggleMic}
+                      onClick={speech.toggle}
                       className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                        micActive
+                        speech.listening
                           ? "bg-destructive/20 text-destructive ring-2 ring-destructive/40"
                           : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                       }`}
                     >
-                      {micActive ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                      {speech.listening ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
                     </button>
                     <input
                       ref={inputRef}
