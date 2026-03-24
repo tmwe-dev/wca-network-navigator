@@ -1036,8 +1036,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     const body = await req.json()
     const { wcaId, preview, countryCode: callerCountryCode, aiParse } = body
