@@ -26,6 +26,7 @@ export const AGENT_AVATARS: AgentAvatar[] = [
   { id: "renato", src: avatarRenato, label: "Renato", gender: "female" },
   { id: "carlo", src: avatarCarlo, label: "Carlo", gender: "female" },
   { id: "leonardo", src: avatarLeonardo, label: "Leonardo", gender: "male" },
+  { id: "gianfranco", src: avatarGianfranco, label: "Gianfranco", gender: "male" },
 ];
 
 /**
@@ -43,6 +44,7 @@ const NAME_AVATAR_MAP: Record<string, string> = {
   carlo: "carlo",
   leonardo: "leonardo",
   marco: "bruce", // fallback male
+  gianfranco: "gianfranco",
 };
 
 /**
