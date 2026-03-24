@@ -1,12 +1,17 @@
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Send, X, Loader2 } from "lucide-react";
+import { CheckCircle2, Send, X, Loader2, Trash2 } from "lucide-react";
 import { SortingList } from "@/components/sorting/SortingList";
 import { SortingCanvas } from "@/components/sorting/SortingCanvas";
 import { useSortingJobs, useBulkReview, useCancelJobs, useSendJob } from "@/hooks/useSortingJobs";
+import { useDeleteActivities } from "@/hooks/useActivities";
 import type { SortingJob } from "@/hooks/useSortingJobs";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Sorting() {
   const { data: jobs = [], isLoading } = useSortingJobs();
@@ -18,6 +23,8 @@ export default function Sorting() {
   const bulkReview = useBulkReview();
   const cancelJobs = useCancelJobs();
   const sendJob = useSendJob();
+  const deleteActivities = useDeleteActivities();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const selectedJob = useMemo(() => jobs.find((j) => j.id === selectedId) || null, [jobs, selectedId]);
 
@@ -81,8 +88,11 @@ export default function Sorting() {
             {sending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
             Invia selezionati ({checkedReviewed.length})
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => { cancelJobs.mutate(checkedArr); setCheckedIds(new Set()); }} disabled={cancelJobs.isPending}>
+          <Button size="sm" variant="outline" onClick={() => { cancelJobs.mutate(checkedArr); setCheckedIds(new Set()); }} disabled={cancelJobs.isPending}>
             <X className="w-4 h-4 mr-1" /> Scarta selezionati
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteActivities.isPending}>
+            <Trash2 className="w-4 h-4 mr-1" /> Elimina selezionati
           </Button>
           {sending && (
             <div className="flex-1 max-w-xs">
@@ -92,6 +102,31 @@ export default function Sorting() {
           )}
         </div>
       )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare {checkedIds.size} record?</AlertDialogTitle>
+            <AlertDialogDescription>Questa azione è irreversibile.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await deleteActivities.mutateAsync(checkedArr);
+                  setCheckedIds(new Set());
+                  toast.success(`${checkedArr.length} record eliminati`);
+                } catch { toast.error("Errore durante l'eliminazione"); }
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

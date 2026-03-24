@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
 import { CockpitContactCard } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,13 +33,14 @@ interface ContactStreamProps {
   onBulkAlias: () => void;
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
+  onBulkDelete?: () => void;
 }
 
 export function ContactStream({
   viewMode, searchQuery, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias,
+  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
@@ -109,6 +110,11 @@ export function ContactStream({
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkAlias}>
             <Sparkles className="w-3 h-3" /> Alias
           </Button>
+          {onBulkDelete && (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-destructive hover:bg-destructive/10" onClick={onBulkDelete}>
+              <Trash2 className="w-3 h-3" /> Elimina
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 ml-auto" onClick={onClear}>
             <X className="w-3 h-3" /> Deseleziona
           </Button>
