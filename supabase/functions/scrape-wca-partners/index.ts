@@ -632,7 +632,7 @@ async function ssoLoginDirect(username: string, password: string): Promise<{ suc
   } catch (e) { return { success: false, error: String(e) } }
 }
 
-async function getDirectAuthCookies(supabase: any, userId: string): Promise<{ cookies: string } | null> {
+async function getDirectAuthCookies(supabase: any, userId: string | null): Promise<{ cookies: string } | null> {
   const { data: cached } = await supabase.from('app_settings').select('value, updated_at').eq('key', 'wca_direct_cookie').maybeSingle()
   if (cached?.value) {
     const age = Date.now() - new Date(cached.updated_at).getTime()
@@ -1024,6 +1024,7 @@ Deno.serve(async (req) => {
 
     // Allow service role key as admin bypass (for server-to-server calls)
     const isServiceRole = token === serviceRoleKey
+    let userId: string | null = null
     if (!isServiceRole) {
       const authClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -1034,6 +1035,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+      userId = userData.user.id
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
@@ -1082,7 +1084,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 1b: Direct SSO Login + Cheerio extraction (from wca-app repo) ──
-    const userId = userData.user.id
+    // userId is set from auth above (null if service role call)
     
     // Get authenticated cookies via SSO
     const directAuth = await getDirectAuthCookies(supabase, userId)
