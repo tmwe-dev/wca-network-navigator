@@ -175,7 +175,7 @@ export function useWcaAppFallback(options: UseWcaAppFallbackOptions = {}) {
         if (abortRef.current) {
           // Salva job sospeso
           const remaining = pendingIds.slice(i);
-          saveSuspendedJob(countryCode, countryName, remaining, getTotalCount(countryCode));
+          saveSuspendedJob(countryCode, countryName);
           emit({ phase: "paused", message: `${countryName} sospeso: ${remaining.length} rimanenti`, current: i, total: pendingIds.length, countryCode, countryName });
           setIsRunning(false);
           return;
