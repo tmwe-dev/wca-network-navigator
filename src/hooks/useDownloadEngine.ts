@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pauseJob, stopJob, emitEvent } from "@/lib/download/jobState";
 import { wcaScrape, wcaSave, wcaLogin } from "@/lib/wca-app-bridge";
+import { fetchWcaCredentials } from "@/lib/wcaCredentials";
 import { createDirectory, markIdDone, markIdFailed, getPendingIds, checkMissingIdsLocal, saveSuspendedJob, removeSuspendedJob } from "@/lib/localDirectory";
 
 /**
@@ -69,27 +70,26 @@ function getPatternDelay(index: number, pattern: number[]): number {
   return (pattern[index % pattern.length] || 3) * 1000;
 }
 
-/** Get WCA cookie — tries Supabase stored credentials first */
+/** Get WCA cookie — usa credenziali da Settings Lovable (get-wca-credentials) */
 async function getWcaCookie(): Promise<string> {
   try {
-    const { data } = await supabase.from("app_settings").select("value").eq("key", "wca_cookie").single();
-    if (data?.value) return data.value;
-  } catch {}
-  // Fallback: try stored credentials
-  try {
-    const { data: creds } = await supabase.from("app_settings").select("key, value").in("key", ["wca_username", "wca_password"]);
-    if (creds && creds.length >= 2) {
-      const u = creds.find(c => c.key === "wca_username")?.value;
-      const p = creds.find(c => c.key === "wca_password")?.value;
-      if (u && p) {
-        const cookie = await wcaLogin(u, p);
-        // Save cookie for reuse
-        await supabase.from("app_settings").upsert({ key: "wca_cookie", value: cookie }, { onConflict: "key" });
-        return cookie;
+    const cached = localStorage.getItem("wca_session_cookie");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.cookie && Date.now() - parsed.savedAt < 30 * 60 * 1000) {
+        console.log("[CLAUDE-ENGINE] Using cached WCA cookie");
+        return parsed.cookie;
       }
     }
   } catch {}
-  throw new Error("Nessuna sessione WCA disponibile. Configura le credenziali in Settings.");
+  const creds = await fetchWcaCredentials();
+  if (creds?.username && creds?.password) {
+    console.log("[CLAUDE-ENGINE] Got credentials from Settings, logging in...");
+    const cookie = await wcaLogin(creds.username, creds.password);
+    try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie, savedAt: Date.now() })); } catch {}
+    return cookie;
+  }
+  throw new Error("Nessuna sessione WCA. Configura le credenziali in Settings.");
 }
 
 export function useDownloadEngine() {
