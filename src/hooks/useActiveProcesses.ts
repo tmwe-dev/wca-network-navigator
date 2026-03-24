@@ -137,7 +137,7 @@ export function useActiveProcesses() {
     }
 
     return result;
-  }, [downloadJobs, deepSearch?.running, deepSearch?.current, emailQueueCounts]);
+  }, [downloadJobs, deepSearch?.running, deepSearch?.current, emailQueueCounts, countdowns]);
 
   const hasActive = processes.length > 0;
   const runningCount = processes.filter((p) => p.status === "running").length;
