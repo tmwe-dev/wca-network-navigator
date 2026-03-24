@@ -4,11 +4,100 @@ import { useQueryClient } from "@tanstack/react-query";
 import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pauseJob, stopJob, emitEvent } from "@/lib/download/jobState";
 
 /**
- * V6: Server-side download engine.
- * - Uses edge function scrape-wca-partners (direct SSO + cheerio) instead of Chrome extension
- * - No extension bridge dependency
- * - Backoff retry on failures
+ * V7: Server-side download engine with circuit breaker + exponential backoff.
+ * 
+ * Standards:
+ * - RFC 7231 §7.1.3: Exponential backoff with jitter on 429/503
+ * - Circuit Breaker (Martin Fowler): Opens after N consecutive failures, half-open test after cooldown
+ * - 12-Factor App: DELAY_PATTERN externalized via app_settings, not hardcoded
  */
+
+// Default delay pattern from wca-app repo (seconds between requests)
+const DEFAULT_DELAY_PATTERN = [3, 3, 2, 3, 8, 3, 5, 3, 12, 3, 4, 3, 6, 3, 9, 3, 3, 3, 10];
+const DEFAULT_BATCH_PAUSE = 15; // seconds pause every 20 profiles
+const DEFAULT_BATCH_SIZE = 20;
+
+// Circuit breaker states
+type CircuitState = "closed" | "open" | "half_open";
+
+interface CircuitBreaker {
+  state: CircuitState;
+  failureCount: number;
+  lastFailureTime: number;
+  threshold: number;      // failures before opening
+  cooldownMs: number;     // ms before half-open test
+  halfOpenSuccessNeeded: number;
+  halfOpenSuccessCount: number;
+}
+
+function createCircuitBreaker(threshold = 5, cooldownMs = 60_000): CircuitBreaker {
+  return {
+    state: "closed",
+    failureCount: 0,
+    lastFailureTime: 0,
+    threshold,
+    cooldownMs,
+    halfOpenSuccessNeeded: 2,
+    halfOpenSuccessCount: 0,
+  };
+}
+
+function recordSuccess(cb: CircuitBreaker): void {
+  if (cb.state === "half_open") {
+    cb.halfOpenSuccessCount++;
+    if (cb.halfOpenSuccessCount >= cb.halfOpenSuccessNeeded) {
+      cb.state = "closed";
+      cb.failureCount = 0;
+      cb.halfOpenSuccessCount = 0;
+      console.log("[CIRCUIT] Closed — service recovered");
+    }
+  } else {
+    cb.failureCount = 0;
+  }
+}
+
+function recordFailure(cb: CircuitBreaker): void {
+  cb.failureCount++;
+  cb.lastFailureTime = Date.now();
+  cb.halfOpenSuccessCount = 0;
+
+  if (cb.state === "half_open") {
+    cb.state = "open";
+    console.log("[CIRCUIT] Re-opened from half_open — still failing");
+  } else if (cb.failureCount >= cb.threshold) {
+    cb.state = "open";
+    console.log(`[CIRCUIT] Opened — ${cb.failureCount} consecutive failures`);
+  }
+}
+
+function canAttempt(cb: CircuitBreaker): boolean {
+  if (cb.state === "closed") return true;
+  if (cb.state === "open") {
+    const elapsed = Date.now() - cb.lastFailureTime;
+    if (elapsed >= cb.cooldownMs) {
+      cb.state = "half_open";
+      cb.halfOpenSuccessCount = 0;
+      console.log("[CIRCUIT] Half-open — testing service");
+      return true;
+    }
+    return false;
+  }
+  // half_open
+  return true;
+}
+
+/** Calculate delay with jitter (RFC 7231) */
+function calcBackoff(attempt: number, baseMs = 5000, maxMs = 60_000): number {
+  const exponential = Math.min(baseMs * Math.pow(2, attempt - 1), maxMs);
+  const jitter = exponential * 0.5 * Math.random(); // ±50% jitter
+  return Math.round(exponential + jitter);
+}
+
+/** Get delay from pattern (12-Factor: loaded from config, falls back to default) */
+function getPatternDelay(index: number, pattern: number[]): number {
+  return (pattern[index % pattern.length] || 3) * 1000;
+}
+
 export function useDownloadEngine() {
   const queryClient = useQueryClient();
   const abortRef = useRef<AbortController | null>(null);
@@ -26,9 +115,43 @@ export function useDownloadEngine() {
       body: { wcaId, countryCode, aiParse: false },
     });
     if (error) {
-      return { success: false, error: error.message || "Edge function error" };
+      // Detect rate limit (429) or service unavailable (503)
+      const status = (error as any)?.status || 0;
+      return { success: false, error: error.message || "Edge function error", httpStatus: status };
     }
     return data;
+  };
+
+  /** Load externalized config from app_settings (12-Factor) */
+  const loadConfig = async (): Promise<{ delayPattern: number[]; batchPause: number; batchSize: number; circuitThreshold: number; circuitCooldown: number }> => {
+    const defaults = {
+      delayPattern: DEFAULT_DELAY_PATTERN,
+      batchPause: DEFAULT_BATCH_PAUSE,
+      batchSize: DEFAULT_BATCH_SIZE,
+      circuitThreshold: 5,
+      circuitCooldown: 60,
+    };
+
+    try {
+      const { data: settings } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .in("key", ["download_delay_pattern", "download_batch_pause", "download_batch_size", "download_circuit_threshold", "download_circuit_cooldown"]);
+
+      if (settings) {
+        for (const s of settings) {
+          try {
+            if (s.key === "download_delay_pattern" && s.value) defaults.delayPattern = JSON.parse(s.value);
+            if (s.key === "download_batch_pause" && s.value) defaults.batchPause = parseInt(s.value);
+            if (s.key === "download_batch_size" && s.value) defaults.batchSize = parseInt(s.value);
+            if (s.key === "download_circuit_threshold" && s.value) defaults.circuitThreshold = parseInt(s.value);
+            if (s.key === "download_circuit_cooldown" && s.value) defaults.circuitCooldown = parseInt(s.value);
+          } catch {}
+        }
+      }
+    } catch {}
+
+    return defaults;
   };
 
   const startJob = useCallback(async (jobId: string) => {
@@ -43,7 +166,11 @@ export function useDownloadEngine() {
       const claimed = await claimJob(jobId);
       if (!claimed) return;
 
-      // 2. Safety: ensure download_job_items exist
+      // 2. Load externalized config
+      const config = await loadConfig();
+      console.log(`[DL-ENGINE] Config loaded: pattern=${config.delayPattern.length} steps, batch=${config.batchSize}, circuit=${config.circuitThreshold}`);
+
+      // 3. Safety: ensure download_job_items exist
       const { count: itemCount } = await supabase.from("download_job_items").select("id", { count: "exact", head: true }).eq("job_id", jobId);
       if (!itemCount || itemCount === 0) {
         const { data: jobData } = await supabase.from("download_jobs").select("wca_ids").eq("id", jobId).single();
@@ -55,18 +182,29 @@ export function useDownloadEngine() {
         }
       }
 
-      // 3. Fetch job for delay and country info
+      // 4. Fetch job info
       const { data: job } = await supabase.from("download_jobs").select("delay_seconds, country_code, country_name").eq("id", jobId).single();
       if (!job) return;
-      const delayMs = Math.max((job.delay_seconds || 15), 5) * 1000;
-      let consecutiveFails = 0;
+
+      // 5. Initialize circuit breaker
+      const cb = createCircuitBreaker(config.circuitThreshold, config.circuitCooldown * 1000);
       let itemsProcessed = 0;
 
-      // 4. Main loop
+      // 6. Main loop
       while (!ac.signal.aborted) {
         // Check for pause/stop
         const { data: jobCheck } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
         if (!jobCheck || jobCheck.status !== "running") break;
+
+        // Circuit breaker check
+        if (!canAttempt(cb)) {
+          const waitTime = cb.cooldownMs - (Date.now() - cb.lastFailureTime);
+          console.log(`[DL-ENGINE] Circuit OPEN — waiting ${Math.round(waitTime / 1000)}s before retry`);
+          await emitEvent(jobId, null, "circuit_open", { waitMs: waitTime, failures: cb.failureCount });
+          await sleep(Math.min(waitTime, 10_000), ac.signal);
+          if (ac.signal.aborted) break;
+          continue;
+        }
 
         // Get next item
         const { data: nextItems } = await supabase
@@ -80,9 +218,17 @@ export function useDownloadEngine() {
         if (!nextItems?.length) break;
         const item = nextItems[0];
 
-        // Delay between requests (skip first)
+        // Delay: use pattern from config (repo-style timing)
         if (itemsProcessed > 0) {
-          await sleep(delayMs, ac.signal);
+          // Batch pause every N profiles (repo pattern: 15s every 20 profiles)
+          if (itemsProcessed % config.batchSize === 0) {
+            console.log(`[DL-ENGINE] Batch pause: ${config.batchPause}s after ${itemsProcessed} profiles`);
+            await emitEvent(jobId, null, "batch_pause", { itemsProcessed, pauseSeconds: config.batchPause });
+            await sleep(config.batchPause * 1000, ac.signal);
+          } else {
+            const patternDelay = getPatternDelay(itemsProcessed, config.delayPattern);
+            await sleep(patternDelay, ac.signal);
+          }
           if (ac.signal.aborted) break;
         }
 
@@ -95,7 +241,7 @@ export function useDownloadEngine() {
           const result = await extractViaEdgeFunction(item.wca_id, job.country_code);
 
           if (result.success && result.found) {
-            consecutiveFails = 0;
+            recordSuccess(cb);
             const partner = result.partner || {};
             const hasContact = partner.contacts?.some((c: any) => c.email || c.phone || c.mobile);
             const cf = hasContact ? 1 : 0;
@@ -103,7 +249,7 @@ export function useDownloadEngine() {
             await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
             await emitEvent(jobId, item.id, "item_success", { companyName: partner.company_name || result.partner?.company_name });
           } else if (result.success && !result.found) {
-            // Not found
+            // Not found is not a service failure — don't trigger circuit breaker
             await updateItem(item.id, "member_not_found", { errorCode: "WCA_PROFILE_NOT_FOUND" });
             try {
               await supabase.from("partners_no_contacts").upsert({
@@ -115,44 +261,44 @@ export function useDownloadEngine() {
             } catch {}
             await emitEvent(jobId, item.id, "item_failed", { state: "member_not_found" });
           } else {
-            // Error
-            consecutiveFails++;
+            // Service error — trigger circuit breaker
+            recordFailure(cb);
             const errorMsg = result.error || "Unknown error";
+            const httpStatus = result.httpStatus || 0;
             await updateItem(item.id, "temporary_error", { errorCode: "EDGE_FN_ERROR", errorMessage: errorMsg });
-            await emitEvent(jobId, item.id, "item_failed", { errorCode: "EDGE_FN_ERROR", errorMessage: errorMsg });
+            await emitEvent(jobId, item.id, "item_failed", { errorCode: "EDGE_FN_ERROR", errorMessage: errorMsg, httpStatus });
 
-            if (consecutiveFails >= 5) {
-              await pauseJob(jobId, "Troppi errori consecutivi — verifica le credenziali WCA e riprova");
+            if (cb.state === "open") {
+              await pauseJob(jobId, `Circuit breaker aperto: ${cb.failureCount} errori consecutivi — attesa ${config.circuitCooldown}s`);
               break;
             }
 
-            // Exponential backoff
-            const backoffMs = Math.min(5000 * Math.pow(2, consecutiveFails - 1), 40000);
-            console.log(`[DL-ENGINE] Fail #${consecutiveFails}, backoff ${backoffMs}ms`);
+            // Exponential backoff with jitter (RFC 7231)
+            const backoffMs = calcBackoff(cb.failureCount);
+            console.log(`[DL-ENGINE] Fail #${cb.failureCount}, backoff ${backoffMs}ms (jitter applied)`);
             await sleep(backoffMs, ac.signal);
             if (ac.signal.aborted) break;
             itemsProcessed++;
             continue;
           }
         } catch (err) {
-          consecutiveFails++;
+          recordFailure(cb);
           const errorMsg = err instanceof Error ? err.message : "Network error";
           await updateItem(item.id, "temporary_error", { errorCode: "NETWORK_ERROR", errorMessage: errorMsg });
           await emitEvent(jobId, item.id, "item_failed", { errorCode: "NETWORK_ERROR" });
 
-          if (consecutiveFails >= 5) {
-            await pauseJob(jobId, "Errore di rete persistente — controlla la connessione");
+          if (cb.state === "open") {
+            await pauseJob(jobId, `Errore di rete persistente — circuit breaker aperto dopo ${cb.failureCount} errori`);
             break;
           }
 
-          const backoffMs = Math.min(5000 * Math.pow(2, consecutiveFails - 1), 40000);
+          const backoffMs = calcBackoff(cb.failureCount);
           await sleep(backoffMs, ac.signal);
           if (ac.signal.aborted) break;
           itemsProcessed++;
           continue;
         }
 
-        consecutiveFails = 0;
         itemsProcessed++;
         if (itemsProcessed % 3 === 0) {
           await snapshotProgress(jobId, item.wca_id);
@@ -160,7 +306,7 @@ export function useDownloadEngine() {
         }
       }
 
-      // 5. Final snapshot + finalize
+      // Final snapshot + finalize
       if (!ac.signal.aborted) {
         await snapshotProgress(jobId);
         await finalizeJob(jobId);
