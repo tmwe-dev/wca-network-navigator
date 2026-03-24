@@ -1024,6 +1024,7 @@ Deno.serve(async (req) => {
 
     // Allow service role key as admin bypass (for server-to-server calls)
     const isServiceRole = token === serviceRoleKey
+    let userId: string | null = null
     if (!isServiceRole) {
       const authClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -1034,6 +1035,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+      userId = userData.user.id
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
@@ -1082,7 +1084,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 1b: Direct SSO Login + Cheerio extraction (from wca-app repo) ──
-    const userId = userData.user.id
+    // userId is set from auth above (null if service role call)
     
     // Get authenticated cookies via SSO
     const directAuth = await getDirectAuthCookies(supabase, userId)
