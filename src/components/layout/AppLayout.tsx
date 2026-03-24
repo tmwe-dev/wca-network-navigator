@@ -6,6 +6,7 @@ import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
+import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ export function AppLayout() {
           <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
         </Suspense>
       </div>
-    </DeepSearchContext.Provider>
+    <ClaudeBadge />
+      </DeepSearchContext.Provider>
   );
 }
