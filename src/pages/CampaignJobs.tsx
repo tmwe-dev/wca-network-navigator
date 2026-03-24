@@ -1,18 +1,24 @@
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JobList } from "@/components/campaigns/JobList";
 import { JobCanvas } from "@/components/campaigns/JobCanvas";
-import { useCampaignJobs, useUpdateCampaignJob } from "@/hooks/useCampaignJobs";
+import { useCampaignJobs, useUpdateCampaignJob, useDeleteCampaignJobs } from "@/hooks/useCampaignJobs";
 import { useContactsForPartners } from "@/hooks/useActivities";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CampaignJobs() {
   const [searchParams] = useSearchParams();
   const batchId = searchParams.get("batch");
   const { data: jobs = [] } = useCampaignJobs(batchId);
   const updateJob = useUpdateCampaignJob();
+  const deleteCampaignJobs = useDeleteCampaignJobs();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Focus: which contact row was clicked (shows details in canvas)
   const [focusedContactId, setFocusedContactId] = useState<string | null>(null);
@@ -112,6 +118,12 @@ export default function CampaignJobs() {
         <span className="text-sm text-muted-foreground">
           {jobs.length} job · {pendingCount} da fare
         </span>
+        {selectedContactIds.size > 0 && (
+          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)} className="gap-1.5">
+            <Trash2 className="w-3.5 h-3.5" />
+            Elimina {selectedContactIds.size} selezionati
+          </Button>
+        )}
         {pendingCount > 0 && (
           <Button size="sm" variant="outline" onClick={handleCompleteAll} className="gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -148,6 +160,34 @@ export default function CampaignJobs() {
           />
         </div>
       </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare i job selezionati?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Verranno eliminati i campaign job associati ai {selectedContactIds.size} contatti selezionati. Questa azione è irreversibile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const targetJobs = getJobsForSelectedContacts();
+                try {
+                  await deleteCampaignJobs.mutateAsync(targetJobs.map(j => j.id));
+                  setSelectedContactIds(new Set());
+                  toast.success(`${targetJobs.length} job eliminati`);
+                } catch { toast.error("Errore durante l'eliminazione"); }
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

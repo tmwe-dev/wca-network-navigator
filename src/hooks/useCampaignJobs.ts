@@ -90,3 +90,20 @@ export function useUpdateCampaignJob() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["campaign-jobs"] }),
   });
 }
+
+export function useDeleteCampaignJobs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("campaign_jobs")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["campaign-jobs"] });
+      qc.invalidateQueries({ queryKey: ["all-activities"] });
+    },
+  });
+}

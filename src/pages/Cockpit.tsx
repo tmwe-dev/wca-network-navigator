@@ -9,7 +9,12 @@ import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { useDeleteActivities } from "@/hooks/useActivities";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type ViewMode = "card" | "list";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
@@ -51,6 +56,8 @@ const Cockpit = () => {
   const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
+  const deleteActivities = useDeleteActivities();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
   const executeAIActions = useCallback((actions: CockpitAIAction[], message: string) => {
@@ -209,6 +216,22 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
 
+  const handleBulkDelete = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmBulkDelete = useCallback(async () => {
+    const ids = Array.from(selection.selectedIds);
+    try {
+      await deleteActivities.mutateAsync(ids);
+      selection.clear();
+      toast.success(`${ids.length} record eliminati`);
+    } catch {
+      toast.error("Errore durante l'eliminazione");
+    }
+    setShowDeleteConfirm(false);
+  }, [selection, deleteActivities]);
+
   const contactsForAI = useMemo(() =>
     contacts.map(c => ({
       id: c.id, name: c.name, company: c.company, country: c.country,
@@ -239,6 +262,7 @@ const Cockpit = () => {
             isAllSelected={selection.isAllSelected} selectionCount={selection.count}
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
+            onBulkDelete={handleBulkDelete}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
@@ -251,6 +275,20 @@ const Cockpit = () => {
           <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
         </div>
       </div>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare {selection.count} record?</AlertDialogTitle>
+            <AlertDialogDescription>Questa azione è irreversibile.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
