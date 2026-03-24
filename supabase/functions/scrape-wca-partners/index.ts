@@ -831,133 +831,86 @@ Deno.serve(async (req) => {
       wcaSessionCookie = Deno.env.get('WCA_SESSION_COOKIE') || null
     }
 
-    // ── Step 1b: Try Vercel API first (primary channel) ──
-    let vercelSuccess = false
+    // ── Step 1b: Direct SSO Login + Cheerio extraction (from wca-app repo) ──
     const userId = claimsData.claims.sub as string
     
-    // Get Vercel cookie (cached or fresh login)
-    let vercelCookie: string | null = null
-    {
-      const { data: cached } = await supabase
-        .from('app_settings')
-        .select('value, updated_at')
-        .eq('key', 'vercel_wca_cookie')
-        .maybeSingle()
-      
-      if (cached?.value) {
-        const age = Date.now() - new Date(cached.updated_at).getTime()
-        if (age < 3600_000) vercelCookie = cached.value
-      }
-      
-      if (!vercelCookie) {
-        const { data: creds } = await supabase
-          .from('user_wca_credentials')
-          .select('wca_username, wca_password')
-          .eq('user_id', userId)
-          .maybeSingle()
-        
-        if (creds?.wca_username && creds?.wca_password) {
-          try {
-            const loginRes = await fetch(`${VERCEL_BASE}/login`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: creds.wca_username, password: creds.wca_password }),
-            })
-            const loginData = await loginRes.json()
-            if (loginData.cookie) {
-              vercelCookie = loginData.cookie
-              const { data: existing } = await supabase.from('app_settings').select('id').eq('key', 'vercel_wca_cookie').maybeSingle()
-              if (existing) {
-                await supabase.from('app_settings').update({ value: loginData.cookie }).eq('key', 'vercel_wca_cookie')
-              } else {
-                await supabase.from('app_settings').insert({ key: 'vercel_wca_cookie', value: loginData.cookie })
-              }
-              console.log('Vercel login OK')
-            }
-          } catch (e) {
-            console.error('Vercel login error:', e)
-          }
-        }
-      }
-    }
+    // Get authenticated cookies via SSO
+    const directAuth = await getDirectAuthCookies(supabase, userId)
     
-    if (vercelCookie) {
-      console.log(`Trying Vercel /api/scrape for member ${wcaId}...`)
+    if (directAuth) {
+      console.log(`[scrape] Trying direct fetch + cheerio for member ${wcaId}...`)
       try {
-        const scrapeRes = await fetch(`${VERCEL_BASE}/scrape`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memberId: String(wcaId), cookie: vercelCookie }),
-        })
-        const scrapeData = await scrapeRes.json()
+        const profileResult = await fetchProfileDirect(wcaId, directAuth.cookies)
         
-        if (scrapeRes.ok && scrapeData && (scrapeData.companyName || scrapeData.company_name)) {
-          console.log(`Vercel scrape OK: ${scrapeData.companyName || scrapeData.company_name}`)
+        if (profileResult && profileResult.state === 'ok') {
+          console.log(`[scrape] Direct extraction OK: ${profileResult.company_name}`)
           
-          // Map Vercel format to our parsed format
-          const vercelContacts = (scrapeData.contacts || []).map((c: any) => ({
-            title: c.title || c.position || c.role || 'Unknown',
-            name: c.name || undefined,
-            email: c.email || undefined,
-            phone: c.phone || c.directLine || c.direct_phone || undefined,
-            mobile: c.mobile || undefined,
-          }))
-          
-          const vercelNetworks = (scrapeData.networks || []).map((n: any) => ({
-            name: n.name || n.network_name || '',
-            expires: n.expires || undefined,
-          }))
-          
-          const vercelParsed = {
-            company_name: scrapeData.companyName || scrapeData.company_name,
-            city: scrapeData.city || 'Unknown',
-            country: scrapeData.country || scrapeData.countryName || '',
-            country_code: (scrapeData.countryCode || scrapeData.country_code || callerCountryCode || 'XX').toUpperCase(),
-            office_type: scrapeData.officeType || scrapeData.office_type || 'head_office',
-            email: scrapeData.email || null,
-            phone: scrapeData.phone || null,
-            fax: scrapeData.fax || null,
-            mobile: scrapeData.mobile || null,
-            emergency_phone: scrapeData.emergencyPhone || scrapeData.emergency_phone || null,
-            website: cleanWebsite(scrapeData.website || null),
-            address: scrapeData.address || null,
-            profile_description: scrapeData.profileDescription || scrapeData.profile_description || null,
-            member_since: scrapeData.memberSince || scrapeData.member_since || null,
-            gold_medallion: scrapeData.goldMedallion || scrapeData.gold_medallion || false,
-            networks: vercelNetworks,
-            certifications: scrapeData.certifications || [],
-            contacts: vercelContacts,
-            branch_offices: scrapeData.branchOffices || scrapeData.branch_offices || [],
-            has_branches: (scrapeData.branchOffices || scrapeData.branch_offices || []).length > 0,
-            _rawHtml: scrapeData.rawHtml || scrapeData.raw_html || '',
-            _rawMarkdown: scrapeData.rawMarkdown || scrapeData.raw_markdown || '',
+          const directParsed = {
+            company_name: profileResult.company_name,
+            city: profileResult.address?.split(',')[0]?.trim() || 'Unknown',
+            country: '',
+            country_code: (callerCountryCode || 'XX').toUpperCase(),
+            office_type: profileResult.branch ? 'branch' : 'head_office',
+            email: profileResult.email || null,
+            phone: profileResult.phone || null,
+            fax: profileResult.fax || null,
+            mobile: null,
+            emergency_phone: profileResult.emergency_call || null,
+            website: cleanWebsite(profileResult.website || null),
+            address: profileResult.address || null,
+            profile_description: profileResult.profile_text || null,
+            member_since: profileResult.enrolled_since || null,
+            gold_medallion: profileResult.gm_coverage || false,
+            networks: profileResult.networks.map((n: string) => {
+              const expiresMatch = profileResult.expires
+              return { name: n, expires: expiresMatch || undefined }
+            }),
+            certifications: profileResult.certifications || [],
+            contacts: profileResult.contacts.map((c: any) => ({
+              title: c.title || c.name || 'Unknown',
+              name: c.name || undefined,
+              email: c.email || undefined,
+              phone: c.direct_line || undefined,
+              mobile: c.mobile || undefined,
+            })),
+            branch_offices: profileResult.branch_cities?.map((bc: string) => ({ city: bc })) || [],
+            has_branches: (profileResult.branch_cities || []).length > 0,
+            _rawHtml: '',
+            _rawMarkdown: '',
           }
           
           if (preview) {
-            const contactsWithData = vercelParsed.contacts.filter((c: any) => c.email || c.phone || c.mobile)
+            const contactsWithData = directParsed.contacts.filter((c: any) => c.email || c.phone || c.mobile)
             return new Response(
               JSON.stringify({
                 success: true, found: true, wcaId,
                 authStatus: 'authenticated',
-                authDetails: 'Vercel API scrape',
+                authDetails: 'Direct SSO + Cheerio extraction',
                 partner: {
-                  company_name: vercelParsed.company_name, city: vercelParsed.city,
-                  country: vercelParsed.country, country_code: vercelParsed.country_code,
-                  office_type: vercelParsed.office_type, email: vercelParsed.email,
-                  phone: vercelParsed.phone, website: vercelParsed.website,
-                  networks: vercelParsed.networks, contacts: vercelParsed.contacts,
+                  company_name: directParsed.company_name, city: directParsed.city,
+                  country: directParsed.country, country_code: directParsed.country_code,
+                  office_type: directParsed.office_type, email: directParsed.email,
+                  phone: directParsed.phone, website: directParsed.website,
+                  networks: directParsed.networks, contacts: directParsed.contacts,
                 },
-                contactsFound: contactsWithData.length, totalContacts: vercelParsed.contacts.length,
+                contactsFound: contactsWithData.length, totalContacts: directParsed.contacts.length,
               }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
           }
           
-          return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, vercelParsed, callerCountryCode, aiParse)
+          return await saveAndRespond(supabase, supabaseUrl, supabaseKey, wcaId, directParsed, callerCountryCode, aiParse)
+        } else if (profileResult?.state === 'login_redirect') {
+          console.log('[scrape] Direct fetch: login redirect, cookies expired')
+          // Invalidate cached cookies
+          await supabase.from('app_settings').update({ value: '' }).eq('key', 'wca_direct_cookie')
+        } else if (profileResult?.state === 'not_found') {
+          console.log(`[scrape] Direct fetch: member ${wcaId} not found`)
         }
-        console.log('Vercel scrape returned no valid data, falling back...')
+        
+        console.log('[scrape] Direct extraction failed or not found, falling back...')
       } catch (e) {
-        console.error('Vercel scrape error:', e)
+        console.error('[scrape] Direct extraction error:', e)
       }
     }
 
