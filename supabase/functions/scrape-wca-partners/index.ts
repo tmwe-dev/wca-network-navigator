@@ -632,7 +632,7 @@ async function ssoLoginDirect(username: string, password: string): Promise<{ suc
   } catch (e) { return { success: false, error: String(e) } }
 }
 
-async function getDirectAuthCookies(supabase: any, userId: string): Promise<{ cookies: string } | null> {
+async function getDirectAuthCookies(supabase: any, userId: string | null): Promise<{ cookies: string } | null> {
   const { data: cached } = await supabase.from('app_settings').select('value, updated_at').eq('key', 'wca_direct_cookie').maybeSingle()
   if (cached?.value) {
     const age = Date.now() - new Date(cached.updated_at).getTime()
