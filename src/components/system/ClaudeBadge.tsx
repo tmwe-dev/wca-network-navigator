@@ -1,6 +1,6 @@
 /**
  * ClaudeBadge — Indicatore visivo "Claude al comando"
- * 🤖 Creato da Claude · Diario di bordo #1
+ * 🤖 Claude Engine V8 · Diario di bordo #5
  */
 
 import { useState } from "react";
@@ -28,18 +28,22 @@ export function ClaudeBadge() {
       {/* Pannello espanso */}
       {expanded && (
         <div
-          className="bg-background/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-xl text-xs max-w-[220px] animate-in fade-in slide-in-from-left-2 duration-200"
+          className="bg-background/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-xl text-xs max-w-[240px] animate-in fade-in slide-in-from-left-2 duration-200"
         >
-          <div className="font-semibold text-foreground mb-1 flex items-center gap-1.5">
-            <span style={{ color: "#D97706" }}>●</span> Claude Engine
+          <div className="font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+            <span style={{ color: "#D97706" }}>●</span> Claude Engine V8
           </div>
           <div className="text-muted-foreground space-y-0.5">
-            <div>▸ WCA Download Bridge</div>
-            <div>▸ Directory Locale</div>
-            <div>▸ Job Resume System</div>
+            <div>✅ Login Automatico (server-side)</div>
+            <div>✅ WCA Download Bridge</div>
+            <div>✅ WCA Scraper Bridge</div>
+            <div>✅ Directory Locale (localStorage)</div>
+            <div>✅ Circuit Breaker + Delay Pattern</div>
+            <div>✅ Job Resume System</div>
+            <div>✅ AI Agent Integration</div>
           </div>
           <div className="mt-2 pt-1.5 border-t border-border text-muted-foreground/60">
-            wca-app.vercel.app
+            wca-app.vercel.app · v8
           </div>
         </div>
       )}

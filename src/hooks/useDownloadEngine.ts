@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pauseJob, stopJob, emitEvent } from "@/lib/download/jobState";
 import { wcaScrape, wcaSave, wcaLogin } from "@/lib/wca-app-bridge";
-import { fetchWcaCredentials } from "@/lib/wcaCredentials";
+// fetchWcaCredentials rimosso — login diretto via wca-app (Claude Engine V8)
 import { createDirectory, markIdDone, markIdFailed, getPendingIds, checkMissingIdsLocal, saveSuspendedJob, removeSuspendedJob } from "@/lib/localDirectory";
 
 /**
@@ -70,26 +70,31 @@ function getPatternDelay(index: number, pattern: number[]): number {
   return (pattern[index % pattern.length] || 3) * 1000;
 }
 
-/** Get WCA cookie — usa credenziali da Settings Lovable (get-wca-credentials) */
+/** Get WCA cookie — login diretto via wca-app (credenziali server-side) 🤖 Claude Engine V8 */
 async function getWcaCookie(): Promise<string> {
   try {
     const cached = localStorage.getItem("wca_session_cookie");
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.cookie && Date.now() - parsed.savedAt < 30 * 60 * 1000) {
+      if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) {
         console.log("[CLAUDE-ENGINE] Using cached WCA cookie");
         return parsed.cookie;
       }
     }
   } catch {}
-  const creds = await fetchWcaCredentials();
-  if (creds?.username && creds?.password) {
-    console.log("[CLAUDE-ENGINE] Got credentials from Settings, logging in...");
-    const cookie = await wcaLogin(creds.username, creds.password);
-    try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie, savedAt: Date.now() })); } catch {}
-    return cookie;
+  console.log("[CLAUDE-ENGINE] Login via wca-app.vercel.app...");
+  const res = await fetch("https://wca-app.vercel.app/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const data = await res.json();
+  if (!data.success || !data.cookies) {
+    throw new Error(data.error || "Login WCA fallito via wca-app");
   }
-  throw new Error("Nessuna sessione WCA. Configura le credenziali in Settings.");
+  console.log("[CLAUDE-ENGINE] Login OK — cookie ottenuto");
+  try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+  return data.cookies;
 }
 
 export function useDownloadEngine() {

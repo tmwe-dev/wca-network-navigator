@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Pause, Square, Play, ChevronDown, ChevronUp,
-  Loader2, AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
@@ -10,7 +10,7 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { useTheme, t } from "./theme";
-import { useExtensionBridge } from "@/hooks/useExtensionBridge";
+// useExtensionBridge rimosso — download via wca-app bridge (Claude Engine V8)
 
 interface ActiveJobBarProps {
   onStartJob?: (jobId: string) => void;
@@ -22,8 +22,6 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
   const { data: jobs } = useDownloadJobs();
   const pauseResume = usePauseResumeJob();
   const [expanded, setExpanded] = useState(false);
-  const { isAvailable: extensionAvailable } = useExtensionBridge();
-
   const activeJobs = (jobs || []).filter(
     (j) => j.status === "running" || j.status === "pending" || j.status === "paused"
   );
@@ -74,11 +72,9 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
                 IN PAUSA
               </span>
             ) : null}
-            {!extensionAvailable && (
-              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-red-50 text-red-600 border border-red-200"}`}>
-                <AlertTriangle className="w-3 h-3" /> Estensione mancante
-              </span>
-            )}
+            <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+              🤖 Claude V8
+            </span>
           </div>
 
           {/* Big percentage — centered */}

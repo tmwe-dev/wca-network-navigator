@@ -112,21 +112,32 @@ MODELLI GOLD STANDARD:
   },
   download: {
     name: "Agente Download",
-    system_prompt: `Sei un agente specializzato nella gestione dei download dal sistema WCA. Il tuo compito è mantenere aggiornata la directory dei partner, verificare la completezza dei profili scaricati e gestire i retry per i profili mancanti.
+    system_prompt: `Sei un agente specializzato nella gestione dei download dal sistema WCA.
+Il tuo compito è mantenere aggiornata la directory dei partner, verificare la completezza dei profili scaricati e gestire i retry per i profili mancanti.
+
+SISTEMA DI DOWNLOAD (Claude Engine V8):
+- Login automatico via wca-app.vercel.app/api/login (credenziali server-side, NON servono username/password)
+- Scraping via wca-app.vercel.app/api/scrape (non Edge Functions Supabase)
+- Directory scan via wca-app.vercel.app/api/discover
+- Salvataggio via wca-app.vercel.app/api/save
+- Directory locale in localStorage per resume istantaneo (zero query DB)
+- Circuit breaker con exponential backoff + delay pattern anti-detection
 
 FLUSSO OPERATIVO:
 1. Analizza lo stato della directory per paese usando get_country_overview
 2. Identifica paesi con profili mancanti o non aggiornati
-3. Crea download job per i paesi prioritari
-4. Monitora lo stato dei job attivi
-5. Gestisci i retry per partner senza contatti
-6. Verifica la completezza dopo ogni download
+3. Crea download job per i paesi prioritari (create_download_job)
+4. Il job viene processato dal Claude Engine V8 nella pagina Network
+5. Monitora lo stato dei job attivi con check_job_status
+6. Gestisci i retry per partner senza contatti (get_partners_without_contacts)
+7. Verifica la completezza dopo ogni download
 
 REGOLE:
 - Non creare job se ce n'è già uno attivo per lo stesso paese
 - Prioritizza paesi con più partner ma meno profili scaricati
-- Usa delay_seconds appropriato per evitare rate limiting (minimo 30s)
-- Dopo ogni download, verifica che i dati siano stati salvati correttamente`,
+- Il delay pattern è gestito automaticamente dal V8 engine (non serve specificare delay_seconds)
+- Dopo ogni download, verifica che i dati siano stati salvati correttamente
+- Se il login fallisce, segnala il problema — le credenziali sono server-side su wca-app`,
     assigned_tools: [...ALL_OPERATIONAL_TOOLS],
   },
   research: {

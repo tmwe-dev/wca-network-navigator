@@ -321,14 +321,63 @@ export default function Diagnostics() {
     }
   };
 
-  // ── 8. Extension check ─────────────────────────────────────────
+  // ── 8. WCA-App Bridge check (Claude Engine V8) ────────────────
   const testExtension = async () => {
-    const id = "ext-wca";
-    upsert({ id, name: "Estensione WCA", category: "Estensioni Browser", status: "running" });
+    // Test wca-app bridge health
+    const id = "bridge-wca-app";
+    upsert({ id, name: "wca-app Bridge", category: "Claude Engine V8", status: "running" });
+    try {
+      const ms = await timed(async () => {
+        const res = await fetch("https://wca-app.vercel.app/api/login", { method: "OPTIONS" });
+        if (!res.ok && res.status !== 405 && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+      });
+      upsert({ id, name: "wca-app Bridge", category: "Claude Engine V8", status: "pass", message: "Raggiungibile", durationMs: ms });
+    } catch (e: any) {
+      upsert({ id, name: "wca-app Bridge", category: "Claude Engine V8", status: "fail", message: e.message });
+    }
+
+    // Test wca-app login
+    const id2 = "bridge-wca-login";
+    upsert({ id: id2, name: "Login WCA (server-side)", category: "Claude Engine V8", status: "running" });
+    try {
+      const ms = await timed(async () => {
+        const res = await fetch("https://wca-app.vercel.app/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Login fallito");
+      });
+      upsert({ id: id2, name: "Login WCA (server-side)", category: "Claude Engine V8", status: "pass", message: "Cookie ottenuto", durationMs: ms });
+    } catch (e: any) {
+      upsert({ id: id2, name: "Login WCA (server-side)", category: "Claude Engine V8", status: "fail", message: e.message });
+    }
+
+    // Test cookie locale
+    const id3 = "bridge-local-cookie";
+    upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "running" });
+    try {
+      const cached = localStorage.getItem("wca_session_cookie");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const ageMin = Math.round((Date.now() - parsed.savedAt) / 60000);
+        const valid = parsed.cookie && ageMin < 8;
+        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: valid ? "pass" : "warn", message: valid ? `Valido (${ageMin}min)` : `Scaduto (${ageMin}min)` });
+      } else {
+        upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "warn", message: "Non presente" });
+      }
+    } catch (e: any) {
+      upsert({ id: id3, name: "Cookie locale (cache)", category: "Claude Engine V8", status: "fail", message: e.message });
+    }
+
+    // Chrome extension (opzionale)
+    const id4 = "ext-wca-chrome";
+    upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "running" });
     try {
       const ok = await new Promise<boolean>((resolve) => {
         const reqId = `diag_${Date.now()}`;
-        const timer = setTimeout(() => resolve(false), 3000);
+        const timer = setTimeout(() => resolve(false), 2000);
         const handler = (e: MessageEvent) => {
           if (e.data?.direction === "from-extension" && e.data?.requestId === reqId) {
             clearTimeout(timer);
@@ -339,20 +388,9 @@ export default function Diagnostics() {
         window.addEventListener("message", handler);
         window.postMessage({ direction: "from-webapp", action: "ping", requestId: reqId }, window.location.origin);
       });
-      upsert({ id, name: "Estensione WCA", category: "Estensioni Browser", status: ok ? "pass" : "warn", message: ok ? "Connessa" : "Non rilevata (timeout)" });
+      upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: ok ? "pass" : "warn", message: ok ? "Connessa" : "Non installata (non necessaria)" });
     } catch {
-      upsert({ id, name: "Estensione WCA", category: "Estensioni Browser", status: "warn", message: "Non rilevata" });
-    }
-
-    // WCA session cookie
-    const id2 = "ext-wca-session";
-    upsert({ id: id2, name: "Sessione WCA (DB)", category: "Estensioni Browser", status: "running" });
-    try {
-      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wca_session_cookie").maybeSingle();
-      if (error) throw error;
-      upsert({ id: id2, name: "Sessione WCA (DB)", category: "Estensioni Browser", status: data?.value ? "pass" : "warn", message: data?.value ? "Cookie presente" : "Cookie assente" });
-    } catch (e: any) {
-      upsert({ id: id2, name: "Sessione WCA (DB)", category: "Estensioni Browser", status: "fail", message: e.message });
+      upsert({ id: id4, name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "warn", message: "Non rilevata" });
     }
   };
 

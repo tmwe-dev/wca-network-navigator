@@ -27,6 +27,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   const [cookieInput, setCookieInput] = useState("");
   const [savingCookie, setSavingCookie] = useState(false);
 
+  // WCA credentials rimossi — login automatico via wca-app (Claude Engine V8)
   const [wcaUser, setWcaUser] = useState("");
   const [wcaPass, setWcaPass] = useState("");
   const [showWcaPass, setShowWcaPass] = useState(false);
@@ -134,7 +135,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
         </Badge>
       </div>
 
-      {/* WCA Credentials */}
+      {/* WCA Auto-Login — Claude Engine V8 */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -143,51 +144,24 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                 <KeyRound className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Credenziali Auto-Login</CardTitle>
-                <CardDescription>Username e password per il login automatico WCA</CardDescription>
+                <CardTitle className="text-base">Login Automatico WCA</CardTitle>
+                <CardDescription>Connessione gestita da Claude Engine V8 via wca-app</CardDescription>
               </div>
             </div>
-            <Badge variant={wcaUser && wcaPass ? "default" : "secondary"} className={wcaUser && wcaPass ? "bg-primary text-primary-foreground" : ""}>
-              {wcaUser && wcaPass ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+            <Badge variant={isWcaOk ? "default" : "secondary"} className={isWcaOk ? "bg-emerald-600 text-white" : ""}>
+              {isWcaOk ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Automatico</> : "Da verificare"}
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Username WCA</Label>
-            <Input value={wcaUser} onChange={(e) => setWcaUser(e.target.value)} placeholder="email@example.com" />
-          </div>
-          <div className="space-y-2">
-            <Label>Password WCA</Label>
-            <div className="relative">
-              <Input type={showWcaPass ? "text" : "password"} value={wcaPass} onChange={(e) => setWcaPass(e.target.value)} placeholder="••••••••" className="pr-10" />
-              <button type="button" onClick={() => setShowWcaPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showWcaPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <Button onClick={handleSaveWcaCreds} disabled={savingWcaCreds || !wcaUser.trim() || !wcaPass.trim()}>
-            {savingWcaCreds ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Salva Credenziali
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Extension download */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Scarica l'estensione Chrome, installala, e clicca <strong>"🚀 Connetti WCA"</strong>.<br/>
-              Fa tutto lui: login + cookie + verifica. Un solo click.
-            </p>
-          </div>
-          <Button className="w-full" size="lg" onClick={() => window.open("/download-wca-extension.html", "_blank")}>
-            <Download className="w-4 h-4 mr-2" /> Scarica Estensione Chrome
-          </Button>
-          <p className="text-[11px] text-muted-foreground text-center">
-            Dopo il download: Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata → seleziona la cartella.
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Le credenziali WCA sono gestite automaticamente lato server. Non devi inserire username o password.
+            Il sistema effettua il login SSO tramite <code className="font-mono bg-muted px-1 rounded text-xs">wca-app.vercel.app</code>.
           </p>
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <span className="text-sm">🤖</span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">Claude Engine V8 — Login server-side, cache 8 min</span>
+          </div>
         </CardContent>
       </Card>
 

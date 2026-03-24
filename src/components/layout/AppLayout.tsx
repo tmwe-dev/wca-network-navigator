@@ -51,7 +51,13 @@ export function AppLayout() {
         case "navigate": if (detail.path) navigate(detail.path); break;
         case "show_toast": toast({ title: detail.toast_type === "error" ? "⚠️ Errore" : "✅ Fatto", description: detail.message || "" }); break;
         case "apply_filters": window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } })); break;
-        // V3: No auto-start downloads from AI — user starts manually
+        case "start_download_job":
+          // V8 Claude Engine: notifica l'utente del job creato e naviga alla pagina Network
+          if (detail.job_id) {
+            toast({ title: "🤖 Job creato dall'agente", description: `Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.` });
+            navigate("/network");
+          }
+          break;
       }
     };
     window.addEventListener("ai-ui-action", handler);
