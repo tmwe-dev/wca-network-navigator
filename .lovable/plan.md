@@ -1,60 +1,91 @@
 
 
-# Piano: Tasto Elimina Jobs + Selezione Multi-Record
+# Analisi Completa: Processi Download WCA — Dipendenze e Interazioni
 
-## Stato attuale
+## Mappa delle dipendenze
 
-- **Sorting** (`Sorting.tsx`): Ha già selezione multipla con checkbox e "Scarta selezionati" (usa `useCancelJobs` che imposta status=cancelled, non elimina davvero)
-- **ActivitiesTab** (`ActivitiesTab.tsx`): Ha già `useSelection`, `useDeleteActivities`, e bulk delete funzionante
-- **Cockpit** (`ContactStream.tsx`): Ha selezione multipla ma **nessun tasto elimina** — solo Deep Search e Alias
-- **CampaignJobs** (`CampaignJobs.tsx`): Ha selezione contatti ma **nessun tasto elimina jobs**
-- **HubOperativo**: Importa `useDeleteActivities` ma va verificato se espone il bottone
+Il sistema di download WCA tocca **7 aree della piattaforma** attraverso una catena di hook, componenti e tabelle DB interconnessi.
 
-## Interventi
+```text
+                    ┌─────────────────────────┐
+                    │  useDownloadEngine.ts    │ ← Motore V7 (client-side)
+                    │  circuit breaker, delays │
+                    └────────┬────────────────┘
+                             │ invoca
+                    ┌────────▼────────────────┐
+                    │  scrape-wca-partners     │ ← Edge Function (scraping)
+                    │  (server-side)           │
+                    └────────┬────────────────┘
+                             │ scrive su
+              ┌──────────────▼──────────────────┐
+              │  download_jobs / _items / _events │ ← DB (stato job)
+              └──────────────┬──────────────────┘
+                             │ letto da (Realtime)
+              ┌──────────────▼──────────────────┐
+              │     useDownloadJobs.ts           │ ← Singleton Realtime
+              └──┬──────┬──────┬──────┬────┬────┘
+                 │      │      │      │    │
+    ┌────────────▼┐ ┌───▼────┐ ┌▼─────┐ ┌─▼──────────┐ ┌▼───────────────┐
+    │Operations.tsx│ │Super   │ │Global│ │ActiveProcess│ │JobHealth       │
+    │(Network pg) │ │Home3D  │ │.tsx   │ │Indicator    │ │Monitor         │
+    └─────────────┘ └────────┘ └──────┘ └─────────────┘ └────────────────┘
+```
 
-### 1. Cockpit — Aggiungere "Elimina selezionati"
-**File**: `src/components/cockpit/ContactStream.tsx`
-- Aggiungere bottone `Trash2` nella barra bulk actions (accanto a Deep Search e Alias)
-- Il bottone chiama una callback `onBulkDelete` passata come prop
+## Componenti che consumano dati download
 
-**File**: `src/pages/Cockpit.tsx`
-- Aggiungere handler `onBulkDelete` che elimina le attività/draft associati ai contatti selezionati via `useDeleteActivities`
+| # | Componente/Hook | Dove | Cosa fa |
+|---|----------------|------|---------|
+| 1 | **Operations.tsx** | `/network` | Centro operativo download: CountryGrid, ActiveJobBar, JobMonitor, DownloadCanvas, DownloadExperienceDialog, Terminal. Avvia/stoppa job |
+| 2 | **ActiveProcessIndicator** | `AppLayout` (header globale) | Badge in alto con progress %, pausa/resume, lista espandibile di tutti i processi attivi |
+| 3 | **useJobHealthMonitor** | `AppLayout` (globale) | Rileva job falliti/bloccati/in pausa e mostra toast proattivi |
+| 4 | **SuperHome3D** | `/dashboard` | Widget "ActiveJobsWidget" mostra card dei job attivi/recenti con progress bar |
+| 5 | **Global.tsx** | `/global` | DownloadStatusPanel nella sidebar sinistra: stats, job attivo con progress, coda, completati |
+| 6 | **DownloadExperienceDialog** | Dialog fullscreen | 3 viste: Terminal, Agenda Partner, Profili Live |
+| 7 | **LiveOperationCards** | Chat AI (risposta) | Mostra progress dei job inline nelle risposte AI |
+| 8 | **OperationsCenter** | Dashboard tab | Pannello real-time con metriche download aggregate |
 
-### 2. Sorting — Cambiare "Scarta" in "Elimina" (DELETE reale)
-**File**: `src/pages/Sorting.tsx`
-- Il bottone "Scarta selezionati" attualmente usa `useCancelJobs` (imposta status=cancelled). Aggiungere un secondo bottone "Elimina" che usa `useDeleteActivities` per rimuovere davvero i record dal database
+## Flusso completo di un download
 
-### 3. CampaignJobs — Aggiungere elimina bulk
-**File**: `src/pages/CampaignJobs.tsx`
-- Aggiungere bottone "Elimina selezionati" nella barra header quando ci sono contatti selezionati
-- Creare un hook o riusare `useDeleteActivities` per eliminare i campaign_jobs selezionati
+1. **Creazione**: `useCreateDownloadJob` → filtra dead IDs → inserisce `download_jobs` + `download_job_items`
+2. **Avvio**: `useDownloadEngine.startJob()` → `claimJob()` → loop con DELAY_PATTERN + circuit breaker
+3. **Per ogni profilo**: `markProcessing()` → `scrape-wca-partners` Edge Function → `updateItem()` → `snapshotProgress()` ogni 3 profili
+4. **Pausa automatica**: Circuit breaker dopo 5 errori consecutivi → `pauseJob()` → toast da `useJobHealthMonitor`
+5. **Completamento**: `finalizeJob()` → invalida queries → toast di completamento
+6. **Post-job**: `process-download-job` Edge Function (action=complete) → `verifyDownloadCompleteness()` + `updateNetworkConfigsFromData()`
 
-**File**: `src/hooks/useCampaignJobs.ts`
-- Aggiungere `useDeleteCampaignJobs` mutation che fa DELETE reale sulla tabella `campaign_jobs`
+## Aree di influenza sul PartnerHub
 
-### 4. Selezione colonna intera + multi-record ovunque
-Tutte le sezioni che mostrano liste di jobs/attività devono avere:
-- **Checkbox "seleziona tutti"** nell'header della lista/colonna
-- **Checkbox per riga** su ogni record
-- **Contatore selezione** visibile
-- Riusare `useSelection` hook dove non è già usato
+Il PartnerHub (`/network` → PartnerHub.tsx) **non usa direttamente** il download engine, ma:
+- I dati scaricati finiscono in `partners` + `partner_contacts` → aggiornano automaticamente le query del PartnerHub
+- `useCountryStats` e `usePartners` vengono invalidate dal download engine, quindi il PartnerHub si aggiorna in tempo reale
+- Il download NON è avviabile dal PartnerHub — solo da Operations.tsx
 
-**File coinvolti per uniformare**:
-- `src/components/sorting/SortingList.tsx` — già ha checkbox, verificare select-all nell'header
-- `src/components/campaigns/JobList.tsx` — aggiungere checkbox select-all header
-- `src/components/cockpit/ContactStream.tsx` — già ha select-all, aggiungere delete
+## Stato attuale — Problemi identificati
 
-### 5. Conferma eliminazione
-Aggiungere un `AlertDialog` di conferma prima di ogni eliminazione bulk per evitare cancellazioni accidentali. Messaggio: "Eliminare X record? Questa azione è irreversibile."
+1. **Nessun badge download nel PartnerHub**: Quando un download è attivo per un paese che l'utente sta visualizzando nel PartnerHub, non c'è alcun indicatore visivo
+2. **Countdown/pause non visibile fuori da Operations**: Le pause del DELAY_PATTERN e le batch pause (15s ogni 20 profili) sono visibili solo nel Terminal/DownloadExperience. Nessun countdown globale
+3. **Duplicazione logica**: `ActiveJobBar`, `DownloadStatusPanel`, `ActiveProcessIndicator` e `ActiveJobsWidget` mostrano tutti la stessa informazione in modi diversi senza coordinamento
+4. **PartnerHub disconnesso**: Nessuna integrazione con lo stato download — l'utente non sa se i partner che vede sono aggiornati o se un download è in corso per quel paese
 
-## File coinvolti
+## Piano di intervento raccomandato
 
-| File | Azione |
-|------|--------|
-| `src/components/cockpit/ContactStream.tsx` | Aggiungere bottone Elimina nella bulk bar |
-| `src/pages/Cockpit.tsx` | Aggiungere handler delete + prop |
-| `src/pages/Sorting.tsx` | Aggiungere bottone Elimina reale accanto a Scarta |
-| `src/pages/CampaignJobs.tsx` | Aggiungere bulk delete con conferma |
-| `src/hooks/useCampaignJobs.ts` | Aggiungere `useDeleteCampaignJobs` mutation |
-| `src/components/campaigns/JobList.tsx` | Checkbox select-all nell'header |
+### A. Badge download nel PartnerHub
+- Aggiungere un indicatore in `PartnerHub.tsx` che mostra quando un download è attivo per il paese selezionato
+- Badge con progress %, paese, countdown alla prossima pausa
+
+### B. Countdown globale nel badge header
+- Migliorare `ActiveProcessIndicator` per mostrare il countdown delle pause (batch pause, delay pattern)
+- Richiede che `useDownloadEngine` emetta eventi di countdown via `download_job_events`
+
+### C. Unificare la visualizzazione
+- Il `DownloadStatusPanel` (Global.tsx), `ActiveJobBar` (Operations.tsx), e `ActiveJobsWidget` (SuperHome3D) hanno lo stesso scopo — standardizzare il componente base
+
+### D. Nessuna modifica strutturale necessaria
+- Il motore V7 è solido e funzionante
+- Le tabelle DB e gli hook sono ben organizzati
+- Le Edge Function gestiscono correttamente auth e scraping
+
+---
+
+**In sintesi**: il download funziona bene internamente ma è "invisibile" fuori dalla pagina Operations. Serve propagare lo stato download (con countdown e pause) verso PartnerHub e verso il badge globale nell'header.
 
