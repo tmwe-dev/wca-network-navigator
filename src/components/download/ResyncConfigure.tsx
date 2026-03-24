@@ -60,13 +60,28 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
     checkCookie();
   }, []);
 
+  // 🤖 Claude Engine V8: verifica connessione wca-app (non più cookie DB)
   async function checkCookie() {
-    const { data } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "wca_session_cookie")
-      .maybeSingle();
-    setHasCookie(!!data?.value);
+    try {
+      const cached = localStorage.getItem("wca_session_cookie");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) {
+          setHasCookie(true); return;
+        }
+      }
+      // Try a fresh login to verify
+      const res = await fetch("https://wca-app.vercel.app/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      setHasCookie(data.success && !!data.cookies);
+      if (data.success && data.cookies) {
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+      }
+    } catch { setHasCookie(false); }
   }
 
   async function loadStats() {
@@ -197,12 +212,10 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       if (error) throw error;
 
-      await supabase.functions.invoke("process-download-job", {
-        body: { jobId: data.id },
-      });
-
+      // 🤖 Claude Engine V8: il job viene processato dal motore V8 nella UI
+      // Non serve più chiamare Edge Function process-download-job
       queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
-      toast({ title: "Re-sync avviato", description: `${allWcaIds.length} partner da aggiornare` });
+      toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
       onStartRunning();
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
@@ -234,9 +247,9 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className={`text-sm font-medium ${th.h2}`}>Cookie WCA non configurato</p>
+            <p className={`text-sm font-medium ${th.h2}`}>Connessione WCA non disponibile</p>
             <p className={`text-xs mt-1 ${th.sub}`}>
-              Vai in Impostazioni e inserisci il cookie di sessione WCA prima di avviare il re-sync.
+              Il server wca-app non risponde. Verifica la connessione in Diagnostics.
             </p>
           </div>
         </div>

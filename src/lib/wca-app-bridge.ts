@@ -36,8 +36,9 @@ export async function wcaLogin(username: string, password: string): Promise<stri
     body: JSON.stringify({ username, password }),
   });
   const data = await res.json();
-  if (!data.cookie) throw new Error(data.error || "Login fallito");
-  return data.cookie;
+  const cookie = data.cookies || data.cookie;
+  if (!cookie) throw new Error(data.error || "Login fallito");
+  return cookie;
 }
 
 /** Discover membri per paese (una pagina alla volta) */

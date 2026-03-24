@@ -1,15 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
-/** Claim a job: set status to running + emit event. */
+/** Claim a job: set status to running + emit event.
+ * 🤖 V8: accepts "pending", "paused", AND "running" (for orphan re-attach after recovery)
+ */
 export async function claimJob(jobId: string): Promise<boolean> {
   const { data } = await supabase
     .from("download_jobs")
     .update({ status: "running", error_message: null })
     .eq("id", jobId)
-    .in("status", ["pending", "paused"])
+    .in("status", ["pending", "paused", "running"])
     .select("id");
   if (data?.length) {
-    await emitEvent(jobId, null, "job_started", {});
+    // Fix any items stuck in "processing" from a previous interrupted run
+    await supabase
+      .from("download_job_items")
+      .update({ status: "pending" })
+      .eq("job_id", jobId)
+      .eq("status", "processing");
+    await emitEvent(jobId, null, "job_started", { engine: "claude-v8" });
     return true;
   }
   return false;
@@ -116,6 +124,46 @@ export async function stopJob(jobId: string): Promise<void> {
   await supabase.from("download_jobs").update({ status: "stopped" }).eq("id", jobId);
   await supabase.from("download_job_items").update({ status: "cancelled" }).eq("job_id", jobId).eq("status", "pending");
   await emitEvent(jobId, null, "job_stopped", {});
+}
+
+/**
+ * Recover orphan jobs: reset stale "running" jobs to "pending" and fix stuck items.
+ * 🤖 Claude Engine V8 — Diario di bordo #5
+ * Called at page mount to clean up jobs that were interrupted by page reload.
+ */
+export async function recoverOrphanJobs(): Promise<string[]> {
+  const recovered: string[] = [];
+
+  // 1. Find jobs stuck in "running" — they have no active worker
+  const { data: runningJobs } = await supabase
+    .from("download_jobs")
+    .select("id, country_name, current_index, updated_at")
+    .eq("status", "running");
+
+  if (runningJobs && runningJobs.length > 0) {
+    for (const job of runningJobs) {
+      // Reset to pending so the engine can re-claim them
+      await supabase
+        .from("download_jobs")
+        .update({ status: "pending", error_message: "Recuperato automaticamente (job orfano)" })
+        .eq("id", job.id);
+
+      // Fix items stuck in "processing" → back to "pending"
+      await supabase
+        .from("download_job_items")
+        .update({ status: "pending" })
+        .eq("job_id", job.id)
+        .eq("status", "processing");
+
+      recovered.push(job.id);
+      await emitEvent(job.id, null, "job_recovered", {
+        reason: "orphan_detection",
+        previousIndex: job.current_index,
+      });
+    }
+  }
+
+  return recovered;
 }
 
 /** Emit an event to the append-only log. */

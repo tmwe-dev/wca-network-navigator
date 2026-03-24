@@ -8,32 +8,8 @@ import {
   Mail, Phone, User, Building2, Globe, ChevronDown, ChevronRight,
   ShieldCheck, ShieldAlert, ShieldX
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { previewWcaProfile, type PreviewResult } from "@/lib/api/wcaScraper";
 import { toast } from "@/hooks/use-toast";
-
-interface PreviewResult {
-  success: boolean;
-  found?: boolean;
-  wcaId: number;
-  authStatus: "authenticated" | "members_only" | "no_credentials" | "login_failed";
-  authDetails?: string;
-  partner?: {
-    company_name: string;
-    city: string;
-    country: string;
-    country_code: string;
-    office_type: string;
-    email: string | null;
-    phone: string | null;
-    website: string | null;
-    networks: { name: string; expires?: string }[];
-    contacts: { title: string; name?: string; email?: string; phone?: string; mobile?: string }[];
-  };
-  contactsFound?: number;
-  totalContacts?: number;
-  htmlSnippet?: string;
-  error?: string;
-}
 
 export function WcaBrowser({ isDark }: { isDark: boolean }) {
   const [wcaId, setWcaId] = useState("");
@@ -51,11 +27,9 @@ export function WcaBrowser({ isDark }: { isDark: boolean }) {
     setResult(null);
     setShowHtml(false);
     try {
-      const { data, error } = await supabase.functions.invoke("scrape-wca-partners", {
-        body: { wcaId: id, preview: true },
-      });
-      if (error) throw error;
-      setResult(data as PreviewResult);
+      // 🤖 Claude Engine V8: usa wca-app bridge invece di Edge Function
+      const data = await previewWcaProfile(id);
+      setResult(data);
     } catch (err) {
       setResult({
         success: false,

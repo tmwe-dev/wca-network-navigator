@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Pause, Square, Play, ChevronDown, ChevronUp,
-  Loader2,
+  Loader2, RotateCcw,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import {
@@ -10,6 +10,8 @@ import {
   type DownloadJob,
 } from "@/hooks/useDownloadJobs";
 import { useTheme, t } from "./theme";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 // useExtensionBridge rimosso — download via wca-app bridge (Claude Engine V8)
 
 interface ActiveJobBarProps {
@@ -37,6 +39,21 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
   const isPending = mainJob.status === "pending";
   const isPaused = mainJob.status === "paused";
 
+  // Detect stalled job: "running" but updated_at is stale (> 2 min)
+  const isStalled = useMemo(() => {
+    if (!isRunning) return false;
+    const updatedAt = new Date(mainJob.updated_at).getTime();
+    return Date.now() - updatedAt > 120_000;
+  }, [isRunning, mainJob.updated_at]);
+
+  const handleResetJob = async () => {
+    try {
+      await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato manualmente" }).eq("id", mainJob.id);
+      await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", mainJob.id).eq("status", "processing");
+      toast.success("Job resettato");
+    } catch { toast.error("Errore nel reset"); }
+  };
+
   return (
     <div className="flex-shrink-0 mx-4 mb-2">
       <div
@@ -50,7 +67,14 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
         <div className="flex items-center gap-3">
           {/* Status badge */}
           <div className="flex items-center gap-2 min-w-0">
-            {isRunning ? (
+            {isRunning && isStalled ? (
+              <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                isDark ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-red-50 text-red-700 border border-red-200"
+              }`}>
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                BLOCCATO
+              </span>
+            ) : isRunning ? (
               <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
                 isDark ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
               }`}>
@@ -86,7 +110,15 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
 
           {/* Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            {isRunning && (
+            {isRunning && isStalled ? (
+              <Button
+                size="sm"
+                onClick={handleResetJob}
+                className={`h-7 text-xs px-3 ${isDark ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-400 text-white"}`}
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+              </Button>
+            ) : isRunning ? (
               <>
                 <Button
                   size="sm"
@@ -105,7 +137,7 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
                   <Square className="w-3.5 h-3.5" />
                 </Button>
               </>
-            )}
+            ) : null}
             {isPending && onStartJob && (
               <Button
                 size="sm"

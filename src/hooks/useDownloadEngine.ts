@@ -264,8 +264,15 @@ export function useDownloadEngine() {
           recordFailure(cb);
           markIdFailed(job.country_code, item.wca_id);
           const errorMsg = err instanceof Error ? err.message : "Network error";
-          await updateItem(item.id, "temporary_error", { errorCode: "NETWORK_ERROR", errorMessage: errorMsg });
-          await emitEvent(jobId, item.id, "item_failed", { errorCode: "NETWORK_ERROR" });
+          // Classify error for better diagnostics
+          const errorCode = errorMsg.includes("Login") ? "WCA_LOGIN_ERROR"
+            : errorMsg.includes("Scrape") ? "WCA_SCRAPE_ERROR"
+            : errorMsg.includes("Save") ? "WCA_SAVE_ERROR"
+            : errorMsg.includes("fetch") || errorMsg.includes("Failed") ? "FETCH_ERROR"
+            : "NETWORK_ERROR";
+          console.error(`[CLAUDE-ENGINE] ${errorCode} wca_id=${item.wca_id}: ${errorMsg}`);
+          await updateItem(item.id, "temporary_error", { errorCode, errorMessage: errorMsg });
+          await emitEvent(jobId, item.id, "item_failed", { errorCode, errorMessage: errorMsg, engine: "claude-v8" });
 
           if (cb.state === "open") {
             saveSuspendedJob(job.country_code, job.country_name || job.country_code);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Terminal, Download,
@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDownloadEngine } from "@/hooks/useDownloadEngine";
+import { recoverOrphanJobs } from "@/lib/download/jobState";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { getCountryFlag } from "@/lib/countries";
@@ -90,6 +91,24 @@ export default function Operations() {
     setDlCanvasOpen(true);
     rawStartJob(jobId);
   }, [rawStartJob]);
+
+  // 🤖 Claude Engine V8: recupero automatico job orfani al mount
+  useEffect(() => {
+    let cancelled = false;
+    const recover = async () => {
+      try {
+        const recovered = await recoverOrphanJobs();
+        if (cancelled || recovered.length === 0) return;
+        console.log(`[CLAUDE-ENGINE] Recovered ${recovered.length} orphan job(s)`);
+        toast.info(`${recovered.length} job recuperato — pronto per riprendere`);
+        queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
+      } catch (err) {
+        console.error("[CLAUDE-ENGINE] Orphan recovery failed:", err);
+      }
+    };
+    recover();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
 
