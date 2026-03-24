@@ -7,6 +7,7 @@ import avatarBruce from "@/assets/agents/avatar-bruce.png";
 import avatarRenato from "@/assets/agents/avatar-renato.png";
 import avatarCarlo from "@/assets/agents/avatar-carlo.png";
 import avatarLeonardo from "@/assets/agents/avatar-leonardo.png";
+import avatarGianfranco from "@/assets/agents/avatar-gianfranco.png";
 
 export interface AgentAvatar {
   id: string;
@@ -25,6 +26,7 @@ export const AGENT_AVATARS: AgentAvatar[] = [
   { id: "renato", src: avatarRenato, label: "Renato", gender: "female" },
   { id: "carlo", src: avatarCarlo, label: "Carlo", gender: "female" },
   { id: "leonardo", src: avatarLeonardo, label: "Leonardo", gender: "male" },
+  { id: "gianfranco", src: avatarGianfranco, label: "Gianfranco", gender: "male" },
 ];
 
 /**
@@ -42,6 +44,7 @@ const NAME_AVATAR_MAP: Record<string, string> = {
   carlo: "carlo",
   leonardo: "leonardo",
   marco: "bruce", // fallback male
+  gianfranco: "gianfranco",
 };
 
 /**
