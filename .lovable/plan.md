@@ -1,46 +1,83 @@
 
 
-# Piano: Backup Completo + Integrazione WCA Repository
+# Piano: Download Experience Center + Agenda Potenziata
 
-## Fase 1: Backup Completo (data e ora nel nome)
+## Panoramica
 
-Creare un backup completo salvato in `/mnt/documents/` con timestamp.
+Tre interventi principali:
 
-### Database — Export di tutte le 48 tabelle
-
-Script che esporta ogni tabella pubblica in JSON:
-- `backup_2026-03-24_03h00/db/partners.json` (1585 record)
-- `backup_2026-03-24_03h00/db/partner_contacts.json` (2139)
-- `backup_2026-03-24_03h00/db/partner_networks.json` (5991)
-- `backup_2026-03-24_03h00/db/partner_services.json` (4360)
-- `backup_2026-03-24_03h00/db/partner_certifications.json` (254)
-- `backup_2026-03-24_03h00/db/partner_social_links.json` (1331)
-- `backup_2026-03-24_03h00/db/imported_contacts.json` (11462)
-- `backup_2026-03-24_03h00/db/blacklist_entries.json` (328)
-- `backup_2026-03-24_03h00/db/agents.json` (11)
-- `backup_2026-03-24_03h00/db/app_settings.json` (48)
-- ... tutte le altre tabelle
-
-### Codebase — Copia di tutti i file sorgente
-
-- `backup_2026-03-24_03h00/code/` — copia completa di `src/`, `supabase/functions/`, `public/`, config files
-- Include tutti i componenti, hooks, pagine, edge functions, estensioni
-
-### Schema DB
-
-- `backup_2026-03-24_03h00/schema.sql` — dump della struttura (CREATE TABLE, RLS policies, triggers, functions)
+1. **Download Experience Popup** — Pagina dedicata (Dialog fullscreen) che raccoglie TUTTO il download in un unico posto, con menu per scegliere la vista live
+2. **Agenda Potenziata** — Copia e migliora l'agenda del repo con design moderno + due visualizzazioni (cards profilo e lista riga per riga)
+3. **Menu Vista Live** — Durante il download, l'utente sceglie cosa vedere: Terminal, Agenda Partner, o Profili Live in tempo reale
 
 ---
 
-## Fase 2: Integrazione WCA Repository (dopo backup)
+## 1. Download Experience Popup
 
-Come da piano approvato precedentemente:
+**Cosa**: Un Dialog/Sheet fullscreen che si apre quando c'è un download attivo. Contiene tutto: progress bar, controlli (pausa/stop/resume), e le 3 viste selezionabili.
+
+**File nuovi**:
+- `src/components/download/DownloadExperienceDialog.tsx` — Container principale con:
+  - Header: paese, progress %, contatori, controlli
+  - Menu vista: 3 bottoni icona (Terminal | Agenda | Profili Live)
+  - Area contenuto che mostra la vista selezionata
+
+**Componenti vista**:
+- **Terminal** → Riusa `DownloadTerminal` esistente (embedded, non dialog)
+- **Agenda Partner** → Nuovo `DownloadAgendaView.tsx` — lista partner scaricati con dati chiave (nome, email, tel, network), filtri, stato completamento
+- **Profili Live** → Nuovo `LiveProfileCards.tsx` — tabs orizzontali scorrevoli con card per ogni profilo appena scaricato (logo, nome, contatti, network badges). Ispirato alle "scraped tabs" del repo `index.html`
+
+**Integrazione in Operations.tsx**: Il bottone Download apre il DownloadExperienceDialog invece del DownloadCanvas attuale.
+
+---
+
+## 2. Agenda Potenziata
+
+**Cosa**: Rifare `src/pages/Agenda.tsx` con design premium e due modalità di visualizzazione dei partner/attività.
+
+**Modifiche**:
+- `src/pages/Agenda.tsx` — Redesign con glassmorphism, header con stats animati, tab migliorate
+- `src/components/agenda/AgendaCardView.tsx` — Vista a card dei partner con foto/logo, dati principali, badge network, indicatore completezza
+- `src/components/agenda/AgendaListView.tsx` — Vista tabellare compatta riga per riga con tutte le colonne (azienda, città, email, tel, network, stato, data)
+- Toggle vista (card/lista) nell'header dell'agenda
+- Migliorare `ActivitiesTab.tsx` con design coerente (glassmorphism, animazioni, colori gradient)
+
+---
+
+## 3. Menu Vista Live nel Download
+
+**Cosa**: Dentro il DownloadExperienceDialog, un selettore a 3 opzioni:
+
+| Vista | Icona | Descrizione |
+|-------|-------|-------------|
+| Terminal | `Terminal` | Log tecnico in tempo reale (esistente) |
+| Agenda | `ListTodo` | Lista partner scaricati con dati, filtri, ricerca |
+| Profili | `Eye` | Card profilo per ogni partner appena processato |
+
+L'utente cambia vista in qualsiasi momento durante il download. La vista Profili Live mostra l'ultimo partner scaricato in evidenza + storico scorrevole.
+
+---
+
+## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/scrape-wca-directory/index.ts` | Integrare `ssoLogin()` + `extractMembersFromHtml()` dal repo, Firecrawl come fallback |
-| `supabase/functions/scrape-wca-partners/index.ts` | Integrare `ssoLogin()` + `extractProfile()` + `fetchProfile()` dal repo |
-| `src/hooks/useDownloadEngine.ts` | Sostituire extension bridge con `supabase.functions.invoke("scrape-wca-partners")` |
+| `src/components/download/DownloadExperienceDialog.tsx` | **NUOVO** — Container principale popup download |
+| `src/components/download/DownloadAgendaView.tsx` | **NUOVO** — Vista agenda partner scaricati |
+| `src/components/download/LiveProfileCards.tsx` | **NUOVO** — Vista profili live con tabs |
+| `src/components/download/DownloadTerminal.tsx` | **MODIFICA** — Estrarre versione embedded (non solo dialog) |
+| `src/pages/Operations.tsx` | **MODIFICA** — Sostituire DownloadCanvas con DownloadExperienceDialog |
+| `src/pages/Agenda.tsx` | **MODIFICA** — Redesign completo con 2 viste |
+| `src/components/agenda/AgendaCardView.tsx` | **NUOVO** — Vista card partner |
+| `src/components/agenda/AgendaListView.tsx` | **NUOVO** — Vista lista riga per riga |
+| `src/components/agenda/ActivitiesTab.tsx` | **MODIFICA** — Upgrade design |
 
-Cheerio importato via `https://esm.sh/cheerio@1.0.0` nelle edge function Deno.
+---
+
+## Design
+
+- Glassmorphism coerente con il resto del sistema (`glass-panel`, `backdrop-blur`)
+- Profili Live: card con bordo gradient animato per il profilo in corso, badge colorati per network
+- Agenda: header con contatori animati (totale, con email, con tel, completati)
+- Transizioni Framer Motion tra le viste
 
