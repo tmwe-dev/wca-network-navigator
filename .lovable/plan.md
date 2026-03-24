@@ -1,54 +1,46 @@
 
 
-# Piano: Integrazione API Vercel WCA nel Sistema di Scraping
+# Piano: Backup Completo + Integrazione WCA Repository
 
-## Obiettivo
+## Fase 1: Backup Completo (data e ora nel nome)
 
-Sostituire Firecrawl come canale primario con le API Vercel (`https://wca-app.vercel.app/api`) per directory listing e profile scraping. Le credenziali WCA sono gia' salvate nella tabella `user_wca_credentials` (per-user) e vengono lette dalla edge function `get-wca-credentials`.
+Creare un backup completo salvato in `/mnt/documents/` con timestamp.
 
-## Flusso
+### Database — Export di tutte le 48 tabelle
 
-```text
-Edge Function → Vercel /api/login (con credenziali da user_wca_credentials)
-             → Vercel /api/discover (lista membri per paese)
-             → Vercel /api/scrape (profilo singolo)
-             → Se fallisce → Fallback a Firecrawl/Direct fetch (attuale)
-```
+Script che esporta ogni tabella pubblica in JSON:
+- `backup_2026-03-24_03h00/db/partners.json` (1585 record)
+- `backup_2026-03-24_03h00/db/partner_contacts.json` (2139)
+- `backup_2026-03-24_03h00/db/partner_networks.json` (5991)
+- `backup_2026-03-24_03h00/db/partner_services.json` (4360)
+- `backup_2026-03-24_03h00/db/partner_certifications.json` (254)
+- `backup_2026-03-24_03h00/db/partner_social_links.json` (1331)
+- `backup_2026-03-24_03h00/db/imported_contacts.json` (11462)
+- `backup_2026-03-24_03h00/db/blacklist_entries.json` (328)
+- `backup_2026-03-24_03h00/db/agents.json` (11)
+- `backup_2026-03-24_03h00/db/app_settings.json` (48)
+- ... tutte le altre tabelle
 
-## Modifiche
+### Codebase — Copia di tutti i file sorgente
 
-### 1. `supabase/functions/scrape-wca-directory/index.ts`
+- `backup_2026-03-24_03h00/code/` — copia completa di `src/`, `supabase/functions/`, `public/`, config files
+- Include tutti i componenti, hooks, pagine, edge functions, estensioni
 
-**Canale primario: Vercel API**
-- Leggere credenziali WCA dal DB (`user_wca_credentials` via service role, usando lo user_id dal JWT)
-- `POST /api/login` con username/password → ottieni cookie
-- `POST /api/discover` con country, page, cookie → lista membri con `id`, `company_name`, `city`
-- Mappare il formato Vercel al formato esistente (`{ company_name, city, wca_id }`)
-- Se Vercel fallisce (timeout, errore, 0 risultati) → fallback a Firecrawl (codice attuale)
+### Schema DB
 
-### 2. `supabase/functions/scrape-wca-partners/index.ts`
+- `backup_2026-03-24_03h00/schema.sql` — dump della struttura (CREATE TABLE, RLS policies, triggers, functions)
 
-**Canale primario: Vercel API (prima di direct fetch)**
-- Leggere credenziali WCA dal DB
-- `POST /api/login` → cookie
-- `POST /api/scrape` con `memberId` e cookie → profilo completo
-- Mappare i campi Vercel al formato `parseProfileFromContent` esistente (company_name, city, email, phone, website, contacts, networks)
-- Se Vercel restituisce dati validi → passare a `saveAndRespond()` come gia' fa
-- Se fallisce → fallback al flusso attuale (direct fetch con cookie + Firecrawl)
+---
 
-### 3. Cache del cookie Vercel
+## Fase 2: Integrazione WCA Repository (dopo backup)
 
-Per evitare login ripetuti:
-- Dopo un login Vercel riuscito, salvare il cookie in `app_settings` con key `vercel_wca_cookie` e timestamp
-- Prima di ogni chiamata, controllare se il cookie cached e' < 1 ora → riusarlo
-- Se scaduto o assente → nuovo login
-
-## File coinvolti
+Come da piano approvato precedentemente:
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/scrape-wca-directory/index.ts` | Aggiungere Vercel come canale primario, Firecrawl come fallback |
-| `supabase/functions/scrape-wca-partners/index.ts` | Aggiungere Vercel `/api/scrape` come primo tentativo |
+| `supabase/functions/scrape-wca-directory/index.ts` | Integrare `ssoLogin()` + `extractMembersFromHtml()` dal repo, Firecrawl come fallback |
+| `supabase/functions/scrape-wca-partners/index.ts` | Integrare `ssoLogin()` + `extractProfile()` + `fetchProfile()` dal repo |
+| `src/hooks/useDownloadEngine.ts` | Sostituire extension bridge con `supabase.functions.invoke("scrape-wca-partners")` |
 
-Nessun secret aggiuntivo necessario — le credenziali WCA sono gia' nel DB. Nessuna modifica frontend.
+Cheerio importato via `https://esm.sh/cheerio@1.0.0` nelle edge function Deno.
 
