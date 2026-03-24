@@ -12,6 +12,7 @@ export interface ActiveProcess {
   progress?: number; // 0-100
   detail?: string;
   errorMessage?: string;
+  countdownLabel?: string;
 }
 
 /**
