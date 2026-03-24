@@ -13,6 +13,7 @@ import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { DownloadTerminalDialog } from "@/components/download/DownloadTerminal";
+import { DownloadExperienceDialog } from "@/components/download/DownloadExperienceDialog";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
