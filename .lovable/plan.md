@@ -1,83 +1,60 @@
 
 
-# Piano: Download Experience Center + Agenda Potenziata
+# Piano: Tasto Elimina Jobs + Selezione Multi-Record
 
-## Panoramica
+## Stato attuale
 
-Tre interventi principali:
+- **Sorting** (`Sorting.tsx`): Ha già selezione multipla con checkbox e "Scarta selezionati" (usa `useCancelJobs` che imposta status=cancelled, non elimina davvero)
+- **ActivitiesTab** (`ActivitiesTab.tsx`): Ha già `useSelection`, `useDeleteActivities`, e bulk delete funzionante
+- **Cockpit** (`ContactStream.tsx`): Ha selezione multipla ma **nessun tasto elimina** — solo Deep Search e Alias
+- **CampaignJobs** (`CampaignJobs.tsx`): Ha selezione contatti ma **nessun tasto elimina jobs**
+- **HubOperativo**: Importa `useDeleteActivities` ma va verificato se espone il bottone
 
-1. **Download Experience Popup** — Pagina dedicata (Dialog fullscreen) che raccoglie TUTTO il download in un unico posto, con menu per scegliere la vista live
-2. **Agenda Potenziata** — Copia e migliora l'agenda del repo con design moderno + due visualizzazioni (cards profilo e lista riga per riga)
-3. **Menu Vista Live** — Durante il download, l'utente sceglie cosa vedere: Terminal, Agenda Partner, o Profili Live in tempo reale
+## Interventi
 
----
+### 1. Cockpit — Aggiungere "Elimina selezionati"
+**File**: `src/components/cockpit/ContactStream.tsx`
+- Aggiungere bottone `Trash2` nella barra bulk actions (accanto a Deep Search e Alias)
+- Il bottone chiama una callback `onBulkDelete` passata come prop
 
-## 1. Download Experience Popup
+**File**: `src/pages/Cockpit.tsx`
+- Aggiungere handler `onBulkDelete` che elimina le attività/draft associati ai contatti selezionati via `useDeleteActivities`
 
-**Cosa**: Un Dialog/Sheet fullscreen che si apre quando c'è un download attivo. Contiene tutto: progress bar, controlli (pausa/stop/resume), e le 3 viste selezionabili.
+### 2. Sorting — Cambiare "Scarta" in "Elimina" (DELETE reale)
+**File**: `src/pages/Sorting.tsx`
+- Il bottone "Scarta selezionati" attualmente usa `useCancelJobs` (imposta status=cancelled). Aggiungere un secondo bottone "Elimina" che usa `useDeleteActivities` per rimuovere davvero i record dal database
 
-**File nuovi**:
-- `src/components/download/DownloadExperienceDialog.tsx` — Container principale con:
-  - Header: paese, progress %, contatori, controlli
-  - Menu vista: 3 bottoni icona (Terminal | Agenda | Profili Live)
-  - Area contenuto che mostra la vista selezionata
+### 3. CampaignJobs — Aggiungere elimina bulk
+**File**: `src/pages/CampaignJobs.tsx`
+- Aggiungere bottone "Elimina selezionati" nella barra header quando ci sono contatti selezionati
+- Creare un hook o riusare `useDeleteActivities` per eliminare i campaign_jobs selezionati
 
-**Componenti vista**:
-- **Terminal** → Riusa `DownloadTerminal` esistente (embedded, non dialog)
-- **Agenda Partner** → Nuovo `DownloadAgendaView.tsx` — lista partner scaricati con dati chiave (nome, email, tel, network), filtri, stato completamento
-- **Profili Live** → Nuovo `LiveProfileCards.tsx` — tabs orizzontali scorrevoli con card per ogni profilo appena scaricato (logo, nome, contatti, network badges). Ispirato alle "scraped tabs" del repo `index.html`
+**File**: `src/hooks/useCampaignJobs.ts`
+- Aggiungere `useDeleteCampaignJobs` mutation che fa DELETE reale sulla tabella `campaign_jobs`
 
-**Integrazione in Operations.tsx**: Il bottone Download apre il DownloadExperienceDialog invece del DownloadCanvas attuale.
+### 4. Selezione colonna intera + multi-record ovunque
+Tutte le sezioni che mostrano liste di jobs/attività devono avere:
+- **Checkbox "seleziona tutti"** nell'header della lista/colonna
+- **Checkbox per riga** su ogni record
+- **Contatore selezione** visibile
+- Riusare `useSelection` hook dove non è già usato
 
----
+**File coinvolti per uniformare**:
+- `src/components/sorting/SortingList.tsx` — già ha checkbox, verificare select-all nell'header
+- `src/components/campaigns/JobList.tsx` — aggiungere checkbox select-all header
+- `src/components/cockpit/ContactStream.tsx` — già ha select-all, aggiungere delete
 
-## 2. Agenda Potenziata
-
-**Cosa**: Rifare `src/pages/Agenda.tsx` con design premium e due modalità di visualizzazione dei partner/attività.
-
-**Modifiche**:
-- `src/pages/Agenda.tsx` — Redesign con glassmorphism, header con stats animati, tab migliorate
-- `src/components/agenda/AgendaCardView.tsx` — Vista a card dei partner con foto/logo, dati principali, badge network, indicatore completezza
-- `src/components/agenda/AgendaListView.tsx` — Vista tabellare compatta riga per riga con tutte le colonne (azienda, città, email, tel, network, stato, data)
-- Toggle vista (card/lista) nell'header dell'agenda
-- Migliorare `ActivitiesTab.tsx` con design coerente (glassmorphism, animazioni, colori gradient)
-
----
-
-## 3. Menu Vista Live nel Download
-
-**Cosa**: Dentro il DownloadExperienceDialog, un selettore a 3 opzioni:
-
-| Vista | Icona | Descrizione |
-|-------|-------|-------------|
-| Terminal | `Terminal` | Log tecnico in tempo reale (esistente) |
-| Agenda | `ListTodo` | Lista partner scaricati con dati, filtri, ricerca |
-| Profili | `Eye` | Card profilo per ogni partner appena processato |
-
-L'utente cambia vista in qualsiasi momento durante il download. La vista Profili Live mostra l'ultimo partner scaricato in evidenza + storico scorrevole.
-
----
+### 5. Conferma eliminazione
+Aggiungere un `AlertDialog` di conferma prima di ogni eliminazione bulk per evitare cancellazioni accidentali. Messaggio: "Eliminare X record? Questa azione è irreversibile."
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/download/DownloadExperienceDialog.tsx` | **NUOVO** — Container principale popup download |
-| `src/components/download/DownloadAgendaView.tsx` | **NUOVO** — Vista agenda partner scaricati |
-| `src/components/download/LiveProfileCards.tsx` | **NUOVO** — Vista profili live con tabs |
-| `src/components/download/DownloadTerminal.tsx` | **MODIFICA** — Estrarre versione embedded (non solo dialog) |
-| `src/pages/Operations.tsx` | **MODIFICA** — Sostituire DownloadCanvas con DownloadExperienceDialog |
-| `src/pages/Agenda.tsx` | **MODIFICA** — Redesign completo con 2 viste |
-| `src/components/agenda/AgendaCardView.tsx` | **NUOVO** — Vista card partner |
-| `src/components/agenda/AgendaListView.tsx` | **NUOVO** — Vista lista riga per riga |
-| `src/components/agenda/ActivitiesTab.tsx` | **MODIFICA** — Upgrade design |
-
----
-
-## Design
-
-- Glassmorphism coerente con il resto del sistema (`glass-panel`, `backdrop-blur`)
-- Profili Live: card con bordo gradient animato per il profilo in corso, badge colorati per network
-- Agenda: header con contatori animati (totale, con email, con tel, completati)
-- Transizioni Framer Motion tra le viste
+| `src/components/cockpit/ContactStream.tsx` | Aggiungere bottone Elimina nella bulk bar |
+| `src/pages/Cockpit.tsx` | Aggiungere handler delete + prop |
+| `src/pages/Sorting.tsx` | Aggiungere bottone Elimina reale accanto a Scarta |
+| `src/pages/CampaignJobs.tsx` | Aggiungere bulk delete con conferma |
+| `src/hooks/useCampaignJobs.ts` | Aggiungere `useDeleteCampaignJobs` mutation |
+| `src/components/campaigns/JobList.tsx` | Checkbox select-all nell'header |
 
