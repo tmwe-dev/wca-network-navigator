@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/hooks/useAgents";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const roleBadgeColor: Record<string, string> = {
   account: "bg-blue-500/20 text-blue-400",
@@ -43,6 +45,7 @@ export function AgentAvatarCarousel({ agents, activeId, onSelect }: Props) {
         {agents.map((agent) => {
           const isActive = agent.id === activeId;
           const badge = roleBadgeColor[agent.role] || "bg-muted text-muted-foreground";
+          const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
 
           return (
             <motion.button
@@ -58,9 +61,16 @@ export function AgentAvatarCarousel({ agents, activeId, onSelect }: Props) {
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
               whileTap={{ scale: 0.92 }}
             >
-              <span className={cn("text-2xl transition-all", isActive && "text-3xl")}>
-                {agent.avatar_emoji}
-              </span>
+              {avatarSrc ? (
+                <Avatar className={cn("transition-all", isActive ? "h-10 w-10" : "h-8 w-8")}>
+                  <AvatarImage src={avatarSrc} alt={agent.name} />
+                  <AvatarFallback>{agent.avatar_emoji}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <span className={cn("text-2xl transition-all", isActive && "text-3xl")}>
+                  {agent.avatar_emoji}
+                </span>
+              )}
               <span className={cn("text-[11px] font-medium truncate max-w-[80px]", isActive ? "text-foreground" : "text-muted-foreground")}>
                 {agent.name}
               </span>

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import type { AgentStatusItem } from "@/hooks/useDailyBriefing";
 
 interface Props {
@@ -12,10 +14,8 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
   const navigate = useNavigate();
   const [agents, setAgents] = useState(initialAgents);
 
-  // Sync from parent
   useEffect(() => { setAgents(initialAgents); }, [initialAgents]);
 
-  // Realtime subscription on agent_tasks
   useEffect(() => {
     if (!initialAgents || initialAgents.length === 0) return;
 
@@ -56,6 +56,7 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {agents.map((agent) => {
           const isWorking = agent.activeTasks > 0;
+          const avatarSrc = resolveAgentAvatar(agent.name, agent.emoji);
           return (
             <button
               key={agent.id}
@@ -68,7 +69,14 @@ export function AgentStatusPanel({ agents: initialAgents }: Props) {
               )}
             >
               <div className="flex items-center gap-2">
-                <span className="text-lg leading-none">{agent.emoji}</span>
+                {avatarSrc ? (
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={avatarSrc} alt={agent.name} />
+                    <AvatarFallback className="text-xs">{agent.emoji}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <span className="text-lg leading-none">{agent.emoji}</span>
+                )}
                 <span className="text-xs font-semibold text-foreground truncate">{agent.name}</span>
                 {isWorking && (
                   <span className="ml-auto flex h-2 w-2 rounded-full bg-primary animate-pulse" />
