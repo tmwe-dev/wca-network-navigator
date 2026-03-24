@@ -64,6 +64,7 @@ export default function Operations() {
   const [dlResults, setDlResults] = useState<DownloadResult[]>([]);
   const [dlCurrent, setDlCurrent] = useState<DownloadCurrent | null>(null);
   const [showTerminal, setShowTerminal] = useState(false);
+  const [showExperience, setShowExperience] = useState(false);
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
