@@ -439,3 +439,20 @@ Le credenziali WCA devono essere salvate in `app_settings` con chiavi:
 Oppure un cookie valido con chiave `wca_cookie`.
 
 ---
+
+## Sessione #3 — 24 Marzo 2026
+
+### File modificati:
+
+| File | Modifica |
+|------|----------|
+| `src/hooks/useDownloadEngine.ts` | Login semplificato: chiama direttamente wca-app.vercel.app/api/login SENZA credenziali — il server le ha già |
+
+### Dettagli:
+- Rimossa dipendenza da `fetchWcaCredentials` (edge function Lovable)
+- Il login va diretto a `wca-app.vercel.app/api/login` con body vuoto `{}`
+- Il server usa le credenziali WCA configurate nel backend Vercel
+- Cookie cachato 8 minuti (il server lo cacha 10 min)
+- Zero configurazione richiesta lato Lovable Settings
+
+---
