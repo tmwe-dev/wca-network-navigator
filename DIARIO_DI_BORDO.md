@@ -456,3 +456,42 @@ Oppure un cookie valido con chiave `wca_cookie`.
 - Zero configurazione richiesta lato Lovable Settings
 
 ---
+
+## Sessione #4 — 24 Marzo 2026
+
+### Operazione: Deprecazione sistema download legacy
+
+### File RISCRITTI:
+
+| File | Azione |
+|------|--------|
+| `src/hooks/useWcaSession.ts` | Riscritto: non usa più estensione Chrome, testa connessione via wca-app.vercel.app/api/login |
+| `src/hooks/useWcaAppFallback.ts` | Deprecato: redirect a useWcaAppDownload |
+| `src/lib/api/wcaAppBridge.ts` | Deprecato: redirect a lib/wca-app-bridge.ts |
+| `src/lib/wcaCredentials.ts` | Deprecato: mantenuto per backward compat Settings, non usato dal download |
+| `src/components/download/WcaSessionIndicator.tsx` | Aggiornato tooltip |
+
+### File NON toccati (mantenuti per sicurezza):
+
+| File | Motivo |
+|------|--------|
+| `hooks/useExtensionBridge.ts` | Importato da 12+ file UI — non tocco per non rompere |
+| `hooks/useDirectoryDownload.ts` | Troppo interconnesso con UI PartnerListPanel |
+| `lib/download/jobState.ts` | Usato attivamente dal nostro engine V8 |
+| `lib/download/jobUpdater.ts` | Usato dal job monitor |
+| `lib/download/terminalLog.ts` | Usato dal terminale download |
+| `lib/download/extractProfile.ts` | Solo tipi, nessun side effect |
+| `lib/api/wcaScraper.ts` | Usato per scan directory (ancora via Edge Function) |
+| `components/download/*` | 15+ componenti UI — lasciati a Lovable |
+| `components/settings/ConnectionsSettings.tsx` | UI settings — gestito da Lovable |
+
+### Flusso download attuale:
+1. UI Lovable crea job → `useDirectoryDownload` → Supabase `download_jobs`
+2. `useDownloadEngine.startJob()` (Claude V8) prende il job
+3. Login via `wca-app.vercel.app/api/login` (credenziali server-side, zero config)
+4. Scrape via `wca-app.vercel.app/api/scrape`
+5. Save via `wca-app.vercel.app/api/save`
+6. Directory locale aggiornata ad ogni profilo
+7. UI Lovable mostra progress via `download_job_events` (invariato)
+
+---

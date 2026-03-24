@@ -1,31 +1,60 @@
 /**
- * V4: WcaSession hook is now a thin wrapper.
- * No session gates. Only provides status for UI indicators.
+ * V5: WcaSession — ora usa wca-app bridge (Claude Engine).
+ * 🤖 Claude Engine — Diario di bordo #4
+ * 
+ * Non dipende più dall'estensione Chrome.
+ * Testa la connessione chiamando wca-app.vercel.app/api/login.
  */
 import { useState, useCallback } from "react";
-import { useExtensionBridge } from "./useExtensionBridge";
+
+const WCA_APP_LOGIN = "https://wca-app.vercel.app/api/login";
 
 export function useWcaSession() {
-  const [extensionAvailable, setExtensionAvailable] = useState<boolean | null>(null);
+  const [extensionAvailable, setExtensionAvailable] = useState<boolean | null>(true);
   const [sessionActive, setSessionActive] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
-  const { checkAvailable, verifySession } = useExtensionBridge();
 
   const ensureSession = useCallback(async (): Promise<boolean> => {
     setIsChecking(true);
     setLastError(null);
     try {
-      const extOk = await checkAvailable();
-      setExtensionAvailable(extOk);
-      if (!extOk) { setLastError("Estensione non rilevata."); setSessionActive(false); return false; }
-      const result = await verifySession();
-      const ok = !!(result.success && result.authenticated);
-      setSessionActive(ok);
-      if (!ok) setLastError("Sessione WCA non attiva.");
-      return ok;
-    } finally { setIsChecking(false); }
-  }, [checkAvailable, verifySession]);
+      const res = await fetch(WCA_APP_LOGIN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (data.success && data.cookies) {
+        setExtensionAvailable(true);
+        setSessionActive(true);
+        // Cache cookie
+        try {
+          localStorage.setItem("wca_session_cookie", JSON.stringify({
+            cookie: data.cookies,
+            savedAt: Date.now(),
+          }));
+        } catch {}
+        return true;
+      }
+      setSessionActive(false);
+      setLastError(data.error || "Login WCA fallito");
+      return false;
+    } catch (err) {
+      setSessionActive(false);
+      setLastError("wca-app non raggiungibile");
+      return false;
+    } finally {
+      setIsChecking(false);
+    }
+  }, []);
 
-  return { extensionAvailable, sessionActive, isChecking, lastError, ensureSession, isSessionActive: sessionActive };
+  return {
+    extensionAvailable,
+    sessionActive,
+    isChecking,
+    lastError,
+    ensureSession,
+    isSessionActive: sessionActive,
+  };
 }

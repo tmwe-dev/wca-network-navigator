@@ -1,6 +1,7 @@
 /**
- * Fetch WCA credentials from edge function with proper auth header.
- * Logs failures to localStorage for diagnostic panel.
+ * @deprecated Il Claude Engine V8 usa login diretto via wca-app — credenziali server-side.
+ * Questa funzione è mantenuta per compatibilità con componenti legacy.
+ * 🤖 Claude Engine — Diario di bordo #4
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,44 +11,25 @@ export interface WcaCredentials {
 }
 
 export async function fetchWcaCredentials(): Promise<WcaCredentials | null> {
+  // Il nuovo engine non ha bisogno di credenziali — login diretto via wca-app
+  // Mantenuto per backward compatibility con componenti Settings
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    console.warn("[WcaCredentials] No active session — cannot fetch credentials");
-    return null;
-  }
+  if (!session?.access_token) return null;
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-wca-credentials`;
   try {
     const res = await fetch(url, {
       headers: {
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
         Authorization: `Bearer ${session.access_token}`,
         "Content-Type": "application/json",
       },
     });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      const errorInfo = { status: res.status, body: body.slice(0, 500), timestamp: new Date().toISOString() };
-      console.error(`[WcaCredentials] HTTP ${res.status}: ${res.statusText}`);
-      try { localStorage.setItem("last_wca_error", JSON.stringify(errorInfo)); } catch {}
-      try {
-        localStorage.setItem("last_failed_network_call", JSON.stringify({
-          endpoint: "get-wca-credentials",
-          status: res.status,
-          ts: new Date().toISOString(),
-        }));
-      } catch {}
-      return null;
-    }
-
+    if (!res.ok) return null;
     const creds = await res.json();
     if (!creds.username || !creds.password) return null;
     return creds as WcaCredentials;
-  } catch (err) {
-    const errorInfo = { status: 0, body: String(err), timestamp: new Date().toISOString() };
-    try { localStorage.setItem("last_wca_error", JSON.stringify(errorInfo)); } catch {}
-    console.error("[WcaCredentials] Network error:", err);
+  } catch {
     return null;
   }
 }

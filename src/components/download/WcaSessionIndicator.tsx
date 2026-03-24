@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTheme } from "./theme";
-import { useWcaSession } from "@/hooks/useWcaSession";
+import { useWcaSession } from "@/hooks/useWcaSession"; // Claude Engine V5
 import { Loader2 } from "lucide-react";
 
 export function WcaSessionIndicator() {
@@ -25,7 +25,7 @@ export function WcaSessionIndicator() {
   } else if (noExt) {
     label = "WCA ✕";
     dotColor = isDark ? "bg-red-400" : "bg-red-500";
-    tooltipText = "Estensione Chrome non rilevata — installa dalla pagina dedicata";
+    tooltipText = "Claude Engine — connessione via wca-app.vercel.app";
   } else if (lastError) {
     label = "WCA ✕";
     dotColor = isDark ? "bg-red-400" : "bg-red-500";
