@@ -1,12 +1,12 @@
 /**
- * WCA Scraper — Migrato a wca-app bridge
- * 🤖 Claude Engine V8 — Diario di bordo #5
+ * WCA Scraper — Chiamate dirette a wca-app.vercel.app
+ * 🤖 Claude Engine V8 — Bridge eliminato, API inline
  *
- * Tutte le funzioni ora usano wca-app.vercel.app invece di Edge Functions Supabase.
- * Le interfacce restano identiche per compatibilità con ActionPanel, WcaBrowser, etc.
+ * Tutte le funzioni chiamano direttamente wca-app.vercel.app.
+ * Le interfacce restano identiche per compatibilità con WcaBrowser, ResyncConfigure, etc.
  */
 
-import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
+const WCA_APP_BASE = "https://wca-app.vercel.app/api";
 
 // ─── Helper: get cached WCA cookie or login fresh ──────────────
 
@@ -105,11 +105,17 @@ export interface ScrapeSingleResult {
   error?: string;
 }
 
-/** Scrape singolo partner via wca-app bridge */
+/** Scrape singolo partner — chiamata diretta a wca-app */
 export async function scrapeWcaPartnerById(wcaId: number): Promise<ScrapeSingleResult> {
   try {
     const cookie = await getOrRefreshCookie();
-    const result = await wcaScrape(wcaId, cookie);
+    const res = await fetch(`${WCA_APP_BASE}/scrape`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: wcaId, cookie }),
+    });
+    if (!res.ok) return { success: false, wcaId, error: `HTTP ${res.status}` };
+    const result = await res.json();
 
     if (!result.success) {
       return { success: false, wcaId, error: result.error || "Scrape fallito" };
@@ -173,11 +179,17 @@ export interface PreviewResult {
   error?: string;
 }
 
-/** Preview profilo via wca-app bridge */
+/** Preview profilo — chiamata diretta a wca-app */
 export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
   try {
     const cookie = await getOrRefreshCookie();
-    const result = await wcaScrape(wcaId, cookie);
+    const res = await fetch(`${WCA_APP_BASE}/scrape`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: wcaId, cookie }),
+    });
+    if (!res.ok) return { success: false, wcaId, authStatus: "login_failed", error: `HTTP ${res.status}` };
+    const result = await res.json();
 
     if (!result.success) {
       return { success: false, wcaId, authStatus: "login_failed", error: result.error || "Preview fallito" };
@@ -213,7 +225,7 @@ export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
   }
 }
 
-/** Scan directory WCA per paese via wca-app bridge */
+/** Scan directory WCA per paese — chiamata diretta a wca-app */
 export async function scrapeWcaDirectory(
   countryCode: string,
   network?: string,
@@ -222,9 +234,19 @@ export async function scrapeWcaDirectory(
 ): Promise<DirectoryResult> {
   try {
     const cookie = await getOrRefreshCookie();
-    const result = await wcaDiscover(countryCode, pageIndex || 1, cookie);
+    const res = await fetch(`${WCA_APP_BASE}/discover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: countryCode, page: pageIndex || 1, cookie }),
+    });
+    if (!res.ok) return {
+      success: false, members: [],
+      pagination: { total_results: 0, current_page: 1, total_pages: 1, has_next_page: false },
+      error: `HTTP ${res.status}`,
+    };
+    const result = await res.json();
 
-    const members: DirectoryMember[] = (result.members || []).map(m => ({
+    const members: DirectoryMember[] = (result.members || []).map((m: any) => ({
       company_name: m.name || m.company || "",
       city: undefined,
       country: undefined,

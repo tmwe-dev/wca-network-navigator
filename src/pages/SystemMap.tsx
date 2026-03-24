@@ -21,8 +21,8 @@ const LAYERS = [
     name: "2. Pipeline Download",
     status: "operational",
     modules: [
-      { name: "Engine", files: ["src/hooks/useDownloadEngine.ts"], status: "operational", notes: "V4 item-level, 157 righe, deterministico" },
-      { name: "Bridge", files: ["src/hooks/useExtensionBridge.ts"], status: "operational", notes: "V4 health separation, serial queue, 132 righe" },
+      { name: "Engine V8", files: ["src/hooks/useWcaAppDownload.ts"], status: "operational", notes: "Claude Engine V8 — auto-login, localDirectory, zero bridge" },
+      { name: "Progress UI", files: ["src/components/download/DownloadProgressBar.tsx"], status: "operational", notes: "Widget compatto fase/progresso/stop/riprendi" },
       { name: "Job State", files: ["src/lib/download/jobState.ts"], status: "operational", notes: "claim/update/snapshot/finalize, 131 righe" },
       { name: "Profile Saver", files: ["src/lib/download/profileSaver.ts"], status: "operational", notes: "Batch ops, unico writer, 208 righe" },
       { name: "Job Tracking", files: ["src/hooks/useDownloadJobs.ts"], status: "operational", notes: "CRUD + realtime singleton, 287 righe" },

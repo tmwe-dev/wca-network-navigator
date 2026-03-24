@@ -28,9 +28,18 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
     (j) => j.status === "running" || j.status === "pending" || j.status === "paused"
   );
 
-  if (activeJobs.length === 0) return null;
+  const mainJob = activeJobs.length > 0 ? activeJobs[0] : null;
 
-  const mainJob = activeJobs[0];
+  // Detect stalled job: "running" but updated_at is stale (> 2 min)
+  // 🤖 V8: useMemo MUST be before any early return to keep hook count stable
+  const isStalled = useMemo(() => {
+    if (!mainJob || mainJob.status !== "running") return false;
+    const updatedAt = new Date(mainJob.updated_at).getTime();
+    return Date.now() - updatedAt > 120_000;
+  }, [mainJob?.status, mainJob?.updated_at]);
+
+  if (!mainJob) return null;
+
   const progress =
     mainJob.total_count > 0
       ? (mainJob.current_index / mainJob.total_count) * 100
@@ -38,13 +47,6 @@ export function ActiveJobBar({ onStartJob }: ActiveJobBarProps = {}) {
   const isRunning = mainJob.status === "running";
   const isPending = mainJob.status === "pending";
   const isPaused = mainJob.status === "paused";
-
-  // Detect stalled job: "running" but updated_at is stale (> 2 min)
-  const isStalled = useMemo(() => {
-    if (!isRunning) return false;
-    const updatedAt = new Date(mainJob.updated_at).getTime();
-    return Date.now() - updatedAt > 120_000;
-  }, [isRunning, mainJob.updated_at]);
 
   const handleResetJob = async () => {
     try {

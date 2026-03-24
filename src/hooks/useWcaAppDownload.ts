@@ -1,13 +1,13 @@
 /**
  * useWcaAppDownload — Hook per download WCA via wca-app API
- * 🤖 Creato da Claude · Diario di bordo #1
- * 
+ * 🤖 Claude Engine V8 · Auto-login — nessuna credenziale richiesta
+ *
  * Usa le API Vercel di wca-app come engine di download.
+ * Login automatico: il server gestisce le credenziali internamente.
  * Integra la directory locale per confronto istantaneo e ripresa.
  */
 
 import { useState, useRef, useCallback } from "react";
-import { wcaLogin, wcaDiscover, wcaScrape, wcaSave, wcaDiscoverAll } from "@/lib/wca-app-bridge";
 import {
   createDirectory,
   markIdDone,
@@ -33,6 +33,9 @@ export interface DownloadProgress {
 
 // Delay pattern dal wca-app originale
 const DELAY_PATTERN = [3, 3, 2, 3, 8, 3, 5, 3, 12, 3, 4, 3, 6, 3, 9, 3, 3, 3, 10];
+const WCA_APP_BASE = "https://wca-app.vercel.app/api";
+const COOKIE_KEY = "wca_session_cookie";
+const COOKIE_TTL = 8 * 60 * 1000; // 8 min
 
 function getDelay(index: number): number {
   return (DELAY_PATTERN[index % DELAY_PATTERN.length] || 3) * 1000;
@@ -46,6 +49,78 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+/** Auto-login: controlla cache, se scaduto chiama wca-app/api/login con body vuoto */
+async function autoLogin(): Promise<string> {
+  try {
+    const cached = localStorage.getItem(COOKIE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.cookie && Date.now() - parsed.savedAt < COOKIE_TTL) {
+        return parsed.cookie;
+      }
+    }
+  } catch {}
+  const res = await fetch(`${WCA_APP_BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const data = await res.json();
+  const cookie = data.cookies || data.cookie;
+  if (!cookie) throw new Error(data.error || "Login WCA fallito");
+  try { localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() })); } catch {}
+  return cookie;
+}
+
+/** Discover una pagina di membri per paese */
+async function apiDiscover(country: string, page: number, cookie: string): Promise<{ members: { id: number; name: string; company?: string }[]; totalPages: number }> {
+  const res = await fetch(`${WCA_APP_BASE}/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ country, page, cookie }),
+  });
+  if (!res.ok) throw new Error(`Discover failed: ${res.status}`);
+  return res.json();
+}
+
+/** Discover TUTTI i membri (tutte le pagine) */
+async function apiDiscoverAll(
+  country: string, cookie: string,
+  onProgress?: (page: number, total: number) => void
+): Promise<{ id: number; name: string }[]> {
+  const all: { id: number; name: string }[] = [];
+  let page = 1, totalPages = 1;
+  do {
+    const result = await apiDiscover(country, page, cookie);
+    all.push(...result.members);
+    totalPages = result.totalPages;
+    onProgress?.(page, totalPages);
+    page++;
+  } while (page <= totalPages);
+  return all;
+}
+
+/** Scrape profilo singolo */
+async function apiScrape(memberId: number, cookie: string): Promise<{ success: boolean; found?: boolean; partner?: Record<string, any> }> {
+  const res = await fetch(`${WCA_APP_BASE}/scrape`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ memberId, cookie }),
+  });
+  if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
+  return res.json();
+}
+
+/** Salva partner su Supabase via wca-app */
+async function apiSave(partner: Record<string, any>): Promise<void> {
+  const res = await fetch(`${WCA_APP_BASE}/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ partner }),
+  });
+  if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+}
+
 export function useWcaAppDownload() {
   const [progress, setProgress] = useState<DownloadProgress>({
     phase: "idle", current: 0, total: 0, message: "",
@@ -56,12 +131,10 @@ export function useWcaAppDownload() {
   const updateProgress = (p: Partial<DownloadProgress>) =>
     setProgress((prev) => ({ ...prev, ...p }));
 
-  /** Avvia download completo per un paese */
+  /** Avvia download completo per un paese — auto-login, nessuna credenziale */
   const startDownload = useCallback(async (
     countryCode: string,
     countryName: string,
-    username: string,
-    password: string
   ) => {
     if (isRunning) return;
     setIsRunning(true);
@@ -69,13 +142,13 @@ export function useWcaAppDownload() {
     abortRef.current = ac;
 
     try {
-      // 1. Login
-      updateProgress({ phase: "login", message: `Login WCA...`, countryCode });
-      const cookie = await wcaLogin(username, password);
+      // 1. Auto-login
+      updateProgress({ phase: "login", message: "Login WCA automatico...", countryCode });
+      const cookie = await autoLogin();
 
       // 2. Discover
       updateProgress({ phase: "discover", message: `Scoperta membri ${countryName}...` });
-      const members = await wcaDiscoverAll(countryCode, cookie, (page, total) => {
+      const members = await apiDiscoverAll(countryCode, cookie, (page, total) => {
         updateProgress({ message: `Discover ${countryName}: pagina ${page}/${total}` });
       });
 
@@ -86,7 +159,7 @@ export function useWcaAppDownload() {
       createDirectory(countryCode, countryName, memberIds);
 
       // 4. Confronto istantaneo (zero query!)
-      updateProgress({ phase: "compare", message: `Confronto locale...` });
+      updateProgress({ phase: "compare", message: "Confronto locale..." });
       const { missing, found } = checkMissingIdsLocal(memberIds, countryCode);
 
       if (missing.length === 0) {
@@ -119,9 +192,9 @@ export function useWcaAppDownload() {
         });
 
         try {
-          const result = await wcaScrape(id, cookie);
+          const result = await apiScrape(id, cookie);
           if (result.success && result.found && result.partner) {
-            await wcaSave(result.partner);
+            await apiSave(result.partner);
             markIdDone(countryCode, id);
             downloaded++;
           } else {
@@ -156,12 +229,10 @@ export function useWcaAppDownload() {
     }
   }, [isRunning]);
 
-  /** Riprendi download sospeso (zero query!) */
+  /** Riprendi download sospeso — auto-login, zero query */
   const resumeDownload = useCallback(async (
     countryCode: string,
     countryName: string,
-    username: string,
-    password: string
   ) => {
     if (isRunning) return;
     const pending = getPendingIds(countryCode);
@@ -175,8 +246,8 @@ export function useWcaAppDownload() {
     abortRef.current = ac;
 
     try {
-      updateProgress({ phase: "login", message: "Login WCA..." });
-      const cookie = await wcaLogin(username, password);
+      updateProgress({ phase: "login", message: "Login WCA automatico..." });
+      const cookie = await autoLogin();
 
       const done = getDoneCount(countryCode);
       const total = getTotalCount(countryCode);
@@ -203,9 +274,9 @@ export function useWcaAppDownload() {
         });
 
         try {
-          const result = await wcaScrape(id, cookie);
+          const result = await apiScrape(id, cookie);
           if (result.success && result.found && result.partner) {
-            await wcaSave(result.partner);
+            await apiSave(result.partner);
             markIdDone(countryCode, id);
             downloaded++;
           } else {

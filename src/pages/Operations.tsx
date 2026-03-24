@@ -1,32 +1,23 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, X, Eye, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Terminal, Download,
+  Sun, Moon, Bot, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Eye,
 } from "lucide-react";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { DownloadCanvas, type DownloadResult, type DownloadCurrent } from "@/components/operations/DownloadCanvas";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
-import { SpeedGauge } from "@/components/download/SpeedGauge";
 import { ThemeCtx, t } from "@/components/download/theme";
 import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
-import { ActiveJobBar } from "@/components/download/ActiveJobBar";
-import { DownloadTerminalDialog } from "@/components/download/DownloadTerminal";
-import { DownloadExperienceDialog } from "@/components/download/DownloadExperienceDialog";
-import { JobMonitor } from "@/components/download/JobMonitor";
+import { DownloadProgressBar } from "@/components/download/DownloadProgressBar";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { useDownloadEngine } from "@/hooks/useDownloadEngine";
-import { recoverOrphanJobs } from "@/lib/download/jobState";
+import { useWcaAppDownload } from "@/hooks/useWcaAppDownload";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
-import { getCountryFlag } from "@/lib/countries";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -61,11 +52,6 @@ export default function Operations() {
   const [aiOpen, setAiOpen] = useState(false);
   const deepSearch = useDeepSearch();
   const [aliasGenerating, setAliasGenerating] = useState(false);
-  const [dlCanvasOpen, setDlCanvasOpen] = useState(false);
-  const [dlResults, setDlResults] = useState<DownloadResult[]>([]);
-  const [dlCurrent, setDlCurrent] = useState<DownloadCurrent | null>(null);
-  const [showTerminal, setShowTerminal] = useState(false);
-  const [showExperience, setShowExperience] = useState(false);
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
@@ -82,35 +68,22 @@ export default function Operations() {
     scannedCountries: dirTotals?.scannedCountries || 0,
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
-  const { data: jobs } = useDownloadJobs();
-  const { stop: emergencyStop, startJob: rawStartJob } = useDownloadEngine();
+
+  // 🤖 Claude Engine V8 — download system
+  const wcaDl = useWcaAppDownload();
   const toggleFavorite = useToggleFavorite();
 
-  const startJob = useCallback((jobId: string) => {
-    setDlResults([]);
-    setDlCanvasOpen(true);
-    rawStartJob(jobId);
-  }, [rawStartJob]);
+  // Callback per avviare il download da PartnerListPanel
+  const handleStartDownload = useCallback((countryCode: string, countryName: string) => {
+    wcaDl.startDownload(countryCode, countryName);
+  }, [wcaDl.startDownload]);
 
-  // 🤖 Claude Engine V8: recupero automatico job orfani al mount
-  useEffect(() => {
-    let cancelled = false;
-    const recover = async () => {
-      try {
-        const recovered = await recoverOrphanJobs();
-        if (cancelled || recovered.length === 0) return;
-        console.log(`[CLAUDE-ENGINE] Stopped ${recovered.length} orphan job(s)`);
-        toast.info(`${recovered.length} job orfano fermato. Puoi avviare un nuovo download.`);
-        queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
-      } catch (err) {
-        console.error("[CLAUDE-ENGINE] Orphan recovery failed:", err);
-      }
-    };
-    recover();
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const handleResumeDownload = useCallback((countryCode: string, countryName: string) => {
+    wcaDl.resumeDownload(countryCode, countryName);
+  }, [wcaDl.resumeDownload]);
 
-  const activeJobs = useMemo(() => (jobs || []).filter(j => j.status === "running" || j.status === "pending"), [jobs]);
+  // Recupero job sospesi al mount
+  const suspended = useMemo(() => wcaDl.suspendedJobs(), [wcaDl.progress.phase]);
 
   const activeCountryCodes = useMemo(() => selectedCountries.map(c => c.code), [selectedCountries]);
   const activeCountryNames = useMemo(() => selectedCountries.map(c => c.name), [selectedCountries]);
@@ -164,13 +137,20 @@ export default function Operations() {
     }
   }, [aliasGenerating, queryClient]);
 
-  const th = t(isDark);
+  // Invalidate partner queries when download completes
+  useEffect(() => {
+    if (wcaDl.progress.phase === "done") {
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
+    }
+  }, [wcaDl.progress.phase, queryClient]);
+
   const hasDetailOpen = !isMobile && hasSelection;
 
   return (
     <ThemeCtx.Provider value={isDark}>
       <div className="h-full min-h-0 relative flex flex-col overflow-hidden bg-background">
-        {/* Subtle ambient — single layer only */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.06),transparent)]" />
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
@@ -181,15 +161,15 @@ export default function Operations() {
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
               <h1 className="text-sm font-semibold text-gradient-blue">Operations</h1>
-              {activeJobs.length > 0 && (
+              {wcaDl.isRunning && (
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full micro-badge-amber">
                   <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                  {activeJobs.length} attivi
+                  Download
                 </span>
               )}
             </div>
 
-            {/* Center: Stats pills — contextual to selected countries */}
+            {/* Center: Stats pills */}
             {globalStats && (() => {
               const contextStats = (() => {
                 if (selectedCountries.length > 0 && countryStatsData?.byCountry) {
@@ -213,13 +193,10 @@ export default function Operations() {
               const missingPhone = contextStats.totalPartners - contextStats.withPhone;
               return (
                 <div className="hidden md:flex items-center gap-1 overflow-x-auto">
-                  {/* Gruppo info */}
                   <StatPill icon={FolderOpen} value={contextStats.totalDirectory} label="Directory" isDark={isDark} onClick={() => setFilterMode("missing")} active={filterMode === "missing"} variant="info" />
                   <StatPill icon={Globe} value={contextStats.scannedCountries} label={selectedCountries.length > 0 ? "Selez." : "Paesi"} isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
                   <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("todo")} active={filterMode === "todo"} variant="info" />
-                  {/* Separatore */}
                   <div className="w-px h-5 bg-border/50 mx-1 flex-shrink-0" />
-                  {/* Gruppo mancanze */}
                   <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
                   <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} onClick={() => setFilterMode("no_email")} active={filterMode === "no_email"} variant={missingEmail > 0 ? "warn" : "ok"} />
                   <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} onClick={() => setFilterMode("no_phone")} active={filterMode === "no_phone"} variant={missingPhone > 0 ? "warn" : "ok"} />
@@ -229,36 +206,7 @@ export default function Operations() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
-              {activeJobs.length > 0 && (
-                <SpeedGauge
-                  lastUpdatedAt={activeJobs.find(j => j.status === "running")?.updated_at ?? activeJobs[0]?.updated_at ?? null}
-                  onStop={() => emergencyStop()}
-                  idle={activeJobs.length === 0}
-                />
-              )}
               <WcaSessionIndicator />
-              {(activeJobs.length > 0 || dlResults.length > 0) && !dlCanvasOpen && (
-                <button onClick={() => setDlCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-primary/10 hover:bg-primary/20 text-primary" title="Mostra Download Canvas">
-                  <Download className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={() => setShowExperience(true)}
-                className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
-                title="Download Experience"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-              {(activeJobs.length > 0 || (jobs || []).length > 0) && (
-                <button onClick={() => setShowTerminal(v => !v)} className={cn(
-                  "p-1.5 rounded-md transition-all",
-                  showTerminal
-                    ? "bg-success/15 text-success border border-success/30"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )} title="Terminal">
-                  <Terminal className="w-4 h-4" />
-                </button>
-              )}
               {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
                 <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Mostra Deep Search">
                   <Eye className="w-4 h-4" />
@@ -296,11 +244,16 @@ export default function Operations() {
                 onDirectoryOnlyChange={setDirectoryOnly}
                 compact={hasSelection || isMobile}
               />
-              {(activeJobs.length > 0 || showTerminal) && !hasSelection && !isMobile && (
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  <ActiveJobBar onStartJob={startJob} />
-                  <JobMonitor />
-                </div>
+              {/* Download progress sotto la grid quando nessun paese selezionato */}
+              {!hasSelection && !isMobile && (wcaDl.progress.phase !== "idle" || suspended.length > 0) && (
+                <DownloadProgressBar
+                  progress={wcaDl.progress}
+                  isRunning={wcaDl.isRunning}
+                  onStop={wcaDl.stopDownload}
+                  onResume={handleResumeDownload}
+                  suspendedJobs={suspended}
+                  isDark={isDark}
+                />
               )}
             </div>
 
@@ -308,7 +261,15 @@ export default function Operations() {
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
             {hasSelection ? (
               <>
-                <ActiveJobBar onStartJob={startJob} />
+                {/* Download progress bar — sopra la lista partner */}
+                <DownloadProgressBar
+                  progress={wcaDl.progress}
+                  isRunning={wcaDl.isRunning}
+                  onStop={wcaDl.stopDownload}
+                  onResume={handleResumeDownload}
+                  suspendedJobs={suspended}
+                  isDark={isDark}
+                />
                 <div className={cn(
                   "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
                   "bg-card/50 backdrop-blur-sm border-border"
@@ -321,7 +282,7 @@ export default function Operations() {
                     onGenerateAliases={handleGenerateAliases}
                     deepSearchRunning={deepSearch.running}
                     aliasGenerating={aliasGenerating}
-                    onJobCreated={startJob}
+                    onStartDownload={handleStartDownload}
                     directoryOnly={directoryOnly}
                     onDirectoryOnlyChange={setDirectoryOnly}
                     onSelectPartner={setSelectedPartnerId}
@@ -338,21 +299,7 @@ export default function Operations() {
                     running={deepSearch.running}
                     isDark={isDark}
                   />
-
-                  {/* Download Canvas overlay */}
-                  <DownloadCanvas
-                    open={dlCanvasOpen}
-                    onClose={() => setDlCanvasOpen(false)}
-                    onStop={() => emergencyStop()}
-                    current={dlCurrent}
-                    results={dlResults}
-                    running={activeJobs.length > 0}
-                    isDark={isDark}
-                  />
                 </div>
-
-
-
               </>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
@@ -363,7 +310,7 @@ export default function Operations() {
             )}
             </div>
 
-            {/* COL 3: Partner Detail — always visible when countries selected */}
+            {/* COL 3: Partner Detail */}
             {hasDetailOpen && (
               <div className="w-[380px] flex-shrink-0 min-h-0 flex flex-col rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden animate-in slide-in-from-right-8 duration-200">
                 {selectedPartnerId && selectedPartner ? (
@@ -392,8 +339,6 @@ export default function Operations() {
         </div>
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
-      <DownloadTerminalDialog open={showTerminal} onOpenChange={setShowTerminal} />
-      <DownloadExperienceDialog open={showExperience} onOpenChange={setShowExperience} onStop={() => emergencyStop()} />
     </ThemeCtx.Provider>
   );
 }
@@ -405,8 +350,6 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
   variant?: "info" | "warn" | "ok";
 }) {
   const isComplete = variant === "ok" || (variant === "warn" && value === 0);
-
-  // Tri-state: 0 → green, ≤10 → amber, >10 → red
   const pillClass = isComplete || value === 0
     ? "bg-emerald-500/15 border-emerald-500/25 text-emerald-300"
     : value <= 10

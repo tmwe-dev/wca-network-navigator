@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { t } from "@/components/download/theme";
 
-import { JobMonitor } from "@/components/download/JobMonitor";
+// JobMonitor rimosso — download gestito da Claude Engine V8 (useWcaAppDownload)
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { getRealLogoUrl } from "@/lib/partnerUtils";
 
@@ -41,7 +41,7 @@ interface PartnerListPanelProps {
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
-  onJobCreated?: (jobId: string) => void;
+  onStartDownload?: (countryCode: string, countryName: string) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
   onSelectPartner?: (id: string | null) => void;
@@ -52,7 +52,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  onJobCreated, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  onStartDownload, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
@@ -73,7 +73,7 @@ export function PartnerListPanel({
 
   // ── Hooks ──
   const dl = useDirectoryDownload({
-    countryCodes, countryNames, onJobCreated,
+    countryCodes, countryNames, onStartDownload,
     directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   });
 
@@ -221,40 +221,11 @@ export function PartnerListPanel({
               filter={progressFilter}
               count={filteredPartners.length}
               isDark={isDark}
-              onDownload={async () => {
-                const filteredWcaIds = filteredPartners.map((p: any) => p.wca_id).filter((id: number | null): id is number => id != null);
-                if (filteredWcaIds.length === 0) { toast.error("Nessun partner filtrato ha un WCA ID"); return; }
-                // 🤖 Claude Engine V8: login preventivo
-                try {
-                  let hasCookie = false;
-                  try {
-                    const cached = localStorage.getItem("wca_session_cookie");
-                    if (cached) { const p = JSON.parse(cached); if (p.cookie && Date.now() - p.savedAt < 8*60*1000) hasCookie = true; }
-                  } catch {}
-                  if (!hasCookie) {
-                    const res = await fetch("https://wca-app.vercel.app/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-                    const d = await res.json();
-                    if (!d.success || !d.cookies) { toast.error(d.error || "Login WCA fallito"); return; }
-                    try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: d.cookies, savedAt: Date.now() })); } catch {}
-                  }
-                } catch { toast.error("Connessione WCA fallita"); return; }
-                // Check active jobs con gestione orfani
-                const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
-                if (activeJobs && activeJobs.length > 0) {
-                  const j = activeJobs[0];
-                  const age = Date.now() - new Date(j.updated_at).getTime();
-                  if (j.status === "running" && age > 120_000) {
-                    await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — orfano" }).eq("id", j.id);
-                  } else { toast.error("Job già in corso."); return; }
-                }
+              onDownload={() => {
+                // 🤖 Claude Engine V8: avvia download diretto via useWcaAppDownload
                 const primaryCode = countryCodes[0] || "";
-                const primaryName = countryNames.length > 1 ? `${countryNames[0]} +${countryNames.length - 1}` : countryNames[0] || "";
-                const jobId = await dl.createJob.mutateAsync({
-                  country_code: primaryCode, country_name: primaryName,
-                  network_name: dl.networks.length > 0 ? dl.networks.join(", ") : "Tutti",
-                  wca_ids: filteredWcaIds, delay_seconds: Math.max(dl.delay, 10),
-                });
-                if (jobId && onJobCreated) onJobCreated(jobId);
+                const primaryName = countryNames[0] || "";
+                if (onStartDownload) onStartDownload(primaryCode, primaryName);
               }}
               onDeepSearch={() => {
                 const ids = filteredPartners.map((p: any) => p.id);
@@ -340,9 +311,7 @@ export function PartnerListPanel({
                 </>
               )}
             </div>
-            <div className="max-h-24 overflow-auto space-y-1 mt-1.5">
-              <JobMonitor />
-            </div>
+            {/* JobMonitor rimosso — V8 */}
           </div>
         )}
 

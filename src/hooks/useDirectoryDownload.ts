@@ -10,12 +10,13 @@ interface UseDirectoryDownloadArgs {
   countryCodes: string[];
   countryNames: string[];
   onJobCreated?: (jobId: string) => void;
+  onStartDownload?: (countryCode: string, countryName: string) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
 }
 
 export function useDirectoryDownload({
-  countryCodes, countryNames, onJobCreated,
+  countryCodes, countryNames, onJobCreated, onStartDownload,
   directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
 }: UseDirectoryDownloadArgs) {
   const queryClient = useQueryClient();
@@ -290,67 +291,24 @@ export function useDirectoryDownload({
     queryClient.invalidateQueries({ queryKey: ["db-partners-for-countries"] });
   }, [countryCode, countryName, networkKeys, saveScanToCache, queryClient, skipCachedDirs, cachedEntries]);
 
-  // ── Download ──
+  // ── Download — 🤖 V8: usa useWcaAppDownload invece di job DB ──
   const handleStartDownload = async () => {
-    await executeDownload();
-  };
-
-  const executeDownload = async () => {
     if (idsToDownload.length === 0) { toast.info("Nessun partner da scaricare"); return; }
-
-    // 🤖 Claude Engine V8: login preventivo PRIMA di creare il job
-    try {
-      let hasCookie = false;
-      try {
-        const cached = localStorage.getItem("wca_session_cookie");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) hasCookie = true;
-        }
-      } catch {}
-      if (!hasCookie) {
-        console.log("[CLAUDE-ENGINE] Login preventivo via wca-app...");
-        const res = await fetch("https://wca-app.vercel.app/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
-        const data = await res.json();
-        if (!data.success || !data.cookies) {
-          toast.error(data.error || "Login WCA fallito — il server non risponde");
-          return;
-        }
-        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
-        console.log("[CLAUDE-ENGINE] Login preventivo OK");
-      }
-    } catch {
-      toast.error("Connessione WCA fallita — impossibile raggiungere wca-app");
-      return;
-    }
-
-    // Check for active jobs — but recover orphans instead of blocking
-    const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
-    if (activeJobs && activeJobs.length > 0) {
-      const job = activeJobs[0];
-      const ageMs = Date.now() - new Date(job.updated_at).getTime();
-      // If job is "running" but hasn't been updated in 2+ minutes, it's orphan — reset it
-      if (job.status === "running" && ageMs > 120_000) {
-        await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — job orfano" }).eq("id", job.id);
-        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", job.id).eq("status", "processing");
-        toast.info("Job orfano resettato. Nuovo download in corso...");
-      } else {
-        toast.error("Job già in corso. Attendi il completamento o fermalo."); return;
-      }
-    }
     const primaryCode = countryCodes[0] || "";
     const primaryName = countryNames[0] || "";
-    const jobLabel = countryCodes.length > 1 ? `${primaryName} +${countryCodes.length - 1}` : primaryName;
-    const jobId = await createJob.mutateAsync({
-      country_code: primaryCode, country_name: jobLabel,
-      network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
-      wca_ids: idsToDownload, delay_seconds: Math.max(delay, 10),
-    });
-    if (jobId && onJobCreated) onJobCreated(jobId);
+    // Delega al sistema Claude V8 (useWcaAppDownload)
+    if (onStartDownload) {
+      onStartDownload(primaryCode, primaryName);
+    } else if (onJobCreated) {
+      // Fallback legacy: crea job DB
+      const jobLabel = countryCodes.length > 1 ? `${primaryName} +${countryCodes.length - 1}` : primaryName;
+      const jobId = await createJob.mutateAsync({
+        country_code: primaryCode, country_name: jobLabel,
+        network_name: networks.length > 0 ? networks.join(", ") : "Tutti",
+        wca_ids: idsToDownload, delay_seconds: Math.max(delay, 10),
+      });
+      if (jobId) onJobCreated(jobId);
+    }
   };
 
   const stopScan = useCallback(() => {
