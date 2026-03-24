@@ -13,6 +13,7 @@ import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
 import { ActiveJobBar } from "@/components/download/ActiveJobBar";
 import { DownloadTerminalDialog } from "@/components/download/DownloadTerminal";
+import { DownloadExperienceDialog } from "@/components/download/DownloadExperienceDialog";
 import { JobMonitor } from "@/components/download/JobMonitor";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
@@ -63,6 +64,7 @@ export default function Operations() {
   const [dlResults, setDlResults] = useState<DownloadResult[]>([]);
   const [dlCurrent, setDlCurrent] = useState<DownloadCurrent | null>(null);
   const [showTerminal, setShowTerminal] = useState(false);
+  const [showExperience, setShowExperience] = useState(false);
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
@@ -221,6 +223,13 @@ export default function Operations() {
                   <Download className="w-4 h-4" />
                 </button>
               )}
+              <button
+                onClick={() => setShowExperience(true)}
+                className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Download Experience"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
               {(activeJobs.length > 0 || (jobs || []).length > 0) && (
                 <button onClick={() => setShowTerminal(v => !v)} className={cn(
                   "p-1.5 rounded-md transition-all",
@@ -365,6 +374,7 @@ export default function Operations() {
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
       <DownloadTerminalDialog open={showTerminal} onOpenChange={setShowTerminal} />
+      <DownloadExperienceDialog open={showExperience} onOpenChange={setShowExperience} onStop={() => emergencyStop()} />
     </ThemeCtx.Provider>
   );
 }
