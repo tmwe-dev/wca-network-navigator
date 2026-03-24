@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
   Upload, Camera, Handshake, Search, Loader2, ImagePlus, Building2, User, MapPin, Calendar,
+  FileSpreadsheet, FileText, CheckCircle2,
 } from "lucide-react";
 import { useBusinessCards, useCreateBusinessCard, useUpdateBusinessCard, type BusinessCard } from "@/hooks/useBusinessCards";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,80 +15,155 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { parseBusinessCardFile, isImageFile, isDataFile, type ParsedBusinessCard } from "@/lib/businessCardFileParser";
 
 /* ═══ Upload + Parse logic ═══ */
 
 function useUploadAndParse() {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
   const createCard = useCreateBusinessCard();
 
-  const uploadAndParse = useCallback(async (
+  /** Upload a single image → AI Vision parse */
+  const uploadImage = useCallback(async (
     file: File,
+    userId: string,
+    eventMeta: { event_name?: string; met_at?: string; location?: string },
+  ): Promise<boolean> => {
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `business-cards/${userId}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from("import-files")
+      .upload(path, file, { contentType: file.type });
+    if (uploadErr) throw uploadErr;
+
+    const { data: urlData } = supabase.storage.from("import-files").getPublicUrl(path);
+    const photoUrl = urlData.publicUrl;
+
+    const { data: parseResult, error: parseErr } = await supabase.functions.invoke("parse-business-card", {
+      body: { imageUrl: photoUrl },
+    });
+    if (parseErr) throw parseErr;
+    if (parseResult?.error) throw new Error(parseResult.error);
+
+    const extracted = parseResult?.data || {};
+
+    await createCard.mutateAsync({
+      user_id: userId,
+      company_name: extracted.company_name,
+      contact_name: extracted.contact_name,
+      email: extracted.email,
+      phone: extracted.phone,
+      mobile: extracted.mobile,
+      position: extracted.position,
+      photo_url: photoUrl,
+      event_name: eventMeta.event_name || null,
+      met_at: eventMeta.met_at || null,
+      location: eventMeta.location || null,
+      notes: extracted.notes,
+      raw_data: extracted,
+    } as any);
+
+    return true;
+  }, [createCard]);
+
+  /** Parse a data file (CSV/XLSX/JSON/VCF) → multiple cards */
+  const uploadDataFile = useCallback(async (
+    file: File,
+    userId: string,
+    eventMeta: { event_name?: string; met_at?: string; location?: string },
+  ): Promise<number> => {
+    const parsed = await parseBusinessCardFile(file);
+    if (parsed.length === 0) throw new Error("Nessun contatto trovato nel file.");
+
+    let created = 0;
+    for (const card of parsed) {
+      await createCard.mutateAsync({
+        user_id: userId,
+        company_name: card.company_name || null,
+        contact_name: card.contact_name || null,
+        email: card.email || null,
+        phone: card.phone || null,
+        mobile: card.mobile || null,
+        position: card.position || null,
+        notes: card.notes || null,
+        event_name: eventMeta.event_name || null,
+        met_at: eventMeta.met_at || null,
+        location: eventMeta.location || null,
+        raw_data: card.raw_data || null,
+      } as any);
+      created++;
+    }
+
+    return created;
+  }, [createCard]);
+
+  /** Main entry: handles mixed files */
+  const processFiles = useCallback(async (
+    files: File[],
     eventMeta: { event_name?: string; met_at?: string; location?: string },
   ) => {
     setUploading(true);
+    setProgress({ current: 0, total: files.length });
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Non autenticato");
 
-      // Upload to storage
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `business-cards/${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("import-files")
-        .upload(path, file, { contentType: file.type });
-      if (uploadErr) throw uploadErr;
+      let imageCount = 0;
+      let dataCount = 0;
+      let errors = 0;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage.from("import-files").getPublicUrl(path);
-      const photoUrl = urlData.publicUrl;
+      for (let i = 0; i < files.length; i++) {
+        setProgress({ current: i + 1, total: files.length });
+        const file = files[i];
 
-      // Call AI parsing
-      const { data: parseResult, error: parseErr } = await supabase.functions.invoke("parse-business-card", {
-        body: { imageUrl: photoUrl },
-      });
-      if (parseErr) throw parseErr;
-      if (parseResult?.error) throw new Error(parseResult.error);
+        try {
+          if (isImageFile(file)) {
+            await uploadImage(file, user.id, eventMeta);
+            imageCount++;
+          } else if (isDataFile(file)) {
+            const count = await uploadDataFile(file, user.id, eventMeta);
+            dataCount += count;
+          } else {
+            toast({ title: "File ignorato", description: `${file.name} — formato non supportato`, variant: "destructive" });
+            errors++;
+          }
+        } catch (e: any) {
+          toast({ title: `Errore: ${file.name}`, description: e.message, variant: "destructive" });
+          errors++;
+        }
+      }
 
-      const extracted = parseResult?.data || {};
-
-      // Create business card record
-      await createCard.mutateAsync({
-        user_id: user.id,
-        company_name: extracted.company_name,
-        contact_name: extracted.contact_name,
-        email: extracted.email,
-        phone: extracted.phone,
-        mobile: extracted.mobile,
-        position: extracted.position,
-        photo_url: photoUrl,
-        event_name: eventMeta.event_name || null,
-        met_at: eventMeta.met_at || null,
-        location: eventMeta.location || null,
-        notes: extracted.notes,
-        raw_data: extracted,
-      } as any);
+      const parts: string[] = [];
+      if (imageCount > 0) parts.push(`${imageCount} foto analizzate con AI`);
+      if (dataCount > 0) parts.push(`${dataCount} contatti importati da file`);
+      if (errors > 0) parts.push(`${errors} errori`);
 
       toast({
-        title: "✨ Biglietto analizzato",
-        description: `${extracted.contact_name || "Contatto"} — ${extracted.company_name || "Azienda"}`,
+        title: "✨ Importazione completata",
+        description: parts.join(" · ") || "Nessun contatto elaborato",
       });
-
-      return true;
     } catch (e: any) {
       toast({ title: "Errore", description: e.message, variant: "destructive" });
-      return false;
     } finally {
       setUploading(false);
+      setProgress({ current: 0, total: 0 });
     }
-  }, [createCard]);
+  }, [uploadImage, uploadDataFile]);
 
-  return { uploadAndParse, uploading };
+  return { processFiles, uploading, progress };
 }
 
 /* ═══ Drop Zone ═══ */
 
-function DropZone({ onFiles, uploading }: { onFiles: (files: File[]) => void; uploading: boolean }) {
+const ACCEPTED_TYPES = "image/*,.csv,.xlsx,.xls,.json,.vcf,.txt";
+
+function DropZone({ onFiles, uploading, progress }: {
+  onFiles: (files: File[]) => void;
+  uploading: boolean;
+  progress: { current: number; total: number };
+}) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +171,7 @@ function DropZone({ onFiles, uploading }: { onFiles: (files: File[]) => void; up
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/") || f.name.match(/\.(jpg|jpeg|png|heic|webp)$/i)
+      isImageFile(f) || isDataFile(f)
     );
     if (files.length) onFiles(files);
   }, [onFiles]);
@@ -115,24 +191,36 @@ function DropZone({ onFiles, uploading }: { onFiles: (files: File[]) => void; up
       )}
     >
       {uploading ? (
-        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+          {progress.total > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {progress.current} / {progress.total} file
+            </p>
+          )}
+        </div>
       ) : (
-        <div className="w-12 h-12 rounded-xl bg-violet-500/15 flex items-center justify-center">
-          <Camera className="w-6 h-6 text-violet-400" />
+        <div className="flex gap-3">
+          <div className="w-12 h-12 rounded-xl bg-violet-500/15 flex items-center justify-center">
+            <Camera className="w-6 h-6 text-violet-400" />
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+            <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
+          </div>
         </div>
       )}
       <div className="text-center">
         <p className="text-sm font-medium text-foreground">
-          {uploading ? "Analisi in corso..." : "Trascina qui le foto dei biglietti"}
+          {uploading ? "Elaborazione in corso..." : "Trascina foto o file dati"}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          JPG, PNG, HEIC — l'AI estrae automaticamente i dati
+          📸 JPG, PNG, HEIC (AI Vision) · 📄 CSV, XLSX, JSON, VCF (parsing diretto)
         </p>
       </div>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={ACCEPTED_TYPES}
         multiple
         className="hidden"
         onChange={(e) => {
@@ -154,13 +242,15 @@ function BusinessCardItem({ card }: { card: BusinessCard }) {
     pending: "bg-muted text-muted-foreground border-0",
   };
 
+  const hasPhoto = !!card.photo_url;
+
   return (
     <div className="bg-gradient-to-br from-violet-500/5 via-card to-purple-500/5 backdrop-blur-sm border border-violet-500/10 rounded-2xl overflow-hidden">
-      {/* Photo thumbnail */}
-      {card.photo_url && (
+      {/* Photo thumbnail — only for image-based cards */}
+      {hasPhoto && (
         <AspectRatio ratio={16 / 9}>
           <img
-            src={card.photo_url}
+            src={card.photo_url!}
             alt="Biglietto da visita"
             className="w-full h-full object-cover"
             loading="lazy"
@@ -168,8 +258,15 @@ function BusinessCardItem({ card }: { card: BusinessCard }) {
         </AspectRatio>
       )}
 
+      {/* Data-only indicator for file-imported cards */}
+      {!hasPhoto && (
+        <div className="h-10 bg-gradient-to-r from-emerald-500/10 to-violet-500/10 flex items-center justify-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[10px] text-emerald-400 font-medium">Da file</span>
+        </div>
+      )}
+
       <div className="p-3 space-y-2">
-        {/* Name + company */}
         <div>
           {card.contact_name && (
             <div className="flex items-center gap-1.5">
@@ -188,7 +285,18 @@ function BusinessCardItem({ card }: { card: BusinessCard }) {
           )}
         </div>
 
-        {/* Event info */}
+        {/* Contact info for data-imported cards */}
+        {!hasPhoto && (card.email || card.phone || card.mobile) && (
+          <div className="space-y-0.5">
+            {card.email && (
+              <p className="text-[10px] text-muted-foreground truncate">✉ {card.email}</p>
+            )}
+            {(card.phone || card.mobile) && (
+              <p className="text-[10px] text-muted-foreground truncate">📞 {card.phone || card.mobile}</p>
+            )}
+          </div>
+        )}
+
         {card.event_name && (
           <div className="flex items-center gap-1.5">
             <Handshake className="w-3 h-3 text-violet-400 shrink-0" />
@@ -201,12 +309,14 @@ function BusinessCardItem({ card }: { card: BusinessCard }) {
           </div>
         )}
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-1">
           <Badge className={cn("text-[9px]", statusColors[card.match_status] || statusColors.pending)}>
             {card.match_status === "matched" ? "Matchato" : card.match_status === "unmatched" ? "Non trovato" : "In attesa"}
           </Badge>
-          {card.email && (
+          {hasPhoto && (
+            <Badge variant="outline" className="text-[9px] border-violet-500/15">📸 Foto</Badge>
+          )}
+          {card.email && hasPhoto && (
             <Badge variant="outline" className="text-[9px] border-violet-500/15">{card.email}</Badge>
           )}
         </div>
@@ -226,14 +336,17 @@ export default function BusinessCardsHub() {
   const [metAt, setMetAt] = useState("");
   const [location, setLocation] = useState("");
 
-  const { uploadAndParse, uploading } = useUploadAndParse();
+  const { processFiles, uploading, progress } = useUploadAndParse();
   const { data: cards = [], isLoading } = useBusinessCards({
     event_name: eventFilter || undefined,
     match_status: statusFilter || undefined,
   });
 
-  // Get unique event names for filter
   const eventNames = [...new Set(cards.map((c) => c.event_name).filter(Boolean))] as string[];
+
+  // Summary of pending files
+  const pendingImages = pendingFiles.filter(isImageFile).length;
+  const pendingData = pendingFiles.filter(isDataFile).length;
 
   const handleFiles = useCallback((files: File[]) => {
     setPendingFiles(files);
@@ -243,16 +356,13 @@ export default function BusinessCardsHub() {
   const handleConfirmUpload = useCallback(async () => {
     setShowEventDialog(false);
     const meta = { event_name: eventName || undefined, met_at: metAt || undefined, location: location || undefined };
-    for (const file of pendingFiles) {
-      await uploadAndParse(file, meta);
-    }
+    await processFiles(pendingFiles, meta);
     setPendingFiles([]);
-  }, [pendingFiles, eventName, metAt, location, uploadAndParse]);
+  }, [pendingFiles, eventName, metAt, location, processFiles]);
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
-      {/* Upload zone */}
-      <DropZone onFiles={handleFiles} uploading={uploading} />
+      <DropZone onFiles={handleFiles} uploading={uploading} progress={progress} />
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
@@ -298,7 +408,7 @@ export default function BusinessCardsHub() {
             <ImagePlus className="w-8 h-8 text-violet-400/50" />
           </div>
           <p className="text-sm text-muted-foreground">Nessun biglietto da visita</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Carica una foto per iniziare</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Carica foto o file dati per iniziare</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -318,6 +428,20 @@ export default function BusinessCardsHub() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {/* File summary */}
+            <div className="flex gap-2 flex-wrap">
+              {pendingImages > 0 && (
+                <Badge variant="outline" className="text-[10px] border-violet-500/20">
+                  📸 {pendingImages} foto → AI Vision
+                </Badge>
+              )}
+              {pendingData > 0 && (
+                <Badge variant="outline" className="text-[10px] border-emerald-500/20">
+                  📄 {pendingData} file dati → parsing diretto
+                </Badge>
+              )}
+            </div>
+
             <div>
               <label className="text-xs text-muted-foreground">Evento / Fiera</label>
               <Input
@@ -346,7 +470,7 @@ export default function BusinessCardsHub() {
               />
             </div>
             <p className="text-[10px] text-muted-foreground/60">
-              {pendingFiles.length} {pendingFiles.length === 1 ? "foto" : "foto"} — opzionale, puoi saltare
+              Opzionale — puoi saltare
             </p>
           </div>
           <DialogFooter className="gap-2">
@@ -364,7 +488,11 @@ export default function BusinessCardsHub() {
               Salta
             </Button>
             <Button size="sm" className="text-xs" onClick={handleConfirmUpload}>
-              Carica e analizza
+              {pendingImages > 0 && pendingData > 0
+                ? "Carica tutto"
+                : pendingImages > 0
+                  ? "Carica e analizza"
+                  : "Importa contatti"}
             </Button>
           </DialogFooter>
         </DialogContent>
