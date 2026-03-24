@@ -223,6 +223,13 @@ export default function Operations() {
                   <Download className="w-4 h-4" />
                 </button>
               )}
+              <button
+                onClick={() => setShowExperience(true)}
+                className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Download Experience"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
               {(activeJobs.length > 0 || (jobs || []).length > 0) && (
                 <button onClick={() => setShowTerminal(v => !v)} className={cn(
                   "p-1.5 rounded-md transition-all",
