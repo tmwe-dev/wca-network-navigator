@@ -1,30 +1,34 @@
 import { useRef, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useExtensionBridge } from "./useExtensionBridge";
 import { useQueryClient } from "@tanstack/react-query";
 import { claimJob, markProcessing, updateItem, snapshotProgress, finalizeJob, pauseJob, stopJob, emitEvent } from "@/lib/download/jobState";
-import { saveExtractionResult } from "@/lib/download/profileSaver";
 
 /**
- * V5: Resilient download engine.
- * - Backoff retry on bridge failures instead of immediate pause
- * - Re-checks extension availability before each extraction
- * - Auto-generates missing download_job_items
- * - Data integrity guards (blocks invalid extractions)
+ * V6: Server-side download engine.
+ * - Uses edge function scrape-wca-partners (direct SSO + cheerio) instead of Chrome extension
+ * - No extension bridge dependency
+ * - Backoff retry on failures
  */
 export function useDownloadEngine() {
-  const { extractContacts, checkAvailable } = useExtensionBridge();
   const queryClient = useQueryClient();
   const abortRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const extractRef = useRef(extractContacts);
-  extractRef.current = extractContacts;
 
   const invalidate = () => {
     for (const k of ["download-jobs", "contact-completeness", "country-stats", "partners"]) {
       queryClient.invalidateQueries({ queryKey: [k] });
     }
+  };
+
+  const extractViaEdgeFunction = async (wcaId: number, countryCode: string) => {
+    const { data, error } = await supabase.functions.invoke("scrape-wca-partners", {
+      body: { wcaId, countryCode, aiParse: false },
+    });
+    if (error) {
+      return { success: false, error: error.message || "Edge function error" };
+    }
+    return data;
   };
 
   const startJob = useCallback(async (jobId: string) => {
@@ -35,15 +39,11 @@ export function useDownloadEngine() {
     abortRef.current = ac;
 
     try {
-      // 1. Check extension
-      const extOk = await checkAvailable();
-      if (!extOk) { await pauseJob(jobId, "Estensione Chrome non rilevata"); return; }
-
-      // 2. Claim job
+      // 1. Claim job
       const claimed = await claimJob(jobId);
       if (!claimed) return;
 
-      // 2b. Safety: ensure download_job_items exist
+      // 2. Safety: ensure download_job_items exist
       const { count: itemCount } = await supabase.from("download_job_items").select("id", { count: "exact", head: true }).eq("job_id", jobId);
       if (!itemCount || itemCount === 0) {
         const { data: jobData } = await supabase.from("download_jobs").select("wca_ids").eq("id", jobId).single();
@@ -55,16 +55,16 @@ export function useDownloadEngine() {
         }
       }
 
-      // 3. Fetch job for delay
+      // 3. Fetch job for delay and country info
       const { data: job } = await supabase.from("download_jobs").select("delay_seconds, country_code, country_name").eq("id", jobId).single();
       if (!job) return;
       const delayMs = Math.max((job.delay_seconds || 15), 5) * 1000;
-      let consecutiveBridgeFails = 0;
+      let consecutiveFails = 0;
       let itemsProcessed = 0;
 
-      // 4. Main loop: fetch next pending item
+      // 4. Main loop
       while (!ac.signal.aborted) {
-        // Check for pause/stop requests
+        // Check for pause/stop
         const { data: jobCheck } = await supabase.from("download_jobs").select("status").eq("id", jobId).single();
         if (!jobCheck || jobCheck.status !== "running") break;
 
@@ -77,7 +77,7 @@ export function useDownloadEngine() {
           .order("position", { ascending: true })
           .limit(1);
 
-        if (!nextItems?.length) break; // No more items
+        if (!nextItems?.length) break;
         const item = nextItems[0];
 
         // Delay between requests (skip first)
@@ -90,81 +90,72 @@ export function useDownloadEngine() {
         await markProcessing(item.id);
         await emitEvent(jobId, item.id, "item_processing", { wca_id: item.wca_id });
 
-        // Extract
-        const result = await extractRef.current(item.wca_id);
+        // Extract via edge function
+        try {
+          const result = await extractViaEdgeFunction(item.wca_id, job.country_code);
 
-        // Bridge health check with exponential backoff
-        if (!result.bridgeHealthy) {
-          consecutiveBridgeFails++;
-          await updateItem(item.id, "temporary_error", { errorCode: result.bridgeError || "EXT_BRIDGE_TIMEOUT", errorMessage: "Bridge not responding" });
-          await emitEvent(jobId, item.id, "item_failed", { errorCode: result.bridgeError });
+          if (result.success && result.found) {
+            consecutiveFails = 0;
+            const partner = result.partner || {};
+            const hasContact = partner.contacts?.some((c: any) => c.email || c.phone || c.mobile);
+            const cf = hasContact ? 1 : 0;
+            const cm = cf ? 0 : 1;
+            await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
+            await emitEvent(jobId, item.id, "item_success", { companyName: partner.company_name || result.partner?.company_name });
+          } else if (result.success && !result.found) {
+            // Not found
+            await updateItem(item.id, "member_not_found", { errorCode: "WCA_PROFILE_NOT_FOUND" });
+            try {
+              await supabase.from("partners_no_contacts").upsert({
+                wca_id: item.wca_id,
+                company_name: `WCA ${item.wca_id}`,
+                country_code: job.country_code,
+                scraped_at: new Date().toISOString(),
+              }, { onConflict: "wca_id" });
+            } catch {}
+            await emitEvent(jobId, item.id, "item_failed", { state: "member_not_found" });
+          } else {
+            // Error
+            consecutiveFails++;
+            const errorMsg = result.error || "Unknown error";
+            await updateItem(item.id, "temporary_error", { errorCode: "EDGE_FN_ERROR", errorMessage: errorMsg });
+            await emitEvent(jobId, item.id, "item_failed", { errorCode: "EDGE_FN_ERROR", errorMessage: errorMsg });
 
-          if (consecutiveBridgeFails >= 5) {
-            await pauseJob(jobId, "Estensione non risponde — verifica che sia attiva e riprova");
+            if (consecutiveFails >= 5) {
+              await pauseJob(jobId, "Troppi errori consecutivi — verifica le credenziali WCA e riprova");
+              break;
+            }
+
+            // Exponential backoff
+            const backoffMs = Math.min(5000 * Math.pow(2, consecutiveFails - 1), 40000);
+            console.log(`[DL-ENGINE] Fail #${consecutiveFails}, backoff ${backoffMs}ms`);
+            await sleep(backoffMs, ac.signal);
+            if (ac.signal.aborted) break;
+            itemsProcessed++;
+            continue;
+          }
+        } catch (err) {
+          consecutiveFails++;
+          const errorMsg = err instanceof Error ? err.message : "Network error";
+          await updateItem(item.id, "temporary_error", { errorCode: "NETWORK_ERROR", errorMessage: errorMsg });
+          await emitEvent(jobId, item.id, "item_failed", { errorCode: "NETWORK_ERROR" });
+
+          if (consecutiveFails >= 5) {
+            await pauseJob(jobId, "Errore di rete persistente — controlla la connessione");
             break;
           }
 
-          // Exponential backoff: 5s, 10s, 20s, 40s before retrying
-          const backoffMs = Math.min(5000 * Math.pow(2, consecutiveBridgeFails - 1), 40000);
-          console.log(`[DL-ENGINE] Bridge fail #${consecutiveBridgeFails}, backoff ${backoffMs}ms`);
+          const backoffMs = Math.min(5000 * Math.pow(2, consecutiveFails - 1), 40000);
           await sleep(backoffMs, ac.signal);
           if (ac.signal.aborted) break;
-
-          // Re-check extension availability after backoff
-          const stillAvailable = await checkAvailable();
-          if (!stillAvailable) {
-            await pauseJob(jobId, "Estensione Chrome disconnessa — ricarica la pagina e riprova");
-            break;
-          }
-
           itemsProcessed++;
           continue;
         }
-        consecutiveBridgeFails = 0;
 
-        const ext = result.extraction!;
-        const state = ext.state;
-
-        // Data integrity guard: verify the extraction is genuinely valid
-        if (state === "ok") {
-          const cn = (ext.companyName || "").toLowerCase();
-          const isInvalidName = cn.includes("member not found") || cn.includes("not found") || cn.includes("please try again") || cn.length < 2;
-          
-          if (isInvalidName) {
-            // False positive — extraction reported ok but data is invalid
-            await updateItem(item.id, "member_not_found", { errorCode: "WCA_INVALID_EXTRACTION", errorMessage: `Invalid company name: ${ext.companyName}` });
-            await emitEvent(jobId, item.id, "item_failed", { state: "member_not_found", errorCode: "WCA_INVALID_EXTRACTION" });
-          } else {
-            // Genuine success — save data
-            const partnerId = await ensurePartner(item.wca_id, ext.companyName, job.country_code, job.country_name);
-            let cf = 0, cm = 0;
-            if (partnerId) {
-              const saved = await saveExtractionResult(partnerId, item.wca_id, { success: true, ...ext }, ext.companyName || "");
-              cf = (saved.hasEmail || saved.hasPhone) ? 1 : 0;
-              cm = cf ? 0 : 1;
-            }
-            await updateItem(item.id, "success", { contactsFound: cf, contactsMissing: cm });
-            await emitEvent(jobId, item.id, "item_success", { companyName: ext.companyName });
-          }
-        } else if (state === "member_not_found") {
-          await updateItem(item.id, "member_not_found", { errorCode: ext.errorCode || "WCA_PROFILE_NOT_FOUND" });
-          try { await supabase.from("partners_no_contacts").upsert({ wca_id: item.wca_id, company_name: ext.companyName || `WCA ${item.wca_id}`, country_code: job.country_code, scraped_at: new Date().toISOString() }, { onConflict: "wca_id" }); } catch {}
-          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: ext.errorCode });
-        } else if (state === "login_required") {
-          await updateItem(item.id, "temporary_error", { errorCode: "WCA_LOGIN_REQUIRED", errorMessage: "Login richiesto" });
-          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: "WCA_LOGIN_REQUIRED" });
-          await pauseJob(jobId, "Sessione WCA scaduta — effettua il login su wcaworld.com e ripremi Avvia");
-          break;
-        } else {
-          // not_loaded, extraction_error
-          await updateItem(item.id, "temporary_error", { errorCode: ext.errorCode || "UNKNOWN", errorMessage: ext.error || state });
-          await emitEvent(jobId, item.id, "item_failed", { state, errorCode: ext.errorCode });
-        }
-
-        // Snapshot progress every 3 items
+        consecutiveFails = 0;
         itemsProcessed++;
         if (itemsProcessed % 3 === 0) {
-          await snapshotProgress(jobId, item.wca_id, ext.companyName);
+          await snapshotProgress(jobId, item.wca_id);
           invalidate();
         }
       }
@@ -180,7 +171,7 @@ export function useDownloadEngine() {
       abortRef.current = null;
       invalidate();
     }
-  }, [queryClient, checkAvailable]);
+  }, [queryClient]);
 
   const stop = useCallback(async () => {
     abortRef.current?.abort();
@@ -199,16 +190,4 @@ async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     const t = setTimeout(resolve, ms);
     signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
   });
-}
-
-async function ensurePartner(wcaId: number, companyName: string | null | undefined, countryCode: string, countryName: string): Promise<string | null> {
-  const { data: existing } = await supabase.from("partners").select("id").eq("wca_id", wcaId).maybeSingle();
-  if (existing) return existing.id;
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: newP } = await supabase.from("partners").insert({
-    wca_id: wcaId, company_name: companyName || `WCA ${wcaId}`,
-    country_code: countryCode, country_name: countryName, city: "",
-    user_id: user?.id,
-  }).select("id").single();
-  return newP?.id || null;
 }
