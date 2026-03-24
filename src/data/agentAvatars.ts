@@ -7,6 +7,7 @@ import avatarBruce from "@/assets/agents/avatar-bruce.png";
 import avatarRenato from "@/assets/agents/avatar-renato.png";
 import avatarCarlo from "@/assets/agents/avatar-carlo.png";
 import avatarLeonardo from "@/assets/agents/avatar-leonardo.png";
+import avatarGianfranco from "@/assets/agents/avatar-gianfranco.png";
 
 export interface AgentAvatar {
   id: string;
