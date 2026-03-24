@@ -1019,14 +1019,21 @@ Deno.serve(async (req) => {
     }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: userData, error: userError } = await authClient.auth.getUser()
-    if (userError || !userData?.user?.id) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const token = authHeader.replace('Bearer ', '')
+
+    // Allow service role key as admin bypass (for server-to-server calls)
+    const isServiceRole = token === serviceRoleKey
+    if (!isServiceRole) {
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
       })
+      const { data: userData, error: userError } = await authClient.auth.getUser()
+      if (userError || !userData?.user?.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
