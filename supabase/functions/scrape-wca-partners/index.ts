@@ -1022,8 +1022,8 @@ Deno.serve(async (req) => {
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(authHeader.replace('Bearer ', ''))
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userError } = await authClient.auth.getUser()
+    if (userError || !userData?.user?.id) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -1076,7 +1076,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 1b: Direct SSO Login + Cheerio extraction (from wca-app repo) ──
-    const userId = claimsData.claims.sub as string
+    const userId = userData.user.id
     
     // Get authenticated cookies via SSO
     const directAuth = await getDirectAuthCookies(supabase, userId)
