@@ -142,10 +142,11 @@ export async function recoverOrphanJobs(): Promise<string[]> {
 
   if (runningJobs && runningJobs.length > 0) {
     for (const job of runningJobs) {
-      // Reset to pending so the engine can re-claim them
+      // Reset to stopped — user can start a fresh download
+      // (DO NOT set to "pending" — the anti-duplicate guard would block new jobs)
       await supabase
         .from("download_jobs")
-        .update({ status: "pending", error_message: "Recuperato automaticamente (job orfano)" })
+        .update({ status: "stopped", error_message: "Interrotto — job orfano (pagina ricaricata)" })
         .eq("id", job.id);
 
       // Fix items stuck in "processing" → back to "pending"

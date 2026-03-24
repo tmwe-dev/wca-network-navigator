@@ -129,18 +129,26 @@ export function useCreateDownloadJob() {
         return null;
       }
 
-      // Guard anti-duplicato
+      // Guard anti-duplicato — solo se job VERAMENTE attivo (aggiornato di recente)
       const { data: existing } = await supabase
         .from("download_jobs")
-        .select("id")
+        .select("id, status, updated_at")
         .eq("country_code", params.country_code)
         .eq("network_name", params.network_name)
         .in("status", ["pending", "running"])
         .limit(1);
 
       if (existing && existing.length > 0) {
-        
-        return existing[0].id;
+        const job = existing[0];
+        const ageMs = Date.now() - new Date(job.updated_at).getTime();
+        // If the job is stale (>2 min without update), kill it and proceed with new one
+        if (ageMs > 120_000) {
+          await supabase.from("download_jobs").update({ status: "stopped", error_message: "Sostituito da nuovo download" }).eq("id", job.id);
+          console.log("[CLAUDE-ENGINE] Stale job killed:", job.id);
+        } else {
+          // Truly active job — return its ID
+          return job.id;
+        }
       }
 
       const { data: { user } } = await supabase.auth.getUser();

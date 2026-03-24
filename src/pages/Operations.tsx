@@ -99,8 +99,8 @@ export default function Operations() {
       try {
         const recovered = await recoverOrphanJobs();
         if (cancelled || recovered.length === 0) return;
-        console.log(`[CLAUDE-ENGINE] Recovered ${recovered.length} orphan job(s)`);
-        toast.info(`${recovered.length} job recuperato — pronto per riprendere`);
+        console.log(`[CLAUDE-ENGINE] Stopped ${recovered.length} orphan job(s)`);
+        toast.info(`${recovered.length} job orfano fermato. Puoi avviare un nuovo download.`);
         queryClient.invalidateQueries({ queryKey: ["download-jobs"] });
       } catch (err) {
         console.error("[CLAUDE-ENGINE] Orphan recovery failed:", err);
