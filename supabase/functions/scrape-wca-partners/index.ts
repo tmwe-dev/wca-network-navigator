@@ -564,6 +564,250 @@ function parseDateString(dateStr: string): string | null {
   }
 }
 
+// ─── Direct SSO Auth + Cheerio Profile Extraction (from wca-app repo) ─────────
+
+function cookieJarDirect() {
+  const jar: Record<string, Record<string, string>> = {}
+  return {
+    add(domain: string, headers: string[]) {
+      if (!jar[domain]) jar[domain] = {}
+      for (const raw of headers) {
+        const c = raw.split(';')[0]
+        const eq = c.indexOf('=')
+        if (eq > 0) jar[domain][c.substring(0, eq)] = c
+      }
+    },
+    get(domain: string): string { return jar[domain] ? Object.values(jar[domain]).join('; ') : '' },
+    keys(domain: string): string[] { return jar[domain] ? Object.keys(jar[domain]) : [] },
+  }
+}
+
+async function ssoLoginDirect(username: string, password: string): Promise<{ success: boolean; cookies?: string; error?: string }> {
+  const WD = 'wcaworld.com', SD = 'sso.api.wcaworld.com'
+  const jar = cookieJarDirect()
+  try {
+    let resp = await fetch(`${WCA_BASE}/Account/Login`, { headers: { 'User-Agent': WCA_UA }, redirect: 'manual' })
+    jar.add(WD, resp.headers.getSetCookie?.() || [])
+    let cur = `${WCA_BASE}/Account/Login`, rc = 0
+    while (resp.status >= 300 && resp.status < 400 && rc < 5) {
+      const loc = resp.headers.get('location') || ''
+      cur = loc.startsWith('http') ? loc : new URL(loc, cur).href
+      resp = await fetch(cur, { headers: { 'User-Agent': WCA_UA, 'Cookie': jar.get(WD) }, redirect: 'manual' })
+      jar.add(WD, resp.headers.getSetCookie?.() || []); rc++
+    }
+    const loginHtml = resp.status === 200 ? await resp.text() : ''
+    const ssoMatch = loginHtml.match(/action\s*[:=]\s*['"]?(https:\/\/sso\.api\.wcaworld\.com[^'"&\s]+[^'"]*)/i)
+    if (!ssoMatch) return { success: false, error: 'SSO URL not found' }
+    const ssoUrl = ssoMatch[1].replace(/&amp;/g, '&')
+    const ssoResp = await fetch(ssoUrl, {
+      method: 'POST', redirect: 'manual',
+      headers: { 'User-Agent': WCA_UA, 'Content-Type': 'application/x-www-form-urlencoded', 'Origin': 'https://sso.api.wcaworld.com', 'Referer': ssoUrl },
+      body: `UserName=${encodeURIComponent(username)}&Password=${encodeURIComponent(password)}&pwd=${encodeURIComponent(password)}`,
+    })
+    jar.add(SD, ssoResp.headers.getSetCookie?.() || [])
+    if (!jar.keys(SD).includes('.ASPXAUTH') || ssoResp.status < 300 || ssoResp.status >= 400) return { success: false, error: 'SSO failed' }
+    let cbUrl = ssoResp.headers.get('location') || '', fc = 0
+    while (cbUrl && fc < 8) {
+      const u = cbUrl.startsWith('http') ? cbUrl : new URL(cbUrl, ssoUrl).href
+      const d = u.includes('sso.api.wcaworld.com') ? SD : WD
+      const r = await fetch(u, { headers: { 'User-Agent': WCA_UA, 'Cookie': jar.get(d) }, redirect: 'manual' })
+      jar.add(d, r.headers.getSetCookie?.() || [])
+      const nl = r.headers.get('location') || ''
+      cbUrl = nl ? (nl.startsWith('http') ? nl : new URL(nl, u).href) : ''
+      if (r.status === 200) break; fc++
+    }
+    let cookies = jar.get(WD)
+    try {
+      let wr = await fetch(`${WCA_BASE}/Directory`, { headers: { 'User-Agent': WCA_UA, 'Cookie': cookies }, redirect: 'manual' })
+      jar.add(WD, wr.headers.getSetCookie?.() || [])
+      let wl = wr.headers.get('location') || '', wc = 0
+      while (wl && wc < 3) {
+        const wn = wl.startsWith('http') ? wl : new URL(wl, `${WCA_BASE}/Directory`).href
+        wr = await fetch(wn, { headers: { 'User-Agent': WCA_UA, 'Cookie': jar.get(WD) }, redirect: 'manual' })
+        jar.add(WD, wr.headers.getSetCookie?.() || []); wl = wr.headers.get('location') || ''; wc++
+      }
+      cookies = jar.get(WD)
+    } catch {}
+    return { success: true, cookies }
+  } catch (e) { return { success: false, error: String(e) } }
+}
+
+async function getDirectAuthCookies(supabase: any, userId: string): Promise<{ cookies: string } | null> {
+  const { data: cached } = await supabase.from('app_settings').select('value, updated_at').eq('key', 'wca_direct_cookie').maybeSingle()
+  if (cached?.value) {
+    const age = Date.now() - new Date(cached.updated_at).getTime()
+    if (age < 600_000) {
+      try { const p = JSON.parse(cached.value); if (p.cookies) return { cookies: p.cookies } } catch { return { cookies: cached.value } }
+    }
+  }
+  const { data: creds } = await supabase.from('user_wca_credentials').select('wca_username, wca_password').eq('user_id', userId).maybeSingle()
+  if (!creds?.wca_username) return null
+  const result = await ssoLoginDirect(creds.wca_username, creds.wca_password)
+  if (!result.success || !result.cookies) return null
+  const val = JSON.stringify({ cookies: result.cookies, savedAt: new Date().toISOString() })
+  const { data: ex } = await supabase.from('app_settings').select('id').eq('key', 'wca_direct_cookie').maybeSingle()
+  if (ex) await supabase.from('app_settings').update({ value: val }).eq('key', 'wca_direct_cookie')
+  else await supabase.from('app_settings').insert({ key: 'wca_direct_cookie', value: val })
+  return { cookies: result.cookies }
+}
+
+function extractProfileCheerio($: any, wcaId: number): any {
+  const CONTACT_LABELS: Record<string, string> = {
+    'name': 'name', 'nome': 'name', 'title': 'title', 'titolo': 'title', 'position': 'title', 'role': 'title',
+    'email': 'email', 'e-mail': 'email', 'direct line': 'direct_line', 'direct': 'direct_line', 'phone': 'direct_line',
+    'telephone': 'direct_line', 'tel': 'direct_line', 'fax': 'fax', 'mobile': 'mobile', 'cell': 'mobile', 'skype': 'skype',
+  }
+  const result: any = {
+    wca_id: wcaId, state: 'ok', company_name: '', logo_url: null, branch: '',
+    gm_coverage: null, networks: [], profile_text: '', address: '', phone: '', fax: '',
+    emergency_call: '', website: '', email: '', contacts: [], services: [], certifications: [],
+    branch_cities: [], access_limited: false, enrolled_since: '', expires: '',
+  }
+  const h1 = $('h1.company, h1').first().text().trim()
+  result.company_name = h1
+  if (!h1 || /not\s*found|error|404/i.test(h1)) return { wca_id: wcaId, state: 'not_found' }
+
+  $('img[src*="companylogo"], img[src*="company_logo"], img[src*="/companylogos/"]').each((_: number, el: any) => {
+    if (!result.logo_url) {
+      const src = $(el).attr('src') || ''
+      result.logo_url = src.startsWith('//') ? 'https:' + src : src.startsWith('/') ? WCA_BASE + src : src
+    }
+  })
+
+  result.branch = $('.branchname').first().text().trim()
+
+  $('.profile_row').each((_: number, row: any) => {
+    if ($(row).closest('.contactperson_row, .contactperson_info').length) return
+    const label = $(row).find('.profile_label').text().trim().replace(/:?\s*$/, '').toLowerCase()
+    const valEl = $(row).find('.profile_val')
+    let val = valEl.text().trim()
+    if (/members\s*only|please.*login/i.test(val)) val = ''
+    if (/^phone|^telephone/.test(label)) result.phone = val
+    else if (/^fax/.test(label)) result.fax = val
+    else if (/^emergency/.test(label)) result.emergency_call = val
+    else if (/^website|^web\s*site|^url/.test(label)) result.website = valEl.find('a[href]').attr('href') || val
+    else if (/^email|^e-mail/.test(label)) {
+      const mailto = valEl.find("a[href^='mailto:']").attr('href')
+      if (mailto) result.email = mailto.replace('mailto:', '').trim()
+      else if (val.includes('@')) result.email = val
+    }
+  })
+
+  $('.memberprofile_memberof img[alt], .memberof_img img[alt]').each((_: number, el: any) => {
+    const name = $(el).attr('alt') || ''
+    if (name && name.length > 2) result.networks.push(name.trim())
+  })
+
+  // Contact extraction
+  function extractContactsFromContainer($container: any) {
+    const contacts: any[] = []
+    const allEls = $container.find('*').toArray()
+    let currentContact: any = {}; let lastLabel: string | null = null
+    for (const el of allEls) {
+      const $el = $(el)
+      if ($el.children().length > 2) continue
+      const text = ($el.clone().children().remove().end().text().trim()) || $el.text().trim()
+      if (!text || text.length > 200) continue
+      const cleanLabel = text.replace(/:\s*$/, '').trim().toLowerCase()
+      const mappedField = CONTACT_LABELS[cleanLabel]
+      if (mappedField) {
+        if (mappedField === 'name' && (currentContact.name || currentContact.email)) { contacts.push({...currentContact}); currentContact = {} }
+        lastLabel = mappedField
+      } else if (lastLabel && text && !/members\s*only|please.*login/i.test(text)) {
+        if (lastLabel === 'email') {
+          const mailto = $el.find("a[href^='mailto:']").attr('href')
+          if (mailto) currentContact.email = mailto.replace('mailto:', '').trim()
+          else if (text.includes('@')) currentContact.email = text
+        } else { currentContact[lastLabel] = text }
+        lastLabel = null
+      }
+    }
+    if (currentContact.name || currentContact.email) contacts.push(currentContact)
+    return contacts
+  }
+
+  const contactSelectors = ['.contactperson_row', "[class*='contactperson']", "[class*='office_contact']"]
+  for (const sel of contactSelectors) {
+    const rows = $(sel)
+    if (rows.length === 0) continue
+    rows.each((_: number, row: any) => {
+      const rowContacts = extractContactsFromContainer($(row))
+      for (const c of rowContacts) { if (c.name || c.email) result.contacts.push(c) }
+    })
+    if (result.contacts.length > 0) break
+  }
+
+  // Mailto fallback
+  if (result.contacts.length === 0) {
+    $("a[href^='mailto:']").each((_: number, el: any) => {
+      const email = ($(el).attr('href') || '').replace('mailto:', '').trim()
+      if (email && !result.contacts.find((c: any) => c.email === email)) {
+        result.contacts.push({ email, name: $(el).text().trim() || email })
+      }
+    })
+  }
+
+  $("[class*='service'] span, [class*='service'] li").each((_: number, el: any) => {
+    const svc = $(el).text().trim()
+    if (svc && svc.length > 2 && svc.length < 100 && !result.services.includes(svc)) result.services.push(svc)
+  })
+  $("[class*='certif'] span, [class*='certif'] img").each((_: number, el: any) => {
+    const cert = ($(el).attr('alt') || $(el).attr('title') || $(el).text() || '').trim()
+    if (cert && cert.length > 1 && cert.length < 60 && !result.certifications.includes(cert)) result.certifications.push(cert)
+  })
+  $("[class*='branch'] li, [class*='branch'] a").each((_: number, el: any) => {
+    const bc = $(el).text().trim()
+    if (bc && bc.length > 1 && bc.length < 80 && !result.branch_cities.includes(bc)) result.branch_cities.push(bc)
+  })
+
+  return result
+}
+
+async function tryFetchUrlDirect(url: string, cookies: string): Promise<any> {
+  let currentUrl = url, redirectCount = 0, resp: Response | undefined
+  while (redirectCount < 5) {
+    resp = await fetch(currentUrl, {
+      headers: { 'User-Agent': WCA_UA, 'Cookie': cookies, 'Accept': 'text/html,application/xhtml+xml', 'Referer': WCA_BASE + '/Directory' },
+      redirect: 'manual',
+    })
+    const newCookies = (resp.headers.getSetCookie?.() || []).map((c: string) => c.split(';')[0])
+    if (newCookies.length) {
+      const cookieMap: Record<string, string> = {}
+      for (const c of cookies.split('; ')) { const eq = c.indexOf('='); if (eq > 0) cookieMap[c.substring(0, eq)] = c }
+      for (const c of newCookies) { const eq = c.indexOf('='); if (eq > 0) cookieMap[c.substring(0, eq)] = c }
+      cookies = Object.values(cookieMap).join('; ')
+    }
+    if (resp.status >= 300 && resp.status < 400) {
+      const loc = resp.headers.get('location') || ''
+      if (!loc) break
+      currentUrl = loc.startsWith('http') ? loc : new URL(loc, currentUrl).href
+      if (currentUrl.toLowerCase().includes('/login')) return { state: 'login_redirect' }
+      redirectCount++; continue
+    }
+    break
+  }
+  if (!resp || resp.status === 404) return null
+  const html = await resp.text()
+  if (html.includes('type="password"') || currentUrl.toLowerCase().includes('/login')) return { state: 'login_redirect' }
+  const $ = cheerio.load(html)
+  const h1 = $('h1').first().text().trim()
+  if (/member\s*not\s*found|not\s*found.*try\s*again/i.test(h1)) return null
+  return { $, html }
+}
+
+async function fetchProfileDirect(wcaId: number, cookies: string): Promise<any> {
+  const url = `${WCA_BASE}/directory/members/${wcaId}`
+  try {
+    const result = await tryFetchUrlDirect(url, cookies)
+    if (!result) return { wca_id: wcaId, state: 'not_found' }
+    if (result.state === 'login_redirect') return { wca_id: wcaId, state: 'login_redirect' }
+    return extractProfileCheerio(result.$, wcaId)
+  } catch (err) {
+    console.log(`[scrape] fetchProfile error: ${err}`)
+    return { wca_id: wcaId, state: 'error' }
+  }
+}
+
 // ─── Direct HTTP Fetch (bypasses Firecrawl) ─────────
 
 async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean; loginPrompt: boolean; contactsAuthenticated: boolean }> {
