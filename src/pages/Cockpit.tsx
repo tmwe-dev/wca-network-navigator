@@ -216,6 +216,22 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
 
+  const handleBulkDelete = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmBulkDelete = useCallback(async () => {
+    const ids = Array.from(selection.selectedIds);
+    try {
+      await deleteActivities.mutateAsync(ids);
+      selection.clear();
+      toast.success(`${ids.length} record eliminati`);
+    } catch {
+      toast.error("Errore durante l'eliminazione");
+    }
+    setShowDeleteConfirm(false);
+  }, [selection, deleteActivities]);
+
   const contactsForAI = useMemo(() =>
     contacts.map(c => ({
       id: c.id, name: c.name, company: c.company, country: c.country,
