@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import * as cheerio from 'https://esm.sh/cheerio@1.0.0'
 
-const VERCEL_BASE = 'https://wca-app.vercel.app/api'
+const WCA_BASE = 'https://www.wcaworld.com'
+const WCA_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
