@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { Bot, Power, PowerOff } from "lucide-react";
+import { Power, PowerOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/hooks/useAgents";
 import { AGENT_ROLES } from "@/data/agentTemplates";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface Props {
   agent: Agent;
@@ -12,6 +14,7 @@ interface Props {
 
 export function AgentCard({ agent, isSelected, onClick }: Props) {
   const roleMeta = AGENT_ROLES.find((r) => r.value === agent.role);
+  const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
 
   return (
     <motion.button
@@ -26,7 +29,14 @@ export function AgentCard({ agent, isSelected, onClick }: Props) {
       )}
     >
       <div className="flex items-start gap-3">
-        <span className="text-2xl flex-shrink-0">{agent.avatar_emoji || roleMeta?.emoji || "🤖"}</span>
+        {avatarSrc ? (
+          <Avatar className="h-9 w-9 flex-shrink-0 ring-2 ring-border/30">
+            <AvatarImage src={avatarSrc} alt={agent.name} />
+            <AvatarFallback>{agent.avatar_emoji || "🤖"}</AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="text-2xl flex-shrink-0">{agent.avatar_emoji || roleMeta?.emoji || "🤖"}</span>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{agent.name}</span>
