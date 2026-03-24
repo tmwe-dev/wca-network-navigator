@@ -105,27 +105,29 @@ export interface ScrapeSingleResult {
   error?: string;
 }
 
-/** Scrape singolo partner — chiamata diretta a wca-app */
+/** Scrape singolo partner — chiamata diretta a wca-app (SSO auto) */
 export async function scrapeWcaPartnerById(wcaId: number): Promise<ScrapeSingleResult> {
   try {
-    const cookie = await getOrRefreshCookie();
     const res = await fetch(`${WCA_APP_BASE}/scrape`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId: wcaId, cookie }),
+      body: JSON.stringify({ wcaIds: [wcaId] }),
     });
     if (!res.ok) return { success: false, wcaId, error: `HTTP ${res.status}` };
-    const result = await res.json();
+    const data = await res.json();
 
-    if (!result.success) {
-      return { success: false, wcaId, error: result.error || "Scrape fallito" };
+    if (!data.success || !data.results || data.results.length === 0) {
+      return { success: false, wcaId, error: data.error || "Scrape fallito" };
     }
+
+    const profile = data.results[0];
+    const found = profile.state === "ok" && !!profile.company_name;
 
     return {
       success: true,
-      found: result.found ?? true,
+      found,
       wcaId,
-      partner: result.partner as ScrapedPartner | undefined,
+      partner: profile as ScrapedPartner | undefined,
     };
   } catch (err) {
     return { success: false, wcaId, error: err instanceof Error ? err.message : "Errore di rete" };
@@ -179,46 +181,47 @@ export interface PreviewResult {
   error?: string;
 }
 
-/** Preview profilo — chiamata diretta a wca-app */
+/** Preview profilo — chiamata diretta a wca-app (SSO auto) */
 export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
   try {
-    const cookie = await getOrRefreshCookie();
     const res = await fetch(`${WCA_APP_BASE}/scrape`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId: wcaId, cookie }),
+      body: JSON.stringify({ wcaIds: [wcaId] }),
     });
     if (!res.ok) return { success: false, wcaId, authStatus: "login_failed", error: `HTTP ${res.status}` };
-    const result = await res.json();
+    const data = await res.json();
 
-    if (!result.success) {
-      return { success: false, wcaId, authStatus: "login_failed", error: result.error || "Preview fallito" };
+    if (!data.success || !data.results || data.results.length === 0) {
+      return { success: false, wcaId, authStatus: "login_failed", error: data.error || "Preview fallito" };
     }
 
-    if (!result.found) {
+    const p = data.results[0];
+    const found = p.state === "ok" && !!p.company_name;
+
+    if (!found) {
       return { success: true, found: false, wcaId, authStatus: "authenticated" };
     }
 
-    const p = result.partner as any;
     return {
       success: true,
       found: true,
       wcaId,
       authStatus: "authenticated",
-      partner: p ? {
+      partner: {
         company_name: p.company_name || "",
-        city: p.city || "",
-        country: p.country_name || "",
+        city: (p.address || "").split(",")[0]?.trim() || "",
+        country: p.country_code || "",
         country_code: p.country_code || "",
-        office_type: p.office_type || "",
+        office_type: p.branch || "",
         email: p.email || null,
         phone: p.phone || null,
         website: p.website || null,
-        networks: p.networks || [],
+        networks: (p.networks || []).map((n: any) => typeof n === "string" ? { name: n } : n),
         contacts: p.contacts || [],
-      } : undefined,
-      contactsFound: p?.contacts?.length || 0,
-      totalContacts: p?.contacts?.length || 0,
+      },
+      contactsFound: p.contacts?.length || 0,
+      totalContacts: p.contacts?.length || 0,
     };
   } catch (err) {
     return { success: false, wcaId, authStatus: "login_failed", error: err instanceof Error ? err.message : "Errore di rete" };
@@ -237,7 +240,7 @@ export async function scrapeWcaDirectory(
     const res = await fetch(`${WCA_APP_BASE}/discover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: countryCode, page: pageIndex || 1, cookie }),
+      body: JSON.stringify({ cookies: cookie, page: pageIndex || 1, filters: { country: countryCode } }),
     });
     if (!res.ok) return {
       success: false, members: [],
@@ -254,14 +257,18 @@ export async function scrapeWcaDirectory(
       wca_id: m.id,
     }));
 
+    const totalResults = result.totalResults || members.length;
+    const totalPages = Math.ceil(totalResults / 50) || 1;
+    const currentPage = result.page || pageIndex || 1;
+
     return {
       success: true,
       members,
       pagination: {
-        total_results: members.length * (result.totalPages || 1),
-        current_page: result.page || pageIndex || 1,
-        total_pages: result.totalPages || 1,
-        has_next_page: (result.page || 1) < (result.totalPages || 1),
+        total_results: totalResults,
+        current_page: currentPage,
+        total_pages: totalPages,
+        has_next_page: result.hasNext || currentPage < totalPages,
       },
     };
   } catch (err) {

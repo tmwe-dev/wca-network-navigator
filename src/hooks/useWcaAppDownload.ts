@@ -73,14 +73,19 @@ async function autoLogin(): Promise<string> {
 }
 
 /** Discover una pagina di membri per paese */
-async function apiDiscover(country: string, page: number, cookie: string): Promise<{ members: { id: number; name: string; company?: string }[]; totalPages: number }> {
+async function apiDiscover(country: string, page: number, cookie: string): Promise<{ members: { id: number; name: string; company?: string }[]; totalPages: number; totalResults?: number; hasNext?: boolean }> {
   const res = await fetch(`${WCA_APP_BASE}/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ country, page, cookie }),
+    body: JSON.stringify({ cookies: cookie, page, filters: { country } }),
   });
   if (!res.ok) throw new Error(`Discover failed: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  // L'API restituisce { members, hasNext, totalResults, page }
+  // Calcoliamo totalPages dal totalResults
+  const totalResults = data.totalResults || data.members?.length || 0;
+  const totalPages = Math.ceil(totalResults / 50) || 1;
+  return { members: data.members || [], totalPages, totalResults };
 }
 
 /** Discover TUTTI i membri (tutte le pagine) */
@@ -100,23 +105,29 @@ async function apiDiscoverAll(
   return all;
 }
 
-/** Scrape profilo singolo */
-async function apiScrape(memberId: number, cookie: string): Promise<{ success: boolean; found?: boolean; partner?: Record<string, any> }> {
+/** Scrape profilo singolo — l'API gestisce login SSO internamente */
+async function apiScrape(memberId: number): Promise<{ success: boolean; found?: boolean; profile?: Record<string, any> }> {
   const res = await fetch(`${WCA_APP_BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ memberId, cookie }),
+    body: JSON.stringify({ wcaIds: [memberId] }),
   });
   if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  if (!data.success || !data.results || data.results.length === 0) {
+    return { success: false };
+  }
+  const profile = data.results[0];
+  const found = profile.state === "ok" && !!profile.company_name;
+  return { success: true, found, profile };
 }
 
-/** Salva partner su Supabase via wca-app */
-async function apiSave(partner: Record<string, any>): Promise<void> {
+/** Salva profilo su Supabase via wca-app */
+async function apiSave(profile: Record<string, any>): Promise<void> {
   const res = await fetch(`${WCA_APP_BASE}/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ partner }),
+    body: JSON.stringify({ profile }),
   });
   if (!res.ok) throw new Error(`Save failed: ${res.status}`);
 }
@@ -192,9 +203,9 @@ export function useWcaAppDownload() {
         });
 
         try {
-          const result = await apiScrape(id, cookie);
-          if (result.success && result.found && result.partner) {
-            await apiSave(result.partner);
+          const result = await apiScrape(id);
+          if (result.success && result.found && result.profile) {
+            await apiSave(result.profile);
             markIdDone(countryCode, id);
             downloaded++;
           } else {
@@ -274,9 +285,9 @@ export function useWcaAppDownload() {
         });
 
         try {
-          const result = await apiScrape(id, cookie);
-          if (result.success && result.found && result.partner) {
-            await apiSave(result.partner);
+          const result = await apiScrape(id);
+          if (result.success && result.found && result.profile) {
+            await apiSave(result.profile);
             markIdDone(countryCode, id);
             downloaded++;
           } else {
