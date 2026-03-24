@@ -374,6 +374,7 @@ export default function Operations() {
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
       <DownloadTerminalDialog open={showTerminal} onOpenChange={setShowTerminal} />
+      <DownloadExperienceDialog open={showExperience} onOpenChange={setShowExperience} onStop={() => emergencyStop()} />
     </ThemeCtx.Provider>
   );
 }
