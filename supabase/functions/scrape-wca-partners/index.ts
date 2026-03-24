@@ -1076,7 +1076,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 1b: Direct SSO Login + Cheerio extraction (from wca-app repo) ──
-    const userId = claimsData.claims.sub as string
+    const userId = userData.user.id
     
     // Get authenticated cookies via SSO
     const directAuth = await getDirectAuthCookies(supabase, userId)
