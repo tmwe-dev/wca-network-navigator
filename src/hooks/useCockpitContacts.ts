@@ -226,6 +226,17 @@ export function useDeleteCockpitContacts() {
       const errors: string[] = [];
 
       if (pcIds.length > 0) {
+        // Pulisci FK: activities.selected_contact_id → null
+        await supabase
+          .from("activities")
+          .update({ selected_contact_id: null } as any)
+          .in("selected_contact_id", pcIds);
+        // Pulisci FK: partner_social_links.contact_id
+        await supabase
+          .from("partner_social_links")
+          .delete()
+          .in("contact_id", pcIds);
+        // Ora elimina il contatto
         const { error } = await supabase
           .from("partner_contacts")
           .delete()
@@ -255,6 +266,8 @@ export function useDeleteCockpitContacts() {
       queryClient.invalidateQueries({ queryKey: ["cockpit-partner-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["cockpit-imported-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["cockpit-prospect-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: ["all-activities"] });
     },
   });
 }
