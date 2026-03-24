@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Search, Globe, MapPin, Users,
-  Filter, CheckSquare, Sparkles,
+  Filter, CheckSquare, Sparkles, Download, Pause,
 } from "lucide-react";
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { useCountryStats } from "@/hooks/useCountryStats";
+import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import type { CountrySortBy } from "@/components/partners/CountryCards";
 
 import { useBlacklistByPartnerIds } from "@/hooks/useBlacklist";
@@ -60,8 +61,16 @@ export default function PartnerHub() {
   const [showAI, setShowAI] = useState(false);
 
   const { data: countryStatsData } = useCountryStats();
+  const { data: downloadJobs } = useDownloadJobs();
 
-  
+  // Active download for current country
+  const activeDownloadForCountry = useMemo(() => {
+    if (!selectedCountry || !downloadJobs) return null;
+    return downloadJobs.find(
+      (j) => (j.status === "running" || j.status === "paused") && j.country_code === selectedCountry
+    ) || null;
+  }, [selectedCountry, downloadJobs]);
+
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
 
@@ -404,6 +413,35 @@ export default function PartnerHub() {
             <Sparkles className="w-3.5 h-3.5" />
           </Button>
         </div>
+
+        {/* Download badge for selected country */}
+        {activeDownloadForCountry && (
+          <div className="px-4 py-1.5 border-b border-primary/15 bg-primary/5 flex items-center gap-2 text-xs">
+            {activeDownloadForCountry.status === "paused" ? (
+              <Pause className="w-3 h-3 text-amber-500" />
+            ) : (
+              <Download className="w-3 h-3 text-primary animate-pulse" />
+            )}
+            <span className="font-medium text-foreground">
+              Download {activeDownloadForCountry.country_name}
+            </span>
+            <span className="tabular-nums text-muted-foreground">
+              {activeDownloadForCountry.current_index}/{activeDownloadForCountry.total_count}
+            </span>
+            <div className="flex-1 h-1 rounded-full bg-muted ml-1">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  activeDownloadForCountry.status === "paused" ? "bg-amber-500" : "bg-primary"
+                )}
+                style={{ width: `${activeDownloadForCountry.total_count > 0 ? Math.round((activeDownloadForCountry.current_index / activeDownloadForCountry.total_count) * 100) : 0}%` }}
+              />
+            </div>
+            <span className="tabular-nums font-mono text-muted-foreground">
+              {activeDownloadForCountry.total_count > 0 ? Math.round((activeDownloadForCountry.current_index / activeDownloadForCountry.total_count) * 100) : 0}%
+            </span>
+          </div>
+        )}
 
         {/* AI Bar — collapsible */}
         {showAI && (

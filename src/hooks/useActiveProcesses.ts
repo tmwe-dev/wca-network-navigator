@@ -1,4 +1,4 @@
-import { useMemo, useContext } from "react";
+import { useMemo, useContext, useState, useEffect, useRef } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ export interface ActiveProcess {
   progress?: number; // 0-100
   detail?: string;
   errorMessage?: string;
+  countdownLabel?: string;
 }
 
 /**
@@ -21,6 +22,55 @@ export interface ActiveProcess {
 export function useActiveProcesses() {
   const { data: downloadJobs } = useDownloadJobs();
   const deepSearch = useContext(DeepSearchContext);
+  const [countdowns, setCountdowns] = useState<Record<string, { seconds: number; type: string; at: number }>>({});
+  const countdownTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+
+  // Subscribe to countdown events via realtime
+  useEffect(() => {
+    const channel = supabase
+      .channel("countdown-events")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "download_job_events", filter: "event_type=eq.countdown" },
+        (payload) => {
+          const row = payload.new as any;
+          const jobId = row.job_id;
+          const secs = (row.payload as any)?.seconds || 0;
+          const type = (row.payload as any)?.type || "delay";
+          
+          setCountdowns((prev) => ({ ...prev, [jobId]: { seconds: secs, type, at: Date.now() } }));
+          
+          // Clear previous timer
+          if (countdownTimers.current[jobId]) clearInterval(countdownTimers.current[jobId]);
+          
+          // Tick down every second
+          let remaining = secs;
+          countdownTimers.current[jobId] = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+              clearInterval(countdownTimers.current[jobId]);
+              delete countdownTimers.current[jobId];
+              setCountdowns((prev) => {
+                const next = { ...prev };
+                delete next[jobId];
+                return next;
+              });
+            } else {
+              setCountdowns((prev) => ({
+                ...prev,
+                [jobId]: { seconds: remaining, type, at: prev[jobId]?.at || Date.now() },
+              }));
+            }
+          }, 1000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      Object.values(countdownTimers.current).forEach(clearInterval);
+    };
+  }, []);
 
   // Global email queue count (pending + sending)
   const { data: emailQueueCounts } = useQuery({
@@ -60,6 +110,8 @@ export function useActiveProcesses() {
     (downloadJobs || []).forEach((job) => {
       if (job.status === "running" || job.status === "pending" || job.status === "paused") {
         const progress = job.total_count > 0 ? Math.round((job.current_index / job.total_count) * 100) : 0;
+        const cd = countdowns[job.id];
+        const countdownLabel = cd ? `⏱ ${cd.seconds}s ${cd.type === "batch" ? "(pausa batch)" : ""}` : undefined;
         result.push({
           id: `dl-${job.id}`,
           type: "download",
@@ -68,6 +120,7 @@ export function useActiveProcesses() {
           progress,
           detail: `${job.current_index}/${job.total_count}`,
           errorMessage: job.error_message || undefined,
+          countdownLabel,
         });
       }
     });
@@ -84,7 +137,7 @@ export function useActiveProcesses() {
     }
 
     return result;
-  }, [downloadJobs, deepSearch?.running, deepSearch?.current, emailQueueCounts]);
+  }, [downloadJobs, deepSearch?.running, deepSearch?.current, emailQueueCounts, countdowns]);
 
   const hasActive = processes.length > 0;
   const runningCount = processes.filter((p) => p.status === "running").length;

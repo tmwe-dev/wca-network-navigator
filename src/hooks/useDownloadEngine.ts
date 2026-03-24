@@ -224,9 +224,12 @@ export function useDownloadEngine() {
           if (itemsProcessed % config.batchSize === 0) {
             console.log(`[DL-ENGINE] Batch pause: ${config.batchPause}s after ${itemsProcessed} profiles`);
             await emitEvent(jobId, null, "batch_pause", { itemsProcessed, pauseSeconds: config.batchPause });
+            await emitEvent(jobId, null, "countdown", { seconds: config.batchPause, type: "batch" });
             await sleep(config.batchPause * 1000, ac.signal);
           } else {
             const patternDelay = getPatternDelay(itemsProcessed, config.delayPattern);
+            const delaySec = Math.round(patternDelay / 1000);
+            await emitEvent(jobId, null, "countdown", { seconds: delaySec, type: "delay" });
             await sleep(patternDelay, ac.signal);
           }
           if (ac.signal.aborted) break;
