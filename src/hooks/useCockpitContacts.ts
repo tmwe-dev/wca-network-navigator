@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import type { ContactOrigin } from "@/pages/Cockpit";
@@ -202,4 +202,59 @@ export function useCockpitContacts() {
   }, [contacts]);
 
   return { contacts, contactsMap, isLoading };
+}
+
+/**
+ * Elimina contatti cockpit dalla tabella corretta in base al prefisso ID.
+ * Gli ID cockpit sono: pc-{uuid}, ic-{uuid}, prc-{uuid}
+ */
+export function useDeleteCockpitContacts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (prefixedIds: string[]) => {
+      // Raggruppa per tabella sorgente
+      const pcIds: string[] = [];
+      const icIds: string[] = [];
+      const prcIds: string[] = [];
+
+      for (const pid of prefixedIds) {
+        if (pid.startsWith("pc-")) pcIds.push(pid.slice(3));
+        else if (pid.startsWith("ic-")) icIds.push(pid.slice(3));
+        else if (pid.startsWith("prc-")) prcIds.push(pid.slice(4));
+      }
+
+      const errors: string[] = [];
+
+      if (pcIds.length > 0) {
+        const { error } = await supabase
+          .from("partner_contacts")
+          .delete()
+          .in("id", pcIds);
+        if (error) errors.push(`partner_contacts: ${error.message}`);
+      }
+
+      if (icIds.length > 0) {
+        const { error } = await supabase
+          .from("imported_contacts")
+          .delete()
+          .in("id", icIds);
+        if (error) errors.push(`imported_contacts: ${error.message}`);
+      }
+
+      if (prcIds.length > 0) {
+        const { error } = await supabase
+          .from("prospect_contacts")
+          .delete()
+          .in("id", prcIds);
+        if (error) errors.push(`prospect_contacts: ${error.message}`);
+      }
+
+      if (errors.length > 0) throw new Error(errors.join("; "));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cockpit-partner-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["cockpit-imported-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["cockpit-prospect-contacts"] });
+    },
+  });
 }

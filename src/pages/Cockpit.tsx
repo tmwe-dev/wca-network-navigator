@@ -8,8 +8,7 @@ import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
-import { useCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
-import { useDeleteActivities } from "@/hooks/useActivities";
+import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -56,7 +55,7 @@ const Cockpit = () => {
   const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
-  const deleteActivities = useDeleteActivities();
+  const deleteContacts = useDeleteCockpitContacts();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
@@ -223,14 +222,14 @@ const Cockpit = () => {
   const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
     try {
-      await deleteActivities.mutateAsync(ids);
+      await deleteContacts.mutateAsync(ids);
       selection.clear();
       toast.success(`${ids.length} record eliminati`);
     } catch {
       toast.error("Errore durante l'eliminazione");
     }
     setShowDeleteConfirm(false);
-  }, [selection, deleteActivities]);
+  }, [selection, deleteContacts]);
 
   const contactsForAI = useMemo(() =>
     contacts.map(c => ({
