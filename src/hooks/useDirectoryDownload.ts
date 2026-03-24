@@ -226,6 +226,37 @@ export function useDirectoryDownload({
 
   const handleStartScan = useCallback(async () => {
     setIsScanning(true); setScanError(null); abortRef.current = false;
+
+    // 🤖 Claude Engine V8: login preventivo prima della scan directory
+    try {
+      let hasCookie = false;
+      try {
+        const cached = localStorage.getItem("wca_session_cookie");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) hasCookie = true;
+        }
+      } catch {}
+      if (!hasCookie) {
+        const res = await fetch("https://wca-app.vercel.app/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const data = await res.json();
+        if (!data.success || !data.cookies) {
+          setScanError("Login WCA fallito — impossibile scansionare");
+          setIsScanning(false);
+          return;
+        }
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+      }
+    } catch {
+      setScanError("Connessione WCA fallita");
+      setIsScanning(false);
+      return;
+    }
+
     const allMembers: DirectoryMember[] = [];
     const cachedCountryCodes = new Set(cachedEntries.map((e: any) => e.country_code));
     if (skipCachedDirs && cachedCountryCodes.has(countryCode)) {
@@ -266,8 +297,51 @@ export function useDirectoryDownload({
 
   const executeDownload = async () => {
     if (idsToDownload.length === 0) { toast.info("Nessun partner da scaricare"); return; }
-    const { data: activeJobs } = await supabase.from("download_jobs").select("id").in("status", ["pending", "running"]).limit(1);
-    if (activeJobs && activeJobs.length > 0) { toast.error("Job già in corso."); return; }
+
+    // 🤖 Claude Engine V8: login preventivo PRIMA di creare il job
+    try {
+      let hasCookie = false;
+      try {
+        const cached = localStorage.getItem("wca_session_cookie");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) hasCookie = true;
+        }
+      } catch {}
+      if (!hasCookie) {
+        console.log("[CLAUDE-ENGINE] Login preventivo via wca-app...");
+        const res = await fetch("https://wca-app.vercel.app/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const data = await res.json();
+        if (!data.success || !data.cookies) {
+          toast.error(data.error || "Login WCA fallito — il server non risponde");
+          return;
+        }
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        console.log("[CLAUDE-ENGINE] Login preventivo OK");
+      }
+    } catch {
+      toast.error("Connessione WCA fallita — impossibile raggiungere wca-app");
+      return;
+    }
+
+    // Check for active jobs — but recover orphans instead of blocking
+    const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, updated_at").in("status", ["pending", "running"]).limit(1);
+    if (activeJobs && activeJobs.length > 0) {
+      const job = activeJobs[0];
+      const ageMs = Date.now() - new Date(job.updated_at).getTime();
+      // If job is "running" but hasn't been updated in 2+ minutes, it's orphan — reset it
+      if (job.status === "running" && ageMs > 120_000) {
+        await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — job orfano" }).eq("id", job.id);
+        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", job.id).eq("status", "processing");
+        toast.info("Job orfano resettato. Nuovo download in corso...");
+      } else {
+        toast.error("Job già in corso. Attendi il completamento o fermalo."); return;
+      }
+    }
     const primaryCode = countryCodes[0] || "";
     const primaryName = countryNames[0] || "";
     const jobLabel = countryCodes.length > 1 ? `${primaryName} +${countryCodes.length - 1}` : primaryName;

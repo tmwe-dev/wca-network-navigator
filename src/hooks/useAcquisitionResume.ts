@@ -93,10 +93,10 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
           if (stillMissing2.length > 0) {
             try {
-              const { data: scanResult } = await supabase.functions.invoke("scrape-wca-directory", {
-                body: { countryCode: job.country_code, network: job.network_name || "" },
-              });
-              if (scanResult?.members) {
+              // 🤖 Claude Engine V8: usa wcaScraper bridge invece di Edge Function
+              const { scrapeWcaDirectory } = await import("@/lib/api/wcaScraper");
+              const scanResult = await scrapeWcaDirectory(job.country_code, job.network_name || "");
+              if (scanResult?.success && scanResult?.members) {
                 const membersJson = scanResult.members.map((m: any) => ({
                   company_name: m.company_name,
                   city: m.city,

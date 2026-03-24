@@ -397,19 +397,57 @@ export function ActionPanel({ selectedCountries, directoryOnly: directoryOnlyPro
       return;
     }
 
+    // 🤖 Claude Engine V8: login preventivo PRIMA di creare il job
+    try {
+      let cookie: string | null = null;
+      try {
+        const cached = localStorage.getItem("wca_session_cookie");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.cookie && Date.now() - parsed.savedAt < 8 * 60 * 1000) {
+            cookie = parsed.cookie;
+          }
+        }
+      } catch {}
+      if (!cookie) {
+        console.log("[CLAUDE-ENGINE] Login preventivo via wca-app...");
+        const res = await fetch("https://wca-app.vercel.app/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const data = await res.json();
+        if (!data.success || !data.cookies) {
+          toast({ title: "Login WCA fallito", description: data.error || "Il server wca-app non risponde. Riprova.", variant: "destructive" });
+          return;
+        }
+        try { localStorage.setItem("wca_session_cookie", JSON.stringify({ cookie: data.cookies, savedAt: Date.now() })); } catch {}
+        console.log("[CLAUDE-ENGINE] Login preventivo OK");
+      }
+    } catch (err) {
+      toast({ title: "Connessione WCA fallita", description: "Impossibile raggiungere wca-app.vercel.app", variant: "destructive" });
+      return;
+    }
+
+    // Check job attivi — con gestione orfani
     const { data: activeJobs } = await supabase
       .from("download_jobs")
-      .select("id")
+      .select("id, status, updated_at")
       .in("status", ["pending", "running"])
       .limit(1);
 
     if (activeJobs && activeJobs.length > 0) {
-      toast({
-        title: "Job già in corso",
-        description: "Attendi il completamento del job attuale prima di avviarne un altro.",
-        variant: "destructive",
-      });
-      return;
+      const job = activeJobs[0];
+      const ageMs = Date.now() - new Date(job.updated_at).getTime();
+      if (job.status === "running" && ageMs > 120_000) {
+        // Job orfano — reset automatico
+        await supabase.from("download_jobs").update({ status: "stopped", error_message: "Resettato — job orfano" }).eq("id", job.id);
+        await supabase.from("download_job_items").update({ status: "pending" }).eq("job_id", job.id).eq("status", "processing");
+        toast({ title: "Job orfano resettato", description: "Nuovo download in corso..." });
+      } else {
+        toast({ title: "Job già in corso", description: "Attendi il completamento del job attuale prima di avviarne un altro.", variant: "destructive" });
+        return;
+      }
     }
 
     const idsByCountry = new Map<string, number[]>();
