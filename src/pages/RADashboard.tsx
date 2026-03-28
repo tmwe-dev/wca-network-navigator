@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useRADashboard } from "@/hooks/useRADashboard";
 import {
   Building2,
   Mail,
@@ -15,87 +17,25 @@ import {
   Activity,
 } from "lucide-react";
 
-// Mock data for Report Aziende dashboard
-const mockStats = {
-  totalProspects: 12847,
-  withEmail: 8923,
-  withPEC: 4156,
-  withPhone: 7234,
+// Glassmorphism and dark lab design tokens
+const GLASS_CARD_STYLE = {
+  background: "rgba(11, 13, 23, 0.6)",
+  backdropFilter: "blur(12px)",
+  border: "1px solid rgba(255, 255, 255, 0.05)",
 };
 
-const mockTopSectors = [
-  { ateco: "45.20", name: "Manutenzione e riparazione di veicoli", count: 1240 },
-  { ateco: "47.11", name: "Commercio al dettaglio in negozi", count: 1089 },
-  { ateco: "41.20", name: "Costruzione di edifici", count: 956 },
-  { ateco: "70.22", name: "Consulenza gestionale aziendale", count: 843 },
-  { ateco: "62.01", name: "Programmazione informatica", count: 721 },
-];
+const KPI_GRADIENT_BORDER = {
+  background: `linear-gradient(180deg, rgba(0, 255, 255, 0.1) 0%, rgba(11, 13, 23, 0.6) 100%)`,
+};
 
-const mockRecentCompanies = [
-  {
-    id: "1",
-    name: "TechSolutions S.p.A.",
-    city: "Milano",
-    ateco: "62.01",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5),
-  },
-  {
-    id: "2",
-    name: "BuildRight Costruzioni",
-    city: "Roma",
-    ateco: "41.20",
-    timestamp: new Date(Date.now() - 1000 * 60 * 23),
-  },
-  {
-    id: "3",
-    name: "VeicAuto Manutenzione",
-    city: "Torino",
-    ateco: "45.20",
-    timestamp: new Date(Date.now() - 1000 * 60 * 47),
-  },
-  {
-    id: "4",
-    name: "ConsultaGest Pro",
-    city: "Firenze",
-    ateco: "70.22",
-    timestamp: new Date(Date.now() - 1000 * 60 * 92),
-  },
-  {
-    id: "5",
-    name: "RetailStore Premium",
-    city: "Bologna",
-    ateco: "47.11",
-    timestamp: new Date(Date.now() - 1000 * 60 * 145),
-  },
-];
+const DARK_BG = "hsl(240, 6%, 3%)"; // #0b0d17
+const CYAN_ACCENT = "hsl(210, 100%, 66%)"; // #00ddff
+const PURPLE_ACCENT = "hsl(270, 60%, 62%)"; // #bb68ff
 
-const mockActiveJobs = [
-  {
-    id: "job-1",
-    name: "Scraping Settore Informatica",
-    progress: 85,
-    status: "running",
-    startedAt: new Date(Date.now() - 1000 * 60 * 12),
-  },
-  {
-    id: "job-2",
-    name: "Update Email Addresses",
-    progress: 60,
-    status: "running",
-    startedAt: new Date(Date.now() - 1000 * 60 * 28),
-  },
-  {
-    id: "job-3",
-    name: "Validazione PEC",
-    progress: 100,
-    status: "completed",
-    startedAt: new Date(Date.now() - 1000 * 60 * 180),
-  },
-];
-
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(date: string | Date): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = now.getTime() - dateObj.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -104,6 +44,11 @@ function formatRelativeTime(date: Date): string {
   if (diffMins < 60) return `${diffMins}m fa`;
   if (diffHours < 24) return `${diffHours}h fa`;
   return `${diffDays}d fa`;
+}
+
+function calculateJobProgress(job: any): number {
+  if (job.total_items === 0) return 0;
+  return Math.round((job.processed_items / job.total_items) * 100);
 }
 
 interface KPICardProps {
@@ -115,35 +60,129 @@ interface KPICardProps {
 
 function KPICard({ icon, label, value, color }: KPICardProps) {
   return (
-    <Card className="bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-colors">
-      <div className="p-4">
+    <div
+      style={{
+        ...GLASS_CARD_STYLE,
+        position: "relative",
+        overflow: "hidden",
+      }}
+      className="rounded-lg p-4 hover:border-cyan-400/20 transition-all duration-300"
+    >
+      {/* Gradient top border */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "2px",
+          background: `linear-gradient(90deg, transparent, ${CYAN_ACCENT}, transparent)`,
+        }}
+      />
+
+      <div className="relative z-10">
         <div className="flex items-center justify-between mb-3">
           <span className={`${color} text-lg`}>{icon}</span>
           <Badge variant="secondary" className="text-xs">
             {color === "text-emerald-400" ? "+2.4%" : "+0.8%"}
           </Badge>
         </div>
-        <div className="text-2xl font-bold text-white mb-1">
-          {value.toLocaleString()}
+        <div className="text-2xl font-bold text-white mb-1" style={{ fontFamily: "JetBrains Mono" }}>
+          {value.toLocaleString("it-IT")}
         </div>
-        <div className="text-xs text-slate-400">{label}</div>
+        <div className="text-xs text-slate-400" style={{ fontFamily: "Inter" }}>
+          {label}
+        </div>
       </div>
-    </Card>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="h-full overflow-auto" style={{ backgroundColor: DARK_BG }}>
+      <div className="p-6 space-y-6">
+        <div className="border-b border-slate-800 pb-6">
+          <div className="h-8 bg-slate-700 rounded w-1/3 mb-2 animate-pulse" />
+          <div className="h-4 bg-slate-700 rounded w-1/2 animate-pulse" />
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              style={GLASS_CARD_STYLE}
+              className="rounded-lg p-4 animate-pulse"
+            >
+              <div className="h-6 bg-slate-700 rounded w-1/2 mb-3" />
+              <div className="h-8 bg-slate-700 rounded mb-2" />
+              <div className="h-4 bg-slate-700 rounded w-1/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ error }: { error: Error }) {
+  return (
+    <div className="h-full overflow-auto flex items-center justify-center" style={{ backgroundColor: DARK_BG }}>
+      <div className="text-center">
+        <p className="text-red-400 mb-4">Errore nel caricamento del dashboard</p>
+        <p className="text-sm text-slate-400">{error.message}</p>
+      </div>
+    </div>
   );
 }
 
 export default function RADashboard() {
+  const navigate = useNavigate();
+  const { data, isLoading, error } = useRADashboard();
   const [activeJobsFilter, setActiveJobsFilter] = useState<
     "all" | "running" | "completed"
   >("all");
 
-  const filteredJobs =
-    activeJobsFilter === "all"
-      ? mockActiveJobs
-      : mockActiveJobs.filter((j) => j.status === activeJobsFilter);
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (error) {
+    return <ErrorState error={error as Error} />;
+  }
+
+  const stats = data ?? {
+    totalProspects: 0,
+    withEmail: 0,
+    withPec: 0,
+    withPhone: 0,
+    topAteco: [],
+    recentProspects: [],
+    activeJobs: [],
+  };
+
+  const filteredJobs = useMemo(() => {
+    const jobs = stats.activeJobs ?? [];
+    if (activeJobsFilter === "all") return jobs;
+    return jobs.filter((j) => j.status === activeJobsFilter);
+  }, [stats.activeJobs, activeJobsFilter]);
+
+  const handleRecentCompanyClick = (id: string) => {
+    navigate(`/ra/company/${id}`);
+  };
 
   return (
-    <div className="h-full overflow-auto bg-background">
+    <div className="h-full overflow-auto" style={{ backgroundColor: DARK_BG }}>
+      <style>{`
+        @keyframes breathe {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+        .status-dot-active {
+          animation: breathe 2s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* Page Container */}
       <div className="p-6 space-y-6">
         {/* Header */}
@@ -161,25 +200,25 @@ export default function RADashboard() {
           <KPICard
             icon={<Building2 className="w-5 h-5" />}
             label="Prospect Totali"
-            value={mockStats.totalProspects}
+            value={stats.totalProspects}
             color="text-blue-400"
           />
           <KPICard
             icon={<Mail className="w-5 h-5" />}
             label="Con Email"
-            value={mockStats.withEmail}
+            value={stats.withEmail}
             color="text-emerald-400"
           />
           <KPICard
             icon={<FileText className="w-5 h-5" />}
             label="Con PEC"
-            value={mockStats.withPEC}
+            value={stats.withPec}
             color="text-teal-400"
           />
           <KPICard
             icon={<Phone className="w-5 h-5" />}
             label="Con Telefono"
-            value={mockStats.withPhone}
+            value={stats.withPhone}
             color="text-amber-400"
           />
         </div>
@@ -187,84 +226,98 @@ export default function RADashboard() {
         {/* Two Column Grid */}
         <div className="grid grid-cols-2 gap-6">
           {/* Left: Top Sectors */}
-          <Card className="bg-slate-900/50 border-slate-800">
+          <div
+            style={GLASS_CARD_STYLE}
+            className="rounded-lg overflow-hidden"
+          >
             <div className="p-6 border-b border-slate-800">
               <div className="flex items-center gap-2 mb-0.5">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-lg font-semibold text-white">SETTORI TOP</h2>
+                <TrendingUp className="w-4 h-4" style={{ color: CYAN_ACCENT }} />
+                <h2 className="text-lg font-semibold text-white" style={{ fontFamily: "JetBrains Mono" }}>
+                  SETTORI TOP
+                </h2>
               </div>
               <p className="text-xs text-slate-400">Top 5 ATECO by prospect</p>
             </div>
             <div className="divide-y divide-slate-800">
-              {mockTopSectors.map((sector) => (
+              {(stats.topAteco ?? []).map((sector) => (
                 <div
-                  key={sector.ateco}
-                  className="px-6 py-3 hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  key={sector.code}
+                  className="px-6 py-3 hover:bg-cyan-500/5 transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-medium text-white group-hover:text-emerald-300 transition-colors">
-                        {sector.name}
+                      <div className="text-sm font-medium text-white group-hover:text-cyan-300 transition-colors" style={{ fontFamily: "Inter" }}>
+                        {sector.description}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        ATECO {sector.ateco}
+                      <div className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: "JetBrains Mono" }}>
+                        ATECO {sector.code}
                       </div>
                     </div>
                     <div className="text-right">
                       <Badge variant="secondary" className="text-xs">
-                        {sector.count.toLocaleString()}
+                        {sector.count.toLocaleString("it-IT")}
                       </Badge>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
 
           {/* Right: Latest Acquisitions */}
-          <Card className="bg-slate-900/50 border-slate-800">
+          <div
+            style={GLASS_CARD_STYLE}
+            className="rounded-lg overflow-hidden"
+          >
             <div className="p-6 border-b border-slate-800">
               <div className="flex items-center gap-2 mb-0.5">
-                <Clock className="w-4 h-4 text-blue-400" />
-                <h2 className="text-lg font-semibold text-white">
+                <Clock className="w-4 h-4" style={{ color: CYAN_ACCENT }} />
+                <h2 className="text-lg font-semibold text-white" style={{ fontFamily: "JetBrains Mono" }}>
                   ULTIME ACQUISIZIONI
                 </h2>
               </div>
               <p className="text-xs text-slate-400">
-                Ultimi 5 aziende scrape
+                Ultimi prospect importati
               </p>
             </div>
             <div className="divide-y divide-slate-800">
-              {mockRecentCompanies.map((company) => (
+              {(stats.recentProspects ?? []).map((prospect) => (
                 <div
-                  key={company.id}
-                  className="px-6 py-3 hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  key={prospect.id}
+                  className="px-6 py-3 hover:bg-cyan-500/5 transition-colors cursor-pointer group"
+                  onClick={() => handleRecentCompanyClick(prospect.id)}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-medium text-white group-hover:text-blue-300 transition-colors">
-                      {company.name}
+                    <div className="text-sm font-medium text-white group-hover:text-cyan-300 transition-colors" style={{ fontFamily: "Inter" }}>
+                      {prospect.company_name}
                     </div>
                     <span className="text-xs text-slate-500">
-                      {formatRelativeTime(company.timestamp)}
+                      {formatRelativeTime(prospect.created_at)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline" className="text-xs">
-                      {company.city}
+                      {prospect.city || "—"}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
-                      {company.ateco}
+                      {prospect.codice_ateco || "—"}
                     </Badge>
                   </div>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Quick Actions Row */}
         <div className="flex gap-3">
-          <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+          <Button
+            size="lg"
+            className="gap-2"
+            style={{ backgroundColor: CYAN_ACCENT, color: "black" }}
+            onClick={() => navigate("/ra/scraping")}
+          >
             <Zap className="w-4 h-4" />
             Nuova Ricerca
           </Button>
@@ -272,9 +325,10 @@ export default function RADashboard() {
             size="lg"
             variant="outline"
             className="gap-2 border-slate-700 hover:bg-slate-800/50"
+            onClick={() => navigate("/ra/explorer")}
           >
             <Activity className="w-4 h-4" />
-            Scraping Batch
+            Explorer ATECO
           </Button>
           <Button
             size="lg"
@@ -295,12 +349,17 @@ export default function RADashboard() {
         </div>
 
         {/* Bottom Section: Active Jobs */}
-        <Card className="bg-slate-900/50 border-slate-800">
+        <div
+          style={GLASS_CARD_STYLE}
+          className="rounded-lg overflow-hidden"
+        >
           <div className="p-6 border-b border-slate-800">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-400" />
-                <h2 className="text-lg font-semibold text-white">JOB IN CORSO</h2>
+                <Activity className="w-4 h-4" style={{ color: PURPLE_ACCENT }} />
+                <h2 className="text-lg font-semibold text-white" style={{ fontFamily: "JetBrains Mono" }}>
+                  JOB IN CORSO
+                </h2>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -336,50 +395,61 @@ export default function RADashboard() {
                 Nessun job trovato
               </div>
             ) : (
-              filteredJobs.map((job) => (
-                <div key={job.id} className="px-6 py-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="text-sm font-medium text-white">
-                          {job.name}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          Iniziato {formatRelativeTime(job.startedAt)}
+              filteredJobs.map((job) => {
+                const progress = calculateJobProgress(job);
+                const isRunning = job.status === "running";
+                return (
+                  <div key={job.id} className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isRunning ? "status-dot-active" : ""
+                          }`}
+                          style={{
+                            backgroundColor: isRunning ? CYAN_ACCENT : "#666",
+                          }}
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-white" style={{ fontFamily: "Inter" }}>
+                            {job.job_type.replace(/_/g, " ").toUpperCase()}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {job.started_at
+                              ? `Iniziato ${formatRelativeTime(job.started_at)}`
+                              : "In attesa..."}
+                          </div>
                         </div>
                       </div>
+                      <Badge
+                        variant={isRunning ? "secondary" : "outline"}
+                        className={`text-xs ${
+                          isRunning
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                            : "bg-slate-500/20 text-slate-300 border-slate-500/30"
+                        }`}
+                      >
+                        {isRunning ? "In Corso" : "Completato"}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={
-                        job.status === "running" ? "secondary" : "outline"
-                      }
-                      className={`text-xs ${
-                        job.status === "running"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          : "bg-slate-500/20 text-slate-300 border-slate-500/30"
-                      }`}
-                    >
-                      {job.status === "running" ? "In Corso" : "Completato"}
-                    </Badge>
+                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${progress}%`,
+                          backgroundColor: isRunning ? CYAN_ACCENT : "#888",
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2 text-right">
+                      {job.processed_items.toLocaleString("it-IT")} / {job.total_items.toLocaleString("it-IT")} ({progress}%)
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        job.status === "running"
-                          ? "bg-emerald-500"
-                          : "bg-slate-600"
-                      }`}
-                      style={{ width: `${job.progress}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-slate-400 mt-2 text-right">
-                    {job.progress}%
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
