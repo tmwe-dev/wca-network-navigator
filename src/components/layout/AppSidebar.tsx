@@ -5,6 +5,7 @@ import {
   Wifi, WifiOff, BookOpen, Send, Sparkles, Bot,
   Users, Command, Upload, UserCheck, Zap,
   Rocket, Microscope, Download, Briefcase, MessageCircle,
+  Building2, FolderTree,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +23,14 @@ const navSections = [
       { title: "Agenda", url: "/agenda", icon: Calendar },
       { title: "Agenti", url: "/agents", icon: Bot },
       { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
+    ],
+  },
+  {
+    label: "Report Aziende",
+    items: [
+      { title: "Dashboard RA", url: "/ra", icon: Building2 },
+      { title: "Explorer ATECO", url: "/ra/explorer", icon: FolderTree },
+      { title: "Scraping Engine", url: "/ra/scraping", icon: Download },
     ],
   },
   {

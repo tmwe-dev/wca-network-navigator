@@ -20,6 +20,12 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const Agents = lazy(() => import("./pages/Agents"));
 const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
 
+// ── Report Aziende (RA) module ──
+const RADashboard = lazy(() => import("./pages/RADashboard"));
+const RAExplorer = lazy(() => import("./pages/RAExplorer"));
+const RAScrapingEngine = lazy(() => import("./pages/RAScrapingEngine"));
+const RACompanyDetail = lazy(() => import("./pages/RACompanyDetail"));
+
 // Prefetch high-traffic routes after initial load
 if (typeof window !== "undefined") {
   window.addEventListener("load", () => {
@@ -87,6 +93,12 @@ const App = () => (
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
+
+                  {/* ── Report Aziende module ── */}
+                  <Route path="/ra" element={<RADashboard />} />
+                  <Route path="/ra/explorer" element={<RAExplorer />} />
+                  <Route path="/ra/scraping" element={<RAScrapingEngine />} />
+                  <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
                   {/* ── Legacy pages kept alive ── */}
                   <Route path="/global" element={<Global />} />
