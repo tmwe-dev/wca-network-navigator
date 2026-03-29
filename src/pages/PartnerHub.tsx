@@ -20,7 +20,7 @@ import {
 import { usePartners, useToggleFavorite, usePartner } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { useCountryStats } from "@/hooks/useCountryStats";
-import { useDownloadJobs } from "@/hooks/useDownloadJobs";
+
 import type { CountrySortBy } from "@/components/partners/CountryCards";
 
 import { useBlacklistByPartnerIds } from "@/hooks/useBlacklist";

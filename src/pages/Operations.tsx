@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sun, Moon, Bot, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Eye,
@@ -7,15 +7,12 @@ import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { ThemeCtx, t } from "@/components/download/theme";
-import { WcaSessionIndicator } from "@/components/download/WcaSessionIndicator";
 import { CountryGrid, type FilterKey } from "@/components/download/CountryGrid";
-import { DownloadProgressBar } from "@/components/download/DownloadProgressBar";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useWcaAppDownload } from "@/hooks/useWcaAppDownload";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,21 +66,7 @@ export default function Operations() {
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
 
-  // 🤖 Claude Engine V8 — download system
-  const wcaDl = useWcaAppDownload();
   const toggleFavorite = useToggleFavorite();
-
-  // Callback per avviare il download da PartnerListPanel
-  const handleStartDownload = useCallback((countryCode: string, countryName: string) => {
-    wcaDl.startDownload(countryCode, countryName);
-  }, [wcaDl.startDownload]);
-
-  const handleResumeDownload = useCallback((countryCode: string, countryName: string) => {
-    wcaDl.resumeDownload(countryCode, countryName);
-  }, [wcaDl.resumeDownload]);
-
-  // Recupero job sospesi al mount
-  const suspended = useMemo(() => wcaDl.suspendedJobs(), [wcaDl.progress.phase]);
 
   const activeCountryCodes = useMemo(() => selectedCountries.map(c => c.code), [selectedCountries]);
   const activeCountryNames = useMemo(() => selectedCountries.map(c => c.name), [selectedCountries]);
@@ -137,15 +120,6 @@ export default function Operations() {
     }
   }, [aliasGenerating, queryClient]);
 
-  // Invalidate partner queries when download completes
-  useEffect(() => {
-    if (wcaDl.progress.phase === "done") {
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
-    }
-  }, [wcaDl.progress.phase, queryClient]);
-
   const hasDetailOpen = !isMobile && hasSelection;
 
   return (
@@ -157,16 +131,10 @@ export default function Operations() {
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
           <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
-            {/* Left: Title + active badge */}
+            {/* Left: Title */}
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
-              <h1 className="text-sm font-semibold text-gradient-blue">Operations</h1>
-              {wcaDl.isRunning && (
-                <span className="flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full micro-badge-amber">
-                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                  Download
-                </span>
-              )}
+              <h1 className="text-sm font-semibold text-gradient-blue">Network</h1>
             </div>
 
             {/* Center: Stats pills */}
@@ -206,7 +174,6 @@ export default function Operations() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
-              <WcaSessionIndicator />
               {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
                 <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Mostra Deep Search">
                   <Eye className="w-4 h-4" />
@@ -244,32 +211,12 @@ export default function Operations() {
                 onDirectoryOnlyChange={setDirectoryOnly}
                 compact={hasSelection || isMobile}
               />
-              {/* Download progress sotto la grid quando nessun paese selezionato */}
-              {!hasSelection && !isMobile && (wcaDl.progress.phase !== "idle" || suspended.length > 0) && (
-                <DownloadProgressBar
-                  progress={wcaDl.progress}
-                  isRunning={wcaDl.isRunning}
-                  onStop={wcaDl.stopDownload}
-                  onResume={handleResumeDownload}
-                  suspendedJobs={suspended}
-                  isDark={isDark}
-                />
-              )}
             </div>
 
             {/* COL 2: Partner List */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
             {hasSelection ? (
               <>
-                {/* Download progress bar — sopra la lista partner */}
-                <DownloadProgressBar
-                  progress={wcaDl.progress}
-                  isRunning={wcaDl.isRunning}
-                  onStop={wcaDl.stopDownload}
-                  onResume={handleResumeDownload}
-                  suspendedJobs={suspended}
-                  isDark={isDark}
-                />
                 <div className={cn(
                   "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
                   "bg-card/50 backdrop-blur-sm border-border"
@@ -282,7 +229,6 @@ export default function Operations() {
                     onGenerateAliases={handleGenerateAliases}
                     deepSearchRunning={deepSearch.running}
                     aliasGenerating={aliasGenerating}
-                    onStartDownload={handleStartDownload}
                     directoryOnly={directoryOnly}
                     onDirectoryOnlyChange={setDirectoryOnly}
                     onSelectPartner={setSelectedPartnerId}
@@ -362,21 +308,16 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
         <button
           onClick={onClick}
           className={cn(
-            "flex flex-col items-center px-2 py-0.5 rounded-md border transition-all whitespace-nowrap cursor-pointer hover:scale-105",
+            "flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold tabular-nums transition-all flex-shrink-0",
             pillClass,
             active && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
           )}
         >
-          <div className="flex items-center gap-1">
-            <Icon className="w-3 h-3" />
-            <span className="text-sm font-bold tabular-nums leading-none">{value.toLocaleString()}</span>
-          </div>
-          <span className="text-[9px] uppercase tracking-wider font-medium opacity-70 leading-none mt-0.5">{label}</span>
+          <Icon className="w-3 h-3" />
+          {value.toLocaleString()}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="text-xs font-medium">
-        {label}: {value.toLocaleString()}
-      </TooltipContent>
+      <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
     </Tooltip>
   );
 }

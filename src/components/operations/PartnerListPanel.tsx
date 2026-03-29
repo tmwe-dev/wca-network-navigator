@@ -41,7 +41,6 @@ interface PartnerListPanelProps {
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
-  onStartDownload?: (countryCode: string, countryName: string) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
   onSelectPartner?: (id: string | null) => void;
