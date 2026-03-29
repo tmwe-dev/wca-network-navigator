@@ -42,7 +42,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
   }
 
   return (
-    <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto">
+    <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const partner = partners[virtualRow.index] as any;

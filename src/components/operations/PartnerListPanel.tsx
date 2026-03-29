@@ -66,7 +66,7 @@ export function PartnerListPanel({
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
-    search: search.length >= 2 ? search : undefined,
+    search: search.length >= 5 ? search : undefined,
   });
 
   const toggleFavorite = useToggleFavorite();
@@ -133,7 +133,7 @@ export function PartnerListPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="h-full min-h-0 flex flex-col">
+      <div className="h-full min-h-0 flex flex-col overflow-hidden">
         {/* ═══ COMPACT HEADER ═══ */}
         <div className="px-3 pt-2.5 pb-1 flex-shrink-0 space-y-2">
           {/* ROW 1: Country + progress + wizard */}
