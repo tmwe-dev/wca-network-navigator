@@ -119,7 +119,7 @@ const App = () => (
                   <Route path="/import" element={<Navigate to="/crm" replace />} />
                   <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
                   <Route path="/workspace" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/email-composer" element={<Navigate to="/email-composer" replace />} />
+                  
                   <Route path="/sorting" element={<Navigate to="/outreach" replace />} />
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                   <Route path="/hub" element={<Navigate to="/agenda" replace />} />
