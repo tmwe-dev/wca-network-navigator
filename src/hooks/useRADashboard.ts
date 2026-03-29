@@ -9,6 +9,7 @@ export function useRADashboard() {
     queryKey: RA_DASHBOARD_KEY,
     queryFn: async (): Promise<RADashboardStats> => {
       // Run parallel queries
+      const db = supabase as any;
       const [
         { count: totalProspects },
         { count: withEmail },
@@ -18,24 +19,13 @@ export function useRADashboard() {
         { data: activeJobs },
         { data: atecoData },
       ] = await Promise.all([
-        supabase.from("ra_prospects").select("*", { count: "exact", head: true }),
-        supabase.from("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
-        supabase.from("ra_prospects").select("*", { count: "exact", head: true }).not("pec", "is", null),
-        supabase.from("ra_prospects").select("*", { count: "exact", head: true }).not("phone", "is", null),
-        supabase
-          .from("ra_prospects")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("ra_scraping_jobs")
-          .select("*")
-          .in("status", ["pending", "running"])
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("ra_prospects")
-          .select("codice_ateco, descrizione_ateco"),
+        db.from("ra_prospects").select("*", { count: "exact", head: true }),
+        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
+        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("pec", "is", null),
+        db.from("ra_prospects").select("*", { count: "exact", head: true }).not("phone", "is", null),
+        db.from("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
+        db.from("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
+        db.from("ra_prospects").select("codice_ateco, descrizione_ateco"),
       ]);
 
       // Calculate top ATECO sectors
