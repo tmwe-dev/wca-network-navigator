@@ -1,14 +1,18 @@
 import { useState, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { TopCommandBar, type CockpitAIAction } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
+import GoalBar from "@/components/workspace/GoalBar";
+import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
+import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -38,7 +42,6 @@ export interface DraftState {
   isGenerating: boolean;
 }
 
-// Re-export for backward compatibility
 export type { CockpitContact };
 
 const Cockpit = () => {
@@ -51,6 +54,16 @@ const Cockpit = () => {
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleOrigins, setVisibleOrigins] = useState<Set<ContactOrigin>>(new Set(["wca", "import", "report_aziende"]));
+
+  // Workspace features
+  const [goal, setGoal] = useState("");
+  const [baseProposal, setBaseProposal] = useState("");
+  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [quality, setQuality] = useState<EmailQuality>("standard");
+  const { documents, uploading, upload, remove } = useWorkspaceDocuments();
+  const { presets, save: savePreset, remove: removePreset } = useWorkspacePresets();
+  const [showGoalBar, setShowGoalBar] = useState(false);
 
   const { contacts, contactsMap, isLoading } = useCockpitContacts();
   const selection = useSelection(contacts);
@@ -72,7 +85,28 @@ const Cockpit = () => {
   [contacts, visibleOrigins]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // ── AI Action Executor ──
+  // Preset handlers
+  const handleLoadPreset = useCallback((preset: WorkspacePreset) => {
+    setGoal(preset.goal || "");
+    setBaseProposal(preset.base_proposal || "");
+    setReferenceLinks(preset.reference_links || []);
+    setActivePresetId(preset.id);
+  }, []);
+
+  const handleSavePreset = useCallback((name: string, id?: string) => {
+    savePreset.mutate({
+      id, name, goal, base_proposal: baseProposal,
+      document_ids: documents.map((d) => d.id),
+      reference_links: referenceLinks,
+    });
+  }, [goal, baseProposal, documents, referenceLinks, savePreset]);
+
+  const handleDeletePreset = useCallback((id: string) => {
+    removePreset.mutate(id);
+    if (activePresetId === id) setActivePresetId(null);
+  }, [removePreset, activePresetId]);
+
+  // AI Action Executor
   const executeAIActions = useCallback((actions: CockpitAIAction[], message: string) => {
     for (const action of actions) {
       switch (action.type) {
@@ -97,25 +131,16 @@ const Cockpit = () => {
           break;
         }
         case "bulk_action":
-          if (action.action === "deep_search") {
-            toast.info(`Deep Search per ${selection.count} contatti`);
-          } else if (action.action === "alias") {
-            toast.info(`Generazione Alias per ${selection.count} contatti`);
-          } else if (action.action === "outreach") {
-            toast.info(`Outreach per ${selection.count} contatti — trascina sulle drop zone`);
-          }
+          if (action.action === "deep_search") toast.info(`Deep Search per ${selection.count} contatti`);
+          else if (action.action === "alias") toast.info(`Generazione Alias per ${selection.count} contatti`);
+          else if (action.action === "outreach") toast.info(`Outreach per ${selection.count} contatti — trascina sulle drop zone`);
           break;
         case "single_action": {
           const contact = contacts.find(c => c.name.toLowerCase().includes((action.contactName || "").toLowerCase()));
           if (contact) {
-            if (action.action === "deep_search") {
-              toast.info(`Deep Search per ${contact.name}`);
-            } else if (action.action === "alias") {
-              toast.info(`Genera Alias per ${contact.name}`);
-            }
-          } else {
-            toast.error(`Contatto "${action.contactName}" non trovato`);
-          }
+            if (action.action === "deep_search") toast.info(`Deep Search per ${contact.name}`);
+            else if (action.action === "alias") toast.info(`Genera Alias per ${contact.name}`);
+          } else toast.error(`Contatto "${action.contactName}" non trovato`);
           break;
         }
         case "view_mode":
@@ -141,19 +166,12 @@ const Cockpit = () => {
     setActiveFilters(prev => prev.filter(f => f.id !== filterId));
   }, []);
 
-  const handleDragStart = useCallback((id: string) => {
-    setDraggedContactId(id);
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedContactId(null);
-  }, []);
+  const handleDragStart = useCallback((id: string) => setDraggedContactId(id), []);
+  const handleDragEnd = useCallback(() => setDraggedContactId(null), []);
 
   const getDraggedIds = useCallback((): string[] => {
     if (!draggedContactId) return [];
-    if (selection.selectedIds.has(draggedContactId) && selection.count > 1) {
-      return Array.from(selection.selectedIds);
-    }
+    if (selection.selectedIds.has(draggedContactId) && selection.count > 1) return Array.from(selection.selectedIds);
     return [draggedContactId];
   }, [draggedContactId, selection.selectedIds, selection.count]);
 
@@ -182,7 +200,9 @@ const Cockpit = () => {
     const result = await generate({
       channel, contact_name: contact.name, contact_email: contact.email,
       company_name: contact.company, country_code: contact.country,
-      goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
+      goal: goal || "Proposta di collaborazione nel freight forwarding",
+      base_proposal: baseProposal || undefined,
+      quality,
     });
 
     if (result) {
@@ -194,7 +214,7 @@ const Cockpit = () => {
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
     }
-  }, [generate, refetchCredits, getDraggedIds, contactsMap]);
+  }, [generate, refetchCredits, getDraggedIds, contactsMap, goal, baseProposal, quality]);
 
   const handleRegenerate = useCallback(async () => {
     if (!draftState.channel || !draftState.contactId) return;
@@ -203,7 +223,10 @@ const Cockpit = () => {
     const result = await generate({
       channel: draftState.channel, contact_name: draftState.contactName || "",
       contact_email: contact?.email, company_name: contact?.company || "",
-      country_code: contact?.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
+      country_code: contact?.country,
+      goal: goal || "Proposta di collaborazione nel freight forwarding",
+      base_proposal: baseProposal || undefined,
+      quality,
     });
     if (result) {
       setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false }));
@@ -211,37 +234,21 @@ const Cockpit = () => {
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
     }
-  }, [draftState, generate, refetchCredits, contactsMap]);
+  }, [draftState, generate, refetchCredits, contactsMap, goal, baseProposal, quality]);
 
-  const handleBulkDeepSearch = useCallback(() => {
-    toast.info(`Deep Search per ${selection.count} contatti`);
-  }, [selection.count]);
+  const handleBulkDeepSearch = useCallback(() => toast.info(`Deep Search per ${selection.count} contatti`), [selection.count]);
+  const handleBulkAlias = useCallback(() => toast.info(`Generazione Alias per ${selection.count} contatti`), [selection.count]);
+  const handleSingleDeepSearch = useCallback((id: string) => toast.info(`Deep Search per ${contactsMap[id]?.name || id}`), [contactsMap]);
+  const handleSingleAlias = useCallback((id: string) => toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`), [contactsMap]);
 
-  const handleBulkAlias = useCallback(() => {
-    toast.info(`Generazione Alias per ${selection.count} contatti`);
-  }, [selection.count]);
-
-  const handleSingleDeepSearch = useCallback((id: string) => {
-    toast.info(`Deep Search per ${contactsMap[id]?.name || id}`);
-  }, [contactsMap]);
-
-  const handleSingleAlias = useCallback((id: string) => {
-    toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
-  }, [contactsMap]);
-
-  const handleBulkDelete = useCallback(() => {
-    setShowDeleteConfirm(true);
-  }, []);
-
+  const handleBulkDelete = useCallback(() => setShowDeleteConfirm(true), []);
   const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
     try {
       await deleteContacts.mutateAsync(ids);
       selection.clear();
       toast.success(`${ids.length} record eliminati`);
-    } catch {
-      toast.error("Errore durante l'eliminazione");
-    }
+    } catch { toast.error("Errore durante l'eliminazione"); }
     setShowDeleteConfirm(false);
   }, [selection, deleteContacts]);
 
@@ -253,18 +260,59 @@ const Cockpit = () => {
   [contacts]);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
-      <TopCommandBar
-        onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
-        searchQuery={searchQuery} onSearchChange={setSearchQuery}
-        contacts={contactsForAI}
-      />
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Top command bar with quality selector */}
+      <div className="flex items-center gap-2 border-b border-border/50 bg-background">
+        <div className="flex-1">
+          <TopCommandBar
+            onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
+            searchQuery={searchQuery} onSearchChange={setSearchQuery}
+            contacts={contactsForAI}
+          />
+        </div>
+        <div className="flex items-center gap-2 pr-3">
+          <QualitySelector value={quality} onChange={setQuality} />
+          <button
+            onClick={() => setShowGoalBar(!showGoalBar)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+              showGoalBar
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50"
+            }`}
+          >
+            🎯 Goal & Preset
+          </button>
+        </div>
+      </div>
+
+      {/* Goal bar (collapsible - from Workspace) */}
+      <AnimatePresence>
+        {showGoalBar && (
+          <div className="border-b border-border/30 bg-muted/10 px-4 py-2.5 shrink-0">
+            <GoalBar
+              goal={goal} baseProposal={baseProposal}
+              onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
+              documents={documents} onUploadDocument={upload} onRemoveDocument={remove} uploading={uploading}
+              referenceLinks={referenceLinks}
+              onAddLink={(url) => setReferenceLinks(prev => [...prev, url])}
+              onRemoveLink={(idx) => setReferenceLinks(prev => prev.filter((_, i) => i !== idx))}
+              presets={presets} activePresetId={activePresetId}
+              onLoadPreset={handleLoadPreset} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Active filter chips */}
       <AnimatePresence>
         {activeFilters.length > 0 && (
           <ActiveFilterChips filters={activeFilters} onRemove={handleRemoveFilter} />
         )}
       </AnimatePresence>
+
+      {/* Main 3-column layout */}
       <div className="flex-1 flex gap-0 overflow-hidden min-h-0">
+        {/* Left: Contact Stream */}
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} onSearchChange={setSearchQuery} filters={activeFilters}
@@ -280,16 +328,22 @@ const Cockpit = () => {
             onToggleOrigin={toggleOrigin}
           />
         </div>
+
+        {/* Center: Channel Drop Zones */}
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
           <ChannelDropZones
             isDragging={!!draggedContactId} draggedContactId={draggedContactId}
             dragCount={dragCount} onDrop={handleDrop}
           />
         </div>
+
+        {/* Right: AI Draft Studio */}
         <div className="w-[400px] flex-shrink-0 border-l border-border/50">
           <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
         </div>
       </div>
+
+      {/* Delete confirm dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
