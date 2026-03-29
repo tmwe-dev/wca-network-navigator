@@ -25,6 +25,7 @@ const ORIGIN_CONFIG: { key: ContactOrigin; label: string; color: string; activeC
 interface ContactStreamProps {
   viewMode: ViewMode;
   searchQuery: string;
+  onSearchChange: (q: string) => void;
   filters: CockpitFilter[];
   contacts: CockpitContact[];
   isLoading: boolean;
@@ -46,7 +47,7 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, filters, contacts, isLoading,
+  viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
@@ -108,6 +109,25 @@ export function ContactStream({
             {o.label}
           </button>
         ))}
+      </div>
+
+      {/* Search field */}
+      <div className="px-1">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Cerca contatto, azienda..."
+            className="w-full h-8 pl-8 pr-8 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
+          />
+          {searchQuery && (
+            <button onClick={() => onSearchChange("")} className="absolute right-2 top-1/2 -translate-y-1/2">
+              <X className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-foreground transition-colors" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Header with select-all and bulk actions */}
