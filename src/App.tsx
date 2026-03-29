@@ -38,6 +38,7 @@ if (typeof window !== "undefined") {
 }
 
 // ── Standalone pages ──
+const EmailComposer = lazy(() => import("./pages/EmailComposer"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -93,6 +94,7 @@ const App = () => (
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/agent-chat" element={<AgentChatHub />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/email-composer" element={<EmailComposer />} />
 
                   {/* ── Report Aziende module ── */}
                   <Route path="/ra" element={<RADashboard />} />
@@ -117,7 +119,7 @@ const App = () => (
                   <Route path="/import" element={<Navigate to="/crm" replace />} />
                   <Route path="/cockpit" element={<Navigate to="/outreach" replace />} />
                   <Route path="/workspace" element={<Navigate to="/outreach" replace />} />
-                  <Route path="/email-composer" element={<Navigate to="/outreach" replace />} />
+                  
                   <Route path="/sorting" element={<Navigate to="/outreach" replace />} />
                   <Route path="/reminders" element={<Navigate to="/agenda" replace />} />
                   <Route path="/hub" element={<Navigate to="/agenda" replace />} />

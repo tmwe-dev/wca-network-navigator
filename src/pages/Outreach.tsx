@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, Mail } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Rocket, Briefcase, Send, ListTodo } from "lucide-react";
+import { CampagneTab } from "@/components/outreach/CampagneTab";
+import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 const Workspace = lazy(() => import("./Workspace"));
-const EmailComposer = lazy(() => import("./EmailComposer"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
@@ -20,15 +21,19 @@ export default function Outreach() {
           <TabsList className="bg-muted/50">
             <TabsTrigger value="cockpit" className="gap-1.5 text-xs">
               <Rocket className="w-3.5 h-3.5" />
-              Cockpit AI
+              Cockpit
             </TabsTrigger>
             <TabsTrigger value="workspace" className="gap-1.5 text-xs">
               <Briefcase className="w-3.5 h-3.5" />
               Workspace
             </TabsTrigger>
-            <TabsTrigger value="composer" className="gap-1.5 text-xs">
-              <Mail className="w-3.5 h-3.5" />
-              Email Composer
+            <TabsTrigger value="campagne" className="gap-1.5 text-xs">
+              <Send className="w-3.5 h-3.5" />
+              Campagne
+            </TabsTrigger>
+            <TabsTrigger value="attivita" className="gap-1.5 text-xs">
+              <ListTodo className="w-3.5 h-3.5" />
+              Attività
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -45,11 +50,8 @@ export default function Outreach() {
             <Workspace />
           </Suspense>
         )}
-        {tab === "composer" && (
-          <Suspense fallback={<TabFallback />}>
-            <EmailComposer />
-          </Suspense>
-        )}
+        {tab === "campagne" && <CampagneTab />}
+        {tab === "attivita" && <AttivitaTab />}
       </div>
     </div>
   );

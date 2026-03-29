@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCheck, Building2, Upload, ContactRound } from "lucide-react";
+import { UserCheck, Upload, ContactRound, Building2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Contacts = lazy(() => import("./Contacts"));
-const ProspectCenter = lazy(() => import("./ProspectCenter"));
 const Import = lazy(() => import("./Import"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 
@@ -13,19 +13,24 @@ function TabFallback() {
 
 export default function CRM() {
   const [tab, setTab] = useState("contatti");
+  const navigate = useNavigate();
+
+  const handleTabChange = (value: string) => {
+    if (value === "ra") {
+      navigate("/ra");
+      return;
+    }
+    setTab(value);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs value={tab} onValueChange={handleTabChange}>
           <TabsList className="bg-muted/50">
             <TabsTrigger value="contatti" className="gap-1.5 text-xs">
               <UserCheck className="w-3.5 h-3.5" />
               Contatti
-            </TabsTrigger>
-            <TabsTrigger value="prospect" className="gap-1.5 text-xs">
-              <Building2 className="w-3.5 h-3.5" />
-              Prospect
             </TabsTrigger>
             <TabsTrigger value="import" className="gap-1.5 text-xs">
               <Upload className="w-3.5 h-3.5" />
@@ -35,6 +40,10 @@ export default function CRM() {
               <ContactRound className="w-3.5 h-3.5" />
               Biglietti
             </TabsTrigger>
+            <TabsTrigger value="ra" className="gap-1.5 text-xs">
+              <Building2 className="w-3.5 h-3.5" />
+              Report Aziende
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -43,11 +52,6 @@ export default function CRM() {
         {tab === "contatti" && (
           <Suspense fallback={<TabFallback />}>
             <Contacts />
-          </Suspense>
-        )}
-        {tab === "prospect" && (
-          <Suspense fallback={<TabFallback />}>
-            <ProspectCenter />
           </Suspense>
         )}
         {tab === "import" && (
