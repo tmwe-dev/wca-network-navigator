@@ -24,6 +24,10 @@ export default function Outreach() {
               <Rocket className="w-3.5 h-3.5" />
               Cockpit
             </TabsTrigger>
+            <TabsTrigger value="inuscita" className="gap-1.5 text-xs">
+              <ArrowUpFromLine className="w-3.5 h-3.5" />
+              In Uscita
+            </TabsTrigger>
             <TabsTrigger value="workspace" className="gap-1.5 text-xs">
               <Briefcase className="w-3.5 h-3.5" />
               Workspace
@@ -44,6 +48,11 @@ export default function Outreach() {
         {tab === "cockpit" && (
           <Suspense fallback={<TabFallback />}>
             <Cockpit />
+          </Suspense>
+        )}
+        {tab === "inuscita" && (
+          <Suspense fallback={<TabFallback />}>
+            <Sorting />
           </Suspense>
         )}
         {tab === "workspace" && (
