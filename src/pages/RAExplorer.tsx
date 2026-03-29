@@ -496,7 +496,6 @@ export default function RAExplorer() {
                   backgroundColor: "rgba(0, 255, 200, 0.2)",
                   color: "#00ffc8",
                   border: "1px solid rgba(0, 255, 200, 0.3)",
-                  hover: "rgba(0, 255, 200, 0.3)"
                 }}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
