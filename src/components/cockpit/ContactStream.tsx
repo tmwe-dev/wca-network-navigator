@@ -47,7 +47,7 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, filters, contacts, isLoading,
+  viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
