@@ -51,7 +51,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  onStartDownload, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);

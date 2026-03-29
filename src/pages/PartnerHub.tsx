@@ -61,15 +61,6 @@ export default function PartnerHub() {
   const [showAI, setShowAI] = useState(false);
 
   const { data: countryStatsData } = useCountryStats();
-  const { data: downloadJobs } = useDownloadJobs();
-
-  // Active download for current country
-  const activeDownloadForCountry = useMemo(() => {
-    if (!selectedCountry || !downloadJobs) return null;
-    return downloadJobs.find(
-      (j) => (j.status === "running" || j.status === "paused") && j.country_code === selectedCountry
-    ) || null;
-  }, [selectedCountry, downloadJobs]);
 
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
