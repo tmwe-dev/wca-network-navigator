@@ -38,6 +38,7 @@ if (typeof window !== "undefined") {
 }
 
 // ── Standalone pages ──
+const EmailComposer = lazy(() => import("./pages/EmailComposer"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Settings = lazy(() => import("./pages/Settings"));
