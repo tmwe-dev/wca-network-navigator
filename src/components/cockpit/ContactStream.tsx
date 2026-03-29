@@ -25,6 +25,7 @@ const ORIGIN_CONFIG: { key: ContactOrigin; label: string; color: string; activeC
 interface ContactStreamProps {
   viewMode: ViewMode;
   searchQuery: string;
+  onSearchChange: (q: string) => void;
   filters: CockpitFilter[];
   contacts: CockpitContact[];
   isLoading: boolean;
