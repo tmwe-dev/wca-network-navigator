@@ -52,6 +52,12 @@ const Cockpit = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleOrigins, setVisibleOrigins] = useState<Set<ContactOrigin>>(new Set(["wca", "import", "report_aziende"]));
 
+  const { contacts, contactsMap, isLoading } = useCockpitContacts();
+  const selection = useSelection(contacts);
+  const { generate } = useOutreachGenerator();
+  const { refetch: refetchCredits } = useCredits();
+  const deleteContacts = useDeleteCockpitContacts();
+
   const toggleOrigin = useCallback((origin: ContactOrigin) => {
     setVisibleOrigins(prev => {
       const next = new Set(prev);
@@ -64,12 +70,6 @@ const Cockpit = () => {
   const visibleContacts = useMemo(() =>
     contacts.filter(c => visibleOrigins.has(c.origin)),
   [contacts, visibleOrigins]);
-
-  const { contacts, contactsMap, isLoading } = useCockpitContacts();
-  const selection = useSelection(contacts);
-  const { generate } = useOutreachGenerator();
-  const { refetch: refetchCredits } = useCredits();
-  const deleteContacts = useDeleteCockpitContacts();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
