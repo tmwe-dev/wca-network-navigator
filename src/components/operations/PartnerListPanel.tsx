@@ -72,7 +72,7 @@ export function PartnerListPanel({
 
   // ── Hooks ──
   const dl = useDirectoryDownload({
-    countryCodes, countryNames, onStartDownload,
+    countryCodes, countryNames,
     directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   });
 

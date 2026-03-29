@@ -406,33 +406,6 @@ export default function PartnerHub() {
         </div>
 
         {/* Download badge for selected country */}
-        {activeDownloadForCountry && (
-          <div className="px-4 py-1.5 border-b border-primary/15 bg-primary/5 flex items-center gap-2 text-xs">
-            {activeDownloadForCountry.status === "paused" ? (
-              <Pause className="w-3 h-3 text-amber-500" />
-            ) : (
-              <Download className="w-3 h-3 text-primary animate-pulse" />
-            )}
-            <span className="font-medium text-foreground">
-              Download {activeDownloadForCountry.country_name}
-            </span>
-            <span className="tabular-nums text-muted-foreground">
-              {activeDownloadForCountry.current_index}/{activeDownloadForCountry.total_count}
-            </span>
-            <div className="flex-1 h-1 rounded-full bg-muted ml-1">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  activeDownloadForCountry.status === "paused" ? "bg-amber-500" : "bg-primary"
-                )}
-                style={{ width: `${activeDownloadForCountry.total_count > 0 ? Math.round((activeDownloadForCountry.current_index / activeDownloadForCountry.total_count) * 100) : 0}%` }}
-              />
-            </div>
-            <span className="tabular-nums font-mono text-muted-foreground">
-              {activeDownloadForCountry.total_count > 0 ? Math.round((activeDownloadForCountry.current_index / activeDownloadForCountry.total_count) * 100) : 0}%
-            </span>
-          </div>
-        )}
 
         {/* AI Bar — collapsible */}
         {showAI && (
