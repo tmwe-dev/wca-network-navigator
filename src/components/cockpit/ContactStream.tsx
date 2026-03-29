@@ -92,6 +92,24 @@ export function ContactStream({
 
   return (
     <div className="p-3 space-y-2">
+      {/* Mostra — origin visibility toggles */}
+      <div className="flex items-center gap-1.5 px-1">
+        <Eye className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+        <span className="text-[11px] text-muted-foreground/70 mr-0.5">Mostra</span>
+        {ORIGIN_CONFIG.map(o => (
+          <button
+            key={o.key}
+            onClick={() => onToggleOrigin(o.key)}
+            className={cn(
+              "px-2 py-0.5 rounded-full border text-[11px] font-medium transition-all duration-200",
+              visibleOrigins.has(o.key) ? o.activeColor : o.color + " opacity-50 hover:opacity-80"
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
       {/* Header with select-all and bulk actions */}
       <div className="flex items-center justify-between px-1 mb-1 gap-2">
         <div className="flex items-center gap-2">
