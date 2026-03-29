@@ -41,7 +41,6 @@ interface PartnerListPanelProps {
   onGenerateAliases?: (countryCodes: string[], type: "company" | "contact") => void;
   deepSearchRunning?: boolean;
   aliasGenerating?: boolean;
-  onStartDownload?: (countryCode: string, countryName: string) => void;
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
   onSelectPartner?: (id: string | null) => void;
@@ -52,7 +51,7 @@ export function PartnerListPanel({
   countryCodes, countryNames, isDark,
   onDeepSearch, onGenerateAliases,
   deepSearchRunning, aliasGenerating,
-  onStartDownload, directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
+  directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
@@ -73,7 +72,7 @@ export function PartnerListPanel({
 
   // ── Hooks ──
   const dl = useDirectoryDownload({
-    countryCodes, countryNames, onStartDownload,
+    countryCodes, countryNames,
     directoryOnly: directoryOnlyProp, onDirectoryOnlyChange,
   });
 
@@ -221,12 +220,7 @@ export function PartnerListPanel({
               filter={progressFilter}
               count={filteredPartners.length}
               isDark={isDark}
-              onDownload={() => {
-                // 🤖 Claude Engine V8: avvia download diretto via useWcaAppDownload
-                const primaryCode = countryCodes[0] || "";
-                const primaryName = countryNames[0] || "";
-                if (onStartDownload) onStartDownload(primaryCode, primaryName);
-              }}
+              onDownload={() => {}}
               onDeepSearch={() => {
                 const ids = filteredPartners.map((p: any) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
