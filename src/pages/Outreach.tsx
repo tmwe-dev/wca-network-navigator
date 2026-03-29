@@ -1,11 +1,12 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, Send, ListTodo } from "lucide-react";
+import { Rocket, Briefcase, Send, ListTodo, ArrowUpFromLine } from "lucide-react";
 import { CampagneTab } from "@/components/outreach/CampagneTab";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 const Workspace = lazy(() => import("./Workspace"));
+const Sorting = lazy(() => import("./Sorting"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
