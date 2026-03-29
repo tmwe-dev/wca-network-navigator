@@ -220,12 +220,7 @@ export function PartnerListPanel({
               filter={progressFilter}
               count={filteredPartners.length}
               isDark={isDark}
-              onDownload={() => {
-                // 🤖 Claude Engine V8: avvia download diretto via useWcaAppDownload
-                const primaryCode = countryCodes[0] || "";
-                const primaryName = countryNames[0] || "";
-                if (onStartDownload) onStartDownload(primaryCode, primaryName);
-              }}
+              onDownload={() => {}}
               onDeepSearch={() => {
                 const ids = filteredPartners.map((p: any) => p.id);
                 if (ids.length > 0) onDeepSearch?.(ids);
