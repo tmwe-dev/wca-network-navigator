@@ -41,6 +41,7 @@ export interface WcaMember {
   name: string;
   href?: string;
   company?: string;
+  networks?: string[];
 }
 
 export interface DiscoverResult {
@@ -231,11 +232,13 @@ export async function wcaDiscoverAll(
 }
 
 /** Scrape profili (SSO auto server-side, no cookie needed) */
-export async function wcaScrape(wcaIds: number[]): Promise<ScrapeResult> {
+export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promise<ScrapeResult> {
+  const body: Record<string, any> = { wcaIds };
+  if (networkDomain) body.networkDomain = networkDomain;
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wcaIds }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Scrape failed: ${res.status}`);
   return res.json();

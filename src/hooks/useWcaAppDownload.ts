@@ -21,6 +21,7 @@ import {
   saveSuspendedJob,
   removeSuspendedJob,
   getSuspendedJobs,
+  getMemberNetworkDomain,
   type SuspendedJob,
 } from "@/lib/localDirectory";
 import {
@@ -63,9 +64,9 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** Scrape singolo via API centralizzata */
-async function scrapeOne(memberId: number): Promise<{ success: boolean; found?: boolean; profile?: Record<string, any> }> {
-  const data = await wcaScrape([memberId]);
+/** Scrape singolo via API centralizzata — con network domain per accesso diretto */
+async function scrapeOne(memberId: number, networkDomain?: string): Promise<{ success: boolean; found?: boolean; profile?: Record<string, any> }> {
+  const data = await wcaScrape([memberId], networkDomain || undefined);
   if (!data.success || !data.results || data.results.length === 0) {
     return { success: false };
   }
@@ -112,9 +113,15 @@ export function useWcaAppDownload() {
 
       if (ac.signal.aborted) return;
 
-      // 3. Crea directory locale
+      // 3. Crea directory locale CON networks per ogni membro
       const memberIds = members.map((m) => m.id);
-      createDirectory(countryCode, countryName, memberIds);
+      const networkMap: Record<number, string[]> = {};
+      for (const m of members) {
+        if (m.networks && m.networks.length > 0) {
+          networkMap[m.id] = m.networks;
+        }
+      }
+      createDirectory(countryCode, countryName, memberIds, networkMap);
 
       // 4. Confronto istantaneo (zero query!)
       updateProgress({ phase: "compare", message: "Confronto locale..." });
@@ -150,14 +157,16 @@ export function useWcaAppDownload() {
         }
 
         const id = missing[i];
+        // Prendi il network domain dalla directory locale (se disponibile)
+        const netDomain = getMemberNetworkDomain(countryCode, id);
         updateProgress({
           current: i + 1,
           total: missing.length,
-          message: `Scaricando ${i + 1}/${missing.length} (ID: ${id})`,
+          message: `Scaricando ${i + 1}/${missing.length} (ID: ${id}${netDomain ? ` via ${netDomain}` : ""})`,
         });
 
         try {
-          const result = await scrapeOne(id);
+          const result = await scrapeOne(id, netDomain || undefined);
           if (result.success && result.found && result.profile) {
             await saveOne(result.profile);
             markIdDone(countryCode, id);
@@ -248,14 +257,15 @@ export function useWcaAppDownload() {
         }
 
         const id = pending[i];
+        const netDomain = getMemberNetworkDomain(countryCode, id);
         updateProgress({
           current: i + 1,
           total: pending.length,
-          message: `Scaricando ${i + 1}/${pending.length} (ID: ${id})`,
+          message: `Scaricando ${i + 1}/${pending.length} (ID: ${id}${netDomain ? ` via ${netDomain}` : ""})`,
         });
 
         try {
-          const result = await scrapeOne(id);
+          const result = await scrapeOne(id, netDomain || undefined);
           if (result.success && result.found && result.profile) {
             await saveOne(result.profile);
             markIdDone(countryCode, id);

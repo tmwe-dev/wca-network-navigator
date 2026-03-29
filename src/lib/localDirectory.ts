@@ -12,6 +12,8 @@ export interface Directory {
   countryCode: string;
   countryName: string;
   ids: Record<string, IdStatus>;
+  /** Network domains per membro (es. { "12345": ["lognetglobal.com", "wca-first"] }) */
+  memberNetworks?: Record<string, string[]>;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,21 +45,28 @@ export function saveDirectory(countryCode: string, dir: Directory): void {
 export function createDirectory(
   countryCode: string,
   countryName: string,
-  memberIds: number[]
+  memberIds: number[],
+  networkMap?: Record<number, string[]>
 ): Directory {
   const existing = getDirectory(countryCode);
   const ids: Record<string, IdStatus> = {};
+  const memberNetworks: Record<string, string[]> = existing?.memberNetworks || {};
 
   for (const id of memberIds) {
     const key = String(id);
     // Preserva lo stato se già esiste (done/failed restano)
     ids[key] = existing?.ids[key] || "pending";
+    // Salva networks dal discover (sovrascrive se nuovi dati)
+    if (networkMap?.[id]?.length) {
+      memberNetworks[key] = networkMap[id];
+    }
   }
 
   const dir: Directory = {
     countryCode,
     countryName,
     ids,
+    memberNetworks,
     createdAt: existing?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -150,6 +159,17 @@ export function saveSuspendedJob(countryCode: string, countryName: string): void
 export function removeSuspendedJob(countryCode: string): void {
   const jobs = getSuspendedJobs().filter((j) => j.countryCode !== countryCode);
   localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
+}
+
+/** Recupera il primo network domain di un membro dalla directory locale */
+export function getMemberNetworkDomain(countryCode: string, memberId: number): string | null {
+  const dir = getDirectory(countryCode);
+  if (!dir?.memberNetworks) return null;
+  const nets = dir.memberNetworks[String(memberId)];
+  if (!nets || nets.length === 0) return null;
+  // Priorità: domini con sito proprio (non wca-first/wca-advanced che sono su wcaworld.com)
+  const ownDomain = nets.find(n => !n.startsWith("wca-") && n !== "wcaworld.com");
+  return ownDomain || nets[0];
 }
 
 /** Lista tutti i paesi con directory locale */
