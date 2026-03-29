@@ -184,7 +184,7 @@ export default function RAScrapingEngine() {
       setSelectedResults(new Set());
       setStatusLogs((prev) => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] Trovate ${results.length} aziende`,
+        `[${new Date().toLocaleTimeString()}] Trovate ${(results as any[]).length} aziende`,
       ]);
     } catch (error) {
       setStatusLogs((prev) => [
