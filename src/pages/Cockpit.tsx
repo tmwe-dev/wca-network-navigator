@@ -50,12 +50,26 @@ const Cockpit = () => {
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleOrigins, setVisibleOrigins] = useState<Set<ContactOrigin>>(new Set(["wca", "import", "report_aziende"]));
 
   const { contacts, contactsMap, isLoading } = useCockpitContacts();
   const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
+
+  const toggleOrigin = useCallback((origin: ContactOrigin) => {
+    setVisibleOrigins(prev => {
+      const next = new Set(prev);
+      if (next.has(origin)) { if (next.size > 1) next.delete(origin); }
+      else next.add(origin);
+      return next;
+    });
+  }, []);
+
+  const visibleContacts = useMemo(() =>
+    contacts.filter(c => visibleOrigins.has(c.origin)),
+  [contacts, visibleOrigins]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
@@ -254,7 +268,7 @@ const Cockpit = () => {
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} filters={activeFilters}
-            contacts={contacts} isLoading={isLoading}
+            contacts={visibleContacts} isLoading={isLoading}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             selectedIds={selection.selectedIds} onToggle={selection.toggle}
             onSelectAll={selection.selectAll} onClear={selection.clear}
@@ -262,6 +276,8 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
+            visibleOrigins={visibleOrigins}
+            onToggleOrigin={toggleOrigin}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
