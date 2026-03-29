@@ -4,6 +4,7 @@ import type { RAProspect, RAProspectFilters, RALeadStatus } from "@/types/ra";
 
 const RA_PROSPECTS_KEY = ["ra-prospects"] as const;
 const DEFAULT_PAGE_SIZE = 100;
+const db = supabase as any;
 
 export function useRAProspects(filters: RAProspectFilters = {}) {
   const page = filters.page ?? 0;
@@ -12,7 +13,7 @@ export function useRAProspects(filters: RAProspectFilters = {}) {
   return useQuery({
     queryKey: [...RA_PROSPECTS_KEY, filters],
     queryFn: async () => {
-      let q = supabase
+      let q = db
         .from("ra_prospects")
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false });
@@ -23,40 +24,17 @@ export function useRAProspects(filters: RAProspectFilters = {}) {
           `company_name.ilike.%${s}%,partita_iva.ilike.%${s}%,city.ilike.%${s}%,email.ilike.%${s}%`
         );
       }
-
-      if (filters.atecoCodes?.length) {
-        q = q.in("codice_ateco", filters.atecoCodes);
-      }
-      if (filters.regions?.length) {
-        q = q.in("region", filters.regions);
-      }
-      if (filters.provinces?.length) {
-        q = q.in("province", filters.provinces);
-      }
-      if (filters.leadStatus) {
-        q = q.eq("lead_status", filters.leadStatus);
-      }
-      if (filters.hasEmail) {
-        q = q.not("email", "is", null);
-      }
-      if (filters.hasPec) {
-        q = q.not("pec", "is", null);
-      }
-      if (filters.hasPhone) {
-        q = q.not("phone", "is", null);
-      }
-      if (filters.minFatturato != null) {
-        q = q.gte("fatturato", filters.minFatturato);
-      }
-      if (filters.maxFatturato != null) {
-        q = q.lte("fatturato", filters.maxFatturato);
-      }
-      if (filters.minDipendenti != null) {
-        q = q.gte("dipendenti", filters.minDipendenti);
-      }
-      if (filters.maxDipendenti != null) {
-        q = q.lte("dipendenti", filters.maxDipendenti);
-      }
+      if (filters.atecoCodes?.length) q = q.in("codice_ateco", filters.atecoCodes);
+      if (filters.regions?.length) q = q.in("region", filters.regions);
+      if (filters.provinces?.length) q = q.in("province", filters.provinces);
+      if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
+      if (filters.hasEmail) q = q.not("email", "is", null);
+      if (filters.hasPec) q = q.not("pec", "is", null);
+      if (filters.hasPhone) q = q.not("phone", "is", null);
+      if (filters.minFatturato != null) q = q.gte("fatturato", filters.minFatturato);
+      if (filters.maxFatturato != null) q = q.lte("fatturato", filters.maxFatturato);
+      if (filters.minDipendenti != null) q = q.gte("dipendenti", filters.minDipendenti);
+      if (filters.maxDipendenti != null) q = q.lte("dipendenti", filters.maxDipendenti);
 
       const from = page * pageSize;
       const to = from + pageSize - 1;
@@ -81,7 +59,7 @@ export function useRAProspect(id: string | undefined) {
     queryKey: ["ra-prospect", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("ra_prospects")
         .select("*")
         .eq("id", id)
@@ -98,7 +76,7 @@ export function useRAProspectContacts(prospectId: string | undefined) {
     queryKey: ["ra-prospect-contacts", prospectId],
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("ra_contacts")
         .select("*")
         .eq("prospect_id", prospectId)
@@ -115,7 +93,7 @@ export function useRAProspectInteractions(prospectId: string | undefined) {
     queryKey: ["ra-prospect-interactions", prospectId],
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("ra_interactions")
         .select("*")
         .eq("prospect_id", prospectId)
@@ -131,16 +109,15 @@ export function useUpsertRAProspect() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (prospect: Partial<RAProspect> & { company_name: string }) => {
-      // Upsert by partita_iva if available
       if (prospect.partita_iva) {
-        const { data: existing } = await supabase
+        const { data: existing } = await db
           .from("ra_prospects")
           .select("id")
           .eq("partita_iva", prospect.partita_iva)
           .maybeSingle();
 
         if (existing) {
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from("ra_prospects")
             .update({ ...prospect, updated_at: new Date().toISOString() })
             .eq("id", existing.id)
@@ -151,7 +128,7 @@ export function useUpsertRAProspect() {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("ra_prospects")
         .insert(prospect)
         .select()
@@ -169,7 +146,7 @@ export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: RALeadStatus }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("ra_prospects")
         .update({ lead_status: status, updated_at: new Date().toISOString() })
         .eq("id", id);
@@ -185,7 +162,7 @@ export function useDeleteRAProspects() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("ra_prospects")
         .delete()
         .in("id", ids);

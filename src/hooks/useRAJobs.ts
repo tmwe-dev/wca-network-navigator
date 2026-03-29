@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { RAScrapingJob } from "@/types/ra";
 
 const RA_JOBS_KEY = ["ra-jobs"] as const;
+const db = supabase as any;
 
 export function useRAJobs(status?: RAScrapingJob["status"]) {
   return useQuery({
     queryKey: [...RA_JOBS_KEY, status],
     queryFn: async () => {
-      let q = supabase
+      let q = db
         .from("ra_scraping_jobs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -21,7 +22,7 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
       return (data ?? []) as RAScrapingJob[];
     },
     staleTime: 10_000,
-    refetchInterval: 15_000, // Poll active jobs
+    refetchInterval: 15_000,
   });
 }
 
@@ -34,7 +35,7 @@ export function useCreateRAJob() {
         "job_type" | "ateco_codes" | "regions" | "provinces" | "min_fatturato" | "max_fatturato" | "delay_seconds" | "batch_size"
       >
     ) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("ra_scraping_jobs")
         .insert({
           ...job,
@@ -62,7 +63,7 @@ export function useUpdateRAJob() {
       id,
       ...updates
     }: Partial<RAScrapingJob> & { id: string }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("ra_scraping_jobs")
         .update(updates)
         .eq("id", id);

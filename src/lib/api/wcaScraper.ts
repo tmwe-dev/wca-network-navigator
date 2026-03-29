@@ -92,7 +92,7 @@ export async function scrapeWcaPartnerById(wcaId: number): Promise<ScrapeSingleR
       success: true,
       found,
       wcaId,
-      partner: profile as ScrapedPartner | undefined,
+      partner: profile as unknown as ScrapedPartner | undefined,
     };
   } catch (err) {
     return { success: false, wcaId, error: err instanceof Error ? err.message : "Errore di rete" };
@@ -177,7 +177,7 @@ export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
         phone: p.phone || null,
         website: p.website || null,
         networks: (p.networks || []).map((n: any) => typeof n === "string" ? { name: n } : n),
-        contacts: p.contacts || [],
+        contacts: (p.contacts || []) as any[],
       },
       contactsFound: p.contacts?.length || 0,
       totalContacts: p.contacts?.length || 0,
