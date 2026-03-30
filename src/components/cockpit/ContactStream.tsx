@@ -38,6 +38,7 @@ interface ContactStreamProps {
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
+  onBatchMode?: () => void;
 }
 
 export function ContactStream({
