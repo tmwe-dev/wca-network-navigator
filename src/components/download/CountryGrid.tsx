@@ -41,23 +41,36 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   const queryClient = useQueryClient();
 
   const handleSync = useCallback(async () => {
-    setSyncing(true);
-    const toastId = toast.loading("Sincronizzazione WCA in corso...");
-    try {
-      const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
-        body: { refresh: true },
-      });
-      if (error) throw error;
-      toast.success(`Sync completata: ${data?.total ?? 0} record aggiornati`, { id: toastId });
-      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
-      queryClient.invalidateQueries({ queryKey: ["partners"] });
-      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
-    } catch (e: any) {
-      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
-    } finally {
-      setSyncing(false);
+    const targets = selected.length > 0 ? selected : [];
+    if (targets.length === 0) {
+      toast.error("Seleziona almeno un paese da sincronizzare");
+      return;
     }
-  }, [queryClient]);
+    setSyncing(true);
+    const toastId = toast.loading(`Sincronizzazione ${targets.length} paes${targets.length === 1 ? "e" : "i"}...`);
+    let totalRecords = 0;
+    let errors = 0;
+    for (const country of targets) {
+      try {
+        const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
+          body: { countryCode: country.code, refresh: true },
+        });
+        if (error) throw error;
+        totalRecords += data?.total ?? 0;
+      } catch {
+        errors++;
+      }
+    }
+    if (errors === targets.length) {
+      toast.error("Sincronizzazione fallita per tutti i paesi", { id: toastId });
+    } else {
+      toast.success(`Sync completata: ${totalRecords} record aggiornati${errors > 0 ? ` (${errors} errori)` : ""}`, { id: toastId });
+    }
+    queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
+    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+    setSyncing(false);
+  }, [queryClient, selected]);
 
   const { data: statsData } = useCountryStats();
   const stats = statsData?.byCountry || {};
