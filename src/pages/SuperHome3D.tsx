@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
@@ -81,7 +82,8 @@ export default function SuperHome3D() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-y-auto bg-background text-foreground">
+    <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+      <ScrollArea className="h-full">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
 
         {/* Greeting + AI Prompt */}
@@ -162,6 +164,7 @@ export default function SuperHome3D() {
           </section>
         )}
       </div>
+      </ScrollArea>
     </div>
   );
 }
