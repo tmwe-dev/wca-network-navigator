@@ -269,6 +269,25 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
           )}
         </div>
       </div>
+
+      {/* ═══ SYNC BUTTON ═══ */}
+      <div className="flex-shrink-0 pt-1.5">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleSync}
+          disabled={syncing}
+          className={cn(
+            "w-full h-8 text-[11px] gap-1.5 font-semibold",
+            isDark
+              ? "border-sky-500/30 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+              : "border-sky-400 text-sky-700 hover:bg-sky-50"
+          )}
+        >
+          {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          {syncing ? "Sincronizzazione..." : "Sincronizza WCA"}
+        </Button>
+      </div>
     </div>
   );
 }
