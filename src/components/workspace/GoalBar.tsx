@@ -14,8 +14,7 @@ import {
 import { type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { toast } from "@/hooks/use-toast";
-import { useAppSettings } from "@/hooks/useAppSettings";
-import { DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem } from "@/data/defaultContentPresets";
+import ContentPicker from "@/components/shared/ContentPicker";
 
 interface GoalBarProps {
   goal: string;
