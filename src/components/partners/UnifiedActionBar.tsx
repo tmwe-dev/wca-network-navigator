@@ -23,7 +23,9 @@ interface UnifiedActionBarProps {
   onStopDeepSearch: () => void;
   onEmail: () => void;
   onSendToWorkspace: () => void;
+  onSendToCockpit?: () => void;
   sendingToWorkspace?: boolean;
+  sendingToCockpit?: boolean;
   deepSearching?: boolean;
   deepSearchProgress?: { current: number; total: number } | null;
   onSingleDeepSearch?: (id: string) => void;
