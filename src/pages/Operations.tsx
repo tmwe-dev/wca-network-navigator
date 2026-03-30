@@ -191,7 +191,10 @@ export default function Operations() {
           </div>
           </TooltipProvider>
 
-          {/* ═══ MAIN: 3-column layout ═══ */}
+          {/* ═══ MAIN ═══ */}
+          {networkView === "bca" ? (
+            <BusinessCardsView />
+          ) : (
           <div className={cn(
             "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
             isMobile ? "flex flex-col" : "flex"
