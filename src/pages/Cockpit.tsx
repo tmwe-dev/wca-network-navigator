@@ -267,7 +267,6 @@ const Cockpit = () => {
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
           />
-          />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
           <ChannelDropZones
