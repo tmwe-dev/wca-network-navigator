@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, CheckCircle2, Clock, Filter } from "lucide-react";
+import { Search, CheckCircle2, Clock, Filter, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { isToday, parseISO } from "date-fns";
 import type { SortingJob } from "@/hooks/useSortingJobs";
 
-type FilterMode = "all" | "unreviewed" | "reviewed" | "today";
+type FilterMode = "all" | "unreviewed" | "reviewed" | "today" | "immediate" | "scheduled";
 
 interface SortingListProps {
   jobs: SortingJob[];
@@ -33,6 +33,8 @@ export function SortingList({
     if (filter === "unreviewed") list = list.filter((j) => !j.reviewed);
     if (filter === "reviewed") list = list.filter((j) => j.reviewed);
     if (filter === "today") list = list.filter((j) => j.scheduled_at && isToday(parseISO(j.scheduled_at)));
+    if (filter === "immediate") list = list.filter((j) => !j.scheduled_at);
+    if (filter === "scheduled") list = list.filter((j) => !!j.scheduled_at);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((j) =>
@@ -51,12 +53,15 @@ export function SortingList({
 
   const reviewedCount = jobs.filter((j) => j.reviewed).length;
   const todayCount = jobs.filter((j) => j.scheduled_at && isToday(parseISO(j.scheduled_at))).length;
+  const immediateCount = jobs.filter((j) => !j.scheduled_at).length;
+  const scheduledCount = jobs.filter((j) => !!j.scheduled_at).length;
 
   const filters: { key: FilterMode; label: string }[] = [
     { key: "all", label: "Tutti" },
+    { key: "immediate", label: `⚡ Immediati (${immediateCount})` },
+    { key: "scheduled", label: `🕐 Programmati (${scheduledCount})` },
     { key: "unreviewed", label: "Da rivedere" },
     { key: "reviewed", label: "Rivisti" },
-    { key: "today", label: "Oggi" },
   ];
 
   return (
@@ -119,6 +124,11 @@ export function SortingList({
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {!job.scheduled_at && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px] h-5">
+                        <Zap className="w-3 h-3 mr-1" /> Immediato
+                      </Badge>
+                    )}
                     {job.reviewed && (
                       <Badge variant="outline" className="text-emerald-600 border-emerald-300 text-[10px] h-5">
                         <CheckCircle2 className="w-3 h-3 mr-1" /> Rivisto

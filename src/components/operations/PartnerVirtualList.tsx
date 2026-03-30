@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Send, ChevronRight, Trophy } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember } from "@/lib/countries";
@@ -16,9 +17,11 @@ interface Props {
   selectedPartnerId?: string | null;
   onSelect: (id: string) => void;
   onEmailClick: (target: { email: string; name: string; company: string; partnerId: string }) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick }: Props) {
+export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick, selectedIds, onToggleSelect }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -74,6 +77,14 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
               )}
             >
               <div className="flex items-center gap-2.5">
+                {onToggleSelect && (
+                  <Checkbox
+                    checked={selectedIds?.has(partner.id) || false}
+                    onCheckedChange={() => onToggleSelect(partner.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0"
+                  />
+                )}
                 {getRealLogoUrl(partner.logo_url) ? (
                   <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                 ) : (

@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useNavigate } from "react-router-dom";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -14,6 +16,7 @@ import {
   Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
   Zap, FolderDown, RefreshCw, Square, CheckCircle2, MailX,
+  Inbox, LayoutGrid, EyeOff,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -29,6 +32,7 @@ import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 import { useDirectoryDownload } from "@/hooks/useDirectoryDownload";
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
+import { useWorkedToday } from "@/hooks/useWorkedToday";
 import { IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
 
@@ -55,6 +59,7 @@ export function PartnerListPanel({
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
+  const navigate = useNavigate();
   const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
   const [search, setSearch] = useState("");
@@ -62,6 +67,9 @@ export function PartnerListPanel({
   type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hideWorked, setHideWorked] = useState(false);
+  const { workedIds } = useWorkedToday();
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
@@ -81,6 +89,10 @@ export function PartnerListPanel({
   // ── Filtered & sorted partners ──
   const filteredPartners = useMemo(() => {
     let list = partners || [];
+    // Hide worked today
+    if (hideWorked && workedIds.size > 0) {
+      list = list.filter((p: any) => !workedIds.has(p.id));
+    }
     if (progressFilter) {
       list = list.filter((p: any) => {
         switch (progressFilter) {
@@ -106,7 +118,52 @@ export function PartnerListPanel({
       });
       default: return sorted;
     }
-  }, [partners, progressFilter, sortBy]);
+  }, [partners, progressFilter, sortBy, hideWorked, workedIds]);
+
+  const togglePartnerSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSendTo = useCallback(async (destination: "cockpit" | "workspace") => {
+    if (selectedIds.size === 0) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
+    const inserts = partnerList.map((p: any) => {
+      const contacts = p.partner_contacts || [];
+      const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+      return {
+        activity_type: "send_email" as const,
+        title: `Email a ${p.company_name}`,
+        source_type: "partner",
+        source_id: p.id,
+        partner_id: p.id,
+        selected_contact_id: primary?.id || null,
+        status: "pending" as const,
+        source_meta: {
+          company_name: p.company_name,
+          country_code: p.country_code,
+          city: p.city,
+          contact_name: primary?.name || null,
+          contact_email: primary?.email || null,
+        },
+        user_id: userId || null,
+      };
+    });
+    const { error } = await supabase.from("activities").insert(inserts as any);
+    if (error) {
+      toast.error("Errore creazione attività: " + error.message);
+      return;
+    }
+    toast.success(`${inserts.length} partner inviati a ${destination === "cockpit" ? "Cockpit" : "Workspace"}`);
+    setSelectedIds(new Set());
+    const tab = destination === "cockpit" ? "cockpit" : "workspace";
+    navigate(`/outreach?tab=${tab}`);
+  }, [selectedIds, partners, navigate]);
 
   const handleSelectPartner = useCallback((id: string) => {
     if (onSelectPartner) onSelectPartner(id);
@@ -230,6 +287,31 @@ export function PartnerListPanel({
               aliasGenerating={aliasGenerating}
             />
           )}
+
+          {/* ROW 4: Hide worked toggle */}
+          <div className="flex items-center gap-2">
+            <Switch checked={hideWorked} onCheckedChange={setHideWorked} className="scale-75" />
+            <span className={cn("text-[10px]", isDark ? "text-slate-400" : "text-slate-500")}>
+              <EyeOff className="w-3 h-3 inline mr-1" />Nascondi lavorati ({workedIds.size})
+            </span>
+          </div>
+
+          {/* SELECTION ACTION BAR */}
+          {selectedIds.size > 0 && (
+            <div className={cn("flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-2", isDark ? "bg-sky-950/40 border-sky-500/30" : "bg-sky-50 border-sky-200")}>
+              <span className={cn("text-xs font-bold", isDark ? "text-sky-300" : "text-sky-700")}>{selectedIds.size} selezionati</span>
+              <div className="flex-1" />
+              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("cockpit")}>
+                <Inbox className="w-3 h-3" /> Cockpit
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("workspace")}>
+                <LayoutGrid className="w-3 h-3" /> Workspace
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
+                ✕
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* ═══ WIZARD ═══ */}
@@ -342,6 +424,8 @@ export function PartnerListPanel({
           selectedPartnerId={selectedPartnerId}
           onSelect={handleSelectPartner}
           onEmailClick={(target) => setEmailTarget(target)}
+          selectedIds={selectedIds}
+          onToggleSelect={togglePartnerSelect}
         />
       </div>
       {emailTarget && (

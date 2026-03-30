@@ -125,19 +125,43 @@ export function useSendJob() {
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
+      const now = new Date().toISOString();
+      // Update activity status
       const { error } = await supabase
         .from("activities")
         .update({
           status: "completed",
-          sent_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
+          sent_at: now,
+          completed_at: now,
         } as any)
         .eq("id", job.id);
       if (error) throw error;
+
+      // Update partner lead_status and last_interaction_at
+      if (job.partner_id) {
+        await supabase
+          .from("partners")
+          .update({
+            lead_status: "contacted",
+            last_interaction_at: now,
+          } as any)
+          .eq("id", job.partner_id)
+          .eq("lead_status", "new");
+
+        // Create interaction record
+        await supabase.from("interactions").insert({
+          partner_id: job.partner_id,
+          interaction_type: "email" as any,
+          subject: job.email_subject || "Email inviata",
+          notes: `Inviata a ${email}`,
+        } as any);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sorting-jobs"] });
       qc.invalidateQueries({ queryKey: ["all-activities"] });
+      qc.invalidateQueries({ queryKey: ["worked-today"] });
+      qc.invalidateQueries({ queryKey: ["partners"] });
       toast.success("Email inviata");
     },
     onError: (err: Error) => toast.error(err.message),
