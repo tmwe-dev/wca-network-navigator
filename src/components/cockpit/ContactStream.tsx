@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users, Trash2, Eye } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
 import { CockpitContactCard } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { Checkbox } from "@/components/ui/checkbox";
