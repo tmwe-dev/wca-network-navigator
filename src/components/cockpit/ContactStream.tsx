@@ -38,13 +38,14 @@ interface ContactStreamProps {
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
+  onBatchMode?: () => void;
 }
 
 export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
+  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
@@ -134,6 +135,11 @@ export function ContactStream({
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkAlias}>
             <Sparkles className="w-3 h-3" /> Alias
           </Button>
+          {onBatchMode && (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-primary" onClick={onBatchMode}>
+              <Sparkles className="w-3 h-3" /> Genera
+            </Button>
+          )}
           {onBulkDelete && (
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-destructive hover:bg-destructive/10" onClick={onBulkDelete}>
               <Trash2 className="w-3 h-3" /> Elimina

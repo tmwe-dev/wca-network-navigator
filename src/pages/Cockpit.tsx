@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TopCommandBar, type CockpitAIAction } from "@/components/cockpit/TopCommandBar";
+import { TopCommandBar, type CockpitAIAction, type SourceTab } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
+import { Mail, Sparkles } from "lucide-react";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
@@ -44,7 +45,9 @@ export type { CockpitContact };
 
 const Cockpit = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+  const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null,
     companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
@@ -53,7 +56,14 @@ const Cockpit = () => {
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
-  const { contacts, contactsMap, isLoading } = useCockpitContacts();
+  const { contacts: allContacts, contactsMap, isLoading } = useCockpitContacts();
+
+  // Filter contacts by source tab
+  const contacts = useMemo(() => {
+    if (sourceTab === "all") return allContacts;
+    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import" };
+    return allContacts.filter(c => c.origin === originMap[sourceTab]);
+  }, [allContacts, sourceTab]);
   const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
@@ -247,6 +257,7 @@ const Cockpit = () => {
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
         contacts={contactsForAI}
+        sourceTab={sourceTab} onSourceTabChange={setSourceTab}
       />
       <AnimatePresence>
         {activeFilters.length > 0 && (
@@ -265,13 +276,37 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
+            onBatchMode={() => setBatchMode(true)}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
-          <ChannelDropZones
-            isDragging={!!draggedContactId} draggedContactId={draggedContactId}
-            dragCount={dragCount} onDrop={handleDrop}
-          />
+          {batchMode && selection.count > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-4 text-center max-w-md"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Generazione Batch</h3>
+              <p className="text-sm text-muted-foreground">
+                {selection.count} contatti selezionati. Trascina sulle drop zone per generare uno alla volta,
+                oppure usa il comando AI per generare in batch.
+              </p>
+              <button
+                onClick={() => { setBatchMode(false); }}
+                className="text-xs text-primary hover:underline"
+              >
+                ← Torna alla vista drop zone
+              </button>
+            </motion.div>
+          ) : (
+            <ChannelDropZones
+              isDragging={!!draggedContactId} draggedContactId={draggedContactId}
+              dragCount={dragCount} onDrop={handleDrop}
+            />
+          )}
         </div>
         <div className="w-[400px] flex-shrink-0 border-l border-border/50">
           <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
