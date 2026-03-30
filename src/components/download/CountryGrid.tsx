@@ -124,7 +124,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-1.5">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden gap-1.5">
       {/* ═══ TOOLBAR ═══ */}
       <div className="flex-shrink-0 space-y-1.5">
         <div className="relative">
@@ -164,7 +164,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
 
         {/* Selected flags */}
         {selected.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
             {selected.map(c => (
               <button
                 key={c.code}
