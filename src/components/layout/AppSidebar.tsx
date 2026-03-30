@@ -28,6 +28,11 @@ function getNavSections(pathname: string) {
         { title: "Outreach", url: "/outreach", icon: Rocket },
         { title: "Email Composer", url: "/email-composer", icon: Mail },
         { title: "Agenda", url: "/agenda", icon: Calendar },
+      ],
+    },
+    {
+      label: "AI",
+      items: [
         { title: "Agenti", url: "/agents", icon: Bot },
         { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
       ],
