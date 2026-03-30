@@ -37,6 +37,27 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [syncing, setSyncing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    const toastId = toast.loading("Sincronizzazione WCA in corso...");
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
+        body: { refresh: true },
+      });
+      if (error) throw error;
+      toast.success(`Sync completata: ${data?.total ?? 0} record aggiornati`, { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
+    } finally {
+      setSyncing(false);
+    }
+  }, [queryClient]);
 
   const { data: statsData } = useCountryStats();
   const stats = statsData?.byCountry || {};
