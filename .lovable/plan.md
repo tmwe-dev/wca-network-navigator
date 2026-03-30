@@ -1,35 +1,53 @@
 
 
-# ElevenLabs: Riconnessione API Key + Caricamento Voci Dinamico
+# Contenuti Categorizzati Riutilizzabili nelle Sezioni Operative
 
-## Due problemi
+## Problema
 
-1. **API Key scaduta/invalida** — l'errore 401 conferma che la chiave ElevenLabs collegata non funziona. Va riconnessa.
-2. **Voci hardcoded** — le 18 voci nel settings sono statiche. Serve una edge function che interroghi l'API ElevenLabs per scaricare tutte le voci disponibili (incluse quelle clonate dall'utente).
+I contenuti (Goal e Proposte) sono visualizzati con card categorizzate e icone solo nelle Impostazioni. Nelle sezioni operative (Email Composer, Cockpit/AIDraftStudio, GoalBar del Workspace) si vedono solo Select piatte senza categorie, senza icone, senza possibilità di modifica inline. L'utente deve tornare nelle impostazioni per capire cosa ha.
 
 ## Soluzione
 
-### 1. Riconnettere ElevenLabs
-Chiederti di riconnettere il connettore ElevenLabs con una nuova API key valida.
+Creare un **componente riutilizzabile `ContentPicker`** che mostra goal/proposte raggruppati per categoria (come nel ContentManager delle impostazioni), permette la selezione con un click, e offre modifica inline tramite Dialog — tutto senza uscire dalla pagina operativa.
 
-### 2. Nuova edge function `list-elevenlabs-voices`
-Chiama `GET https://api.elevenlabs.io/v1/voices` con la API key e ritorna l'elenco completo delle voci (nome, ID, categoria, lingua, anteprima URL).
+### Design del ContentPicker
 
-### 3. Aggiornare ElevenLabsSettings.tsx
-- Aggiungere un pulsante "Carica voci da ElevenLabs" che chiama la nuova edge function
-- Mostrare le voci in griglia raggruppate per categoria (premade, cloned, generated)
-- Ogni voce ha: nome, lingua, genere, pulsante play (usa preview_url dall'API, senza consumare TTS)
-- Mantenere i preset hardcoded come fallback se la chiamata API fallisce
-- Aggiungere nella tab "Avanzate" un campo per inserire/aggiornare la API key (salvata come secret backend)
+```text
+┌─────────────────────────────────────┐
+│ [Goal ▼]  [Proposta ▼]             │  ← Popover/Sheet trigger
+├─────────────────────────────────────┤
+│ ▼ Primo contatto (3)               │
+│ ┌──────┐ ┌──────┐ ┌──────┐        │
+│ │ 🎯   │ │ 🤝   │ │ 📧   │        │
+│ │ Nome │ │ Nome │ │ Nome │        │
+│ └──────┘ └──────┘ └──────┘        │
+│ ▼ Follow-up (2)                    │
+│ ┌──────┐ ┌──────┐                  │
+│ │ 🔄   │ │ 📋   │    [✏️ Modifica] │
+│ └──────┘ └──────┘                  │
+└─────────────────────────────────────┘
+```
 
-### 4. Verifica stato API key
-Nella tab "Avanzate", invece di mostrare sempre "Configurata" in verde, fare un check reale chiamando la edge function e mostrare lo stato effettivo (valida/scaduta/mancante).
+- Click su card → seleziona e inserisce il testo nel campo attivo
+- Icona matita su hover → apre Dialog di modifica (stessa del ContentManager)
+- Modifiche salvate immediatamente in `app_settings` (stessa logica)
+
+### Dove viene integrato
+
+1. **GoalBar** (`src/components/workspace/GoalBar.tsx`): Sostituire i Select piatti con il ContentPicker nei tab "Goal" e "Proposta"
+
+2. **EmailComposer** (`src/pages/EmailComposer.tsx`): Aggiungere un pulsante/sezione per selezionare goal e proposta dal ContentPicker prima della generazione AI
+
+3. **AIDraftStudio** (`src/components/cockpit/AIDraftStudio.tsx`): Nel tab "Variables", aggiungere accesso al ContentPicker per cambiare goal/proposta del draft
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| Connettore ElevenLabs | Riconnessione con nuova API key |
-| `supabase/functions/list-elevenlabs-voices/index.ts` | **Nuovo** — proxy verso API ElevenLabs per elenco voci |
-| `src/components/settings/ElevenLabsSettings.tsx` | Aggiungere caricamento dinamico voci + verifica stato key |
+| `src/components/shared/ContentPicker.tsx` | **Nuovo** — componente riutilizzabile con griglia categorizzata in Popover + Dialog modifica inline |
+| `src/components/workspace/GoalBar.tsx` | Sostituire i Select con ContentPicker |
+| `src/pages/EmailComposer.tsx` | Integrare ContentPicker per selezione goal/proposta |
+| `src/components/cockpit/AIDraftStudio.tsx` | Aggiungere ContentPicker nel tab Variables |
+
+Nessuna modifica al database — i dati restano in `app_settings`, la logica di lettura/scrittura è la stessa del ContentManager.
 
