@@ -3,11 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Mail, Phone, User, Building2, ChevronRight, AlertTriangle,
-  Globe, Linkedin, MessageCircle, Send, ChevronDown, SlidersHorizontal,
-  Sparkles, FileText,
+  Globe, Linkedin, MessageCircle, Send,
+  Sparkles,
 } from "lucide-react";
 import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
@@ -17,43 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-
-/* ── Filter types ── */
-
-type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
-type EmailGenFilter = "all" | "generated" | "to_generate";
-
-interface FilterSection {
-  label: string;
-  chips: { key: FilterKey; label: string; variant: "green" | "red" }[];
-}
-
-const FILTER_SECTIONS: FilterSection[] = [
-  {
-    label: "Dati Contatto",
-    chips: [
-      { key: "with_email", label: "Con email", variant: "green" },
-      { key: "no_email", label: "Senza email", variant: "red" },
-      { key: "with_contact", label: "Con contatto", variant: "green" },
-      { key: "no_contact", label: "Senza contatto", variant: "red" },
-    ],
-  },
-  {
-    label: "Arricchimento",
-    chips: [
-      { key: "enriched", label: "Arricchito", variant: "green" },
-      { key: "not_enriched", label: "Non arricchito", variant: "red" },
-      { key: "with_alias", label: "Con alias", variant: "green" },
-      { key: "no_alias", label: "Senza alias", variant: "red" },
-    ],
-  },
-];
-
-const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string; icon: typeof Mail }[] = [
-  { key: "all", label: "Tutte", icon: FileText },
-  { key: "generated", label: "Generata", icon: Sparkles },
-  { key: "to_generate", label: "Da generare", icon: Mail },
-];
+import { useGlobalFilters, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 
 /* ── Helpers ── */
 
