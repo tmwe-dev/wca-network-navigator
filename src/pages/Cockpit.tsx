@@ -276,6 +276,7 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
+            onBatchMode={() => setBatchMode(true)}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
