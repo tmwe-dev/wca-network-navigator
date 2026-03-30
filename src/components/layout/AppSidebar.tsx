@@ -2,10 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
-  Wifi, WifiOff, BookOpen, Send, Sparkles, Bot,
-  Users, Command, Upload, UserCheck, Zap,
-  Rocket, Microscope, Download, Briefcase, MessageCircle,
-  Building2, FolderTree,
+  Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,24 +11,21 @@ import { useState } from "react";
 
 const navSections = [
   {
-    label: "Ambienti",
+    label: "Aree",
     items: [
       { title: "Dashboard", url: "/", icon: Home },
       { title: "Network", url: "/network", icon: Globe },
-      { title: "CRM", url: "/crm", icon: UserCheck },
+      { title: "CRM", url: "/crm", icon: Users },
+    ],
+  },
+  {
+    label: "Strumenti",
+    items: [
       { title: "Outreach", url: "/outreach", icon: Rocket },
       { title: "Email Composer", url: "/email-composer", icon: Mail },
       { title: "Agenda", url: "/agenda", icon: Calendar },
       { title: "Agenti", url: "/agents", icon: Bot },
       { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Report Aziende",
-    items: [
-      { title: "Dashboard RA", url: "/ra", icon: Building2 },
-      { title: "Explorer ATECO", url: "/ra/explorer", icon: FolderTree },
-      { title: "Scraping Engine", url: "/ra/scraping", icon: Download },
     ],
   },
   {

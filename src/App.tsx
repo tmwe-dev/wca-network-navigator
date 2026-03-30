@@ -20,7 +20,7 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const Agents = lazy(() => import("./pages/Agents"));
 const AgentChatHub = lazy(() => import("./pages/AgentChatHub"));
 
-// ── Report Aziende (RA) module ──
+// ── Report Aziende (RA) module (hidden, accessible from Settings) ──
 const RADashboard = lazy(() => import("./pages/RADashboard"));
 const RAExplorer = lazy(() => import("./pages/RAExplorer"));
 const RAScrapingEngine = lazy(() => import("./pages/RAScrapingEngine"));
@@ -96,14 +96,14 @@ const App = () => (
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/email-composer" element={<EmailComposer />} />
 
-                  {/* ── Report Aziende module ── */}
-                  <Route path="/ra" element={<RADashboard />} />
-                  <Route path="/ra/explorer" element={<RAExplorer />} />
-                  <Route path="/ra/scraping" element={<RAScrapingEngine />} />
-                  <Route path="/ra/company/:id" element={<RACompanyDetail />} />
+                   {/* ── Report Aziende (hidden, from Settings) ── */}
+                   <Route path="/ra" element={<RADashboard />} />
+                   <Route path="/ra/explorer" element={<RAExplorer />} />
+                   <Route path="/ra/scraping" element={<RAScrapingEngine />} />
+                   <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
-                  {/* ── Legacy pages kept alive ── */}
-                  <Route path="/global" element={<Global />} />
+                   {/* ── Legacy pages kept alive ── */}
+                   <Route path="/global" element={<Navigate to="/" replace />} />
                   <Route path="/campaigns" element={<Navigate to="/" replace />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />

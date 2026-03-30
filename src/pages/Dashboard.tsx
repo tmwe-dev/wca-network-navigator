@@ -1,60 +1,124 @@
-import { lazy, Suspense, useState, useRef } from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Globe, Rocket } from "lucide-react";
-
-const SuperHome3D = lazy(() => import("./SuperHome3D"));
-const GlobalPage = lazy(() => import("./Global"));
-const Campaigns = lazy(() => import("./Campaigns"));
-
-function TabFallback() {
-  return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
-}
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Globe, Users, ArrowRight, Activity, Mail, Calendar } from "lucide-react";
+import { usePartnerListStats } from "@/hooks/usePartnerListStats";
+import { useContacts } from "@/hooks/useContacts";
+import { useActivities } from "@/hooks/useActivities";
 
 export default function Dashboard() {
-  const [tab, setTab] = useState("home");
-  const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { totalPartners } = usePartnerListStats();
+  const { contacts } = useContacts();
+  const { activities } = useActivities();
+
+  const pendingActivities = activities?.filter(a => a.status === "pending")?.length ?? 0;
+  const contactCount = contacts?.length ?? 0;
+
+  const areas = [
+    {
+      key: "network",
+      title: "Network",
+      subtitle: "WCA Partners Hub",
+      icon: Globe,
+      path: "/network",
+      stat: totalPartners ?? 0,
+      statLabel: "partner",
+      description: "Gestisci partner per paese, qualità network, deep search",
+      gradient: "from-primary/15 to-primary/5",
+      iconColor: "text-primary",
+      borderColor: "border-primary/20",
+    },
+    {
+      key: "crm",
+      title: "CRM",
+      subtitle: "Contatti Hub",
+      icon: Users,
+      path: "/crm",
+      stat: contactCount,
+      statLabel: "contatti",
+      description: "Rubrica contatti, import, biglietti da visita, gruppi",
+      gradient: "from-accent/15 to-accent/5",
+      iconColor: "text-accent-foreground",
+      borderColor: "border-accent/20",
+    },
+  ];
+
+  const quickStats = [
+    { icon: Activity, label: "Attività in sospeso", value: pendingActivities },
+    { icon: Mail, label: "Email in coda", value: 0 },
+    { icon: Calendar, label: "Appuntamenti oggi", value: 0 },
+  ];
 
   return (
-    <div
-      ref={containerRef}
-      className="flex flex-col h-full overflow-hidden"
-      style={{ overscrollBehavior: "none" }}
-    >
-      <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-4 pt-2">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="home" className="gap-1.5 text-xs">
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Mission Control
-            </TabsTrigger>
-            <TabsTrigger value="global" className="gap-1.5 text-xs">
-              <Globe className="w-3.5 h-3.5" />
-              Global AI
-            </TabsTrigger>
-            <TabsTrigger value="campaigns" className="gap-1.5 text-xs">
-              <Rocket className="w-3.5 h-3.5" />
-              Campagne
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+    <div className="flex h-full items-center justify-center p-6 overflow-hidden">
+      <div className="w-full max-w-3xl space-y-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center space-y-1"
+        >
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            WCA Partners
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Scegli la tua area di lavoro
+          </p>
+        </motion.div>
 
-      <div className="flex-1 min-h-0 overflow-hidden" style={{ overscrollBehavior: "none" }}>
-        {tab === "home" && (
-          <Suspense fallback={<TabFallback />}>
-            <SuperHome3D />
-          </Suspense>
-        )}
-        {tab === "global" && (
-          <Suspense fallback={<TabFallback />}>
-            <GlobalPage />
-          </Suspense>
-        )}
-        {tab === "campaigns" && (
-          <Suspense fallback={<TabFallback />}>
-            <Campaigns />
-          </Suspense>
-        )}
+        {/* Two main cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {areas.map((area, i) => (
+            <motion.button
+              key={area.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.1, duration: 0.4 }}
+              onClick={() => navigate(area.path)}
+              className={`group relative flex flex-col items-start gap-4 rounded-xl border ${area.borderColor} bg-gradient-to-br ${area.gradient} p-6 text-left transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.99]`}
+            >
+              <div className="flex w-full items-start justify-between">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-background/80 shadow-sm ${area.iconColor}`}>
+                  <area.icon className="h-6 w-6" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
+              </div>
+
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-foreground">{area.title}</h2>
+                <p className="text-xs text-muted-foreground">{area.subtitle}</p>
+              </div>
+
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-bold tabular-nums text-foreground">
+                  {area.stat.toLocaleString("it-IT")}
+                </span>
+                <span className="text-sm text-muted-foreground">{area.statLabel}</span>
+              </div>
+
+              <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                {area.description}
+              </p>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Quick stats */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="flex justify-center gap-6"
+        >
+          {quickStats.map((s) => (
+            <div key={s.label} className="flex items-center gap-2 text-muted-foreground">
+              <s.icon className="h-3.5 w-3.5" />
+              <span className="text-xs">{s.label}:</span>
+              <span className="text-xs font-semibold text-foreground">{s.value}</span>
+            </div>
+          ))}
+        </motion.div>
       </div>
     </div>
   );
