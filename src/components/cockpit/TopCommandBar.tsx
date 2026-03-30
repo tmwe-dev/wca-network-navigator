@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 
-export type SourceTab = "all" | "wca" | "prospect" | "contact";
+export type SourceTab = "all" | "wca" | "prospect" | "contact" | "bca";
 
 export interface CockpitAIAction {
   type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
