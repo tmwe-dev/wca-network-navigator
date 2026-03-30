@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, Loader2, CheckCircle2, FileText, Download } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Save, Loader2, CheckCircle2, FileText, Download, KeyRound, Package } from "lucide-react";
 import { toast } from "sonner";
 
 interface RASettingsProps {
@@ -48,42 +49,57 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
         </Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Credenziali di accesso</CardTitle>
-          <CardDescription>Username e password per reportaziende.it</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Username / Email</Label>
-            <Input value={raUser} onChange={(e) => setRaUser(e.target.value)} placeholder="email@example.com" />
-          </div>
-          <div className="space-y-2">
-            <Label>Password</Label>
-            <Input type="password" value={raPass} onChange={(e) => setRaPass(e.target.value)} placeholder="••••••••" />
-          </div>
-          <Button onClick={handleSave} disabled={saving || !raUser.trim() || !raPass.trim()}>
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Salva Credenziali
-          </Button>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="credenziali" className="space-y-4">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="credenziali" className="gap-1.5 text-xs">
+            <KeyRound className="w-3.5 h-3.5" /> Credenziali
+          </TabsTrigger>
+          <TabsTrigger value="estensione" className="gap-1.5 text-xs">
+            <Package className="w-3.5 h-3.5" /> Estensione
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Scarica l'estensione Chrome per ReportAziende, installala e clicca <strong>"🚀 Connetti"</strong>.
-            </p>
-          </div>
-          <Button className="w-full" size="lg" onClick={() => window.open("/download-ra-extension.html", "_blank")}>
-            <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
-          </Button>
-          <p className="text-[11px] text-muted-foreground text-center">
-            Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata
-          </p>
-        </CardContent>
-      </Card>
+        <TabsContent value="credenziali" className="m-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Credenziali di accesso</CardTitle>
+              <CardDescription>Username e password per reportaziende.it</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Username / Email</Label>
+                <Input value={raUser} onChange={(e) => setRaUser(e.target.value)} placeholder="email@example.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <Input type="password" value={raPass} onChange={(e) => setRaPass(e.target.value)} placeholder="••••••••" />
+              </div>
+              <Button onClick={handleSave} disabled={saving || !raUser.trim() || !raPass.trim()}>
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salva Credenziali
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="estensione" className="m-0">
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Scarica l'estensione Chrome per ReportAziende, installala e clicca <strong>"🚀 Connetti"</strong>.
+                </p>
+              </div>
+              <Button className="w-full" size="lg" onClick={() => window.open("/download-ra-extension.html", "_blank")}>
+                <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
+              </Button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
