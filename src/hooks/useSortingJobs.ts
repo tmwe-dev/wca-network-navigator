@@ -144,13 +144,9 @@ export function useSendJob() {
           .update({
             lead_status: "contacted",
             last_interaction_at: now,
-            interaction_count: (undefined as any), // will use raw SQL below
           } as any)
           .eq("id", job.partner_id)
           .eq("lead_status", "new");
-
-        // Increment interaction count
-        await supabase.rpc("increment_contact_interaction" as any, {} as any).catch(() => {});
 
         // Create interaction record
         await supabase.from("interactions").insert({
