@@ -1,45 +1,113 @@
 
-Obiettivo: bloccare completamente lo scroll della pagina su `/network` e far scorrere solo i pannelli interni (paesi, lista partner, dettaglio), mantenendo sempre tutto dentro lo screen.
 
-## Perché oggi scorre ancora
-Dal replay si vede scroll su `element id=1` (documento), quindi non è solo un pannello interno: sta ancora “cedendo” il contenitore di pagina.  
-In più, nella colonna sinistra la sezione “paesi selezionati” può crescere senza limite verticale e spingere fuori il layout.
+# Ristrutturazione: Due Aree Separate + Landing Page
 
-## Piano di correzione
+## Concetto
 
-1. **Bloccare il viewport a livello AppLayout**
-   - File: `src/components/layout/AppLayout.tsx`
-   - Cambiare shell principale da `min-h-screen` a `h-screen overflow-hidden`.
-   - Garantire che la colonna centrale resti `h-full min-h-0 overflow-hidden`.
-   - Risultato: il documento non deve più diventare scrollabile nelle route fullscreen (inclusa `/network`).
+All'ingresso l'utente vede una **landing page** con due percorsi chiari:
 
-2. **Rendere la route Network rigidamente contenuta**
-   - File: `src/pages/Network.tsx`
-   - Mantenere wrapper con `h-full min-h-0 overflow-hidden`.
-   - Assicurare che anche il fallback di `Suspense` non possa espandere il documento.
+```text
+┌─────────────────────────────────────────────┐
+│              WCA Partners                    │
+│                                              │
+│   ┌──────────────┐   ┌──────────────┐       │
+│   │  🌐 Network  │   │  👤 CRM      │       │
+│   │  WCA Partners│   │  Contatti    │       │
+│   │  Hub         │   │  Hub        │       │
+│   └──────┬───────┘   └──────┬───────┘       │
+│          │                  │                │
+│   Partner per paese   Rubrica contatti       │
+│   Deep Search         Import / Biglietti    │
+│   Qualità network     Gruppi / Origini      │
+└─────────────────────────────────────────────┘
+```
 
-3. **Chiudere tutti i leak verticali in Operations**
-   - File: `src/pages/Operations.tsx`
-   - Su layout principale e colonne: aggiungere/rafforzare `overflow-hidden` + `min-h-0`.
-   - Colonna sinistra: forzare contenimento (`overflow-hidden`) così non espande la pagina.
-   - Colonna centrale/dettaglio: confermare solo scroll interno (`overflow-auto` nel body dettaglio).
+Una volta entrati in un'area, la sidebar mostra solo le voci pertinenti + le sezioni condivise (Outreach, Email Composer, Agenda, Agenti).
 
-4. **Limitare l’altezza dei blocchi non scrollanti in CountryGrid**
-   - File: `src/components/download/CountryGrid.tsx`
-   - Root del componente: `overflow-hidden`.
-   - Toolbar superiore (ricerca/sort/selezioni): mantenuta `flex-shrink-0`.
-   - Sezione bandierine selezionate: trasformarla in area con `max-h + overflow-y-auto` (non deve crescere all’infinito).
-   - Lista paesi resta `flex-1 min-h-0 overflow-y-auto`.
-   - Bottone sync resta `flex-shrink-0`.
+**Report Aziende** esce dal menu principale: è già presente in Settings come tab dedicata. Le route `/ra/*` restano funzionanti ma accessibili solo da Settings.
 
-## Verifica (obbligatoria)
-1. Vai su `/network` desktop (viewport attuale) e prova wheel/trackpad sullo sfondo: **la pagina non deve muoversi**.
-2. Seleziona molti paesi (20+): la colonna sinistra resta dentro container, scrolla solo internamente.
-3. Prova lista partner lunga + dettaglio aperto: scroll solo nei rispettivi pannelli.
-4. Test mobile/tablet: nessun “crollo” verticale della pagina, solo scroll interno alle liste.
+## Nuova struttura route
 
-## File da aggiornare
-- `src/components/layout/AppLayout.tsx`
-- `src/pages/Network.tsx`
-- `src/pages/Operations.tsx`
-- `src/components/download/CountryGrid.tsx`
+| Route | Contenuto |
+|-------|-----------|
+| `/` | **Landing page** — scelta Network o CRM |
+| `/network` | Hub WCA (Operations: paesi → partner → dettaglio) |
+| `/crm` | Hub Contatti (Contatti, Import, Biglietti) |
+| `/outreach` | Cockpit, In Uscita, Workspace, Campagne, Attività (condiviso) |
+| `/email-composer` | Email Composer (condiviso) |
+| `/agenda` | Agenda (condiviso) |
+| `/agents` | Agenti (condiviso) |
+| `/settings` | Impostazioni (include tab Report Aziende) |
+
+## File da modificare
+
+### 1. `src/pages/Dashboard.tsx` — Diventa Landing Page
+- Rimuovere i tab Mission Control / Global AI / Campagne
+- Due card grandi cliccabili: **Network** (→ `/network`) e **CRM** (→ `/crm`)
+- Sotto: widget riassuntivi (partner totali, contatti totali, attività in sospeso)
+- Design pulito, due colonne, icone grandi
+
+### 2. `src/components/layout/AppSidebar.tsx` — Sidebar context-aware
+- Rimuovere sezione "Report Aziende" dal menu
+- Riorganizzare in:
+  - **Aree**: Dashboard, Network, CRM
+  - **Strumenti**: Outreach, Email Composer, Agenda, Agenti, Chat Agenti
+  - **Sistema**: Impostazioni
+
+### 3. `src/App.tsx` — Pulizia route
+- Rimuovere route `/ra`, `/ra/explorer`, `/ra/scraping`, `/ra/company/:id` dal menu principale (restano funzionanti come route nascoste accessibili da Settings)
+- Redirect `/global` → `/`
+- Campagne tab rimosso dalla Dashboard, resta dentro Outreach
+
+### 4. `src/components/layout/AppLayout.tsx` — Aggiornare `isFullscreenRoute`
+- Aggiungere `/` alla lista fullscreen (la landing page deve essere fullscreen)
+
+## Dettagli tecnici
+
+### Landing Page (Dashboard.tsx)
+```text
+┌─────────────────────────────────────┐
+│  Benvenuto, [nome]                  │
+│                                     │
+│  ┌───────────┐  ┌───────────┐      │
+│  │ 🌐        │  │ 👤        │      │
+│  │ Network   │  │ CRM       │      │
+│  │ 2,450     │  │ 1,230     │      │
+│  │ partner   │  │ contatti  │      │
+│  └───────────┘  └───────────┘      │
+│                                     │
+│  Attività recenti / briefing       │
+└─────────────────────────────────────┘
+```
+
+Le due card navigano a `/network` e `/crm`. Sotto, un briefing operativo con le metriche principali da entrambe le aree.
+
+### Sidebar semplificata
+```text
+Aree
+  Dashboard        /
+  Network          /network
+  CRM              /crm
+
+Strumenti
+  Outreach         /outreach
+  Email Composer   /email-composer
+  Agenda           /agenda
+  Agenti           /agents
+  Chat Agenti      /agent-chat
+
+Sistema
+  Impostazioni     /settings
+```
+
+Report Aziende sparisce dalla navigazione principale. Resta accessibile dalla tab già esistente in Settings.
+
+## File coinvolti
+
+| File | Azione |
+|------|--------|
+| `src/pages/Dashboard.tsx` | Riscrivere come landing page a due percorsi |
+| `src/components/layout/AppSidebar.tsx` | Rimuovere RA, riorganizzare sezioni |
+| `src/App.tsx` | Pulire route RA dal layout principale |
+| `src/components/layout/AppLayout.tsx` | Aggiornare fullscreen routes |
+
