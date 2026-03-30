@@ -11,8 +11,9 @@ import { toast } from "sonner";
 import {
   Send, Save, Eye, Loader2, Mail, Sparkles,
   Search, Paperclip, Link as LinkIcon, Plus, X,
-  Building2, User, Brain, ChevronRight,
+  Building2, User, Brain, ChevronRight, Target,
 } from "lucide-react";
+import ContentPicker from "@/components/shared/ContentPicker";
 import {
   ResizablePanelGroup, ResizablePanel, ResizableHandle,
 } from "@/components/ui/resizable";
