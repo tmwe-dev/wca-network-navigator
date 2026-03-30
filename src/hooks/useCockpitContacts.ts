@@ -1,12 +1,28 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
+import { format } from "date-fns";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 export interface CockpitContact {
   id: string;
   queueId: string;
   name: string;
+  company: string;
+  role: string;
+  country: string;
+  language: string;
+  lastContact: string;
+  priority: number;
+  channels: string[];
+  email: string;
+  origin: ContactOrigin;
+  originDetail: string;
+  sourceType: string;
+  sourceId: string;
+  partnerId: string | null;
+  isScheduledReturn?: boolean;
+}
   company: string;
   role: string;
   country: string;
