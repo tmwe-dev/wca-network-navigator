@@ -16,11 +16,6 @@ const FLAG: Record<string, string> = {
   TR: "🇹🇷", IN: "🇮🇳", AE: "🇦🇪", SA: "🇸🇦", KR: "🇰🇷", AU: "🇦🇺", CA: "🇨🇦", MX: "🇲🇽",
 };
 
-const ORIGIN_CONFIG: { key: ContactOrigin; label: string; color: string; activeColor: string }[] = [
-  { key: "wca", label: "WCA", color: "text-blue-400/60 border-blue-500/20", activeColor: "text-blue-300 bg-blue-500/20 border-blue-400/50" },
-  { key: "import", label: "Import", color: "text-emerald-400/60 border-emerald-500/20", activeColor: "text-emerald-300 bg-emerald-500/20 border-emerald-400/50" },
-  { key: "report_aziende", label: "Prospect", color: "text-amber-400/60 border-amber-500/20", activeColor: "text-amber-300 bg-amber-500/20 border-amber-400/50" },
-];
 
 interface ContactStreamProps {
   viewMode: ViewMode;
