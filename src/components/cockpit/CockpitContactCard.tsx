@@ -78,6 +78,7 @@ const originAccent: Record<ContactOrigin, string> = {
   wca: "from-chart-1/60 to-chart-1/10",
   report_aziende: "from-chart-4/60 to-chart-4/10",
   import: "from-chart-3/60 to-chart-3/10",
+  bca: "from-amber-500/60 to-amber-500/10",
 };
 
 export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
