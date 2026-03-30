@@ -93,7 +93,7 @@ export default function Agenda() {
         id: a.id,
         title: a.title,
         date: d,
-        hour: a.scheduled_at ? getHours(parseISO(a.scheduled_at)) : undefined,
+        hour: undefined,
         type: "activity",
         priority: a.priority || "medium",
         activityType: a.activity_type,
