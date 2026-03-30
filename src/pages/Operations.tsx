@@ -169,8 +169,8 @@ export default function Operations() {
 
           {/* ═══ MAIN: 3-column layout ═══ */}
           <div className={cn(
-            "flex-1 min-h-0 px-4 pb-3 gap-3",
-            isMobile ? "flex flex-col overflow-y-auto" : "flex"
+            "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
+            isMobile ? "flex flex-col" : "flex"
           )}>
             {/* COL 1: Country Grid */}
             <div className={cn(
