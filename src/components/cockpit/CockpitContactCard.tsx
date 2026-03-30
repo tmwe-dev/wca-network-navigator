@@ -95,10 +95,14 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 overflow-hidden",
-        isSelected
-          ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
-          : "border-border/80 hover:border-primary/30"
+        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg overflow-hidden",
+        contact.origin === "bca"
+          ? isSelected
+            ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10 hover:shadow-amber-500/10"
+            : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
+          : isSelected
+            ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10 hover:shadow-primary/5"
+            : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
       )}
     >
       {/* Left accent bar based on origin */}
