@@ -8,6 +8,10 @@ import { Target, ChevronDown, FileText, Link2, Plus, X, Upload, Save, Trash2 } f
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import QualitySelector from "@/components/workspace/QualitySelector";
+import { useMission } from "@/contexts/MissionContext";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface MissionDrawerProps {
   open: boolean;
