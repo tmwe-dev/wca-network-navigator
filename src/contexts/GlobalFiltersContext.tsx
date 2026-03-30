@@ -5,7 +5,10 @@ export interface GlobalFilterState {
   search: string;
   sortBy: string;
   origin: Set<string>;
-  quality: string; // "all" | "no_profile" | "no_email" | "no_phone" | "no_deep_search"
+  quality: string;
+  groupBy: string;
+  holdingPattern: string;
+  leadStatus: string;
 }
 
 interface GlobalFiltersCtxValue {
@@ -14,6 +17,9 @@ interface GlobalFiltersCtxValue {
   setSortBy: (s: string) => void;
   setOrigin: (o: Set<string>) => void;
   setQuality: (q: string) => void;
+  setGroupBy: (g: string) => void;
+  setHoldingPattern: (h: string) => void;
+  setLeadStatus: (l: string) => void;
   resetFilters: () => void;
   currentRoute: string;
 }
@@ -23,6 +29,9 @@ const defaults: GlobalFilterState = {
   sortBy: "name",
   origin: new Set(["wca", "import", "report_aziende"]),
   quality: "all",
+  groupBy: "country",
+  holdingPattern: "out",
+  leadStatus: "all",
 };
 
 const Ctx = createContext<GlobalFiltersCtxValue | null>(null);
@@ -41,10 +50,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const setSortBy = useCallback((s: string) => setFilters(p => ({ ...p, sortBy: s })), []);
   const setOrigin = useCallback((o: Set<string>) => setFilters(p => ({ ...p, origin: o })), []);
   const setQuality = useCallback((q: string) => setFilters(p => ({ ...p, quality: q })), []);
+  const setGroupBy = useCallback((g: string) => setFilters(p => ({ ...p, groupBy: g })), []);
+  const setHoldingPattern = useCallback((h: string) => setFilters(p => ({ ...p, holdingPattern: h })), []);
+  const setLeadStatus = useCallback((l: string) => setFilters(p => ({ ...p, leadStatus: l })), []);
   const resetFilters = useCallback(() => setFilters({ ...defaults, origin: new Set(defaults.origin) }), []);
 
   return (
-    <Ctx.Provider value={{ filters, setSearch, setSortBy, setOrigin, setQuality, resetFilters, currentRoute: location.pathname }}>
+    <Ctx.Provider value={{ filters, setSearch, setSortBy, setOrigin, setQuality, setGroupBy, setHoldingPattern, setLeadStatus, resetFilters, currentRoute: location.pathname }}>
       {children}
     </Ctx.Provider>
   );
