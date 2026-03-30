@@ -72,6 +72,8 @@ export function AppLayout() {
 
   return (
     <DeepSearchContext.Provider value={deepSearch}>
+      <MissionProvider>
+        <GlobalFiltersProvider>
       <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
@@ -82,11 +84,13 @@ export function AppLayout() {
             <div className="flex h-full items-center justify-between px-2 sm:px-4">
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                 <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setFiltersOpen(true)} aria-label="Filtri"><SlidersHorizontal className="h-4 w-4" /></Button>
                 <ActiveProcessIndicator />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
                 <CreditCounter />
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setMissionOpen(true)} aria-label="Mission Context"><Target className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/workspace")} aria-label="Workspace"><Layers className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/email-composer")} aria-label="Email"><Send className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/reminders")} aria-label="Agenda"><Calendar className="h-4 w-4" /></Button>
@@ -108,6 +112,8 @@ export function AppLayout() {
 
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
         <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries: [], filterMode: currentPath }} />
+        <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+        <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
 
         <motion.button
           onClick={() => setIntelliflowOpen(true)}
@@ -124,6 +130,8 @@ export function AppLayout() {
         </Suspense>
       </div>
     <ClaudeBadge />
+        </GlobalFiltersProvider>
+      </MissionProvider>
       </DeepSearchContext.Provider>
   );
 }
