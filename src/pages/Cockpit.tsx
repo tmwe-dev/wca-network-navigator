@@ -56,7 +56,14 @@ const Cockpit = () => {
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
-  const { contacts, contactsMap, isLoading } = useCockpitContacts();
+  const { contacts: allContacts, contactsMap, isLoading } = useCockpitContacts();
+
+  // Filter contacts by source tab
+  const contacts = useMemo(() => {
+    if (sourceTab === "all") return allContacts;
+    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import" };
+    return allContacts.filter(c => c.origin === originMap[sourceTab]);
+  }, [allContacts, sourceTab]);
   const selection = useSelection(contacts);
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
