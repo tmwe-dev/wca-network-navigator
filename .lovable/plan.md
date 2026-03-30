@@ -1,64 +1,62 @@
 
 
-# Nuova Tab "Circuito di Attesa" in Outreach
+# Unificare Cockpit e Workspace in un unico ambiente
 
-## Cosa serve
+## Concetto
 
-Una quinta tab in Outreach che mostri tutti i contatti/partner che sono entrati nel ciclo di vita commerciale (status != "new") con:
-- Indicatore visivo del livello nel circuito (usando `HoldingPatternIndicator` gia' esistente)
-- History completa: attivita', email inviate, interazioni, note
-- Possibilita' di cambiare status direttamente
-- Raggruppamento per livello (Contattato, In corso, Trattativa)
+Cockpit e Workspace fanno essenzialmente la stessa cosa con due modalita':
+- **Cockpit**: drag-and-drop 1-a-1 su drop zone canale, genera bozza AI, azioni rapide (svolta/nota/programma)
+- **Workspace**: lista attivita' per source type, generazione batch email, email canvas con anteprima
 
-## Struttura
+Si fondono in un **unico Cockpit** che supporta entrambe le modalita' operative. La tab "Workspace" sparisce da Outreach.
+
+## Struttura risultante di Outreach
 
 ```text
-[Cockpit] [Workspace] [In Uscita] [Attività] [Circuito]
+[Cockpit] [In Uscita] [Attività] [Circuito]
 ```
 
-Il tab "Circuito" mostra una vista master-detail:
-- **Lista sinistra**: partner/contatti raggruppati per lead_status (Contattato → In corso → Trattativa), con contatore per gruppo, HoldingPatternIndicator compatto, nome azienda, ultimo contatto
-- **Pannello destro** (al click): timeline cronologica completa con tutte le attivita', interazioni, email inviate — ogni entry con data, tipo (icona), dettaglio
+Da 5 tab a 4.
 
-## Sorgenti dati
+## Nuovo Cockpit unificato
 
-I contatti nel circuito vengono da 3 tabelle:
-- `partners` dove `lead_status NOT IN ('new', 'lost', 'converted')` — join con `interactions` e `activities`
-- `prospects` con stessa logica — join con `prospect_interactions`
-- `imported_contacts` con stessa logica — join con `contact_interactions`
+Il layout resta a 3 colonne ma diventa piu' flessibile:
 
-La timeline unifica:
-- `activities` (filtrate per partner_id/source_id)
-- `interactions` (per partner)
-- `email_campaign_queue` (status = 'sent', per partner_id)
+### Colonna sinistra — Lista contatti unificata
+- **Source tabs** (WCA / Prospect / Contatti) come nel Workspace attuale
+- Lista contatti dalla `cockpit_queue` + attivita' pending per il source selezionato
+- Supporta: selezione multipla, drag-and-drop, azioni rapide (svolta/nota/programma)
+- Checkbox + select all/deselect
 
-## Dettagli tecnici
+### Colonna centrale — Area di lavoro duale
+- Se **nessun contatto selezionato o drag attivo**: mostra le **ChannelDropZones** (drag-and-drop per generazione 1-a-1)
+- Se **contatti selezionati + click "Genera"**: mostra l'**EmailCanvas** (anteprima/modifica email batch)
+- Transizione fluida tra le due viste
 
-### Nuovo hook `useHoldingPattern.ts`
-- Query che recupera partner con `lead_status IN ('contacted','in_progress','negotiation')` + conteggio attivita' per ciascuno
-- Per il dettaglio: query separata che unifica activities + interactions + email_campaign_queue in una timeline ordinata per data
+### Colonna destra — AIDraftStudio
+- Rimane come oggi: anteprima bozza AI dopo drag-and-drop
+- Quando si usa la modalita' batch, mostra il progresso della generazione
 
-### Nuovo componente `HoldingPatternTab.tsx`
-- Layout split: lista scrollabile a sinistra (40%), dettaglio a destra (60%)
-- Lista raggruppata per status con accordion
-- Ogni item: nome azienda, paese (flag), HoldingPatternIndicator compatto, data ultimo contatto
-- Click apre il dettaglio con timeline verticale
-- Possibilita' di cambiare lead_status dal pannello dettaglio
+### Barra azioni in alto (TopCommandBar unificata)
+Fonde la TopCommandBar del Cockpit con la action bar del Workspace:
+- Source tabs (WCA/Prospect/Contatti)
+- Deep Search (singola e bulk)
+- Genera (singola e bulk)
+- Elimina selezionati
+- Progresso batch/deep search
 
-### Timeline nel dettaglio
-Ogni entry mostra:
-- Icona tipo (Mail, Phone, MessageSquare, FileText, etc.)
-- Titolo + descrizione
-- Data/ora
-- Badge status (completata, pending, etc.)
-
-## File coinvolti
+## Modifiche tecniche
 
 | File | Azione |
 |------|--------|
-| `src/hooks/useHoldingPattern.ts` | **Nuovo** — query partner nel circuito + timeline dettaglio |
-| `src/components/outreach/HoldingPatternTab.tsx` | **Nuovo** — vista master-detail con timeline |
-| `src/pages/Outreach.tsx` | Aggiungere quinta tab "Circuito" |
+| `src/pages/Cockpit.tsx` | Integrare logica Workspace: source tabs, batch generation, EmailCanvas nella colonna centrale |
+| `src/pages/Outreach.tsx` | Rimuovere tab Workspace, passare da 5 a 4 tab |
+| `src/components/cockpit/TopCommandBar.tsx` | Aggiungere source tabs + pulsanti batch (Genera, Deep Search, Elimina) |
+| `src/components/cockpit/ContactStream.tsx` | Aggiungere source tab filtering, supporto attivita' pending |
 
-Nessuna modifica al database — i dati esistono gia' nelle tabelle `partners`, `activities`, `interactions`, `email_campaign_queue`.
+File **non piu' necessari** (ma non eliminati per sicurezza):
+- `src/pages/Workspace.tsx` — non piu' referenziato
+- `src/components/workspace/ContactListPanel.tsx` — logica migrata nel ContactStream
+
+Nessuna modifica al database.
 
