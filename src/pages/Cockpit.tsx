@@ -266,8 +266,7 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
-            visibleOrigins={visibleOrigins as Set<ContactOrigin>}
-            onToggleOrigin={() => {}}
+          />
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
