@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, Plus, Mic, MicOff, MessageSquare, Zap, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AiResultsPanel, type StructuredPartner } from "@/components/operations/AiResultsPanel";
 import { LiveOperationCards } from "@/components/ai/LiveOperationCards";
@@ -9,9 +9,11 @@ import { useAIConversation, type ConversationMessage } from "@/hooks/useAIConver
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse, type JobCreatedInfo } from "@/lib/ai/agentResponse";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 const SUPER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/super-assistant`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 const QUICK_PROMPTS = [
   "Scarica tutti i partner",
@@ -24,8 +26,33 @@ interface GlobalChatProps {
   onJobCreated?: (job: JobCreatedInfo) => void;
 }
 
+async function playTTS(text: string, voiceId: string): Promise<void> {
+  // Strip markdown for cleaner TTS
+  const cleanText = text.replace(/[#*_~`>\[\]()!|]/g, "").replace(/\n{2,}/g, ". ").trim();
+  if (!cleanText || cleanText.length < 5) return;
+  // Limit to ~500 chars for cost
+  const truncated = cleanText.length > 500 ? cleanText.slice(0, 500) + "..." : cleanText;
+
+  const resp = await fetch(TTS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ text: truncated, voiceId }),
+  });
+  if (!resp.ok) throw new Error("TTS error");
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.onended = () => URL.revokeObjectURL(url);
+  await audio.play();
+}
+
 export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   const navigate = useNavigate();
+  const { data: appSettings } = useAppSettings();
   const {
     messages, addMessages, newConversation,
   } = useAIConversation("global");
@@ -33,8 +60,12 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"operational" | "conversational">("operational");
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const ttsEnabled = appSettings?.elevenlabs_tts_enabled === "true";
+  const defaultVoiceId = appSettings?.elevenlabs_default_voice_id || "JBFqnCBsd6RMkjVDRZzb";
 
   const speech = useContinuousSpeech((text) => setInput(text));
 
@@ -48,6 +79,18 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
     const parsed = parseAiAgentResponse<StructuredPartner>(last.content);
     if (parsed.jobCreated) onJobCreated(parsed.jobCreated);
   }, [messages, onJobCreated]);
+
+  const handleReplay = useCallback(async (content: string, idx: number) => {
+    if (playingIdx !== null) return;
+    setPlayingIdx(idx);
+    try {
+      await playTTS(content, defaultVoiceId);
+    } catch {
+      toast({ title: "Errore TTS", description: "Impossibile riprodurre l'audio", variant: "destructive" });
+    } finally {
+      setPlayingIdx(null);
+    }
+  }, [playingIdx, defaultVoiceId]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -139,13 +182,16 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
       }
       await addMessages([{ role: "assistant", content: assistantContent }]);
       setIsLoading(false);
+
+      // Auto-play TTS if enabled
+      if (ttsEnabled && defaultVoiceId && !assistantContent.startsWith("⚠️")) {
+        playTTS(assistantContent, defaultVoiceId).catch(() => {});
+      }
     },
-    [messages, isLoading, addMessages],
+    [messages, isLoading, addMessages, ttsEnabled, defaultVoiceId, mode, onJobCreated],
   );
 
-  // Old toggleListening removed — using useContinuousSpeech hook
-
-  const renderAssistantMessage = (content: string) => {
+  const renderAssistantMessage = (content: string, idx: number) => {
     const parsed = parseAiAgentResponse<StructuredPartner>(content);
     return (
       <>
@@ -154,6 +200,16 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
         </div>
         {parsed.operations.length > 0 && <LiveOperationCards operations={parsed.operations} />}
         {parsed.partners.length > 0 && <AiResultsPanel partners={parsed.partners} />}
+        {/* Replay button */}
+        <button
+          onClick={() => handleReplay(content, idx)}
+          disabled={playingIdx !== null}
+          className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+          title="Riascolta"
+        >
+          {playingIdx === idx ? <Loader2 className="w-3 h-3 animate-spin" /> : <Volume2 className="w-3 h-3" />}
+          <span>{playingIdx === idx ? "Riproduzione..." : "Ascolta"}</span>
+        </button>
       </>
     );
   };
@@ -166,7 +222,6 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
           <h3 className="text-sm font-semibold text-foreground">Assistente AI</h3>
           <p className="text-[10px] text-muted-foreground">Operativo & Strategico</p>
         </div>
-        {/* Mode toggle */}
         <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5 text-[10px]">
           <button
             onClick={() => setMode("operational")}
@@ -210,7 +265,7 @@ export function GlobalChat({ onJobCreated }: GlobalChatProps) {
                 ? "bg-violet-600/30 text-violet-100 border border-violet-500/20"
                 : "bg-white/5 text-slate-200 border border-white/5"
             }`}>
-              {msg.role === "assistant" ? renderAssistantMessage(msg.content) : msg.content}
+              {msg.role === "assistant" ? renderAssistantMessage(msg.content, i) : msg.content}
             </div>
           </div>
         ))}
