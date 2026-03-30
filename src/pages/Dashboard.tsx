@@ -1,11 +1,10 @@
 import { lazy, Suspense, useState, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Globe, Rocket, Gauge } from "lucide-react";
+import { LayoutDashboard, Globe, Rocket } from "lucide-react";
 
 const SuperHome3D = lazy(() => import("./SuperHome3D"));
 const GlobalPage = lazy(() => import("./Global"));
 const Campaigns = lazy(() => import("./Campaigns"));
-const OperationsCenterLazy = lazy(() => import("@/components/home/OperationsCenter").then(m => ({ default: m.OperationsCenter })));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
@@ -14,8 +13,6 @@ function TabFallback() {
 export default function Dashboard() {
   const [tab, setTab] = useState("home");
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // No wheel/popstate hijacking needed with clean scroll layout
 
   return (
     <div
@@ -38,10 +35,6 @@ export default function Dashboard() {
               <Rocket className="w-3.5 h-3.5" />
               Campagne
             </TabsTrigger>
-            <TabsTrigger value="ops" className="gap-1.5 text-xs">
-              <Gauge className="w-3.5 h-3.5" />
-              Centro Operativo
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -60,11 +53,6 @@ export default function Dashboard() {
         {tab === "campaigns" && (
           <Suspense fallback={<TabFallback />}>
             <Campaigns />
-          </Suspense>
-        )}
-        {tab === "ops" && (
-          <Suspense fallback={<TabFallback />}>
-            <OperationsCenterLazy />
           </Suspense>
         )}
       </div>
