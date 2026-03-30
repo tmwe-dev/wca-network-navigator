@@ -257,6 +257,7 @@ const Cockpit = () => {
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
         contacts={contactsForAI}
+        sourceTab={sourceTab} onSourceTabChange={setSourceTab}
       />
       <AnimatePresence>
         {activeFilters.length > 0 && (
