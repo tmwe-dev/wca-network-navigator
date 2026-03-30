@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Radar, Network, Users, CalendarCheck, Activity, Download, Loader2, CheckCircle2, AlertTriangle, Pause, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
 import { OperativeBriefing } from "@/components/home/OperativeBriefing";
 import { AgentStatusPanel } from "@/components/home/AgentStatusPanel";
