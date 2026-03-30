@@ -1,79 +1,64 @@
 
-# Spostare definitivamente i filtri di Outreach nella sidebar
 
-## Problema reale
-Hai ragione: in `/outreach` ci sono ancora filtri inline sia in **Workspace** sia in **In Uscita**. Il nodo tecnico è questo: oggi il drawer conosce solo la route `/outreach`, ma **non sa quale tab interna è attiva** (`cockpit`, `inuscita`, `workspace`, ecc.). Per questo i filtri sono rimasti dentro i componenti locali.
+# Ristrutturazione Outreach: Campagne dentro In Uscita + Workflow Attività dal Cockpit
 
-## Soluzione
-Rendo il drawer **consapevole della tab interna di Outreach** e porto lì tutti i filtri, lasciando nelle pagine solo le azioni operative.
+## Struttura Tab Outreach (da 5 a 4)
 
-### 1. Rendere globale la tab attiva di Outreach
-In `src/contexts/GlobalFiltersContext.tsx` aggiungo stato e setter per la sezione interna attiva di Outreach, più bucket separati per i filtri di:
-- **Workspace**
-- **In Uscita**
+```text
+[Cockpit] [Workspace] [In Uscita] [Attività]
+```
 
-Così i filtri non si mischiano tra le due viste.
+**In Uscita** diventa un container con sub-tab interni:
+- **Invii Diretti**: l'attuale Sorting (email/azioni uscite da Cockpit/Workspace)
+- **Campagne**: l'attuale CampagneTab (coda email_campaign_queue)
 
-### 2. Collegare il tab di Outreach al drawer
-In `src/pages/Outreach.tsx` sincronizzo il tab selezionato con il `GlobalFiltersContext`.
+Il tab "Campagne" standalone sparisce da Outreach.
 
-Risultato:
-- se sei su **Workspace**, il drawer mostra solo filtri Workspace
-- se sei su **In Uscita**, il drawer mostra solo filtri In Uscita
-- niente più pannelli sbagliati o generici
+## Workflow Attività dal Cockpit/Workspace
 
-### 3. Portare i filtri di In Uscita nella sidebar
-In `src/components/global/FiltersDrawer.tsx` aggiungo la sezione specifica per **In Uscita** con:
-- cerca azienda/contatto
-- Tutti
-- Immediati
-- Programmati
-- Da rivedere
-- Rivisti
+Oggi il Cockpit permette solo drag-and-drop sulle drop zone per generare bozze. Manca la possibilità di:
 
-In `src/components/sorting/SortingList.tsx` rimuovo:
-- search input locale
-- chip filtro locali
+### A) Azioni rapide sul contatto (nuovo pannello/menu)
+Cliccando su un contatto nel Cockpit o Workspace, l'utente può:
+1. **Segna come svolta** — crea un'attività `completed` immediata (es. "Telefonata fatta"). Tipo attività selezionabile (phone_call, meeting, other). Il contatto esce dalla coda cockpit.
+2. **Aggiungi nota** — salva una nota/descrizione sull'attività senza completarla.
+3. **Programma** — crea un'attività `pending` con `due_date` futuro. Appare in Agenda. Il contatto esce dal cockpit oggi ma ricompare quando arriva la data.
 
-La lista leggerà tutto dal context globale.
+### B) Attività programmate per oggi nel Cockpit
+Il hook `useCockpitContacts` viene esteso per includere anche le attività con `due_date = oggi` e `status = pending`. Queste appaiono nel Cockpit come contatti "di ritorno" con un badge che indica che sono riprogrammate.
 
-### 4. Completare anche Workspace nello stesso passaggio
-Già che il problema è identico, completo anche Workspace nello stesso refactoring:
-- rimuovo il blocco `Collapsible` dei filtri da `src/components/workspace/ContactListPanel.tsx`
-- sposto nel drawer:
-  - Stato Email
-  - Dati Contatto
-  - Arricchimento
-  - Paese
+### C) Attività completate vanno in In Uscita
+Le attività marcate come `completed` (sia da Cockpit che da Workspace) appaiono automaticamente nel tab "Invii Diretti" di In Uscita, che già legge dalla tabella `activities`.
 
-### 5. Cosa resta nelle pagine
-Restano in alto solo i controlli operativi:
-- **Deep Search**
-- **Genera**
-- **Elimina**
-- **Select all / none**
-- contatori e stato
+## Modifiche tecniche
 
-I filtri spariscono dal contenuto centrale.
+### 1. `src/pages/Outreach.tsx`
+- Rimuovere tab "Campagne" standalone
+- Rinominare tab: Cockpit, Workspace, In Uscita, Attività (4 tab)
 
-## Dettagli tecnici
-- Nessuna modifica al database
-- Nessuna modifica backend
-- Il `reset` del drawer verrà reso **contestuale alla tab attiva di Outreach**, così non azzera filtri di altre sezioni per errore
-- Il placeholder della ricerca nel drawer verrà adattato alla vista attiva (`Workspace` vs `In Uscita`)
+### 2. Nuovo `src/components/outreach/InUscitaTab.tsx`
+- Container con sub-tab interni: "Invii Diretti" (Sorting) + "Campagne" (CampagneTab)
+- Lazy load di entrambi
+
+### 3. `src/pages/Cockpit.tsx` + nuovo componente `ContactActionMenu`
+- Aggiungere menu contestuale (click destro o pulsante azioni) su ogni contatto
+- Opzioni: "Svolta" (con scelta tipo), "Nota", "Programma" (con date picker)
+- Alla conferma: crea activity + rimuove da cockpit_queue (o marca come "worked")
+
+### 4. `src/hooks/useCockpitContacts.ts`
+- Estendere la query per includere activities con `due_date = oggi`, `status = pending`, come contatti aggiuntivi nel cockpit
+- Questi contatti hanno un flag `isScheduledReturn: true`
+
+### 5. `src/components/sorting/SortingList.tsx`
+- Già mostra activities pending con email_body. Nessuna modifica sostanziale, ma il filtro potrebbe includere anche le attività completate (storico invii).
 
 ## File coinvolti
+
 | File | Azione |
 |------|--------|
-| `src/contexts/GlobalFiltersContext.tsx` | Aggiungere `outreachTab` + stati filtro separati per Workspace e In Uscita |
-| `src/pages/Outreach.tsx` | Sincronizzare tab attiva con il context globale |
-| `src/components/global/FiltersDrawer.tsx` | Mostrare filtri diversi in base a `outreachTab` |
-| `src/components/sorting/SortingList.tsx` | Rimuovere toolbar filtri locale e leggere dal context |
-| `src/components/workspace/ContactListPanel.tsx` | Rimuovere blocco filtri inline e leggere dal context |
+| `src/pages/Outreach.tsx` | Ridurre a 4 tab, caricare InUscitaTab |
+| `src/components/outreach/InUscitaTab.tsx` | **Nuovo** — sub-tab Invii Diretti + Campagne |
+| `src/pages/Cockpit.tsx` | Aggiungere azioni rapide (svolta/nota/programma) sui contatti |
+| `src/hooks/useCockpitContacts.ts` | Includere attività programmate per oggi |
+| `src/components/cockpit/ContactStream.tsx` | Supportare menu azioni e badge "riprogrammato" |
 
-## Risultato finale
-Dentro Outreach avrai una UI pulita:
-- **contenuto al centro**
-- **filtri solo nella sidebar sinistra**
-- **Mission/AI solo nella sidebar destra**
-- zero duplicazioni, zero blocchi filtro sparsi nelle pagine
