@@ -91,7 +91,7 @@ export function AppLayout() {
     <DeepSearchContext.Provider value={deepSearch}>
       <MissionProvider>
         <GlobalFiltersProvider>
-      <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+      <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         {/* Edge hover zones */}
         <div className="fixed left-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("left")} onMouseLeave={() => handleEdgeLeave("left")} />
         <div className="fixed right-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("right")} onMouseLeave={() => handleEdgeLeave("right")} />
@@ -125,7 +125,7 @@ export function AppLayout() {
             </div>
           </header>
 
-          <main className={cn("flex-1 min-h-0", isFullscreenRoute ? "overflow-hidden" : "overflow-auto p-4")}>
+          <main className={cn("flex-1 min-h-0 overflow-hidden", isFullscreenRoute ? "" : "overflow-auto p-4")}>
             <Outlet />
           </main>
         </div>
