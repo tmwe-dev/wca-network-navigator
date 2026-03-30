@@ -37,8 +37,6 @@ interface ContactStreamProps {
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
-  visibleOrigins: Set<ContactOrigin>;
-  onToggleOrigin: (origin: ContactOrigin) => void;
 }
 
 export function ContactStream({
@@ -46,7 +44,6 @@ export function ContactStream({
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
-  visibleOrigins, onToggleOrigin,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
