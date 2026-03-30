@@ -9,15 +9,13 @@ import {
 import {
   Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch, RefreshCw, Loader2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 
 export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing" | "no_email" | "no_phone" | "no_deep";
 
