@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TopCommandBar, type CockpitAIAction } from "@/components/cockpit/TopCommandBar";
+import { TopCommandBar, type CockpitAIAction, type SourceTab } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
+import { EmailCanvas } from "@/components/workspace/EmailCanvas";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";

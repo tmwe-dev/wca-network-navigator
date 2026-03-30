@@ -90,8 +90,27 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="px-4 pt-3 pb-2"
+      className="px-4 pt-3 pb-2 space-y-2"
     >
+      {/* Source Tabs */}
+      <div className="flex items-center gap-1">
+        {SOURCE_TABS.map(st => (
+          <button
+            key={st.value}
+            type="button"
+            onClick={() => onSourceTabChange(st.value)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+              sourceTab === st.value
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40"
+            )}
+          >
+            <st.icon className="w-3.5 h-3.5" />
+            {st.label}
+          </button>
+        ))}
+      </div>
       <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
         {/* Command Input */}
         <div className="relative flex-1 group">
