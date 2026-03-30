@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useNavigate } from "react-router-dom";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -14,6 +16,7 @@ import {
   Search, Phone, Mail, ChevronRight, Loader2,
   FileText, Trophy, Wand2, Send, Download, Telescope, Building2, UserCircle,
   Zap, FolderDown, RefreshCw, Square, CheckCircle2, MailX,
+  Inbox, LayoutGrid, EyeOff,
 } from "lucide-react";
 import { usePartners, useToggleFavorite } from "@/hooks/usePartners";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
@@ -29,6 +32,7 @@ import { getRealLogoUrl } from "@/lib/partnerUtils";
 
 import { useDirectoryDownload } from "@/hooks/useDirectoryDownload";
 import { usePartnerListStats } from "@/hooks/usePartnerListStats";
+import { useWorkedToday } from "@/hooks/useWorkedToday";
 import { IconIndicator, StatusDot, HorizStep, DownloadChoice, FilterActionBar } from "./partner-list/SubComponents";
 import { PartnerVirtualList } from "./PartnerVirtualList";
 
