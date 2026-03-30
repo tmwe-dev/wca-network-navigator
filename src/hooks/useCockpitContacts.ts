@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
+import { format } from "date-fns";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 export interface CockpitContact {
@@ -20,6 +21,7 @@ export interface CockpitContact {
   sourceType: string;
   sourceId: string;
   partnerId: string | null;
+  isScheduledReturn?: boolean;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
@@ -114,14 +116,24 @@ export function useCockpitContacts() {
       const prcMap: Record<string, any> = {};
       for (const c of prcData as any[]) prcMap[c.id] = c;
 
-      return { queue, pcMap, bcMap, prcMap, partnersMap };
+      // Fetch today's scheduled activities
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data: scheduledActivities } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .eq("due_date", today)
+        .limit(100);
+
+      return { queue, pcMap, bcMap, prcMap, partnersMap, scheduledActivities: scheduledActivities || [] };
     },
     staleTime: 30_000,
   });
 
   const contacts = useMemo<CockpitContact[]>(() => {
     if (!q.data || Array.isArray(q.data)) return [];
-    const { queue, pcMap, bcMap, prcMap, partnersMap } = q.data;
+    const { queue, pcMap, bcMap, prcMap, partnersMap, scheduledActivities } = q.data;
     const result: CockpitContact[] = [];
 
     for (const item of queue) {
@@ -193,6 +205,32 @@ export function useCockpitContacts() {
           partnerId: item.partner_id,
         });
       }
+    }
+
+    // Add scheduled return activities
+    for (const act of scheduledActivities) {
+      const meta = (act.source_meta || {}) as any;
+      const existsAlready = result.some(r => r.sourceId === act.source_id);
+      if (existsAlready) continue;
+      result.push({
+        id: `act-${act.id}`,
+        queueId: act.id,
+        name: meta.name || act.title || "—",
+        company: meta.company || "—",
+        role: "",
+        country: meta.country || "",
+        language: inferLanguage(meta.country),
+        lastContact: formatRelativeDate(act.created_at),
+        priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
+        channels: inferChannels(meta.email, null, null),
+        email: meta.email || "",
+        origin: "wca" as ContactOrigin,
+        originDetail: `📅 Riprogrammato`,
+        sourceType: act.source_type,
+        sourceId: act.source_id,
+        partnerId: act.partner_id,
+        isScheduledReturn: true,
+      });
     }
 
     result.sort((a, b) => b.priority - a.priority);
