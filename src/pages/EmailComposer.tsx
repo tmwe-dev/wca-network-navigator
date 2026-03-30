@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
-  Send, Save, Eye, Loader2, Mail, Globe, Users, Sparkles,
-  Search, Filter, ListOrdered, Paperclip, Link as LinkIcon, Plus, X, Briefcase,
+  Send, Save, Eye, Loader2, Mail, Sparkles,
+  Search, Paperclip, Link as LinkIcon, Plus, X,
+  Building2, User, Brain, ChevronRight,
 } from "lucide-react";
 import {
   ResizablePanelGroup, ResizablePanel, ResizableHandle,
@@ -23,25 +21,50 @@ import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useMission } from "@/contexts/MissionContext";
-
-const CATEGORIES = [
-  { value: "offerta_cliente", label: "Offerta nuovo cliente" },
-  { value: "collaborazione_domestic", label: "Collaborazione nazionale" },
-  { value: "collaborazione_international", label: "Collaborazione internazionale" },
-  { value: "saluti_festivita", label: "Saluti e festività" },
-  { value: "comunicazioni_operative", label: "Comunicazioni operative" },
-  { value: "altro", label: "Altro" },
-];
+import { cn } from "@/lib/utils";
 
 const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{country}}"];
 
 interface LinkItem { label: string; url: string; }
 
+interface PartnerResult {
+  id: string;
+  company_name: string;
+  country_name: string;
+  city: string;
+  email: string | null;
+  enriched_at: string | null;
+}
+
+interface ContactResult {
+  id: string;
+  partner_id: string;
+  name: string;
+  email: string | null;
+  title: string | null;
+  contact_alias: string | null;
+}
+
+interface SelectedRecipient {
+  partnerId: string;
+  companyName: string;
+  contactId?: string;
+  contactName?: string;
+  email: string | null;
+  city: string;
+  countryName: string;
+  isEnriched: boolean;
+}
+
 export default function EmailComposer() {
   const { goal, baseProposal, documents, referenceLinks } = useMission();
 
+  // Search & selection
+  const [searchQuery, setSearchQuery] = useState("");
+  const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
+  const [expandedPartnerId, setExpandedPartnerId] = useState<string | null>(null);
+
   // Email state
-  const [category, setCategory] = useState("altro");
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [selectedAttachments, setSelectedAttachments] = useState<string[]>([]);
@@ -49,98 +72,91 @@ export default function EmailComposer() {
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
 
-  // Recipient state
-  const [recipientTab, setRecipientTab] = useState<"country" | "partner">("country");
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
-  const [partnerSearch, setPartnerSearch] = useState("");
-  const [filterWithEmail, setFilterWithEmail] = useState(false);
-
   // Queue state
   const [sending, setSending] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [queueDelay, setQueueDelay] = useState(5);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeQueueStatus, setActiveQueueStatus] = useState("idle");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [deepSearching, setDeepSearching] = useState<string | null>(null);
 
   const enqueueCampaign = useEnqueueCampaign();
   const { processing, startProcessing } = useProcessQueue();
   const saveDraft = useSaveEmailDraft();
   const { data: templates = [] } = useEmailTemplates();
 
-  // Data queries
-  const { data: countries = [] } = useQuery({
-    queryKey: ["email-composer-countries"],
+  // Search partners
+  const { data: searchResults = [] } = useQuery({
+    queryKey: ["email-search-partners", searchQuery],
     queryFn: async () => {
+      if (searchQuery.length < 2) return [];
+      const q = `%${searchQuery}%`;
       const { data, error } = await supabase
         .from("partners")
-        .select("country_code, country_name")
-        .order("country_name");
-      if (error) throw error;
-      const map = new Map<string, { code: string; name: string; count: number }>();
-      (data || []).forEach((p) => {
-        const existing = map.get(p.country_code);
-        if (existing) existing.count++;
-        else map.set(p.country_code, { code: p.country_code, name: p.country_name, count: 1 });
-      });
-      return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-    },
-  });
-
-  const { data: allPartners = [] } = useQuery({
-    queryKey: ["email-composer-partners"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("partners")
-        .select("id, company_name, country_name, city, email")
+        .select("id, company_name, country_name, city, email, enriched_at")
+        .or(`company_name.ilike.${q},city.ilike.${q},country_name.ilike.${q}`)
         .order("company_name")
-        .limit(1000);
+        .limit(30);
       if (error) throw error;
-      return data || [];
+      return (data || []) as PartnerResult[];
     },
+    enabled: searchQuery.length >= 2,
   });
 
-  // Computed
-  const recipients = useMemo(() => {
-    if (recipientTab === "country") {
-      return allPartners.filter((p) => selectedCountries.includes(p.country_name));
-    }
-    return allPartners.filter((p) => selectedPartnerIds.includes(p.id));
-  }, [recipientTab, selectedCountries, selectedPartnerIds, allPartners]);
+  // Fetch contacts for expanded partner
+  const { data: partnerContacts = [] } = useQuery({
+    queryKey: ["email-partner-contacts", expandedPartnerId],
+    queryFn: async () => {
+      if (!expandedPartnerId) return [];
+      const { data, error } = await supabase
+        .from("partner_contacts")
+        .select("id, partner_id, name, email, title, contact_alias")
+        .eq("partner_id", expandedPartnerId)
+        .order("is_primary", { ascending: false });
+      if (error) throw error;
+      return (data || []) as ContactResult[];
+    },
+    enabled: !!expandedPartnerId,
+  });
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
 
-  const filteredPartners = useMemo(() => {
-    let list = allPartners;
-    if (filterWithEmail) list = list.filter((p) => p.email);
-    if (partnerSearch) {
-      const q = partnerSearch.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.company_name.toLowerCase().includes(q) ||
-          p.country_name?.toLowerCase().includes(q) ||
-          p.city?.toLowerCase().includes(q)
-      );
-    }
-    return list.slice(0, 100);
-  }, [allPartners, partnerSearch, filterWithEmail]);
+  const addRecipient = useCallback((partner: PartnerResult, contact?: ContactResult) => {
+    const key = contact ? `${partner.id}-${contact.id}` : partner.id;
+    if (recipients.some((r) => (contact ? `${r.partnerId}-${r.contactId}` : r.partnerId) === key)) return;
+    setRecipients((prev) => [...prev, {
+      partnerId: partner.id,
+      companyName: partner.company_name,
+      contactId: contact?.id,
+      contactName: contact?.contact_alias || contact?.name,
+      email: contact?.email || partner.email,
+      city: partner.city,
+      countryName: partner.country_name,
+      isEnriched: !!partner.enriched_at,
+    }]);
+  }, [recipients]);
 
-  const toggleCountry = (name: string) => {
-    setSelectedCountries((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
-    );
+  const removeRecipient = (idx: number) => {
+    setRecipients((prev) => prev.filter((_, i) => i !== idx));
   };
-  const togglePartner = (id: string) => {
-    setSelectedPartnerIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
+
+  // Deep Search
+  const handleDeepSearch = async (partnerId: string) => {
+    setDeepSearching(partnerId);
+    try {
+      const { error } = await supabase.functions.invoke("deep-search-partner", {
+        body: { partner_id: partnerId },
+      });
+      if (error) throw error;
+      toast.success("Deep Search completata");
+    } catch (err: any) {
+      toast.error("Errore Deep Search: " + (err.message || "Sconosciuto"));
+    } finally {
+      setDeepSearching(null);
+    }
   };
-  const toggleAttachment = (id: string) => {
-    setSelectedAttachments((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
-  };
+
+  const escapeHtml = (str: string) =>
+    str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
   const isValidUrl = (url: string) => {
     try { return ['http:', 'https:'].includes(new URL(url).protocol); }
@@ -154,15 +170,12 @@ export default function EmailComposer() {
     setNewLinkLabel(""); setNewLinkUrl("");
   };
 
-  const escapeHtml = (str: string) =>
-    str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
   const buildFinalHtml = (body: string, partner: any, contactName: string) => {
     let html = body
-      .replace(/\{\{company_name\}\}/g, escapeHtml(partner.company_name || ""))
+      .replace(/\{\{company_name\}\}/g, escapeHtml(partner.companyName || partner.company_name || ""))
       .replace(/\{\{contact_name\}\}/g, escapeHtml(contactName || ""))
       .replace(/\{\{city\}\}/g, escapeHtml(partner.city || ""))
-      .replace(/\{\{country\}\}/g, escapeHtml(partner.country_name || ""));
+      .replace(/\{\{country\}\}/g, escapeHtml(partner.countryName || partner.country_name || ""));
     const validLinks = emailLinks.filter((l) => isValidUrl(l.url));
     if (validLinks.length > 0) {
       html += `<br/><br/><p><strong>Link utili:</strong></p><ul>`;
@@ -184,7 +197,7 @@ export default function EmailComposer() {
   // AI generation
   const handleAIGenerate = async () => {
     if (!goal && !baseProposal) {
-      toast.error("Inserisci un goal o una proposta per generare con AI");
+      toast.error("Configura obiettivo o proposta dal pannello Mission (icona target nell'header)");
       return;
     }
     setAiGenerating(true);
@@ -197,11 +210,10 @@ export default function EmailComposer() {
           document_ids: documents.map((d) => d.id),
           reference_urls: referenceLinks,
           quality: "standard",
-          // We pass a dummy activity_id since we're composing from scratch
           activity_id: "00000000-0000-0000-0000-000000000000",
           standalone: true,
           recipient_count: recipientsWithEmail.length,
-          recipient_countries: [...new Set(recipients.map((r) => r.country_name))].join(", "),
+          recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
         },
       });
       if (error) throw error;
@@ -218,9 +230,9 @@ export default function EmailComposer() {
   const handleSaveDraft = async () => {
     try {
       await saveDraft.mutateAsync({
-        subject, html_body: htmlBody, category,
-        recipient_type: recipientTab,
-        recipient_filter: recipientTab === "country" ? { country_names: selectedCountries } : { partner_ids: selectedPartnerIds },
+        subject, html_body: htmlBody, category: "altro",
+        recipient_type: "partner",
+        recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
         attachment_ids: selectedAttachments, link_urls: emailLinks,
         status: "draft", total_count: recipientsWithEmail.length,
       } as any);
@@ -236,49 +248,38 @@ export default function EmailComposer() {
       const { data: savedDraft, error: draftError } = await supabase
         .from("email_drafts" as any)
         .insert({
-          subject, html_body: htmlBody, category,
-          recipient_type: recipientTab,
-          recipient_filter: recipientTab === "country" ? { country_names: selectedCountries } : { partner_ids: selectedPartnerIds },
+          subject, html_body: htmlBody, category: "altro",
+          recipient_type: "partner",
+          recipient_filter: { partner_ids: recipients.map((r) => r.partnerId) },
           attachment_ids: selectedAttachments, link_urls: emailLinks,
           status: "queued", total_count: recipientsWithEmail.length,
         } as any).select().single();
       if (draftError) throw draftError;
       const draftId = (savedDraft as any).id;
 
-      const partnerIds = recipientsWithEmail.map((r) => r.id);
-      const contactBatches: any[] = [];
-      for (let i = 0; i < partnerIds.length; i += 50) {
-        const { data: contacts } = await supabase
-          .from("partner_contacts").select("partner_id, name, is_primary")
-          .in("partner_id", partnerIds.slice(i, i + 50));
-        if (contacts) contactBatches.push(...contacts);
-      }
-      const contactMap: Record<string, string> = {};
-      contactBatches.forEach((c: any) => { if (!contactMap[c.partner_id] || c.is_primary) contactMap[c.partner_id] = c.name; });
+      const resolvedRecipients = recipientsWithEmail.map((r) => ({
+        partner_id: r.partnerId,
+        email: r.email!,
+        name: r.companyName,
+        subject: subject
+          .replace(/\{\{company_name\}\}/g, r.companyName)
+          .replace(/\{\{contact_name\}\}/g, r.contactName || "")
+          .replace(/\{\{city\}\}/g, r.city || "")
+          .replace(/\{\{country\}\}/g, r.countryName || ""),
+        html: buildFinalHtml(htmlBody, r, r.contactName || ""),
+      }));
 
-      const resolvedRecipients = recipientsWithEmail.map((partner) => {
-        const contactName = contactMap[partner.id] || "";
-        return {
-          partner_id: partner.id, email: partner.email!,
-          name: partner.company_name,
-          subject: subject.replace(/\{\{company_name\}\}/g, partner.company_name || "").replace(/\{\{contact_name\}\}/g, contactName).replace(/\{\{city\}\}/g, partner.city || "").replace(/\{\{country\}\}/g, partner.country_name || ""),
-          html: buildFinalHtml(htmlBody, partner, contactName),
-        };
-      });
-
-      await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: queueDelay });
+      await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);
       setActiveQueueStatus("idle");
       startProcessing(draftId);
       setActiveQueueStatus("processing");
     } catch (err) {
       console.error("Enqueue error:", err);
-      toast.error("Errore nell'accodamento della campagna");
+      toast.error("Errore nell'accodamento");
     }
     setSending(false);
   };
-
-  // (Preset handlers now in MissionContext)
 
   const templatesByCategory = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -287,132 +288,177 @@ export default function EmailComposer() {
   }, [templates]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Glass top bar */}
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b border-border/50 glass-panel">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Mail className="w-4.5 h-4.5 text-primary" />
             <div>
               <h1 className="text-sm font-semibold text-foreground">Email Composer</h1>
-              <p className="text-[11px] text-muted-foreground">Composizione AI-powered e invio campagne</p>
+              <p className="text-[11px] text-muted-foreground">Componi e invia email personalizzate</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px]">
-              <Users className="w-3 h-3 mr-1" />
-              {recipientsWithEmail.length} destinatari
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              <Globe className="w-3 h-3 mr-1" />
-              {new Set(recipients.map((r) => r.country_name)).size} paesi
-            </Badge>
-          </div>
+          <Badge variant="outline" className="text-[10px]">
+            <Mail className="w-3 h-3 mr-1" />
+            {recipientsWithEmail.length} destinatari con email
+          </Badge>
         </div>
       </div>
 
-      {/* Mission Context è nel pannello globale (Target icon nell'header) */}
-
-      {/* 3-column layout */}
+      {/* 2-column layout */}
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Column 1: Rubrica Destinatari */}
-          <ResizablePanel defaultSize={25} minSize={18} maxSize={35}>
+
+          {/* Left: Search + Recipients */}
+          <ResizablePanel defaultSize={30} minSize={22} maxSize={40}>
             <div className="h-full flex flex-col border-r border-border/30">
+              {/* Search */}
               <div className="shrink-0 p-3 border-b border-border/30 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold">Rubrica Destinatari</span>
+                  <Search className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold">Cerca Destinatario</span>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
-                    value={partnerSearch} onChange={(e) => setPartnerSearch(e.target.value)}
-                    placeholder="Cerca partner..."
-                    className="h-7 text-xs pl-8 border-border bg-muted/30"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cerca azienda o contatto..."
+                    className="h-8 text-xs pl-8 border-border bg-muted/30"
                   />
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm" variant={recipientTab === "country" ? "default" : "outline"}
-                    className="h-6 text-[10px] flex-1 gap-1"
-                    onClick={() => setRecipientTab("country")}
-                  >
-                    <Globe className="w-3 h-3" /> Paese
-                  </Button>
-                  <Button
-                    size="sm" variant={recipientTab === "partner" ? "default" : "outline"}
-                    className="h-6 text-[10px] flex-1 gap-1"
-                    onClick={() => setRecipientTab("partner")}
-                  >
-                    <Users className="w-3 h-3" /> Partner
-                  </Button>
-                </div>
-                <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-                  <Checkbox checked={filterWithEmail} onCheckedChange={(v) => setFilterWithEmail(!!v)} className="h-3 w-3" />
-                  Solo con email
-                </label>
               </div>
 
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-0.5">
-                  {recipientTab === "country" ? (
-                    countries.map((c) => (
-                      <label key={c.code} className="flex items-center gap-2 text-xs py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded">
-                        <Checkbox checked={selectedCountries.includes(c.name)} onCheckedChange={() => toggleCountry(c.name)} className="h-3.5 w-3.5" />
-                        <span className="flex-1 truncate">{c.name}</span>
-                        <Badge variant="secondary" className="text-[9px] h-4 px-1">{c.count}</Badge>
-                      </label>
-                    ))
-                  ) : (
-                    filteredPartners.map((p) => (
-                      <label key={p.id} className="flex items-center gap-2 text-xs py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded">
-                        <Checkbox checked={selectedPartnerIds.includes(p.id)} onCheckedChange={() => togglePartner(p.id)} className="h-3.5 w-3.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium text-[11px]">{p.company_name}</p>
-                          <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+              {/* Search Results */}
+              {searchQuery.length >= 2 && searchResults.length > 0 && (
+                <div className="shrink-0 border-b border-border/30 max-h-[240px] overflow-y-auto">
+                  <div className="p-1.5 space-y-0.5">
+                    {searchResults.map((p) => (
+                      <div key={p.id}>
+                        <div
+                          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer transition-colors group"
+                          onClick={() => setExpandedPartnerId(expandedPartnerId === p.id ? null : p.id)}
+                        >
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-medium truncate">{p.company_name}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+                          </div>
+                          {!p.enriched_at && (
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-5 px-1.5 text-[9px] gap-1 opacity-0 group-hover:opacity-100 shrink-0"
+                              onClick={(e) => { e.stopPropagation(); handleDeepSearch(p.id); }}
+                              disabled={deepSearching === p.id}
+                            >
+                              {deepSearching === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
+                              Deep Search
+                            </Button>
+                          )}
+                          {p.enriched_at && <Brain className="w-3 h-3 text-amber-500 shrink-0" />}
+                          {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
+                          <ChevronRight className={cn(
+                            "w-3 h-3 text-muted-foreground transition-transform shrink-0",
+                            expandedPartnerId === p.id && "rotate-90"
+                          )} />
                         </div>
-                        {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
-                      </label>
-                    ))
+
+                        {/* Contacts dropdown */}
+                        {expandedPartnerId === p.id && (
+                          <div className="ml-6 pl-2 border-l border-border/30 space-y-0.5 py-1">
+                            {/* Add company directly */}
+                            <button
+                              onClick={() => addRecipient(p)}
+                              className="w-full flex items-center gap-2 px-2 py-1 rounded text-[10px] hover:bg-primary/10 text-primary transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Aggiungi azienda ({p.email || "no email"})
+                            </button>
+                            {/* Individual contacts */}
+                            {partnerContacts.map((c) => (
+                              <button
+                                key={c.id}
+                                onClick={() => addRecipient(p, c)}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 text-left transition-colors"
+                              >
+                                <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-medium truncate">{c.contact_alias || c.name}</p>
+                                  {c.title && <p className="text-[9px] text-muted-foreground truncate">{c.title}</p>}
+                                </div>
+                                {c.email ? (
+                                  <Mail className="w-3 h-3 text-emerald-500 shrink-0" />
+                                ) : (
+                                  <span className="text-[9px] text-muted-foreground">no email</span>
+                                )}
+                              </button>
+                            ))}
+                            {partnerContacts.length === 0 && (
+                              <p className="text-[9px] text-muted-foreground px-2 py-1">Nessun contatto trovato</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected Recipients */}
+              <div className="shrink-0 px-3 py-1.5 border-b border-border/30 flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Destinatari selezionati
+                </span>
+                <Badge variant="outline" className="text-[9px] h-4">{recipients.length}</Badge>
+              </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-1.5 space-y-0.5">
+                  {recipients.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                      <p className="text-[11px]">Cerca e seleziona i destinatari</p>
+                    </div>
                   )}
+                  {recipients.map((r, idx) => (
+                    <div key={idx} className="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/30 group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium truncate">{r.companyName}</p>
+                        {r.contactName && <p className="text-[9px] text-muted-foreground truncate">{r.contactName}</p>}
+                        <p className="text-[9px] text-muted-foreground truncate">{r.city}, {r.countryName}</p>
+                      </div>
+                      {r.email ? (
+                        <Mail className="w-3 h-3 text-emerald-500 shrink-0" />
+                      ) : (
+                        <span className="text-[8px] text-destructive shrink-0">no email</span>
+                      )}
+                      <button
+                        onClick={() => removeRecipient(idx)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </ScrollArea>
-
-              <div className="shrink-0 p-2 border-t border-border/30 space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">Selezionati</span>
-                  <Badge variant="outline" className="text-[9px] h-4">{recipients.length}</Badge>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">Con email</span>
-                  <Badge variant={recipientsWithEmail.length > 0 ? "default" : "destructive"} className="text-[9px] h-4">
-                    {recipientsWithEmail.length}
-                  </Badge>
-                </div>
-              </div>
             </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          {/* Column 2: Editor */}
-          <ResizablePanel defaultSize={45} minSize={30}>
+          {/* Right: Editor + Preview */}
+          <ResizablePanel defaultSize={70} minSize={50}>
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
-                {/* Category + Subject */}
-                <div className="float-panel-subtle p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-semibold">Componi Email</span>
-                  </div>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Oggetto della email..." className="h-8 text-sm" />
+              <div className="p-4 space-y-4 max-w-3xl mx-auto">
+                {/* Subject */}
+                <div className="space-y-2">
+                  <Input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Oggetto della email..."
+                    className="h-9 text-sm font-medium"
+                  />
                   <div className="flex flex-wrap gap-1">
                     <span className="text-[10px] text-muted-foreground mr-1">Variabili:</span>
                     {VARIABLES.map((v) => (
@@ -420,14 +466,19 @@ export default function EmailComposer() {
                         onClick={() => setHtmlBody((prev) => prev + v)}>{v}</Badge>
                     ))}
                   </div>
-                  <Textarea value={htmlBody} onChange={(e) => setHtmlBody(e.target.value)}
-                    placeholder="Scrivi il contenuto della email... Puoi usare HTML e variabili come {{company_name}}"
-                    className="min-h-[180px] font-mono text-xs bg-muted/20" />
                 </div>
 
-                {/* AI Generate button */}
-                <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full gap-2" variant="outline">
-                  {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {/* Body */}
+                <Textarea
+                  value={htmlBody}
+                  onChange={(e) => setHtmlBody(e.target.value)}
+                  placeholder="Scrivi il contenuto della email... Puoi usare HTML e variabili come {{company_name}}"
+                  className="min-h-[200px] font-mono text-xs bg-muted/20"
+                />
+
+                {/* AI Generate */}
+                <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full gap-2 h-10" variant="outline">
+                  {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
                   {aiGenerating ? "Generazione AI in corso..." : "Genera con AI"}
                 </Button>
 
@@ -435,7 +486,7 @@ export default function EmailComposer() {
                 <div className="float-panel-subtle p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Link nell'email</span>
+                    <span className="text-xs font-medium">Link</span>
                   </div>
                   {emailLinks.map((l, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
@@ -453,66 +504,35 @@ export default function EmailComposer() {
                 </div>
 
                 {/* Attachments */}
-                <div className="float-panel-subtle p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Allegati (da Template)</span>
-                  </div>
-                  {Object.entries(templatesByCategory).map(([cat, files]) => (
-                    <div key={cat} className="space-y-0.5">
-                      <p className="text-[10px] text-muted-foreground capitalize">{CATEGORIES.find((c) => c.value === cat)?.label || cat}</p>
-                      {files.map((t: any) => (
-                        <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer">
-                          <Checkbox checked={selectedAttachments.includes(t.id)} onCheckedChange={() => toggleAttachment(t.id)} className="h-3 w-3" />
-                          <span className="truncate">{t.file_name}</span>
-                        </label>
-                      ))}
+                {templates.length > 0 && (
+                  <div className="float-panel-subtle p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium">Allegati</span>
                     </div>
-                  ))}
-                  {templates.length === 0 && <p className="text-[10px] text-muted-foreground">Nessun template caricato.</p>}
-                </div>
-
-                {/* Queue delay */}
-                <div className="float-panel-subtle p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium flex items-center gap-1.5">
-                      <ListOrdered className="w-3.5 h-3.5 text-muted-foreground" /> Ritardo tra invii
-                    </span>
-                    <span className="text-xs font-mono text-muted-foreground">{queueDelay}s</span>
+                    {Object.entries(templatesByCategory).map(([cat, files]) => (
+                      <div key={cat} className="space-y-0.5">
+                        {files.map((t: any) => (
+                          <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={selectedAttachments.includes(t.id)}
+                              onChange={() => setSelectedAttachments((prev) => prev.includes(t.id) ? prev.filter((a) => a !== t.id) : [...prev, t.id])}
+                              className="h-3 w-3"
+                            />
+                            <span className="truncate">{t.file_name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                  <Slider value={[queueDelay]} onValueChange={([v]) => setQueueDelay(v)} min={2} max={30} step={1} />
-                </div>
+                )}
 
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1">
-                    <Save className="w-3.5 h-3.5" /> Salva
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setPreviewOpen(!previewOpen)} className="gap-1">
-                    <Eye className="w-3.5 h-3.5" /> Anteprima
-                  </Button>
-                  <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1 flex-1">
-                    {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    {sending ? "Preparazione..." : `Accoda ${recipientsWithEmail.length} email`}
-                  </Button>
-                </div>
-              </div>
-            </ScrollArea>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Column 3: Preview + Queue Monitor */}
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
-                {/* Inbox-style preview */}
-                <div className="float-panel p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-semibold">Anteprima Inbox</span>
-                  </div>
-                  {subject || htmlBody ? (
+                {/* Preview */}
+                {(subject || htmlBody) && (
+                  <div className="float-panel p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-semibold">Anteprima</span>
+                    </div>
                     <div className="border border-border/30 rounded-xl overflow-hidden">
                       <div className="px-3 py-2 bg-muted/30 border-b border-border/30">
                         <p className="text-xs font-medium truncate">
@@ -523,17 +543,23 @@ export default function EmailComposer() {
                       <div className="p-3 text-xs prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{
                           __html: buildFinalHtml(htmlBody,
-                            { company_name: "Acme Logistics", city: "Milano", country_name: "Italy" },
+                            { companyName: "Acme Logistics", city: "Milano", countryName: "Italy" },
                             "John Doe"),
                         }}
                       />
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Mail className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-xs">Compila l'email per vedere l'anteprima</p>
-                    </div>
-                  )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1">
+                    <Save className="w-3.5 h-3.5" /> Salva bozza
+                  </Button>
+                  <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1 flex-1">
+                    {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
+                  </Button>
                 </div>
 
                 {/* Queue Monitor */}
@@ -543,6 +569,7 @@ export default function EmailComposer() {
               </div>
             </ScrollArea>
           </ResizablePanel>
+
         </ResizablePanelGroup>
       </div>
     </div>
