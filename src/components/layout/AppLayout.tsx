@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
@@ -70,11 +70,31 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
+  // Edge hover zones
+  const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverTimerRight = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleEdgeEnter = (side: "left" | "right") => {
+    const timer = setTimeout(() => {
+      if (side === "left") setFiltersOpen(true);
+      else setMissionOpen(true);
+    }, 150);
+    if (side === "left") hoverTimerLeft.current = timer;
+    else hoverTimerRight.current = timer;
+  };
+  const handleEdgeLeave = (side: "left" | "right") => {
+    const t = side === "left" ? hoverTimerLeft.current : hoverTimerRight.current;
+    if (t) clearTimeout(t);
+  };
+
   return (
     <DeepSearchContext.Provider value={deepSearch}>
       <MissionProvider>
         <GlobalFiltersProvider>
       <div className="flex min-h-screen w-full bg-background" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+        {/* Edge hover zones */}
+        <div className="fixed left-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("left")} onMouseLeave={() => handleEdgeLeave("left")} />
+        <div className="fixed right-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("right")} onMouseLeave={() => handleEdgeLeave("right")} />
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
