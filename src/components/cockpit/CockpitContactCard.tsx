@@ -64,6 +64,13 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
     border: "border-chart-3/30",
     dot: "bg-chart-3",
   },
+  bca: {
+    label: "BCA",
+    bg: "bg-amber-500/15",
+    text: "text-amber-500",
+    border: "border-amber-500/30",
+    dot: "bg-amber-500",
+  },
 };
 
 // Left accent bar color per origin
