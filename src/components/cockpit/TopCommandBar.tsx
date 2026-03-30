@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2 } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
+
+export type SourceTab = "all" | "wca" | "prospect" | "contact";
 
 export interface CockpitAIAction {
   type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
@@ -26,11 +28,20 @@ interface TopCommandBarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   contacts: Array<{ id: string; name: string; company: string; country: string; priority: number; language: string; channels: string[] }>;
+  sourceTab: SourceTab;
+  onSourceTabChange: (tab: SourceTab) => void;
 }
 
 type MicState = "idle" | "listening" | "processing" | "applied";
 
-export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts }: TopCommandBarProps) {
+const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[] = [
+  { value: "all", label: "Tutti", icon: Users },
+  { value: "wca", label: "WCA", icon: Building2 },
+  { value: "prospect", label: "Prospect", icon: FileSearch },
+  { value: "contact", label: "Contatti", icon: Users },
+];
+
+export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);

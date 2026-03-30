@@ -1,13 +1,12 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
 import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const Cockpit = lazy(() => import("./Cockpit"));
-const Workspace = lazy(() => import("./Workspace"));
 
 function TabFallback() {
   return <div className="h-[calc(100vh-6rem)] animate-pulse bg-muted/20 rounded-lg" />;
@@ -27,10 +26,6 @@ export default function Outreach() {
             <TabsTrigger value="cockpit" className="gap-1.5 text-xs">
               <Rocket className="w-3.5 h-3.5" />
               Cockpit
-            </TabsTrigger>
-            <TabsTrigger value="workspace" className="gap-1.5 text-xs">
-              <Briefcase className="w-3.5 h-3.5" />
-              Workspace
             </TabsTrigger>
             <TabsTrigger value="inuscita" className="gap-1.5 text-xs">
               <ArrowUpFromLine className="w-3.5 h-3.5" />
@@ -52,11 +47,6 @@ export default function Outreach() {
         {tab === "cockpit" && (
           <Suspense fallback={<TabFallback />}>
             <Cockpit />
-          </Suspense>
-        )}
-        {tab === "workspace" && (
-          <Suspense fallback={<TabFallback />}>
-            <Workspace />
           </Suspense>
         )}
         {tab === "inuscita" && <InUscitaTab />}
