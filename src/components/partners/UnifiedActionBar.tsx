@@ -142,6 +142,16 @@ export function UnifiedActionBar({
             </>
           )}
 
+          {/* Cockpit */}
+          {onSendToCockpit && (
+            <Button size="sm" variant="ghost"
+              onClick={onSendToCockpit}
+              className={btnClass} disabled={deepSearching || sendingToCockpit}>
+              {sendingToCockpit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Inbox className="w-3.5 h-3.5" />}
+              Cockpit
+            </Button>
+          )}
+
           {/* Workspace */}
           <Button size="sm" variant="ghost"
             onClick={() => isBulk ? onSendToWorkspace() : onSendToWorkspace()}

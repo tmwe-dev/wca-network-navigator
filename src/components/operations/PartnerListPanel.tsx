@@ -138,14 +138,13 @@ export function PartnerListPanel({
     if (destination === "cockpit") {
       // Insert partner contacts into cockpit_queue
       const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] = [];
-      for (const p of partnerList) {
-        const contacts = p.partner_contacts || [];
+      for (const p of partnerList as any[]) {
+        const contacts = (p.partner_contacts || []) as any[];
         if (contacts.length > 0) {
           for (const c of contacts) {
             items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: userId, status: "queued" });
           }
         } else {
-          // No contacts — still queue via partner_id reference
           items.push({ source_type: "partner_contact", source_id: p.id, partner_id: p.id, user_id: userId, status: "queued" });
         }
       }
