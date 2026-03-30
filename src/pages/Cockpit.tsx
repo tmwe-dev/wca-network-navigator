@@ -52,7 +52,6 @@ const Cockpit = () => {
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
-  const visibleOrigins = gf.origin as Set<string>;
 
   const { contacts, contactsMap, isLoading } = useCockpitContacts();
   const selection = useSelection(contacts);
@@ -60,9 +59,6 @@ const Cockpit = () => {
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
 
-  const visibleContacts = useMemo(() =>
-    contacts.filter(c => visibleOrigins.has(c.origin)),
-  [contacts, visibleOrigins]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
@@ -261,7 +257,7 @@ const Cockpit = () => {
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} onSearchChange={() => {}} filters={activeFilters}
-            contacts={visibleContacts} isLoading={isLoading}
+            contacts={contacts} isLoading={isLoading}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             selectedIds={selection.selectedIds} onToggle={selection.toggle}
             onSelectAll={selection.selectAll} onClear={selection.clear}
@@ -269,8 +265,6 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
-            visibleOrigins={visibleOrigins as Set<ContactOrigin>}
-            onToggleOrigin={() => {}}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">

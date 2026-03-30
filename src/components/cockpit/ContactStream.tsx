@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users, Trash2, Eye } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
 import { CockpitContactCard } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { ViewMode, CockpitFilter, ContactOrigin } from "@/pages/Cockpit";
+import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {
@@ -16,11 +16,6 @@ const FLAG: Record<string, string> = {
   TR: "🇹🇷", IN: "🇮🇳", AE: "🇦🇪", SA: "🇸🇦", KR: "🇰🇷", AU: "🇦🇺", CA: "🇨🇦", MX: "🇲🇽",
 };
 
-const ORIGIN_CONFIG: { key: ContactOrigin; label: string; color: string; activeColor: string }[] = [
-  { key: "wca", label: "WCA", color: "text-blue-400/60 border-blue-500/20", activeColor: "text-blue-300 bg-blue-500/20 border-blue-400/50" },
-  { key: "import", label: "Import", color: "text-emerald-400/60 border-emerald-500/20", activeColor: "text-emerald-300 bg-emerald-500/20 border-emerald-400/50" },
-  { key: "report_aziende", label: "Prospect", color: "text-amber-400/60 border-amber-500/20", activeColor: "text-amber-300 bg-amber-500/20 border-amber-400/50" },
-];
 
 interface ContactStreamProps {
   viewMode: ViewMode;
@@ -42,8 +37,6 @@ interface ContactStreamProps {
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
-  visibleOrigins: Set<ContactOrigin>;
-  onToggleOrigin: (origin: ContactOrigin) => void;
 }
 
 export function ContactStream({
@@ -51,7 +44,6 @@ export function ContactStream({
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete,
-  visibleOrigins, onToggleOrigin,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
@@ -93,23 +85,6 @@ export function ContactStream({
 
   return (
     <div className="p-3 space-y-2">
-      {/* Mostra — origin visibility toggles */}
-      <div className="flex items-center gap-1.5 px-1">
-        <Eye className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
-        <span className="text-[11px] text-muted-foreground/70 mr-0.5">Mostra</span>
-        {ORIGIN_CONFIG.map(o => (
-          <button
-            key={o.key}
-            onClick={() => onToggleOrigin(o.key)}
-            className={cn(
-              "px-2 py-0.5 rounded-full border text-[11px] font-medium transition-all duration-200",
-              visibleOrigins.has(o.key) ? o.activeColor : o.color + " opacity-50 hover:opacity-80"
-            )}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
 
       {/* Search field */}
       <div className="px-1">

@@ -70,47 +70,16 @@ function getImportedOriginDetail(origin: string | null, groupName?: string | nul
   return groupName || fileName || "Import";
 }
 
-// ── Query: partner_contacts + partners ──
-function usePartnerContactsQuery() {
+// ── Query: business_cards only (BCA-dedicated cockpit) ──
+function useBusinessCardContactsQuery() {
   return useQuery({
-    queryKey: ["cockpit-partner-contacts"],
+    queryKey: ["cockpit-business-cards"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, name, title, email, direct_phone, mobile, partner_id, created_at, partners!inner(company_name, country_code, country_name, last_interaction_at, email, phone, mobile)")
-        .limit(500);
-      if (error) throw error;
-      return (data || []) as any[];
-    },
-    staleTime: 60_000,
-  });
-}
-
-// ── Query: imported_contacts + import_logs ──
-function useImportedContactsQuery() {
-  return useQuery({
-    queryKey: ["cockpit-imported-contacts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("imported_contacts")
-        .select("id, name, company_name, position, email, phone, mobile, country, origin, created_at, last_interaction_at, import_logs!inner(file_name, group_name)")
-        .not("name", "is", null)
-        .limit(500);
-      if (error) throw error;
-      return (data || []) as any[];
-    },
-    staleTime: 60_000,
-  });
-}
-
-// ── Query: prospect_contacts + prospects ──
-function useProspectContactsQuery() {
-  return useQuery({
-    queryKey: ["cockpit-prospect-contacts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prospect_contacts")
-        .select("id, name, role, email, phone, prospect_id, created_at, prospects!inner(company_name, city, province, last_interaction_at)")
+        .from("business_cards")
+        .select("id, contact_name, company_name, position, email, phone, mobile, location, met_at, event_name, created_at, match_status")
+        .not("contact_name", "is", null)
+        .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
       return (data || []) as any[];
@@ -120,80 +89,35 @@ function useProspectContactsQuery() {
 }
 
 export function useCockpitContacts() {
-  const partnerQ = usePartnerContactsQuery();
-  const importedQ = useImportedContactsQuery();
-  const prospectQ = useProspectContactsQuery();
+  const bcQ = useBusinessCardContactsQuery();
 
-  const isLoading = partnerQ.isLoading || importedQ.isLoading || prospectQ.isLoading;
+  const isLoading = bcQ.isLoading;
 
   const contacts = useMemo<CockpitContact[]>(() => {
     const result: CockpitContact[] = [];
 
-    // Partner contacts (WCA)
-    for (const pc of partnerQ.data || []) {
-      const p = pc.partners;
-      if (!p) continue;
-      const email = pc.email || p.email || "";
-      const phone = pc.direct_phone || pc.mobile || p.phone || p.mobile || null;
+    for (const bc of bcQ.data || []) {
+      const email = bc.email || "";
+      const phone = bc.phone || bc.mobile || null;
       result.push({
-        id: `pc-${pc.id}`,
-        name: pc.name || "—",
-        company: p.company_name || "—",
-        role: pc.title || "",
-        country: (p.country_code || "").trim(),
-        language: inferLanguage(p.country_code),
-        lastContact: formatRelativeDate(p.last_interaction_at || pc.created_at),
-        priority: computePriority(email, phone, null, p.last_interaction_at),
-        channels: inferChannels(email, phone),
-        email: email || "",
-        origin: "wca" as ContactOrigin,
-        originDetail: "WCA",
-      });
-    }
-
-    // Imported contacts
-    for (const ic of importedQ.data || []) {
-      const log = ic.import_logs;
-      result.push({
-        id: `ic-${ic.id}`,
-        name: ic.name || "—",
-        company: ic.company_name || "—",
-        role: ic.position || "",
-        country: (ic.country || "").trim(),
-        language: inferLanguage(ic.country),
-        lastContact: formatRelativeDate(ic.last_interaction_at || ic.created_at),
-        priority: computePriority(ic.email, ic.phone, ic.mobile, ic.last_interaction_at),
-        channels: inferChannels(ic.email, ic.phone, ic.mobile),
-        email: ic.email || "",
+        id: `bc-${bc.id}`,
+        name: bc.contact_name || "—",
+        company: bc.company_name || "—",
+        role: bc.position || "",
+        country: "",
+        language: "english",
+        lastContact: formatRelativeDate(bc.met_at || bc.created_at),
+        priority: computePriority(email, phone, bc.mobile, bc.met_at),
+        channels: inferChannels(email, phone, bc.mobile),
+        email: email,
         origin: "import" as ContactOrigin,
-        originDetail: getImportedOriginDetail(ic.origin, log?.group_name, log?.file_name),
+        originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
       });
     }
 
-    // Prospect contacts (Report Aziende)
-    for (const prc of prospectQ.data || []) {
-      const pr = prc.prospects;
-      if (!pr) continue;
-      result.push({
-        id: `prc-${prc.id}`,
-        name: prc.name || "—",
-        company: pr.company_name || "—",
-        role: prc.role || "",
-        country: "IT",
-        language: "italiano",
-        lastContact: formatRelativeDate(pr.last_interaction_at || prc.created_at),
-        priority: computePriority(prc.email, prc.phone, null, pr.last_interaction_at),
-        channels: inferChannels(prc.email, prc.phone),
-        email: prc.email || "",
-        origin: "report_aziende" as ContactOrigin,
-        originDetail: "Report Aziende",
-      });
-    }
-
-    // Sort by priority desc
     result.sort((a, b) => b.priority - a.priority);
     return result;
-  }, [partnerQ.data, importedQ.data, prospectQ.data]);
+  }, [bcQ.data]);
 
   const contactsMap = useMemo(() => {
     const map: Record<string, CockpitContact> = {};
