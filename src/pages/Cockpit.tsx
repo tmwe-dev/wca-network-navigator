@@ -5,7 +5,7 @@ import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
-import EmailCanvas from "@/components/workspace/EmailCanvas";
+import { Mail, Sparkles } from "lucide-react";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
