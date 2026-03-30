@@ -25,6 +25,8 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [intelliflowOpen, setIntelliflowOpen] = useState(false);
+  const [missionOpen, setMissionOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
