@@ -86,7 +86,7 @@ export function SortingList({
       </div>
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="px-2 pb-4 space-y-3">
           {groups.map((g) => (
             <div key={g.countryCode}>
