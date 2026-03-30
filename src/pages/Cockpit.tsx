@@ -280,9 +280,26 @@ const Cockpit = () => {
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
           {batchMode && selection.count > 0 ? (
-            <div className="w-full h-full overflow-auto">
-              <EmailCanvas />
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-4 text-center max-w-md"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Generazione Batch</h3>
+              <p className="text-sm text-muted-foreground">
+                {selection.count} contatti selezionati. Trascina sulle drop zone per generare uno alla volta,
+                oppure usa il comando AI per generare in batch.
+              </p>
+              <button
+                onClick={() => { setBatchMode(false); }}
+                className="text-xs text-primary hover:underline"
+              >
+                ← Torna alla vista drop zone
+              </button>
+            </motion.div>
           ) : (
             <ChannelDropZones
               isDragging={!!draggedContactId} draggedContactId={draggedContactId}
