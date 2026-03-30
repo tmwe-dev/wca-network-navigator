@@ -5,7 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { CreditCounter } from "./CreditCounter";
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles } from "lucide-react";
+import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles, Target, SlidersHorizontal } from "lucide-react";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
 import { toast } from "@/hooks/use-toast";
+import { MissionProvider } from "@/contexts/MissionContext";
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
+import { MissionDrawer } from "@/components/global/MissionDrawer";
+import { FiltersDrawer } from "@/components/global/FiltersDrawer";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 
