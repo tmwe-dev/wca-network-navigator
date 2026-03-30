@@ -1,18 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Globe, Users, ArrowRight, Activity, Mail, Calendar } from "lucide-react";
-import { usePartnerListStats } from "@/hooks/usePartnerListStats";
-import { useContacts } from "@/hooks/useContacts";
-import { useActivities } from "@/hooks/useActivities";
+import { useCountryStats } from "@/hooks/useCountryStats";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { totalPartners } = usePartnerListStats();
-  const { contacts } = useContacts();
-  const { activities } = useActivities();
+  const { stats } = useCountryStats();
 
-  const pendingActivities = activities?.filter(a => a.status === "pending")?.length ?? 0;
-  const contactCount = contacts?.length ?? 0;
+  const totalPartners = stats?.total ?? 0;
 
   const areas = [
     {
