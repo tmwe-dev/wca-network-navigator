@@ -35,7 +35,7 @@ function getDisplayFields(a: AllActivity) {
   };
 }
 
-function matchesFilter(a: AllActivity, f: FilterKey): boolean {
+function matchesFilter(a: AllActivity, f: WorkspaceFilterKey): boolean {
   const contact = a.selected_contact;
   const d = getDisplayFields(a);
   switch (f) {
