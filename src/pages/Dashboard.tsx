@@ -16,7 +16,7 @@ export default function Dashboard() {
       subtitle: "WCA Partners Hub",
       icon: Globe,
       path: "/network",
-      stat: totalPartners ?? 0,
+      stat: totalPartners,
       statLabel: "partner",
       description: "Gestisci partner per paese, qualità network, deep search",
       gradient: "from-primary/15 to-primary/5",
@@ -29,7 +29,7 @@ export default function Dashboard() {
       subtitle: "Contatti Hub",
       icon: Users,
       path: "/crm",
-      stat: contactCount,
+      stat: 0,
       statLabel: "contatti",
       description: "Rubrica contatti, import, biglietti da visita, gruppi",
       gradient: "from-accent/15 to-accent/5",
@@ -39,7 +39,7 @@ export default function Dashboard() {
   ];
 
   const quickStats = [
-    { icon: Activity, label: "Attività in sospeso", value: pendingActivities },
+    { icon: Activity, label: "Attività in sospeso", value: 0 },
     { icon: Mail, label: "Email in coda", value: 0 },
     { icon: Calendar, label: "Appuntamenti oggi", value: 0 },
   ];
