@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   ClipboardList, Sparkles, Briefcase, Send, StickyNote,
-  X, Loader2, Square, Save, AlertCircle,
+  X, Loader2, Square, Save, AlertCircle, Inbox,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +23,9 @@ interface UnifiedActionBarProps {
   onStopDeepSearch: () => void;
   onEmail: () => void;
   onSendToWorkspace: () => void;
+  onSendToCockpit?: () => void;
   sendingToWorkspace?: boolean;
+  sendingToCockpit?: boolean;
   deepSearching?: boolean;
   deepSearchProgress?: { current: number; total: number } | null;
   onSingleDeepSearch?: (id: string) => void;
@@ -39,7 +41,9 @@ export function UnifiedActionBar({
   onStopDeepSearch,
   onEmail,
   onSendToWorkspace,
+  onSendToCockpit,
   sendingToWorkspace,
+  sendingToCockpit,
   deepSearching,
   deepSearchProgress,
   onSingleDeepSearch,
@@ -136,6 +140,16 @@ export function UnifiedActionBar({
                 </Button>
               )}
             </>
+          )}
+
+          {/* Cockpit */}
+          {onSendToCockpit && (
+            <Button size="sm" variant="ghost"
+              onClick={onSendToCockpit}
+              className={btnClass} disabled={deepSearching || sendingToCockpit}>
+              {sendingToCockpit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Inbox className="w-3.5 h-3.5" />}
+              Cockpit
+            </Button>
           )}
 
           {/* Workspace */}
