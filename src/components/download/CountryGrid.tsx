@@ -24,7 +24,7 @@ interface CountryGridProps {
   onToggle: (code: string, name: string) => void;
   onRemove: (code: string) => void;
   filterMode: FilterKey;
-  onFilterModeChange?: (mode: FilterKey) => void;
+  
   directoryOnly?: boolean;
   onDirectoryOnlyChange?: (v: boolean) => void;
   compact?: boolean;
@@ -32,7 +32,7 @@ interface CountryGridProps {
 
 type SortKey = "name" | "partners";
 
-export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilterModeChange, compact = false }: CountryGridProps) {
+export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact = false }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
@@ -161,34 +161,6 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
           </button>
         </div>
 
-        {/* Quality filter chips */}
-        {onFilterModeChange && (
-          <div className="flex flex-wrap gap-1">
-            {([
-              { key: "no_profile" as FilterKey, label: "No Profilo", count: noProfileCount },
-              { key: "no_email" as FilterKey, label: "No Email", count: noEmailCount },
-              { key: "no_phone" as FilterKey, label: "No Tel", count: noPhoneCount },
-              { key: "no_deep" as FilterKey, label: "No Deep", count: noDeepCount },
-            ]).map(f => {
-              const isActive = filterMode === f.key;
-              const chipClass = f.count > 0 ? "micro-badge-red" : "micro-badge-green";
-              return (
-                <button
-                  key={f.key}
-                  onClick={() => onFilterModeChange(filterMode === f.key ? "all" : f.key)}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105",
-                    chipClass,
-                    isActive && "ring-1 ring-current shadow-[0_0_8px_currentColor]"
-                  )}
-                >
-                  {f.label}
-                  <span className="font-mono">{f.count}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
 
         {/* Selected flags */}
         {selected.length > 0 && (

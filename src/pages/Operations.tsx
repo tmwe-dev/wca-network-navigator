@@ -45,7 +45,8 @@ export default function Operations() {
   const [selectedCountries, setSelectedCountries] = useState<{ code: string; name: string }[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [directoryOnly, setDirectoryOnly] = useState(false);
-  const [filterMode, setFilterMode] = useState<FilterKey>("all");
+  const { filters } = useGlobalFilters();
+  const filterMode = (filters.quality === "all" ? "all" : filters.quality) as FilterKey;
   const [aiOpen, setAiOpen] = useState(false);
   const deepSearch = useDeepSearch();
   const [aliasGenerating, setAliasGenerating] = useState(false);
@@ -137,38 +138,16 @@ export default function Operations() {
               <h1 className="text-sm font-semibold text-gradient-blue">Network</h1>
             </div>
 
-            {/* Center: Stats pills */}
-            {globalStats && (() => {
-              const contextStats = (() => {
-                if (selectedCountries.length > 0 && countryStatsData?.byCountry) {
-                  const agg = { totalPartners: 0, withProfile: 0, withEmail: 0, withPhone: 0 };
-                  selectedCountries.forEach(c => {
-                    const s = countryStatsData.byCountry[c.code];
-                    if (s) {
-                      agg.totalPartners += s.total_partners;
-                      agg.withProfile += s.with_profile;
-                      agg.withEmail += s.with_email;
-                      agg.withPhone += s.with_phone;
-                    }
-                  });
-                  const dirCount = dirData ? selectedCountries.reduce((sum, c) => sum + (dirData[c.code]?.count || 0), 0) : 0;
-                  return { ...agg, scannedCountries: selectedCountries.length, totalDirectory: dirCount };
-                }
-                return globalStats;
-              })();
-              const missingProfile = contextStats.totalPartners - contextStats.withProfile;
-              const missingEmail = contextStats.totalPartners - contextStats.withEmail;
-              const missingPhone = contextStats.totalPartners - contextStats.withPhone;
-              return (
-                <div className="hidden md:flex items-center gap-1 overflow-x-auto">
-                  <StatPill icon={Users} value={contextStats.totalPartners} label="Partner" isDark={isDark} onClick={() => setFilterMode("all")} active={filterMode === "all"} variant="info" />
-                  <div className="w-px h-5 bg-border/50 mx-1 flex-shrink-0" />
-                  <StatPill icon={FileX} value={missingProfile} label="No Profilo" isDark={isDark} onClick={() => setFilterMode("no_profile")} active={filterMode === "no_profile"} variant={missingProfile > 0 ? "warn" : "ok"} />
-                  <StatPill icon={MailX} value={missingEmail} label="No Email" isDark={isDark} onClick={() => setFilterMode("no_email")} active={filterMode === "no_email"} variant={missingEmail > 0 ? "warn" : "ok"} />
-                  <StatPill icon={PhoneOff} value={missingPhone} label="No Tel" isDark={isDark} onClick={() => setFilterMode("no_phone")} active={filterMode === "no_phone"} variant={missingPhone > 0 ? "warn" : "ok"} />
-                </div>
-              );
-            })()}
+            {/* Center: Stats */}
+            {globalStats && (
+              <div className="hidden md:flex items-center gap-1.5">
+                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="font-mono">{globalStats.totalPartners}</span>
+                  <span>Partner</span>
+                </span>
+              </div>
+            )}
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
@@ -204,7 +183,6 @@ export default function Operations() {
                 onToggle={handleCountryClick}
                 onRemove={handleRemoveCountry}
                 filterMode={filterMode}
-                onFilterModeChange={setFilterMode}
                 directoryOnly={directoryOnly}
                 onDirectoryOnlyChange={setDirectoryOnly}
                 compact={hasSelection || isMobile}
