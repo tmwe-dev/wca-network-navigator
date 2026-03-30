@@ -66,17 +66,6 @@ export default function GoalBar({
   const [presetName, setPresetName] = useState("");
   const [showSave, setShowSave] = useState(false);
 
-  const { data: settings } = useAppSettings();
-
-  const goalItems = useMemo<ContentItem[]>(() => {
-    try { return settings?.custom_goals ? JSON.parse(settings.custom_goals) : DEFAULT_GOALS; }
-    catch { return DEFAULT_GOALS; }
-  }, [settings?.custom_goals]);
-
-  const proposalItems = useMemo<ContentItem[]>(() => {
-    try { return settings?.custom_proposals ? JSON.parse(settings.custom_proposals) : DEFAULT_PROPOSALS; }
-    catch { return DEFAULT_PROPOSALS; }
-  }, [settings?.custom_proposals]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
