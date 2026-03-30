@@ -21,7 +21,7 @@ interface Props {
   onToggleSelect?: (id: string) => void;
 }
 
-export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick }: Props) {
+export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick, selectedIds, onToggleSelect }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
