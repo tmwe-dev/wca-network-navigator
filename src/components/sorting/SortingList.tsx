@@ -124,6 +124,11 @@ export function SortingList({
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {!job.scheduled_at && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px] h-5">
+                        <Zap className="w-3 h-3 mr-1" /> Immediato
+                      </Badge>
+                    )}
                     {job.reviewed && (
                       <Badge variant="outline" className="text-emerald-600 border-emerald-300 text-[10px] h-5">
                         <CheckCircle2 className="w-3 h-3 mr-1" /> Rivisto
