@@ -45,7 +45,9 @@ export type { CockpitContact };
 
 const Cockpit = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+  const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null,
     companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
