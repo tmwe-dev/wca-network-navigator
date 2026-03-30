@@ -77,6 +77,14 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
               )}
             >
               <div className="flex items-center gap-2.5">
+                {onToggleSelect && (
+                  <Checkbox
+                    checked={selectedIds?.has(partner.id) || false}
+                    onCheckedChange={() => onToggleSelect(partner.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0"
+                  />
+                )}
                 {getRealLogoUrl(partner.logo_url) ? (
                   <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                 ) : (
