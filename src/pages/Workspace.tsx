@@ -193,7 +193,6 @@ export default function Workspace() {
         )}
 
         <div className="flex-1" />
-        <QualitySelector value={quality} onChange={setQuality} disabled={batchGenerating || deepSearch.running} />
 
         {deepSearch.running ? (
           <Button onClick={() => deepSearch.stop()} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">
