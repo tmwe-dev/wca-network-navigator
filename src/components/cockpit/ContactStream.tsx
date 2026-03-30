@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { ViewMode, CockpitFilter, ContactOrigin } from "@/pages/Cockpit";
+import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {

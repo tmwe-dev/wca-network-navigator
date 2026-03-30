@@ -52,7 +52,6 @@ const Cockpit = () => {
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
-  const visibleOrigins = gf.origin as Set<string>;
 
   const { contacts, contactsMap, isLoading } = useCockpitContacts();
   const selection = useSelection(contacts);
