@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye,
+  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search,
 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
@@ -18,6 +18,11 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useBusinessCards, useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
+import { useSendToCockpit } from "@/hooks/useCockpitContacts";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
@@ -36,6 +41,7 @@ function useDirectoryTotal() {
 }
 
 export default function Operations() {
+  const [networkView, setNetworkView] = useState<"partners" | "bca">("partners");
   const [isDark, setIsDark] = useState(() => {
     const s = localStorage.getItem("dl_theme");
     return s !== null ? s === "dark" : true;
@@ -133,10 +139,28 @@ export default function Operations() {
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
           <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
-            {/* Left: Title */}
+            {/* Left: Title + View Toggle */}
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
               <h1 className="text-sm font-semibold text-gradient-blue">Network</h1>
+              <div className="flex items-center ml-2 rounded-lg border border-border/60 bg-card/60 p-0.5">
+                <button
+                  onClick={() => setNetworkView("partners")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Users className="w-3.5 h-3.5" /> Partner
+                </button>
+                <button
+                  onClick={() => setNetworkView("bca")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    networkView === "bca" ? "bg-amber-500/15 text-amber-500" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Business Cards
+                </button>
+              </div>
             </div>
 
             {/* Center: Stats */}
@@ -167,7 +191,10 @@ export default function Operations() {
           </div>
           </TooltipProvider>
 
-          {/* ═══ MAIN: 3-column layout ═══ */}
+          {/* ═══ MAIN ═══ */}
+          {networkView === "bca" ? (
+            <BusinessCardsView />
+          ) : (
           <div className={cn(
             "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
             isMobile ? "flex flex-col" : "flex"
@@ -259,6 +286,7 @@ export default function Operations() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
@@ -296,5 +324,125 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/* ── Business Cards View ── */
+function BusinessCardsView() {
+  const { data: cards = [], isLoading } = useBusinessCards();
+  const { data: matchedPartnerIds } = useBusinessCardPartnerMatches();
+  const sendToCockpit = useSendToCockpit();
+  const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search) return cards;
+    const q = search.toLowerCase();
+    return cards.filter(c =>
+      (c.company_name || "").toLowerCase().includes(q) ||
+      (c.contact_name || "").toLowerCase().includes(q) ||
+      (c.event_name || "").toLowerCase().includes(q)
+    );
+  }, [cards, search]);
+
+  const toggleBca = (id: string) => {
+    setSelectedBca(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleSendToCockpit = async () => {
+    const items = Array.from(selectedBca).map(id => ({
+      sourceType: "business_card",
+      sourceId: id,
+      partnerId: cards.find(c => c.id === id)?.matched_partner_id || undefined,
+    }));
+    try {
+      const count = await sendToCockpit.mutateAsync(items);
+      toast.success(`${count} biglietti inviati al Cockpit`);
+      setSelectedBca(new Set());
+    } catch {
+      toast.error("Errore nell'invio al Cockpit");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col px-4 pb-3 gap-3 overflow-hidden">
+      {/* Search + Actions */}
+      <div className="flex items-center gap-3 pt-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cerca biglietto da visita..."
+            className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+          />
+        </div>
+        <span className="text-xs text-muted-foreground">{filtered.length} biglietti</span>
+        {selectedBca.size > 0 && (
+          <Button size="sm" className="h-7 text-xs gap-1.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25" variant="outline" onClick={handleSendToCockpit}>
+            <Send className="w-3 h-3" /> Invia {selectedBca.size} al Cockpit
+          </Button>
+        )}
+      </div>
+
+      {/* Cards grid */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <CreditCard className="w-12 h-12 text-muted-foreground/20" />
+            <p className="text-sm text-muted-foreground/60">Nessun biglietto da visita</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filtered.map(card => {
+              const isMatched = matchedPartnerIds?.has(card.matched_partner_id || "");
+              const isSelected = selectedBca.has(card.id);
+              return (
+                <div
+                  key={card.id}
+                  className={cn(
+                    "relative rounded-xl border p-3.5 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    isMatched ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card/50",
+                    isSelected && "ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
+                  )}
+                  onClick={() => toggleBca(card.id)}
+                >
+                  {isMatched && (
+                    <Badge variant="outline" className="absolute top-2 right-2 text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30">
+                      Matchato
+                    </Badge>
+                  )}
+                  <div className="flex items-start gap-2 mb-2">
+                    <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{card.contact_name || "—"}</p>
+                      <p className="text-xs text-foreground/80 truncate">{card.company_name || "—"}</p>
+                      {card.position && <p className="text-[11px] text-muted-foreground">{card.position}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+                    {card.email && <span className="px-1.5 py-0.5 rounded bg-muted/50 truncate max-w-[160px]">{card.email}</span>}
+                    {card.event_name && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">{card.event_name}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

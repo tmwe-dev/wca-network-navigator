@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 
-export type SourceTab = "all" | "wca" | "prospect" | "contact";
+export type SourceTab = "all" | "wca" | "prospect" | "contact" | "bca";
 
 export interface CockpitAIAction {
   type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
@@ -39,6 +39,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[]
   { value: "wca", label: "WCA", icon: Building2 },
   { value: "prospect", label: "Prospect", icon: FileSearch },
   { value: "contact", label: "Contatti", icon: Users },
+  { value: "bca", label: "BCA", icon: CreditCard },
 ];
 
 export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {

@@ -19,7 +19,7 @@ import {
 
 export type ViewMode = "card" | "list";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
-export type ContactOrigin = "wca" | "report_aziende" | "import";
+export type ContactOrigin = "wca" | "report_aziende" | "import" | "bca";
 
 export interface CockpitFilter {
   id: string;
@@ -61,7 +61,7 @@ const Cockpit = () => {
   // Filter contacts by source tab
   const contacts = useMemo(() => {
     if (sourceTab === "all") return allContacts;
-    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import" };
+    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import", bca: "bca" };
     return allContacts.filter(c => c.origin === originMap[sourceTab]);
   }, [allContacts, sourceTab]);
   const selection = useSelection(contacts);

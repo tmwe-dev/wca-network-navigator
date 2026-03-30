@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles } from "lucide-react";
+import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ContactOrigin } from "@/pages/Cockpit";
@@ -64,6 +64,13 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
     border: "border-chart-3/30",
     dot: "bg-chart-3",
   },
+  bca: {
+    label: "BCA",
+    bg: "bg-amber-500/15",
+    text: "text-amber-500",
+    border: "border-amber-500/30",
+    dot: "bg-amber-500",
+  },
 };
 
 // Left accent bar color per origin
@@ -71,6 +78,7 @@ const originAccent: Record<ContactOrigin, string> = {
   wca: "from-chart-1/60 to-chart-1/10",
   report_aziende: "from-chart-4/60 to-chart-4/10",
   import: "from-chart-3/60 to-chart-3/10",
+  bca: "from-amber-500/60 to-amber-500/10",
 };
 
 export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
@@ -87,10 +95,14 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 overflow-hidden",
-        isSelected
-          ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
-          : "border-border/80 hover:border-primary/30"
+        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg overflow-hidden",
+        contact.origin === "bca"
+          ? isSelected
+            ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10 hover:shadow-amber-500/10"
+            : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
+          : isSelected
+            ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10 hover:shadow-primary/5"
+            : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
       )}
     >
       {/* Left accent bar based on origin */}
@@ -115,6 +127,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
+                {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
                 <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
                 <span className="text-sm">{flag}</span>
               </div>

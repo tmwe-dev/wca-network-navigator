@@ -22,6 +22,7 @@ export interface CockpitContact {
   sourceId: string;
   partnerId: string | null;
   isScheduledReturn?: boolean;
+  isBusinessCard?: boolean;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
@@ -177,11 +178,12 @@ export function useCockpitContacts() {
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
           email: bc.email || "",
-          origin: "import" as ContactOrigin,
+          origin: "bca" as ContactOrigin,
           originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          isBusinessCard: true,
         });
       } else if (st === "prospect_contact") {
         const prc = prcMap[sid];

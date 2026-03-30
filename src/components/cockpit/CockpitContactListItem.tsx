@@ -37,6 +37,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
   wca: { label: "WCA", bg: "bg-chart-1/15", text: "text-chart-1", dot: "bg-chart-1" },
   report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", dot: "bg-chart-4" },
   import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", dot: "bg-chart-3" },
+  bca: { label: "BCA", bg: "bg-amber-500/15", text: "text-amber-500", dot: "bg-amber-500" },
 };
 
 export function CockpitContactListItem({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
@@ -52,7 +53,9 @@ export function CockpitContactListItem({ contact, flag, index, isSelected, onTog
       onDragEnd={onDragEnd}
       className={cn(
         "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",
-        isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
+        contact.origin === "bca"
+          ? isSelected ? "bg-amber-500/10 border border-amber-500/30" : "hover:bg-amber-500/5"
+          : isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
       )}
     >
       <Checkbox
