@@ -6,7 +6,7 @@ import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useMission } from "@/contexts/MissionContext";
-import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
+import type { EmailQuality } from "@/components/workspace/QualitySelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -37,11 +37,10 @@ const SOURCE_TABS = [
 ];
 
 export default function Workspace() {
-  const { goal, baseProposal, documents, referenceLinks } = useMission();
+  const { goal, baseProposal, documents, referenceLinks, quality } = useMission();
   const [sourceTab, setSourceTab] = useState<"partner" | "prospect" | "contact">("partner");
   const [selectedActivity, setSelectedActivity] = useState<AllActivity | null>(null);
   const [search, setSearch] = useState("");
-  const [quality, setQuality] = useState<EmailQuality>("standard");
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
@@ -194,7 +193,6 @@ export default function Workspace() {
         )}
 
         <div className="flex-1" />
-        <QualitySelector value={quality} onChange={setQuality} disabled={batchGenerating || deepSearch.running} />
 
         {deepSearch.running ? (
           <Button onClick={() => deepSearch.stop()} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">

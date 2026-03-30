@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { useWorkspaceDocuments, type WorkspaceDoc } from "@/hooks/useWorkspaceDocuments";
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
+import type { EmailQuality } from "@/components/workspace/QualitySelector";
 
 interface MissionState {
   goal: string;
@@ -19,6 +20,8 @@ interface MissionState {
   savePreset: (name: string, id?: string) => void;
   deletePreset: (id: string) => void;
   loadPreset: (preset: WorkspacePreset) => void;
+  quality: EmailQuality;
+  setQuality: (q: EmailQuality) => void;
 }
 
 const MissionCtx = createContext<MissionState | null>(null);
@@ -34,6 +37,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [baseProposal, setBaseProposal] = useState("");
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [quality, setQuality] = useState<EmailQuality>("standard");
 
   const { documents, uploading, upload, remove } = useWorkspaceDocuments();
   const { presets, save: savePresetMut, remove: removePresetMut } = useWorkspacePresets();
@@ -68,6 +72,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       documents, uploading, upload, removeDocument: remove,
       presets, activePresetId, setActivePresetId,
       savePreset, deletePreset, loadPreset,
+      quality, setQuality,
     }}>
       {children}
     </MissionCtx.Provider>

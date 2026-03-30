@@ -8,6 +8,7 @@ import { Target, ChevronDown, FileText, Link2, Plus, X, Upload, Save, Trash2 } f
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import QualitySelector from "@/components/workspace/QualitySelector";
 
 interface MissionDrawerProps {
   open: boolean;
@@ -21,7 +22,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [openSections, setOpenSections] = useState({
-    goal: true, proposal: true, documents: false, links: false,
+    goal: true, proposal: true, documents: false, links: false, quality: true,
   });
 
   const toggle = (key: keyof typeof openSections) =>
@@ -112,6 +113,14 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
                 <Input value={newLink} onChange={e => setNewLink(e.target.value)} placeholder="https://..." className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && addLink()} />
                 <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={addLink}><Plus className="w-3.5 h-3.5" /></Button>
               </div>
+            </div>
+          </Section>
+
+          {/* Quality AI */}
+          <Section title="Qualità AI" icon="⚡" open={openSections.quality} onToggle={() => toggle("quality")}>
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">Livello di generazione per email e outreach AI</p>
+              <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
             </div>
           </Section>
 
