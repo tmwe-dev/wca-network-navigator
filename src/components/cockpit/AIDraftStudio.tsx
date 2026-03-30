@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target } from "lucide-react";
+import ContentPicker from "@/components/shared/ContentPicker";
+import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState, DraftChannel } from "@/pages/Cockpit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
