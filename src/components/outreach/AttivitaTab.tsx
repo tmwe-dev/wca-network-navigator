@@ -49,7 +49,7 @@ export function AttivitaTab() {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden p-4 gap-4">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3 flex items-center gap-3">
@@ -101,7 +101,7 @@ export function AttivitaTab() {
       </Tabs>
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
