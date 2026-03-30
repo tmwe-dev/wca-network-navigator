@@ -143,14 +143,6 @@ export default function RADashboard() {
     "all" | "running" | "completed"
   >("all");
 
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
-
-  if (error) {
-    return <ErrorState error={error as Error} />;
-  }
-
   const stats = data ?? {
     totalProspects: 0,
     withEmail: 0,
@@ -166,6 +158,14 @@ export default function RADashboard() {
     if (activeJobsFilter === "all") return jobs;
     return jobs.filter((j) => j.status === activeJobsFilter);
   }, [stats.activeJobs, activeJobsFilter]);
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (error) {
+    return <ErrorState error={error as Error} />;
+  }
 
   const handleRecentCompanyClick = (id: string) => {
     navigate(`/ra/company/${id}`);
