@@ -22,9 +22,7 @@ import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
-import GoalBar from "@/components/workspace/GoalBar";
-import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
-import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
+import { useMission } from "@/contexts/MissionContext";
 
 const CATEGORIES = [
   { value: "offerta_cliente", label: "Offerta nuovo cliente" },
@@ -40,14 +38,7 @@ const VARIABLES = ["{{company_name}}", "{{contact_name}}", "{{city}}", "{{countr
 interface LinkItem { label: string; url: string; }
 
 export default function EmailComposer() {
-  // Goal / proposal state (shared with GoalBar)
-  const [goal, setGoal] = useState("");
-  const [baseProposal, setBaseProposal] = useState("");
-  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
-
-  const { documents, uploading, upload, remove: removeDoc } = useWorkspaceDocuments();
-  const { presets, save: savePresetMut, remove: removePresetMut } = useWorkspacePresets();
+  const { goal, baseProposal, documents, referenceLinks } = useMission();
 
   // Email state
   const [category, setCategory] = useState("altro");
@@ -287,17 +278,7 @@ export default function EmailComposer() {
     setSending(false);
   };
 
-  // Preset handlers
-  const handleLoadPreset = (preset: WorkspacePreset) => {
-    setGoal(preset.goal || "");
-    setBaseProposal(preset.base_proposal || "");
-    setReferenceLinks(preset.reference_links || []);
-    setActivePresetId(preset.id);
-  };
-  const handleSavePreset = (name: string, id?: string) => {
-    savePresetMut.mutate({ id, name, goal, base_proposal: baseProposal, document_ids: documents.map((d) => d.id), reference_links: referenceLinks });
-  };
-  const handleDeletePreset = (id: string) => { removePresetMut.mutate(id); };
+  // (Preset handlers now in MissionContext)
 
   const templatesByCategory = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -330,19 +311,7 @@ export default function EmailComposer() {
         </div>
       </div>
 
-      {/* GoalBar */}
-      <div className="shrink-0 px-4 py-2 border-b border-border/30 bg-card/50">
-        <GoalBar
-          goal={goal} baseProposal={baseProposal}
-          onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
-          documents={documents} onUploadDocument={upload} onRemoveDocument={removeDoc} uploading={uploading}
-          referenceLinks={referenceLinks}
-          onAddLink={(url) => setReferenceLinks((prev) => [...prev, url])}
-          onRemoveLink={(idx) => setReferenceLinks((prev) => prev.filter((_, i) => i !== idx))}
-          presets={presets} activePresetId={activePresetId}
-          onLoadPreset={handleLoadPreset} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset}
-        />
-      </div>
+      {/* Mission Context è nel pannello globale (Target icon nell'header) */}
 
       {/* 3-column layout */}
       <div className="flex-1 min-h-0">

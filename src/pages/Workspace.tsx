@@ -1,13 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
 import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks/useActivities";
-import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
-import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { useMission } from "@/contexts/MissionContext";
 import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users, Mail } from "lucide-react";
@@ -39,16 +37,11 @@ const SOURCE_TABS = [
 ];
 
 export default function Workspace() {
+  const { goal, baseProposal, documents, referenceLinks } = useMission();
   const [sourceTab, setSourceTab] = useState<"partner" | "prospect" | "contact">("partner");
   const [selectedActivity, setSelectedActivity] = useState<AllActivity | null>(null);
-  const [goal, setGoal] = useState("");
-  const [baseProposal, setBaseProposal] = useState("");
-  const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [quality, setQuality] = useState<EmailQuality>("standard");
-  const { documents, uploading, upload, remove } = useWorkspaceDocuments();
-  const { presets, save: savePreset, remove: removePreset } = useWorkspacePresets();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
@@ -70,29 +63,7 @@ export default function Workspace() {
 
   const activeSourceLabel = SOURCE_TABS.find(t => t.key === sourceTab)?.label ?? "";
 
-  // Preset handlers
-  const handleLoadPreset = useCallback((preset: WorkspacePreset) => {
-    setGoal(preset.goal || "");
-    setBaseProposal(preset.base_proposal || "");
-    setReferenceLinks(preset.reference_links || []);
-    setActivePresetId(preset.id);
-  }, []);
-
-  const handleSavePreset = useCallback((name: string, id?: string) => {
-    savePreset.mutate({
-      id,
-      name,
-      goal,
-      base_proposal: baseProposal,
-      document_ids: documents.map((d) => d.id),
-      reference_links: referenceLinks,
-    });
-  }, [goal, baseProposal, documents, referenceLinks, savePreset]);
-
-  const handleDeletePreset = useCallback((id: string) => {
-    removePreset.mutate(id);
-    if (activePresetId === id) setActivePresetId(null);
-  }, [removePreset, activePresetId]);
+  // (Preset handlers now in MissionContext)
 
   // Selection handlers
   const handleToggleSelect = useCallback((id: string) => {
@@ -339,19 +310,7 @@ export default function Workspace() {
         <ResizablePanel defaultSize={70} minSize={40}>
           {/* ═══ RIGHT PANEL: Config + Canvas ═══ */}
           <div className="h-full flex flex-col min-w-0 overflow-hidden">
-            {/* GoalBar */}
-            <div className="px-4 py-2.5 border-b border-border/30 shrink-0">
-              <GoalBar
-                goal={goal} baseProposal={baseProposal}
-                onGoalChange={setGoal} onBaseProposalChange={setBaseProposal}
-                documents={documents} onUploadDocument={upload} onRemoveDocument={remove} uploading={uploading}
-                referenceLinks={referenceLinks}
-                onAddLink={(url) => setReferenceLinks((prev) => [...prev, url])}
-                onRemoveLink={(idx) => setReferenceLinks((prev) => prev.filter((_, i) => i !== idx))}
-                presets={presets} activePresetId={activePresetId}
-                onLoadPreset={handleLoadPreset} onSavePreset={handleSavePreset} onDeletePreset={handleDeletePreset}
-              />
-            </div>
+            {/* Email Canvas (Mission Context è nel pannello globale) */}
 
             {/* Email Canvas */}
             <div className="flex-1 overflow-hidden">
