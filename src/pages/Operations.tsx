@@ -41,6 +41,7 @@ function useDirectoryTotal() {
 }
 
 export default function Operations() {
+  const [networkView, setNetworkView] = useState<"partners" | "bca">("partners");
   const [isDark, setIsDark] = useState(() => {
     const s = localStorage.getItem("dl_theme");
     return s !== null ? s === "dark" : true;
