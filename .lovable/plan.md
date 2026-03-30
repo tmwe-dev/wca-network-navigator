@@ -1,58 +1,86 @@
 
 
-# Due Pannelli Globali: Mission Context + Filtri
+# Redesign Pannelli Globali + Edge Hover + Pulizia Filtri Inline
 
-## Concetto
+## 3 problemi da risolvere
 
-Due drawer laterali sempre disponibili da **AppLayout**, accessibili da qualsiasi pagina:
+1. **Mission Drawer e Filters Drawer sono brutti** — design minimale, nessun polish
+2. **Nessun trigger edge-hover** — l'utente deve cliccare icone nell'header mischiato ad altre icone
+3. **Filtri inline ancora presenti** — Contacts (`ContactFiltersBar` con 392 righe), Cockpit (`TopCommandBar` con search/origin), Workspace (source tabs + search inline)
 
-1. **Pannello Destro — "Mission Context"** (Goal, Proposta, Documenti, Link, Preset)
-   - Aperto con un bottone fisso nell'header (icona Target)
-   - Contiene il GoalBar esistente, riutilizzando `useWorkspaceDocuments`, `useWorkspacePresets` e gli hook correlati
-   - Il contesto impostato qui viene usato automaticamente da tutte le funzioni di generazione email (Email Composer, Cockpit draft, Workspace, Campagne)
-   - Stato condiviso tramite React Context (`MissionContext`) in modo che ogni componente email possa leggere goal/proposta/documenti/link senza doverli passare come props
+---
 
-2. **Pannello Sinistro — "Filtri & Ordinamento"**
-   - Aperto con un bottone fisso nell'header (icona Filter)
-   - Contiene filtri contestuali alla pagina attiva (Network: qualita/paese, Cockpit: origine/priorita/canale, CRM: gruppo/origine)
-   - Ordinamento (Nome, Paese, Priorita, Azienda)
-   - Bottone "Applica" per confermare
-   - Emette i filtri tramite un Context (`GlobalFilters`) che le pagine leggono
+## 1. Edge Hover Trigger (AppLayout.tsx)
 
-## Modifiche ai file
-
-### Nuovi file
-1. **`src/contexts/MissionContext.tsx`** (~60 righe) — Context + Provider con stato goal, proposta, documenti, link. Wrappa `useWorkspaceDocuments` e `useWorkspacePresets`. Espone `useMission()`.
-2. **`src/components/global/MissionDrawer.tsx`** (~80 righe) — Sheet da destra che renderizza il GoalBar esistente, collegato a MissionContext.
-3. **`src/contexts/GlobalFiltersContext.tsx`** (~50 righe) — Context per filtri/ordinamento attivi, con setter e route-awareness.
-4. **`src/components/global/FiltersDrawer.tsx`** (~100 righe) — Sheet da sinistra con filtri contestuali per route, ordinamento, bottone "Applica".
-
-### File modificati
-5. **`src/components/layout/AppLayout.tsx`** — Aggiungere MissionProvider e GlobalFiltersProvider come wrapper. Aggiungere due bottoni nell'header (Target per Mission, Filter per Filtri). Renderizzare MissionDrawer e FiltersDrawer.
-6. **`src/pages/Cockpit.tsx`** — Rimuovere filtri inline, leggere da `useGlobalFilters()`. Rimuovere la gestione locale di `activeFilters`.
-7. **`src/pages/Operations.tsx`** — Rimuovere filtri/stat pills inline, leggere da `useGlobalFilters()`.
-8. **`src/components/cockpit/TopCommandBar.tsx`** — Rimuovere searchQuery inline (spostato nel FiltersDrawer).
-9. **`src/pages/Workspace.tsx`** / **`src/pages/EmailComposer.tsx`** — Leggere goal/proposta/documenti/link da `useMission()` invece di stato locale.
-
-## Flusso utente
-
-- L'utente apre qualsiasi pagina. Nell'header vede due icone: **Target** (destra) e **Filtro** (sinistra)
-- Click su Target: si apre il drawer destro con Goal, Proposta, Documenti, Link e Preset
-- Click su Filtro: si apre il drawer sinistro con filtri e ordinamento contestuali alla pagina attiva
-- Le maschere restano pulite, senza barre filtri o GoalBar incorporati
-- Quando genera un'email (da qualsiasi punto), il sistema usa automaticamente il contesto Mission
-
-## Dettaglio tecnico
+Aggiungere due zone invisibili (4px di larghezza) sui bordi sinistro e destro dello schermo. Al `mouseenter` (con 150ms debounce) si apre il drawer corrispondente. Questo si aggiunge ai bottoni header esistenti.
 
 ```text
-AppLayout
-├── MissionProvider (Context)
-│   ├── GlobalFiltersProvider (Context, route-aware)
-│   │   ├── Header [+Target btn] [+Filter btn]
-│   │   ├── <Outlet /> (pagine pulite, senza filtri inline)
-│   │   ├── MissionDrawer (Sheet side="right")
-│   │   └── FiltersDrawer (Sheet side="left")
+┌─[4px]──────────────────────────────────[4px]─┐
+│ ↕    Filters Drawer        Main Content       Mission Drawer    ↕ │
+│ hover                                                      hover │
+└──────────────────────────────────────────────┘
 ```
 
-I filtri nel drawer sinistro cambiano dinamicamente in base alla route (`/outreach` mostra origine/priorita/canale, `/network` mostra qualita/paese, `/crm` mostra gruppo/tipo). Il bottone "Applica" chiude il drawer e aggiorna il context.
+## 2. Redesign MissionDrawer (destra)
+
+Riscrivere `MissionDrawer.tsx` senza dipendere da `GoalBar` (componente pesante 227 righe con logica preset). Costruire UI dedicata e pulita:
+
+- Header con gradient sottile e icona Target
+- **4 sezioni collassabili** con accordion:
+  - **Obiettivo** — textarea compatta
+  - **Proposta Base** — textarea compatta
+  - **Documenti** — lista file con upload drag-drop
+  - **Link di Riferimento** — lista link con input add
+- **Preset selector** in fondo (select + save/delete)
+- Tutto collegato a `useMission()` come ora
+
+## 3. Redesign FiltersDrawer (sinistra)
+
+Riscrivere `FiltersDrawer.tsx` con design coerente e filtri route-aware piu completi:
+
+- Header con gradient e icona SlidersHorizontal
+- **Cerca** — input sempre visibile
+- **Ordinamento** — chip toggle
+- **Filtri contestuali per route**:
+  - `/outreach`, `/crm`: Origine (WCA/Import/RA), Stato, Priorita
+  - `/network`: Qualita dati (No Profilo/Email/Phone/Deep Search)
+  - `/contacts`: GroupBy (Paese/Origine/Status/Data), Holding Pattern, Stato lead
+- **Footer**: Reset + Applica con contatore filtri attivi
+
+## 4. Pulizia filtri inline dalle maschere
+
+### Contacts (`ContactListPanel.tsx`)
+- Rimuovere `<ContactFiltersBar>` — spostare groupBy, holdingPattern, search, sort nel `GlobalFiltersContext`
+- Aggiungere al context: `groupBy`, `holdingPattern`, `leadStatus` per la route `/contacts`
+- Il componente legge da `useGlobalFilters()` invece di stato locale
+
+### Cockpit (`Cockpit.tsx` + `TopCommandBar.tsx`)
+- Rimuovere `searchQuery` e `visibleOrigins` locali dal Cockpit — leggerli da `useGlobalFilters()`
+- `TopCommandBar`: rimuovere campo search inline, mantenere solo AI command input e view mode toggle
+- `ContactStream`: riceve search/origins dal context
+
+### Workspace (`Workspace.tsx`)
+- Rimuovere search bar inline (riga 283-290) — il search viene dal FiltersDrawer
+- Source tabs (WCA/Prospect/Contatti) restano inline perche sono specifici del workspace, non filtri generici
+
+## 5. GlobalFiltersContext ampliato
+
+Aggiungere al context i campi mancanti per supportare tutte le route:
+- `groupBy: string` (per Contacts)
+- `holdingPattern: string` (per Contacts)
+- `leadStatus: string` (per Contacts)
+- `origins: Set<string>` (per Cockpit — rinominare da `origin`)
+
+## File modificati
+
+| File | Azione |
+|------|--------|
+| `src/components/global/MissionDrawer.tsx` | Riscritto — UI dedicata con accordion |
+| `src/components/global/FiltersDrawer.tsx` | Riscritto — filtri route-aware completi |
+| `src/contexts/GlobalFiltersContext.tsx` | Ampliato con groupBy, holdingPattern, leadStatus |
+| `src/components/layout/AppLayout.tsx` | Aggiungere edge-hover zones |
+| `src/components/contacts/ContactListPanel.tsx` | Rimuovere ContactFiltersBar, leggere da context |
+| `src/pages/Cockpit.tsx` | Rimuovere searchQuery/visibleOrigins locali |
+| `src/components/cockpit/TopCommandBar.tsx` | Rimuovere search inline |
+| `src/pages/Workspace.tsx` | Rimuovere search bar inline |
 
