@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
+export type WorkspaceFilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
+export type EmailGenFilter = "all" | "generated" | "to_generate";
+export type SortingFilterMode = "all" | "unreviewed" | "reviewed" | "today" | "immediate" | "scheduled";
+
 export interface GlobalFilterState {
   search: string;
   sortBy: string;
@@ -9,6 +13,14 @@ export interface GlobalFilterState {
   groupBy: string;
   holdingPattern: string;
   leadStatus: string;
+  outreachTab: string;
+  // Workspace filters
+  workspaceFilters: Set<WorkspaceFilterKey>;
+  emailGenFilter: EmailGenFilter;
+  workspaceCountries: Set<string>;
+  // Sorting filters
+  sortingFilter: SortingFilterMode;
+  sortingSearch: string;
 }
 
 interface GlobalFiltersCtxValue {
