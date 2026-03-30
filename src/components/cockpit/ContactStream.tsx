@@ -148,14 +148,19 @@ export function ContactStream({
       {viewMode === "card" ? (
         <div className="space-y-2.5">
           {filteredContacts.map((contact, i) => (
-            <CockpitContactCard
-              key={contact.id} contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
-              isSelected={selectedIds.has(contact.id)}
-              onToggleSelect={() => onToggle(contact.id)}
-              onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
-              onDeepSearch={() => onSingleDeepSearch(contact.id)}
-              onAlias={() => onSingleAlias(contact.id)}
-            />
+            <div key={contact.id} className="relative group">
+              <CockpitContactCard
+                contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
+                isSelected={selectedIds.has(contact.id)}
+                onToggleSelect={() => onToggle(contact.id)}
+                onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
+                onDeepSearch={() => onSingleDeepSearch(contact.id)}
+                onAlias={() => onSingleAlias(contact.id)}
+              />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ContactActionMenu contact={contact} />
+              </div>
+            </div>
           ))}
         </div>
       ) : (
