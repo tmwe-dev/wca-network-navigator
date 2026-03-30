@@ -22,7 +22,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [openSections, setOpenSections] = useState({
-    goal: true, proposal: true, documents: false, links: false,
+    goal: true, proposal: true, documents: false, links: false, quality: true,
   });
 
   const toggle = (key: keyof typeof openSections) =>
