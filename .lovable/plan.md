@@ -1,62 +1,46 @@
 
 
-# Unificare Cockpit e Workspace in un unico ambiente
+# Business Cards Tab nel Network + Evidenziazione nel Cockpit
 
-## Concetto
+## Cosa cambia
 
-Cockpit e Workspace fanno essenzialmente la stessa cosa con due modalita':
-- **Cockpit**: drag-and-drop 1-a-1 su drop zone canale, genera bozza AI, azioni rapide (svolta/nota/programma)
-- **Workspace**: lista attivita' per source type, generazione batch email, email canvas con anteprima
+1. **Network (Operations)**: aggiunta di un tab "Business Cards" sopra la griglia paesi/partner, che mostra le business card dalla tabella `business_cards`. Le card matchate con partner vengono evidenziate (badge dorato, link al partner). Da qui si possono selezionare e inviare al Cockpit.
 
-Si fondono in un **unico Cockpit** che supporta entrambe le modalita' operative. La tab "Workspace" sparisce da Outreach.
+2. **Cockpit source tabs**: aggiunta di un quinto source tab "BCA" (Business Cards) nel TopCommandBar. I contatti provenienti da business card vengono mostrati con uno stile visivo distinto (bordo dorato, icona biglietto da visita) per distinguerli dai contatti normali.
 
-## Struttura risultante di Outreach
+3. **cockpit_queue**: supporto per `source_type = 'business_card'` + `source_id` che punta a `business_cards.id`.
 
-```text
-[Cockpit] [In Uscita] [Attività] [Circuito]
-```
+## Dettagli tecnici
 
-Da 5 tab a 4.
+### 1. `src/pages/Operations.tsx`
+- Aggiungere un toggle/tab in alto: "Partner" (vista attuale) | "Business Cards"
+- Quando attivo "Business Cards": mostrare una versione semplificata di `BusinessCardsHub` con possibilita' di selezionare card e pulsante "Invia a Cockpit" che inserisce nella `cockpit_queue` con `source_type = 'business_card'`
 
-## Nuovo Cockpit unificato
+### 2. `src/components/cockpit/TopCommandBar.tsx`
+- Estendere `SourceTab` type: `"all" | "wca" | "prospect" | "contact" | "bca"`
+- Aggiungere tab "BCA" con icona `CreditCard` nel SOURCE_TABS array
 
-Il layout resta a 3 colonne ma diventa piu' flessibile:
+### 3. `src/hooks/useCockpitContacts.ts`
+- Nella query cockpit_queue, gestire `source_type = 'business_card'`: fetch da `business_cards` e mappare a `CockpitContact` con `origin: "bca"`
+- Aggiungere flag `isBusinessCard: boolean` al tipo `CockpitContact`
 
-### Colonna sinistra — Lista contatti unificata
-- **Source tabs** (WCA / Prospect / Contatti) come nel Workspace attuale
-- Lista contatti dalla `cockpit_queue` + attivita' pending per il source selezionato
-- Supporta: selezione multipla, drag-and-drop, azioni rapide (svolta/nota/programma)
-- Checkbox + select all/deselect
+### 4. `src/components/cockpit/CockpitContactCard.tsx` + `CockpitContactListItem.tsx`
+- Se `isBusinessCard === true`: bordo dorato/ambrato, piccola icona biglietto da visita, badge "BCA" per distinguerli visivamente
 
-### Colonna centrale — Area di lavoro duale
-- Se **nessun contatto selezionato o drag attivo**: mostra le **ChannelDropZones** (drag-and-drop per generazione 1-a-1)
-- Se **contatti selezionati + click "Genera"**: mostra l'**EmailCanvas** (anteprima/modifica email batch)
-- Transizione fluida tra le due viste
+### 5. `src/pages/Cockpit.tsx`
+- Aggiornare `ContactOrigin` type per includere `"bca"`
+- Aggiornare il filtro sourceTab per mappare `"bca"` → contatti con `origin === "bca"`
 
-### Colonna destra — AIDraftStudio
-- Rimane come oggi: anteprima bozza AI dopo drag-and-drop
-- Quando si usa la modalita' batch, mostra il progresso della generazione
-
-### Barra azioni in alto (TopCommandBar unificata)
-Fonde la TopCommandBar del Cockpit con la action bar del Workspace:
-- Source tabs (WCA/Prospect/Contatti)
-- Deep Search (singola e bulk)
-- Genera (singola e bulk)
-- Elimina selezionati
-- Progresso batch/deep search
-
-## Modifiche tecniche
+## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/pages/Cockpit.tsx` | Integrare logica Workspace: source tabs, batch generation, EmailCanvas nella colonna centrale |
-| `src/pages/Outreach.tsx` | Rimuovere tab Workspace, passare da 5 a 4 tab |
-| `src/components/cockpit/TopCommandBar.tsx` | Aggiungere source tabs + pulsanti batch (Genera, Deep Search, Elimina) |
-| `src/components/cockpit/ContactStream.tsx` | Aggiungere source tab filtering, supporto attivita' pending |
+| `src/pages/Operations.tsx` | Aggiungere toggle Partner/Business Cards + azione "Invia a Cockpit" |
+| `src/components/cockpit/TopCommandBar.tsx` | Aggiungere source tab "BCA" |
+| `src/hooks/useCockpitContacts.ts` | Supportare `source_type = 'business_card'` + flag `isBusinessCard` |
+| `src/pages/Cockpit.tsx` | Estendere `ContactOrigin`, aggiornare filtro source |
+| `src/components/cockpit/CockpitContactCard.tsx` | Stile dorato per business card |
+| `src/components/cockpit/CockpitContactListItem.tsx` | Badge/bordo dorato per business card |
 
-File **non piu' necessari** (ma non eliminati per sicurezza):
-- `src/pages/Workspace.tsx` — non piu' referenziato
-- `src/components/workspace/ContactListPanel.tsx` — logica migrata nel ContactStream
-
-Nessuna modifica al database.
+Nessuna modifica al database — la `cockpit_queue` supporta gia' qualsiasi `source_type` testuale.
 
