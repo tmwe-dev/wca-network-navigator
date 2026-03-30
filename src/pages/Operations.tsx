@@ -139,10 +139,28 @@ export default function Operations() {
           {/* ═══ TOP BAR ═══ */}
           <TooltipProvider delayDuration={150}>
           <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
-            {/* Left: Title */}
+            {/* Left: Title + View Toggle */}
             <div className="flex items-center gap-3">
               <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
               <h1 className="text-sm font-semibold text-gradient-blue">Network</h1>
+              <div className="flex items-center ml-2 rounded-lg border border-border/60 bg-card/60 p-0.5">
+                <button
+                  onClick={() => setNetworkView("partners")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Users className="w-3.5 h-3.5" /> Partner
+                </button>
+                <button
+                  onClick={() => setNetworkView("bca")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    networkView === "bca" ? "bg-amber-500/15 text-amber-500" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Business Cards
+                </button>
+              </div>
             </div>
 
             {/* Center: Stats */}
