@@ -1,45 +1,79 @@
 
+# Spostare definitivamente i filtri di Outreach nella sidebar
 
-# Cockpit Alimentato da Selezione Utente + Business Cards nel Network
+## Problema reale
+Hai ragione: in `/outreach` ci sono ancora filtri inline sia in **Workspace** sia in **In Uscita**. Il nodo tecnico è questo: oggi il drawer conosce solo la route `/outreach`, ma **non sa quale tab interna è attiva** (`cockpit`, `inuscita`, `workspace`, ecc.). Per questo i filtri sono rimasti dentro i componenti locali.
 
-## Problema attuale
-Il Cockpit attualmente pesca direttamente dalla tabella `business_cards`, come se fosse una vista dedicata ai BCA. Sbagliato. Il flusso corretto e':
+## Soluzione
+Rendo il drawer **consapevole della tab interna di Outreach** e porto lì tutti i filtri, lasciando nelle pagine solo le azioni operative.
 
-1. L'utente sta nel **Network**, vede i partner e i loro contatti
-2. Seleziona quelli che vuole lavorare e clicca "Invia a Cockpit" o "Invia a Workspace"
-3. Il **Cockpit** mostra SOLO quei contatti selezionati (un "batch" di lavoro)
-4. I **Biglietti da visita** sono una sorgente aggiuntiva visibile nel Network, da cui l'utente puo' ugualmente selezionare e inviare al Cockpit
+### 1. Rendere globale la tab attiva di Outreach
+In `src/contexts/GlobalFiltersContext.tsx` aggiungo stato e setter per la sezione interna attiva di Outreach, più bucket separati per i filtri di:
+- **Workspace**
+- **In Uscita**
 
-## Cosa cambia
+Così i filtri non si mischiano tra le due viste.
 
-### 1. Tabella `cockpit_queue` (nuova)
-Serve un posto dove salvare "questi contatti sono stati inviati al cockpit". Campi:
-- `id`, `user_id`
-- `source_type` ("partner_contact" | "business_card" | "prospect_contact")
-- `source_id` (uuid del record originale)
-- `partner_id` (per contesto azienda)
-- `created_at`
-- `status` ("queued" | "worked")
+### 2. Collegare il tab di Outreach al drawer
+In `src/pages/Outreach.tsx` sincronizzo il tab selezionato con il `GlobalFiltersContext`.
 
-### 2. Network: Azione "Invia a Cockpit"
-Nella `UnifiedActionBar` (o `BulkActionBar`), aggiungere un pulsante "Cockpit" che prende i contatti dei partner selezionati e li inserisce in `cockpit_queue`.
+Risultato:
+- se sei su **Workspace**, il drawer mostra solo filtri Workspace
+- se sei su **In Uscita**, il drawer mostra solo filtri In Uscita
+- niente più pannelli sbagliati o generici
 
-### 3. Network: Business Cards visibili
-Nel Network aggiungere una vista/tab "Biglietti da Visita" che mostra i BCA dell'utente. Da li' l'utente puo' selezionare e inviarli al Cockpit con la stessa azione.
+### 3. Portare i filtri di In Uscita nella sidebar
+In `src/components/global/FiltersDrawer.tsx` aggiungo la sezione specifica per **In Uscita** con:
+- cerca azienda/contatto
+- Tutti
+- Immediati
+- Programmati
+- Da rivedere
+- Rivisti
 
-### 4. Cockpit: legge da `cockpit_queue`
-`useCockpitContacts` viene riscritto per leggere da `cockpit_queue` (join con `partner_contacts`, `business_cards`, o `prospect_contacts` in base a `source_type`). Mostra solo i record in coda, non piu' tutto il DB.
+In `src/components/sorting/SortingList.tsx` rimuovo:
+- search input locale
+- chip filtro locali
 
-### 5. Workspace: stesso meccanismo
-L'azione "Invia a Workspace" rimane separata ma usa lo stesso principio (gia' implementato tramite activities).
+La lista leggerà tutto dal context globale.
+
+### 4. Completare anche Workspace nello stesso passaggio
+Già che il problema è identico, completo anche Workspace nello stesso refactoring:
+- rimuovo il blocco `Collapsible` dei filtri da `src/components/workspace/ContactListPanel.tsx`
+- sposto nel drawer:
+  - Stato Email
+  - Dati Contatto
+  - Arricchimento
+  - Paese
+
+### 5. Cosa resta nelle pagine
+Restano in alto solo i controlli operativi:
+- **Deep Search**
+- **Genera**
+- **Elimina**
+- **Select all / none**
+- contatori e stato
+
+I filtri spariscono dal contenuto centrale.
+
+## Dettagli tecnici
+- Nessuna modifica al database
+- Nessuna modifica backend
+- Il `reset` del drawer verrà reso **contestuale alla tab attiva di Outreach**, così non azzera filtri di altre sezioni per errore
+- Il placeholder della ricerca nel drawer verrà adattato alla vista attiva (`Workspace` vs `In Uscita`)
 
 ## File coinvolti
-
 | File | Azione |
 |------|--------|
-| DB Migration | **Nuova tabella** `cockpit_queue` con RLS |
-| `src/hooks/useCockpitContacts.ts` | Riscrivere per leggere da `cockpit_queue` + join sulle tabelle sorgente |
-| `src/components/partners/UnifiedActionBar.tsx` | Aggiungere pulsante "Cockpit" |
-| `src/pages/Cockpit.tsx` | Adattare per il nuovo data source (rimuovere logica BCA-only) |
-| Network page (Operations/PartnerHub) | Aggiungere tab/sezione Business Cards selezionabili |
+| `src/contexts/GlobalFiltersContext.tsx` | Aggiungere `outreachTab` + stati filtro separati per Workspace e In Uscita |
+| `src/pages/Outreach.tsx` | Sincronizzare tab attiva con il context globale |
+| `src/components/global/FiltersDrawer.tsx` | Mostrare filtri diversi in base a `outreachTab` |
+| `src/components/sorting/SortingList.tsx` | Rimuovere toolbar filtri locale e leggere dal context |
+| `src/components/workspace/ContactListPanel.tsx` | Rimuovere blocco filtri inline e leggere dal context |
 
+## Risultato finale
+Dentro Outreach avrai una UI pulita:
+- **contenuto al centro**
+- **filtri solo nella sidebar sinistra**
+- **Mission/AI solo nella sidebar destra**
+- zero duplicazioni, zero blocchi filtro sparsi nelle pagine
