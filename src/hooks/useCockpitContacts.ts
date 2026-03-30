@@ -221,6 +221,32 @@ export function useCockpitContacts() {
       }
     }
 
+    // Add scheduled return activities
+    for (const act of scheduledActivities) {
+      const meta = (act.source_meta || {}) as any;
+      const existsAlready = result.some(r => r.sourceId === act.source_id);
+      if (existsAlready) continue;
+      result.push({
+        id: `act-${act.id}`,
+        queueId: act.id,
+        name: meta.name || act.title || "—",
+        company: meta.company || "—",
+        role: "",
+        country: meta.country || "",
+        language: inferLanguage(meta.country),
+        lastContact: formatRelativeDate(act.created_at),
+        priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
+        channels: inferChannels(meta.email, null, null),
+        email: meta.email || "",
+        origin: "wca" as ContactOrigin,
+        originDetail: `📅 Riprogrammato`,
+        sourceType: act.source_type,
+        sourceId: act.source_id,
+        partnerId: act.partner_id,
+        isScheduledReturn: true,
+      });
+    }
+
     result.sort((a, b) => b.priority - a.priority);
     return result;
   }, [q.data]);
