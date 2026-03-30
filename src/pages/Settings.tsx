@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown } from "lucide-react";
+import { Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2 } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import ContentManager from "@/components/settings/ContentManager";
@@ -8,6 +8,7 @@ import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
 import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
 import { RASettings } from "@/components/settings/RASettings";
+import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -42,6 +43,9 @@ export default function Settings() {
             <TabsTrigger value="wca" className="gap-1.5 text-xs">
               <Link className="w-3.5 h-3.5" /> Connessioni
             </TabsTrigger>
+            <TabsTrigger value="voce-ai" className="gap-1.5 text-xs">
+              <Volume2 className="w-3.5 h-3.5" /> Voce AI
+            </TabsTrigger>
             <TabsTrigger value="import-export" className="gap-1.5 text-xs">
               <Download className="w-3.5 h-3.5" /> Import / Export
             </TabsTrigger>
@@ -65,6 +69,12 @@ export default function Settings() {
             <TabsContent value="wca" className="m-0">
               <div className="float-panel p-5">
                 <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="voce-ai" className="m-0">
+              <div className="float-panel p-5">
+                <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
               </div>
             </TabsContent>
 
