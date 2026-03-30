@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/select";
 
 import {
-  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch, RefreshCw, Loader2,
+  Search, CheckCircle, X, CheckSquare, Mail, Phone, RefreshCw, Loader2,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
@@ -17,7 +17,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
 import { toast } from "sonner";
 
-export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing" | "no_email" | "no_phone" | "no_deep";
+export type FilterKey = "all" | "no_profile" | "no_email" | "no_phone" | "no_deep";
 
 interface CountryGridProps {
   selected: { code: string; name: string }[];
@@ -30,13 +30,13 @@ interface CountryGridProps {
   compact?: boolean;
 }
 
-type SortKey = "name" | "partners" | "directory" | "completion";
+type SortKey = "name" | "partners";
 
 export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilterModeChange, compact = false }: CountryGridProps) {
   const isDark = useTheme();
   const th = t(isDark);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [sortBy, setSortBy] = useState<SortKey>("partners");
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -66,7 +66,6 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
     } else {
       toast.success(`Sync completata: ${totalRecords} record aggiornati${errors > 0 ? ` (${errors} errori)` : ""}`, { id: toastId });
     }
-    queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
     queryClient.invalidateQueries({ queryKey: ["partners"] });
     queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     setSyncing(false);
@@ -75,76 +74,38 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   const { data: statsData } = useCountryStats();
   const stats = statsData?.byCountry || {};
 
-  const { data: cacheData = {} } = useQuery({
-    queryKey: ["cache-data-by-country"],
-    queryFn: async () => {
-      const { data } = await supabase.rpc("get_directory_counts");
-      const result: Record<string, { count: number; verified: boolean }> = {};
-      (data || []).forEach((r: any) => {
-        result[r.country_code] = { count: Number(r.member_count) || 0, verified: r.is_verified === true };
-      });
-      return result;
-    },
-    staleTime: 60_000,
-  });
-
   const selectedCodes = new Set(selected.map(c => c.code));
-  const exploredSet = new Set(Object.keys(cacheData));
 
-  const getStatus = (code: string) => {
-    const s = stats[code];
-    const c = cacheData[code];
-    const pCount = s?.total_partners || 0;
-    const cCount = c?.count || 0;
-    const hasDir = exploredSet.has(code);
-    const withProfile = s?.with_profile || 0;
-    const noProfile = s?.without_profile || 0;
-    const allDownloaded = hasDir && cCount > 0 && pCount >= cCount;
-    const allProfiles = pCount > 0 && noProfile === 0;
-    const isDone = allDownloaded && allProfiles;
-    const isTodo = pCount === 0 || !allDownloaded || !allProfiles;
-    return { pCount, cCount, hasDir, withProfile, noProfile, allDownloaded, allProfiles, isDone, isTodo };
-  };
+  // Only show countries that have partners or are currently selected
+  const countriesWithPartners = WCA_COUNTRIES.filter(c => {
+    const s = stats[c.code];
+    return (s && s.total_partners > 0) || selectedCodes.has(c.code);
+  });
 
   // Counts for filter labels
-  let doneCount = 0, todoCount = 0, noProfileCount = 0, missingCount = 0, totalWithData = 0;
-  let noEmailCount = 0, noPhoneCount = 0, noDeepCount = 0;
-  WCA_COUNTRIES.forEach(c => {
-    const st = getStatus(c.code);
+  let noProfileCount = 0, noEmailCount = 0, noPhoneCount = 0, noDeepCount = 0;
+  countriesWithPartners.forEach(c => {
     const s = stats[c.code];
-    if (st.isDone) doneCount++;
-    if (st.isTodo && (st.pCount > 0 || exploredSet.has(c.code))) todoCount++;
-    if (st.noProfile > 0) noProfileCount++;
-    if (!exploredSet.has(c.code) && st.pCount === 0) missingCount++;
-    if (st.pCount > 0 || exploredSet.has(c.code)) totalWithData++;
-    if (st.pCount > 0 && (st.pCount - (s?.with_email || 0)) > 0) noEmailCount++;
-    if (st.pCount > 0 && (st.pCount - (s?.with_phone || 0)) > 0) noPhoneCount++;
-    if (st.pCount > 0 && (st.pCount - (s?.with_deep_search || 0)) > 0) noDeepCount++;
+    if (!s || s.total_partners === 0) return;
+    if (s.without_profile > 0) noProfileCount++;
+    if ((s.total_partners - s.with_email) > 0) noEmailCount++;
+    if ((s.total_partners - s.with_phone) > 0) noPhoneCount++;
+    if ((s.total_partners - s.with_deep_search) > 0) noDeepCount++;
   });
 
-  const filtered = WCA_COUNTRIES.filter(c => {
+  const filtered = countriesWithPartners.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
-    const st = getStatus(c.code);
-    // Show countries with data or selected, hide empty unless filter=missing
-    if (filterMode !== "missing" && !cacheData[c.code] && st.pCount === 0 && !selectedCodes.has(c.code)) return false;
-    if (filterMode === "done") return st.isDone;
-    if (filterMode === "todo") return st.isTodo && (st.pCount > 0 || exploredSet.has(c.code));
-    if (filterMode === "no_profile") return st.noProfile > 0;
-    if (filterMode === "missing") return !exploredSet.has(c.code) && st.pCount === 0;
-    if (filterMode === "no_email") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_email || 0)) > 0; }
-    if (filterMode === "no_phone") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_phone || 0)) > 0; }
-    if (filterMode === "no_deep") { const s = stats[c.code]; return st.pCount > 0 && (st.pCount - (s?.with_deep_search || 0)) > 0; }
+    const s = stats[c.code];
+    if (!s || s.total_partners === 0) return selectedCodes.has(c.code);
+    if (filterMode === "no_profile") return s.without_profile > 0;
+    if (filterMode === "no_email") return (s.total_partners - s.with_email) > 0;
+    if (filterMode === "no_phone") return (s.total_partners - s.with_phone) > 0;
+    if (filterMode === "no_deep") return (s.total_partners - s.with_deep_search) > 0;
     return true;
   }).sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
-    const sA = stats[a.code], sB = stats[b.code];
-    if (sortBy === "partners") return (sB?.total_partners || 0) - (sA?.total_partners || 0);
-    if (sortBy === "directory") return (cacheData[b.code]?.count || 0) - (cacheData[a.code]?.count || 0);
-    const cA = cacheData[a.code]?.count || 0, cB = cacheData[b.code]?.count || 0;
-    const pctA = cA > 0 ? (sA?.total_partners || 0) / cA : -1;
-    const pctB = cB > 0 ? (sB?.total_partners || 0) / cB : -1;
-    return pctA - pctB;
+    return (stats[b.code]?.total_partners || 0) - (stats[a.code]?.total_partners || 0);
   });
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCodes.has(c.code));
@@ -155,21 +116,17 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
     });
   };
 
-
   const sortLabel = (key: SortKey) => {
     switch (key) {
       case "name": return "Nome A-Z";
       case "partners": return "N° Partner";
-      case "directory": return "Directory";
-      case "completion": return "% Complet.";
     }
   };
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-1.5">
-      {/* ═══ TOOLBAR: Search + Filter dropdown + Sort dropdown ═══ */}
+      {/* ═══ TOOLBAR ═══ */}
       <div className="flex-shrink-0 space-y-1.5">
-        {/* Row 1: Search */}
         <div className="relative">
           <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${th.dim}`} />
           <Input
@@ -185,7 +142,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(["name", "partners", "directory", "completion"] as SortKey[]).map(k => (
+              {(["name", "partners"] as SortKey[]).map(k => (
                 <SelectItem key={k} value={k} className="text-xs">{sortLabel(k)}</SelectItem>
               ))}
             </SelectContent>
@@ -208,20 +165,13 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
         {onFilterModeChange && (
           <div className="flex flex-wrap gap-1">
             {([
-              { key: "missing" as FilterKey, label: "Missing", count: missingCount },
               { key: "no_profile" as FilterKey, label: "No Profilo", count: noProfileCount },
               { key: "no_email" as FilterKey, label: "No Email", count: noEmailCount },
               { key: "no_phone" as FilterKey, label: "No Tel", count: noPhoneCount },
               { key: "no_deep" as FilterKey, label: "No Deep", count: noDeepCount },
-              { key: "done" as FilterKey, label: "✓ Completi", count: doneCount },
             ]).map(f => {
-              // badge-green for "done"/zero, badge-red for "no_*" with count, badge-amber for low count
               const isActive = filterMode === f.key;
-              const chipClass = f.key === "done"
-                ? "micro-badge-green"
-                : f.count > 0
-                  ? "micro-badge-red"
-                  : "micro-badge-green";
+              const chipClass = f.count > 0 ? "micro-badge-red" : "micro-badge-green";
               return (
                 <button
                   key={f.key}
@@ -270,8 +220,6 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
               key={c.code}
               country={c}
               stats={stats}
-              cacheData={cacheData}
-              getStatus={getStatus}
               isSelected={selectedCodes.has(c.code)}
               onToggle={onToggle}
               isDark={isDark}
@@ -305,60 +253,34 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   );
 }
 
-/* ═══ Coverage color helper ═══ */
-function coverageColor(count: number, total: number, isDark: boolean) {
-  if (total === 0 || count === 0) return isDark ? "text-rose-400/60" : "text-rose-400";
-  const pct = count / total;
-  if (pct >= 0.8) return isDark ? "text-emerald-400" : "text-emerald-600";
-  if (pct >= 0.5) return isDark ? "text-amber-400" : "text-amber-600";
-  return isDark ? "text-rose-400" : "text-rose-500";
-}
-
 /* ═══ COUNTRY CARD ═══ */
-function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggle, isDark }: {
+function CountryCard({ country, stats, isSelected, onToggle, isDark }: {
   country: { code: string; name: string };
   stats: Record<string, any>;
-  cacheData: Record<string, { count: number; verified: boolean }>;
-  getStatus: (code: string) => any;
   isSelected: boolean;
   onToggle: (code: string, name: string) => void;
   isDark: boolean;
 }) {
-  const st = getStatus(country.code);
   const s = stats[country.code];
-  const dlPct = st.cCount > 0 ? Math.round((st.pCount / st.cCount) * 100) : 0;
-  const missing = st.cCount > 0 ? st.cCount - st.pCount : 0;
+  const pCount = s?.total_partners || 0;
+  const withEmail = s?.with_email || 0;
+  const withPhone = s?.with_phone || 0;
+  const withProfile = s?.with_profile || 0;
+  const noProfile = s?.without_profile || 0;
 
-  // Unified badge: 🟢 complete | 🟡 downloaded but missing profiles | 🟡 partial | 🔴 0% | ⚪ no data
-  let dotColor: string, label: string, tooltip: string;
-  if (st.cCount > 0 && dlPct >= 100 && st.noProfile === 0) {
-    dotColor = "bg-emerald-500";
-    label = "100%";
-    tooltip = `Tutti i ${st.cCount} partner scaricati e completi`;
-  } else if (st.cCount > 0 && dlPct >= 100 && st.noProfile > 0) {
-    dotColor = "bg-amber-500";
-    label = "100%↓";
-    tooltip = `Tutti scaricati — ${st.noProfile} senza profilo`;
-  } else if (st.cCount > 0 && st.pCount > 0) {
-    dotColor = "bg-amber-500";
-    label = `${dlPct}%`;
-    tooltip = `${st.pCount} di ${st.cCount} scaricati — ${missing} mancanti`;
-  } else if (st.cCount > 0 && st.pCount === 0) {
-    dotColor = "bg-rose-500";
-    label = `0/${st.cCount}`;
-    tooltip = `${st.cCount} partner in directory, nessuno ancora scaricato`;
-  } else {
+  // Quality dot: green = all have profile+email, amber = partial, red = many missing
+  let dotColor: string, tooltip: string;
+  if (pCount === 0) {
     dotColor = isDark ? "bg-slate-700" : "bg-slate-300";
-    label = "scan";
-    tooltip = "Nessun dato — seleziona e scansiona la directory per iniziare";
+    tooltip = "Nessun partner";
+  } else if (noProfile === 0 && withEmail === pCount) {
+    dotColor = "bg-emerald-500";
+    tooltip = `${pCount} partner — tutti completi`;
+  } else {
+    const completeness = (withProfile + withEmail) / (pCount * 2);
+    dotColor = completeness >= 0.5 ? "bg-amber-500" : "bg-rose-500";
+    tooltip = `${pCount} partner — ${noProfile} senza profilo, ${pCount - withEmail} senza email`;
   }
-
-  // Left tab color for completion status
-  const leftTab = st.isDone
-    ? "border-l-[3px] border-l-emerald-500"
-    : (st.cCount > 0 && dlPct >= 100 && st.noProfile > 0)
-      ? "border-l-[3px] border-l-amber-500"
-      : "";
 
   const cardBorder = isSelected
     ? isDark ? "border-sky-400/40 ring-1 ring-sky-400/20" : "border-sky-400 ring-1 ring-sky-300/50"
@@ -370,28 +292,22 @@ function CountryCard({ country, stats, cacheData, getStatus, isSelected, onToggl
   return (
     <button
       onClick={() => onToggle(country.code, country.name)}
-      className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder} ${leftTab}`}
+      className={`group rounded-lg border text-left transition-all duration-150 ${cardBg} ${cardBorder}`}
       title={tooltip}
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <span className="text-lg leading-none flex-shrink-0">{getCountryFlag(country.code)}</span>
         <div className="min-w-0 flex-1">
           <p className={`text-[11px] font-semibold truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{country.name}</p>
-          {st.pCount > 0 && (
+          {pCount > 0 && (
             <p className={`text-[9px] font-mono mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              {st.pCount}{st.cCount > 0 ? `/${st.cCount}` : ""} <Mail className="inline w-2.5 h-2.5 -mt-px" />{s?.with_email || 0} <Phone className="inline w-2.5 h-2.5 -mt-px" />{s?.with_phone || 0}
+              {pCount} <Mail className="inline w-2.5 h-2.5 -mt-px" />{withEmail} <Phone className="inline w-2.5 h-2.5 -mt-px" />{withPhone}
             </p>
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {label === "scan" ? (
-            <FolderSearch className={`w-3.5 h-3.5 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
-          ) : (
-            <>
-              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-              <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{label}</span>
-            </>
-          )}
+          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+          <span className={`text-[10px] font-bold font-mono ${isDark ? "text-slate-300" : "text-slate-600"}`}>{pCount}</span>
         </div>
         {isSelected && (
           <CheckCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? "text-sky-400" : "text-sky-600"}`} />
