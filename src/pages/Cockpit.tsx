@@ -258,7 +258,7 @@ const Cockpit = () => {
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} onSearchChange={() => {}} filters={activeFilters}
-            contacts={visibleContacts} isLoading={isLoading}
+            contacts={contacts} isLoading={isLoading}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             selectedIds={selection.selectedIds} onToggle={selection.toggle}
             onSelectAll={selection.selectAll} onClear={selection.clear}
