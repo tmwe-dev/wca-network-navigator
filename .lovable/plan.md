@@ -1,46 +1,55 @@
 
 
-# Agenda: Riscrittura Completa come Agenda a Pagina Piena
+# Riorganizzazione Sidebar: AI in Settings + Switch Area in Header
 
-## Problema
-La pagina attuale ha doppi menu (Agenda.tsx wrappa Reminders.tsx che ha i suoi tab), tab ridondanti (Partner già in Network, Attività già in altra pagina, Pipeline = Sorting). Risultato: confuso e inutile.
+## Cosa cambia
 
-## Soluzione
-Una singola pagina **agenda a tutta pagina** — un calendario vero, grande, con righe impegni visibili dentro le celle, zoom per vista (giorno/settimana/mese), nessun tab secondario.
+### 1. Agenti e Chat Agenti → sotto Impostazioni (non più in Strumenti)
 
-### Design
+Attualmente "Agenti" e "Chat Agenti" sono nella sezione "Strumenti" del menu. Vanno spostati in una nuova sezione separata **"AI"** posizionata sotto "Sistema", oppure direttamente come sotto-voci di Impostazioni. Per chiarezza li mettiamo in una sezione dedicata **"AI Management"** in fondo al menu, separata dagli strumenti operativi.
 
-```text
-┌──────────────────────────────────────────────────┐
-│ [◀ Mese]  Marzo 2026  [Mese ▶]    [G] [S] [M]  │
-├──────────────────────────────────────────────────┤
-│  Vista MESE: griglia 7 colonne, celle alte       │
-│  con righe reminder/attività dentro ogni cella   │
-│                                                   │
-│  Vista SETTIMANA: 7 colonne larghe, slot orari   │
-│  righe = ore 8-20, eventi come blocchi colorati  │
-│                                                   │
-│  Vista GIORNO: colonna singola espansa           │
-│  timeline verticale con tutti gli impegni        │
-└──────────────────────────────────────────────────┘
-```
+### 2. CRM non deve apparire quando sei in Network (e viceversa)
 
-### Dati mostrati
-- **Reminders** (dalla tabella `reminders`) — follow-up partner
-- **Activities** (dalla tabella `activities`) — attività scheduled con `due_date`
-- Colore per priorità/tipo, click per dettaglio
+Il codice attuale nasconde CRM quando `inNetwork` e Network quando `inCRM` — ma l'utente riporta che CRM è ancora visibile dall'area Network. Verificando il codice, la logica c'è ma il problema è che nella sezione "Aree" mostra comunque l'altra voce come link. La soluzione: quando sei in un'area specifica, l'altra area non compare nel menu. Al suo posto, nell'**header** della pagina aggiungiamo uno **switch** (toggle o pulsante) per passare rapidamente dall'altra parte senza tornare alla Dashboard.
 
-### Zoom views
-- **Mese** (default): griglia classica, celle grandi con max 4 righe impegno + "+N"
-- **Settimana**: 7 colonne con fasce orarie, eventi posizionati per ora
-- **Giorno**: timeline verticale singola, tutti i dettagli espansi
+### 3. Switch rapido nell'header
 
-### File
+Quando sei in `/network/*`, l'header mostra un piccolo pulsante "→ CRM" per saltare direttamente. Quando sei in `/crm/*`, mostra "→ Network". Dalla Dashboard o da strumenti condivisi, non appare nessuno switch.
+
+## Piano file
 
 | File | Azione |
 |------|--------|
-| `src/pages/Agenda.tsx` | **Riscrittura completa** — elimina tutti i tab, diventa il calendario unico con toggle G/S/M |
-| `src/pages/Reminders.tsx` | Non più importato da Agenda (resta nel codebase per eventuali usi futuri) |
+| `src/components/layout/AppSidebar.tsx` | Spostare Agenti e Chat Agenti in nuova sezione "AI" sotto Sistema. Rimuovere completamente CRM/Network dall'area opposta (già fatto ma da verificare). |
+| `src/components/layout/AppLayout.tsx` | Aggiungere switch "→ CRM" / "→ Network" nell'header quando in area specifica |
 
-La pagina usa `useReminders()` + una query attività con `due_date` per popolare le celle. Tutto contenuto in `h-full overflow-hidden` con scroll interno solo sulla griglia calendario.
+### Struttura menu risultante
+
+```text
+Aree
+  Dashboard        /
+  Network          /network    ← solo se NON in /crm
+  CRM              /crm        ← solo se NON in /network
+
+Strumenti
+  Outreach         /outreach
+  Email Composer   /email-composer
+  Agenda           /agenda
+
+AI
+  Agenti           /agents
+  Chat Agenti      /agent-chat
+
+Sistema
+  Impostazioni     /settings
+```
+
+### Switch header
+
+```text
+┌─[☰]─── WCA Partners ────────────── [→ CRM] ──┐
+│  ...contenuto Network...                       │
+```
+
+Il pulsante switch usa `useNavigate` per saltare all'altra area. Stile: piccolo badge/button con icona e testo, posizionato nell'header accanto al titolo o a destra.
 
