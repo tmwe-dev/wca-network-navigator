@@ -166,12 +166,19 @@ export function ContactStream({
       ) : (
         <div className="space-y-px">
           {filteredContacts.map((contact, i) => (
-            <CockpitContactListItem
-              key={contact.id} contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
-              isSelected={selectedIds.has(contact.id)}
-              onToggleSelect={() => onToggle(contact.id)}
-              onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
-            />
+            <div key={contact.id} className="relative group flex items-center">
+              <div className="flex-1">
+                <CockpitContactListItem
+                  contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
+                  isSelected={selectedIds.has(contact.id)}
+                  onToggleSelect={() => onToggle(contact.id)}
+                  onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
+                />
+              </div>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                <ContactActionMenu contact={contact} />
+              </div>
+            </div>
           ))}
         </div>
       )}
