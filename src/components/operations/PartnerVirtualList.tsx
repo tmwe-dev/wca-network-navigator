@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Send, ChevronRight, Trophy } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { getYearsMember } from "@/lib/countries";
@@ -16,6 +17,8 @@ interface Props {
   selectedPartnerId?: string | null;
   onSelect: (id: string) => void;
   onEmailClick: (target: { email: string; name: string; company: string; partnerId: string }) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick }: Props) {
