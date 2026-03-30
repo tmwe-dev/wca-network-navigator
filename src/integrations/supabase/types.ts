@@ -651,6 +651,36 @@ export type Database = {
           },
         ]
       }
+      cockpit_queue: {
+        Row: {
+          created_at: string
+          id: string
+          partner_id: string | null
+          source_id: string
+          source_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          partner_id?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          partner_id?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_interactions: {
         Row: {
           contact_id: string
