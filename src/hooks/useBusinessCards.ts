@@ -59,19 +59,29 @@ export function useBusinessCardContactMatches() {
   });
 }
 
+export interface BusinessCardWithPartner extends BusinessCard {
+  partner?: {
+    id: string;
+    company_name: string;
+    logo_url: string | null;
+    company_alias: string | null;
+    enrichment_data: any;
+  } | null;
+}
+
 export function useBusinessCards(filters?: { event_name?: string; match_status?: string }) {
   return useQuery({
     queryKey: [...BC_KEY, filters],
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
-        .select("*")
+        .select("*, partner:matched_partner_id(id, company_name, logo_url, company_alias, enrichment_data)")
         .order("created_at", { ascending: false });
       if (filters?.event_name) q = q.ilike("event_name", `%${filters.event_name}%`);
       if (filters?.match_status) q = q.eq("match_status", filters.match_status);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as BusinessCard[];
+      return (data ?? []) as BusinessCardWithPartner[];
     },
   });
 }
