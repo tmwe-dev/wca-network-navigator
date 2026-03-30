@@ -1,46 +1,40 @@
 
 
-# Business Cards Tab nel Network + Evidenziazione nel Cockpit
+# ElevenLabs Settings: Dropdown con Bandiere, Genere e Selezione Agente
 
 ## Cosa cambia
 
-1. **Network (Operations)**: aggiunta di un tab "Business Cards" sopra la griglia paesi/partner, che mostra le business card dalla tabella `business_cards`. Le card matchate con partner vengono evidenziate (badge dorato, link al partner). Da qui si possono selezionare e inviare al Cockpit.
+La libreria voci attuale mostra una griglia di card per categoria. Va sostituita con un'interfaccia piu' compatta e utile:
 
-2. **Cockpit source tabs**: aggiunta di un quinto source tab "BCA" (Business Cards) nel TopCommandBar. I contatti provenienti da business card vengono mostrati con uno stile visivo distinto (bordo dorato, icona biglietto da visita) per distinguerli dai contatti normali.
+1. **Due Select dropdown** principali invece della griglia:
+   - **Voce predefinita assistente**: dropdown con tutte le voci raggruppate per genere (Maschile / Femminile), ogni voce mostra bandiera dell'accento + nome + categoria
+   - **Agente AI predefinito**: dropdown con la lista degli agenti dal sistema, per scegliere quale agente usa la voce
 
-3. **cockpit_queue**: supporto per `source_type = 'business_card'` + `source_id` che punta a `business_cards.id`.
+2. **Bandiere per accento/lingua**: mapping accent → emoji flag (american → US, british → GB, italian → IT, etc.)
+
+3. **Raggruppamento per genere**: nel dropdown le voci sono organizzate in due gruppi separati (Maschile / Femminile) usando `SelectGroup` + `SelectLabel`
+
+4. **Anteprima audio**: accanto al dropdown, pulsante Play per ascoltare la voce selezionata
 
 ## Dettagli tecnici
 
-### 1. `src/pages/Operations.tsx`
-- Aggiungere un toggle/tab in alto: "Partner" (vista attuale) | "Business Cards"
-- Quando attivo "Business Cards": mostrare una versione semplificata di `BusinessCardsHub` con possibilita' di selezionare card e pulsante "Invia a Cockpit" che inserisce nella `cockpit_queue` con `source_type = 'business_card'`
+### `src/components/settings/ElevenLabsSettings.tsx`
 
-### 2. `src/components/cockpit/TopCommandBar.tsx`
-- Estendere `SourceTab` type: `"all" | "wca" | "prospect" | "contact" | "bca"`
-- Aggiungere tab "BCA" con icona `CreditCard` nel SOURCE_TABS array
-
-### 3. `src/hooks/useCockpitContacts.ts`
-- Nella query cockpit_queue, gestire `source_type = 'business_card'`: fetch da `business_cards` e mappare a `CockpitContact` con `origin: "bca"`
-- Aggiungere flag `isBusinessCard: boolean` al tipo `CockpitContact`
-
-### 4. `src/components/cockpit/CockpitContactCard.tsx` + `CockpitContactListItem.tsx`
-- Se `isBusinessCard === true`: bordo dorato/ambrato, piccola icona biglietto da visita, badge "BCA" per distinguerli visivamente
-
-### 5. `src/pages/Cockpit.tsx`
-- Aggiornare `ContactOrigin` type per includere `"bca"`
-- Aggiornare il filtro sourceTab per mappare `"bca"` → contatti con `origin === "bca"`
+- Rimuovere la griglia card delle voci
+- Sostituire con due `Select` (da shadcn):
+  - **Voce**: `SelectGroup` "Maschile" + `SelectGroup` "Femminile", ogni `SelectItem` mostra `{flag} {nome} · {categoria}`
+  - **Agente**: `SelectGroup` con gli agenti attivi dall'hook `useAgents()`
+- Mapping accento → bandiera:
+  ```
+  american → 🇺🇸, british → 🇬🇧, italian → 🇮🇹, french → 🇫🇷, 
+  german → 🇩🇪, spanish → 🇪🇸, australian → 🇦🇺, indian → 🇮🇳
+  ```
+- Pulsante Play/Stop accanto al Select voce per anteprima
+- Mantenere: toggle TTS, card custom Voice ID, tab Avanzate
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/pages/Operations.tsx` | Aggiungere toggle Partner/Business Cards + azione "Invia a Cockpit" |
-| `src/components/cockpit/TopCommandBar.tsx` | Aggiungere source tab "BCA" |
-| `src/hooks/useCockpitContacts.ts` | Supportare `source_type = 'business_card'` + flag `isBusinessCard` |
-| `src/pages/Cockpit.tsx` | Estendere `ContactOrigin`, aggiornare filtro source |
-| `src/components/cockpit/CockpitContactCard.tsx` | Stile dorato per business card |
-| `src/components/cockpit/CockpitContactListItem.tsx` | Badge/bordo dorato per business card |
-
-Nessuna modifica al database — la `cockpit_queue` supporta gia' qualsiasi `source_type` testuale.
+| `src/components/settings/ElevenLabsSettings.tsx` | Sostituire griglia voci con Select dropdown raggruppati per genere + aggiungere Select agente |
 
