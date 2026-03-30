@@ -220,8 +220,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 <Target className="w-3 h-3 text-primary" />
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI</span>
               </div>
-              <ContentPicker type="goals" onSelect={onGoalChange} selectedText={goal} triggerLabel="Goal" className="w-full" />
-              <ContentPicker type="proposals" onSelect={onBaseProposalChange} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
+              <ContentPicker type="goals" onSelect={setGoal} selectedText={goal} triggerLabel="Goal" className="w-full" />
+              <ContentPicker type="proposals" onSelect={setBaseProposal} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
             </div>
             <div className="border-t border-border/30 pt-2 space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-muted-foreground">recipient_name</span><span className="text-foreground">{draft.contactName}</span></div>
