@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   ClipboardList, Sparkles, Briefcase, Send, StickyNote,
-  X, Loader2, Square, Save, AlertCircle,
+  X, Loader2, Square, Save, AlertCircle, Inbox,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";

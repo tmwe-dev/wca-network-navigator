@@ -132,34 +132,55 @@ export function PartnerListPanel({
     if (selectedIds.size === 0) return;
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
+    if (!userId) { toast.error("Utente non autenticato"); return; }
     const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
-    const inserts = partnerList.map((p: any) => {
-      const contacts = p.partner_contacts || [];
-      const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
-      return {
-        activity_type: "send_email" as const,
-        title: `Email a ${p.company_name}`,
-        source_type: "partner",
-        source_id: p.id,
-        partner_id: p.id,
-        selected_contact_id: primary?.id || null,
-        status: "pending" as const,
-        source_meta: {
-          company_name: p.company_name,
-          country_code: p.country_code,
-          city: p.city,
-          contact_name: primary?.name || null,
-          contact_email: primary?.email || null,
-        },
-        user_id: userId || null,
-      };
-    });
-    const { error } = await supabase.from("activities").insert(inserts as any);
-    if (error) {
-      toast.error("Errore creazione attività: " + error.message);
-      return;
+
+    if (destination === "cockpit") {
+      // Insert partner contacts into cockpit_queue
+      const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] = [];
+      for (const p of partnerList) {
+        const contacts = p.partner_contacts || [];
+        if (contacts.length > 0) {
+          for (const c of contacts) {
+            items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: userId, status: "queued" });
+          }
+        } else {
+          // No contacts — still queue via partner_id reference
+          items.push({ source_type: "partner_contact", source_id: p.id, partner_id: p.id, user_id: userId, status: "queued" });
+        }
+      }
+      if (items.length > 0) {
+        const { error } = await supabase.from("cockpit_queue").upsert(items as any, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
+        if (error) { toast.error("Errore: " + error.message); return; }
+      }
+      toast.success(`${partnerList.length} partner inviati a Cockpit`);
+    } else {
+      // Workspace: create activities as before
+      const inserts = partnerList.map((p: any) => {
+        const contacts = p.partner_contacts || [];
+        const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+        return {
+          activity_type: "send_email" as const,
+          title: `Email a ${p.company_name}`,
+          source_type: "partner",
+          source_id: p.id,
+          partner_id: p.id,
+          selected_contact_id: primary?.id || null,
+          status: "pending" as const,
+          source_meta: {
+            company_name: p.company_name,
+            country_code: p.country_code,
+            city: p.city,
+            contact_name: primary?.name || null,
+            contact_email: primary?.email || null,
+          },
+          user_id: userId,
+        };
+      });
+      const { error } = await supabase.from("activities").insert(inserts as any);
+      if (error) { toast.error("Errore: " + error.message); return; }
+      toast.success(`${inserts.length} partner inviati a Workspace`);
     }
-    toast.success(`${inserts.length} partner inviati a ${destination === "cockpit" ? "Cockpit" : "Workspace"}`);
     setSelectedIds(new Set());
     const tab = destination === "cockpit" ? "cockpit" : "workspace";
     navigate(`/outreach?tab=${tab}`);

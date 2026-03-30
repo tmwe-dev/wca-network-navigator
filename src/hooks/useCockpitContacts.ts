@@ -5,6 +5,7 @@ import type { ContactOrigin } from "@/pages/Cockpit";
 
 export interface CockpitContact {
   id: string;
+  queueId: string;
   name: string;
   company: string;
   role: string;
@@ -16,6 +17,9 @@ export interface CockpitContact {
   email: string;
   origin: ContactOrigin;
   originDetail: string;
+  sourceType: string;
+  sourceId: string;
+  partnerId: string | null;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
@@ -36,16 +40,10 @@ function inferChannels(email?: string | null, phone?: string | null, mobile?: st
   return ch;
 }
 
-function computePriority(email?: string | null, phone?: string | null, mobile?: string | null, lastInteraction?: string | null): number {
+function computePriority(email?: string | null, phone?: string | null, mobile?: string | null): number {
   let p = 1;
   if (email) p += 3;
   if (phone || mobile) p += 2;
-  if (lastInteraction) {
-    const days = (Date.now() - new Date(lastInteraction).getTime()) / 86400000;
-    if (days < 7) p += 3;
-    else if (days < 30) p += 2;
-    else if (days < 90) p += 1;
-  }
   return Math.min(p, 10);
 }
 
@@ -60,64 +58,146 @@ function formatRelativeDate(dateStr: string | null): string {
   return `${Math.floor(days / 365)} anni fa`;
 }
 
-function getImportedOriginDetail(origin: string | null, groupName?: string | null, fileName?: string | null): string {
-  if (origin?.startsWith("business_card:")) {
-    return `Biglietti da visita · ${origin.replace("business_card:", "")}`;
-  }
-  if (origin === "business_card") {
-    return groupName ? `Biglietti da visita · ${groupName}` : "Biglietti da visita";
-  }
-  return groupName || fileName || "Import";
-}
-
-// ── Query: business_cards only (BCA-dedicated cockpit) ──
-function useBusinessCardContactsQuery() {
-  return useQuery({
-    queryKey: ["cockpit-business-cards"],
+export function useCockpitContacts() {
+  const q = useQuery({
+    queryKey: ["cockpit-queue"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_cards")
-        .select("id, contact_name, company_name, position, email, phone, mobile, location, met_at, event_name, created_at, match_status")
-        .not("contact_name", "is", null)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      // Fetch queue items
+      const { data: queue, error } = await supabase
+        .from("cockpit_queue")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "queued")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return (data || []) as any[];
+      if (!queue || queue.length === 0) return [];
+
+      // Group source_ids by source_type
+      const pcIds = queue.filter((q: any) => q.source_type === "partner_contact").map((q: any) => q.source_id);
+      const bcIds = queue.filter((q: any) => q.source_type === "business_card").map((q: any) => q.source_id);
+      const prcIds = queue.filter((q: any) => q.source_type === "prospect_contact").map((q: any) => q.source_id);
+
+      // Fetch source data in parallel
+      const [pcData, bcData, prcData] = await Promise.all([
+        pcIds.length > 0
+          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id").in("id", pcIds).then(r => r.data || [])
+          : Promise.resolve([]),
+        bcIds.length > 0
+          ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
+          : Promise.resolve([]),
+        prcIds.length > 0
+          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
+          : Promise.resolve([]),
+      ]);
+
+      // Also fetch partner names for partner_contacts
+      const partnerIds = [
+        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
+        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
+      ];
+      const uniquePartnerIds = [...new Set(partnerIds)];
+      let partnersMap: Record<string, any> = {};
+      if (uniquePartnerIds.length > 0) {
+        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code").in("id", uniquePartnerIds);
+        for (const p of pData || []) partnersMap[p.id] = p;
+      }
+
+      // Build lookup maps
+      const pcMap: Record<string, any> = {};
+      for (const c of pcData as any[]) pcMap[c.id] = c;
+      const bcMap: Record<string, any> = {};
+      for (const c of bcData as any[]) bcMap[c.id] = c;
+      const prcMap: Record<string, any> = {};
+      for (const c of prcData as any[]) prcMap[c.id] = c;
+
+      return { queue, pcMap, bcMap, prcMap, partnersMap };
     },
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
-}
-
-export function useCockpitContacts() {
-  const bcQ = useBusinessCardContactsQuery();
-
-  const isLoading = bcQ.isLoading;
 
   const contacts = useMemo<CockpitContact[]>(() => {
+    if (!q.data || Array.isArray(q.data)) return [];
+    const { queue, pcMap, bcMap, prcMap, partnersMap } = q.data;
     const result: CockpitContact[] = [];
 
-    for (const bc of bcQ.data || []) {
-      const email = bc.email || "";
-      const phone = bc.phone || bc.mobile || null;
-      result.push({
-        id: `bc-${bc.id}`,
-        name: bc.contact_name || "—",
-        company: bc.company_name || "—",
-        role: bc.position || "",
-        country: "",
-        language: "english",
-        lastContact: formatRelativeDate(bc.met_at || bc.created_at),
-        priority: computePriority(email, phone, bc.mobile, bc.met_at),
-        channels: inferChannels(email, phone, bc.mobile),
-        email: email,
-        origin: "import" as ContactOrigin,
-        originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
-      });
+    for (const item of queue) {
+      const st = item.source_type;
+      const sid = item.source_id;
+
+      if (st === "partner_contact") {
+        const pc = pcMap[sid];
+        if (!pc) continue;
+        const partner = partnersMap[pc.partner_id] || partnersMap[item.partner_id];
+        result.push({
+          id: `pc-${pc.id}`,
+          queueId: item.id,
+          name: pc.name || "—",
+          company: partner?.company_name || "—",
+          role: pc.title || "",
+          country: partner?.country_code || "",
+          language: inferLanguage(partner?.country_code),
+          lastContact: formatRelativeDate(item.created_at),
+          priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
+          channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
+          email: pc.email || "",
+          origin: "wca" as ContactOrigin,
+          originDetail: partner?.company_name || "Partner",
+          sourceType: st,
+          sourceId: sid,
+          partnerId: pc.partner_id || item.partner_id,
+        });
+      } else if (st === "business_card") {
+        const bc = bcMap[sid];
+        if (!bc) continue;
+        result.push({
+          id: `bc-${bc.id}`,
+          queueId: item.id,
+          name: bc.contact_name || "—",
+          company: bc.company_name || "—",
+          role: bc.position || "",
+          country: "",
+          language: "english",
+          lastContact: formatRelativeDate(bc.met_at || bc.created_at),
+          priority: computePriority(bc.email, bc.phone, bc.mobile),
+          channels: inferChannels(bc.email, bc.phone, bc.mobile),
+          email: bc.email || "",
+          origin: "import" as ContactOrigin,
+          originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
+          sourceType: st,
+          sourceId: sid,
+          partnerId: item.partner_id,
+        });
+      } else if (st === "prospect_contact") {
+        const prc = prcMap[sid];
+        if (!prc) continue;
+        result.push({
+          id: `prc-${prc.id}`,
+          queueId: item.id,
+          name: prc.name || "—",
+          company: "—",
+          role: prc.role || "",
+          country: "",
+          language: "italiano",
+          lastContact: formatRelativeDate(item.created_at),
+          priority: computePriority(prc.email, prc.phone, null),
+          channels: inferChannels(prc.email, prc.phone, null),
+          email: prc.email || "",
+          origin: "report_aziende" as ContactOrigin,
+          originDetail: "Prospect",
+          sourceType: st,
+          sourceId: sid,
+          partnerId: item.partner_id,
+        });
+      }
     }
 
     result.sort((a, b) => b.priority - a.priority);
     return result;
-  }, [bcQ.data]);
+  }, [q.data]);
 
   const contactsMap = useMemo(() => {
     const map: Record<string, CockpitContact> = {};
@@ -125,73 +205,71 @@ export function useCockpitContacts() {
     return map;
   }, [contacts]);
 
-  return { contacts, contactsMap, isLoading };
+  return { contacts, contactsMap, isLoading: q.isLoading };
 }
 
 /**
- * Elimina contatti cockpit dalla tabella corretta in base al prefisso ID.
- * Gli ID cockpit sono: pc-{uuid}, ic-{uuid}, prc-{uuid}
+ * Remove contacts from cockpit_queue
  */
 export function useDeleteCockpitContacts() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (prefixedIds: string[]) => {
-      // Raggruppa per tabella sorgente
-      const pcIds: string[] = [];
-      const icIds: string[] = [];
-      const prcIds: string[] = [];
+      // We need to find the queue IDs for these contacts
+      // But we can also just delete by source criteria
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
+      const sourceEntries: { type: string; id: string }[] = [];
       for (const pid of prefixedIds) {
-        if (pid.startsWith("pc-")) pcIds.push(pid.slice(3));
-        else if (pid.startsWith("ic-")) icIds.push(pid.slice(3));
-        else if (pid.startsWith("prc-")) prcIds.push(pid.slice(4));
+        if (pid.startsWith("pc-")) sourceEntries.push({ type: "partner_contact", id: pid.slice(3) });
+        else if (pid.startsWith("bc-")) sourceEntries.push({ type: "business_card", id: pid.slice(3) });
+        else if (pid.startsWith("prc-")) sourceEntries.push({ type: "prospect_contact", id: pid.slice(4) });
       }
 
-      const errors: string[] = [];
-
-      if (pcIds.length > 0) {
-        // Pulisci FK: activities.selected_contact_id → null
+      // Delete from cockpit_queue by source matches
+      for (const entry of sourceEntries) {
         await supabase
-          .from("activities")
-          .update({ selected_contact_id: null } as any)
-          .in("selected_contact_id", pcIds);
-        // Pulisci FK: partner_social_links.contact_id
-        await supabase
-          .from("partner_social_links")
+          .from("cockpit_queue")
           .delete()
-          .in("contact_id", pcIds);
-        // Ora elimina il contatto
-        const { error } = await supabase
-          .from("partner_contacts")
-          .delete()
-          .in("id", pcIds);
-        if (error) errors.push(`partner_contacts: ${error.message}`);
+          .eq("user_id", user.id)
+          .eq("source_type", entry.type)
+          .eq("source_id", entry.id);
       }
-
-      if (icIds.length > 0) {
-        const { error } = await supabase
-          .from("imported_contacts")
-          .delete()
-          .in("id", icIds);
-        if (error) errors.push(`imported_contacts: ${error.message}`);
-      }
-
-      if (prcIds.length > 0) {
-        const { error } = await supabase
-          .from("prospect_contacts")
-          .delete()
-          .in("id", prcIds);
-        if (error) errors.push(`prospect_contacts: ${error.message}`);
-      }
-
-      if (errors.length > 0) throw new Error(errors.join("; "));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cockpit-partner-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["cockpit-imported-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["cockpit-prospect-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["all-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+    },
+  });
+}
+
+/**
+ * Send partner contacts to cockpit_queue
+ */
+export function useSendToCockpit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { sourceType: string; sourceId: string; partnerId?: string }[]) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const inserts = items.map(item => ({
+        user_id: user.id,
+        source_type: item.sourceType,
+        source_id: item.sourceId,
+        partner_id: item.partnerId || null,
+        status: "queued",
+      }));
+
+      const { error } = await supabase.from("cockpit_queue").upsert(inserts as any, {
+        onConflict: "user_id,source_type,source_id",
+        ignoreDuplicates: true,
+      });
+      if (error) throw error;
+      return inserts.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
     },
   });
 }
