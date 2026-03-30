@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
 import { CockpitContactCard } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
+import { ContactActionMenu } from "./ContactActionMenu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
