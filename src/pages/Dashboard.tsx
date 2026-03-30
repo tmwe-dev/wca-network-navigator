@@ -5,9 +5,9 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { stats } = useCountryStats();
-
-  const totalPartners = stats?.total ?? 0;
+  const countryStats = useCountryStats();
+  const globalStats = countryStats.data?.global;
+  const totalPartners = globalStats?.total ?? 0;
 
   const areas = [
     {
