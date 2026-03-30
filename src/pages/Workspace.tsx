@@ -37,11 +37,10 @@ const SOURCE_TABS = [
 ];
 
 export default function Workspace() {
-  const { goal, baseProposal, documents, referenceLinks } = useMission();
+  const { goal, baseProposal, documents, referenceLinks, quality } = useMission();
   const [sourceTab, setSourceTab] = useState<"partner" | "prospect" | "contact">("partner");
   const [selectedActivity, setSelectedActivity] = useState<AllActivity | null>(null);
   const [search, setSearch] = useState("");
-  const [quality, setQuality] = useState<EmailQuality>("standard");
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
