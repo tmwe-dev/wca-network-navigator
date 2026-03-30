@@ -89,6 +89,10 @@ export function PartnerListPanel({
   // ── Filtered & sorted partners ──
   const filteredPartners = useMemo(() => {
     let list = partners || [];
+    // Hide worked today
+    if (hideWorked && workedIds.size > 0) {
+      list = list.filter((p: any) => !workedIds.has(p.id));
+    }
     if (progressFilter) {
       list = list.filter((p: any) => {
         switch (progressFilter) {
@@ -114,7 +118,52 @@ export function PartnerListPanel({
       });
       default: return sorted;
     }
-  }, [partners, progressFilter, sortBy]);
+  }, [partners, progressFilter, sortBy, hideWorked, workedIds]);
+
+  const togglePartnerSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSendTo = useCallback(async (destination: "cockpit" | "workspace") => {
+    if (selectedIds.size === 0) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    const partnerList = (partners || []).filter((p: any) => selectedIds.has(p.id));
+    const inserts = partnerList.map((p: any) => {
+      const contacts = p.partner_contacts || [];
+      const primary = contacts.find((c: any) => c.is_primary) || contacts[0];
+      return {
+        activity_type: "send_email" as const,
+        title: `Email a ${p.company_name}`,
+        source_type: "partner",
+        source_id: p.id,
+        partner_id: p.id,
+        selected_contact_id: primary?.id || null,
+        status: "pending" as const,
+        source_meta: {
+          company_name: p.company_name,
+          country_code: p.country_code,
+          city: p.city,
+          contact_name: primary?.name || null,
+          contact_email: primary?.email || null,
+        },
+        user_id: userId || null,
+      };
+    });
+    const { error } = await supabase.from("activities").insert(inserts as any);
+    if (error) {
+      toast.error("Errore creazione attività: " + error.message);
+      return;
+    }
+    toast.success(`${inserts.length} partner inviati a ${destination === "cockpit" ? "Cockpit" : "Workspace"}`);
+    setSelectedIds(new Set());
+    const tab = destination === "cockpit" ? "cockpit" : "workspace";
+    navigate(`/outreach?tab=${tab}`);
+  }, [selectedIds, partners, navigate]);
 
   const handleSelectPartner = useCallback((id: string) => {
     if (onSelectPartner) onSelectPartner(id);
