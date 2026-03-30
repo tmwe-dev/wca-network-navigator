@@ -3,11 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Volume2, Play, Check, Settings2, Loader2, RefreshCw, Square, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Volume2, Play, Settings2, Loader2, RefreshCw, Square, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
+import { useAgents } from "@/hooks/useAgents";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,12 +21,33 @@ interface Voice {
   description: string | null;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  cloned: "Clonate",
-  generated: "Generate",
-  premade: "Premade",
-  professional: "Professional",
-  high_quality: "Alta Qualità",
+const ACCENT_FLAGS: Record<string, string> = {
+  american: "🇺🇸",
+  british: "🇬🇧",
+  italian: "🇮🇹",
+  french: "🇫🇷",
+  german: "🇩🇪",
+  spanish: "🇪🇸",
+  australian: "🇦🇺",
+  indian: "🇮🇳",
+  irish: "🇮🇪",
+  swedish: "🇸🇪",
+  portuguese: "🇵🇹",
+  korean: "🇰🇷",
+  chinese: "🇨🇳",
+  japanese: "🇯🇵",
+  dutch: "🇳🇱",
+  turkish: "🇹🇷",
+  polish: "🇵🇱",
+  arabic: "🇸🇦",
+};
+
+const CATEGORY_SHORT: Record<string, string> = {
+  cloned: "Clone",
+  generated: "Gen",
+  premade: "Pre",
+  professional: "Pro",
+  high_quality: "HQ",
 };
 
 const FALLBACK_VOICES: Voice[] = [
@@ -51,12 +73,11 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
 
   const selectedVoiceId = settings?.elevenlabs_default_voice_id || "";
   const ttsEnabled = settings?.elevenlabs_tts_enabled === "true";
-  const agentId = settings?.elevenlabs_agent_id || "";
+  const selectedAgentDbId = settings?.elevenlabs_default_agent_id || "";
 
-  // Load voices on mount
-  useEffect(() => {
-    loadVoices();
-  }, []);
+  const { agents } = useAgents();
+
+  useEffect(() => { loadVoices(); }, []);
 
   const loadVoices = async () => {
     setLoadingVoices(true);
@@ -64,9 +85,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
       const { data, error } = await supabase.functions.invoke("list-elevenlabs-voices");
       if (error) throw error;
       setApiStatus(data.status || "error");
-      if (data.voices && data.voices.length > 0) {
-        setVoices(data.voices);
-      }
+      if (data.voices?.length > 0) setVoices(data.voices);
     } catch {
       setApiStatus("error");
     } finally {
@@ -82,22 +101,26 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     updateSetting.mutate({ key: "elevenlabs_tts_enabled", value: enabled ? "true" : "false" });
   };
 
-  const playPreview = (voice: Voice) => {
-    if (playingId === voice.voice_id) {
+  const handleSelectAgent = (agentDbId: string) => {
+    updateSetting.mutate({ key: "elevenlabs_default_agent_id", value: agentDbId });
+  };
+
+  const playPreview = (voiceId: string) => {
+    const voice = voices.find(v => v.voice_id === voiceId);
+    if (!voice) return;
+    if (playingId === voiceId) {
       audioRef.current?.pause();
       setPlayingId(null);
       return;
     }
     if (audioRef.current) audioRef.current.pause();
-
-    const url = voice.preview_url;
-    if (!url) {
-      toast({ title: "Anteprima non disponibile", description: "Questa voce non ha un'anteprima audio.", variant: "destructive" });
+    if (!voice.preview_url) {
+      toast({ title: "Anteprima non disponibile", variant: "destructive" });
       return;
     }
-    const audio = new Audio(url);
+    const audio = new Audio(voice.preview_url);
     audioRef.current = audio;
-    setPlayingId(voice.voice_id);
+    setPlayingId(voiceId);
     audio.onended = () => setPlayingId(null);
     audio.onerror = () => { setPlayingId(null); toast({ title: "Errore riproduzione", variant: "destructive" }); };
     audio.play();
@@ -110,17 +133,18 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     toast({ title: "Voice ID salvato" });
   };
 
-  const handleSaveAgentId = (val: string) => {
-    updateSetting.mutate({ key: "elevenlabs_agent_id", value: val });
+  // Group by gender
+  const maleVoices = voices.filter(v => v.labels?.gender === "male");
+  const femaleVoices = voices.filter(v => v.labels?.gender === "female");
+  const otherVoices = voices.filter(v => !v.labels?.gender || !["male", "female"].includes(v.labels.gender));
+
+  const voiceLabel = (v: Voice) => {
+    const flag = ACCENT_FLAGS[v.labels?.accent || ""] || "🌍";
+    const cat = CATEGORY_SHORT[v.category] || v.category;
+    return `${flag} ${v.name} · ${cat}`;
   };
 
-  // Group voices by category
-  const grouped = voices.reduce<Record<string, Voice[]>>((acc, v) => {
-    const cat = v.category || "premade";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(v);
-    return acc;
-  }, {});
+  const selectedVoice = voices.find(v => v.voice_id === selectedVoiceId);
 
   const statusBadge = () => {
     switch (apiStatus) {
@@ -135,7 +159,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   return (
     <Tabs defaultValue="voce" className="space-y-4">
       <TabsList className="w-full justify-start">
-        <TabsTrigger value="voce" className="gap-1.5 text-xs"><Volume2 className="w-3.5 h-3.5" /> Libreria Voci</TabsTrigger>
+        <TabsTrigger value="voce" className="gap-1.5 text-xs"><Volume2 className="w-3.5 h-3.5" /> Voce & Agente</TabsTrigger>
         <TabsTrigger value="avanzate" className="gap-1.5 text-xs"><Settings2 className="w-3.5 h-3.5" /> Avanzate</TabsTrigger>
       </TabsList>
 
@@ -153,59 +177,106 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
           </CardContent>
         </Card>
 
-        {/* Voice Library */}
+        {/* Voice Select */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Voci ElevenLabs ({voices.length})</CardTitle>
+              <CardTitle className="text-sm">Voce predefinita ({voices.length} disponibili)</CardTitle>
               <Button size="sm" variant="outline" onClick={loadVoices} disabled={loadingVoices} className="text-xs gap-1.5">
                 {loadingVoices ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                 Aggiorna
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(grouped).map(([category, catVoices]) => (
-              <div key={category}>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-                  {CATEGORY_LABELS[category] || category} ({catVoices.length})
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {catVoices.map((v) => {
-                    const isSelected = selectedVoiceId === v.voice_id;
-                    const isPlaying = playingId === v.voice_id;
-                    const gender = v.labels?.gender || "";
-                    const accent = v.labels?.accent || "";
-                    return (
-                      <div
-                        key={v.voice_id}
-                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-all text-xs ${
-                          isSelected
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/40 hover:bg-secondary/30"
-                        }`}
-                        onClick={() => handleSelectVoice(v.voice_id)}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          {isSelected && <Check className="w-3 h-3 shrink-0" />}
-                          <span className="font-medium truncate">{v.name}</span>
-                          {gender && <Badge variant="outline" className="text-[9px] px-1 py-0">{gender === "female" ? "F" : gender === "male" ? "M" : "N"}</Badge>}
-                          {accent && <span className="text-[9px] text-muted-foreground truncate">{accent}</span>}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={(e) => { e.stopPropagation(); playPreview(v); }}
-                        >
-                          {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+          <CardContent className="space-y-3">
+            <div className="flex gap-2 items-center">
+              <Select value={selectedVoiceId} onValueChange={handleSelectVoice}>
+                <SelectTrigger className="flex-1 text-xs">
+                  <SelectValue placeholder="Seleziona una voce..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {maleVoices.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>👨 Maschile</SelectLabel>
+                      {maleVoices.map(v => (
+                        <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
+                          {voiceLabel(v)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {femaleVoices.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>👩 Femminile</SelectLabel>
+                      {femaleVoices.map(v => (
+                        <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
+                          {voiceLabel(v)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {otherVoices.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>🎭 Altro</SelectLabel>
+                      {otherVoices.map(v => (
+                        <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
+                          {voiceLabel(v)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 h-10 w-10"
+                disabled={!selectedVoiceId}
+                onClick={() => selectedVoiceId && playPreview(selectedVoiceId)}
+              >
+                {playingId === selectedVoiceId ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              </Button>
+            </div>
+            {selectedVoice && (
+              <p className="text-[10px] text-muted-foreground">
+                {ACCENT_FLAGS[selectedVoice.labels?.accent || ""] || "🌍"} {selectedVoice.name} — {selectedVoice.labels?.accent || "n/a"} · {selectedVoice.category}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Agent Select */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Agente AI predefinito</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">Scegli l'agente AI che utilizzerà la voce selezionata</p>
+            <Select value={selectedAgentDbId} onValueChange={handleSelectAgent}>
+              <SelectTrigger className="text-xs">
+                <SelectValue placeholder="Seleziona un agente..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Agenti attivi</SelectLabel>
+                  {(agents || []).filter(a => a.is_active).map(a => (
+                    <SelectItem key={a.id} value={a.id} className="text-xs">
+                      {a.avatar_emoji} {a.name} — {a.role}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                {(agents || []).some(a => !a.is_active) && (
+                  <SelectGroup>
+                    <SelectLabel>Inattivi</SelectLabel>
+                    {(agents || []).filter(a => !a.is_active).map(a => (
+                      <SelectItem key={a.id} value={a.id} className="text-xs">
+                        {a.avatar_emoji} {a.name} — {a.role}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
 
@@ -252,7 +323,12 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">ID dell'agente ElevenLabs per conversazioni vocali in tempo reale</p>
             <div className="flex gap-2">
-              <Input value={agentId} onChange={(e) => handleSaveAgentId(e.target.value)} placeholder="Agent ID opzionale" className="text-xs" />
+              <Input
+                value={settings?.elevenlabs_agent_id || ""}
+                onChange={(e) => updateSetting.mutate({ key: "elevenlabs_agent_id", value: e.target.value })}
+                placeholder="Agent ID opzionale"
+                className="text-xs"
+              />
             </div>
           </CardContent>
         </Card>
