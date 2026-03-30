@@ -75,7 +75,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   const ttsEnabled = settings?.elevenlabs_tts_enabled === "true";
   const selectedAgentDbId = settings?.elevenlabs_default_agent_id || "";
 
-  const { data: agents } = useAgents();
+  const { agents } = useAgents();
 
   useEffect(() => { loadVoices(); }, []);
 
