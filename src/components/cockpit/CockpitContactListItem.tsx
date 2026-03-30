@@ -53,7 +53,9 @@ export function CockpitContactListItem({ contact, flag, index, isSelected, onTog
       onDragEnd={onDragEnd}
       className={cn(
         "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",
-        isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
+        contact.origin === "bca"
+          ? isSelected ? "bg-amber-500/10 border border-amber-500/30" : "hover:bg-amber-500/5"
+          : isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
       )}
     >
       <Checkbox

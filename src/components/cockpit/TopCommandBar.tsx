@@ -39,6 +39,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[]
   { value: "wca", label: "WCA", icon: Building2 },
   { value: "prospect", label: "Prospect", icon: FileSearch },
   { value: "contact", label: "Contatti", icon: Users },
+  { value: "bca", label: "BCA", icon: CreditCard },
 ];
 
 export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {

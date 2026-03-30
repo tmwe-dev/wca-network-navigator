@@ -61,7 +61,7 @@ const Cockpit = () => {
   // Filter contacts by source tab
   const contacts = useMemo(() => {
     if (sourceTab === "all") return allContacts;
-    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import" };
+    const originMap: Record<string, string> = { wca: "wca", prospect: "report_aziende", contact: "import", bca: "bca" };
     return allContacts.filter(c => c.origin === originMap[sourceTab]);
   }, [allContacts, sourceTab]);
   const selection = useSelection(contacts);

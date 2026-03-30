@@ -127,6 +127,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
+                {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
                 <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
                 <span className="text-sm">{flag}</span>
               </div>

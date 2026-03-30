@@ -22,6 +22,7 @@ export interface CockpitContact {
   sourceId: string;
   partnerId: string | null;
   isScheduledReturn?: boolean;
+  isBusinessCard?: boolean;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
