@@ -1,13 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import GoalBar from "@/components/workspace/GoalBar";
 import ContactListPanel from "@/components/workspace/ContactListPanel";
 import EmailCanvas from "@/components/workspace/EmailCanvas";
 import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks/useActivities";
-import { useWorkspaceDocuments } from "@/hooks/useWorkspaceDocuments";
-import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
+import { useMission } from "@/contexts/MissionContext";
 import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users, Mail } from "lucide-react";
