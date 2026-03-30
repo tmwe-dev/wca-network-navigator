@@ -88,7 +88,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
       {/* Sections */}
       <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-4">
-        {navSections.map((section) => (
+        {getNavSections(location.pathname).map((section) => (
           <div key={section.label}>
             <span className="block px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               {section.label}
