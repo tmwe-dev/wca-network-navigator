@@ -1,82 +1,35 @@
 
 
-# Goal e Proposte: Categorie Automatiche con AI
+# ElevenLabs: Riconnessione API Key + Caricamento Voci Dinamico
 
-## Problema
-Attualmente goal e proposte sono una griglia piatta senza organizzazione. L'utente non capisce a colpo d'occhio cosa serve per il primo contatto, cosa per il follow-up, cosa per le richieste informative. Serve raggruppamento per categoria, e AI deve assegnare automaticamente la categoria quando l'utente crea un nuovo elemento.
+## Due problemi
+
+1. **API Key scaduta/invalida** — l'errore 401 conferma che la chiave ElevenLabs collegata non funziona. Va riconnessa.
+2. **Voci hardcoded** — le 18 voci nel settings sono statiche. Serve una edge function che interroghi l'API ElevenLabs per scaricare tutte le voci disponibili (incluse quelle clonate dall'utente).
 
 ## Soluzione
 
-### 1. Aggiungere campo `category` al modello `ContentItem`
+### 1. Riconnettere ElevenLabs
+Chiederti di riconnettere il connettore ElevenLabs con una nuova API key valida.
 
-Estendere l'interfaccia in `defaultContentPresets.ts`:
+### 2. Nuova edge function `list-elevenlabs-voices`
+Chiama `GET https://api.elevenlabs.io/v1/voices` con la API key e ritorna l'elenco completo delle voci (nome, ID, categoria, lingua, anteprima URL).
 
-```typescript
-export interface ContentItem {
-  name: string;
-  text: string;
-  category?: string; // "primo_contatto" | "follow_up" | "richiesta" | "proposta_servizi" | "partnership" | "altro"
-}
-```
+### 3. Aggiornare ElevenLabsSettings.tsx
+- Aggiungere un pulsante "Carica voci da ElevenLabs" che chiama la nuova edge function
+- Mostrare le voci in griglia raggruppate per categoria (premade, cloned, generated)
+- Ogni voce ha: nome, lingua, genere, pulsante play (usa preview_url dall'API, senza consumare TTS)
+- Mantenere i preset hardcoded come fallback se la chiamata API fallisce
+- Aggiungere nella tab "Avanzate" un campo per inserire/aggiornare la API key (salvata come secret backend)
 
-Categorie predefinite (con label e icona):
-- **Primo contatto** — presentazioni, conoscenza iniziale
-- **Follow-up** — secondo contatto, ripresa dialogo
-- **Richiesta** — informazioni, tariffe, referenze
-- **Proposta servizi** — offerte commerciali concrete
-- **Partnership** — accordi, esclusività, network
-- **Altro** — tutto il resto
-
-I default esistenti vengono pre-assegnati alle categorie corrette direttamente nei dati.
-
-### 2. UI raggruppata per categoria
-
-Nel `ContentGridView`, gli item vengono raggruppati per `category`. Ogni gruppo ha:
-- Header con icona + nome categoria + conteggio badge
-- Sotto: griglia card come ora
-- Sezioni collassabili con click sull'header
-
-```text
-▼ Primo contatto (3)
-┌────────┐ ┌────────┐ ┌────────┐
-│ 🎯     │ │ 🤝     │ │ 📧     │
-│ Primo  │ │ Presen.│ │ Invito │
-│ contatt│ │ servizi│ │ meeting│
-└────────┘ └────────┘ └────────┘
-
-▼ Richiesta (2)
-┌────────┐ ┌────────┐
-│ 🔍     │ │ 📋     │
-│ Info   │ │ Tariffe│
-└────────┘ └────────┘
-```
-
-### 3. AI auto-categorizzazione alla creazione
-
-Quando l'utente salva un nuovo goal/proposta, il sistema chiama una edge function che usa Lovable AI per analizzare nome + testo e restituire la categoria corretta.
-
-- Nuova edge function `categorize-content` che riceve `{ name, text, categories }` e ritorna `{ category }`
-- Usa `google/gemini-3-flash-preview` (veloce e economico)
-- Durante la categorizzazione, un piccolo spinner appare sulla card
-- Se AI fallisce, default a "altro"
-
-Nel dialog di creazione: l'utente scrive nome e testo, preme Salva, AI assegna la categoria automaticamente. L'utente puo' anche sovrascrivere manualmente la categoria con un select nel dialog.
-
-### 4. Dialog aggiornato
-
-Il dialog di modifica/creazione mostra:
-- Input nome (come ora)
-- Textarea testo (come ora)
-- Select categoria (precompilato da AI per i nuovi, modificabile manualmente)
-- Badge "Categorizzato da AI" quando assegnato automaticamente
+### 4. Verifica stato API key
+Nella tab "Avanzate", invece di mostrare sempre "Configurata" in verde, fare un check reale chiamando la edge function e mostrare lo stato effettivo (valida/scaduta/mancante).
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/data/defaultContentPresets.ts` | Aggiungere `category` all'interfaccia + pre-assegnare categorie ai default |
-| `src/components/settings/ContentManager.tsx` | Raggruppare card per categoria, aggiungere select categoria nel dialog, chiamata AI alla creazione |
-| `supabase/functions/categorize-content/index.ts` | **Nuovo** — edge function che usa Lovable AI per categorizzare |
-
-Nessuna modifica al database — i dati restano in `app_settings` come JSON, semplicemente ogni item ha un campo `category` in piu'.
+| Connettore ElevenLabs | Riconnessione con nuova API key |
+| `supabase/functions/list-elevenlabs-voices/index.ts` | **Nuovo** — proxy verso API ElevenLabs per elenco voci |
+| `src/components/settings/ElevenLabsSettings.tsx` | Aggiungere caricamento dinamico voci + verifica stato key |
 
