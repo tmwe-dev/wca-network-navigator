@@ -60,9 +60,6 @@ const Cockpit = () => {
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
 
-  const visibleContacts = useMemo(() =>
-    contacts.filter(c => visibleOrigins.has(c.origin)),
-  [contacts, visibleOrigins]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
