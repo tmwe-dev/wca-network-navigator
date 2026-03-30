@@ -1,27 +1,27 @@
 
 
-# Rimozione Centro Operativo dalla Dashboard
+# Rimuovere filtri qualità inline da Network/Operations
 
-## Analisi
+## Problema
+La pagina Network (`Operations.tsx`) ha ancora:
+1. **StatPill bar** nella toolbar (righe 162-169): "No Profilo", "No Email", "No Tel" come pill cliccabili
+2. **CountryGrid** (righe 164-191): chip filtro qualità duplicati dentro la griglia paesi
+3. **filterMode state locale** (riga 48): `useState<FilterKey>("all")` — dovrebbe leggere da `useGlobalFilters().filters.quality`
 
-Il **Centro Operativo** (`OperationsCenter.tsx`) mostra 5 pannelli:
+Tutto questo è già gestito nel FiltersDrawer sinistro (sezione "Qualità dati" visibile su `/network`).
 
-1. **Download attivi** — non serve più, i download sono gestiti esternamente
-2. **Task agenti** — già visibile nella sezione Agenti dedicata
-3. **Email in coda / inviate / lette** — già coperto dal tab **Campagne** in Outreach (`CampagneTab`)
-4. **Attività aperte** — già coperto dal tab **Attività** in Outreach (`AttivitaTab`)
+## Modifiche
 
-L'unico dato potenzialmente utile è un riepilogo veloce, ma è già duplicato altrove. La maschera è ridondante.
+### 1. `src/pages/Operations.tsx`
+- Rimuovere `filterMode` state locale → leggere `useGlobalFilters().filters.quality` e mapparlo a `FilterKey`
+- Rimuovere le StatPill di qualità (righe 162-169) dalla toolbar — mantenere solo il contatore "Partner" come info
+- Rimuovere prop `onFilterModeChange` dal `<CountryGrid>`
+- Rimuovere import di `FileX, MailX, PhoneOff`
 
-## Piano
+### 2. `src/components/download/CountryGrid.tsx`
+- Rimuovere il blocco "Quality filter chips" (righe 164-191) dal render
+- Mantenere la prop `filterMode` in lettura (serve per filtrare i paesi), ma rimuovere `onFilterModeChange` dall'interfaccia
+- Il filtro arriva dal context globale, non da chip inline
 
-**Rimuovere il tab "Centro Operativo" dalla Dashboard**, semplificando a 3 tab: Mission Control, Global AI, Campagne.
-
-### File modificati
-
-| File | Azione |
-|------|--------|
-| `src/pages/Dashboard.tsx` | Rimuovere import `OperationsCenterLazy`, tab "ops" e relativo render |
-
-Nessun file viene cancellato — `OperationsCenter.tsx` e `useOperationsCenter.ts` restano nel codebase nel caso servano in futuro, semplicemente non vengono più referenziati dalla Dashboard.
+Risultato: la toolbar Network mostra solo il contatore partner totali e le azioni (AI, tema). I filtri qualità si attivano esclusivamente dal drawer sinistro.
 
