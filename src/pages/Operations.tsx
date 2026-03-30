@@ -286,7 +286,7 @@ export default function Operations() {
               </div>
             )}
           </div>
-        </div>
+          )}
       </div>
       <AiAssistantDialog open={aiOpen} onClose={() => setAiOpen(false)} context={{ selectedCountries, filterMode }} />
     </ThemeCtx.Provider>
