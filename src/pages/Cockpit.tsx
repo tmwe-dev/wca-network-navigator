@@ -6,7 +6,7 @@ import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
-import { useCredits } from "@/hooks/useCredits";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { toast } from "sonner";
@@ -49,27 +49,7 @@ const Cockpit = () => {
     companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [visibleOrigins, setVisibleOrigins] = useState<Set<ContactOrigin>>(new Set(["wca", "import", "report_aziende"]));
-
-  const { contacts, contactsMap, isLoading } = useCockpitContacts();
-  const selection = useSelection(contacts);
-  const { generate } = useOutreachGenerator();
-  const { refetch: refetchCredits } = useCredits();
-  const deleteContacts = useDeleteCockpitContacts();
-
-  const toggleOrigin = useCallback((origin: ContactOrigin) => {
-    setVisibleOrigins(prev => {
-      const next = new Set(prev);
-      if (next.has(origin)) { if (next.size > 1) next.delete(origin); }
-      else next.add(origin);
-      return next;
-    });
-  }, []);
-
-  const visibleContacts = useMemo(() =>
-    contacts.filter(c => visibleOrigins.has(c.origin)),
-  [contacts, visibleOrigins]);
+  const { filters: gf } = useGlobalFilters();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──

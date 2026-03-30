@@ -2,19 +2,18 @@ import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Search, Megaphone, Briefcase, ClipboardList, Loader2,
-  X,
+  Search, Megaphone, Briefcase, ClipboardList, Loader2, X,
 } from "lucide-react";
-import { ContactFiltersBar } from "./ContactFiltersBar";
 import { GroupStrip } from "./GroupStrip";
 import { ExpandedGroupContent } from "./ExpandedGroupContent";
-import { useContactFilterOptions, type ContactFilters } from "@/hooks/useContacts";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
 import { useImportGroups } from "@/hooks/useImportGroups";
 import { useSelection } from "@/hooks/useSelection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactActions } from "@/hooks/useContactActions";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { SortKey } from "./contactHelpers";
+import type { ContactFilters } from "@/hooks/useContacts";
 
 interface Props {
   selectedId: string | null;
@@ -22,9 +21,17 @@ interface Props {
 }
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
-  const [filters, setFilters] = useState<ContactFilters>({ groupBy: "country", holdingPattern: "out" });
-  const [sortKey, setSortKey] = useState<SortKey>("company");
-  const { data: filterOptions } = useContactFilterOptions();
+  const { filters: gf } = useGlobalFilters();
+
+  // Map global filters to local ContactFilters shape
+  const filters: ContactFilters = useMemo(() => ({
+    groupBy: gf.groupBy as any,
+    holdingPattern: gf.holdingPattern as any,
+    search: gf.search,
+  }), [gf.groupBy, gf.holdingPattern, gf.search]);
+
+  const sortKey = (gf.sortBy || "company") as SortKey;
+
   const { data: allGroupCounts, isLoading: groupsLoading } = useContactGroupCounts();
   const { data: importGroups } = useImportGroups();
   const selection = useSelection([]);
@@ -32,8 +39,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
 
   const currentGroupBy = filters.groupBy || "country";
-  const countries = filterOptions?.countries ?? [];
-  const origins = filterOptions?.origins ?? [];
 
   const groups = useMemo(() => {
     if (!allGroupCounts) return [];
@@ -45,8 +50,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const totalContacts = useMemo(() => groups.reduce((s, g) => s + g.contact_count, 0), [groups]);
 
+  const setFiltersNoop = useCallback(() => {}, []);
+  const setSortKeyNoop = useCallback(() => {}, []);
+
   const actions = useContactActions({
-    selection, setFilters, setSortKey, setOpenGroups, setSelectedGroups,
+    selection, setFilters: setFiltersNoop as any, setSortKey: setSortKeyNoop as any,
+    setOpenGroups, setSelectedGroups,
     currentGroupBy, holdingPattern: filters.holdingPattern,
   });
 
@@ -54,22 +63,17 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     setOpenGroups((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   }, []);
 
-  const handleFilterChange = (partial: Partial<ContactFilters>) => {
-    setFilters((prev) => ({ ...prev, ...partial, page: 0 }));
-    setOpenGroups(new Set());
-  };
-
   const isBulk = selection.count > 0;
   const btnClass = "h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:bg-violet-500/10 hover:text-foreground";
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <ContactFiltersBar
-        filters={filters} onChange={handleFilterChange} countries={countries} origins={origins}
-        importGroups={importGroups} groupCounts={allGroupCounts} totalContacts={totalContacts}
-        selectedCount={selection.count} sortKey={sortKey} onSortChange={(v) => setSortKey(v as SortKey)}
-        onAICommand={actions.handleAICommand}
-      />
+      {/* Header with count */}
+      <div className="px-3 py-2 border-b border-border/30 shrink-0">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">{totalContacts} contatti • {groups.length} gruppi</span>
+        </div>
+      </div>
 
       {isBulk && (
         <div className="px-3 py-1.5 border-b border-violet-500/15 bg-gradient-to-r from-violet-500/[0.06] to-purple-500/[0.04] backdrop-blur-xl shrink-0">
@@ -135,10 +139,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             );
           })
         )}
-      </div>
-
-      <div className="flex items-center justify-between px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground">
-        <span>{totalContacts} contatti • {groups.length} gruppi</span>
       </div>
     </div>
   );
