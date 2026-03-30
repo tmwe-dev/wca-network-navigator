@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 import {
-  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch,
+  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch, RefreshCw, Loader2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { useTheme, t } from "./theme";
+import { toast } from "sonner";
 
 export type FilterKey = "all" | "todo" | "no_profile" | "done" | "missing" | "no_email" | "no_phone" | "no_deep";
 
@@ -35,6 +37,27 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
   const th = t(isDark);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [syncing, setSyncing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    const toastId = toast.loading("Sincronizzazione WCA in corso...");
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-wca-directory", {
+        body: { refresh: true },
+      });
+      if (error) throw error;
+      toast.success(`Sync completata: ${data?.total ?? 0} record aggiornati`, { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ["cache-data-by-country"] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
+    } finally {
+      setSyncing(false);
+    }
+  }, [queryClient]);
 
   const { data: statsData } = useCountryStats();
   const stats = statsData?.byCountry || {};
@@ -245,6 +268,25 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, onFilter
             <div className={`text-center py-8 text-sm ${th.dim}`}>Nessun paese trovato</div>
           )}
         </div>
+      </div>
+
+      {/* ═══ SYNC BUTTON ═══ */}
+      <div className="flex-shrink-0 pt-1.5">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleSync}
+          disabled={syncing}
+          className={cn(
+            "w-full h-8 text-[11px] gap-1.5 font-semibold",
+            isDark
+              ? "border-sky-500/30 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+              : "border-sky-400 text-sky-700 hover:bg-sky-50"
+          )}
+        >
+          {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          {syncing ? "Sincronizzazione..." : "Sincronizza WCA"}
+        </Button>
       </div>
     </div>
   );
