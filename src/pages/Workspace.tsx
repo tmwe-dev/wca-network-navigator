@@ -6,7 +6,7 @@ import { type AllActivity, useAllActivities, useDeleteActivities } from "@/hooks
 import { useEmailGenerator } from "@/hooks/useEmailGenerator";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useMission } from "@/contexts/MissionContext";
-import QualitySelector, { type EmailQuality } from "@/components/workspace/QualitySelector";
+import type { EmailQuality } from "@/components/workspace/QualitySelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Sparkles, Search, Zap, Trash2, Square, Globe, Building2, Users, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
