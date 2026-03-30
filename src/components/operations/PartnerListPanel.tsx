@@ -287,6 +287,31 @@ export function PartnerListPanel({
               aliasGenerating={aliasGenerating}
             />
           )}
+
+          {/* ROW 4: Hide worked toggle */}
+          <div className="flex items-center gap-2">
+            <Switch checked={hideWorked} onCheckedChange={setHideWorked} className="scale-75" />
+            <span className={cn("text-[10px]", isDark ? "text-slate-400" : "text-slate-500")}>
+              <EyeOff className="w-3 h-3 inline mr-1" />Nascondi lavorati ({workedIds.size})
+            </span>
+          </div>
+
+          {/* SELECTION ACTION BAR */}
+          {selectedIds.size > 0 && (
+            <div className={cn("flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-2", isDark ? "bg-sky-950/40 border-sky-500/30" : "bg-sky-50 border-sky-200")}>
+              <span className={cn("text-xs font-bold", isDark ? "text-sky-300" : "text-sky-700")}>{selectedIds.size} selezionati</span>
+              <div className="flex-1" />
+              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("cockpit")}>
+                <Inbox className="w-3 h-3" /> Cockpit
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => handleSendTo("workspace")}>
+                <LayoutGrid className="w-3 h-3" /> Workspace
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
+                ✕
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* ═══ WIZARD ═══ */}
@@ -399,6 +424,8 @@ export function PartnerListPanel({
           selectedPartnerId={selectedPartnerId}
           onSelect={handleSelectPartner}
           onEmailClick={(target) => setEmailTarget(target)}
+          selectedIds={selectedIds}
+          onToggleSelect={togglePartnerSelect}
         />
       </div>
       {emailTarget && (
