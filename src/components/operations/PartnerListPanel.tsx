@@ -59,6 +59,7 @@ export function PartnerListPanel({
   onSelectPartner, selectedPartnerId,
 }: PartnerListPanelProps) {
   const th = t(isDark);
+  const navigate = useNavigate();
   const countryCode = countryCodes[0] || "";
   const countryName = countryNames[0] || "";
   const [search, setSearch] = useState("");
@@ -66,6 +67,9 @@ export function PartnerListPanel({
   type ProgressFilterKey = "profiles" | "deep" | "email" | "phone" | "alias_co" | "alias_ct" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hideWorked, setHideWorked] = useState(false);
+  const { workedIds } = useWorkedToday();
 
   const { data: partners, isLoading } = usePartners({
     countries: countryCodes,
