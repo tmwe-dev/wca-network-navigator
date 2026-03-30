@@ -79,6 +79,7 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
 
 export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStudioProps) {
   const [sending, setSending] = useState(false);
+  const { goal, baseProposal, onGoalChange, onBaseProposalChange } = useMission();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
 
