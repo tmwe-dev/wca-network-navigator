@@ -1,65 +1,45 @@
 
 
-# Ristrutturazione Settings: Tab Orizzontali Ovunque
+# Aggiungere Sezione ElevenLabs nelle Impostazioni + Voce nell'Assistente AI Globale
 
-## Problema
-Ogni sezione delle impostazioni impila card una sopra l'altra verticalmente. Risultato: confusione, devi scrollare tantissimo, vedi tutto insieme. Serve: **tab orizzontali**, una cosa per volta.
+## Stato attuale
 
-## Cosa cambia per ogni sezione
+- La configurazione voce ElevenLabs esiste **solo** dentro `AgentVoiceConfig.tsx`, accessibile unicamente dal dettaglio di un singolo agente. Non c'è nessuna impostazione globale.
+- L'assistente AI globale (`GlobalChat.tsx`) **non ha TTS**: risponde solo in testo.
+- Le edge function `elevenlabs-tts` e `elevenlabs-conversation-token` esistono già e funzionano.
+- Il secret `ELEVENLABS_API_KEY` è già configurato nel backend.
+- I preset voci sono hardcoded in `AgentVoiceConfig` (Laura, Sarah, Daniel, George, Roger).
 
-### 1. Generale (`GeneralSettings.tsx`)
-Attualmente: WhatsApp + SMTP + Info SMTP + Test Email + Template + Profilo AI — tutto impilato.
+## Piano
 
-Tab orizzontali:
-- **WhatsApp** — numero telefono
-- **Email SMTP** — configurazione server + test invio
-- **Template** — TemplateManager
-- **Profilo AI** — AIProfileSettings
+### 1. Nuova sezione "Voce AI" nelle Impostazioni (`Settings.tsx`)
 
-### 2. Connessioni (`ConnectionsSettings.tsx`)
-Attualmente: WCA status + Auto-Login + Verifica + Avanzate + LinkedIn credenziali + Estensione + Cookie avanzato + Blacklist — tutto impilato.
+Aggiungere un nuovo tab **"Voce AI"** nella pagina Settings, tra Connessioni e Import/Export. Questo tab contiene:
 
-Tab orizzontali:
-- **WCA** — status, auto-login, verifica, avanzate
-- **LinkedIn** — credenziali, estensione, cookie avanzato
-- **Blacklist** — BlacklistManager
+- **Voce predefinita**: selezione della voce ElevenLabs da usare per l'assistente AI globale (salvata in `app_settings` con chiave `elevenlabs_default_voice_id`)
+- **API Key status**: badge che mostra se il secret `ELEVENLABS_API_KEY` è configurato
+- **Preset voci**: lista cliccabile delle voci disponibili (stessa lista di `AgentVoiceConfig` + voci aggiuntive)
+- **Voice ID personalizzato**: campo per inserire un ID voce custom
+- **Test voce**: pulsante per ascoltare un'anteprima della voce selezionata
+- **Attivazione TTS globale**: switch on/off per abilitare le risposte vocali nell'assistente
 
-### 3. Contenuti (`ContentManager.tsx`)
-Attualmente: Accordion con Goal, Proposte, Documenti, Link tutti espandibili insieme.
+### 2. Nuovo componente `ElevenLabsSettings.tsx`
 
-Tab orizzontali:
-- **Goal** — lista goal
-- **Proposte** — lista proposte
-- **Documenti** — upload e lista documenti
-- **Link** — link di riferimento
+Nuovo file `src/components/settings/ElevenLabsSettings.tsx` con:
+- Tab orizzontali: **Voce** (selezione voce default) e **Avanzate** (API key, Agent ID per conversational AI)
+- Salva su `app_settings`: `elevenlabs_default_voice_id`, `elevenlabs_tts_enabled`, `elevenlabs_agent_id`
 
-### 4. Import/Export (`ImportExportSettings.tsx`)
-Già ha tab orizzontali — OK, nessuna modifica.
+### 3. Integrare TTS nell'assistente globale (`GlobalChat.tsx`)
 
-### 5. Report Aziende (`RASettings.tsx`)
-Attualmente: Credenziali + Estensione impilate.
+- Leggere `elevenlabs_default_voice_id` e `elevenlabs_tts_enabled` da `useAppSettings()`
+- Dopo ogni risposta dell'assistente, se TTS è abilitato, chiamare `elevenlabs-tts` e riprodurre l'audio
+- Aggiungere un pulsante speaker su ogni messaggio assistente per riascoltare
 
-Tab orizzontali:
-- **Credenziali** — username/password
-- **Estensione** — download e istruzioni
-
-### 6. Abbonamento (`SubscriptionPanel.tsx`)
-Attualmente: Piano + Crediti + Calcolatore token impilati.
-
-Tab orizzontali:
-- **Piano** — card tier + gestione
-- **Crediti** — saldo + acquisto pacchetti
-- **Token** — calcolatore costi
-
-## File coinvolti
+### File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/settings/GeneralSettings.tsx` | Wrappare contenuti in Tabs con 4 tab |
-| `src/components/settings/ConnectionsSettings.tsx` | Wrappare in Tabs con 3 tab |
-| `src/components/settings/ContentManager.tsx` | Sostituire Accordion con Tabs a 4 tab |
-| `src/components/settings/RASettings.tsx` | Wrappare in Tabs con 2 tab |
-| `src/components/settings/SubscriptionPanel.tsx` | Wrappare in Tabs con 3 tab |
-
-Ogni sezione mostra **una sola vista per volta**, selezionata dal tab orizzontale in alto. Zero scroll infinito, zero confusione.
+| `src/components/settings/ElevenLabsSettings.tsx` | **Nuovo** — pannello impostazioni voce con tab |
+| `src/pages/Settings.tsx` | Aggiungere tab "Voce AI" con import del nuovo componente |
+| `src/components/global/GlobalChat.tsx` | Aggiungere TTS automatico + pulsante riascolto sui messaggi |
 
