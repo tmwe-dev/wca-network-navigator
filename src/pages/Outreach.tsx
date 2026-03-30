@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, Briefcase, ArrowUpFromLine, ListTodo } from "lucide-react";
+import { Rocket, Briefcase, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
+import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const Cockpit = lazy(() => import("./Cockpit"));
@@ -39,6 +40,10 @@ export default function Outreach() {
               <ListTodo className="w-3.5 h-3.5" />
               Attività
             </TabsTrigger>
+            <TabsTrigger value="circuito" className="gap-1.5 text-xs">
+              <Plane className="w-3.5 h-3.5" />
+              Circuito
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -56,6 +61,7 @@ export default function Outreach() {
         )}
         {tab === "inuscita" && <InUscitaTab />}
         {tab === "attivita" && <AttivitaTab />}
+        {tab === "circuito" && <HoldingPatternTab />}
       </div>
     </div>
   );
