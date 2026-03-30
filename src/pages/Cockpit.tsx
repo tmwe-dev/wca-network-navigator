@@ -279,10 +279,16 @@ const Cockpit = () => {
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
-          <ChannelDropZones
-            isDragging={!!draggedContactId} draggedContactId={draggedContactId}
-            dragCount={dragCount} onDrop={handleDrop}
-          />
+          {batchMode && selection.count > 0 ? (
+            <div className="w-full h-full overflow-auto">
+              <EmailCanvas />
+            </div>
+          ) : (
+            <ChannelDropZones
+              isDragging={!!draggedContactId} draggedContactId={draggedContactId}
+              dragCount={dragCount} onDrop={handleDrop}
+            />
+          )}
         </div>
         <div className="w-[400px] flex-shrink-0 border-l border-border/50">
           <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
