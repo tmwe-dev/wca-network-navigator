@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search,
+  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search, Brain, Phone, Mail, Calendar, Building2, CheckSquare,
 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
@@ -18,7 +18,7 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useBusinessCards, useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
+import { useBusinessCards, useBusinessCardPartnerMatches, type BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { useSendToCockpit } from "@/hooks/useCockpitContacts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -327,11 +327,21 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
   );
 }
 
-/* ── Business Cards View ── */
+/* ── Business Cards View — Grouped by Company ── */
+interface BcaGroup {
+  key: string;
+  companyName: string;
+  logoUrl: string | null;
+  hasDeepSearch: boolean;
+  isMatched: boolean;
+  partnerId: string | null;
+  cards: BusinessCardWithPartner[];
+}
+
 function BusinessCardsView() {
   const { data: cards = [], isLoading } = useBusinessCards();
-  const { data: matchedPartnerIds } = useBusinessCardPartnerMatches();
   const sendToCockpit = useSendToCockpit();
+  const deepSearch = useDeepSearch();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
@@ -345,12 +355,49 @@ function BusinessCardsView() {
     );
   }, [cards, search]);
 
+  // Group by matched_partner_id or normalized company_name
+  const groups = useMemo(() => {
+    const map = new Map<string, BcaGroup>();
+    for (const card of filtered) {
+      const key = card.matched_partner_id || (card.company_name || "sconosciuta").toLowerCase().trim();
+      if (!map.has(key)) {
+        const partner = card.partner;
+        map.set(key, {
+          key,
+          companyName: partner?.company_name || card.company_name || "Sconosciuta",
+          logoUrl: partner?.logo_url || null,
+          hasDeepSearch: !!partner?.enrichment_data?.deep_search_at,
+          isMatched: !!card.matched_partner_id,
+          partnerId: card.matched_partner_id || null,
+          cards: [],
+        });
+      }
+      map.get(key)!.cards.push(card);
+    }
+    // Sort: matched first, then by card count desc
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.isMatched !== b.isMatched) return a.isMatched ? -1 : 1;
+      return b.cards.length - a.cards.length;
+    });
+  }, [filtered]);
+
+  const allFilteredIds = useMemo(() => filtered.map(c => c.id), [filtered]);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedBca.has(id));
+
   const toggleBca = (id: string) => {
     setSelectedBca(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedBca(new Set());
+    } else {
+      setSelectedBca(new Set(allFilteredIds));
+    }
   };
 
   const handleSendToCockpit = async () => {
@@ -368,6 +415,20 @@ function BusinessCardsView() {
     }
   };
 
+  const handleBcaDeepSearch = () => {
+    // Collect unique partner IDs from selected BCA
+    const partnerIds = new Set<string>();
+    for (const id of selectedBca) {
+      const card = cards.find(c => c.id === id);
+      if (card?.matched_partner_id) partnerIds.add(card.matched_partner_id);
+    }
+    if (partnerIds.size === 0) {
+      toast.warning("Nessun biglietto selezionato è associato a un partner. Esegui prima il match.");
+      return;
+    }
+    deepSearch.start(Array.from(partnerIds), true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -378,8 +439,8 @@ function BusinessCardsView() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col px-4 pb-3 gap-3 overflow-hidden">
-      {/* Search + Actions */}
-      <div className="flex items-center gap-3 pt-3">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 pt-3 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
           <input
@@ -390,56 +451,158 @@ function BusinessCardsView() {
             className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
-        <span className="text-xs text-muted-foreground">{filtered.length} biglietti</span>
+
+        <button
+          onClick={toggleAll}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all",
+            allSelected
+              ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
+              : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50"
+          )}
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+          {allSelected ? "Deseleziona" : "Seleziona tutti"}
+        </button>
+
+        <span className="text-xs text-muted-foreground">
+          {filtered.length} biglietti · {groups.length} aziende
+          {selectedBca.size > 0 && <span className="ml-1 text-amber-500">· {selectedBca.size} sel.</span>}
+        </span>
+
         {selectedBca.size > 0 && (
-          <Button size="sm" className="h-7 text-xs gap-1.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25" variant="outline" onClick={handleSendToCockpit}>
-            <Send className="w-3 h-3" /> Invia {selectedBca.size} al Cockpit
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" className="h-7 text-xs gap-1.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25" variant="outline" onClick={handleSendToCockpit}>
+              <Send className="w-3 h-3" /> Cockpit ({selectedBca.size})
+            </Button>
+            <Button size="sm" className="h-7 text-xs gap-1.5 bg-violet-500/15 text-violet-500 border border-violet-500/30 hover:bg-violet-500/25" variant="outline" onClick={handleBcaDeepSearch}>
+              <Brain className="w-3 h-3" /> Deep Search
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Cards grid */}
+      {/* Deep Search Canvas */}
+      <DeepSearchCanvas
+        open={deepSearch.canvasOpen}
+        onClose={() => deepSearch.setCanvasOpen(false)}
+        onStop={() => deepSearch.stop()}
+        current={deepSearch.current}
+        results={deepSearch.results}
+        running={deepSearch.running}
+        isDark={true}
+      />
+
+      {/* Grouped cards */}
       <div className="flex-1 min-h-0 overflow-auto">
-        {filtered.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <CreditCard className="w-12 h-12 text-muted-foreground/20" />
             <p className="text-sm text-muted-foreground/60">Nessun biglietto da visita</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filtered.map(card => {
-              const isMatched = matchedPartnerIds?.has(card.matched_partner_id || "");
-              const isSelected = selectedBca.has(card.id);
-              return (
-                <div
-                  key={card.id}
-                  className={cn(
-                    "relative rounded-xl border p-3.5 cursor-pointer transition-all duration-200 hover:shadow-md",
-                    isMatched ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card/50",
-                    isSelected && "ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
-                  )}
-                  onClick={() => toggleBca(card.id)}
-                >
-                  {isMatched && (
-                    <Badge variant="outline" className="absolute top-2 right-2 text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30">
-                      Matchato
-                    </Badge>
-                  )}
-                  <div className="flex items-start gap-2 mb-2">
-                    <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{card.contact_name || "—"}</p>
-                      <p className="text-xs text-foreground/80 truncate">{card.company_name || "—"}</p>
-                      {card.position && <p className="text-[11px] text-muted-foreground">{card.position}</p>}
+          <div className="space-y-3">
+            {groups.map(group => (
+              <div
+                key={group.key}
+                className={cn(
+                  "rounded-xl border overflow-hidden transition-all",
+                  group.isMatched ? "border-amber-500/30 bg-amber-500/[0.03]" : "border-border/60 bg-card/40"
+                )}
+              >
+                {/* Group header */}
+                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
+                  {/* Logo */}
+                  <div className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border",
+                    group.isMatched ? "border-amber-500/30 bg-amber-500/10" : "border-border/40 bg-muted/30"
+                  )}>
+                    {group.logoUrl ? (
+                      <img src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" />
+                    ) : (
+                      <Building2 className={cn("w-4 h-4", group.isMatched ? "text-amber-500/60" : "text-muted-foreground/40")} />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
+                      {group.isMatched && (
+                        <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">
+                          WCA
+                        </Badge>
+                      )}
+                      {group.hasDeepSearch && (
+                        <Brain className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]" />
+                      )}
                     </div>
+                    <span className="text-[10px] text-muted-foreground">{group.cards.length} contatt{group.cards.length === 1 ? "o" : "i"}</span>
                   </div>
-                  <div className="flex flex-wrap gap-1 text-[10px] text-muted-foreground">
-                    {card.email && <span className="px-1.5 py-0.5 rounded bg-muted/50 truncate max-w-[160px]">{card.email}</span>}
-                    {card.event_name && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">{card.event_name}</span>}
-                  </div>
+
+                  {/* Select all in group */}
+                  <button
+                    onClick={() => {
+                      const ids = group.cards.map(c => c.id);
+                      const allInGroup = ids.every(id => selectedBca.has(id));
+                      setSelectedBca(prev => {
+                        const next = new Set(prev);
+                        ids.forEach(id => allInGroup ? next.delete(id) : next.add(id));
+                        return next;
+                      });
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/30 hover:bg-muted/40 transition-all"
+                  >
+                    {group.cards.every(c => selectedBca.has(c.id)) ? "Deseleziona" : "Seleziona"}
+                  </button>
                 </div>
-              );
-            })}
+
+                {/* Contact cards inside group */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 p-3">
+                  {group.cards.map(card => {
+                    const isSelected = selectedBca.has(card.id);
+                    return (
+                      <div
+                        key={card.id}
+                        className={cn(
+                          "relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm",
+                          isSelected
+                            ? "ring-1 ring-amber-500/50 border-amber-500/40 bg-amber-500/5 shadow-sm shadow-amber-500/10"
+                            : "border-border/40 bg-background/50 hover:border-border"
+                        )}
+                        onClick={() => toggleBca(card.id)}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{card.contact_name || "—"}</p>
+                            {card.position && <p className="text-[11px] text-muted-foreground truncate">{card.position}</p>}
+
+                            <div className="flex flex-col gap-0.5 mt-1.5">
+                              {card.email && (
+                                <span className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+                                  <Mail className="w-2.5 h-2.5 flex-shrink-0" /> {card.email}
+                                </span>
+                              )}
+                              {(card.phone || card.mobile) && (
+                                <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                  <Phone className="w-2.5 h-2.5 flex-shrink-0" /> {card.mobile || card.phone}
+                                </span>
+                              )}
+                              {card.event_name && (
+                                <span className="flex items-center gap-1 text-[10px] text-amber-600">
+                                  <Calendar className="w-2.5 h-2.5 flex-shrink-0" /> {card.event_name}
+                                  {card.met_at && <span className="text-muted-foreground ml-1">{new Date(card.met_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
