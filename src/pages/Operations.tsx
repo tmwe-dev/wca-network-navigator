@@ -174,7 +174,7 @@ export default function Operations() {
           )}>
             {/* COL 1: Country Grid */}
             <div className={cn(
-              "flex-shrink-0 min-h-0 flex flex-col gap-2 transition-all duration-200",
+              "flex-shrink-0 min-h-0 overflow-hidden flex flex-col gap-2 transition-all duration-200",
               isMobile
                 ? (hasSelection ? "max-h-[35vh]" : "")
                 : (hasDetailOpen ? "w-[220px]" : "w-[280px]")
