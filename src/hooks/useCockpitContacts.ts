@@ -130,7 +130,17 @@ export function useCockpitContacts() {
       const prcMap: Record<string, any> = {};
       for (const c of prcData as any[]) prcMap[c.id] = c;
 
-      return { queue, pcMap, bcMap, prcMap, partnersMap };
+      // Fetch today's scheduled activities
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data: scheduledActivities } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .eq("due_date", today)
+        .limit(100);
+
+      return { queue, pcMap, bcMap, prcMap, partnersMap, scheduledActivities: scheduledActivities || [] };
     },
     staleTime: 30_000,
   });
