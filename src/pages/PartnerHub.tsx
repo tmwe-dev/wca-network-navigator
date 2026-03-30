@@ -317,6 +317,39 @@ export default function PartnerHub() {
     }
   }, [selectedIds, selectedId, filteredPartners, createActivities, navigate, handleSendToWorkspace]);
 
+  const handleUnifiedCockpit = useCallback(async () => {
+    const ids = selectedIds.size > 0 ? Array.from(selectedIds) : (selectedId ? [selectedId] : []);
+    if (ids.length === 0) return;
+    setSendingToCockpit(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Non autenticato"); return; }
+      const partnerList = (filteredPartners || []).filter((p: any) => ids.includes(p.id)) as any[];
+      const items: any[] = [];
+      for (const p of partnerList) {
+        const contacts = (p.partner_contacts || []) as any[];
+        if (contacts.length > 0) {
+          for (const c of contacts) {
+            items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: user.id, status: "queued" });
+          }
+        } else {
+          items.push({ source_type: "partner_contact", source_id: p.id, partner_id: p.id, user_id: user.id, status: "queued" });
+        }
+      }
+      if (items.length > 0) {
+        const { error } = await supabase.from("cockpit_queue").upsert(items, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      toast.success(`${partnerList.length} partner inviati a Cockpit`);
+      setSelectedIds(new Set());
+      navigate("/outreach?tab=cockpit");
+    } catch (e: any) {
+      toast.error("Errore: " + (e?.message || "sconosciuto"));
+    } finally {
+      setSendingToCockpit(false);
+    }
+  }, [selectedIds, selectedId, filteredPartners, navigate]);
+
   const handleUnifiedAssignActivity = useCallback(() => {
     if (selectedIds.size === 0 && selectedId) {
       setSelectedIds(new Set([selectedId]));
