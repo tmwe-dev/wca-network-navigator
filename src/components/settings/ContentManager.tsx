@@ -11,10 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   BookOpen, Target, FileText, Link2, Plus, Trash2, Save, Loader2,
-  Upload, ExternalLink, Edit2, X, File, RefreshCw,
+  Upload, ExternalLink, X, File, RefreshCw,
+  Handshake, Mail, Search, Globe, Briefcase, TrendingUp, Users, Package, FileCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const CARD_ICONS = [Target, Handshake, Mail, Search, Globe, Briefcase, TrendingUp, Users, Package, FileCheck];
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,75 +32,47 @@ function hostname(url: string) {
   try { return new URL(url).hostname; } catch { return url; }
 }
 
-function ContentItemCard({ item, onSave, onDelete }: {
-  item: ContentItem;
-  onSave: (updated: ContentItem, original: ContentItem) => void;
-  onDelete: (item: ContentItem) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(item.name);
-  const [text, setText] = useState(item.text);
-
-  const handleSave = () => { onSave({ name, text }, item); setEditing(false); };
-  const handleCancel = () => { setName(item.name); setText(item.text); setEditing(false); };
-
-  return (
-    <Card>
-      <CardContent className="py-3 px-4 space-y-2">
-        <div className="flex items-center justify-between">
-          {editing ? (
-            <Input value={name} onChange={e => setName(e.target.value)} className="h-7 text-sm font-medium max-w-[280px]" />
-          ) : (
-            <p className="font-medium text-sm">{item.name}</p>
-          )}
-          <div className="flex items-center gap-1">
-            {editing ? (
-              <>
-                <Button size="sm" variant="ghost" onClick={handleCancel}><X className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="default" onClick={handleSave}><Save className="w-3.5 h-3.5" /></Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Edit2 className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onDelete(item)}><Trash2 className="w-3.5 h-3.5" /></Button>
-              </>
-            )}
-          </div>
-        </div>
-        {editing ? (
-          <Textarea value={text} onChange={e => setText(e.target.value)} rows={3} className="text-xs" />
-        ) : (
-          <p className="text-xs text-muted-foreground line-clamp-3">{item.text}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ContentListView({ settingKey, defaults, items, onUpdate }: {
+function ContentGridView({ settingKey, defaults, items, onUpdate }: {
   settingKey: string;
   defaults: ContentItem[];
   items: ContentItem[];
   onUpdate: (key: string, items: ContentItem[]) => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newText, setNewText] = useState("");
+  const [editItem, setEditItem] = useState<{ item: ContentItem; index: number } | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editText, setEditText] = useState("");
 
-  const handleAdd = () => {
-    if (!newName.trim()) return;
-    onUpdate(settingKey, [...items, { name: newName.trim(), text: newText.trim() }]);
-    setNewName(""); setNewText(""); setAdding(false);
-    toast.success("Elemento aggiunto");
+  const openEdit = (item: ContentItem, index: number) => {
+    setEditItem({ item, index });
+    setEditName(item.name);
+    setEditText(item.text);
+    setIsNew(false);
   };
 
-  const handleSave = (updated: ContentItem, original: ContentItem) => {
-    onUpdate(settingKey, items.map(i => i.name === original.name && i.text === original.text ? updated : i));
-    toast.success("Elemento aggiornato");
+  const openNew = () => {
+    setEditItem({ item: { name: "", text: "" }, index: -1 });
+    setEditName("");
+    setEditText("");
+    setIsNew(true);
   };
 
-  const handleDelete = (item: ContentItem) => {
-    onUpdate(settingKey, items.filter(i => !(i.name === item.name && i.text === item.text)));
+  const handleSave = () => {
+    if (!editName.trim()) return;
+    if (isNew) {
+      onUpdate(settingKey, [...items, { name: editName.trim(), text: editText.trim() }]);
+      toast.success("Elemento aggiunto");
+    } else if (editItem) {
+      const updated = [...items];
+      updated[editItem.index] = { name: editName.trim(), text: editText.trim() };
+      onUpdate(settingKey, updated);
+      toast.success("Elemento aggiornato");
+    }
+    setEditItem(null);
+  };
+
+  const handleDelete = (index: number) => {
+    onUpdate(settingKey, items.filter((_, i) => i !== index));
     toast.success("Elemento eliminato");
   };
 
@@ -107,36 +85,82 @@ function ContentListView({ settingKey, defaults, items, onUpdate }: {
   };
 
   return (
-    <div className="space-y-2">
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">Nessun elemento salvato</p>
-      ) : (
-        items.map((item, i) => (
-          <ContentItemCard key={`${item.name}-${i}`} item={item} onSave={handleSave} onDelete={handleDelete} />
-        ))
-      )}
-      {adding ? (
-        <Card>
-          <CardContent className="py-3 px-4 space-y-2">
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="h-7 text-sm" />
-            <Textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="Descrizione..." rows={3} className="text-xs" />
-            <div className="flex gap-2 justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Annulla</Button>
-              <Button size="sm" onClick={handleAdd} disabled={!newName.trim()}>Salva</Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => setAdding(true)}>
-            <Plus className="w-3.5 h-3.5" /> Aggiungi
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleLoadDefaults}>
+    <>
+      <div className="space-y-3">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleLoadDefaults}>
             <RefreshCw className="w-3.5 h-3.5" /> Carica default
           </Button>
         </div>
-      )}
-    </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {items.map((item, i) => {
+            const Icon = CARD_ICONS[i % CARD_ICONS.length];
+            return (
+              <Card
+                key={`${item.name}-${i}`}
+                className="group cursor-pointer hover:border-primary/50 transition-colors relative"
+                onClick={() => openEdit(item, i)}
+              >
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2 min-h-[120px]">
+                  <Icon className="w-6 h-6 text-primary shrink-0" />
+                  <p className="text-sm font-medium line-clamp-2 leading-tight">{item.name}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-2">{item.text}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-destructive h-6 w-6 p-0"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(i); }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {/* Add card */}
+          <Card
+            className="cursor-pointer border-dashed hover:border-primary/50 transition-colors"
+            onClick={openNew}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2 min-h-[120px]">
+              <Plus className="w-6 h-6 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Aggiungi</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isNew ? "Nuovo elemento" : "Modifica elemento"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              placeholder="Nome"
+              className="text-sm"
+            />
+            <Textarea
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              placeholder="Descrizione..."
+              rows={5}
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditItem(null)}>Annulla</Button>
+            <Button onClick={handleSave} disabled={!editName.trim()}>
+              <Save className="w-4 h-4 mr-1.5" /> Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -262,11 +286,11 @@ export default function ContentManager() {
         </TabsList>
 
         <TabsContent value="goals" className="m-0">
-          <ContentListView settingKey="custom_goals" defaults={DEFAULT_GOALS} items={goals} onUpdate={handleUpdateItems} />
+          <ContentGridView settingKey="custom_goals" defaults={DEFAULT_GOALS} items={goals} onUpdate={handleUpdateItems} />
         </TabsContent>
 
         <TabsContent value="proposals" className="m-0">
-          <ContentListView settingKey="custom_proposals" defaults={DEFAULT_PROPOSALS} items={proposals} onUpdate={handleUpdateItems} />
+          <ContentGridView settingKey="custom_proposals" defaults={DEFAULT_PROPOSALS} items={proposals} onUpdate={handleUpdateItems} />
         </TabsContent>
 
         <TabsContent value="documents" className="m-0 space-y-2">
