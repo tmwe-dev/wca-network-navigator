@@ -56,9 +56,9 @@ export function CampagneTab() {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4">
+    <div className="flex flex-col h-full p-4 gap-4 overflow-hidden">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
         <Card className="p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
             <Send className="w-4 h-4 text-primary" />
@@ -110,7 +110,7 @@ export function CampagneTab() {
       )}
 
       {/* Filter */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as QueueFilter)}>
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as QueueFilter)} className="shrink-0">
         <TabsList className="bg-muted/50">
           <TabsTrigger value="all" className="text-xs">Tutte ({stats.total})</TabsTrigger>
           <TabsTrigger value="pending" className="text-xs">Pending ({stats.pending})</TabsTrigger>
@@ -120,7 +120,7 @@ export function CampagneTab() {
       </Tabs>
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />

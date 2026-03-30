@@ -81,7 +81,8 @@ export default function SuperHome3D() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-y-auto bg-background text-foreground">
+    <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+      <ScrollArea className="h-full">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
 
         {/* Greeting + AI Prompt */}
@@ -162,6 +163,7 @@ export default function SuperHome3D() {
           </section>
         )}
       </div>
+      </ScrollArea>
     </div>
   );
 }

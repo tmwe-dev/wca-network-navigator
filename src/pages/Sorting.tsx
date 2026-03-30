@@ -57,10 +57,10 @@ export default function Sorting() {
   }, [checkedReviewed, sendJob]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left panel - 40% */}
-        <div className="w-[40%] min-w-[320px]">
+        <div className="w-[40%] min-w-[320px] overflow-hidden">
           <SortingList
             jobs={jobs}
             selectedId={selectedId}
@@ -72,7 +72,7 @@ export default function Sorting() {
           />
         </div>
         {/* Right panel - 60% */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <SortingCanvas job={selectedJob} />
         </div>
       </div>

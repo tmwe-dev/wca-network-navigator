@@ -51,7 +51,9 @@ export default function Import() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-hidden">
+      <ScrollArea className="h-full">
+      <div className="p-4 space-y-4">
 
       {/* ====== UPLOAD DIALOG ====== */}
       <Dialog open={w.uploadDialogOpen} onOpenChange={w.setUploadDialogOpen}>
