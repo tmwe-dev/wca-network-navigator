@@ -279,15 +279,6 @@ export default function Workspace() {
                 ))}
               </div>
 
-              {/* Search */}
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cerca..."
-                  className="pl-9 h-8 text-[13px] rounded-lg border-border/40"
-                />
-              </div>
             </div>
 
             {/* Contact list */}
