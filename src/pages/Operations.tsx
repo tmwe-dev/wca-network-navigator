@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye,
+  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send,
 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
@@ -18,6 +18,11 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useBusinessCards, useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
+import { useSendToCockpit } from "@/hooks/useCockpitContacts";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
