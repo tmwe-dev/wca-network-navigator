@@ -213,15 +213,26 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
         </TabsContent>
 
         <TabsContent value="variables" className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between"><span className="text-muted-foreground">recipient_name</span><span className="text-foreground">{draft.contactName}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">company</span><span className="text-foreground">{draft.companyName}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">channel</span><span className="text-foreground">{draft.channel}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">language</span><span className="text-foreground">{draft.language}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">country</span><span className="text-foreground">{draft.countryCode}</span></div>
-            {draft.contactEmail && (
-              <div className="flex justify-between"><span className="text-muted-foreground">email</span><span className="text-foreground">{draft.contactEmail}</span></div>
-            )}
+          <div className="space-y-3">
+            {/* Content pickers */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Target className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI</span>
+              </div>
+              <ContentPicker type="goals" onSelect={onGoalChange} selectedText={goal} triggerLabel="Goal" className="w-full" />
+              <ContentPicker type="proposals" onSelect={onBaseProposalChange} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
+            </div>
+            <div className="border-t border-border/30 pt-2 space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-muted-foreground">recipient_name</span><span className="text-foreground">{draft.contactName}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">company</span><span className="text-foreground">{draft.companyName}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">channel</span><span className="text-foreground">{draft.channel}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">language</span><span className="text-foreground">{draft.language}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">country</span><span className="text-foreground">{draft.countryCode}</span></div>
+              {draft.contactEmail && (
+                <div className="flex justify-between"><span className="text-muted-foreground">email</span><span className="text-foreground">{draft.contactEmail}</span></div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -477,11 +477,21 @@ export default function EmailComposer() {
                   className="min-h-[200px] font-mono text-xs bg-muted/20"
                 />
 
-                {/* AI Generate */}
-                <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full gap-2 h-10" variant="outline">
-                  {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
-                  {aiGenerating ? "Generazione AI in corso..." : "Genera con AI"}
-                </Button>
+                {/* Goal & Proposal pickers + AI Generate */}
+                <div className="float-panel-subtle p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium">Contesto AI</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ContentPicker type="goals" onSelect={(t) => {}} selectedText={goal} triggerLabel="Goal" className="w-full" />
+                    <ContentPicker type="proposals" onSelect={(t) => {}} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
+                  </div>
+                  <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full gap-2 h-9" variant="outline">
+                    {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
+                    {aiGenerating ? "Generazione AI in corso..." : "Genera con AI"}
+                  </Button>
+                </div>
 
                 {/* Links */}
                 <div className="float-panel-subtle p-3 space-y-2">

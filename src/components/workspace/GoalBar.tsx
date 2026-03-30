@@ -115,32 +115,14 @@ export default function GoalBar({
         </TabsList>
 
         <TabsContent value="goal" className="mt-2 space-y-1.5">
-          <Select onValueChange={(v) => { const item = goalItems.find((_, i) => String(i) === v); if (item) onGoalChange(item.text); }}>
-            <SelectTrigger className="h-7 text-xs border-border bg-muted/30">
-              <SelectValue placeholder="Seleziona goal predefinito..." />
-            </SelectTrigger>
-            <SelectContent>
-              {goalItems.map((item, i) => (
-                <SelectItem key={i} value={String(i)} className="text-xs">{item.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ContentPicker type="goals" onSelect={onGoalChange} selectedText={goal} className="w-full" />
           <Textarea value={goal} onChange={(e) => onGoalChange(e.target.value)}
             placeholder="Es. Proporre una collaborazione per spedizioni via mare FCL verso il Far East..."
             className="min-h-[120px] max-h-[200px] text-sm bg-muted/20 border-border text-foreground placeholder:text-muted-foreground" />
         </TabsContent>
 
         <TabsContent value="proposal" className="mt-2 space-y-1.5">
-          <Select onValueChange={(v) => { const item = proposalItems.find((_, i) => String(i) === v); if (item) onBaseProposalChange(item.text); }}>
-            <SelectTrigger className="h-7 text-xs border-border bg-muted/30">
-              <SelectValue placeholder="Seleziona proposta predefinita..." />
-            </SelectTrigger>
-            <SelectContent>
-              {proposalItems.map((item, i) => (
-                <SelectItem key={i} value={String(i)} className="text-xs">{item.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ContentPicker type="proposals" onSelect={onBaseProposalChange} selectedText={baseProposal} className="w-full" />
           <Textarea value={baseProposal} onChange={(e) => onBaseProposalChange(e.target.value)}
             placeholder="Es. Offriamo transit time competitivi di 25 giorni, servizio door-to-door con tracking..."
             className="min-h-[120px] max-h-[200px] text-sm bg-muted/20 border-border text-foreground placeholder:text-muted-foreground" />
