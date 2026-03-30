@@ -7,6 +7,7 @@ import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { toast } from "sonner";
@@ -248,7 +249,7 @@ const Cockpit = () => {
     <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
-        searchQuery={searchQuery} onSearchChange={setSearchQuery}
+        searchQuery={searchQuery} onSearchChange={() => {}}
         contacts={contactsForAI}
       />
       <AnimatePresence>
@@ -259,7 +260,7 @@ const Cockpit = () => {
       <div className="flex-1 flex gap-0 overflow-hidden min-h-0">
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
-            viewMode={viewMode} searchQuery={searchQuery} onSearchChange={setSearchQuery} filters={activeFilters}
+            viewMode={viewMode} searchQuery={searchQuery} onSearchChange={() => {}} filters={activeFilters}
             contacts={visibleContacts} isLoading={isLoading}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             selectedIds={selection.selectedIds} onToggle={selection.toggle}
@@ -268,8 +269,8 @@ const Cockpit = () => {
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
-            visibleOrigins={visibleOrigins}
-            onToggleOrigin={toggleOrigin}
+            visibleOrigins={visibleOrigins as Set<ContactOrigin>}
+            onToggleOrigin={() => {}}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
