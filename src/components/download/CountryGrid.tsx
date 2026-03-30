@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/select";
 
 import {
-  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch,
+  Search, CheckCircle, X, CheckSquare, Mail, Phone, FolderSearch, RefreshCw, Loader2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
