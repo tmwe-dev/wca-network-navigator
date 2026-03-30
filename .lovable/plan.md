@@ -1,64 +1,64 @@
 
 
-# Ristrutturazione Outreach: Campagne dentro In Uscita + Workflow Attività dal Cockpit
+# Nuova Tab "Circuito di Attesa" in Outreach
 
-## Struttura Tab Outreach (da 5 a 4)
+## Cosa serve
+
+Una quinta tab in Outreach che mostri tutti i contatti/partner che sono entrati nel ciclo di vita commerciale (status != "new") con:
+- Indicatore visivo del livello nel circuito (usando `HoldingPatternIndicator` gia' esistente)
+- History completa: attivita', email inviate, interazioni, note
+- Possibilita' di cambiare status direttamente
+- Raggruppamento per livello (Contattato, In corso, Trattativa)
+
+## Struttura
 
 ```text
-[Cockpit] [Workspace] [In Uscita] [Attività]
+[Cockpit] [Workspace] [In Uscita] [Attività] [Circuito]
 ```
 
-**In Uscita** diventa un container con sub-tab interni:
-- **Invii Diretti**: l'attuale Sorting (email/azioni uscite da Cockpit/Workspace)
-- **Campagne**: l'attuale CampagneTab (coda email_campaign_queue)
+Il tab "Circuito" mostra una vista master-detail:
+- **Lista sinistra**: partner/contatti raggruppati per lead_status (Contattato → In corso → Trattativa), con contatore per gruppo, HoldingPatternIndicator compatto, nome azienda, ultimo contatto
+- **Pannello destro** (al click): timeline cronologica completa con tutte le attivita', interazioni, email inviate — ogni entry con data, tipo (icona), dettaglio
 
-Il tab "Campagne" standalone sparisce da Outreach.
+## Sorgenti dati
 
-## Workflow Attività dal Cockpit/Workspace
+I contatti nel circuito vengono da 3 tabelle:
+- `partners` dove `lead_status NOT IN ('new', 'lost', 'converted')` — join con `interactions` e `activities`
+- `prospects` con stessa logica — join con `prospect_interactions`
+- `imported_contacts` con stessa logica — join con `contact_interactions`
 
-Oggi il Cockpit permette solo drag-and-drop sulle drop zone per generare bozze. Manca la possibilità di:
+La timeline unifica:
+- `activities` (filtrate per partner_id/source_id)
+- `interactions` (per partner)
+- `email_campaign_queue` (status = 'sent', per partner_id)
 
-### A) Azioni rapide sul contatto (nuovo pannello/menu)
-Cliccando su un contatto nel Cockpit o Workspace, l'utente può:
-1. **Segna come svolta** — crea un'attività `completed` immediata (es. "Telefonata fatta"). Tipo attività selezionabile (phone_call, meeting, other). Il contatto esce dalla coda cockpit.
-2. **Aggiungi nota** — salva una nota/descrizione sull'attività senza completarla.
-3. **Programma** — crea un'attività `pending` con `due_date` futuro. Appare in Agenda. Il contatto esce dal cockpit oggi ma ricompare quando arriva la data.
+## Dettagli tecnici
 
-### B) Attività programmate per oggi nel Cockpit
-Il hook `useCockpitContacts` viene esteso per includere anche le attività con `due_date = oggi` e `status = pending`. Queste appaiono nel Cockpit come contatti "di ritorno" con un badge che indica che sono riprogrammate.
+### Nuovo hook `useHoldingPattern.ts`
+- Query che recupera partner con `lead_status IN ('contacted','in_progress','negotiation')` + conteggio attivita' per ciascuno
+- Per il dettaglio: query separata che unifica activities + interactions + email_campaign_queue in una timeline ordinata per data
 
-### C) Attività completate vanno in In Uscita
-Le attività marcate come `completed` (sia da Cockpit che da Workspace) appaiono automaticamente nel tab "Invii Diretti" di In Uscita, che già legge dalla tabella `activities`.
+### Nuovo componente `HoldingPatternTab.tsx`
+- Layout split: lista scrollabile a sinistra (40%), dettaglio a destra (60%)
+- Lista raggruppata per status con accordion
+- Ogni item: nome azienda, paese (flag), HoldingPatternIndicator compatto, data ultimo contatto
+- Click apre il dettaglio con timeline verticale
+- Possibilita' di cambiare lead_status dal pannello dettaglio
 
-## Modifiche tecniche
-
-### 1. `src/pages/Outreach.tsx`
-- Rimuovere tab "Campagne" standalone
-- Rinominare tab: Cockpit, Workspace, In Uscita, Attività (4 tab)
-
-### 2. Nuovo `src/components/outreach/InUscitaTab.tsx`
-- Container con sub-tab interni: "Invii Diretti" (Sorting) + "Campagne" (CampagneTab)
-- Lazy load di entrambi
-
-### 3. `src/pages/Cockpit.tsx` + nuovo componente `ContactActionMenu`
-- Aggiungere menu contestuale (click destro o pulsante azioni) su ogni contatto
-- Opzioni: "Svolta" (con scelta tipo), "Nota", "Programma" (con date picker)
-- Alla conferma: crea activity + rimuove da cockpit_queue (o marca come "worked")
-
-### 4. `src/hooks/useCockpitContacts.ts`
-- Estendere la query per includere activities con `due_date = oggi`, `status = pending`, come contatti aggiuntivi nel cockpit
-- Questi contatti hanno un flag `isScheduledReturn: true`
-
-### 5. `src/components/sorting/SortingList.tsx`
-- Già mostra activities pending con email_body. Nessuna modifica sostanziale, ma il filtro potrebbe includere anche le attività completate (storico invii).
+### Timeline nel dettaglio
+Ogni entry mostra:
+- Icona tipo (Mail, Phone, MessageSquare, FileText, etc.)
+- Titolo + descrizione
+- Data/ora
+- Badge status (completata, pending, etc.)
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/pages/Outreach.tsx` | Ridurre a 4 tab, caricare InUscitaTab |
-| `src/components/outreach/InUscitaTab.tsx` | **Nuovo** — sub-tab Invii Diretti + Campagne |
-| `src/pages/Cockpit.tsx` | Aggiungere azioni rapide (svolta/nota/programma) sui contatti |
-| `src/hooks/useCockpitContacts.ts` | Includere attività programmate per oggi |
-| `src/components/cockpit/ContactStream.tsx` | Supportare menu azioni e badge "riprogrammato" |
+| `src/hooks/useHoldingPattern.ts` | **Nuovo** — query partner nel circuito + timeline dettaglio |
+| `src/components/outreach/HoldingPatternTab.tsx` | **Nuovo** — vista master-detail con timeline |
+| `src/pages/Outreach.tsx` | Aggiungere quinta tab "Circuito" |
+
+Nessuna modifica al database — i dati esistono gia' nelle tabelle `partners`, `activities`, `interactions`, `email_campaign_queue`.
 
