@@ -23,20 +23,6 @@ export interface CockpitContact {
   partnerId: string | null;
   isScheduledReturn?: boolean;
 }
-  company: string;
-  role: string;
-  country: string;
-  language: string;
-  lastContact: string;
-  priority: number;
-  channels: string[];
-  email: string;
-  origin: ContactOrigin;
-  originDetail: string;
-  sourceType: string;
-  sourceId: string;
-  partnerId: string | null;
-}
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
   IT: "italiano", FR: "français", DE: "deutsch", ES: "español",
