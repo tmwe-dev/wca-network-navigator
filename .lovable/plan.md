@@ -1,55 +1,65 @@
 
 
-# Riorganizzazione Sidebar: AI in Settings + Switch Area in Header
+# Ristrutturazione Settings: Tab Orizzontali Ovunque
 
-## Cosa cambia
+## Problema
+Ogni sezione delle impostazioni impila card una sopra l'altra verticalmente. Risultato: confusione, devi scrollare tantissimo, vedi tutto insieme. Serve: **tab orizzontali**, una cosa per volta.
 
-### 1. Agenti e Chat Agenti → sotto Impostazioni (non più in Strumenti)
+## Cosa cambia per ogni sezione
 
-Attualmente "Agenti" e "Chat Agenti" sono nella sezione "Strumenti" del menu. Vanno spostati in una nuova sezione separata **"AI"** posizionata sotto "Sistema", oppure direttamente come sotto-voci di Impostazioni. Per chiarezza li mettiamo in una sezione dedicata **"AI Management"** in fondo al menu, separata dagli strumenti operativi.
+### 1. Generale (`GeneralSettings.tsx`)
+Attualmente: WhatsApp + SMTP + Info SMTP + Test Email + Template + Profilo AI — tutto impilato.
 
-### 2. CRM non deve apparire quando sei in Network (e viceversa)
+Tab orizzontali:
+- **WhatsApp** — numero telefono
+- **Email SMTP** — configurazione server + test invio
+- **Template** — TemplateManager
+- **Profilo AI** — AIProfileSettings
 
-Il codice attuale nasconde CRM quando `inNetwork` e Network quando `inCRM` — ma l'utente riporta che CRM è ancora visibile dall'area Network. Verificando il codice, la logica c'è ma il problema è che nella sezione "Aree" mostra comunque l'altra voce come link. La soluzione: quando sei in un'area specifica, l'altra area non compare nel menu. Al suo posto, nell'**header** della pagina aggiungiamo uno **switch** (toggle o pulsante) per passare rapidamente dall'altra parte senza tornare alla Dashboard.
+### 2. Connessioni (`ConnectionsSettings.tsx`)
+Attualmente: WCA status + Auto-Login + Verifica + Avanzate + LinkedIn credenziali + Estensione + Cookie avanzato + Blacklist — tutto impilato.
 
-### 3. Switch rapido nell'header
+Tab orizzontali:
+- **WCA** — status, auto-login, verifica, avanzate
+- **LinkedIn** — credenziali, estensione, cookie avanzato
+- **Blacklist** — BlacklistManager
 
-Quando sei in `/network/*`, l'header mostra un piccolo pulsante "→ CRM" per saltare direttamente. Quando sei in `/crm/*`, mostra "→ Network". Dalla Dashboard o da strumenti condivisi, non appare nessuno switch.
+### 3. Contenuti (`ContentManager.tsx`)
+Attualmente: Accordion con Goal, Proposte, Documenti, Link tutti espandibili insieme.
 
-## Piano file
+Tab orizzontali:
+- **Goal** — lista goal
+- **Proposte** — lista proposte
+- **Documenti** — upload e lista documenti
+- **Link** — link di riferimento
+
+### 4. Import/Export (`ImportExportSettings.tsx`)
+Già ha tab orizzontali — OK, nessuna modifica.
+
+### 5. Report Aziende (`RASettings.tsx`)
+Attualmente: Credenziali + Estensione impilate.
+
+Tab orizzontali:
+- **Credenziali** — username/password
+- **Estensione** — download e istruzioni
+
+### 6. Abbonamento (`SubscriptionPanel.tsx`)
+Attualmente: Piano + Crediti + Calcolatore token impilati.
+
+Tab orizzontali:
+- **Piano** — card tier + gestione
+- **Crediti** — saldo + acquisto pacchetti
+- **Token** — calcolatore costi
+
+## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/layout/AppSidebar.tsx` | Spostare Agenti e Chat Agenti in nuova sezione "AI" sotto Sistema. Rimuovere completamente CRM/Network dall'area opposta (già fatto ma da verificare). |
-| `src/components/layout/AppLayout.tsx` | Aggiungere switch "→ CRM" / "→ Network" nell'header quando in area specifica |
+| `src/components/settings/GeneralSettings.tsx` | Wrappare contenuti in Tabs con 4 tab |
+| `src/components/settings/ConnectionsSettings.tsx` | Wrappare in Tabs con 3 tab |
+| `src/components/settings/ContentManager.tsx` | Sostituire Accordion con Tabs a 4 tab |
+| `src/components/settings/RASettings.tsx` | Wrappare in Tabs con 2 tab |
+| `src/components/settings/SubscriptionPanel.tsx` | Wrappare in Tabs con 3 tab |
 
-### Struttura menu risultante
-
-```text
-Aree
-  Dashboard        /
-  Network          /network    ← solo se NON in /crm
-  CRM              /crm        ← solo se NON in /network
-
-Strumenti
-  Outreach         /outreach
-  Email Composer   /email-composer
-  Agenda           /agenda
-
-AI
-  Agenti           /agents
-  Chat Agenti      /agent-chat
-
-Sistema
-  Impostazioni     /settings
-```
-
-### Switch header
-
-```text
-┌─[☰]─── WCA Partners ────────────── [→ CRM] ──┐
-│  ...contenuto Network...                       │
-```
-
-Il pulsante switch usa `useNavigate` per saltare all'altra area. Stile: piccolo badge/button con icona e testo, posizionato nell'header accanto al titolo o a destra.
+Ogni sezione mostra **una sola vista per volta**, selezionata dal tab orizzontale in alto. Zero scroll infinito, zero confusione.
 
