@@ -393,6 +393,8 @@ export default function Import() {
         activeFileName={w.activeLog?.file_name}
       />
       </div>
+      </ScrollArea>
+      </div>
     </div>
   );
 }
