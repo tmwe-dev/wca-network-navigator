@@ -9,32 +9,37 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useWcaSession } from "@/hooks/useWcaSession";
 import { useState } from "react";
 
-const navSections = [
-  {
-    label: "Aree",
-    items: [
-      { title: "Dashboard", url: "/", icon: Home },
-      { title: "Network", url: "/network", icon: Globe },
-      { title: "CRM", url: "/crm", icon: Users },
-    ],
-  },
-  {
-    label: "Strumenti",
-    items: [
-      { title: "Outreach", url: "/outreach", icon: Rocket },
-      { title: "Email Composer", url: "/email-composer", icon: Mail },
-      { title: "Agenda", url: "/agenda", icon: Calendar },
-      { title: "Agenti", url: "/agents", icon: Bot },
-      { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { title: "Impostazioni", url: "/settings", icon: Settings },
-    ],
-  },
-];
+function getNavSections(pathname: string) {
+  const inNetwork = pathname.startsWith("/network");
+  const inCRM = pathname.startsWith("/crm");
+
+  return [
+    {
+      label: "Aree",
+      items: [
+        { title: "Dashboard", url: "/", icon: Home },
+        ...(!inCRM ? [{ title: "Network", url: "/network", icon: Globe }] : []),
+        ...(!inNetwork ? [{ title: "CRM", url: "/crm", icon: Users }] : []),
+      ],
+    },
+    {
+      label: "Strumenti",
+      items: [
+        { title: "Outreach", url: "/outreach", icon: Rocket },
+        { title: "Email Composer", url: "/email-composer", icon: Mail },
+        { title: "Agenda", url: "/agenda", icon: Calendar },
+        { title: "Agenti", url: "/agents", icon: Bot },
+        { title: "Chat Agenti", url: "/agent-chat", icon: MessageCircle },
+      ],
+    },
+    {
+      label: "Sistema",
+      items: [
+        { title: "Impostazioni", url: "/settings", icon: Settings },
+      ],
+    },
+  ];
+}
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -83,7 +88,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
       {/* Sections */}
       <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-4">
-        {navSections.map((section) => (
+        {getNavSections(location.pathname).map((section) => (
           <div key={section.label}>
             <span className="block px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               {section.label}
