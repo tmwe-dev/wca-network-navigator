@@ -370,7 +370,9 @@ export default function PartnerHub() {
         onStopDeepSearch={handleStopDeepSearch}
         onEmail={handleUnifiedEmail}
         onSendToWorkspace={handleUnifiedWorkspace}
+        onSendToCockpit={handleUnifiedCockpit}
         sendingToWorkspace={sendingToWorkspace}
+        sendingToCockpit={sendingToCockpit}
         deepSearching={deepSearch.running}
         deepSearchProgress={deepSearch.current ? { current: deepSearch.current.index, total: deepSearch.current.total } : null}
         onSingleDeepSearch={handleSingleDeepSearch}
