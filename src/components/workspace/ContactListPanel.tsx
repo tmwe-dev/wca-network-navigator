@@ -89,10 +89,10 @@ export default function ContactListPanel({
   selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onFilteredIdsChange,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
-  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
-  const [emailGenFilter, setEmailGenFilter] = useState<EmailGenFilter>("all");
-  const [selectedCountries, setSelectedCountries] = useState<Set<string>>(new Set());
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const { filters } = useGlobalFilters();
+  const activeFilters = filters.workspaceFilters;
+  const emailGenFilter = filters.emailGenFilter;
+  const selectedCountries = filters.workspaceCountries;
   const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string } | null>(null);
 
   const emailActivities = useMemo(() => {
@@ -104,19 +104,6 @@ export default function ContactListPanel({
 
   const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
-
-  // Available countries for filter
-  const availableCountries = useMemo(() => {
-    const map = new Map<string, { code: string; name: string; count: number }>();
-    for (const a of emailActivities) {
-      const d = getDisplayFields(a);
-      const key = d.countryCode;
-      const existing = map.get(key);
-      if (existing) existing.count++;
-      else map.set(key, { code: key, name: d.countryName, count: 1 });
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count);
-  }, [emailActivities]);
 
   const searched = useMemo(() => {
     if (!search.trim()) return emailActivities;
@@ -135,7 +122,6 @@ export default function ContactListPanel({
   const filtered = useMemo(() => {
     let result = searched;
 
-    // Chip filters
     if (activeFilters.size > 0) {
       result = result.filter((a) => {
         for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
@@ -143,14 +129,12 @@ export default function ContactListPanel({
       });
     }
 
-    // Email generation filter
     if (emailGenFilter === "generated") {
       result = result.filter((a) => !!a.email_subject);
     } else if (emailGenFilter === "to_generate") {
       result = result.filter((a) => !a.email_subject);
     }
 
-    // Country filter
     if (selectedCountries.size > 0) {
       result = result.filter((a) => {
         const d = getDisplayFields(a);
@@ -161,14 +145,6 @@ export default function ContactListPanel({
     return result;
   }, [searched, activeFilters, emailGenFilter, selectedCountries]);
 
-  const filterCounts = useMemo(() => {
-    const counts = {} as Record<FilterKey, number>;
-    const allChips = FILTER_SECTIONS.flatMap((s) => s.chips);
-    for (const chip of allChips) { counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length; }
-    return counts;
-  }, [searched]);
-
-  // Email gen counts
   const emailGenCounts = useMemo(() => {
     const generated = searched.filter((a) => !!a.email_subject).length;
     return { all: searched.length, generated, to_generate: searched.length - generated };
@@ -179,29 +155,8 @@ export default function ContactListPanel({
     [filtered]
   );
 
-  const toggleFilter = useCallback((key: FilterKey) => {
-    setActiveFilters((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setActiveFilters(new Set());
-    setEmailGenFilter("all");
-    setSelectedCountries(new Set());
-  }, []);
-
-  const toggleCountry = useCallback((code: string) => {
-    setSelectedCountries((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  }, []);
-
   const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
-
-  const activeFilterCount = activeFilters.size + (emailGenFilter !== "all" ? 1 : 0) + selectedCountries.size;
 
   useEffect(() => {
     onFilteredIdsChange?.(filteredIds);
