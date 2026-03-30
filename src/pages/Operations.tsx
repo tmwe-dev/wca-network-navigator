@@ -326,3 +326,123 @@ function StatPill({ icon: Icon, value, label, isDark, onClick, active, variant =
     </Tooltip>
   );
 }
+
+/* ── Business Cards View ── */
+function BusinessCardsView() {
+  const { data: cards = [], isLoading } = useBusinessCards();
+  const { data: matchedPartnerIds } = useBusinessCardPartnerMatches();
+  const sendToCockpit = useSendToCockpit();
+  const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search) return cards;
+    const q = search.toLowerCase();
+    return cards.filter(c =>
+      (c.company_name || "").toLowerCase().includes(q) ||
+      (c.contact_name || "").toLowerCase().includes(q) ||
+      (c.event_name || "").toLowerCase().includes(q)
+    );
+  }, [cards, search]);
+
+  const toggleBca = (id: string) => {
+    setSelectedBca(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleSendToCockpit = async () => {
+    const items = Array.from(selectedBca).map(id => ({
+      sourceType: "business_card",
+      sourceId: id,
+      partnerId: cards.find(c => c.id === id)?.matched_partner_id || undefined,
+    }));
+    try {
+      const count = await sendToCockpit.mutateAsync(items);
+      toast.success(`${count} biglietti inviati al Cockpit`);
+      setSelectedBca(new Set());
+    } catch {
+      toast.error("Errore nell'invio al Cockpit");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col px-4 pb-3 gap-3 overflow-hidden">
+      {/* Search + Actions */}
+      <div className="flex items-center gap-3 pt-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cerca biglietto da visita..."
+            className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+          />
+        </div>
+        <span className="text-xs text-muted-foreground">{filtered.length} biglietti</span>
+        {selectedBca.size > 0 && (
+          <Button size="sm" className="h-7 text-xs gap-1.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25" variant="outline" onClick={handleSendToCockpit}>
+            <Send className="w-3 h-3" /> Invia {selectedBca.size} al Cockpit
+          </Button>
+        )}
+      </div>
+
+      {/* Cards grid */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <CreditCard className="w-12 h-12 text-muted-foreground/20" />
+            <p className="text-sm text-muted-foreground/60">Nessun biglietto da visita</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filtered.map(card => {
+              const isMatched = matchedPartnerIds?.has(card.matched_partner_id || "");
+              const isSelected = selectedBca.has(card.id);
+              return (
+                <div
+                  key={card.id}
+                  className={cn(
+                    "relative rounded-xl border p-3.5 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    isMatched ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card/50",
+                    isSelected && "ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
+                  )}
+                  onClick={() => toggleBca(card.id)}
+                >
+                  {isMatched && (
+                    <Badge variant="outline" className="absolute top-2 right-2 text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30">
+                      Matchato
+                    </Badge>
+                  )}
+                  <div className="flex items-start gap-2 mb-2">
+                    <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{card.contact_name || "—"}</p>
+                      <p className="text-xs text-foreground/80 truncate">{card.company_name || "—"}</p>
+                      {card.position && <p className="text-[11px] text-muted-foreground">{card.position}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+                    {card.email && <span className="px-1.5 py-0.5 rounded bg-muted/50 truncate max-w-[160px]">{card.email}</span>}
+                    {card.event_name && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">{card.event_name}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
