@@ -119,6 +119,14 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </div>
           </Section>
 
+          {/* Quality AI */}
+          <Section title="Qualità AI" icon="⚡" open={openSections.goal} onToggle={() => {}}>
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">Livello di generazione per email e outreach AI</p>
+              <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
+            </div>
+          </Section>
+
           {/* Presets */}
           <div className="pt-2 border-t border-border/30 space-y-2">
             <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Preset</p>
