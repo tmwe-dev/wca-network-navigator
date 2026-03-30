@@ -63,6 +63,7 @@ export default function PartnerHub() {
   const { data: countryStatsData } = useCountryStats();
 
   const [sendingToWorkspace, setSendingToWorkspace] = useState(false);
+  const [sendingToCockpit, setSendingToCockpit] = useState(false);
   const [aliasGenerating, setAliasGenerating] = useState<"company" | "contact" | null>(null);
 
   const deepSearch = useDeepSearch();
