@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, Globe, Users, FileX, MailX, PhoneOff, FolderOpen, Eye,
+  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye,
 } from "lucide-react";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
