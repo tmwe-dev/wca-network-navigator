@@ -1,8 +1,9 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rocket, Briefcase, Send, ListTodo, ArrowUpFromLine } from "lucide-react";
 import { CampagneTab } from "@/components/outreach/CampagneTab";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 const Workspace = lazy(() => import("./Workspace"));
@@ -14,6 +15,9 @@ function TabFallback() {
 
 export default function Outreach() {
   const [tab, setTab] = useState("cockpit");
+  const { setOutreachTab } = useGlobalFilters();
+
+  useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

@@ -1,16 +1,13 @@
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, CheckCircle2, Clock, Filter, Zap } from "lucide-react";
+import { CheckCircle2, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { isToday, parseISO } from "date-fns";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { SortingJob } from "@/hooks/useSortingJobs";
-
-type FilterMode = "all" | "unreviewed" | "reviewed" | "today" | "immediate" | "scheduled";
 
 interface SortingListProps {
   jobs: SortingJob[];
@@ -25,8 +22,9 @@ interface SortingListProps {
 export function SortingList({
   jobs, selectedId, selectedIds, onSelect, onToggleCheck, onSelectAll, onSelectNone,
 }: SortingListProps) {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<FilterMode>("all");
+  const { filters } = useGlobalFilters();
+  const search = filters.sortingSearch;
+  const filter = filters.sortingFilter;
 
   const filtered = useMemo(() => {
     let list = jobs;
@@ -53,16 +51,6 @@ export function SortingList({
 
   const reviewedCount = jobs.filter((j) => j.reviewed).length;
   const todayCount = jobs.filter((j) => j.scheduled_at && isToday(parseISO(j.scheduled_at))).length;
-  const immediateCount = jobs.filter((j) => !j.scheduled_at).length;
-  const scheduledCount = jobs.filter((j) => !!j.scheduled_at).length;
-
-  const filters: { key: FilterMode; label: string }[] = [
-    { key: "all", label: "Tutti" },
-    { key: "immediate", label: `⚡ Immediati (${immediateCount})` },
-    { key: "scheduled", label: `🕐 Programmati (${scheduledCount})` },
-    { key: "unreviewed", label: "Da rivedere" },
-    { key: "reviewed", label: "Rivisti" },
-  ];
 
   return (
     <div className="flex flex-col h-full border-r border-border">
@@ -71,19 +59,8 @@ export function SortingList({
         {jobs.length} in coda · {reviewedCount} rivisti · {todayCount} oggi
       </div>
 
-      {/* Toolbar */}
-      <div className="px-4 pb-2 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Cerca azienda o contatto..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9 text-sm" />
-        </div>
-        <div className="flex gap-1 flex-wrap">
-          {filters.map((f) => (
-            <Button key={f.key} variant={filter === f.key ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setFilter(f.key)}>
-              {f.label}
-            </Button>
-          ))}
-        </div>
+      {/* Select controls */}
+      <div className="px-4 pb-2">
         <div className="flex gap-2 text-xs">
           <button onClick={onSelectAll} className="text-primary hover:underline">Seleziona tutti</button>
           <button onClick={onSelectNone} className="text-muted-foreground hover:underline">Nessuno</button>

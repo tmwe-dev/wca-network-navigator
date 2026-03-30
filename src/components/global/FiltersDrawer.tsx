@@ -3,7 +3,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SlidersHorizontal, Search, RotateCcw, Check } from "lucide-react";
-import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 
 interface FiltersDrawerProps {
@@ -53,6 +53,43 @@ const LEAD_STATUS_OPTIONS = [
   { value: "converted", label: "Convertito" },
 ];
 
+/* ── Workspace filter definitions ── */
+const WS_FILTER_SECTIONS: { label: string; chips: { key: WorkspaceFilterKey; label: string }[] }[] = [
+  {
+    label: "Dati Contatto",
+    chips: [
+      { key: "with_email", label: "Con email" },
+      { key: "no_email", label: "Senza email" },
+      { key: "with_contact", label: "Con contatto" },
+      { key: "no_contact", label: "Senza contatto" },
+    ],
+  },
+  {
+    label: "Arricchimento",
+    chips: [
+      { key: "enriched", label: "Arricchito" },
+      { key: "not_enriched", label: "Non arricchito" },
+      { key: "with_alias", label: "Con alias" },
+      { key: "no_alias", label: "Senza alias" },
+    ],
+  },
+];
+
+const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string }[] = [
+  { key: "all", label: "Tutte" },
+  { key: "generated", label: "Generata" },
+  { key: "to_generate", label: "Da generare" },
+];
+
+/* ── Sorting filter definitions ── */
+const SORTING_FILTER_OPTIONS: { key: SortingFilterMode; label: string }[] = [
+  { key: "all", label: "Tutti" },
+  { key: "immediate", label: "⚡ Immediati" },
+  { key: "scheduled", label: "🕐 Programmati" },
+  { key: "unreviewed", label: "Da rivedere" },
+  { key: "reviewed", label: "Rivisti" },
+];
+
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const g = useGlobalFilters();
   const [localSearch, setLocalSearch] = useState(g.filters.search);
@@ -73,10 +110,20 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     g.setOrigin(next);
   };
 
+  const toggleWsFilter = (key: WorkspaceFilterKey) => {
+    const next = new Set(g.filters.workspaceFilters);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    g.setWorkspaceFilters(next);
+  };
+
   const route = g.currentRoute;
-  const showOrigin = ["/outreach", "/crm"].includes(route);
+  const isOutreach = route === "/outreach";
+  const outTab = g.filters.outreachTab;
+  const showOrigin = ["/outreach", "/crm"].includes(route) && !isOutreach;
   const showQuality = ["/network", "/operations"].includes(route);
   const showContacts = route === "/contacts" || route === "/crm";
+  const showWorkspace = isOutreach && outTab === "workspace";
+  const showSorting = isOutreach && outTab === "inuscita";
 
   const activeCount = useMemo(() => {
     let c = 0;
@@ -87,8 +134,15 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     if (g.filters.groupBy !== "country") c++;
     if (g.filters.holdingPattern !== "out") c++;
     if (g.filters.leadStatus !== "all") c++;
+    if (g.filters.workspaceFilters.size > 0) c++;
+    if (g.filters.emailGenFilter !== "all") c++;
+    if (g.filters.workspaceCountries.size > 0) c++;
+    if (g.filters.sortingFilter !== "all") c++;
+    if (g.filters.sortingSearch) c++;
     return c;
   }, [g.filters]);
+
+  const searchPlaceholder = showSorting ? "Cerca azienda o contatto..." : showWorkspace ? "Cerca partner, contatto..." : "Cerca partner, contatto...";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -101,7 +155,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-foreground">Filtri & Ordinamento</h3>
-              <p className="text-[11px] text-muted-foreground">Filtra i dati della vista corrente</p>
+              <p className="text-[11px] text-muted-foreground">
+                {showWorkspace ? "Filtri Workspace" : showSorting ? "Filtri In Uscita" : "Filtra i dati della vista corrente"}
+              </p>
             </div>
             {activeCount > 0 && (
               <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold">{activeCount} attivi</span>
@@ -111,29 +167,48 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-          {/* Search */}
-          <FilterSection title="Cerca">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                value={localSearch} onChange={e => setLocalSearch(e.target.value)}
-                placeholder="Cerca partner, contatto..."
-                className="pl-9 h-9 text-sm bg-muted/30 border-border/40"
-                onKeyDown={e => e.key === "Enter" && handleApply()}
-              />
-            </div>
-          </FilterSection>
+          {/* Global Search */}
+          {!showSorting && (
+            <FilterSection title="Cerca">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={localSearch} onChange={e => setLocalSearch(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="pl-9 h-9 text-sm bg-muted/30 border-border/40"
+                  onKeyDown={e => e.key === "Enter" && handleApply()}
+                />
+              </div>
+            </FilterSection>
+          )}
 
-          {/* Sort */}
-          <FilterSection title="Ordinamento">
-            <div className="flex flex-wrap gap-1.5">
-              {SORT_OPTIONS.map(opt => (
-                <ChipButton key={opt.value} active={g.filters.sortBy === opt.value} onClick={() => g.setSortBy(opt.value)}>
-                  {opt.label}
-                </ChipButton>
-              ))}
-            </div>
-          </FilterSection>
+          {/* Sorting-specific search */}
+          {showSorting && (
+            <FilterSection title="Cerca">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={g.filters.sortingSearch}
+                  onChange={e => g.setSortingSearch(e.target.value)}
+                  placeholder="Cerca azienda o contatto..."
+                  className="pl-9 h-9 text-sm bg-muted/30 border-border/40"
+                />
+              </div>
+            </FilterSection>
+          )}
+
+          {/* Sort (non-outreach) */}
+          {!showWorkspace && !showSorting && (
+            <FilterSection title="Ordinamento">
+              <div className="flex flex-wrap gap-1.5">
+                {SORT_OPTIONS.map(opt => (
+                  <ChipButton key={opt.value} active={g.filters.sortBy === opt.value} onClick={() => g.setSortBy(opt.value)}>
+                    {opt.label}
+                  </ChipButton>
+                ))}
+              </div>
+            </FilterSection>
+          )}
 
           {/* Origin */}
           {showOrigin && (
@@ -201,6 +276,46 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 </div>
               </FilterSection>
             </>
+          )}
+
+          {/* ── WORKSPACE FILTERS ── */}
+          {showWorkspace && (
+            <>
+              <FilterSection title="Stato Email">
+                <div className="flex flex-wrap gap-1.5">
+                  {EMAIL_GEN_OPTIONS.map(opt => (
+                    <ChipButton key={opt.key} active={g.filters.emailGenFilter === opt.key} onClick={() => g.setEmailGenFilter(opt.key)}>
+                      {opt.label}
+                    </ChipButton>
+                  ))}
+                </div>
+              </FilterSection>
+
+              {WS_FILTER_SECTIONS.map(section => (
+                <FilterSection key={section.label} title={section.label}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {section.chips.map(chip => (
+                      <ChipButton key={chip.key} active={g.filters.workspaceFilters.has(chip.key)} onClick={() => toggleWsFilter(chip.key)}>
+                        {chip.label}
+                      </ChipButton>
+                    ))}
+                  </div>
+                </FilterSection>
+              ))}
+            </>
+          )}
+
+          {/* ── SORTING FILTERS ── */}
+          {showSorting && (
+            <FilterSection title="Stato coda">
+              <div className="flex flex-wrap gap-1.5">
+                {SORTING_FILTER_OPTIONS.map(opt => (
+                  <ChipButton key={opt.key} active={g.filters.sortingFilter === opt.key} onClick={() => g.setSortingFilter(opt.key)}>
+                    {opt.label}
+                  </ChipButton>
+                ))}
+              </div>
+            </FilterSection>
           )}
         </div>
 

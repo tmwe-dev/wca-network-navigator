@@ -3,11 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Mail, Phone, User, Building2, ChevronRight, AlertTriangle,
-  Globe, Linkedin, MessageCircle, Send, ChevronDown, SlidersHorizontal,
-  Sparkles, FileText,
+  Globe, Linkedin, MessageCircle, Send,
+  Sparkles,
 } from "lucide-react";
 import ContactPicker from "@/components/workspace/ContactPicker";
 import LinkedInDMDialog from "@/components/workspace/LinkedInDMDialog";
@@ -17,43 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { groupByCountry } from "@/lib/groupByCountry";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-
-/* ── Filter types ── */
-
-type FilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
-type EmailGenFilter = "all" | "generated" | "to_generate";
-
-interface FilterSection {
-  label: string;
-  chips: { key: FilterKey; label: string; variant: "green" | "red" }[];
-}
-
-const FILTER_SECTIONS: FilterSection[] = [
-  {
-    label: "Dati Contatto",
-    chips: [
-      { key: "with_email", label: "Con email", variant: "green" },
-      { key: "no_email", label: "Senza email", variant: "red" },
-      { key: "with_contact", label: "Con contatto", variant: "green" },
-      { key: "no_contact", label: "Senza contatto", variant: "red" },
-    ],
-  },
-  {
-    label: "Arricchimento",
-    chips: [
-      { key: "enriched", label: "Arricchito", variant: "green" },
-      { key: "not_enriched", label: "Non arricchito", variant: "red" },
-      { key: "with_alias", label: "Con alias", variant: "green" },
-      { key: "no_alias", label: "Senza alias", variant: "red" },
-    ],
-  },
-];
-
-const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string; icon: typeof Mail }[] = [
-  { key: "all", label: "Tutte", icon: FileText },
-  { key: "generated", label: "Generata", icon: Sparkles },
-  { key: "to_generate", label: "Da generare", icon: Mail },
-];
+import { useGlobalFilters, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 
 /* ── Helpers ── */
 
@@ -72,7 +35,7 @@ function getDisplayFields(a: AllActivity) {
   };
 }
 
-function matchesFilter(a: AllActivity, f: FilterKey): boolean {
+function matchesFilter(a: AllActivity, f: WorkspaceFilterKey): boolean {
   const contact = a.selected_contact;
   const d = getDisplayFields(a);
   switch (f) {
@@ -126,10 +89,10 @@ export default function ContactListPanel({
   selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onFilteredIdsChange,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
-  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
-  const [emailGenFilter, setEmailGenFilter] = useState<EmailGenFilter>("all");
-  const [selectedCountries, setSelectedCountries] = useState<Set<string>>(new Set());
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const { filters } = useGlobalFilters();
+  const activeFilters = filters.workspaceFilters;
+  const emailGenFilter = filters.emailGenFilter;
+  const selectedCountries = filters.workspaceCountries;
   const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string } | null>(null);
 
   const emailActivities = useMemo(() => {
@@ -141,19 +104,6 @@ export default function ContactListPanel({
 
   const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
-
-  // Available countries for filter
-  const availableCountries = useMemo(() => {
-    const map = new Map<string, { code: string; name: string; count: number }>();
-    for (const a of emailActivities) {
-      const d = getDisplayFields(a);
-      const key = d.countryCode;
-      const existing = map.get(key);
-      if (existing) existing.count++;
-      else map.set(key, { code: key, name: d.countryName, count: 1 });
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count);
-  }, [emailActivities]);
 
   const searched = useMemo(() => {
     if (!search.trim()) return emailActivities;
@@ -172,7 +122,6 @@ export default function ContactListPanel({
   const filtered = useMemo(() => {
     let result = searched;
 
-    // Chip filters
     if (activeFilters.size > 0) {
       result = result.filter((a) => {
         for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
@@ -180,14 +129,12 @@ export default function ContactListPanel({
       });
     }
 
-    // Email generation filter
     if (emailGenFilter === "generated") {
       result = result.filter((a) => !!a.email_subject);
     } else if (emailGenFilter === "to_generate") {
       result = result.filter((a) => !a.email_subject);
     }
 
-    // Country filter
     if (selectedCountries.size > 0) {
       result = result.filter((a) => {
         const d = getDisplayFields(a);
@@ -198,14 +145,6 @@ export default function ContactListPanel({
     return result;
   }, [searched, activeFilters, emailGenFilter, selectedCountries]);
 
-  const filterCounts = useMemo(() => {
-    const counts = {} as Record<FilterKey, number>;
-    const allChips = FILTER_SECTIONS.flatMap((s) => s.chips);
-    for (const chip of allChips) { counts[chip.key] = searched.filter((a) => matchesFilter(a, chip.key)).length; }
-    return counts;
-  }, [searched]);
-
-  // Email gen counts
   const emailGenCounts = useMemo(() => {
     const generated = searched.filter((a) => !!a.email_subject).length;
     return { all: searched.length, generated, to_generate: searched.length - generated };
@@ -216,29 +155,8 @@ export default function ContactListPanel({
     [filtered]
   );
 
-  const toggleFilter = useCallback((key: FilterKey) => {
-    setActiveFilters((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setActiveFilters(new Set());
-    setEmailGenFilter("all");
-    setSelectedCountries(new Set());
-  }, []);
-
-  const toggleCountry = useCallback((code: string) => {
-    setSelectedCountries((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  }, []);
-
   const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
   const allSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
-
-  const activeFilterCount = activeFilters.size + (emailGenFilter !== "all" ? 1 : 0) + selectedCountries.size;
 
   useEffect(() => {
     onFilteredIdsChange?.(filteredIds);
@@ -281,106 +199,6 @@ export default function ContactListPanel({
         </div>
       </div>
 
-      {/* Collapsible Filters */}
-      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-1.5 border-b border-border/30 hover:bg-muted/30 transition-colors">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <SlidersHorizontal className="w-3 h-3" />
-            <span>Filtri</span>
-            {activeFilterCount > 0 && (
-              <Badge className="h-4 px-1.5 text-[9px] bg-primary/20 text-primary hover:bg-primary/20 border-0">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </div>
-          <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", filtersOpen && "rotate-180")} />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-3 py-2 border-b border-border/30 space-y-2.5">
-
-            {/* Email generation status */}
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Stato Email</p>
-              <div className="flex gap-1">
-                {EMAIL_GEN_OPTIONS.map((opt) => {
-                  const isActive = emailGenFilter === opt.key;
-                  const count = emailGenCounts[opt.key];
-                  return (
-                    <button key={opt.key} onClick={() => setEmailGenFilter(opt.key)}
-                      className={cn(
-                        "flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all",
-                        isActive
-                          ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                      )}>
-                      <opt.icon className="w-3 h-3" />
-                      {opt.label}
-                      <span className="opacity-60">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Filter sections in 2-column grid */}
-            {FILTER_SECTIONS.map((section) => (
-              <div key={section.label}>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{section.label}</p>
-                <div className="grid grid-cols-2 gap-1">
-                  {section.chips.map((chip) => {
-                    const isActive = activeFilters.has(chip.key);
-                    return (
-                      <button key={chip.key} onClick={() => toggleFilter(chip.key)}
-                        className={cn(
-                          "flex items-center justify-between px-2 py-1 rounded-md text-[10px] font-medium transition-all",
-                          chip.variant === "green"
-                            ? isActive ? "bg-success/15 text-success ring-1 ring-success/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            : isActive ? "bg-destructive/15 text-destructive ring-1 ring-destructive/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                        )}>
-                        <span className="truncate">{chip.label}</span>
-                        <span className="opacity-60 ml-1 shrink-0">{filterCounts[chip.key]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Country filter */}
-            {availableCountries.length > 1 && (
-              <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Paese</p>
-                <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
-                  {availableCountries.map((c) => {
-                    const isActive = selectedCountries.has(c.code);
-                    return (
-                      <button key={c.code} onClick={() => toggleCountry(c.code)}
-                        className={cn(
-                          "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all",
-                          isActive
-                            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                        )}>
-                        <span>{getCountryFlag(c.code)}</span>
-                        <span className="truncate max-w-[60px]">{c.name}</span>
-                        <span className="opacity-50">{c.count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Clear all */}
-            {activeFilterCount > 0 && (
-              <button onClick={clearFilters}
-                className="text-[10px] text-destructive hover:underline">
-                ✕ Rimuovi tutti i filtri
-              </button>
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
 
       {/* List */}
       <ScrollArea className="flex-1">
