@@ -204,7 +204,7 @@ export default function Workspace() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-full relative overflow-hidden flex flex-col">
+    <div className="h-[calc(100vh-3.25rem)] relative overflow-hidden flex flex-col">
       {/* ═══ TOP ACTION BAR — same style as UnifiedActionBar ═══ */}
       <div className="h-10 flex items-center gap-2 px-4 border-b border-border/30 bg-background shrink-0 relative">
         <Mail className="w-4 h-4 text-primary" />

@@ -253,7 +253,7 @@ const Cockpit = () => {
   [contacts]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={setSearchQuery}
