@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight } from "lucide-react";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
