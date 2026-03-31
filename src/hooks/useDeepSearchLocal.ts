@@ -1,21 +1,14 @@
 /**
  * useDeepSearchLocal — Client-side Deep Search using FireScrape extension + AI Gateway
- * Replaces Firecrawl API calls with browser-based Google searches and scraping.
+ * Uses FireScrape's agent sequences for Google search and scraping.
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useFireScrapeExtensionBridge, FireScrapeSearchResult } from "./useFireScrapeExtensionBridge";
+import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 
-// Lovable AI Gateway (same endpoint used by edge functions)
+// Lovable AI Gateway
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-2.5-flash-lite";
-
-async function getApiKey(): Promise<string | null> {
-  // The LOVABLE_API_KEY is available as env var on the server
-  // For client-side, we call a tiny edge function to proxy the AI call
-  // OR we use the VITE env if available
-  return import.meta.env.VITE_LOVABLE_API_KEY || null;
-}
 
 async function aiCall(prompt: string, apiKey: string): Promise<string | null> {
   const resp = await fetch(AI_GATEWAY, {
@@ -53,12 +46,79 @@ function getLastName(name: string): string {
 
 async function delay(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
+interface GoogleSearchResult {
+  url: string;
+  title: string;
+  snippet: string;
+}
+
 export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
 
   /**
+   * Perform a Google search using FireScrape's agent sequence.
+   * Opens Google in a background tab, extracts results.
+   */
+  const googleSearch = useCallback(async (query: string, limit = 5): Promise<GoogleSearchResult[]> => {
+    // Use agent-sequence: navigate to Google, then extract results
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${limit}&hl=en`;
+
+    // Navigate to Google search
+    const navResult = await fs.agentAction({ action: "navigate", url: searchUrl });
+    if (!navResult.success) return [];
+
+    await delay(2000);
+
+    // Extract search results using CSS selectors
+    const extractResult = await fs.extract({
+      results_links: "div.g a[href^='http'] h3",
+      results_urls: "div.g a[href^='http']",
+      results_snippets: "div.g div.VwiC3b, div.g span.aCOpRe",
+    });
+
+    if (!extractResult.success || !extractResult.data) return [];
+
+    // Parse results
+    const titles = Array.isArray(extractResult.data.results_links)
+      ? extractResult.data.results_links
+      : extractResult.data.results_links ? [extractResult.data.results_links] : [];
+    const urls = Array.isArray(extractResult.data.results_urls)
+      ? extractResult.data.results_urls
+      : extractResult.data.results_urls ? [extractResult.data.results_urls] : [];
+    const snippets = Array.isArray(extractResult.data.results_snippets)
+      ? extractResult.data.results_snippets
+      : extractResult.data.results_snippets ? [extractResult.data.results_snippets] : [];
+
+    const results: GoogleSearchResult[] = [];
+    for (let i = 0; i < Math.min(titles.length, limit); i++) {
+      results.push({
+        url: urls[i] || "",
+        title: titles[i] || "",
+        snippet: snippets[i] || "",
+      });
+    }
+    return results;
+  }, [fs]);
+
+  /**
+   * Scrape a URL using FireScrape — navigate then scrape.
+   */
+  const scrapeUrl = useCallback(async (url: string) => {
+    const navResult = await fs.agentAction({ action: "navigate", url });
+    if (!navResult.success) return null;
+    await delay(2000);
+    const result = await fs.scrape(true);
+    if (!result.success) return null;
+    return {
+      title: result.metadata?.title || "",
+      description: result.metadata?.description || "",
+      markdown: result.markdown || "",
+      logoUrl: null as string | null,
+    };
+  }, [fs]);
+
+  /**
    * Run Deep Search for a single partner entirely client-side.
-   * Returns the same shape as the edge function response.
    */
   const searchPartner = useCallback(async (partnerId: string): Promise<{
     success: boolean;
@@ -71,10 +131,8 @@ export function useDeepSearchLocal() {
     companyName: string;
     error?: string;
   }> => {
-    // We need the AI key — try to get from edge function proxy
-    const apiKey = await getApiKey();
+    const apiKey = import.meta.env.VITE_LOVABLE_API_KEY || null;
 
-    // Get partner data
     const { data: partner, error: pErr } = await supabase
       .from("partners")
       .select("id, company_name, website, city, country_name, enrichment_data, email, profile_description, member_since, phone, branch_cities, has_branches")
@@ -98,36 +156,31 @@ export function useDeepSearchLocal() {
       .select("network_name")
       .eq("partner_id", partnerId);
 
-    const { data: certifications = [] } = await supabase
-      .from("partner_certifications")
-      .select("certification")
-      .eq("partner_id", partnerId);
-
     const existingSet = new Set(existingLinks.map((l) => `${l.contact_id || "company"}_${l.platform}`));
 
     let socialLinksFound = 0;
     let logoFound = false;
     const contactProfiles: Record<string, any> = {};
 
-    // ═══ SEARCH SOCIAL PROFILES FOR EACH CONTACT ═══
+    // ═══ SEARCH SOCIAL PROFILES ═══
     for (const contact of contacts || []) {
       if (!contact.name || contact.name.length < 3) continue;
       const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
 
-      // --- LinkedIn personal ---
+      // --- LinkedIn ---
       if (!existingSet.has(`${contact.id}_linkedin`)) {
         const query = `"${contact.name}" "${partner.company_name}" site:linkedin.com/in`;
-        let results = (await fs.search(query, 5)).results?.filter((r) => r.url?.includes("linkedin.com/in/")) || [];
+        let results = (await googleSearch(query, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
 
         if (results.length === 0) {
           const retry = `"${getLastName(contact.name)}" "${partner.company_name}" logistics site:linkedin.com/in`;
-          results = (await fs.search(retry, 5)).results?.filter((r) => r.url?.includes("linkedin.com/in/")) || [];
+          results = (await googleSearch(retry, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
           await delay(500);
         }
 
         if (results.length > 0 && apiKey) {
           const answer = await aiCall(
-            `Find the PERSONAL LinkedIn profile (linkedin.com/in/) of "${contact.name}" at "${partner.company_name}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}
+            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${partner.company_name}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}
 Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
 If one matches, respond with ONLY the URL. If none, respond "NONE".`,
             apiKey
@@ -140,7 +193,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
               });
               if (!error) socialLinksFound++;
               const sr = extractSeniority(results[0]?.title);
-              if (sr) contactProfiles[contact.id] = { ...contactProfiles[contact.id], name: contact.name, title: contact.title, ...sr };
+              if (sr) contactProfiles[contact.id] = { name: contact.name, title: contact.title, ...sr };
             }
           }
         }
@@ -150,7 +203,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       // --- Facebook ---
       if (!existingSet.has(`${contact.id}_facebook`)) {
         const q = `"${contact.name}" "${partner.company_name}" site:facebook.com`;
-        const fbRes = (await fs.search(q, 5)).results?.filter((r) => r.url?.includes("facebook.com/") && !r.url?.includes("/groups/")) || [];
+        const fbRes = (await googleSearch(q, 5)).filter((r) => r.url?.includes("facebook.com/") && !r.url?.includes("/groups/"));
         if (fbRes.length > 0 && apiKey) {
           const answer = await aiCall(
             `Find the PERSONAL Facebook profile of "${contact.name}" at "${partner.company_name}" in ${location}.
@@ -174,7 +227,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       // --- Instagram ---
       if (!existingSet.has(`${contact.id}_instagram`)) {
         const q = `"${contact.name}" "${partner.company_name}" site:instagram.com`;
-        const igRes = (await fs.search(q, 5)).results?.filter((r) => r.url?.includes("instagram.com/")) || [];
+        const igRes = (await googleSearch(q, 5)).filter((r) => r.url?.includes("instagram.com/"));
         if (igRes.length > 0 && apiKey) {
           const answer = await aiCall(
             `Find the Instagram profile of "${contact.name}" at "${partner.company_name}" in ${location}.
@@ -211,7 +264,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     // ═══ COMPANY LINKEDIN ═══
     if (!existingSet.has("company_linkedin")) {
       const q = `"${partner.company_name}" site:linkedin.com/company`;
-      const res = (await fs.search(q, 3)).results || [];
+      const res = await googleSearch(q, 3);
       const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
       if (match) {
         const { error } = await supabase.from("partner_social_links").insert({
@@ -222,28 +275,28 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       await delay(500);
     }
 
-    // ═══ WEBSITE + LOGO via scrape ═══
+    // ═══ WEBSITE + LOGO via FireScrape scrape ═══
     let websiteQualityScore = 0;
     if (partner.website) {
       const websiteUrl = partner.website.startsWith("http") ? partner.website : `https://${partner.website}`;
-      const scrapeResult = await fs.scrape(websiteUrl);
-      if (scrapeResult.success && scrapeResult.data) {
-        let logoUrl = scrapeResult.data.logoUrl;
-        if (!logoUrl) {
-          try {
-            const domain = new URL(websiteUrl).hostname;
-            logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-          } catch {}
-        }
+      const scraped = await scrapeUrl(websiteUrl);
+      if (scraped) {
+        // Try Google favicon
+        let logoUrl: string | null = null;
+        try {
+          const domain = new URL(websiteUrl).hostname;
+          logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        } catch {}
+
         if (logoUrl) {
           const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
           if (!error) logoFound = true;
         }
 
         // Website quality via AI
-        if (scrapeResult.data.markdown && scrapeResult.data.markdown.length > 100 && apiKey) {
+        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
           const qa = await aiCall(
-            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scrapeResult.data.markdown.slice(0, 2000)}`,
+            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
             apiKey
           );
           if (qa) {
@@ -253,13 +306,10 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
         }
       }
     } else {
-      // Try email domain
       const ce = contacts?.find((c) => c.email && !/(gmail|yahoo|hotmail|outlook)/i.test(c.email));
       if (ce?.email) {
         const domain = ce.email.split("@")[1];
-        if (domain) {
-          await supabase.from("partners").update({ website: `https://${domain}` }).eq("id", partnerId);
-        }
+        if (domain) await supabase.from("partners").update({ website: `https://${domain}` }).eq("id", partnerId);
       }
     }
 
@@ -270,11 +320,11 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(),
-      deep_search_engine: "firescrape",
+      deep_search_engine: "firescrape-v3.3",
     };
     await supabase.from("partners").update({ enrichment_data: updated }).eq("id", partnerId);
 
-    // ═══ RATING (simplified — same weights) ═══
+    // ═══ RATING ═══
     const { data: services = [] } = await supabase
       .from("partner_services")
       .select("service_category")
@@ -283,7 +333,6 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     const websiteScore = websiteQualityScore || (partner.website ? 2 : 1);
     const svcSet = new Set(services.map((s: any) => s.service_category));
     let serviceMix = 1;
-    if (svcSet.has("ocean_fcl") || svcSet.has("ocean_lcl")) serviceMix = 1;
     if (svcSet.has("air_freight")) serviceMix += 1.5;
     if (svcSet.has("road_freight")) serviceMix += 1;
     if (svcSet.has("warehousing")) serviceMix += 1;
@@ -323,7 +372,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       rateLimited: false,
       companyName: partner.company_name,
     };
-  }, [fs]);
+  }, [fs, googleSearch, scrapeUrl]);
 
   return { searchPartner, isAvailable: fs.isAvailable };
 }

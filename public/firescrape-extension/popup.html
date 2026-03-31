@@ -1,21 +1,863 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <style>
-    body { font-family: -apple-system, sans-serif; width: 260px; padding: 16px; margin: 0; background: #0f172a; color: #e2e8f0; }
-    h3 { margin: 0 0 8px; font-size: 14px; color: #38bdf8; }
-    p { margin: 0; font-size: 12px; line-height: 1.5; color: #94a3b8; }
-    .status { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 11px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 420px;
+      max-height: 580px;
+      overflow-y: auto;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-size: 13px;
+    }
+    body::-webkit-scrollbar { width: 5px; }
+    body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #1e1e1e;
+      position: sticky;
+      top: 0;
+      background: #0f0f0f;
+      z-index: 10;
+    }
+    .header .logo { font-size: 20px; }
+    .header h1 { font-size: 15px; font-weight: 700; color: #ff6b35; }
+    .header .ver { font-size: 10px; color: #555; margin-left: auto; }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 8px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #777;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .tab:hover { color: #ccc; background: #1a1a1a; }
+    .tab.active { color: #fff; background: #ff6b35; }
+
+    .panel { display: none; padding: 14px 16px; }
+    .panel.active { display: block; }
+
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+      margin-bottom: 6px;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: #ff6b35; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #e55a25; }
+    .btn-secondary { background: #1a1a1a; color: #ccc; border: 1px solid #2a2a2a; }
+    .btn-secondary:hover:not(:disabled) { background: #222; }
+    .btn-danger { background: #441111; color: #ff5555; border: 1px solid #552222; }
+    .btn-sm { padding: 7px 12px; font-size: 12px; }
+    .icon { font-size: 14px; }
+
+    .input, select.input {
+      width: 100%;
+      padding: 9px 12px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 8px;
+      transition: border 0.15s;
+    }
+    .input:focus { border-color: #ff6b35; }
+    .input::placeholder { color: #555; }
+    textarea.input { min-height: 70px; resize: vertical; font-family: 'SF Mono', monospace; font-size: 12px; }
+
+    label { display: block; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .field { margin-bottom: 10px; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+
+    .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .stat { font-size: 11px; background: #1a1a1a; padding: 3px 8px; border-radius: 5px; border: 1px solid #222; color: #888; }
+    .stat b { color: #ccc; }
+
+    .preview {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #999;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+    .preview::-webkit-scrollbar { width: 5px; }
+    .preview::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    .status { text-align: center; padding: 8px; font-size: 12px; color: #888; min-height: 20px; }
+    .status.error { color: #ff5555; }
+    .status.success { color: #55cc55; }
+
+    .progress-bar { width: 100%; height: 4px; background: #1a1a1a; border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #ff6b35; border-radius: 2px; transition: width 0.3s; width: 0%; }
+
+    .result-list { max-height: 180px; overflow-y: auto; margin-bottom: 8px; }
+    .result-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #1a1a1a; font-size: 11px; }
+    .result-item .url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; }
+    .badge { padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .badge-ok { background: #113311; color: #55cc55; }
+    .badge-err { background: #331111; color: #ff5555; }
+
+    .format-toggle { display: flex; gap: 3px; margin-bottom: 8px; background: #1a1a1a; border-radius: 7px; padding: 2px; border: 1px solid #222; }
+    .format-toggle button { flex: 1; padding: 5px 8px; border: none; border-radius: 5px; background: transparent; color: #777; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .format-toggle button.active { background: #ff6b35; color: white; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #444; border-top-color: #ff6b35; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    .schema-row { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; }
+    .schema-row input { margin-bottom: 0; }
+    .schema-row .remove-field { width: 28px; height: 28px; padding: 0; border: none; background: #221111; color: #ff5555; border-radius: 6px; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+
+    .screenshot-preview { border-radius: 8px; border: 1px solid #222; max-width: 100%; margin-bottom: 8px; }
+
+    /* ====== DASHBOARD ====== */
+    .dash-section { margin-bottom: 16px; }
+    .dash-section-title {
+      font-size: 11px; font-weight: 700; color: #ff6b35; text-transform: uppercase;
+      letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .dash-section-title .dot {
+      width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    }
+    .dot-green { background: #44cc44; box-shadow: 0 0 4px #44cc4488; }
+    .dot-yellow { background: #ccaa22; box-shadow: 0 0 4px #ccaa2288; }
+    .dot-red { background: #cc4444; box-shadow: 0 0 4px #cc444488; }
+
+    /* Battery card */
+    .battery-card {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+    }
+    .battery-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+    }
+    .battery-label { font-size: 12px; font-weight: 600; color: #ccc; }
+    .battery-value { font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; }
+    .battery-value.full { color: #44cc44; }
+    .battery-value.mid { color: #ccaa22; }
+    .battery-value.low { color: #ff6b35; }
+    .battery-value.empty { color: #ff4444; }
+
+    .battery-track {
+      width: 100%; height: 8px; background: #1e1e1e; border-radius: 4px;
+      overflow: hidden; position: relative;
+    }
+    .battery-fill {
+      height: 100%; border-radius: 4px; transition: width 0.5s ease, background 0.5s ease;
+      position: relative;
+    }
+    .battery-fill.full { background: linear-gradient(90deg, #22aa44, #44cc44); }
+    .battery-fill.mid { background: linear-gradient(90deg, #aa8822, #ccaa22); }
+    .battery-fill.low { background: linear-gradient(90deg, #cc5522, #ff6b35); }
+    .battery-fill.empty { background: linear-gradient(90deg, #aa2222, #ff4444); }
+    .battery-fill.pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .battery-detail {
+      display: flex; justify-content: space-between; margin-top: 4px;
+      font-size: 10px; color: #555;
+    }
+    .battery-detail .timer { color: #ff6b35; font-weight: 600; }
+
+    /* Blocked banner */
+    .blocked-banner {
+      background: #1a1111;
+      border: 1px solid #332222;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #ff8866;
+    }
+    .blocked-banner .icon { font-size: 16px; }
+    .blocked-banner .countdown {
+      margin-left: auto;
+      font-family: 'SF Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      color: #ff5555;
+    }
+
+    /* Cache stats */
+    .cache-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;
+    }
+    .cache-tile {
+      background: #141414; border: 1px solid #222; border-radius: 8px;
+      padding: 8px 10px; text-align: center;
+    }
+    .cache-tile .num {
+      font-size: 18px; font-weight: 800; color: #ff6b35;
+      font-family: 'SF Mono', monospace;
+    }
+    .cache-tile .lbl { font-size: 10px; color: #666; text-transform: uppercase; margin-top: 2px; }
+
+    /* Queue */
+    .queue-item {
+      display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+      border-bottom: 1px solid #1a1a1a; font-size: 11px;
+    }
+    .queue-item .pri {
+      width: 20px; height: 20px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 10px; font-weight: 800;
+    }
+    .pri-1 { background: #ff6b35; color: white; }
+    .pri-2 { background: #333; color: #ccc; }
+    .pri-3 { background: #1a1a1a; color: #666; }
+
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #44cc44;
+      display: inline-block; animation: blink 1s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
 <body>
-  <h3>🔥 FireScrape</h3>
-  <p>Motore di ricerca e scraping client-side per Deep Search. Nessun costo API.</p>
-  <div class="status">
-    <span class="dot"></span>
-    <span>Attivo — ricerche dal tuo browser</span>
+  <div class="header">
+    <span class="logo">🔥</span>
+    <h1>FireScrape</h1>
+    <span class="ver">v3.2</span>
   </div>
+
+  <!-- COMMAND BAR — Chat AI universale -->
+  <div style="padding:8px 16px;border-bottom:1px solid #1e1e1e;display:flex;gap:6px;align-items:center;">
+    <input class="input" id="commandInput" placeholder="Chiedi all'AI: &quot;scrapa logistics.com e invia contatti su Slack&quot;" style="margin:0;flex:1;font-size:12px;" />
+    <button class="btn btn-primary btn-sm" id="commandBtn" style="margin:0;padding:8px 14px;white-space:nowrap;width:auto;">🧠 Go</button>
+  </div>
+  <div id="commandResult" class="hidden" style="padding:8px 16px;max-height:200px;overflow-y:auto;border-bottom:1px solid #1e1e1e;">
+    <pre id="commandOutput" style="font-size:11px;color:#aaa;white-space:pre-wrap;word-break:break-word;margin:0;"></pre>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="scrape">⚡ Scrape</button>
+    <button class="tab" data-tab="crawl">🕷 Crawl</button>
+    <button class="tab" data-tab="map">🗺 Map</button>
+    <button class="tab" data-tab="extract">🎯 Extract</button>
+    <button class="tab" data-tab="batch">📦 Batch</button>
+    <button class="tab" data-tab="screenshot">📸 Screenshot</button>
+    <button class="tab" data-tab="brain">🧠 Brain</button>
+    <button class="tab" data-tab="agent">🤖 Agent</button>
+    <button class="tab" data-tab="relay">🧠 Relay</button>
+    <button class="tab" data-tab="tasks">📋 Tasks</button>
+    <button class="tab" data-tab="connectors">🔌 Connect</button>
+    <button class="tab" data-tab="pipelines">🔄 Pipeline</button>
+    <button class="tab" data-tab="canvas">🎨 Canvas</button>
+    <button class="tab" data-tab="voice">🎙 Voice</button>
+    <button class="tab" data-tab="dashboard">🔋 Limiti</button>
+  </div>
+
+  <!-- SCRAPE -->
+  <div class="panel active" id="panel-scrape">
+    <button class="btn btn-primary" id="scrapeBtn"><span class="icon">⚡</span> Scrape questa pagina</button>
+    <div id="scrapeOutput" class="hidden">
+      <div class="stats" id="scrapeStats"></div>
+      <div class="format-toggle" id="scrapeFormat">
+        <button class="active" data-format="markdown">Markdown</button>
+        <button data-format="html">HTML</button>
+        <button data-format="text">Testo</button>
+      </div>
+      <div class="preview" id="scrapePreview"></div>
+      <div class="row">
+        <button class="btn btn-secondary btn-sm" id="scrapeCopy">📋 Copia</button>
+        <button class="btn btn-secondary btn-sm" id="scrapeDownload">💾 Scarica</button>
+      </div>
+    </div>
+    <div class="status" id="scrapeStatus"></div>
+  </div>
+
+  <!-- CRAWL -->
+  <div class="panel" id="panel-crawl">
+    <div class="field">
+      <label>URL di partenza</label>
+      <input class="input" id="crawlUrl" placeholder="lascia vuoto per pagina corrente">
+    </div>
+    <div class="row">
+      <div class="field"><label>Max pagine</label><input class="input" id="crawlMaxPages" type="number" value="30"></div>
+      <div class="field"><label>Profondità</label><input class="input" id="crawlMaxDepth" type="number" value="3"></div>
+      <div class="field"><label>Delay ms</label><input class="input" id="crawlDelay" type="number" value="800"></div>
+    </div>
+    <button class="btn btn-primary" id="crawlStartBtn"><span class="icon">🕷</span> Avvia Crawl</button>
+    <button class="btn btn-danger hidden" id="crawlStopBtn">⏹ Ferma Crawl</button>
+    <div class="progress-bar"><div class="progress-fill" id="crawlProgressFill"></div></div>
+    <div class="stats" id="crawlStats"></div>
+    <div class="result-list" id="crawlResults"></div>
+    <div class="row hidden" id="crawlActions">
+      <button class="btn btn-secondary btn-sm" id="crawlCopy">📋 Copia tutto</button>
+      <button class="btn btn-secondary btn-sm" id="crawlDownload">💾 Scarica JSON</button>
+    </div>
+    <div class="status" id="crawlStatus"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="panel" id="panel-map">
+    <div class="field"><label>URL del sito</label><input class="input" id="mapUrl" placeholder="lascia vuoto per pagina corrente"></div>
+    <div class="field"><label>Max URL</label><input class="input" id="mapMax" type="number" value="100"></div>
+    <button class="btn btn-primary" id="mapBtn"><span class="icon">🗺</span> Genera Mappa</button>
+    <div class="progress-bar hidden" id="mapProgress"><div class="progress-fill" id="mapProgressFill"></div></div>
+    <div class="result-list" id="mapResults"></div>
+    <div class="row hidden" id="mapActions">
+      <button class="btn btn-secondary btn-sm" id="mapCopy">📋 Copia</button>
+      <button class="btn btn-secondary btn-sm" id="mapDownload">💾 JSON</button>
+    </div>
+    <div class="status" id="mapStatus"></div>
+  </div>
+
+  <!-- EXTRACT -->
+  <div class="panel" id="panel-extract">
+    <div class="field"><label>Schema di estrazione (campo → CSS / XPath / regex:)</label></div>
+    <div id="schemaFields">
+      <div class="schema-row">
+        <input class="input" placeholder="campo (es. titolo)" style="flex:1">
+        <input class="input" placeholder="selettore (es. h1, .price)" style="flex:2">
+        <button class="remove-field">×</button>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-sm" id="addFieldBtn" style="margin-bottom:10px">+ Aggiungi campo</button>
+    <button class="btn btn-primary" id="extractBtn"><span class="icon">🎯</span> Estrai dati</button>
+    <div class="preview hidden" id="extractPreview"></div>
+    <div class="row hidden" id="extractActions">
+      <button class="btn btn-secondary btn-sm" id="extractCopy">📋 Copia JSON</button>
+      <button class="btn btn-secondary btn-sm" id="extractDownload">💾 Scarica</button>
+    </div>
+    <div class="status" id="extractStatus"></div>
+  </div>
+
+  <!-- BATCH -->
+  <div class="panel" id="panel-batch">
+    <div class="field">
+      <label>URL (uno per riga)</label>
+      <textarea class="input" id="batchUrls" rows="5" placeholder="https://esempio.com/pagina1&#10;https://esempio.com/pagina2"></textarea>
+    </div>
+    <div class="field"><label>Tab paralleli (max 5)</label><input class="input" id="batchConcurrency" type="number" value="3" min="1" max="5"></div>
+    <button class="btn btn-primary" id="batchBtn"><span class="icon">📦</span> Avvia Batch</button>
+    <div class="progress-bar hidden" id="batchProgress"><div class="progress-fill" id="batchProgressFill"></div></div>
+    <div class="result-list" id="batchResults"></div>
+    <div class="row hidden" id="batchActions">
+      <button class="btn btn-secondary btn-sm" id="batchCopy">📋 Copia tutto</button>
+      <button class="btn btn-secondary btn-sm" id="batchDownload">💾 JSON</button>
+    </div>
+    <div class="status" id="batchStatus"></div>
+  </div>
+
+  <!-- SCREENSHOT -->
+  <div class="panel" id="panel-screenshot">
+    <div class="row" style="margin-bottom:10px">
+      <div class="field"><label>Formato</label><select class="input" id="ssFormat"><option value="png">PNG</option><option value="jpg">JPEG</option></select></div>
+      <div class="field"><label>Tipo</label><select class="input" id="ssType"><option value="visible">Viewport</option><option value="full">Pagina intera</option></select></div>
+    </div>
+    <button class="btn btn-primary" id="ssBtn"><span class="icon">📸</span> Cattura Screenshot</button>
+    <div id="ssPreviewArea" class="hidden">
+      <img id="ssPreview" class="screenshot-preview">
+      <div class="row">
+        <button class="btn btn-secondary btn-sm" id="ssCopy">📋 Copia</button>
+        <button class="btn btn-secondary btn-sm" id="ssDownload">💾 Scarica</button>
+      </div>
+    </div>
+    <div class="status" id="ssStatus"></div>
+  </div>
+
+  <!-- BRAIN -->
+  <div class="panel" id="panel-brain">
+
+    <!-- Token Budget Battery -->
+    <div class="battery-card" style="margin-bottom:12px;">
+      <div class="battery-header">
+        <span class="battery-label">🪫 Budget Token Giornaliero</span>
+        <span class="battery-value" id="brainTokenValue">—</span>
+      </div>
+      <div class="battery-track">
+        <div class="battery-fill full" id="brainTokenFill" style="width:100%"></div>
+      </div>
+      <div class="battery-detail">
+        <span id="brainTokenDetail">—</span>
+        <span id="brainModelName">—</span>
+      </div>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="cache-grid" style="margin-bottom:12px;">
+      <div class="cache-tile"><div class="num" id="brainLibTotal">0</div><div class="lbl">In libreria</div></div>
+      <div class="cache-tile"><div class="num" id="brainLibDomains">0</div><div class="lbl">Domini</div></div>
+      <div class="cache-tile"><div class="num" id="brainLibTags">0</div><div class="lbl">Tags</div></div>
+      <div class="cache-tile">
+        <div class="num" id="brainSupaStatus" style="font-size:14px;">—</div>
+        <div class="lbl">Supabase</div>
+      </div>
+    </div>
+
+    <!-- Analizza pagina -->
+    <button class="btn btn-primary" id="brainAnalyzeBtn"><span class="icon">🧠</span> Analizza pagina corrente</button>
+    <div class="preview hidden" id="brainAnalysisResult" style="margin-top:8px;max-height:180px;"></div>
+
+    <!-- Azioni suggerite dall'AI -->
+    <div id="brainSuggestedActions" class="hidden" style="margin-top:8px;">
+      <label>AZIONI SUGGERITE</label>
+      <div id="brainActionsList" class="result-list" style="max-height:120px;"></div>
+      <button class="btn btn-secondary btn-sm" id="brainRunActionsBtn" style="margin-top:6px">▶ Esegui azioni suggerite</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:12px 0;">
+
+    <!-- Chat / Prompt libero -->
+    <div class="field">
+      <label>Chiedi al Brain</label>
+      <div style="display:flex;gap:6px;">
+        <input class="input" id="brainPrompt" placeholder="es. Analizza questa azienda per logistica..." style="flex:1;margin-bottom:0;">
+        <button class="btn btn-primary" id="brainAskBtn" style="width:auto;padding:9px 14px;margin-bottom:0;">→</button>
+      </div>
+    </div>
+    <div class="preview hidden" id="brainChatResult" style="margin-top:8px;"></div>
+    <div class="status" id="brainStatus"></div>
+
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:12px 0;">
+
+    <!-- Libreria -->
+    <div class="field">
+      <label>📚 Libreria — cerca</label>
+      <div style="display:flex;gap:6px;">
+        <input class="input" id="libSearch" placeholder="dominio, tag, testo..." style="flex:1;margin-bottom:0;">
+        <button class="btn btn-secondary" id="libSearchBtn" style="width:auto;padding:9px 14px;margin-bottom:0;">🔍</button>
+      </div>
+    </div>
+    <div class="result-list" id="libResults" style="max-height:150px;"></div>
+    <div class="row" style="margin-top:6px;">
+      <button class="btn btn-secondary btn-sm" id="libExportBtn">📤 Esporta</button>
+      <button class="btn btn-danger btn-sm" id="libClearBtn">🗑 Svuota</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:12px 0;">
+
+    <!-- Settings -->
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer;font-size:11px;color:#666;font-weight:600;">⚙ IMPOSTAZIONI API</summary>
+      <div style="margin-top:8px;">
+        <div class="field"><label>Claude API Key</label><input class="input" id="brainApiKey" type="password" placeholder="sk-ant-..."></div>
+        <div class="field"><label>Modello</label>
+          <select class="input" id="brainModel">
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (economico)</option>
+            <option value="claude-opus-4-6">Claude Opus 4.6</option>
+          </select>
+        </div>
+        <div class="field"><label>Budget token/giorno</label><input class="input" id="brainBudget" type="number" value="50000"></div>
+        <hr style="border:none;border-top:1px solid #1e1e1e;margin:8px 0;">
+        <div class="field"><label>Supabase URL</label><input class="input" id="brainSupaUrl" placeholder="https://xxx.supabase.co"></div>
+        <div class="field"><label>Supabase Anon Key</label><input class="input" id="brainSupaKey" type="password" placeholder="eyJ..."></div>
+        <button class="btn btn-secondary btn-sm" id="brainSaveSettings">💾 Salva impostazioni</button>
+        <div class="status" id="brainSettingsStatus"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- AGENT -->
+  <div class="panel" id="panel-agent">
+    <!-- Snapshot -->
+    <button class="btn btn-primary" id="agentSnapshotBtn"><span class="icon">👁</span> Analizza pagina</button>
+    <div id="agentSnapshotArea" class="hidden" style="margin-top:8px;">
+      <div class="stats" id="agentSnapStats"></div>
+      <div class="preview" id="agentSnapPreview" style="max-height:150px;"></div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:12px 0;">
+
+    <!-- Azione singola -->
+    <div class="field">
+      <label>Azione rapida</label>
+      <div class="row">
+        <select class="input" id="agentActionType" style="flex:1;">
+          <option value="click">Click</option>
+          <option value="type">Digita</option>
+          <option value="read">Leggi</option>
+          <option value="scroll">Scroll</option>
+          <option value="wait">Aspetta</option>
+          <option value="select">Select</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Selettore CSS</label>
+      <input class="input" id="agentSelector" placeholder="es. #login-btn, .search-input, h1">
+    </div>
+    <div class="field hidden" id="agentTextField">
+      <label>Testo (per type)</label>
+      <input class="input" id="agentText" placeholder="testo da digitare...">
+    </div>
+    <button class="btn btn-primary" id="agentRunBtn"><span class="icon">▶</span> Esegui</button>
+    <div class="preview hidden" id="agentResult" style="margin-top:8px;"></div>
+    <div class="status" id="agentStatus"></div>
+
+    <hr style="border:none;border-top:1px solid #1e1e1e;margin:12px 0;">
+
+    <!-- Sequenza -->
+    <div class="field">
+      <label>Sequenza (JSON — lista di azioni)</label>
+      <textarea class="input" id="agentSequence" rows="5" placeholder='[
+  {"action":"navigate","url":"https://..."},
+  {"action":"wait","selector":"#form"},
+  {"action":"type","selector":"#email","text":"test@test.com"},
+  {"action":"click","selector":"#submit"}
+]'></textarea>
+    </div>
+    <button class="btn btn-secondary" id="agentSeqBtn"><span class="icon">⏩</span> Esegui sequenza</button>
+    <div class="preview hidden" id="agentSeqResult" style="margin-top:8px;"></div>
+    <div class="status" id="agentSeqStatus"></div>
+  </div>
+
+  <!-- RELAY -->
+  <div class="panel" id="panel-relay">
+    <div style="text-align:center;margin-bottom:12px;">
+      <div id="relayStatusDot" style="width:12px;height:12px;border-radius:50%;background:#cc4444;display:inline-block;margin-right:6px;"></div>
+      <span id="relayStatusText" style="font-size:13px;font-weight:600;">Disconnesso</span>
+    </div>
+
+    <button class="btn btn-primary" id="relayStartBtn"><span class="icon">🧠</span> Connetti a Claude</button>
+    <button class="btn btn-danger hidden" id="relayStopBtn">⏹ Disconnetti</button>
+
+    <div class="stats" id="relayStats" style="margin-top:10px;"></div>
+
+    <div style="margin-top:12px;">
+      <label>LOG COMANDI</label>
+      <div class="result-list" id="relayLog" style="max-height:200px;"></div>
+      <div id="relayLogEmpty" style="text-align:center;color:#444;font-size:11px;padding:12px;">Nessun comando ricevuto</div>
+    </div>
+
+    <button class="btn btn-secondary btn-sm" id="relaySendTabsBtn" style="margin-top:8px">📑 Invia lista tab</button>
+    <div class="status" id="relayStatusMsg"></div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="panel" id="panel-tasks">
+    <div class="section-title">📋 Task Runner</div>
+    <div class="stats" id="taskStats"></div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">Task attivi</div>
+      <div id="taskList" style="max-height:200px;overflow-y:auto;"></div>
+      <div id="taskEmpty" style="text-align:center;color:#444;font-size:11px;padding:8px;">Nessun task. Crea un workflow o usa le pipeline.</div>
+    </div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">Crea task rapido</div>
+      <input class="input" id="taskName" placeholder="Nome del task" />
+      <textarea class="input" id="taskStepsJson" placeholder='[{"action":"navigate","params":{"url":"..."}},{"action":"scrape","params":{}}]'></textarea>
+      <button class="btn btn-primary btn-sm" id="taskCreateBtn"><span class="icon">▶</span> Crea & Avvia</button>
+      <div class="status" id="taskStatus"></div>
+    </div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">📁 File generati</div>
+      <div id="fileList" style="max-height:150px;overflow-y:auto;"></div>
+      <div id="fileEmpty" style="text-align:center;color:#444;font-size:11px;padding:8px;">Nessun file generato</div>
+      <div class="stats" id="fileStats"></div>
+    </div>
+  </div>
+
+  <!-- CONNECTORS -->
+  <div class="panel" id="panel-connectors">
+    <div class="section-title">🔌 Connettori</div>
+    <p style="font-size:11px;color:#666;margin-bottom:12px;">Configura le API dei servizi esterni. Le chiavi vengono cifrate prima del salvataggio.</p>
+
+    <div id="connectorList"></div>
+
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">⚙ Configura connettore</div>
+      <select class="input" id="connectorSelect">
+        <option value="">Seleziona connettore...</option>
+        <option value="email">📧 Email (Webhook)</option>
+        <option value="webhook">🔗 Webhook generico</option>
+        <option value="google-sheets">📊 Google Sheets</option>
+        <option value="supabase">🗄 Supabase</option>
+        <option value="slack">💬 Slack</option>
+        <option value="custom-rest">🛠 REST Custom</option>
+      </select>
+      <div id="connectorConfigFields"></div>
+      <button class="btn btn-primary btn-sm" id="connectorSaveBtn"><span class="icon">💾</span> Salva configurazione</button>
+      <button class="btn btn-secondary btn-sm" id="connectorTestBtn" style="margin-top:4px;"><span class="icon">🧪</span> Testa connessione</button>
+      <div class="status" id="connectorStatus"></div>
+    </div>
+  </div>
+
+  <!-- PIPELINES -->
+  <div class="panel" id="panel-pipelines">
+    <div class="section-title">🔄 Pipeline</div>
+    <p style="font-size:11px;color:#666;margin-bottom:12px;">Workflow automatici multi-step: scraping → analisi → export → notifica.</p>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Template pronti</div>
+      <div id="pipelineTemplates"></div>
+    </div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">Le tue pipeline</div>
+      <div id="pipelineList" style="max-height:200px;overflow-y:auto;"></div>
+      <div id="pipelineEmpty" style="text-align:center;color:#444;font-size:11px;padding:8px;">Nessuna pipeline salvata</div>
+    </div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">Esegui pipeline</div>
+      <select class="input" id="pipelineSelect">
+        <option value="">Seleziona pipeline...</option>
+      </select>
+      <div id="pipelineVars"></div>
+      <button class="btn btn-primary btn-sm" id="pipelineRunBtn"><span class="icon">▶</span> Esegui</button>
+      <div class="status" id="pipelineStatus"></div>
+    </div>
+
+    <div class="dash-section" style="margin-top:10px;">
+      <div class="dash-section-title">Crea pipeline (JSON)</div>
+      <textarea class="input" id="pipelineJson" placeholder='{"name":"Mia pipeline","stages":[...]}'></textarea>
+      <button class="btn btn-secondary btn-sm" id="pipelineSaveBtn"><span class="icon">💾</span> Salva pipeline</button>
+    </div>
+  </div>
+
+  <!-- CANVAS AI -->
+  <div class="panel" id="panel-canvas">
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input class="input" id="canvasPrompt" placeholder="Chiedi all'AI: &quot;mostra una tabella dei dati&quot;, &quot;crea un grafico&quot;, &quot;visualizza la mappa&quot;" style="margin:0;flex:1;font-size:12px;" />
+      <button class="btn btn-primary btn-sm" id="canvasAskBtn" style="margin:0;padding:8px 12px;width:auto;">🎨</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:8px;">
+      <button class="btn btn-secondary btn-sm" id="canvasTableBtn" style="flex:1;">📊 Tabella dati</button>
+      <button class="btn btn-secondary btn-sm" id="canvasChartBtn" style="flex:1;">📈 Grafico</button>
+      <button class="btn btn-secondary btn-sm" id="canvasSummaryBtn" style="flex:1;">📋 Report</button>
+    </div>
+    <div id="canvasFrame" style="background:#fff;border-radius:8px;min-height:300px;overflow:auto;position:relative;">
+      <div id="canvasContent" style="padding:12px;color:#333;font-family:system-ui;font-size:12px;">
+        <div style="text-align:center;color:#999;padding:40px 20px;">
+          <div style="font-size:32px;margin-bottom:8px;">🎨</div>
+          <div>L'AI può visualizzare qui: tabelle, grafici, report, HTML personalizzato.</div>
+          <div style="margin-top:8px;font-size:11px;">Scrivi un prompt o usa i pulsanti rapidi.</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:8px;">
+      <button class="btn btn-secondary btn-sm" id="canvasClearBtn" style="flex:1;">🗑 Pulisci</button>
+      <button class="btn btn-secondary btn-sm" id="canvasCopyBtn" style="flex:1;">📋 Copia HTML</button>
+      <button class="btn btn-secondary btn-sm" id="canvasDownloadBtn" style="flex:1;">💾 Scarica</button>
+    </div>
+    <div class="status" id="canvasStatus"></div>
+  </div>
+
+  <!-- VOICE — ElevenLabs TTS/STT -->
+  <div class="panel" id="panel-voice">
+    <!-- Settings -->
+    <div class="dash-section">
+      <div class="dash-section-title">🔑 Configurazione ElevenLabs</div>
+      <div class="field">
+        <label>API Key</label>
+        <input class="input" id="elApiKey" type="password" placeholder="xi-xxxxxxxxxxxxxxxxxxxxxxxx" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Lingua predefinita</label>
+          <select class="input" id="elLanguage"></select>
+        </div>
+        <div class="field">
+          <label>Modello TTS</label>
+          <select class="input" id="elModel">
+            <option value="eleven_multilingual_v2">Multilingual v2</option>
+            <option value="eleven_turbo_v2_5">Turbo v2.5</option>
+            <option value="eleven_turbo_v2">Turbo v2</option>
+            <option value="eleven_monolingual_v1">Monolingual v1</option>
+            <option value="eleven_multilingual_v1">Multilingual v1</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Stabilità</label>
+          <input class="input" id="elStability" type="range" min="0" max="1" step="0.05" value="0.5" style="padding:4px 0;" />
+        </div>
+        <div class="field">
+          <label>Similarità</label>
+          <input class="input" id="elSimilarity" type="range" min="0" max="1" step="0.05" value="0.75" style="padding:4px 0;" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Formato output</label>
+        <select class="input" id="elFormat">
+          <option value="mp3_44100_128">MP3 44.1kHz 128kbps</option>
+          <option value="mp3_44100_192">MP3 44.1kHz 192kbps</option>
+          <option value="pcm_16000">PCM 16kHz</option>
+          <option value="pcm_44100">PCM 44.1kHz</option>
+          <option value="ulaw_8000">μ-law 8kHz</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" id="elSaveConfigBtn"><span class="icon">💾</span> Salva configurazione</button>
+      <div class="status" id="elConfigStatus"></div>
+    </div>
+
+    <!-- Voci -->
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">🗣 Voci disponibili</div>
+      <div class="row" style="margin-bottom:8px;">
+        <input class="input" id="elVoiceSearch" placeholder="Cerca voce..." style="margin:0;" />
+        <button class="btn btn-secondary btn-sm" id="elRefreshVoicesBtn" style="width:auto;padding:8px 12px;margin:0;">🔄</button>
+      </div>
+      <div id="elVoiceList" style="max-height:200px;overflow-y:auto;"></div>
+      <div class="status" id="elVoiceStatus"></div>
+    </div>
+
+    <!-- TTS -->
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">📢 Text-to-Speech</div>
+      <textarea class="input" id="elTtsText" placeholder="Scrivi il testo da pronunciare..." style="min-height:50px;"></textarea>
+      <div class="row">
+        <button class="btn btn-primary btn-sm" id="elSpeakBtn"><span class="icon">▶</span> Parla</button>
+        <button class="btn btn-secondary btn-sm" id="elSpeakPageBtn"><span class="icon">📄</span> Leggi pagina</button>
+      </div>
+      <div id="elAudioPlayer" class="hidden" style="margin-top:8px;">
+        <audio id="elAudio" controls style="width:100%;height:32px;"></audio>
+        <button class="btn btn-secondary btn-sm" id="elDownloadAudioBtn" style="margin-top:4px;"><span class="icon">💾</span> Scarica audio</button>
+      </div>
+      <div class="status" id="elTtsStatus"></div>
+    </div>
+
+    <!-- STT -->
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">🎤 Speech-to-Text</div>
+      <div class="row">
+        <button class="btn btn-primary btn-sm" id="elRecordBtn"><span class="icon">🎤</span> Registra (5s)</button>
+        <button class="btn btn-secondary btn-sm" id="elStopRecordBtn" disabled><span class="icon">⏹</span> Stop</button>
+      </div>
+      <div id="elTranscriptBox" class="hidden" style="margin-top:8px;">
+        <label>Trascrizione</label>
+        <div class="preview" id="elTranscript"></div>
+        <button class="btn btn-secondary btn-sm" id="elCopyTranscriptBtn">📋 Copia</button>
+      </div>
+      <div class="status" id="elSttStatus"></div>
+    </div>
+
+    <!-- Agenti -->
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">🤖 Agenti vocali</div>
+      <div id="elAgentList" style="max-height:150px;overflow-y:auto;"></div>
+      <div style="margin-top:8px;">
+        <div class="field">
+          <label>Nome agente</label>
+          <input class="input" id="elAgentName" placeholder="Es: Assistente Logistica" />
+        </div>
+        <div class="field">
+          <label>System prompt</label>
+          <textarea class="input" id="elAgentPrompt" placeholder="Descrivi il comportamento dell'agente..." style="min-height:40px;"></textarea>
+        </div>
+        <div class="field">
+          <label>Messaggio iniziale</label>
+          <input class="input" id="elAgentFirstMsg" placeholder="Es: Ciao! Come posso aiutarti?" />
+        </div>
+        <button class="btn btn-secondary btn-sm" id="elCreateAgentBtn"><span class="icon">➕</span> Crea agente</button>
+      </div>
+      <div class="status" id="elAgentStatus"></div>
+    </div>
+
+    <!-- Quota -->
+    <div class="dash-section" style="margin-top:12px;">
+      <div class="dash-section-title">📊 Utilizzo</div>
+      <div class="stats" id="elUsageStats"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD LIMITI -->
+  <div class="panel" id="panel-dashboard">
+    <!-- Live indicator -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+      <span class="live-dot"></span>
+      <span style="font-size:11px;color:#666;">Aggiornamento live ogni 2s</span>
+      <span style="margin-left:auto;font-size:10px;color:#444;" id="dashLastUpdate"></span>
+    </div>
+
+    <!-- Blocchi attivi -->
+    <div id="blockedSection" class="hidden">
+      <div class="dash-section-title"><span class="dot dot-red"></span> BLOCCATI ORA</div>
+      <div id="blockedList"></div>
+    </div>
+
+    <!-- Batterie per dominio -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span class="dot dot-green"></span> BUDGET PER DOMINIO</div>
+      <div id="domainBatteries"></div>
+      <div id="noDomainMsg" style="text-align:center;color:#444;font-size:11px;padding:12px;">Nessun dominio tracciato. Fai uno scrape per iniziare.</div>
+    </div>
+
+    <!-- Sessione stealth -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span class="dot dot-yellow"></span> SESSIONE STEALTH</div>
+      <div id="sessionBattery"></div>
+    </div>
+
+    <!-- Coda -->
+    <div class="dash-section">
+      <div class="dash-section-title">📋 CODA OPERAZIONI</div>
+      <div id="queueList" style="max-height:120px;overflow-y:auto;"></div>
+      <div id="queueEmpty" style="text-align:center;color:#444;font-size:11px;padding:8px;">Coda vuota</div>
+    </div>
+
+    <!-- Cache -->
+    <div class="dash-section">
+      <div class="dash-section-title">💾 CACHE</div>
+      <div class="cache-grid" id="cacheGrid">
+        <div class="cache-tile"><div class="num" id="cacheTotal">0</div><div class="lbl">Elementi</div></div>
+        <div class="cache-tile"><div class="num" id="cacheHits">0</div><div class="lbl">Richieste salvate</div></div>
+        <div class="cache-tile"><div class="num" id="cacheExpired">0</div><div class="lbl">Scaduti</div></div>
+        <div class="cache-tile"><div class="num" id="cacheDomains">0</div><div class="lbl">Domini</div></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-secondary btn-sm" id="cacheCleanupBtn">🧹 Pulisci scaduti</button>
+        <button class="btn btn-danger btn-sm" id="cacheClearBtn">🗑 Svuota cache</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
