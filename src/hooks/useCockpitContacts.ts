@@ -22,6 +22,7 @@ export interface CockpitContact {
   sourceType: string;
   sourceId: string;
   partnerId: string | null;
+  linkedinUrl: string;
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
 }
