@@ -264,6 +264,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: "",
         });
       }
     }
