@@ -385,7 +385,14 @@ const Cockpit = () => {
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
-          {batchMode && selection.count > 0 ? (
+          {showLinkedInFlow && selection.count > 0 ? (
+            <LinkedInFlowPanel
+              selectedContacts={contacts
+                .filter(c => selection.selectedIds.has(c.id))
+                .map(c => ({ id: c.id, name: c.name, company: c.company, linkedinUrl: c.linkedinUrl }))}
+              onClose={() => setShowLinkedInFlow(false)}
+            />
+          ) : batchMode && selection.count > 0 ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -399,12 +406,21 @@ const Cockpit = () => {
                 {selection.count} contatti selezionati. Trascina sulle drop zone per generare uno alla volta,
                 oppure usa il comando AI per generare in batch.
               </p>
-              <button
-                onClick={() => { setBatchMode(false); }}
-                className="text-xs text-primary hover:underline"
-              >
-                ← Torna alla vista drop zone
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowLinkedInFlow(true)}
+                  className="flex items-center gap-1.5 text-xs text-[#0077B5] hover:underline font-medium"
+                >
+                  <Linkedin className="w-3.5 h-3.5" /> LinkedIn Flow
+                </button>
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
+                  onClick={() => { setBatchMode(false); }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  ← Drop zone
+                </button>
+              </div>
             </motion.div>
           ) : (
             <ChannelDropZones
