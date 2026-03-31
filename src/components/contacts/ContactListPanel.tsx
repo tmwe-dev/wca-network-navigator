@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Search, Megaphone, Briefcase, ClipboardList, Loader2, X,
+  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus,
 } from "lucide-react";
+const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { GroupStrip } from "./GroupStrip";
 import { ExpandedGroupContent } from "./ExpandedGroupContent";
 import { useContactGroupCounts } from "@/hooks/useContactGroups";
@@ -37,6 +38,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const selection = useSelection([]);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [addOpen, setAddOpen] = useState(false);
 
   const currentGroupBy = filters.groupBy || "country";
 
@@ -72,6 +74,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">{totalContacts} contatti • {groups.length} gruppi</span>
+          <Tooltip><TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setAddOpen(true)}>
+              <UserPlus className="w-3.5 h-3.5" /> Nuovo
+            </Button>
+          </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
         </div>
       </div>
 
@@ -140,6 +147,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           })
         )}
       </div>
+
+      {addOpen && (
+        <Suspense fallback={null}>
+          <AddContactDialog open={addOpen} onOpenChange={setAddOpen} defaultDestination="contacts" />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus } from "lucide-react";
+const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,7 +90,7 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
   };
 
   return (
-    <motion.div
+    <><motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className="px-4 pt-3 pb-2 space-y-2"
@@ -111,6 +113,14 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
             {st.label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-1 border border-dashed border-border/50"
+        >
+          <UserPlus className="w-3.5 h-3.5" />
+          Nuovo
+        </button>
       </div>
       <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
         {/* Command Input */}
@@ -187,5 +197,12 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
         </div>
       </form>
     </motion.div>
+
+    {addOpen && (
+      <Suspense fallback={null}>
+        <AddContactDialog open={addOpen} onOpenChange={setAddOpen} defaultDestination="cockpit" />
+      </Suspense>
+    )}
+    </>
   );
 }
