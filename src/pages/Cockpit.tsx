@@ -31,7 +31,9 @@ export interface CockpitFilter {
   type: "search" | "country" | "status" | "language" | "channel" | "priority" | "custom";
 }
 
-export type ScrapingPhase = "idle" | "visiting" | "extracting" | "enriching" | "generating";
+export type ScrapingPhase = "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+
+export type LinkedInConnectionStatus = "not_connected" | "connected" | "pending" | "unknown";
 
 export interface LinkedInProfileData {
   name?: string;
@@ -40,6 +42,7 @@ export interface LinkedInProfileData {
   about?: string;
   photoUrl?: string;
   profileUrl?: string;
+  connectionStatus?: LinkedInConnectionStatus;
 }
 
 export interface DraftState {
