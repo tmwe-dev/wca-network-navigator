@@ -12,7 +12,9 @@
     {
       "matches": [
         "https://*.lovable.app/*",
-        "https://*.lovableproject.com/*"
+        "https://*.lovableproject.com/*",
+        "http://localhost:*/*",
+        "*://localhost:*/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle",
