@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FireScrape",
+  "name": "Partner Connect",
   "version": "3.3.0",
-  "description": "Scraping + Agent browser + Relay Claude. Analizza, naviga e opera come un umano.",
+  "description": "Scraping + Agent browser + Hydra Memory. Analizza, naviga e opera come un umano.",
   "permissions": [
     "activeTab",
     "scripting",
