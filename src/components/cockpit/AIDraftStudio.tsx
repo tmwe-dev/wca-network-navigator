@@ -614,32 +614,50 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                   {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
                   {sending ? "..." : "DM"}
                 </button>
-                {liBridge.isAvailable && draft.contactLinkedinUrl && (
-                  <button
-                    onClick={async () => {
-                      setSending(true);
-                      try {
-                        const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
-                        const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
-                        if (res.success) {
-                          toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
-                        } else {
-                          toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
-                        }
-                      } catch {
-                        toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
-                      } finally {
-                        setSending(false);
+                <button
+                  onClick={async () => {
+                    if (!liBridge.isAvailable) {
+                      toast({ title: "Estensione LinkedIn non rilevata", description: "Installa e attiva l'estensione LinkedIn per inviare richieste di collegamento.", variant: "destructive" });
+                      return;
+                    }
+                    if (!draft.contactLinkedinUrl) {
+                      toast({ title: "URL LinkedIn mancante", description: "Questo contatto non ha un profilo LinkedIn associato.", variant: "destructive" });
+                      return;
+                    }
+                    setSending(true);
+                    try {
+                      const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+                      const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
+                      if (res.success) {
+                        toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
+                      } else {
+                        toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
                       }
-                    }}
-                    disabled={sending}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,35%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                    title="Invia richiesta di collegamento con nota personalizzata"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    {sending ? "..." : "Connetti"}
-                  </button>
-                )}
+                    } catch {
+                      toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
+                    } finally {
+                      setSending(false);
+                    }
+                  }}
+                  disabled={sending}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity",
+                    liBridge.isAvailable && draft.contactLinkedinUrl
+                      ? "bg-[hsl(210,80%,35%)] hover:opacity-90"
+                      : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed",
+                    "disabled:opacity-50"
+                  )}
+                  title={
+                    !liBridge.isAvailable
+                      ? "Estensione LinkedIn non attiva"
+                      : !draft.contactLinkedinUrl
+                        ? "URL LinkedIn mancante per questo contatto"
+                        : "Invia richiesta di collegamento con nota personalizzata"
+                  }
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {sending ? "..." : "Connetti"}
+                </button>
               </div>
             ) : (
               <button
