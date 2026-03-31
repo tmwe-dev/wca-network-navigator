@@ -302,6 +302,157 @@ async function sendLinkedInMessage(profileUrl, message) {
   }
 }
 
+// ── Send connection request on LinkedIn ──
+function clickConnectButton() {
+  try {
+    // Primary: the "Connect" / "Collegati" button in profile actions
+    var connectBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='onnect']")
+      || document.querySelector("button.pvs-profile-actions__action[aria-label*='olleg']")
+      || Array.from(document.querySelectorAll("button")).find(function (el) {
+        return /^(connect|collegati|connetti)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
+      });
+
+    if (connectBtn) { connectBtn.click(); return { success: true, method: "direct" }; }
+
+    // Sometimes Connect is hidden in "More" dropdown
+    var moreBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='ore']")
+      || Array.from(document.querySelectorAll("button")).find(function (el) {
+        return /^(more|altro|più)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
+      });
+
+    if (moreBtn) {
+      moreBtn.click();
+      // Wait a bit for dropdown
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          var dropdownConnect = Array.from(document.querySelectorAll("div[role='option'], li, span")).find(function (el) {
+            return /connect|collegati|connetti/i.test(el.textContent.trim()) && el.offsetParent !== null;
+          });
+          if (dropdownConnect) {
+            dropdownConnect.click();
+            resolve({ success: true, method: "more_dropdown" });
+          } else {
+            resolve({ success: false, error: "Bottone Collegati non trovato nel menu" });
+          }
+        }, 1000);
+      });
+    }
+
+    return { success: false, error: "Bottone Collegati/Connect non trovato" };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function addConnectionNote(noteText) {
+  try {
+    // Click "Add a note" button in the connection modal
+    var addNoteBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+      return /add a note|aggiungi nota|aggiungi un messaggio/i.test(el.textContent.trim());
+    });
+    if (!addNoteBtn) return { success: false, error: "Bottone 'Aggiungi nota' non trovato" };
+    addNoteBtn.click();
+
+    // Wait for textarea to appear
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        var textarea = document.querySelector("textarea[name='message']")
+          || document.querySelector("textarea#custom-message")
+          || document.querySelector(".send-invite__custom-message textarea")
+          || document.querySelector("textarea");
+
+        if (!textarea) { resolve({ success: false, error: "Textarea nota non trovata" }); return; }
+
+        var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+        textarea.focus();
+        nativeSet.call(textarea, noteText);
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        textarea.dispatchEvent(new Event("change", { bubbles: true }));
+
+        // Click send
+        setTimeout(function () {
+          var sendBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+            return /^(send|invia)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
+          });
+          if (sendBtn) {
+            sendBtn.click();
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, error: "Bottone Invia non trovato" });
+          }
+        }, 500);
+      }, 1000);
+    });
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function sendConnectionRequest(profileUrl, note) {
+  if (!profileUrl) return { success: false, error: "URL profilo mancante" };
+
+  var tab = await chrome.tabs.create({ url: profileUrl.replace(/\/$/, ""), active: false });
+  try {
+    await waitForTabLoad(tab.id, 20000);
+
+    // Click Connect button
+    var clickRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: clickConnectButton,
+    });
+    var clickResult = clickRes[0] && clickRes[0].result;
+
+    if (!clickResult || !clickResult.success) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return { success: false, error: (clickResult && clickResult.error) || "Bottone Connect non trovato" };
+    }
+
+    // Wait for modal to appear
+    await new Promise(function (r) { setTimeout(r, 2000); });
+
+    if (note && note.trim()) {
+      // Add a personalized note
+      var noteRes = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: addConnectionNote,
+        args: [note],
+      });
+      var noteResult = noteRes[0] && noteRes[0].result;
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: !!(noteResult && noteResult.success),
+        method: "connect_with_note",
+        noteAdded: !!(noteResult && noteResult.success),
+        error: noteResult && noteResult.error,
+      };
+    } else {
+      // Send without note — click "Send without a note" or the direct send
+      var sendRes = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var sendBtn = Array.from(document.querySelectorAll("button")).find(function (el) {
+            return /send without|invia senza|send now/i.test(el.textContent.trim());
+          }) || Array.from(document.querySelectorAll("button")).find(function (el) {
+            return /^(send|invia)$/i.test(el.textContent.trim()) && el.offsetParent !== null;
+          });
+          if (sendBtn) { sendBtn.click(); return { success: true }; }
+          return { success: false, error: "Bottone invio non trovato" };
+        },
+      });
+      var sendResult = sendRes[0] && sendRes[0].result;
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: !!(sendResult && sendResult.success),
+        method: "connect_without_note",
+        error: sendResult && sendResult.error,
+      };
+    }
+  } catch (err) {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    return { success: false, error: err.message };
+  }
+}
+
 // ── Extract profile by URL ──
 async function extractProfileByUrl(url) {
   if (!url) return { success: false, error: "URL mancante" };
@@ -369,6 +520,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "sendMessage") {
     (async function () {
       try { var result = await sendLinkedInMessage(message.url, message.message); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    })();
+    return true;
+  }
+
+  if (message.action === "sendConnectionRequest") {
+    (async function () {
+      try { var result = await sendConnectionRequest(message.url, message.note); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
     })();
     return true;
