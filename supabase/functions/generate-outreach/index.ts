@@ -182,6 +182,130 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ─── Recipient Intelligence: query DB for real data ───
+    const intelligence: {
+      sources_checked: string[];
+      data_found: Record<string, boolean>;
+      enrichment_snippet: string;
+      warning: string | null;
+    } = {
+      sources_checked: [],
+      data_found: {},
+      enrichment_snippet: "",
+      warning: null,
+    };
+    const contextParts: string[] = [];
+
+    // 1) Partners table
+    intelligence.sources_checked.push("partners");
+    let partnerId: string | null = null;
+    if (company_name) {
+      const { data: partnerRows } = await supabase
+        .from("partners")
+        .select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
+        .ilike("company_name", `%${company_name}%`)
+        .limit(1);
+      const partner = partnerRows?.[0];
+      if (partner) {
+        intelligence.data_found.partner = true;
+        partnerId = partner.id;
+        const parts: string[] = [];
+        if (partner.profile_description) parts.push(`Profilo: ${partner.profile_description.slice(0, 500)}`);
+        if (partner.city) parts.push(`Sede: ${partner.city}, ${partner.country_code}`);
+        if (partner.website) parts.push(`Website: ${partner.website}`);
+        if (partner.lead_status) parts.push(`Status CRM: ${partner.lead_status}`);
+        if (partner.enrichment_data) {
+          const ed = partner.enrichment_data as Record<string, any>;
+          if (ed.trade_lanes) parts.push(`Trade Lanes: ${JSON.stringify(ed.trade_lanes).slice(0, 300)}`);
+          if (ed.specializations) parts.push(`Specializzazioni: ${JSON.stringify(ed.specializations).slice(0, 200)}`);
+          if (ed.deep_search_summary) parts.push(`Deep Search: ${String(ed.deep_search_summary).slice(0, 400)}`);
+        }
+        if (parts.length) contextParts.push(`[PARTNER DB]\n${parts.join("\n")}`);
+      } else {
+        intelligence.data_found.partner = false;
+      }
+    }
+
+    // 2) Partner contacts
+    intelligence.sources_checked.push("partner_contacts");
+    if (partnerId) {
+      const { data: contactRows } = await supabase
+        .from("partner_contacts")
+        .select("name, title, email, contact_alias")
+        .eq("partner_id", partnerId)
+        .limit(5);
+      if (contactRows && contactRows.length > 0) {
+        intelligence.data_found.contacts = true;
+        const cList = contactRows.map((c: any) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ");
+        contextParts.push(`[CONTATTI AZIENDA]\n${cList}`);
+      } else {
+        intelligence.data_found.contacts = false;
+      }
+    }
+
+    // 3) Partner networks
+    intelligence.sources_checked.push("partner_networks");
+    if (partnerId) {
+      const { data: netRows } = await supabase
+        .from("partner_networks")
+        .select("network_name")
+        .eq("partner_id", partnerId)
+        .limit(10);
+      if (netRows && netRows.length > 0) {
+        intelligence.data_found.networks = true;
+        contextParts.push(`[NETWORK CONDIVISI]\n${netRows.map((n: any) => n.network_name).join(", ")}`);
+      } else {
+        intelligence.data_found.networks = false;
+      }
+    }
+
+    // 4) Partner services
+    intelligence.sources_checked.push("partner_services");
+    if (partnerId) {
+      const { data: svcRows } = await supabase
+        .from("partner_services")
+        .select("service_category")
+        .eq("partner_id", partnerId)
+        .limit(20);
+      if (svcRows && svcRows.length > 0) {
+        intelligence.data_found.services = true;
+        contextParts.push(`[SERVIZI]\n${svcRows.map((s: any) => s.service_category).join(", ")}`);
+      } else {
+        intelligence.data_found.services = false;
+      }
+    }
+
+    // 5) Imported contacts (CRM)
+    intelligence.sources_checked.push("imported_contacts");
+    if (contact_email || company_name) {
+      const q = supabase.from("imported_contacts").select("name, company_name, note, enrichment_data, deep_search_at").limit(1);
+      if (contact_email) q.ilike("email", contact_email);
+      else if (company_name) q.ilike("company_name", `%${company_name}%`);
+      const { data: icRows } = await q;
+      const ic = icRows?.[0];
+      if (ic) {
+        intelligence.data_found.imported_contacts = true;
+        const parts: string[] = [];
+        if (ic.note) parts.push(`Note: ${String(ic.note).slice(0, 300)}`);
+        if (ic.enrichment_data) {
+          const ed = ic.enrichment_data as Record<string, any>;
+          if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`);
+        }
+        if (parts.length) contextParts.push(`[CRM CONTATTO]\n${parts.join("\n")}`);
+      } else {
+        intelligence.data_found.imported_contacts = false;
+      }
+    }
+
+    // Build enrichment snippet (max ~2000 chars)
+    const rawSnippet = contextParts.join("\n\n");
+    intelligence.enrichment_snippet = rawSnippet.slice(0, 2000);
+    if (!rawSnippet) {
+      intelligence.warning = "Nessun dato trovato nel DB. L'AI lavora solo con dati base.";
+    }
+
+    // ─── End Recipient Intelligence ───
+
     // Fetch AI settings
     const { data: settingsRows } = await supabase
       .from("app_settings")
@@ -239,6 +363,14 @@ ${contact_email ? `- Email: ${contact_email}` : ""}
 REGOLA: ${recipientName ? `Rivolgiti a ${recipientName}, MAI all'azienda nel saluto.` : `Usa saluto generico. MAI usare nomi di azienda nel saluto.`}
 `;
 
+    // Recipient intelligence block for prompt
+    const intelligenceBlock = intelligence.enrichment_snippet
+      ? `\nINTELLIGENCE DESTINATARIO (dati verificati dal database — USA QUESTI, non inventare):
+${intelligence.enrichment_snippet}
+`
+      : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
+`;
+
     const systemPrompt = `Sei un esperto copywriter B2B nel settore logistica e freight forwarding internazionale.
 
 CANALE: ${ch.toUpperCase()}
@@ -246,16 +378,17 @@ ${channelInstructions}
 
 REGOLE CRITICHE:
 1. Scrivi INTERAMENTE in ${effectiveLanguage} (paese destinatario: ${country_code} → ${detected.languageLabel})
-2. Personalizza il messaggio sul destinatario
+2. Personalizza il messaggio sul destinatario SOLO con dati dalla sezione INTELLIGENCE DESTINATARIO
 3. ${ch === "email" ? "NON includere firma — viene aggiunta automaticamente" : "Includi il nome del mittente alla fine"}
-4. Non inventare informazioni
-5. Usa i network condivisi come punto di connessione se esistono
+4. CRITICO: Non inventare MAI informazioni, eventi, presentazioni o fatti non presenti nei dati forniti
+5. Usa i network condivisi come punto di connessione se esistono nei dati
 6. CRITICO: Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
-7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi`;
+7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
+8. Se non hai dati specifici sul destinatario, scrivi un messaggio generico ma professionale`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
-
+${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
@@ -358,6 +491,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
       credits_consumed: result.usage ? Math.max(1, Math.ceil(((result.usage.prompt_tokens || 0) + (result.usage.completion_tokens || 0) * 2) / 1000)) : 0,
       channel_instructions: ch.toUpperCase(),
       settings_keys_found: Object.keys(settings),
+      recipient_intelligence: intelligence,
     };
 
     return new Response(

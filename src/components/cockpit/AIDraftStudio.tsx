@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -274,6 +274,48 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
                   <div className="flex justify-between"><span className="text-muted-foreground">Nome risolto</span><span className="text-foreground">{draft._debug.recipient_name_resolved}</span></div>
                 </div>
+              </div>
+
+              {/* Recipient Intelligence */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Search className="w-3 h-3 text-chart-4" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intelligence Destinatario</span>
+                </div>
+                {draft._debug.recipient_intelligence ? (
+                  <div className="bg-muted/30 rounded-lg p-2.5 space-y-2 text-xs">
+                    {draft._debug.recipient_intelligence.warning && (
+                      <div className="flex items-center gap-1.5 text-warning bg-warning/10 rounded px-2 py-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        <span className="text-[10px]">{draft._debug.recipient_intelligence.warning}</span>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-muted-foreground font-medium">Fonti consultate:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {draft._debug.recipient_intelligence.sources_checked.map(src => {
+                          const found = draft._debug!.recipient_intelligence!.data_found[src === "partner_contacts" ? "contacts" : src === "partner_networks" ? "networks" : src === "partner_services" ? "services" : src];
+                          return (
+                            <span key={src} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-mono ${found ? "bg-success/10 text-success" : "bg-muted/50 text-muted-foreground"}`}>
+                              {found ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+                              {src.replace("partner_", "").replace("imported_", "")}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {draft._debug.recipient_intelligence.enrichment_snippet && (
+                      <details className="group">
+                        <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Mostra contesto iniettato nel prompt ▸</summary>
+                        <pre className="mt-1 text-[9px] text-muted-foreground/90 whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">
+                          {draft._debug.recipient_intelligence.enrichment_snippet}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-muted/30 rounded-lg p-2.5 text-xs text-muted-foreground">Non disponibile</div>
+                )}
               </div>
 
               <div className="space-y-1.5">
