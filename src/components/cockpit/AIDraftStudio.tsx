@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+
+const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
 interface AIDraftStudioProps {
   draft: DraftState;
@@ -79,6 +81,7 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
 
 export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStudioProps) {
   const [sending, setSending] = useState(false);
+  const [liDmOpen, setLiDmOpen] = useState(false);
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
@@ -91,6 +94,17 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       : draft.body;
     navigator.clipboard.writeText(text);
     toast({ title: "Copiato negli appunti" });
+  };
+
+  const handleOpenWhatsApp = () => {
+    const phone = draft.contactPhone?.replace(/[^0-9+]/g, "").replace(/^\+/, "");
+    if (!phone) {
+      toast({ title: "Numero di telefono mancante", variant: "destructive" });
+      return;
+    }
+    const text = encodeURIComponent(draft.body.replace(/<[^>]+>/g, ""));
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+    toast({ title: "WhatsApp aperto" });
   };
 
   const handleSend = async () => {
@@ -232,6 +246,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
               {draft.contactEmail && (
                 <div className="flex justify-between"><span className="text-muted-foreground">email</span><span className="text-foreground">{draft.contactEmail}</span></div>
               )}
+              {draft.contactPhone && (
+                <div className="flex justify-between"><span className="text-muted-foreground">phone</span><span className="text-foreground">{draft.contactPhone}</span></div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -246,6 +263,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
             exit={{ opacity: 0, y: 10 }}
             className="px-4 py-3 border-t border-border/60 flex items-center gap-2"
           >
+            {/* Channel-specific primary action */}
             {draft.channel === "email" && draft.contactEmail ? (
               <button
                 onClick={handleSend}
@@ -253,7 +271,23 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                {sending ? "Invio..." : "Invia"}
+                {sending ? "Invio..." : "Invia Email"}
+              </button>
+            ) : draft.channel === "whatsapp" && draft.contactPhone ? (
+              <button
+                onClick={handleOpenWhatsApp}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Apri WhatsApp
+              </button>
+            ) : draft.channel === "linkedin" ? (
+              <button
+                onClick={() => setLiDmOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <Linkedin className="w-3.5 h-3.5" />
+                Invia su LinkedIn
               </button>
             ) : (
               <button
@@ -273,6 +307,19 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* LinkedIn DM Dialog */}
+      {liDmOpen && (
+        <Suspense fallback={null}>
+          <LinkedInDMDialog
+            open={liDmOpen}
+            onOpenChange={setLiDmOpen}
+            profileUrl=""
+            contactName={draft.contactName}
+            companyName={draft.companyName || ""}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

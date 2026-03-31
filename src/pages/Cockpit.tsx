@@ -32,6 +32,7 @@ export interface DraftState {
   contactId: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  contactPhone: string | null;
   companyName: string | null;
   countryCode: string | null;
   subject: string;
@@ -49,7 +50,7 @@ const Cockpit = () => {
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
-    channel: null, contactId: null, contactName: null, contactEmail: null,
+    channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
@@ -173,7 +174,8 @@ const Cockpit = () => {
 
     setDraftState({
       channel, contactId: firstId, contactName: contact.name,
-      contactEmail: contact.email, companyName: contact.company,
+      contactEmail: contact.email, contactPhone: contact.phone,
+      companyName: contact.company,
       countryCode: contact.country, subject: "", body: "",
       language: contact.language, isGenerating: true,
     });

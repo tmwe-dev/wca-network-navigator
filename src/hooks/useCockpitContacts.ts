@@ -16,6 +16,7 @@ export interface CockpitContact {
   priority: number;
   channels: string[];
   email: string;
+  phone: string;
   origin: ContactOrigin;
   originDetail: string;
   sourceType: string;
@@ -157,6 +158,7 @@ export function useCockpitContacts() {
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
           email: pc.email || "",
+          phone: pc.mobile || pc.direct_phone || "",
           origin: "wca" as ContactOrigin,
           originDetail: partner?.company_name || "Partner",
           sourceType: st,
@@ -178,6 +180,7 @@ export function useCockpitContacts() {
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
           email: bc.email || "",
+          phone: bc.mobile || bc.phone || "",
           origin: "bca" as ContactOrigin,
           originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
           sourceType: st,
@@ -200,6 +203,7 @@ export function useCockpitContacts() {
           priority: computePriority(prc.email, prc.phone, null),
           channels: inferChannels(prc.email, prc.phone, null),
           email: prc.email || "",
+          phone: prc.phone || "",
           origin: "report_aziende" as ContactOrigin,
           originDetail: "Prospect",
           sourceType: st,
@@ -226,6 +230,7 @@ export function useCockpitContacts() {
         priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
         channels: inferChannels(meta.email, null, null),
         email: meta.email || "",
+        phone: meta.phone || meta.mobile || "",
         origin: "wca" as ContactOrigin,
         originDetail: `📅 Riprogrammato`,
         sourceType: act.source_type,
