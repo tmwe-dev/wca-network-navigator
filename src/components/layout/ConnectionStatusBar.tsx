@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Linkedin, MessageCircle, Bot, Send, Pause, Play, Zap, Loader2 } from "lucide-react";
+import { Linkedin, MessageCircle, Bot, Send, Pause, Play, Zap, Loader2, Flame } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
