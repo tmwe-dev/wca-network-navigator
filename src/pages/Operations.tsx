@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search, Brain, Phone, Mail, Calendar, Building2, CheckSquare,
+  Sun, Moon, Bot, Globe, Users, FolderOpen, Eye, CreditCard, Send, Search, Brain, Phone, Mail, Calendar, Building2, CheckSquare, RefreshCw,
 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
@@ -335,15 +335,73 @@ interface BcaGroup {
   hasDeepSearch: boolean;
   isMatched: boolean;
   partnerId: string | null;
+  countryCode: string | null;
   cards: BusinessCardWithPartner[];
+}
+
+/** Derive country code from location string or phone prefix */
+function guessCountryFromLocation(location: string | null, phone: string | null): string | null {
+  if (!location && !phone) return null;
+  // Try location first
+  if (location) {
+    const loc = location.toLowerCase();
+    const map: Record<string, string> = {
+      india: "IN", china: "CN", cina: "CN", usa: "US", "united states": "US",
+      brazil: "BR", "united kingdom": "UK", uk: "GB", turkey: "TR", turchia: "TR",
+      singapore: "SG", bangladesh: "BD", korea: "KR", "saudi arabia": "SA",
+      messico: "MX", mexico: "MX", germany: "DE", germania: "DE", france: "FR",
+      francia: "FR", italia: "IT", italy: "IT", spain: "ES", spagna: "ES",
+      japan: "JP", giappone: "JP", australia: "AU", canada: "CA",
+    };
+    for (const [name, code] of Object.entries(map)) {
+      if (loc.includes(name)) return code;
+    }
+  }
+  // Try phone prefix
+  if (phone) {
+    const clean = phone.replace(/[^+\d]/g, "");
+    const prefixes: Record<string, string> = {
+      "+91": "IN", "+86": "CN", "+1": "US", "+55": "BR", "+44": "GB",
+      "+90": "TR", "+65": "SG", "+88": "BD", "+82": "KR", "+966": "SA",
+      "+52": "MX", "+49": "DE", "+33": "FR", "+39": "IT", "+34": "ES",
+      "+81": "JP", "+61": "AU",
+    };
+    for (const [prefix, code] of Object.entries(prefixes)) {
+      if (clean.startsWith(prefix)) return code;
+    }
+  }
+  return null;
+}
+
+function countryCodeToFlag(code: string | null): string {
+  if (!code || code.length !== 2) return "";
+  const upper = code.toUpperCase();
+  const codePoints = upper.split("").map(c => 127397 + c.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
 }
 
 function BusinessCardsView() {
   const { data: cards = [], isLoading } = useBusinessCards();
+  const qc = useQueryClient();
   const sendToCockpit = useSendToCockpit();
   const deepSearch = useDeepSearch();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-business-cards");
+      if (error) throw error;
+      toast.success(`Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati`);
+      qc.invalidateQueries({ queryKey: ["business-cards"] });
+    } catch (e: any) {
+      toast.error("Errore sincronizzazione: " + (e.message || "sconosciuto"));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!search) return cards;
@@ -369,6 +427,7 @@ function BusinessCardsView() {
           hasDeepSearch: !!partner?.enrichment_data?.deep_search_at,
           isMatched: !!card.matched_partner_id,
           partnerId: card.matched_partner_id || null,
+          countryCode: partner?.country_code || guessCountryFromLocation(card.location, card.phone || card.mobile),
           cards: [],
         });
       }
@@ -480,6 +539,10 @@ function BusinessCardsView() {
             </Button>
           </div>
         )}
+
+        <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
+          <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+        </Button>
       </div>
 
       {/* Deep Search Canvas */}
@@ -526,6 +589,7 @@ function BusinessCardsView() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
+                      {group.countryCode && <span className="text-base flex-shrink-0" title={group.countryCode}>{countryCodeToFlag(group.countryCode)}</span>}
                       <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
                       {group.isMatched && (
                         <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">
@@ -574,7 +638,10 @@ function BusinessCardsView() {
                         <div className="flex items-start gap-2.5">
                           <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{card.contact_name || "—"}</p>
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {!group.countryCode && (() => { const cc = guessCountryFromLocation(card.location, card.phone || card.mobile); return cc ? <span className="mr-1">{countryCodeToFlag(cc)}</span> : null; })()}
+                              {card.contact_name || "—"}
+                            </p>
                             {card.position && <p className="text-[11px] text-muted-foreground truncate">{card.position}</p>}
 
                             <div className="flex flex-col gap-0.5 mt-1.5">
