@@ -125,7 +125,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     if (!fsOk) {
       // Auto-download Partner Connect extension
-      downloadFireScrapeExtension();
+      downloadPartnerConnectExtension();
     }
 
     toast({
