@@ -35,7 +35,7 @@
   "minimum_chrome_version": "102",
   "content_scripts": [
     {
-      "matches": ["*://*.lovable.app/*", "http://localhost:*/*", "*://localhost:*/*"],
+      "matches": ["*://*.lovable.app/*", "*://*.lovableproject.com/*", "http://localhost:*/*", "*://localhost:*/*"],
       "js": ["webapp-bridge.js"],
       "run_at": "document_idle"
     }
