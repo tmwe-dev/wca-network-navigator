@@ -1,38 +1,50 @@
 
 
-# Connessione WhatsApp/LinkedIn da Settings (senza pagina esterna)
+# Connessione One-Click: LinkedIn e WhatsApp
 
-## Problema
+## Situazione attuale
 
-Cliccando le icone WhatsApp/LinkedIn nella header, si apre una pagina esterna di istruzioni per installare estensioni Chrome. L'utente ha gia' tutti i numeri di telefono nei contatti e vuole gestire le connessioni direttamente dai Settings dell'app — non da pagine HTML separate.
+Il sistema mostra "Non rilevato" e istruzioni manuali per installare estensioni Chrome. L'utente vuole un singolo bottone "Connetti" che gestisca tutto.
 
-## Soluzione
+## Limiti tecnici reali
 
-### 1. Sezione "Canali di Comunicazione" in `ConnectionsSettings.tsx`
+Le estensioni Chrome **non possono** essere installate via codice — è una restrizione di sicurezza di Google. Tuttavia possiamo:
+1. **Simulare la connessione** per LinkedIn usando le credenziali già salvate + le API server-side (cookie `li_at` già disponibile nel DB)
+2. **Per WhatsApp** aprire una sessione WA Web embedded o usare il link `wa.me` come fallback
 
-Aggiungere un nuovo tab o sezione dentro Settings > Connessioni con:
+## Cosa faremo
 
-- **WhatsApp**: Campo per numero mittente (gia' disponibile nei dati utente), toggle attivazione, stato connessione con pallino verde/rosso. Il click su "Attiva" lancia il bridge check e mostra istruzioni inline (non pagina esterna) se l'estensione non e' rilevata
-- **LinkedIn**: Stesso pattern — mostra stato estensione, credenziali gia' salvate (li_at cookie), verifica sessione inline
-- **AI Agent**: Toggle attivazione (sempre attivo, conferma visiva)
+### 1. Bottone "Connetti Tutto" nella header (`ConnectionStatusBar.tsx`)
 
-### 2. Modifica `ConnectionStatusBar.tsx`
+Un singolo bottone che:
+- **LinkedIn**: chiama l'edge function `get-linkedin-credentials` per verificare che le credenziali esistano → poi chiama `save-linkedin-cookie` se il cookie `li_at` è già nel DB → segna come connesso. Se le credenziali mancano, apre inline un mini-form per inserirle
+- **WhatsApp**: verifica se l'estensione risponde al ping. Se sì, auto-verifica la sessione. Se no, mostra un dialog compatto con download + 4 step (senza navigare altrove)
+- **AI Agent**: sempre attivo, conferma visiva
 
-- Rimuovere i `window.open` verso le pagine HTML di download
-- Click su icona disconnessa → navigazione a `/settings` tab Connessioni con toast "Configura da Impostazioni > Connessioni"
-- Se estensione non rilevata, mostrare istruzioni compatte inline nel toast o dialog, non aprire pagina esterna
+### 2. Auto-connect all'apertura del Cockpit (`Cockpit.tsx`)
 
-### 3. Istruzioni inline invece di pagine separate
+Quando si apre il Cockpit:
+- Tenta automaticamente di verificare LinkedIn (via cookie `li_at` salvato nel DB — non serve l'estensione per la Deep Search, solo per l'invio DM)
+- Tenta ping WhatsApp extension
+- Aggiorna lo stato delle icone nella header
 
-Quando l'estensione non e' installata, mostrare un piccolo dialog/sheet dentro l'app con:
-- Link per scaricare il ZIP dell'estensione (fetch+blob, gia' implementato)
-- 4 step compatti per l'installazione
-- Tutto dentro l'app, nessun redirect esterno
+### 3. Semplificazione radicale del tab Canali (`ConnectionsSettings.tsx`)
+
+Rimuovere le istruzioni tecniche verbose. Per ogni canale:
+- **Connesso**: badge verde + bottone "Verifica"
+- **Non connesso**: singolo bottone "Connetti" che fa tutto il possibile automaticamente
+- Credenziali LinkedIn: se già salvate nel DB, mostrare "✅ Credenziali configurate" invece del form vuoto
+- Le istruzioni estensione Chrome diventano un piccolo `<details>` nascosto sotto "Setup avanzato"
+
+### 4. Stato connessione persistente
+
+Salvare lo stato delle connessioni in `app_settings` (`linkedin_connected`, `whatsapp_connected`) così all'apertura successiva le icone si mostrano subito verdi senza attendere il ping.
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/settings/ConnectionsSettings.tsx` | Nuova sezione canali WhatsApp/LinkedIn/AI |
-| `src/components/layout/ConnectionStatusBar.tsx` | Rimuovere redirect a pagine esterne, navigare a Settings |
+| `src/components/layout/ConnectionStatusBar.tsx` | Bottone "Connetti tutto" + auto-verify al mount |
+| `src/components/settings/ConnectionsSettings.tsx` | Semplificare UI, auto-detect credenziali, nascondere istruzioni tecniche |
+| `src/pages/Cockpit.tsx` | Auto-connect all'apertura |
 
