@@ -210,7 +210,7 @@ const Cockpit = () => {
       country_code: contact?.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
     });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false }));
+      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, _debug: result._debug }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
