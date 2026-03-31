@@ -113,6 +113,14 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
             {st.label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-1 border border-dashed border-border/50"
+        >
+          <UserPlus className="w-3.5 h-3.5" />
+          Nuovo
+        </button>
       </div>
       <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
         {/* Command Input */}
