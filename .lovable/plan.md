@@ -1,126 +1,56 @@
 
 
-# Analisi Completa della Pipeline AI Outreach
+# Drop Zone piu' grandi + WhatsApp invio diretto via Twilio
 
-## Stato Attuale — Cosa usa e cosa NO
+## 1. Drop Zone — raddoppio dimensioni
 
-### Due Edge Function separate per due flussi diversi:
+In `src/components/cockpit/ChannelDropZones.tsx`:
+- Cambiare `max-w-[140px]` → `max-w-[240px]`
+- Padding da `p-3` → `p-5`
+- Icone da `w-8 h-8` / `w-4 h-4` → `w-12 h-12` / `w-6 h-6`
+- Label da `text-sm` → `text-base`
+- Gap da `gap-2` → `gap-3`
 
-**`generate-email`** (Workspace — batch email):
-| Dato | Usato? | Note |
-|------|--------|------|
-| Profilo mittente (KB, tono, ruolo) | ✅ | Da `app_settings` |
-| Sales Knowledge Base (SKB) | ✅ | Sliced per quality |
-| Goal + Proposta base (Mission) | ✅ | Passati dal frontend |
-| Documenti workspace | ✅ | Solo standard/premium |
-| Link di riferimento (Firecrawl scrape) | ✅ | Solo premium |
-| Profilo partner WCA (descrizione, markdown) | ✅ | Troncato per quality |
-| Network condivisi | ✅ | Da `partner_networks` |
-| Servizi partner | ✅ | Solo standard/premium |
-| Social links (LinkedIn URL) | ✅ | Solo premium, ma **solo l'URL**, non scrapa il contenuto |
-| Alias auto-generati | ✅ | |
-| **History interazioni** | ❌ | **NON consultata** |
-| **Deep Search data salvata** | ❌ | **NON consultata** |
-| **Post LinkedIn** | ❌ | **NON scrapati** |
-| **Sito aziendale destinatario** | ❌ | **NON scrapato** |
+Risultato: caselle circa il doppio in larghezza e altezza, target di drop molto piu' comodo.
 
-**`generate-outreach`** (Cockpit — singolo drag):
-| Dato | Usato? | Note |
-|------|--------|------|
-| Profilo mittente (KB, tono) | ✅ | |
-| Sales KB | ✅ | Sliced |
-| Goal + Proposta | ✅ | |
-| Intelligence DB (partner, networks, servizi, CRM) | ✅ | Aggiunto di recente |
-| **History interazioni** | ❌ | **NON consultata** |
-| **Deep Search data** | Parziale | Solo `deep_search_summary` da `enrichment_data` |
-| **Post LinkedIn** | ❌ | |
-| **Sito aziendale** | ❌ | |
-| **Documenti workspace** | ❌ | Non passati dal Cockpit |
+## 2. WhatsApp — invio diretto senza aprire browser
 
-### Cosa manca in entrambi:
-1. **History interazioni** — le email/chiamate precedenti non vengono considerate (rischio di ripetere lo stesso messaggio)
-2. **Scraping sito aziendale** — il website è nel DB ma non viene letto
-3. **Scraping LinkedIn** — solo l'URL è salvato, nessun contenuto viene estratto
-4. **Persistenza dati scrapati** — se si scrapa, i dati vanno salvati nel DB per le volte successive
+**Problema attuale**: il bottone "Apri WhatsApp" apre `wa.me` in una nuova tab. L'utente vuole che il messaggio parta direttamente.
 
----
+**Soluzione**: usare **Twilio** via connector per inviare il messaggio WhatsApp dal backend.
 
-## Piano di Implementazione: Outreach Intelligence Layer
+### Prerequisiti
+- Collegare il connector Twilio al progetto (richiede account Twilio con WhatsApp Business abilitato e numero Twilio configurato come sender WhatsApp)
+- L'utente dovra' configurare il proprio numero Twilio WhatsApp
 
-### Strategia costi
+### Implementazione
 
-```text
-SINGOLO (Cockpit drag):     Scrape sito + LinkedIn (se premium) → salva nel DB
-BATCH (Workspace genera):   Solo dati già in DB (no scraping live per costi)
-SUCCESSIVI:                 Usa dati cached, scrape solo se > 30 giorni
-```
+**Nuova Edge Function `send-whatsapp/index.ts`**:
+- Riceve `{ to, body }` dal frontend
+- Valida input con Zod
+- Chiama Twilio API via connector gateway (`/Messages.json`) con `From: whatsapp:+<numero_twilio>`, `To: whatsapp:+<numero_dest>`, `Body: <testo>`
+- Restituisce `{ success, sid }` o errore
 
-### 1. Arricchire `generate-outreach` (Cockpit — singolo)
+**Modifica `AIDraftStudio.tsx`**:
+- Il bottone WhatsApp cambia da "Apri WhatsApp" → "Invia WhatsApp"
+- Rimuove `window.open(wa.me/...)` e chiama `supabase.functions.invoke("send-whatsapp", ...)`
+- Mostra loader durante l'invio e toast di conferma/errore
+- Fallback: se Twilio non configurato, mantiene il link `wa.me` con avviso
 
-In `supabase/functions/generate-outreach/index.ts`:
+## Domanda critica prima di procedere
 
-- **Query history**: `SELECT * FROM interactions WHERE partner_id = X ORDER BY interaction_date DESC LIMIT 5` — iniettare nel prompt come "STORIA INTERAZIONI" per evitare ripetizioni
-- **Query activities completate**: `SELECT email_subject, sent_at FROM activities WHERE source_id = X AND status = 'completed' LIMIT 5` — mostrare cosa è già stato inviato
-- **Scrape sito aziendale** (se `website` esiste e `enrichment_data.website_scraped_at` è null o > 30 giorni): Firecrawl scrape → salva summary in `enrichment_data.website_summary`
-- **Scrape LinkedIn** (solo premium, singolo): se il social link LinkedIn esiste, Firecrawl scrape → salva in `enrichment_data.linkedin_summary` con `linkedin_scraped_at`
-- **Salvare tutto** nel record partner/contatto per riuso futuro
+Per inviare WhatsApp tramite Twilio serve:
+1. Un account Twilio con WhatsApp Business API abilitato
+2. Un numero Twilio registrato come sender WhatsApp
+3. Il connector Twilio collegato al progetto
 
-### 2. Arricchire `generate-email` (Workspace — batch)
-
-In `supabase/functions/generate-email/index.ts`:
-
-- **Query history**: stessa logica, `interactions` + `activities` completate per quel partner
-- **Usare dati cached**: leggere `enrichment_data.website_summary` e `linkedin_summary` se già presenti (da Deep Search o scraping precedente)
-- **NO scraping live** nel batch per contenere i costi
-
-### 3. Persistenza dati scrapati
-
-Salvare in `partners.enrichment_data` (JSONB già esistente):
-```json
-{
-  "website_summary": "...",
-  "website_scraped_at": "2026-03-31T...",
-  "linkedin_summary": "...",
-  "linkedin_scraped_at": "2026-03-31T...",
-  "deep_search_summary": "...",
-  "deep_search_at": "..."
-}
-```
-
-Per contatti importati, salvare in `imported_contacts.enrichment_data`.
-
-### 4. Aggiornare tab Sources (AIDraftStudio)
-
-Aggiungere nel tab Sources:
-- Sezione **"Storia Interazioni"**: quante interazioni trovate, ultima data
-- Sezione **"Website"**: scraped/cached/non disponibile, con data
-- Sezione **"LinkedIn"**: scraped/cached/non disponibile
-- Indicazione costo stimato dell'operazione
-
-### 5. Aggiornare `_debug` response
-
-Estendere con:
-- `interaction_history_count`: numero interazioni trovate
-- `website_source`: "cached" | "live_scraped" | "not_available"
-- `linkedin_source`: "cached" | "live_scraped" | "not_available"
-- `estimated_cost`: crediti stimati
+Senza Twilio, l'alternativa resta il link `wa.me` (che apre WhatsApp Web/app). Vuoi procedere con l'integrazione Twilio, oppure preferisci che il link `wa.me` funzioni in modo piu' trasparente (es. copia automatica del messaggio + apertura link)?
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/generate-outreach/index.ts` | History + website scrape + LinkedIn scrape + salvataggio |
-| `supabase/functions/generate-email/index.ts` | History + dati cached |
-| `src/components/cockpit/AIDraftStudio.tsx` | Tab Sources esteso |
-| `src/hooks/useOutreachGenerator.ts` | Interfaccia debug estesa |
-
-## Costo stimato per operazione
-
-| Operazione | Crediti AI | Firecrawl |
-|------------|-----------|-----------|
-| Outreach singolo (fast) | ~3 | 0 |
-| Outreach singolo (standard) | ~8 | 0 |
-| Outreach singolo (premium) | ~15 | 1-2 crediti FC |
-| Batch email (fast) × 20 | ~60 | 0 |
-| Batch email (premium) × 20 | ~300 | 0 (usa cache) |
+| `src/components/cockpit/ChannelDropZones.tsx` | Raddoppio dimensioni caselle |
+| `src/components/cockpit/AIDraftStudio.tsx` | Bottone invio WhatsApp diretto |
+| `supabase/functions/send-whatsapp/index.ts` | Nuova funzione (solo se Twilio) |
 
