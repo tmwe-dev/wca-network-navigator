@@ -102,6 +102,12 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "FireScrape", "AI"].filter(Boolean);
     const allOk = liOk && waOk && fsOk;
+
+    if (!fsOk) {
+      // Auto-download FireScrape extension
+      downloadFireScrapeExtension();
+    }
+
     toast({
       title: allOk ? "✅ Tutto attivo" : "⚡ Connessioni verificate",
       description: active.join(" · ") + (allOk ? "" : " — configura i canali mancanti in Impostazioni"),
