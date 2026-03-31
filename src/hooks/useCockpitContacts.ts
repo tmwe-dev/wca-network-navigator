@@ -203,6 +203,7 @@ export function useCockpitContacts() {
           priority: computePriority(prc.email, prc.phone, null),
           channels: inferChannels(prc.email, prc.phone, null),
           email: prc.email || "",
+          phone: prc.phone || "",
           origin: "report_aziende" as ContactOrigin,
           originDetail: "Prospect",
           sourceType: st,
