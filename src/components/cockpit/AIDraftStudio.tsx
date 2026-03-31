@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -83,6 +85,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
+  const waBridge = useWhatsAppExtensionBridge();
+  const liBridge = useLinkedInExtensionBridge();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
 
@@ -96,25 +100,66 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
     toast({ title: "Copiato negli appunti" });
   };
 
-  const handleOpenWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     const phone = draft.contactPhone?.replace(/[^0-9+]/g, "").replace(/^\+/, "");
     if (!phone) {
       toast({ title: "Numero di telefono mancante", variant: "destructive" });
       return;
     }
-    const plainText = draft.body.replace(/<[^>]+>/g, "");
-    navigator.clipboard.writeText(plainText);
-    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
-    toast({
-      title: "📋 Messaggio copiato!",
-      description: "Clicca per aprire WhatsApp e incolla il messaggio.",
-      action: (
-        <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          className="text-xs font-semibold text-primary underline whitespace-nowrap">
-          Apri WhatsApp ↗
-        </a>
-      ),
-    });
+    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+
+    if (waBridge.isAvailable) {
+      setSending(true);
+      try {
+        const res = await waBridge.sendWhatsApp(phone, plainText);
+        if (res.success) {
+          toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
+        } else {
+          toast({ title: "Errore WhatsApp", description: res.error, variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Errore invio WhatsApp", variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+    } else {
+      // Fallback: copy + link
+      navigator.clipboard.writeText(plainText);
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
+      toast({
+        title: "📋 Messaggio copiato!",
+        description: "Estensione WA non rilevata. Clicca per aprire WhatsApp.",
+        action: (
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold text-primary underline whitespace-nowrap">
+            Apri WhatsApp ↗
+          </a>
+        ),
+      });
+    }
+  };
+
+  const handleSendLinkedIn = async () => {
+    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+    if (liBridge.isAvailable) {
+      setSending(true);
+      try {
+        const profileUrl = ""; // profile URL from contact if available
+        const res = await liBridge.sendDirectMessage(profileUrl, plainText);
+        if (res.success) {
+          toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
+        } else {
+          toast({ title: "Errore LinkedIn", description: res.error, variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Errore invio LinkedIn", variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+    } else {
+      // Fallback: open dialog
+      setLiDmOpen(true);
+    }
   };
 
   const handleSend = async () => {
@@ -460,19 +505,21 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
               </button>
             ) : draft.channel === "whatsapp" && draft.contactPhone ? (
               <button
-                onClick={handleOpenWhatsApp}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                onClick={handleSendWhatsApp}
+                disabled={sending}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Apri WhatsApp
+                {waBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                {sending ? "Invio..." : waBridge.isAvailable ? "Invia WhatsApp" : "Apri WhatsApp"}
               </button>
             ) : draft.channel === "linkedin" ? (
               <button
-                onClick={() => setLiDmOpen(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                onClick={handleSendLinkedIn}
+                disabled={sending}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                <Linkedin className="w-3.5 h-3.5" />
-                Invia su LinkedIn
+                {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
+                {sending ? "Invio..." : "Invia su LinkedIn"}
               </button>
             ) : (
               <button
