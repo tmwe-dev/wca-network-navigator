@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
+import { useDeepSearchLocal } from "./useDeepSearchLocal";
 
 export type DeepSearchMode = "partner" | "contact";
 
