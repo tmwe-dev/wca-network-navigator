@@ -103,6 +103,29 @@ export function useCockpitContacts() {
           : Promise.resolve([]),
       ]);
 
+      // Fetch social links (LinkedIn) for partner contacts
+      const allPartnerIdsForSocial = [
+        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
+        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
+      ];
+      const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
+      let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
+      let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
+      if (uniqueSocialPartnerIds.length > 0) {
+        const { data: slData } = await supabase
+          .from("partner_social_links")
+          .select("partner_id, contact_id, platform, url")
+          .in("partner_id", uniqueSocialPartnerIds)
+          .eq("platform", "linkedin");
+        for (const sl of slData || []) {
+          if (sl.contact_id) {
+            contactSocialMap[sl.contact_id] = sl.url;
+          } else {
+            socialLinksMap[sl.partner_id] = sl.url;
+          }
+        }
+      }
+
       // Also fetch partner names for partner_contacts
       const partnerIds = [
         ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
