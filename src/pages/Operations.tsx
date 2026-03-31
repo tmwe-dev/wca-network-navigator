@@ -569,6 +569,7 @@ function BusinessCardsView() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
+                      {group.countryCode && <span className="text-base flex-shrink-0" title={group.countryCode}>{countryCodeToFlag(group.countryCode)}</span>}
                       <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
                       {group.isMatched && (
                         <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">
