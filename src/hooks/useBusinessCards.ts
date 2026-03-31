@@ -66,6 +66,7 @@ export interface BusinessCardWithPartner extends BusinessCard {
     logo_url: string | null;
     company_alias: string | null;
     enrichment_data: any;
+    country_code: string | null;
   } | null;
 }
 
