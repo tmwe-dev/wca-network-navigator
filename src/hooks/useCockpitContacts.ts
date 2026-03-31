@@ -292,6 +292,7 @@ export function useCockpitContacts() {
         sourceType: act.source_type,
         sourceId: act.source_id,
         partnerId: act.partner_id,
+        linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
         isScheduledReturn: true,
       });
     }
