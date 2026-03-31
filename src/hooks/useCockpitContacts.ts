@@ -165,7 +165,7 @@ export function useCockpitContacts() {
 
   const contacts = useMemo<CockpitContact[]>(() => {
     if (!q.data || Array.isArray(q.data)) return [];
-    const { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities } = q.data;
+    const { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities, socialLinksMap, contactSocialMap } = q.data;
     const result: CockpitContact[] = [];
 
     for (const item of queue) {
