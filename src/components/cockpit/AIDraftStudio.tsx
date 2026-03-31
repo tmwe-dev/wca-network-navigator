@@ -316,6 +316,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 ) : (
                   <div className="bg-muted/30 rounded-lg p-2.5 text-xs text-muted-foreground">Non disponibile</div>
                 )}
+              </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
