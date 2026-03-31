@@ -204,6 +204,16 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           <TooltipContent side="bottom">AI Agent attivo</TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
+              <Flame className="w-4 h-4 text-muted-foreground" />
+              <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background ${fsExt.isAvailable ? "bg-emerald-500" : "bg-red-500"}`} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{fsExt.isAvailable ? "FireScrape attivo — Deep Search client-side" : "FireScrape non rilevato — installa l'estensione"}</TooltipContent>
+        </Tooltip>
+
         {/* Outreach Queue indicator */}
         {outreachQueue && outreachQueue.pendingCount > 0 && (
           <Tooltip>
