@@ -31,6 +31,42 @@ export function getRealLogoUrl(logoUrl: string | null | undefined): string | nul
   return logoUrl;
 }
 
+/** Resolve effective logo: partner.logo_url → enrichment_data.logo_url → null */
+export function getEffectiveLogoUrl(partner: any): string | null {
+  if (partner.logo_url) return partner.logo_url;
+  const enrich = asEnrichment(partner.enrichment_data);
+  if (enrich && typeof (enrich as any).logo_url === "string" && (enrich as any).logo_url) {
+    return (enrich as any).logo_url;
+  }
+  return null;
+}
+
+/** Extract enrichment snippet for card display */
+export function getEnrichmentSnippet(partner: any): string | null {
+  const enrich = asEnrichment(partner.enrichment_data);
+  if (!enrich) return null;
+  const profile = (enrich as any).ai_profile;
+  if (profile?.headline) return profile.headline;
+  if (profile?.sector) return profile.sector;
+  if (profile?.summary) return String(profile.summary).slice(0, 80);
+  return null;
+}
+
+/** Check if partner has LinkedIn social link */
+export function hasLinkedIn(partner: any): boolean {
+  if (partner.partner_social_links?.some?.((l: any) => l.platform === "linkedin" || l.platform === "linkedin_company")) return true;
+  const enrich = asEnrichment(partner.enrichment_data);
+  if ((enrich as any)?.social_links?.some?.((l: any) => l.platform?.includes?.("linkedin"))) return true;
+  return false;
+}
+
+/** Check WhatsApp availability (has mobile/phone) */
+export function hasWhatsApp(partner: any): boolean {
+  if (partner.mobile) return true;
+  const contacts = partner.partner_contacts || [];
+  return contacts.some((c: any) => c.mobile);
+}
+
 export type SortOption =
   | "name_asc"
   | "name_desc"

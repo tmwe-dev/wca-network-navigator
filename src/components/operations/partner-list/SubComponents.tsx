@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Download, Telescope, Building2, UserCircle, CheckCircle2,
+  Linkedin, MessageCircle, Mail, Phone, Globe,
 } from "lucide-react";
 
 /* ── Icon Indicator (circular with badge) — tri-state ── */
