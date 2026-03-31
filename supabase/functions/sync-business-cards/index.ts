@@ -38,12 +38,38 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
-    // Fetch all business cards from external DB
-    const { data: extCards, error: extErr } = await extSb
-      .from("business_cards")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1000);
+    // Fetch all business cards from external DB (paginate to get all)
+    let allCards: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data: batch, error: batchErr } = await extSb
+        .from("wca_business_cards")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (batchErr) {
+        console.error("Error fetching external cards:", batchErr);
+        return new Response(
+          JSON.stringify({ success: false, error: batchErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (batch && batch.length > 0) {
+        allCards = allCards.concat(batch);
+        hasMore = batch.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    const extCards = allCards;
+    const extErr = null;
 
     if (extErr) {
       console.error("Error fetching external cards:", extErr);
