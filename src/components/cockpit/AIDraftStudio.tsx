@@ -85,6 +85,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
+  const waBridge = useWhatsAppExtensionBridge();
+  const liBridge = useLinkedInExtensionBridge();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
 
