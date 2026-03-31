@@ -92,11 +92,7 @@ export function AppLayout() {
       <MissionProvider>
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-        {/* Edge hover zones */}
-        <div className="fixed left-0 top-0 w-[12px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("left")} onMouseLeave={() => handleEdgeLeave("left")} />
-        <div className="fixed right-0 top-0 w-[12px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("right")} onMouseLeave={() => handleEdgeLeave("right")} />
-
-        {/* Visual tab triggers */}
+        {/* Visual tab triggers — only on tab hover, no edge zones */}
         <button
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
