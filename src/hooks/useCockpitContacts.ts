@@ -158,6 +158,7 @@ export function useCockpitContacts() {
           priority: computePriority(pc.email, pc.direct_phone, pc.mobile),
           channels: inferChannels(pc.email, pc.direct_phone, pc.mobile),
           email: pc.email || "",
+          phone: pc.mobile || pc.direct_phone || "",
           origin: "wca" as ContactOrigin,
           originDetail: partner?.company_name || "Partner",
           sourceType: st,
