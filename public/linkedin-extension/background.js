@@ -620,6 +620,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
+  if (message.action === "searchProfile") {
+    (async function () {
+      try { var result = await searchLinkedInProfile(message.query); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    })();
+    return true;
+  }
+
   return false;
 });
 
