@@ -114,12 +114,19 @@ export function useDeepSearchRunner(): DeepSearchState {
       }
     }
 
+    // Detect if FireScrape extension is available for client-side search
+    const useLocal = mode === "partner" && localSearch.isAvailable;
+
     setRunning(true);
     setResults([]);
     setCanvasOpen(true);
     abortRef.current = false;
     let done = 0;
     let processed = 0;
+
+    if (useLocal) {
+      toast.info("🔥 FireScrape attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
+    }
 
     try {
       for (const id of toProcess) {
