@@ -1334,6 +1334,28 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       return results;
     }
 
+    case "queue_outreach": {
+      const channel = String(args.channel || "email");
+      const body = String(args.body || "");
+      if (!body) return { error: "body è obbligatorio" };
+      const { data, error } = await supabase.from("outreach_queue").insert({
+        user_id: userId,
+        channel,
+        recipient_name: args.recipient_name ? String(args.recipient_name) : null,
+        recipient_email: args.recipient_email ? String(args.recipient_email) : null,
+        recipient_phone: args.recipient_phone ? String(args.recipient_phone) : null,
+        recipient_linkedin_url: args.recipient_linkedin_url ? String(args.recipient_linkedin_url) : null,
+        partner_id: args.partner_id ? String(args.partner_id) : null,
+        contact_id: args.contact_id ? String(args.contact_id) : null,
+        subject: args.subject ? String(args.subject) : null,
+        body,
+        priority: Number(args.priority) || 0,
+        created_by: "agent",
+      }).select("id, channel, recipient_name, status").single();
+      if (error) return { error: error.message };
+      return { success: true, queue_id: data.id, channel: data.channel, recipient: data.recipient_name, message: `Messaggio ${channel} accodato per ${data.recipient_name || "destinatario"}. Il frontend lo invierà automaticamente.` };
+    }
+
     default:
       return { error: `Tool sconosciuto: ${name}` };
   }
