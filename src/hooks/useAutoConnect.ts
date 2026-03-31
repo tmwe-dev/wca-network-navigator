@@ -22,6 +22,18 @@ export function useAutoConnect() {
       let liOk = li.isAvailable;
       let waOk = wa.isAvailable;
 
+      // WhatsApp: check if sender number is configured
+      if (!waOk) {
+        try {
+          const { data } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "whatsapp_sender")
+            .maybeSingle();
+          if (data?.value) waOk = true;
+        } catch {}
+      }
+
       // LinkedIn: check DB credentials if extension not available
       if (!liOk) {
         try {
