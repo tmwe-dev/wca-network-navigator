@@ -91,6 +91,7 @@ const Cockpit = () => {
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
+  const liBridge = useLinkedInExtensionBridge();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
