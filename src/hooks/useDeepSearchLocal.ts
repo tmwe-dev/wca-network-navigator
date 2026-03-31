@@ -275,7 +275,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       await delay(500);
     }
 
-    // ═══ WEBSITE + LOGO via FireScrape scrape ═══
+    // ═══ WEBSITE + LOGO via Partner Connect scrape ═══
     let websiteQualityScore = 0;
     if (partner.website) {
       const websiteUrl = partner.website.startsWith("http") ? partner.website : `https://${partner.website}`;
