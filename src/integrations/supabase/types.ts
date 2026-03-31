@@ -1473,6 +1473,72 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_queue: {
+        Row: {
+          attempts: number
+          body: string
+          channel: string
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_error: string | null
+          max_attempts: number
+          partner_id: string | null
+          priority: number
+          processed_at: string | null
+          recipient_email: string | null
+          recipient_linkedin_url: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          status: string
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          channel: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          partner_id?: string | null
+          priority?: number
+          processed_at?: string | null
+          recipient_email?: string | null
+          recipient_linkedin_url?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          status?: string
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          channel?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          partner_id?: string | null
+          priority?: number
+          processed_at?: string | null
+          recipient_email?: string | null
+          recipient_linkedin_url?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          status?: string
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       partner_certifications: {
         Row: {
           certification: Database["public"]["Enums"]["certification_type"]
