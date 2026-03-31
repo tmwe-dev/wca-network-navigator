@@ -29,6 +29,17 @@ export interface CockpitFilter {
   type: "search" | "country" | "status" | "language" | "channel" | "priority" | "custom";
 }
 
+export type ScrapingPhase = "idle" | "visiting" | "extracting" | "enriching" | "generating";
+
+export interface LinkedInProfileData {
+  name?: string;
+  headline?: string;
+  location?: string;
+  about?: string;
+  photoUrl?: string;
+  profileUrl?: string;
+}
+
 export interface DraftState {
   channel: DraftChannel;
   contactId: string | null;
@@ -42,6 +53,8 @@ export interface DraftState {
   body: string;
   language: string;
   isGenerating: boolean;
+  scrapingPhase: ScrapingPhase;
+  linkedinProfile: LinkedInProfileData | null;
   _debug?: OutreachDebug;
 }
 
