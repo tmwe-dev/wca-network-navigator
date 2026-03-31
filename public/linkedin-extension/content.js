@@ -45,6 +45,7 @@
       if (data.url) msg.url = data.url;
       if (data.message) msg.message = data.message;
       if (data.note !== undefined) msg.note = data.note;
+      if (data.query) msg.query = data.query;
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {

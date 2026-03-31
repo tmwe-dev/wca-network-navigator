@@ -498,6 +498,69 @@ async function extractProfileByUrl(url) {
   }
 }
 
+// ── Search LinkedIn profile by name/company ──
+async function searchLinkedInProfile(query) {
+  if (!query) return { success: false, error: "Query mancante" };
+
+  // Build a LinkedIn people search URL
+  var searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
+  var tab = await chrome.tabs.create({ url: searchUrl, active: false });
+  try {
+    await waitForTabLoad(tab.id, 20000);
+
+    // Extract the first result from search
+    var results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: function () {
+        try {
+          // Find the first person result link
+          var resultLinks = document.querySelectorAll("a.app-aware-link[href*='/in/']");
+          for (var i = 0; i < resultLinks.length; i++) {
+            var href = resultLinks[i].href;
+            // Filter out non-profile links
+            if (/linkedin\.com\/in\/[^/]+/.test(href)) {
+              var nameEl = resultLinks[i].querySelector("span[aria-hidden='true']")
+                || resultLinks[i].querySelector("span.entity-result__title-text span");
+              var name = nameEl ? nameEl.textContent.trim() : "";
+              // Extract headline from sibling
+              var container = resultLinks[i].closest(".entity-result__item, li.reusable-search__result-container");
+              var headlineEl = container ? container.querySelector(".entity-result__primary-subtitle, .entity-result__summary") : null;
+              var headline = headlineEl ? headlineEl.textContent.trim() : "";
+              // Clean URL (remove query params)
+              var cleanUrl = href.split("?")[0].replace(/\/$/, "");
+              return { profileUrl: cleanUrl, name: name, headline: headline };
+            }
+          }
+
+          // Fallback: try any link with /in/ pattern
+          var allLinks = document.querySelectorAll("a[href*='/in/']");
+          for (var j = 0; j < allLinks.length; j++) {
+            var h = allLinks[j].href;
+            if (/linkedin\.com\/in\/[^/]+/.test(h) && !/\/in\/miniprofile/.test(h)) {
+              var cleanH = h.split("?")[0].replace(/\/$/, "");
+              return { profileUrl: cleanH, name: "", headline: "" };
+            }
+          }
+
+          return null;
+        } catch (e) {
+          return null;
+        }
+      },
+    });
+
+    var profileData = results[0] && results[0].result;
+    if (profileData && profileData.profileUrl) {
+      return { success: true, profile: profileData };
+    }
+    return { success: false, error: "Nessun profilo trovato per: " + query };
+  } catch (err) {
+    return { success: false, error: err.message };
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
+}
+
 // ── Message handler ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.source !== "li-content-bridge") return false;
@@ -552,6 +615,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "sendConnectionRequest") {
     (async function () {
       try { var result = await sendConnectionRequest(message.url, message.note); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    })();
+    return true;
+  }
+
+  if (message.action === "searchProfile") {
+    (async function () {
+      try { var result = await searchLinkedInProfile(message.query); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
     })();
     return true;
