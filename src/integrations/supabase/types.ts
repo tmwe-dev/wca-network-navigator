@@ -1434,6 +1434,113 @@ export type Database = {
           },
         ]
       }
+      linkedin_flow_items: {
+        Row: {
+          company_name: string | null
+          completed_at: string | null
+          contact_id: string
+          contact_name: string | null
+          created_at: string
+          enrichment_result: Json | null
+          error_message: string | null
+          id: string
+          job_id: string
+          linkedin_url: string | null
+          position: number
+          scraped_data: Json | null
+          source_type: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          company_name?: string | null
+          completed_at?: string | null
+          contact_id: string
+          contact_name?: string | null
+          created_at?: string
+          enrichment_result?: Json | null
+          error_message?: string | null
+          id?: string
+          job_id: string
+          linkedin_url?: string | null
+          position?: number
+          scraped_data?: Json | null
+          source_type?: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          company_name?: string | null
+          completed_at?: string | null
+          contact_id?: string
+          contact_name?: string | null
+          created_at?: string
+          enrichment_result?: Json | null
+          error_message?: string | null
+          id?: string
+          job_id?: string
+          linkedin_url?: string | null
+          position?: number
+          scraped_data?: Json | null
+          source_type?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_flow_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "linkedin_flow_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      linkedin_flow_jobs: {
+        Row: {
+          completed_at: string | null
+          config: Json
+          created_at: string
+          delay_seconds: number
+          error_count: number
+          id: string
+          processed_count: number
+          status: string
+          success_count: number
+          total_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json
+          created_at?: string
+          delay_seconds?: number
+          error_count?: number
+          id?: string
+          processed_count?: number
+          status?: string
+          success_count?: number
+          total_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json
+          created_at?: string
+          delay_seconds?: number
+          error_count?: number
+          id?: string
+          processed_count?: number
+          status?: string
+          success_count?: number
+          total_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       network_configs: {
         Row: {
           created_at: string
