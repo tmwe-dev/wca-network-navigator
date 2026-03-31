@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useAutoConnect } from "@/hooks/useAutoConnect";
 import type { OutreachDebug } from "@/hooks/useOutreachGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar, type CockpitAIAction, type SourceTab } from "@/components/cockpit/TopCommandBar";
