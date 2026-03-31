@@ -317,6 +317,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
             profileUrl=""
             contactName={draft.contactName}
             companyName={draft.companyName || ""}
+            initialMessage={draft.body ? draft.body.replace(/<[^>]*>/g, "").trim() : ""}
           />
         </Suspense>
       )}

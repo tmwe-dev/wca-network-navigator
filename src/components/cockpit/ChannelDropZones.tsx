@@ -22,7 +22,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   return (
-    <div className="grid grid-cols-2 gap-4 w-full max-w-[480px]">
+    <div className="flex flex-col gap-2 w-full max-w-[140px]">
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
@@ -43,7 +43,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               }
             }}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-default",
+              "relative flex flex-row items-center gap-2 p-3 rounded-xl border-2 border-dashed transition-all duration-300 cursor-default",
               isDragging ? "border-primary/40 bg-gradient-to-br " + ch.gradient : "border-border/60 bg-card/60",
               isHovered && "scale-105 border-primary shadow-xl " + ch.glowColor,
               !isDragging && "hover:border-border/50 hover:bg-card/40"
@@ -60,11 +60,11 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               animate={isDragging ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
               className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300",
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300",
                 isHovered ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
               )}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="w-4 h-4" />
             </motion.div>
             <span className={cn(
               "text-sm font-medium transition-colors duration-300",
@@ -72,12 +72,12 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
             )}>
               {ch.label}
             </span>
-            {isDragging && (
+            {isDragging && dragCount > 1 && (
               <motion.span
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-[11px] text-muted-foreground/70"
+                className="text-[9px] text-muted-foreground/70 ml-auto"
               >
-                {dragCount > 1 ? `Rilascia ${dragCount} contatti` : "Rilascia qui"}
+                ×{dragCount}
               </motion.span>
             )}
           </motion.div>
