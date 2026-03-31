@@ -50,7 +50,7 @@ const Cockpit = () => {
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
-    channel: null, contactId: null, contactName: null, contactEmail: null,
+    channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
