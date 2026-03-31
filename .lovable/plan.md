@@ -1,95 +1,38 @@
 
 
-# Coda Outreach AI → Esecuzione Automatica Frontend
+# Connessione WhatsApp/LinkedIn da Settings (senza pagina esterna)
 
-## Architettura
+## Problema
 
-L'agente AI (server-side) inserisce messaggi in una tabella `outreach_queue`. Il frontend li consuma automaticamente tramite le estensioni Chrome (WhatsApp/LinkedIn) o invio email diretto.
+Cliccando le icone WhatsApp/LinkedIn nella header, si apre una pagina esterna di istruzioni per installare estensioni Chrome. L'utente ha gia' tutti i numeri di telefono nei contatti e vuole gestire le connessioni direttamente dai Settings dell'app — non da pagine HTML separate.
 
-```text
-Agent AI (edge function)
-  └─ tool: queue_outreach
-       └─ INSERT INTO outreach_queue (channel, recipient, message, status='pending')
+## Soluzione
 
-Frontend (polling ogni 5s)
-  └─ useOutreachQueue hook
-       ├─ Legge record status='pending'
-       ├─ WhatsApp → useWhatsAppExtensionBridge.sendWhatsApp()
-       ├─ LinkedIn → useLinkedInExtensionBridge.sendDirectMessage()
-       ├─ Email → supabase.functions.invoke('send-email')
-       └─ UPDATE status='sent'/'failed' + result
-```
+### 1. Sezione "Canali di Comunicazione" in `ConnectionsSettings.tsx`
 
-## Implementazione
+Aggiungere un nuovo tab o sezione dentro Settings > Connessioni con:
 
-### 1. Nuova tabella `outreach_queue`
+- **WhatsApp**: Campo per numero mittente (gia' disponibile nei dati utente), toggle attivazione, stato connessione con pallino verde/rosso. Il click su "Attiva" lancia il bridge check e mostra istruzioni inline (non pagina esterna) se l'estensione non e' rilevata
+- **LinkedIn**: Stesso pattern — mostra stato estensione, credenziali gia' salvate (li_at cookie), verifica sessione inline
+- **AI Agent**: Toggle attivazione (sempre attivo, conferma visiva)
 
-```sql
-CREATE TABLE outreach_queue (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  channel TEXT NOT NULL CHECK (channel IN ('email','linkedin','whatsapp','sms')),
-  recipient_name TEXT,
-  recipient_email TEXT,
-  recipient_phone TEXT,
-  recipient_linkedin_url TEXT,
-  partner_id UUID,
-  contact_id TEXT,
-  subject TEXT,
-  body TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  priority INTEGER NOT NULL DEFAULT 0,
-  attempts INTEGER NOT NULL DEFAULT 0,
-  max_attempts INTEGER NOT NULL DEFAULT 3,
-  last_error TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  processed_at TIMESTAMPTZ,
-  created_by TEXT DEFAULT 'manual'
-);
-ALTER TABLE outreach_queue ENABLE ROW LEVEL SECURITY;
--- RLS: user_id = auth.uid()
-ALTER PUBLICATION supabase_realtime ADD TABLE outreach_queue;
-```
+### 2. Modifica `ConnectionStatusBar.tsx`
 
-### 2. Nuovo tool `queue_outreach` in `agent-execute/index.ts`
+- Rimuovere i `window.open` verso le pagine HTML di download
+- Click su icona disconnessa → navigazione a `/settings` tab Connessioni con toast "Configura da Impostazioni > Connessioni"
+- Se estensione non rilevata, mostrare istruzioni compatte inline nel toast o dialog, non aprire pagina esterna
 
-Aggiungere alla lista ALL_TOOLS:
-- Parametri: channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, partner_id, subject, body, priority
-- Esecuzione: INSERT nella tabella outreach_queue con user_id e created_by='agent'
-- L'agente puo' accodare singoli o batch di messaggi
+### 3. Istruzioni inline invece di pagine separate
 
-### 3. Nuovo hook `src/hooks/useOutreachQueue.ts`
-
-- Sottoscrive la tabella `outreach_queue` via Supabase Realtime (INSERT events)
-- Quando arriva un record `pending`:
-  - Verifica che l'estensione del canale sia disponibile
-  - Aggiorna status a `processing`
-  - Esegue l'invio tramite il bridge appropriato
-  - Aggiorna status a `sent` o `failed` con timestamp e errore
-- Retry automatico fino a `max_attempts`
-- Delay configurabile tra invii (rate limiting: 5s WhatsApp, 10s LinkedIn)
-- Toast notification per ogni messaggio inviato/fallito
-
-### 4. Componente indicatore coda in `AIDraftStudio.tsx`
-
-- Badge con contatore messaggi in coda
-- Mini-lista dei prossimi messaggi da inviare
-- Bottoni pausa/riprendi coda
-- Log degli ultimi invii (successo/errore)
-
-### 5. Integrazione in `AppLayout.tsx`
-
-- Il hook `useOutreachQueue` viene montato a livello layout (sempre attivo)
-- Indicatore nella header accanto alle icone connessione
+Quando l'estensione non e' installata, mostrare un piccolo dialog/sheet dentro l'app con:
+- Link per scaricare il ZIP dell'estensione (fetch+blob, gia' implementato)
+- 4 step compatti per l'installazione
+- Tutto dentro l'app, nessun redirect esterno
 
 ## File coinvolti
 
-| File | Azione |
-|------|--------|
-| Migration SQL | Nuova tabella `outreach_queue` + RLS |
-| `supabase/functions/agent-execute/index.ts` | Tool `queue_outreach` + executor |
-| `src/hooks/useOutreachQueue.ts` | Nuovo — consumer realtime |
-| `src/components/cockpit/AIDraftStudio.tsx` | Badge coda + mini-monitor |
-| `src/components/layout/AppLayout.tsx` | Mount hook globale |
-| `src/components/layout/ConnectionStatusBar.tsx` | Indicatore coda attiva |
+| File | Modifica |
+|------|----------|
+| `src/components/settings/ConnectionsSettings.tsx` | Nuova sezione canali WhatsApp/LinkedIn/AI |
+| `src/components/layout/ConnectionStatusBar.tsx` | Rimuovere redirect a pagine esterne, navigare a Settings |
 
