@@ -83,10 +83,24 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
               <div className="flex items-center gap-2 text-xs">
                 <Zap className="w-3 h-3 text-primary animate-pulse" />
                 <span className="text-muted-foreground truncate">
-                  {flow.phase === "scraping" ? "Scraping" : "Enriching"}: {flow.currentContact}
+                  {flow.currentStep || flow.currentContact}
                 </span>
               </div>
             )}
+
+            {/* Extension indicators */}
+            <div className="flex gap-1.5">
+              {flow.linkedInAvailable && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  <Linkedin className="w-2.5 h-2.5 mr-0.5" /> LI
+                </Badge>
+              )}
+              {flow.partnerConnectAvailable && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  <Globe className="w-2.5 h-2.5 mr-0.5" /> PC
+                </Badge>
+              )}
+            </div>
 
             <div className="flex gap-2 text-xs">
               <Badge variant="secondary" className="text-xs">
