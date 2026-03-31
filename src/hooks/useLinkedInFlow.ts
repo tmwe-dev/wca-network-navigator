@@ -232,8 +232,10 @@ export function useLinkedInFlow() {
               about: result.profile.about,
               profileUrl: result.profile.profileUrl,
               photoUrl: result.profile.photoUrl,
+              connectionStatus: (result.profile as any).connectionStatus || "unknown",
             };
             enrichment.linkedin_ok = true;
+            enrichment.connection_status = enrichment.linkedin.connectionStatus;
           } else {
             enrichment.linkedin_ok = false;
             enrichment.linkedin_error = result.error || "Extraction failed";
@@ -354,15 +356,22 @@ export function useLinkedInFlow() {
         }
 
         // ═══════════════════════════════════════════
-        // STEP 5: Auto-connect (optional)
+        // STEP 5: Auto-connect (optional, smart)
         // ═══════════════════════════════════════════
-        if (jobConfig.auto_connect && item.linkedin_url && liBridge.isAvailable && enrichment.outreach?.body) {
+        const connStatus = enrichment.connection_status || "unknown";
+        const shouldConnect = jobConfig.auto_connect
+          && item.linkedin_url
+          && liBridge.isAvailable
+          && connStatus !== "connected"
+          && connStatus !== "pending";
+
+        if (shouldConnect && enrichment.outreach?.body) {
           setCurrentStep("Invio richiesta collegamento...");
           try {
-            // Use first 300 chars of outreach as connection note
-            const note = enrichment.outreach.body.slice(0, 295) + (enrichment.outreach.body.length > 295 ? "..." : "");
-            const connResult = await liBridge.sendConnectionRequest(item.linkedin_url, note);
+            const note = enrichment.outreach.body.replace(/<[^>]+>/g, "").trim().slice(0, 295) + (enrichment.outreach.body.length > 295 ? "..." : "");
+            const connResult = await liBridge.sendConnectionRequest(item.linkedin_url!, note);
             enrichment.connection_sent = connResult.success;
+            enrichment.connection_status = connResult.success ? "pending" : connStatus;
             if (!connResult.success) {
               enrichment.connection_error = connResult.error;
             }
@@ -370,6 +379,14 @@ export function useLinkedInFlow() {
             enrichment.connection_error = e.message;
           }
           await sleep(3000 + Math.random() * 2000);
+        } else if (connStatus === "connected") {
+          setCurrentStep("Già connesso — skip collegamento");
+          enrichment.connection_skipped = true;
+          enrichment.connection_skip_reason = "already_connected";
+        } else if (connStatus === "pending") {
+          setCurrentStep("Richiesta già in attesa — skip");
+          enrichment.connection_skipped = true;
+          enrichment.connection_skip_reason = "pending";
         }
 
       } catch (e: any) {
@@ -518,9 +535,16 @@ async function saveEnrichmentToPartner(companyName: string, enrichment: Record<s
       }
 
       // Connection status
+      if (enrichment.connection_status) {
+        update.linkedin_connection_status = enrichment.connection_status;
+      }
       if (enrichment.connection_sent !== undefined) {
         update.linkedin_connection_sent = enrichment.connection_sent;
         update.linkedin_connection_at = enrichment.processed_at;
+      }
+      if (enrichment.connection_skipped) {
+        update.linkedin_connection_skipped = true;
+        update.linkedin_connection_skip_reason = enrichment.connection_skip_reason;
       }
 
       await supabase.from("partners").update({
