@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import type { OutreachDebug } from "@/hooks/useOutreachGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar, type CockpitAIAction, type SourceTab } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
@@ -39,6 +40,7 @@ export interface DraftState {
   body: string;
   language: string;
   isGenerating: boolean;
+  _debug?: OutreachDebug;
 }
 
 // Re-export for backward compatibility
@@ -190,6 +192,7 @@ const Cockpit = () => {
       setDraftState(prev => ({
         ...prev, subject: result.subject || "", body: result.body || "",
         language: result.language || prev.language, isGenerating: false,
+        _debug: result._debug,
       }));
       refetchCredits();
     } else {
@@ -207,7 +210,7 @@ const Cockpit = () => {
       country_code: contact?.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
     });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false }));
+      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, _debug: result._debug }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));

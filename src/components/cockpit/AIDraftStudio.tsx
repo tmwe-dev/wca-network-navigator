@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -170,6 +170,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       <Tabs defaultValue="preview" className="flex-1 flex flex-col min-h-0">
         <TabsList className="mx-4 mt-2 bg-muted/30 p-0.5 h-8">
           <TabsTrigger value="preview" className="text-xs h-7">Preview</TabsTrigger>
+          <TabsTrigger value="sources" className="text-xs h-7">Sources</TabsTrigger>
           <TabsTrigger value="variables" className="text-xs h-7">Variables</TabsTrigger>
         </TabsList>
 
@@ -224,6 +225,112 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
               )}
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="sources" className="flex-1 overflow-y-auto p-4">
+          {draft._debug ? (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Brain className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Modello AI</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Modello</span><span className="text-foreground font-mono text-[10px]">{draft._debug.model}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Qualità</span><span className="text-foreground">{draft._debug.quality}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Canale</span><span className="text-foreground">{draft._debug.channel_instructions}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Globe className="w-3 h-3 text-chart-3" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Lingua</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Rilevata</span><span className="text-foreground">{draft._debug.language_detected}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Usata</span><span className="text-foreground">{draft._debug.language_used}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Paese</span><span className="text-foreground">{draft._debug.country_code}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3 h-3 text-success" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto Mittente</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Alias</span><span className="text-foreground">{draft._debug.sender_alias}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Azienda</span><span className="text-foreground">{draft._debug.sender_company}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Ruolo</span><span className="text-foreground">{draft._debug.sender_role}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Building2 className="w-3 h-3 text-chart-2" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Destinatario</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Nome risolto</span><span className="text-foreground">{draft._debug.recipient_name_resolved}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="w-3 h-3 text-warning" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Knowledge Base</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">KB caricata</span><span className={draft._debug.kb_loaded ? "text-success" : "text-destructive"}>{draft._debug.kb_loaded ? "✓ Sì" : "✗ No"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Sales KB</span><span className={draft._debug.sales_kb_loaded ? "text-success" : "text-destructive"}>{draft._debug.sales_kb_loaded ? "✓ Sì" : "✗ No"}</span></div>
+                  {draft._debug.sales_kb_loaded && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Sezioni</span><span className="text-foreground">{draft._debug.sales_kb_sections}</span></div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Obiettivo & Proposta</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div><span className="text-muted-foreground">Goal:</span> <span className="text-foreground">{draft._debug.goal_used}</span></div>
+                  <div><span className="text-muted-foreground">Proposta:</span> <span className="text-foreground">{draft._debug.proposal_used}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-warning" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Consumo</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Token input</span><span className="text-foreground font-mono">{draft._debug.tokens_input.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Token output</span><span className="text-foreground font-mono">{draft._debug.tokens_output.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Crediti usati</span><span className="text-foreground font-semibold">{draft._debug.credits_consumed}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Database className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Impostazioni caricate</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {draft._debug.settings_keys_found.map(key => (
+                    <span key={key} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono">{key.replace("ai_", "")}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <Brain className="w-8 h-8 text-muted-foreground/30 mb-2" />
+              <p className="text-xs text-muted-foreground">Genera un messaggio per vedere le fonti e i log AI</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="variables" className="flex-1 overflow-y-auto p-4">
