@@ -280,7 +280,18 @@ const Cockpit = () => {
       }
     }
 
-    // Phase 3: AI Generation
+    // ── STOP for review: show scraped data, wait for user to approve ──
+    if (canScrapeLinkedIn && scrapedProfile) {
+      setDraftState(prev => ({
+        ...prev,
+        scrapingPhase: "reviewing",
+        linkedinProfile: scrapedProfile,
+        isGenerating: false,
+      }));
+      return; // User will click "Genera Messaggio" in AIDraftStudio
+    }
+
+    // Phase 3: AI Generation (non-LinkedIn or no scrape)
     setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
 
     const result = await generate({
@@ -302,6 +313,34 @@ const Cockpit = () => {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
     }
   }, [generate, refetchCredits, getDraggedIds, contactsMap, liBridge]);
+
+  // Called from AIDraftStudio when user clicks "Genera Messaggio" after review
+  const handleGenerateAfterReview = useCallback(async () => {
+    if (!draftState.contactId) return;
+    const contact = contactsMap[draftState.contactId];
+    if (!contact) return;
+
+    setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating" }));
+
+    const result = await generate({
+      channel: draftState.channel!, contact_name: contact.name, contact_email: contact.email,
+      company_name: contact.company, country_code: contact.country,
+      goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
+      linkedin_profile: draftState.linkedinProfile || undefined,
+    });
+
+    if (result) {
+      setDraftState(prev => ({
+        ...prev, subject: result.subject || "", body: result.body || "",
+        language: result.language || prev.language, isGenerating: false,
+        scrapingPhase: "idle",
+        _debug: result._debug,
+      }));
+      refetchCredits();
+    } else {
+      setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
+    }
+  }, [draftState, generate, refetchCredits, contactsMap]);
 
   const handleRegenerate = useCallback(async () => {
     if (!draftState.channel || !draftState.contactId) return;
