@@ -56,7 +56,7 @@ export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
 
   /**
-   * Perform a Google search using FireScrape's agent sequence.
+   * Perform a Google search using Partner Connect's agent sequence.
    * Opens Google in a background tab, extracts results.
    */
   const googleSearch = useCallback(async (query: string, limit = 5): Promise<GoogleSearchResult[]> => {
