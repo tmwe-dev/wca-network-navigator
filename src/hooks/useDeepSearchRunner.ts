@@ -38,13 +38,18 @@ export function useDeepSearchRunner(): DeepSearchState {
   const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
     if (running || ids.length === 0) return;
 
-    const fnName = mode === "contact" ? "deep-search-contact" : "deep-search-partner";
-    const bodyKey = mode === "contact" ? "contactId" : "partnerId";
+    // ── Partner Connect is now REQUIRED ──
+    if (!localSearch.isAvailable) {
+      toast.error("🔌 Installa l'estensione Partner Connect per eseguire la Deep Search. Nessun fallback server disponibile.", {
+        id: "deep-search-global",
+        duration: 8000,
+      });
+      return;
+    }
 
     // ── Pre-check: for partners, detect missing profiles ──
     let noProfileIds: string[] = [];
     if (mode === "partner") {
-      // Fetch in batches of 100 to handle large selections
       const batchSize = 100;
       const allPartnerData: any[] = [];
       for (let i = 0; i < ids.length; i += batchSize) {
@@ -78,7 +83,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     }
 
     // Smart filter: check which already have deep_search_at
-    let toProcess = mode === "partner" 
+    let toProcess = mode === "partner"
       ? ids.filter(id => !noProfileIds.includes(id))
       : [...ids];
 
@@ -114,9 +119,6 @@ export function useDeepSearchRunner(): DeepSearchState {
       }
     }
 
-    // Detect if Partner Connect extension is available for client-side search
-    const useLocal = mode === "partner" && localSearch.isAvailable;
-
     setRunning(true);
     setResults([]);
     setCanvasOpen(true);
@@ -124,16 +126,14 @@ export function useDeepSearchRunner(): DeepSearchState {
     let done = 0;
     let processed = 0;
 
-    if (useLocal) {
-      toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
-    }
+    toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
 
     try {
       for (const id of toProcess) {
         if (abortRef.current) break;
         done++;
 
-        // Get record info — try cache first, then fetch
+        // Get record info
         let cached: any = null;
         if (mode === "partner") {
           const allCached = queryClient.getQueriesData<any[]>({ queryKey: queryKeys.partners.all });
@@ -160,7 +160,6 @@ export function useDeepSearchRunner(): DeepSearchState {
           cached = data ? { company_name: data.name || data.company_name, country_code: data.country } : null;
         }
 
-        // Check abort again after any async operation
         if (abortRef.current) break;
 
         setCurrent({
@@ -172,29 +171,22 @@ export function useDeepSearchRunner(): DeepSearchState {
           total: toProcess.length,
         });
 
-        toast.loading(`Deep Search ${done}/${toProcess.length}${useLocal ? " 🔥" : ""}...`, { id: "deep-search-global" });
+        toast.loading(`Deep Search ${done}/${toProcess.length} 🔥...`, { id: "deep-search-global" });
 
         let data: any = null;
         let error: any = null;
 
-        if (useLocal) {
-          // Client-side via Partner Connect extension
-          try {
+        try {
+          if (mode === "contact") {
+            data = await localSearch.searchContact(id);
+          } else {
             data = await localSearch.searchPartner(id);
-            if (!data.success) error = data.error;
-          } catch (e: any) {
-            error = e?.message || "Partner Connect error";
           }
-        } else {
-          // Server-side via edge function (Firecrawl)
-          const res = await supabase.functions.invoke(fnName, {
-            body: { [bodyKey]: id },
-          });
-          data = res.data;
-          error = res.error;
+          if (!data.success) error = data.error;
+        } catch (e: any) {
+          error = e?.message || "Partner Connect error";
         }
 
-        // Check abort immediately after the search returns
         if (abortRef.current) {
           processed = done;
           break;
@@ -204,7 +196,7 @@ export function useDeepSearchRunner(): DeepSearchState {
 
         const result: DeepSearchResult = {
           partnerId: id,
-          companyName: data?.companyName || cached?.company_name || `Partner ${done}`,
+          companyName: data?.companyName || cached?.company_name || `Record ${done}`,
           countryCode: cached?.country_code,
           logoUrl: cached?.logo_url,
           socialLinksFound: data?.socialLinksFound || 0,
