@@ -47,6 +47,7 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
