@@ -172,7 +172,7 @@ export function AppLayout() {
 
         <motion.button
           onClick={() => setIntelliflowOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300"
+          className="fixed bottom-6 right-14 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300"
           style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.1))", border: "1px solid hsl(var(--primary) / 0.2)", boxShadow: "0 0 30px hsl(var(--primary) / 0.1), 0 8px 32px -8px hsl(0 0% 0% / 0.4)" }}
           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
           aria-label="IntelliFlow Workspace"

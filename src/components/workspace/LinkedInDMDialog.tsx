@@ -16,9 +16,9 @@ interface LinkedInDMDialogProps {
 }
 
 export default function LinkedInDMDialog({
-  open, onOpenChange, profileUrl, contactName, companyName,
+  open, onOpenChange, profileUrl, contactName, companyName, initialMessage,
 }: LinkedInDMDialogProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage || "");
   const [sending, setSending] = useState(false);
   const { isAvailable, sendDirectMessage } = useLinkedInExtensionBridge();
 

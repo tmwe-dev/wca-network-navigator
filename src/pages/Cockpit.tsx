@@ -310,7 +310,7 @@ const Cockpit = () => {
             />
           )}
         </div>
-        <div className="w-[400px] flex-shrink-0 border-l border-border/50">
+        <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
           <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
         </div>
       </div>

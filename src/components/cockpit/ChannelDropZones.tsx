@@ -72,12 +72,12 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
             )}>
               {ch.label}
             </span>
-            {isDragging && (
+            {isDragging && dragCount > 1 && (
               <motion.span
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-[11px] text-muted-foreground/70"
+                className="text-[9px] text-muted-foreground/70 ml-auto"
               >
-                {dragCount > 1 ? `Rilascia ${dragCount} contatti` : "Rilascia qui"}
+                ×{dragCount}
               </motion.span>
             )}
           </motion.div>
