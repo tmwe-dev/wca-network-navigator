@@ -1,32 +1,23 @@
 
 
-# Fix Sincronizzazione Business Cards
+# Linguette Laterali per Drawer Filtri e Mission
 
 ## Problema
+Le zone hover attuali sono solo 5px e invisibili — bisogna arrivare al bordo esatto. Servono zone piu' ampie (10px) con linguette visibili che invitino all'interazione.
 
-La Edge Function `sync-business-cards` cerca la tabella `business_cards` nel database esterno, ma la tabella si chiama **`wca_business_cards`**. Errore dai log:
+## Modifiche in `src/components/layout/AppLayout.tsx`
 
-```
-hint: "Perhaps you meant the table 'public.wca_business_cards'"
-```
+1. **Ampliare zona hover** da `w-[5px]` a `w-[12px]`
+2. **Sostituire i div invisibili** con linguette stilizzate posizionate sotto la header (`top-14`):
+   - **Sinistra**: linguetta semitrasparente con icona `SlidersHorizontal` (filtri), arrotondata a destra, ~32px di altezza
+   - **Destra**: linguetta semitrasparente con icona `Target` (AI/Mission), arrotondata a sinistra
+3. **Stile linguette**: `bg-muted/40 backdrop-blur-sm border border-border/30`, con hover che aumenta opacita' (`hover:bg-muted/60`)
+4. **Mantengono** la stessa logica hover con timer da 150ms
+5. **z-index** `z-[60]` confermato per stare sopra al contenuto
 
-## Soluzione
+### Risultato visivo
+Due piccole tab ancorate ai bordi, appena sotto la header, con icona che indica cosa aprono. Area sensibile di 12px dal bordo.
 
-### `supabase/functions/sync-business-cards/index.ts`
-
-1. Cambiare la query esterna da `.from("business_cards")` a `.from("wca_business_cards")`
-2. Adattare il mapping dei campi — i nomi colonna nel DB esterno potrebbero differire (verificare dopo il fix)
-3. Rimuovere il limite di 1000 record (o paginare) per catturare tutte le 383+ card
-
-### Dopo il deploy
-
-- Lanciare la sync e verificare quante card arrivano
-- Confrontare il totale con le 296 attuali nel DB locale
-- Verificare che il trigger `match_business_card` si attivi correttamente sulle nuove card
-
-## File coinvolti
-
-| File | Azione |
-|------|--------|
-| `supabase/functions/sync-business-cards/index.ts` | Cambiare nome tabella esterna da `business_cards` a `wca_business_cards`, adattare mapping campi |
+## Bug runtime (fix collaterale)
+In `src/hooks/useCockpitContacts.ts` riga 181: accesso a proprieta' undefined. Aggiungere optional chaining per evitare il crash.
 
