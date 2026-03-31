@@ -16,6 +16,7 @@ export interface CockpitContact {
   priority: number;
   channels: string[];
   email: string;
+  phone: string;
   origin: ContactOrigin;
   originDetail: string;
   sourceType: string;
