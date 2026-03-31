@@ -320,7 +320,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(),
-      deep_search_engine: "firescrape-v3.3",
+      deep_search_engine: "partner-connect-v3.3",
     };
     await supabase.from("partners").update({ enrichment_data: updated }).eq("id", partnerId);
 
