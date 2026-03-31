@@ -1,56 +1,74 @@
 
 
-# Drop Zone piu' grandi + WhatsApp invio diretto via Twilio
+# Invio Diretto WhatsApp e LinkedIn dal Cockpit
 
-## 1. Drop Zone — raddoppio dimensioni
+## Problema
+WhatsApp apre `wa.me` che viene bloccato dal browser. LinkedIn apre un dialog che chiede di riscrivere il messaggio. L'utente vuole che entrambi i canali inviino il messaggio automaticamente senza passaggi manuali.
 
-In `src/components/cockpit/ChannelDropZones.tsx`:
-- Cambiare `max-w-[140px]` → `max-w-[240px]`
-- Padding da `p-3` → `p-5`
-- Icone da `w-8 h-8` / `w-4 h-4` → `w-12 h-12` / `w-6 h-6`
-- Label da `text-sm` → `text-base`
-- Gap da `gap-2` → `gap-3`
+## Soluzione: Estensione Chrome per WhatsApp (stesso pattern LinkedIn)
 
-Risultato: caselle circa il doppio in larghezza e altezza, target di drop molto piu' comodo.
+L'architettura gia' in uso per LinkedIn funziona perfettamente: un'estensione Chrome che opera come bridge tra la webapp e il sito destinazione. Applichiamo lo stesso modello a WhatsApp Web.
 
-## 2. WhatsApp — invio diretto senza aprire browser
+### 1. Nuova estensione Chrome — `public/whatsapp-extension/`
 
-**Problema attuale**: il bottone "Apri WhatsApp" apre `wa.me` in una nuova tab. L'utente vuole che il messaggio parta direttamente.
+**`manifest.json`**: Manifest V3, permessi per `web.whatsapp.com` cookies, scripting, tabs. Content script iniettato nella webapp.
 
-**Soluzione**: usare **Twilio** via connector per inviare il messaggio WhatsApp dal backend.
+**`background.js`**: Service worker che:
+- Apre `web.whatsapp.com` in tab nascosta
+- Verifica se WhatsApp Web e' connesso (QR gia' scansionato)
+- Cerca il contatto per numero di telefono nella barra di ricerca
+- Inserisce il messaggio nella chat e clicca invio
+- Chiude la tab e restituisce `{ success: true }`
 
-### Prerequisiti
-- Collegare il connector Twilio al progetto (richiede account Twilio con WhatsApp Business abilitato e numero Twilio configurato come sender WhatsApp)
-- L'utente dovra' configurare il proprio numero Twilio WhatsApp
+**`content.js`**: Bridge identico a quello LinkedIn — ascolta `from-webapp-wa`, inoltra al background, risponde con `from-extension-wa`.
 
-### Implementazione
+### 2. Nuovo hook — `src/hooks/useWhatsAppExtensionBridge.ts`
 
-**Nuova Edge Function `send-whatsapp/index.ts`**:
-- Riceve `{ to, body }` dal frontend
-- Valida input con Zod
-- Chiama Twilio API via connector gateway (`/Messages.json`) con `From: whatsapp:+<numero_twilio>`, `To: whatsapp:+<numero_dest>`, `Body: <testo>`
-- Restituisce `{ success, sid }` o errore
+Stesso pattern di `useLinkedInExtensionBridge`:
+- Polling ping ogni 3s con direction `from-webapp-wa`
+- `isAvailable` state
+- `sendMessage(phone, text)` → invia via estensione
+- `verifySession()` → controlla se WhatsApp Web e' connesso
 
-**Modifica `AIDraftStudio.tsx`**:
-- Il bottone WhatsApp cambia da "Apri WhatsApp" → "Invia WhatsApp"
-- Rimuove `window.open(wa.me/...)` e chiama `supabase.functions.invoke("send-whatsapp", ...)`
-- Mostra loader durante l'invio e toast di conferma/errore
-- Fallback: se Twilio non configurato, mantiene il link `wa.me` con avviso
+### 3. Modifica `AIDraftStudio.tsx`
 
-## Domanda critica prima di procedere
+- Importare `useWhatsAppExtensionBridge`
+- Il bottone WhatsApp diventa **"Invia WhatsApp"** (non piu' "Apri WhatsApp")
+- Se estensione disponibile: chiama `sendWhatsApp(phone, plainText)` → toast successo/errore
+- Se estensione NON disponibile: fallback attuale (copia + link `wa.me` nel toast)
+- Mostra indicatore se estensione WA e' connessa (pallino verde/rosso)
 
-Per inviare WhatsApp tramite Twilio serve:
-1. Un account Twilio con WhatsApp Business API abilitato
-2. Un numero Twilio registrato come sender WhatsApp
-3. Il connector Twilio collegato al progetto
+### 4. LinkedIn — fix invio diretto
 
-Senza Twilio, l'alternativa resta il link `wa.me` (che apre WhatsApp Web/app). Vuoi procedere con l'integrazione Twilio, oppure preferisci che il link `wa.me` funzioni in modo piu' trasparente (es. copia automatica del messaggio + apertura link)?
+Il `LinkedInDMDialog` gia' riceve `initialMessage` pre-compilato. Il problema e' che l'utente deve comunque premere "Invia" nel dialog. 
+
+Opzione: **invio diretto senza dialog** quando l'estensione LinkedIn e' disponibile:
+- Se `isAvailable` LinkedIn → chiama direttamente `sendDirectMessage(profileUrl, plainText)` senza aprire il dialog
+- Mostra toast con risultato
+- Se estensione non disponibile → apre il dialog come fallback
+
+### 5. Pagina download estensione — `public/download-wa-extension.html`
+
+Pagina istruzioni per installare l'estensione WhatsApp (stesso stile delle altre).
 
 ## File coinvolti
 
-| File | Modifica |
-|------|----------|
-| `src/components/cockpit/ChannelDropZones.tsx` | Raddoppio dimensioni caselle |
-| `src/components/cockpit/AIDraftStudio.tsx` | Bottone invio WhatsApp diretto |
-| `supabase/functions/send-whatsapp/index.ts` | Nuova funzione (solo se Twilio) |
+| File | Azione |
+|------|--------|
+| `public/whatsapp-extension/manifest.json` | Nuovo |
+| `public/whatsapp-extension/background.js` | Nuovo |
+| `public/whatsapp-extension/content.js` | Nuovo |
+| `public/whatsapp-extension/popup.html` | Nuovo |
+| `public/whatsapp-extension/popup.js` | Nuovo |
+| `public/download-wa-extension.html` | Nuovo |
+| `src/hooks/useWhatsAppExtensionBridge.ts` | Nuovo |
+| `src/components/cockpit/AIDraftStudio.tsx` | Invio diretto WA + LI senza dialog |
+
+## Flusso risultante
+
+```text
+WhatsApp:  Drag card → AI genera → "Invia WhatsApp" → estensione apre WA Web in background → cerca contatto → incolla messaggio → invia → toast ✅
+LinkedIn:  Drag card → AI genera → "Invia LinkedIn" → estensione apre profilo in background → clicca Messaggio → incolla → invia → toast ✅
+Fallback:  Se estensione non installata → comportamento attuale (copia + link)
+```
 
