@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";

@@ -491,6 +491,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
       credits_consumed: result.usage ? Math.max(1, Math.ceil(((result.usage.prompt_tokens || 0) + (result.usage.completion_tokens || 0) * 2) / 1000)) : 0,
       channel_instructions: ch.toUpperCase(),
       settings_keys_found: Object.keys(settings),
+      recipient_intelligence: intelligence,
     };
 
     return new Response(
