@@ -172,13 +172,29 @@ export function useDeepSearchRunner(): DeepSearchState {
           total: toProcess.length,
         });
 
-        toast.loading(`Deep Search ${done}/${toProcess.length}...`, { id: "deep-search-global" });
+        toast.loading(`Deep Search ${done}/${toProcess.length}${useLocal ? " 🔥" : ""}...`, { id: "deep-search-global" });
 
-        const { data, error } = await supabase.functions.invoke(fnName, {
-          body: { [bodyKey]: id },
-        });
+        let data: any = null;
+        let error: any = null;
 
-        // Check abort immediately after the edge function returns
+        if (useLocal) {
+          // Client-side via FireScrape extension
+          try {
+            data = await localSearch.searchPartner(id);
+            if (!data.success) error = data.error;
+          } catch (e: any) {
+            error = e?.message || "FireScrape error";
+          }
+        } else {
+          // Server-side via edge function (Firecrawl)
+          const res = await supabase.functions.invoke(fnName, {
+            body: { [bodyKey]: id },
+          });
+          data = res.data;
+          error = res.error;
+        }
+
+        // Check abort immediately after the search returns
         if (abortRef.current) {
           processed = done;
           break;
