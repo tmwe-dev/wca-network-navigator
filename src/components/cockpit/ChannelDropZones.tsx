@@ -60,7 +60,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               animate={isDragging ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
               className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300",
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300",
                 isHovered ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
               )}
             >
