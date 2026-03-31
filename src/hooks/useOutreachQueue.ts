@@ -81,13 +81,21 @@ export function useOutreachQueue() {
             return false;
           }
           const profileUrl = item.recipient_linkedin_url || "";
-          const res = await li.sendDirectMessage(profileUrl, item.body);
-          if (res.success) {
+          if (!profileUrl) { await updateStatus(item.id, "failed", "URL profilo LinkedIn mancante"); return false; }
+
+          // Retry up to 2 times on context invalidation
+          let liRes = await li.sendDirectMessage(profileUrl, item.body);
+          if (!liRes.success && liRes.error?.includes("context invalidated")) {
+            await new Promise(r => setTimeout(r, 2000));
+            liRes = await li.sendDirectMessage(profileUrl, item.body);
+          }
+
+          if (liRes.success) {
             await updateStatus(item.id, "sent");
             toast({ title: "✅ LinkedIn inviato", description: `A: ${item.recipient_name || "contatto"}` });
             return true;
           }
-          await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", res.error);
+          await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", liRes.error);
           return false;
         }
 

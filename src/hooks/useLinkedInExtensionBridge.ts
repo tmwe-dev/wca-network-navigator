@@ -54,7 +54,7 @@ export function useLinkedInExtensionBridge() {
         direction: "from-webapp-li",
         action: "ping",
         requestId: `poll_li_${Date.now()}`,
-      }, "*");
+      }, window.location.origin);
     };
 
     doPing();

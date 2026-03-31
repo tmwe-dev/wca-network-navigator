@@ -1,15 +1,38 @@
 // ══════════════════════════════════════════════
 // LinkedIn Cookie Sync - Content Script Bridge
-// Injected into the webapp pages to relay messages
+// Auto-reconnects when extension context is invalidated
 // ══════════════════════════════════════════════
 
 (function () {
-  if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) return;
+  var RETRY_INTERVAL = 2000;
+  var MAX_RETRIES = 5;
 
-  window.addEventListener("message", function (event) {
-    if (event.source !== window) return;
-    var data = event.data;
-    if (!data || data.direction !== "from-webapp-li") return;
+  function isExtensionAlive() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function postToPage(payload) {
+    try {
+      window.postMessage(payload, window.location.origin);
+    } catch (_) {
+      window.postMessage(payload, "*");
+    }
+  }
+
+  function relayMessage(data) {
+    if (!isExtensionAlive()) {
+      postToPage({
+        direction: "from-extension-li",
+        action: data.action,
+        requestId: data.requestId,
+        response: { success: false, error: "Extension context invalidated — ricarica la pagina" },
+      });
+      return;
+    }
 
     try {
       var msg = { source: "li-content-bridge", action: data.action };
@@ -18,43 +41,44 @@
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
-          console.warn("[LI Content] Extension context lost:", chrome.runtime.lastError.message);
-          window.postMessage({
+          console.warn("[LI Content] Extension error:", chrome.runtime.lastError.message);
+          postToPage({
             direction: "from-extension-li",
             action: data.action,
             requestId: data.requestId,
             response: { success: false, error: "Extension context invalidated" },
-          }, "*");
+          });
           return;
         }
 
-        window.postMessage({
+        postToPage({
           direction: "from-extension-li",
           action: data.action,
           requestId: data.requestId,
           response: response || { success: false, error: "No response from extension" },
-        }, "*");
+        });
 
         if (data.action === "ping") {
-          window.postMessage(
-            { direction: "from-extension-li", action: "contentScriptReady" },
-            "*"
-          );
+          postToPage({ direction: "from-extension-li", action: "contentScriptReady" });
         }
       });
     } catch (err) {
       console.warn("[LI Content] sendMessage failed:", err.message);
-      window.postMessage({
+      postToPage({
         direction: "from-extension-li",
         action: data.action,
         requestId: data.requestId,
         response: { success: false, error: "Extension context invalidated" },
-      }, "*");
+      });
     }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (event.source !== window) return;
+    var data = event.data;
+    if (!data || data.direction !== "from-webapp-li") return;
+    relayMessage(data);
   });
 
-  window.postMessage(
-    { direction: "from-extension-li", action: "contentScriptReady" },
-    "*"
-  );
+  postToPage({ direction: "from-extension-li", action: "contentScriptReady" });
 })();
