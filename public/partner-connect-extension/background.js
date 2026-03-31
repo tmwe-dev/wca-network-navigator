@@ -129,6 +129,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'el-stats':            handleElStats,
     'el-history':          handleElHistory,
     'el-languages':        handleElLanguages,
+    // Google Search
+    'google-search':       handleGoogleSearch,
   };
   const handler = handlers[msg.action];
   if (handler) {
@@ -370,6 +372,64 @@ async function protectedScrape(url, options = {}) {
     if (!skipCache) await Cache.set(cacheType, url, result);
     return result;
   });
+}
+
+// ============================================================
+// 0. GOOGLE SEARCH (background tab)
+// ============================================================
+async function handleGoogleSearch(msg) {
+  if (!msg.query) throw new FireScrapeError('Query mancante', 'NO_QUERY');
+  const limit = msg.limit || 5;
+  const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(msg.query) + '&num=' + limit;
+
+  // Check cache first
+  const cacheKey = 'gsearch:' + msg.query;
+  if (!msg.skipCache) {
+    const cached = await Cache.get('domain', cacheKey);
+    if (cached) return { ...cached, _fromCache: true };
+  }
+
+  let tab = null;
+  try {
+    // Stealth delays
+    await Stealth.noiseDelay();
+    tab = await chrome.tabs.create({ url: searchUrl, active: false });
+    await waitForTabLoad(tab.id);
+    await sleep(1500 + Math.random() * 1000);
+
+    // Extract search results
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: function (maxResults) {
+        var items = [];
+        var els = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        for (var i = 0; i < els.length && items.length < maxResults; i++) {
+          var linkEl = els[i].querySelector('a[href^="http"]');
+          if (!linkEl) continue;
+          var url = linkEl.href;
+          // Skip Google's own links
+          if (/google\.com\/(search|maps|imgres|sorry)/.test(url)) continue;
+          var titleEl = els[i].querySelector('h3');
+          var title = titleEl ? titleEl.textContent.trim() : '';
+          var snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
+          var description = snippetEl ? snippetEl.textContent.trim() : '';
+          items.push({ url: url, title: title, description: description });
+        }
+        return items;
+      },
+      args: [limit]
+    });
+
+    var data = (results[0] && results[0].result) || [];
+    RateLimiter.recordRequest(searchUrl);
+    var response = { success: true, data: data, query: msg.query, count: data.length };
+    await Cache.set('domain', cacheKey, response);
+    return response;
+  } catch (err) {
+    throw new FireScrapeError('Google search failed: ' + err.message, 'SEARCH_ERROR');
+  } finally {
+    if (tab) try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
 }
 
 // ============================================================

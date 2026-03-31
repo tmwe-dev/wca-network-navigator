@@ -176,6 +176,15 @@ export function useFireScrapeExtensionBridge() {
     [sendMessage]
   );
 
+  /** Google Search via background tab */
+  const googleSearch = useCallback(
+    (query: string, limit = 5, skipCache = false) =>
+      sendMessage<{ data: Array<{ url: string; title: string; description: string }>; query: string; count: number }>(
+        "google-search", { query, limit, skipCache }, 30000
+      ),
+    [sendMessage]
+  );
+
   return {
     isAvailable,
     sendMessage,
@@ -197,5 +206,7 @@ export function useFireScrapeExtensionBridge() {
     relayStart,
     relayStop,
     relayStatus,
+    // Search
+    googleSearch,
   };
 }
