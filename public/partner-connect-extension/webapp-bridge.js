@@ -59,6 +59,7 @@
       if (data.topic) msg.topic = data.topic;
       if (data.prompt) msg.prompt = data.prompt;
       if (data.body) msg.body = data.body;
+      if (data.limit !== undefined) msg.limit = data.limit;
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
