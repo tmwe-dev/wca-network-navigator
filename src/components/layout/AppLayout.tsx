@@ -138,6 +138,7 @@ export function AppLayout() {
                 )}
 
                 <ActiveProcessIndicator />
+                <ConnectionStatusBar onAiClick={() => setAiOpen(true)} />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
