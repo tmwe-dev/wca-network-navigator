@@ -22,6 +22,7 @@ export interface CockpitContact {
   sourceType: string;
   sourceId: string;
   partnerId: string | null;
+  linkedinUrl: string;
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
 }
@@ -102,6 +103,29 @@ export function useCockpitContacts() {
           : Promise.resolve([]),
       ]);
 
+      // Fetch social links (LinkedIn) for partner contacts
+      const allPartnerIdsForSocial = [
+        ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
+        ...(pcData as any[]).filter((c: any) => c.partner_id).map((c: any) => c.partner_id),
+      ];
+      const uniqueSocialPartnerIds = [...new Set(allPartnerIdsForSocial)];
+      let socialLinksMap: Record<string, string> = {}; // partnerId -> linkedin url
+      let contactSocialMap: Record<string, string> = {}; // contactId -> linkedin url
+      if (uniqueSocialPartnerIds.length > 0) {
+        const { data: slData } = await supabase
+          .from("partner_social_links")
+          .select("partner_id, contact_id, platform, url")
+          .in("partner_id", uniqueSocialPartnerIds)
+          .eq("platform", "linkedin");
+        for (const sl of slData || []) {
+          if (sl.contact_id) {
+            contactSocialMap[sl.contact_id] = sl.url;
+          } else {
+            socialLinksMap[sl.partner_id] = sl.url;
+          }
+        }
+      }
+
       // Also fetch partner names for partner_contacts
       const partnerIds = [
         ...queue.filter((q: any) => q.partner_id).map((q: any) => q.partner_id),
@@ -134,14 +158,14 @@ export function useCockpitContacts() {
         .eq("due_date", today)
         .limit(100);
 
-      return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [] };
+      return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [], socialLinksMap, contactSocialMap };
     },
     staleTime: 30_000,
   });
 
   const contacts = useMemo<CockpitContact[]>(() => {
     if (!q.data || Array.isArray(q.data)) return [];
-    const { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities } = q.data;
+    const { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities, socialLinksMap, contactSocialMap } = q.data;
     const result: CockpitContact[] = [];
 
     for (const item of queue) {
@@ -170,6 +194,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: pc.partner_id || item.partner_id,
+          linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
@@ -192,6 +217,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: "",
           isBusinessCard: true,
         });
       } else if (st === "prospect_contact") {
@@ -215,6 +241,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
         const ic = icMap[sid];
@@ -237,6 +264,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: "",
         });
       }
     }
@@ -264,6 +292,7 @@ export function useCockpitContacts() {
         sourceType: act.source_type,
         sourceId: act.source_id,
         partnerId: act.partner_id,
+        linkedinUrl: act.partner_id ? (socialLinksMap[act.partner_id] || "") : "",
         isScheduledReturn: true,
       });
     }
