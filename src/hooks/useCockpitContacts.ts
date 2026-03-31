@@ -194,6 +194,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: pc.partner_id || item.partner_id,
+          linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
