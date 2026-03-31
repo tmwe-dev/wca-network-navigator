@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus } from "lucide-react";
+const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
