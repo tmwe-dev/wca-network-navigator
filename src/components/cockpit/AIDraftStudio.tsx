@@ -231,7 +231,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
       toast({ title: "🔍 Cercando profilo LinkedIn...", description: `Ricerca per ${draft.contactName}` });
       try {
         const searchQuery = `${draft.contactName} ${draft.companyName || ""}`.trim();
-        const res = await liBridge.sendMessage("searchProfile", { query: searchQuery }, 30000);
+        const res = await liBridge.searchProfile(searchQuery);
         if (res.success && res.profile?.profileUrl) {
           profileUrl = res.profile.profileUrl;
           onDraftChange({ ...draft, contactLinkedinUrl: profileUrl });

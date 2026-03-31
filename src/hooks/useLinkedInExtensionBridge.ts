@@ -117,5 +117,10 @@ export function useLinkedInExtensionBridge() {
     [sendMessage]
   );
 
-  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest };
+  const searchProfile = useCallback(
+    (query: string) => sendMessage("searchProfile", { query }, 30000),
+    [sendMessage]
+  );
+
+  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile };
 }
