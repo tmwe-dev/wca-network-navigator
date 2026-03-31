@@ -217,6 +217,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: "",
           isBusinessCard: true,
         });
       } else if (st === "prospect_contact") {
