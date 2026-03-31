@@ -253,13 +253,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
             <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
               {draft.isGenerating && !draft.body ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-primary/70">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                      <Sparkles className="w-4 h-4" />
-                    </motion.div>
-                    <span className="text-xs">AI sta generando il messaggio {draft.channel}...</span>
-                  </div>
+                <div className="space-y-3">
+                  <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
                   {[1, 2, 3].map(i => (
                     <motion.div
                       key={i}
