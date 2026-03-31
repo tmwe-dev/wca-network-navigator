@@ -753,7 +753,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
                     disabled={sending || !liBridge.isAvailable}
                     className={cn(
                       "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
-                      liBridge.isAvailable && draft.contactLinkedinUrl
+                      liBridge.isAvailable
                         ? "bg-[hsl(210,80%,35%)] hover:opacity-90"
                         : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed"
                     )}
