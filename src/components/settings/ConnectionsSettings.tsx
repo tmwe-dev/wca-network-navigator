@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Save, Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink,
   ClipboardPaste, XCircle, Download, KeyRound, Eye, EyeOff, Mail,
-  Linkedin, ShieldAlert,
+  Linkedin, ShieldAlert, MessageCircle, Bot, Phone, Wifi, WifiOff,
 } from "lucide-react";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWcaSession } from "@/hooks/useWcaSession";
@@ -22,6 +24,8 @@ interface ConnectionsSettingsProps {
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {
   const { isSessionActive, ensureSession } = useWcaSession();
+  const liExt = useLinkedInExtensionBridge();
+  const waExt = useWhatsAppExtensionBridge();
   const isWcaOk = isSessionActive === true;
 
   const [verifying, setVerifying] = useState(false);
@@ -108,8 +112,11 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   };
 
   return (
-    <Tabs defaultValue="wca" className="space-y-4">
+    <Tabs defaultValue="canali" className="space-y-4">
       <TabsList className="w-full justify-start">
+        <TabsTrigger value="canali" className="gap-1.5 text-xs">
+          <Wifi className="w-3.5 h-3.5" /> Canali
+        </TabsTrigger>
         <TabsTrigger value="wca" className="gap-1.5 text-xs">
           <Globe className="w-3.5 h-3.5" /> WCA
         </TabsTrigger>
@@ -120,6 +127,134 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
           <ShieldAlert className="w-3.5 h-3.5" /> Blacklist
         </TabsTrigger>
       </TabsList>
+
+      {/* Canali di Comunicazione */}
+      <TabsContent value="canali" className="m-0 space-y-4">
+        <h2 className="text-lg font-semibold">Canali di Comunicazione</h2>
+        <p className="text-sm text-muted-foreground">Stato delle connessioni per l'invio automatico dei messaggi.</p>
+
+        {/* WhatsApp */}
+        <Card>
+          <CardContent className="pt-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10">
+                  <MessageCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">Invio messaggi via estensione Chrome</p>
+                </div>
+              </div>
+              <Badge variant={waExt.isAvailable ? "default" : "secondary"} className={waExt.isAvailable ? "bg-emerald-600 text-white" : ""}>
+                {waExt.isAvailable
+                  ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</>
+                  : <><WifiOff className="w-3 h-3 mr-1" /> Non rilevato</>}
+              </Badge>
+            </div>
+            {!waExt.isAvailable && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-xs text-muted-foreground">
+                  L'estensione WhatsApp non è stata rilevata. Scaricala, installala in Chrome e ricarica questa pagina.
+                </p>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => {
+                    fetch("/whatsapp-extension.zip")
+                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "whatsapp-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
+                      .catch(() => toast.error("File non disponibile"));
+                  }}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                </Button>
+                <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
+                  <li>Decomprimi il file ZIP scaricato</li>
+                  <li>Apri <code className="font-mono bg-muted px-1 rounded">chrome://extensions</code></li>
+                  <li>Attiva <strong>Modalità sviluppatore</strong></li>
+                  <li>Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella</li>
+                </ol>
+              </div>
+            )}
+            {waExt.isAvailable && (
+              <Button variant="outline" size="sm" onClick={async () => {
+                const res = await waExt.verifySession();
+                toast[res.success ? "success" : "error"](res.success ? "Sessione WhatsApp verificata!" : "Sessione WhatsApp non attiva");
+              }}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* LinkedIn */}
+        <Card>
+          <CardContent className="pt-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#0A66C2]/10">
+                  <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">LinkedIn</p>
+                  <p className="text-xs text-muted-foreground">Invio DM via estensione Chrome</p>
+                </div>
+              </div>
+              <Badge variant={liExt.isAvailable ? "default" : "secondary"} className={liExt.isAvailable ? "bg-emerald-600 text-white" : ""}>
+                {liExt.isAvailable
+                  ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</>
+                  : <><WifiOff className="w-3 h-3 mr-1" /> Non rilevato</>}
+              </Badge>
+            </div>
+            {!liExt.isAvailable && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-xs text-muted-foreground">
+                  L'estensione LinkedIn non è stata rilevata. Scaricala, installala e ricarica la pagina. Le credenziali si configurano nel tab "LinkedIn".
+                </p>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => {
+                    fetch("/linkedin-extension.zip")
+                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
+                      .catch(() => toast.error("File non disponibile"));
+                  }}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                </Button>
+              </div>
+            )}
+            {liExt.isAvailable && (
+              <Button variant="outline" size="sm" onClick={async () => {
+                const res = await liExt.verifySession();
+                toast[res.success ? "success" : "error"](res.success ? "Sessione LinkedIn verificata!" : "Sessione LinkedIn non attiva");
+              }}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Agent */}
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Bot className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">AI Agent</p>
+                  <p className="text-xs text-muted-foreground">Engine di generazione outreach e analisi</p>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 text-white">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Attivo
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       {/* WCA */}
       <TabsContent value="wca" className="m-0 space-y-4">
