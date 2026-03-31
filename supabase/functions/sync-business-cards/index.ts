@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // External DB (WCA engine)
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) {
@@ -24,7 +23,6 @@ Deno.serve(async (req) => {
 
     const extSb = createClient(extUrl, extKey);
 
-    // Local DB
     const localUrl = Deno.env.get("SUPABASE_URL")!;
     const localKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const localSb = createClient(localUrl, localKey);
@@ -38,13 +36,12 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
-    // Fetch all business cards from external DB (paginate to get all)
+    // Fetch all from external DB with pagination
     let allCards: any[] = [];
     let page = 0;
     const pageSize = 1000;
-    let hasMore = true;
 
-    while (hasMore) {
+    while (true) {
       const { data: batch, error: batchErr } = await extSb
         .from("wca_business_cards")
         .select("*")
@@ -61,39 +58,28 @@ Deno.serve(async (req) => {
 
       if (batch && batch.length > 0) {
         allCards = allCards.concat(batch);
-        hasMore = batch.length === pageSize;
+        if (batch.length < pageSize) break;
         page++;
       } else {
-        hasMore = false;
+        break;
       }
     }
 
-    const extCards = allCards;
-    const extErr = null;
-
-    if (extErr) {
-      console.error("Error fetching external cards:", extErr);
-      return new Response(
-        JSON.stringify({ success: false, error: extErr.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!extCards || extCards.length === 0) {
+    if (allCards.length === 0) {
       return new Response(
         JSON.stringify({ success: true, upserted: 0, message: "No cards in external DB" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${extCards.length} cards in external DB`);
+    console.log(`Found ${allCards.length} cards in external DB`);
 
     // Upsert into local DB in batches
     let upserted = 0;
     const batchSize = 50;
 
-    for (let i = 0; i < extCards.length; i += batchSize) {
-      const batch = extCards.slice(i, i + batchSize).map((card: any) => ({
+    for (let i = 0; i < allCards.length; i += batchSize) {
+      const batch = allCards.slice(i, i + batchSize).map((card: any) => ({
         id: card.id,
         user_id: userId || card.user_id,
         company_name: card.company_name,
@@ -126,7 +112,7 @@ Deno.serve(async (req) => {
     console.log(`Upserted ${upserted} cards`);
 
     return new Response(
-      JSON.stringify({ success: true, upserted, total: extCards.length }),
+      JSON.stringify({ success: true, upserted, total: allCards.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
