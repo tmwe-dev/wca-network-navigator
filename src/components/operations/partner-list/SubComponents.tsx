@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Download, Telescope, Building2, UserCircle, CheckCircle2,
+  Linkedin, MessageCircle, Mail, Phone, Globe,
 } from "lucide-react";
 
 /* ── Icon Indicator (circular with badge) — tri-state ── */
@@ -63,6 +64,47 @@ export function StatusDot({ ok, label, isDark }: { ok: boolean; label: string; i
         {ok ? `${label} ✓` : `${label} mancante`}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+/* ── Enriched Status Icons (replaces 4 status dots after Deep Search) ── */
+export function EnrichedStatusIcons({ hasProfile, hasEmail, hasPhone, hasDeep, hasLi, hasWa, isDark }: {
+  hasProfile: boolean; hasEmail: boolean; hasPhone: boolean; hasDeep: boolean;
+  hasLi: boolean; hasWa: boolean; isDark: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {hasDeep ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Telescope className="w-3 h-3 text-cyan-500" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-[10px]">Deep Search ✓</TooltipContent>
+        </Tooltip>
+      ) : (
+        <StatusDot ok={hasProfile} label="Profilo" isDark={isDark} />
+      )}
+      {hasLi ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Linkedin className="w-3 h-3 text-sky-500 fill-sky-500" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-[10px]">LinkedIn ✓</TooltipContent>
+        </Tooltip>
+      ) : (
+        <StatusDot ok={hasEmail} label="Email" isDark={isDark} />
+      )}
+      {hasWa ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <MessageCircle className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-[10px]">WhatsApp ✓</TooltipContent>
+        </Tooltip>
+      ) : (
+        <StatusDot ok={hasPhone} label="Telefono" isDark={isDark} />
+      )}
+    </div>
   );
 }
 
