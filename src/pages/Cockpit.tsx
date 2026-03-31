@@ -40,6 +40,7 @@ export interface DraftState {
   body: string;
   language: string;
   isGenerating: boolean;
+  _debug?: OutreachDebug;
 }
 
 // Re-export for backward compatibility
