@@ -1,77 +1,71 @@
 
 
-# Deep Search via Estensione Chrome (Client-Side)
+# Ristrutturazione Deep Search: Eliminare Firecrawl, Unificare su Partner Connect
 
-## Situazione attuale
-
-La Deep Search usa **Firecrawl API** (server-side, a pagamento) per cercare profili social e scraping siti web. Ogni partner costa 10-15 chiamate API Firecrawl.
-
-## Soluzione
-
-Creare un'estensione Chrome **FireScrape** che esegue le ricerche Google e lo scraping direttamente dal browser dell'utente. Il frontend orchestra tutto: l'estensione cerca, l'AI analizza i risultati.
+## Situazione Attuale
 
 ```text
-ATTUALE:
-  Frontend → Edge Function → Firecrawl API ($$) → AI → DB
-
-NUOVO:
-  Frontend → Estensione Chrome (Google Search + Scrape) → AI Gateway → DB
-  Fallback: se estensione non disponibile → Edge Function (come ora)
+Livello 1: Light (DB only) — OK, resta
+Livello 2: deep-search-partner (Edge Function) — usa Firecrawl per ~15 query Google + scraping
+Livello 3: deep-search-contact (Edge Function) — usa Firecrawl, quasi identico al L2
+Livello 4: LinkedIn Flow (client-side) — usa estensione, on-demand
 ```
 
-## Implementazione
+Problemi: Firecrawl costa, Level 3 è ridondante, Facebook/Instagram personali sono inutili per il business.
 
-### 1. Nuova estensione `firescrape-extension/`
+## Nuova Architettura
 
-- **manifest.json**: permessi per `*://*.google.com/*`, `*://*/*` (scraping generico)
-- **background.js**: riceve comandi dal content script, apre tab in background, esegue ricerche Google, estrae risultati, scrapa pagine web (titolo, description, logo, markdown)
-- **content.js**: bridge postMessage con l'app (stesso pattern LinkedIn/WhatsApp)
-- Azioni supportate:
-  - `search` → cerca su Google, ritorna titolo + URL + snippet per ogni risultato
-  - `scrape` → apre URL in background, estrae testo, logo, metadata
-  - `ping` → verifica disponibilita'
+```text
+Livello 1: Light (DB only) — invariato
+Livello 2: Deep Search Standard (CLIENT-SIDE via Partner Connect)
+           - LinkedIn personale + LinkedIn azienda
+           - WhatsApp auto-link
+           - Website scraping + logo + quality score
+           - Company profile search (Google via estensione)
+           - Contact profile AI (Google via estensione)
+           - NO Facebook personale, NO Instagram personale
+           - AI: Lovable AI Gateway (gratuito)
+Livello 3: ELIMINATO (i contatti CRM usano lo stesso L2 adattato)
+Livello 4: LinkedIn Flow — invariato, solo on-demand
+```
 
-### 2. Hook `useFireScrapeExtensionBridge.ts`
+## Modifiche
 
-Stesso pattern di `useLinkedInExtensionBridge`: postMessage, heartbeat, `isAvailable`, metodi `search(query)` e `scrape(url)`.
+### 1. Riscrivere `useDeepSearchLocal.ts`
+- Rimuovere blocchi Facebook personale e Instagram personale
+- Mantenere: LinkedIn personale, LinkedIn azienda, WhatsApp, website scraping/logo, company profile search, contact profile AI
+- Già usa Partner Connect + Lovable AI — nessun cambiamento di infrastruttura
 
-### 3. Nuovo hook `useDeepSearchLocal.ts`
+### 2. Aggiungere supporto contatti a `useDeepSearchLocal.ts`
+- Nuova funzione `searchContact(contactId)` per contatti CRM (`imported_contacts`)
+- Stessa logica del partner ma legge da `imported_contacts` e salva in `enrichment_data`
+- Cerca: LinkedIn personale, LinkedIn azienda, WhatsApp, website da email domain, company profile
 
-Logica di Deep Search che gira **interamente nel frontend**:
-- Per ogni partner/contatto, usa l'estensione per cercare profili LinkedIn, Facebook, Instagram
-- Usa l'AI Gateway (Lovable AI, gia' disponibile lato client) per validare i risultati
-- Salva direttamente nel DB via Supabase client
-- Stessa logica di rating e enrichment delle edge functions attuali
+### 3. Aggiornare `useDeepSearchRunner.ts`
+- Rimuovere fallback alle edge functions Firecrawl
+- Se Partner Connect non è disponibile → mostra errore "Installa Partner Connect per la Deep Search"
+- Per mode `"contact"` → usa `localSearch.searchContact(id)` invece dell'edge function
+- Nessun riferimento a `deep-search-partner` o `deep-search-contact` edge functions
 
-### 4. Modifica `useDeepSearchRunner.ts`
+### 4. Edge Functions — deprecate
+- `deep-search-partner/index.ts`: aggiungere risposta "deprecated, usa Partner Connect"
+- `deep-search-contact/index.ts`: stessa cosa
+- `enrich-partner-website/index.ts`: nota deprecation (usa Partner Connect per scraping)
+- Non eliminare per ora (backward compatibility) ma disabilitare
 
-- Al `start()`, controlla se l'estensione FireScrape e' disponibile
-- Se si': usa `useDeepSearchLocal` (gratis, nessun costo Firecrawl)
-- Se no: fallback alle edge functions attuali (Firecrawl)
-- Toast indica quale motore sta usando
+### 5. Aggiornare `plan.md`
+- Riflettere la nuova architettura a 3 livelli (L1 Light, L2 Standard, L4 LinkedIn Flow on-demand)
 
-### 5. Indicatore in `ConnectionStatusBar.tsx`
+## Dettagli Tecnici
 
-Aggiungere icona FireScrape accanto a LinkedIn/WhatsApp con stato verde/rosso.
+**Ricerche per partner (L2 Standard):**
+- 1-3 query Google per LinkedIn personale (per contatto)
+- 1 query per LinkedIn azienda
+- 1 scraping sito web (logo + quality)
+- 1-2 query per company profile
+- 1-2 query per contact profile AI
+- WhatsApp: auto-link da telefono (zero query)
+- Totale: ~5-10 operazioni Partner Connect + 3-5 chiamate AI Gateway
 
-## File coinvolti
-
-| File | Azione |
-|------|--------|
-| `public/firescrape-extension/manifest.json` | Nuovo |
-| `public/firescrape-extension/background.js` | Nuovo — Google search + scrape |
-| `public/firescrape-extension/content.js` | Nuovo — bridge postMessage |
-| `public/firescrape-extension/popup.html` | Nuovo — popup minimale |
-| `src/hooks/useFireScrapeExtensionBridge.ts` | Nuovo — bridge hook |
-| `src/hooks/useDeepSearchLocal.ts` | Nuovo — Deep Search client-side |
-| `src/hooks/useDeepSearchRunner.ts` | Modifica — auto-detect estensione, fallback |
-| `src/components/layout/ConnectionStatusBar.tsx` | Modifica — icona FireScrape |
-| `src/components/settings/ConnectionsSettings.tsx` | Modifica — sezione FireScrape |
-
-## Vantaggi
-
-- **Zero costi Firecrawl** quando l'estensione e' attiva
-- **Nessun rate limiting server-side** — le ricerche Google sono dal browser dell'utente
-- **Stealth**: l'estensione opera in tab nascosti, nessuna interazione visibile
-- **Fallback automatico** alle edge functions se l'estensione non c'e'
+**Dipendenze rimosse:** Nessun import/riferimento a Firecrawl nelle operazioni Deep Search.
 
