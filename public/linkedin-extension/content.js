@@ -4,33 +4,39 @@
 // ══════════════════════════════════════════════
 
 (function () {
-  var RETRY_INTERVAL = 2000;
-  var MAX_RETRIES = 5;
+  var HEARTBEAT_MS = 4000;
+  var alive = true;
 
   function isExtensionAlive() {
     try {
-      return !!(chrome && chrome.runtime && chrome.runtime.id);
+      if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
+      // Trigger getter — throws if context is dead
+      void chrome.runtime.getManifest();
+      return true;
     } catch (e) {
       return false;
     }
   }
 
-  function postToPage(payload) {
-    try {
-      window.postMessage(payload, window.location.origin);
-    } catch (_) {
-      window.postMessage(payload, "*");
-    }
+  function post(payload) {
+    try { window.postMessage(payload, window.location.origin); }
+    catch (_) { window.postMessage(payload, "*"); }
+  }
+
+  function failResponse(data, error) {
+    post({
+      direction: "from-extension-li",
+      action: data.action,
+      requestId: data.requestId,
+      response: { success: false, error: error },
+    });
   }
 
   function relayMessage(data) {
     if (!isExtensionAlive()) {
-      postToPage({
-        direction: "from-extension-li",
-        action: data.action,
-        requestId: data.requestId,
-        response: { success: false, error: "Extension context invalidated — ricarica la pagina" },
-      });
+      alive = false;
+      failResponse(data, "Extension context invalidated — ricarica la pagina");
+      post({ direction: "from-extension-li", action: "extensionDead" });
       return;
     }
 
@@ -41,17 +47,15 @@
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
+          alive = false;
           console.warn("[LI Content] Extension error:", chrome.runtime.lastError.message);
-          postToPage({
-            direction: "from-extension-li",
-            action: data.action,
-            requestId: data.requestId,
-            response: { success: false, error: "Extension context invalidated" },
-          });
+          failResponse(data, "Extension context invalidated");
+          post({ direction: "from-extension-li", action: "extensionDead" });
           return;
         }
 
-        postToPage({
+        alive = true;
+        post({
           direction: "from-extension-li",
           action: data.action,
           requestId: data.requestId,
@@ -59,19 +63,31 @@
         });
 
         if (data.action === "ping") {
-          postToPage({ direction: "from-extension-li", action: "contentScriptReady" });
+          post({ direction: "from-extension-li", action: "contentScriptReady" });
         }
       });
     } catch (err) {
+      alive = false;
       console.warn("[LI Content] sendMessage failed:", err.message);
-      postToPage({
-        direction: "from-extension-li",
-        action: data.action,
-        requestId: data.requestId,
-        response: { success: false, error: "Extension context invalidated" },
-      });
+      failResponse(data, "Extension context invalidated");
+      post({ direction: "from-extension-li", action: "extensionDead" });
     }
   }
+
+  // Heartbeat: periodically check if extension is still alive and re-announce
+  setInterval(function () {
+    var nowAlive = isExtensionAlive();
+    if (nowAlive && !alive) {
+      // Extension came back (e.g. reloaded) — re-announce
+      alive = true;
+      post({ direction: "from-extension-li", action: "contentScriptReady" });
+      console.info("[LI Content] Extension reconnected");
+    } else if (!nowAlive && alive) {
+      alive = false;
+      post({ direction: "from-extension-li", action: "extensionDead" });
+      console.warn("[LI Content] Extension context lost");
+    }
+  }, HEARTBEAT_MS);
 
   window.addEventListener("message", function (event) {
     if (event.source !== window) return;
@@ -80,5 +96,5 @@
     relayMessage(data);
   });
 
-  postToPage({ direction: "from-extension-li", action: "contentScriptReady" });
+  post({ direction: "from-extension-li", action: "contentScriptReady" });
 })();
