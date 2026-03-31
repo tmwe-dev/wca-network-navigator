@@ -179,7 +179,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           <TooltipContent side="bottom" className="text-xs space-y-0.5">
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.li ? "bg-emerald-500" : "bg-destructive"}`} /> LinkedIn</div>
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.wa ? "bg-emerald-500" : "bg-destructive"}`} /> WhatsApp</div>
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> FireScrape</div>
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> Partner Connect</div>
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI Agent</div>
             <div className="text-muted-foreground pt-1">Clicca per verificare tutto</div>
           </TooltipContent>
