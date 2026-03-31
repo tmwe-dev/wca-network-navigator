@@ -651,6 +651,8 @@ REGOLE CRITICHE:
 ${partnerContext}
 
 ${contactContext}
+${historyContext}
+${cachedEnrichmentContext}
 ${documentsContext}
 ${linksContext}
 GOAL DELLA COMUNICAZIONE:

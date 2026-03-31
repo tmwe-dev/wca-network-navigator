@@ -318,6 +318,32 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 )}
               </div>
 
+              {/* History & Enrichment Sources */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Database className="w-3 h-3 text-chart-2" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fonti Arricchimento</span>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Interazioni trovate</span>
+                    <span className="text-foreground">{draft._debug.interaction_history_count ?? "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sito aziendale</span>
+                    <span className={`font-mono text-[10px] ${draft._debug.website_source === "live_scraped" ? "text-success" : draft._debug.website_source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}>
+                      {draft._debug.website_source === "live_scraped" ? "🔴 Live" : draft._debug.website_source === "cached" ? "📦 Cache" : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">LinkedIn</span>
+                    <span className={`font-mono text-[10px] ${draft._debug.linkedin_source === "live_scraped" ? "text-success" : draft._debug.linkedin_source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}>
+                      {draft._debug.linkedin_source === "live_scraped" ? "🔴 Live" : draft._debug.linkedin_source === "cached" ? "📦 Cache" : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <BookOpen className="w-3 h-3 text-warning" />
