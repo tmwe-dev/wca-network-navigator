@@ -9,6 +9,7 @@ import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { Mail, Sparkles } from "lucide-react";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
