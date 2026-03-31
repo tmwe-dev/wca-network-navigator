@@ -4,7 +4,7 @@ import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, Rotate
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
-import type { DraftState, DraftChannel } from "@/pages/Cockpit";
+import type { DraftState, DraftChannel, ScrapingPhase } from "@/pages/Cockpit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
