@@ -216,6 +216,28 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
         });
+      } else if (st === "contact") {
+        const ic = icMap[sid];
+        if (!ic) continue;
+        result.push({
+          id: `ic-${ic.id}`,
+          queueId: item.id,
+          name: ic.name || "—",
+          company: ic.company_name || "—",
+          role: ic.position || "",
+          country: ic.country || "",
+          language: inferLanguage(ic.country),
+          lastContact: formatRelativeDate(ic.created_at),
+          priority: computePriority(ic.email, ic.phone, ic.mobile),
+          channels: inferChannels(ic.email, ic.phone, ic.mobile),
+          email: ic.email || "",
+          phone: ic.mobile || ic.phone || "",
+          origin: "manual" as ContactOrigin,
+          originDetail: ic.origin || "Manuale",
+          sourceType: st,
+          sourceId: sid,
+          partnerId: item.partner_id,
+        });
       }
     }
 
