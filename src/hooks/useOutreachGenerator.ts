@@ -3,6 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { DraftChannel } from "@/pages/Cockpit";
 
+export interface RecipientIntelligence {
+  sources_checked: string[];
+  data_found: Record<string, boolean>;
+  enrichment_snippet: string;
+  warning: string | null;
+}
+
 export interface OutreachDebug {
   model: string;
   quality: string;
@@ -23,6 +30,7 @@ export interface OutreachDebug {
   credits_consumed: number;
   channel_instructions: string;
   settings_keys_found: string[];
+  recipient_intelligence?: RecipientIntelligence;
 }
 
 export interface OutreachResult {
