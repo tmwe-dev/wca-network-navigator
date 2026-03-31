@@ -41,7 +41,7 @@ export function useWhatsAppExtensionBridge() {
         direction: "from-webapp-wa",
         action: "ping",
         requestId: `poll_wa_${Date.now()}`,
-      }, "*");
+      }, window.location.origin);
     };
 
     doPing();
