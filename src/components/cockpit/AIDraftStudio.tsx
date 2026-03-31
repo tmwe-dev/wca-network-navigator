@@ -315,51 +315,118 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
         </TabsList>
 
         <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Subject (email only) */}
-          {draft.channel === "email" && (
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Oggetto</label>
-              <div className="mt-1 text-sm font-medium text-foreground">
-                {draft.isGenerating && !draft.subject ? (
-                  <span className="text-muted-foreground/70">Generazione in corso...</span>
-                ) : draft.subject ? (
-                  <TypewriterText text={draft.subject} speed={25} />
-                ) : (
-                  <span className="text-muted-foreground/70">In attesa...</span>
-                )}
+          {/* REVIEW STATE: Show scraped data before generating */}
+          {draft.scrapingPhase === "reviewing" && draft.linkedinProfile && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+              <div className="flex items-center gap-2 text-success">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-sm font-semibold">Profilo analizzato</span>
               </div>
-            </div>
+
+              {/* Profile Card */}
+              <div className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-[hsl(210,80%,55%)]/20 flex items-center justify-center">
+                    <Linkedin className="w-5 h-5 text-[hsl(210,80%,55%)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">{draft.linkedinProfile.name || draft.contactName}</div>
+                    {draft.linkedinProfile.headline && (
+                      <div className="text-xs text-muted-foreground truncate">{draft.linkedinProfile.headline}</div>
+                    )}
+                  </div>
+                </div>
+                {draft.linkedinProfile.location && (
+                  <div className="text-xs text-muted-foreground/80">📍 {draft.linkedinProfile.location}</div>
+                )}
+                {draft.linkedinProfile.about && (
+                  <div className="text-xs text-muted-foreground/90 bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
+                    {draft.linkedinProfile.about}
+                  </div>
+                )}
+
+                {/* Connection status badge */}
+                <div className="flex items-center gap-2 pt-1">
+                  {draft.linkedinProfile.connectionStatus === "connected" ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
+                      <CheckCircle2 className="w-3 h-3" /> Già connesso
+                    </span>
+                  ) : draft.linkedinProfile.connectionStatus === "pending" ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/10 text-warning">
+                      <AlertTriangle className="w-3 h-3" /> Richiesta in attesa
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      <UserPlus className="w-3 h-3" /> Non connesso
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action: Generate Message */}
+              <button
+                onClick={onGenerateAfterReview}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Sparkles className="w-4 h-4" />
+                Genera Messaggio AI
+              </button>
+              <p className="text-[10px] text-muted-foreground text-center">
+                Il messaggio sarà personalizzato in base ai dati estratti dal profilo
+              </p>
+            </motion.div>
           )}
 
-          {/* Body */}
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
-            <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
-              {draft.isGenerating && !draft.body ? (
-                <div className="space-y-3">
-                  <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
-                  {[1, 2, 3].map(i => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0.3, 0.5, 0.3] }}
-                      transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }}
-                      className="h-3 rounded bg-muted/50"
-                      style={{ width: `${70 + i * 10}%` }}
-                    />
-                  ))}
+          {/* Normal flow: generating or showing result */}
+          {draft.scrapingPhase !== "reviewing" && (
+            <>
+              {/* Subject (email only) */}
+              {draft.channel === "email" && (
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Oggetto</label>
+                  <div className="mt-1 text-sm font-medium text-foreground">
+                    {draft.isGenerating && !draft.subject ? (
+                      <span className="text-muted-foreground/70">Generazione in corso...</span>
+                    ) : draft.subject ? (
+                      <TypewriterText text={draft.subject} speed={25} />
+                    ) : (
+                      <span className="text-muted-foreground/70">In attesa...</span>
+                    )}
+                  </div>
                 </div>
-              ) : draft.body ? (
-                isHtmlContent ? (
-                  <TypewriterText text={draft.body} speed={8} isHtml />
-                ) : (
-                  <TypewriterText text={draft.body} speed={12} />
-                )
-              ) : (
-                <span className="text-muted-foreground/70">In attesa...</span>
               )}
-            </div>
-          </div>
+
+              {/* Body */}
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
+                <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
+                  {draft.isGenerating && !draft.body ? (
+                    <div className="space-y-3">
+                      <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
+                      {[1, 2, 3].map(i => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0.3, 0.5, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }}
+                          className="h-3 rounded bg-muted/50"
+                          style={{ width: `${70 + i * 10}%` }}
+                        />
+                      ))}
+                    </div>
+                  ) : draft.body ? (
+                    isHtmlContent ? (
+                      <TypewriterText text={draft.body} speed={8} isHtml />
+                    ) : (
+                      <TypewriterText text={draft.body} speed={12} />
+                    )
+                  ) : (
+                    <span className="text-muted-foreground/70">In attesa...</span>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="sources" className="flex-1 overflow-y-auto p-4">
