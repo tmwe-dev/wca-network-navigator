@@ -22,8 +22,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
   const handleLiClick = async () => {
     if (!li.isAvailable) {
-      toast({ title: "LinkedIn non connesso", description: "Installa l'estensione LinkedIn per inviare messaggi diretti.", action: undefined });
-      window.open("/download-linkedin-extension.html", "_blank");
+      toast({ title: "LinkedIn non connesso", description: "Vai su Impostazioni → Connessioni per configurare LinkedIn." });
+      window.location.href = "/settings";
       return;
     }
     const res = await li.verifySession();
@@ -32,8 +32,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
   const handleWaClick = async () => {
     if (!wa.isAvailable) {
-      toast({ title: "WhatsApp non connesso", description: "Installa l'estensione WhatsApp per inviare messaggi diretti." });
-      window.open("/download-wa-extension.html", "_blank");
+      toast({ title: "WhatsApp non connesso", description: "Vai su Impostazioni → Connessioni per configurare WhatsApp." });
+      window.location.href = "/settings";
       return;
     }
     const res = await wa.verifySession();

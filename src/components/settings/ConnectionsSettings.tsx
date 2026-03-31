@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Save, Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink,
   ClipboardPaste, XCircle, Download, KeyRound, Eye, EyeOff, Mail,
-  Linkedin, ShieldAlert,
+  Linkedin, ShieldAlert, MessageCircle, Bot, Phone, Wifi, WifiOff,
 } from "lucide-react";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWcaSession } from "@/hooks/useWcaSession";
