@@ -61,6 +61,22 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
       } catch {}
     }
 
+    // WhatsApp: check if sender number is configured
+    if (!waOk) {
+      if (settings?.["whatsapp_sender"]) {
+        waOk = true;
+      } else {
+        try {
+          const { data } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "whatsapp_sender")
+            .maybeSingle();
+          if (data?.value) waOk = true;
+        } catch {}
+      }
+    }
+
     // LinkedIn: if extension available, verify session
     if (li.isAvailable) {
       try {
