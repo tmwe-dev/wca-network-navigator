@@ -170,6 +170,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       <Tabs defaultValue="preview" className="flex-1 flex flex-col min-h-0">
         <TabsList className="mx-4 mt-2 bg-muted/30 p-0.5 h-8">
           <TabsTrigger value="preview" className="text-xs h-7">Preview</TabsTrigger>
+          <TabsTrigger value="sources" className="text-xs h-7">Sources</TabsTrigger>
           <TabsTrigger value="variables" className="text-xs h-7">Variables</TabsTrigger>
         </TabsList>
 
