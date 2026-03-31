@@ -35,6 +35,7 @@ export interface DraftState {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  contactLinkedinUrl: string | null;
   companyName: string | null;
   countryCode: string | null;
   subject: string;
