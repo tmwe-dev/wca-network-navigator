@@ -589,7 +589,7 @@ function BusinessCardsView() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      {group.countryCode && <span className="text-base flex-shrink-0" title={group.countryCode}>{countryCodeToFlag(group.countryCode)}</span>}
+                      {group.countryCode && <span className="text-4xl leading-none flex-shrink-0" title={group.countryCode}>{countryCodeToFlag(group.countryCode)}</span>}
                       <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
                       {group.isMatched && (
                         <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/30 flex-shrink-0">
@@ -638,10 +638,12 @@ function BusinessCardsView() {
                         <div className="flex items-start gap-2.5">
                           <Checkbox checked={isSelected} className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              {!group.countryCode && (() => { const cc = guessCountryFromLocation(card.location, card.phone || card.mobile); return cc ? <span className="mr-1">{countryCodeToFlag(cc)}</span> : null; })()}
-                              {card.contact_name || "—"}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              {(() => { const cc = group.countryCode || guessCountryFromLocation(card.location, card.phone || card.mobile); return cc ? <span className="text-3xl leading-none flex-shrink-0">{countryCodeToFlag(cc)}</span> : null; })()}
+                              <p className="text-sm font-semibold text-foreground truncate">
+                                {card.contact_name || "—"}
+                              </p>
+                            </div>
                             {card.position && <p className="text-[11px] text-muted-foreground truncate">{card.position}</p>}
 
                             <div className="flex flex-col gap-0.5 mt-1.5">
