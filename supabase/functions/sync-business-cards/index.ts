@@ -36,6 +36,13 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch all from external DB with pagination
     let allCards: any[] = [];
     let page = 0;
@@ -74,45 +81,97 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${allCards.length} cards in external DB`);
 
-    // Upsert into local DB in batches
-    let upserted = 0;
-    const batchSize = 50;
+    // Get existing cards to avoid duplicates (match by external_id stored in raw_data)
+    const { data: existingCards } = await localSb
+      .from("business_cards")
+      .select("id, raw_data")
+      .eq("user_id", userId);
 
-    for (let i = 0; i < allCards.length; i += batchSize) {
-      const batch = allCards.slice(i, i + batchSize).map((card: any) => ({
-        id: card.id,
-        user_id: userId || card.user_id,
-        company_name: card.company_name,
-        contact_name: card.contact_name,
-        email: card.email,
-        phone: card.phone,
-        mobile: card.mobile,
-        position: card.position,
-        event_name: card.event_name,
-        met_at: card.met_at,
-        location: card.location,
-        notes: card.notes,
-        photo_url: card.photo_url,
-        tags: card.tags,
-        raw_data: card.raw_data,
-        created_at: card.created_at,
-      }));
-
-      const { error: upsertErr } = await localSb
-        .from("business_cards")
-        .upsert(batch, { onConflict: "id" });
-
-      if (upsertErr) {
-        console.error(`Batch ${i} error:`, upsertErr);
-      } else {
-        upserted += batch.length;
+    const existingExtIds = new Set<string>();
+    const existingByExtId = new Map<string, string>();
+    if (existingCards) {
+      for (const c of existingCards) {
+        const extId = (c.raw_data as any)?.external_id;
+        if (extId) {
+          existingExtIds.add(String(extId));
+          existingByExtId.set(String(extId), c.id);
+        }
       }
     }
 
-    console.log(`Upserted ${upserted} cards`);
+    // Upsert into local DB in batches
+    let upserted = 0;
+    let skipped = 0;
+    const batchSize = 50;
+
+    for (let i = 0; i < allCards.length; i += batchSize) {
+      const batch = allCards.slice(i, i + batchSize).map((card: any) => {
+        const extId = String(card.id);
+        const existingId = existingByExtId.get(extId);
+        return {
+          ...(existingId ? { id: existingId } : {}),
+          user_id: userId,
+          company_name: card.company_name || null,
+          contact_name: card.contact_name || card.name || null,
+          email: card.email || null,
+          phone: card.phone || null,
+          mobile: card.mobile || null,
+          position: card.position || card.role || null,
+          event_name: card.event_name || card.event || null,
+          met_at: card.met_at || null,
+          location: card.location || null,
+          notes: card.notes || null,
+          photo_url: card.photo_url || null,
+          tags: card.tags || [],
+          raw_data: { ...((card.raw_data as any) || {}), external_id: card.id },
+          created_at: card.created_at,
+        };
+      });
+
+      // Split into updates (existing) and inserts (new)
+      const toUpdate = batch.filter((b: any) => b.id);
+      const toInsert = batch.filter((b: any) => !b.id);
+
+      if (toUpdate.length > 0) {
+        const { error: updateErr } = await localSb
+          .from("business_cards")
+          .upsert(toUpdate, { onConflict: "id" });
+        if (updateErr) {
+          console.error(`Batch ${i} update error:`, updateErr);
+        } else {
+          upserted += toUpdate.length;
+        }
+      }
+
+      if (toInsert.length > 0) {
+        // Check which ones are truly new
+        const newInserts = toInsert.filter((b: any) => {
+          const extId = String((b.raw_data as any)?.external_id);
+          return !existingExtIds.has(extId);
+        });
+
+        if (newInserts.length > 0) {
+          const { error: insertErr } = await localSb
+            .from("business_cards")
+            .insert(newInserts);
+          if (insertErr) {
+            console.error(`Batch ${i} insert error:`, insertErr);
+          } else {
+            upserted += newInserts.length;
+            newInserts.forEach((b: any) => {
+              existingExtIds.add(String((b.raw_data as any)?.external_id));
+            });
+          }
+        } else {
+          skipped += toInsert.length;
+        }
+      }
+    }
+
+    console.log(`Upserted ${upserted}, skipped ${skipped} cards`);
 
     return new Response(
-      JSON.stringify({ success: true, upserted, total: allCards.length }),
+      JSON.stringify({ success: true, upserted, skipped, total: allCards.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
