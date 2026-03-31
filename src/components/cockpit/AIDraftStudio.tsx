@@ -505,19 +505,21 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
               </button>
             ) : draft.channel === "whatsapp" && draft.contactPhone ? (
               <button
-                onClick={handleOpenWhatsApp}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                onClick={handleSendWhatsApp}
+                disabled={sending}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Apri WhatsApp
+                {waBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                {sending ? "Invio..." : waBridge.isAvailable ? "Invia WhatsApp" : "Apri WhatsApp"}
               </button>
             ) : draft.channel === "linkedin" ? (
               <button
-                onClick={() => setLiDmOpen(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                onClick={handleSendLinkedIn}
+                disabled={sending}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                <Linkedin className="w-3.5 h-3.5" />
-                Invia su LinkedIn
+                {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
+                {sending ? "Invio..." : "Invia su LinkedIn"}
               </button>
             ) : (
               <button
