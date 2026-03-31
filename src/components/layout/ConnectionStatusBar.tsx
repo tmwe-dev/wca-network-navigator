@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Linkedin, MessageCircle, Bot, Send, Pause, Play, Zap, Loader2, Flame } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
@@ -20,6 +20,8 @@ interface Props {
   outreachQueue?: OutreachQueueState;
 }
 
+type ChannelStatus = { li: boolean; wa: boolean; fs: boolean; ai: boolean };
+
 export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
@@ -27,81 +29,68 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
 
-  const [liConnected, setLiConnected] = useState(false);
-  const [waConnected, setWaConnected] = useState(false);
+  const [status, setStatus] = useState<ChannelStatus>({ li: false, wa: false, fs: false, ai: true });
   const [connecting, setConnecting] = useState(false);
+  const [didAutoRun, setDidAutoRun] = useState(false);
 
-  // Restore persisted state on mount
+  // Restore persisted + live extension state
   useEffect(() => {
-    if (settings) {
-      setLiConnected(settings["linkedin_connected"] === "true" || li.isAvailable);
-      setWaConnected(settings["whatsapp_connected"] === "true" || wa.isAvailable || !!settings["whatsapp_sender"]);
-    }
-  }, [settings, li.isAvailable, wa.isAvailable]);
+    if (!settings) return;
+    setStatus(prev => ({
+      ...prev,
+      li: settings["linkedin_connected"] === "true" || li.isAvailable,
+      wa: settings["whatsapp_connected"] === "true" || wa.isAvailable || !!settings["whatsapp_sender"],
+      fs: fsExt.isAvailable,
+      ai: true,
+    }));
+  }, [settings, li.isAvailable, wa.isAvailable, fsExt.isAvailable]);
 
-  // Update when extension pings succeed
+  // Live extension detection
   useEffect(() => {
-    if (li.isAvailable && !liConnected) setLiConnected(true);
+    if (li.isAvailable) setStatus(p => ({ ...p, li: true }));
   }, [li.isAvailable]);
-
   useEffect(() => {
-    if (wa.isAvailable && !waConnected) setWaConnected(true);
+    if (wa.isAvailable) setStatus(p => ({ ...p, wa: true }));
   }, [wa.isAvailable]);
+  useEffect(() => {
+    setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
+  }, [fsExt.isAvailable]);
 
-  const connectAll = useCallback(async () => {
+  const activateAll = useCallback(async () => {
     setConnecting(true);
     let liOk = li.isAvailable;
     let waOk = wa.isAvailable;
+    const fsOk = fsExt.isAvailable;
 
-    // LinkedIn: check if credentials/cookie exist in DB
+    // LinkedIn: check credentials/cookie in DB
     if (!liOk) {
       try {
         const { data } = await supabase.functions.invoke("get-linkedin-credentials");
-        if (data?.email || settings?.["linkedin_li_at"]) {
-          liOk = true;
-        }
+        if (data?.email || settings?.["linkedin_li_at"]) liOk = true;
       } catch {}
     }
+    // LinkedIn: verify session if extension present
+    if (li.isAvailable) {
+      try { const r = await li.verifySession(); liOk = r.success; } catch { liOk = true; }
+    }
 
-    // WhatsApp: check if sender number is configured
+    // WhatsApp: check sender number
     if (!waOk) {
-      if (settings?.["whatsapp_sender"]) {
-        waOk = true;
-      } else {
+      if (settings?.["whatsapp_sender"]) { waOk = true; }
+      else {
         try {
-          const { data } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "whatsapp_sender")
-            .maybeSingle();
+          const { data } = await supabase.from("app_settings").select("value").eq("key", "whatsapp_sender").maybeSingle();
           if (data?.value) waOk = true;
         } catch {}
       }
     }
-
-    // If still not ok, mark as connected anyway if sender was just saved
-    if (!waOk) {
-      waOk = true; // WhatsApp sender is configured in DB
-    }
-
-    // LinkedIn: if extension available, verify session
-    if (li.isAvailable) {
-      try {
-        const res = await li.verifySession();
-        liOk = res.success;
-      } catch { liOk = true; /* extension present, assume ok */ }
-    }
-
-    // WhatsApp: if extension available, verify session
+    // WhatsApp: verify session if extension present
     if (wa.isAvailable) {
-      try {
-        const res = await wa.verifySession();
-        waOk = res.success;
-      } catch { waOk = true; }
+      try { const r = await wa.verifySession(); waOk = r.success; } catch { waOk = true; }
     }
 
-    setLiConnected(liOk);
-    setWaConnected(waOk);
+    const newStatus: ChannelStatus = { li: liOk, wa: waOk, fs: fsOk, ai: true };
+    setStatus(newStatus);
 
     // Persist
     try {
@@ -111,132 +100,81 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     setConnecting(false);
 
-    const channels = [liOk && "LinkedIn", waOk && "WhatsApp", "AI Agent"].filter(Boolean);
+    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "FireScrape", "AI"].filter(Boolean);
+    const allOk = liOk && waOk && fsOk;
     toast({
-      title: "🔗 Connessioni verificate",
-      description: `${channels.join(", ")} — ${liOk && waOk ? "Tutti i canali attivi" : "Alcuni canali richiedono configurazione"}`,
+      title: allOk ? "✅ Tutto attivo" : "⚡ Connessioni verificate",
+      description: active.join(" · ") + (allOk ? "" : " — configura i canali mancanti in Impostazioni"),
     });
-  }, [li, wa, settings, updateSetting]);
+  }, [li, wa, fsExt, settings, updateSetting]);
 
-  const handleLiClick = async () => {
-    if (li.isAvailable) {
-      const res = await li.verifySession();
-      const ok = res.success;
-      setLiConnected(ok);
-      toast({
-        title: ok ? "✅ LinkedIn connesso" : "⚠️ Sessione LinkedIn non attiva",
-        description: ok ? "Sessione verificata" : (res.error || "Effettua il login su LinkedIn"),
-      });
-    } else if (liConnected) {
-      toast({ title: "LinkedIn", description: "Credenziali configurate — estensione non rilevata per DM diretto" });
-    } else {
-      toast({ title: "LinkedIn non connesso", description: "Vai su Impostazioni → Connessioni per configurare LinkedIn." });
-      window.location.href = "/settings";
+  // Auto-activate on first mount
+  useEffect(() => {
+    if (!didAutoRun && settings) {
+      setDidAutoRun(true);
+      const timer = setTimeout(activateAll, 1500);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [settings, didAutoRun]);
 
-  const handleWaClick = async () => {
-    if (wa.isAvailable) {
-      const res = await wa.verifySession();
-      const ok = res.success;
-      setWaConnected(ok);
-      toast({
-        title: ok ? "✅ WhatsApp connesso" : "⚠️ Sessione WhatsApp non attiva",
-        description: ok ? "Sessione verificata" : (res.error || "Apri WhatsApp Web e scansiona il QR"),
-      });
-    } else if (waConnected) {
-      toast({ title: "WhatsApp", description: "Configurato — estensione non rilevata per invio diretto" });
-    } else {
-      toast({ title: "WhatsApp non connesso", description: "Vai su Impostazioni → Connessioni per configurare WhatsApp." });
-      window.location.href = "/settings";
-    }
-  };
+  const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
+  const allActive = activeCount === 4;
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="hidden sm:flex items-center gap-1">
-        {/* Connect All button */}
+      <div className="hidden sm:flex items-center">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={connectAll}
+              onClick={activateAll}
               disabled={connecting}
-              className="relative h-7 px-2 flex items-center gap-1 rounded-md hover:bg-muted/60 transition-colors text-primary"
+              className={`relative h-8 px-3 flex items-center gap-1.5 rounded-lg transition-all text-xs font-semibold ${
+                allActive
+                  ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                  : "bg-primary/10 text-primary hover:bg-primary/20"
+              }`}
             >
-              {connecting
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Zap className="w-3.5 h-3.5" />}
-              <span className="text-[10px] font-semibold">Connetti</span>
+              {connecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : allActive ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <Zap className="w-3.5 h-3.5" />
+              )}
+              <span>{connecting ? "Verifico..." : allActive ? "Tutto attivo" : `${activeCount}/4 attivi`}</span>
+              {/* Mini dots */}
+              <div className="flex items-center gap-0.5 ml-1">
+                {[status.li, status.wa, status.fs, status.ai].map((on, i) => (
+                  <span key={i} className={`w-1.5 h-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-destructive"}`} />
+                ))}
+              </div>
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Verifica e attiva tutte le connessioni</TooltipContent>
+          <TooltipContent side="bottom" className="text-xs space-y-0.5">
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.li ? "bg-emerald-500" : "bg-destructive"}`} /> LinkedIn</div>
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.wa ? "bg-emerald-500" : "bg-destructive"}`} /> WhatsApp</div>
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> FireScrape</div>
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI Agent</div>
+            <div className="text-muted-foreground pt-1">Clicca per verificare tutto</div>
+          </TooltipContent>
         </Tooltip>
 
-        <div className="w-px h-4 bg-border mx-0.5" />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={handleLiClick} className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
-              <Linkedin className="w-4 h-4 text-muted-foreground" />
-              <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background ${liConnected ? "bg-emerald-500" : "bg-red-500"}`} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{liConnected ? "LinkedIn connesso" : "LinkedIn non connesso — clicca per verificare"}</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={handleWaClick} className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
-              <MessageCircle className="w-4 h-4 text-muted-foreground" />
-              <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background ${waConnected ? "bg-emerald-500" : "bg-red-500"}`} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{waConnected ? "WhatsApp connesso" : "WhatsApp non connesso — clicca per verificare"}</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={onAiClick} className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
-              <Bot className="w-4 h-4 text-muted-foreground" />
-              <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background bg-emerald-500" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">AI Agent attivo</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
-              <Flame className="w-4 h-4 text-muted-foreground" />
-              <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background ${fsExt.isAvailable ? "bg-emerald-500" : "bg-red-500"}`} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{fsExt.isAvailable ? "FireScrape attivo — Deep Search client-side" : "FireScrape non rilevato — installa l'estensione"}</TooltipContent>
-        </Tooltip>
-
-        {/* Outreach Queue indicator */}
+        {/* Outreach Queue */}
         {outreachQueue && outreachQueue.pendingCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
-                className="relative h-7 flex items-center gap-1 px-1.5 rounded-md hover:bg-muted/60 transition-colors"
+                className="relative h-7 flex items-center gap-1 px-1.5 ml-1 rounded-md hover:bg-muted/60 transition-colors"
               >
-                {outreachQueue.paused ? (
-                  <Play className="w-3.5 h-3.5 text-muted-foreground" />
-                ) : (
-                  <Send className="w-3.5 h-3.5 text-primary" />
-                )}
-                <span className="text-[10px] font-semibold tabular-nums text-foreground">{outreachQueue.pendingCount}</span>
+                <span className="text-[10px] font-semibold tabular-nums text-foreground">{outreachQueue.pendingCount} in coda</span>
                 {outreachQueue.processing && !outreachQueue.paused && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 )}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              {outreachQueue.paused
-                ? `Coda in pausa — ${outreachQueue.pendingCount} messaggi. Clicca per riprendere`
-                : `${outreachQueue.pendingCount} messaggi in coda — clicca per mettere in pausa`}
+              {outreachQueue.paused ? "Coda in pausa — clicca per riprendere" : "Clicca per mettere in pausa"}
             </TooltipContent>
           </Tooltip>
         )}
