@@ -53,6 +53,7 @@ function extractLinkedInProfile() {
       about: null,
       photoUrl: null,
       profileUrl: window.location.href,
+      connectionStatus: "unknown",
     };
 
     // Name
@@ -74,6 +75,29 @@ function extractLinkedInProfile() {
     // Photo
     var photoEl = document.querySelector("img.pv-top-card-profile-picture__image, img.profile-photo-edit__preview");
     if (photoEl && photoEl.src) result.photoUrl = photoEl.src;
+
+    // Connection status detection
+    // Look for the main action button on the profile
+    var connectBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='Collegati'], button.pvs-profile-actions__action[aria-label*='Connect']");
+    var messageBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='Messaggio'], button.pvs-profile-actions__action[aria-label*='Message']");
+    var pendingBtn = document.querySelector("button.pvs-profile-actions__action[aria-label*='In attesa'], button.pvs-profile-actions__action[aria-label*='Pending']");
+
+    if (pendingBtn) {
+      result.connectionStatus = "pending";
+    } else if (messageBtn && !connectBtn) {
+      result.connectionStatus = "connected";
+    } else if (connectBtn) {
+      result.connectionStatus = "not_connected";
+    } else {
+      // Fallback: check all buttons text
+      var allBtns = document.querySelectorAll("button.pvs-profile-actions__action");
+      for (var i = 0; i < allBtns.length; i++) {
+        var btnText = (allBtns[i].textContent || "").trim().toLowerCase();
+        if (btnText === "messaggio" || btnText === "message") { result.connectionStatus = "connected"; break; }
+        if (btnText === "collegati" || btnText === "connect") { result.connectionStatus = "not_connected"; break; }
+        if (btnText === "in attesa" || btnText === "pending") { result.connectionStatus = "pending"; break; }
+      }
+    }
 
     return result;
   } catch (e) {
