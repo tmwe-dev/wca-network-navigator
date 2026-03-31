@@ -48,6 +48,9 @@ export type { CockpitContact };
 
 const Cockpit = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+
+  // Auto-connect channels on mount
+  useAutoConnect();
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);
