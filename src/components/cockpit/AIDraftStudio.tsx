@@ -246,6 +246,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
               {draft.contactEmail && (
                 <div className="flex justify-between"><span className="text-muted-foreground">email</span><span className="text-foreground">{draft.contactEmail}</span></div>
               )}
+              {draft.contactPhone && (
+                <div className="flex justify-between"><span className="text-muted-foreground">phone</span><span className="text-foreground">{draft.contactPhone}</span></div>
+              )}
             </div>
           </div>
         </TabsContent>
