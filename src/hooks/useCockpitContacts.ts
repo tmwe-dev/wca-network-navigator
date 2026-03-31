@@ -158,7 +158,7 @@ export function useCockpitContacts() {
         .eq("due_date", today)
         .limit(100);
 
-      return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [] };
+      return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [], socialLinksMap, contactSocialMap };
     },
     staleTime: 30_000,
   });
