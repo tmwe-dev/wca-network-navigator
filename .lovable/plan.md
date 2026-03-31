@@ -1,23 +1,12 @@
 
-
-# Linguette Laterali per Drawer Filtri e Mission
+# Fix Cockpit Height in Outreach Container
 
 ## Problema
-Le zone hover attuali sono solo 5px e invisibili — bisogna arrivare al bordo esatto. Servono zone piu' ampie (10px) con linguette visibili che invitino all'interazione.
+Il Cockpit usa `h-[calc(100vh-3.5rem)]` che sottrae solo la header principale (56px), ma quando è dentro Outreach c'è anche la tab bar superiore (~40px). Totale non sottratto: ~96px. I bottoni di azione email/conferma nel pannello AIDraftStudio finiscono fuori schermo.
 
-## Modifiche in `src/components/layout/AppLayout.tsx`
+## Soluzione
 
-1. **Ampliare zona hover** da `w-[5px]` a `w-[12px]`
-2. **Sostituire i div invisibili** con linguette stilizzate posizionate sotto la header (`top-14`):
-   - **Sinistra**: linguetta semitrasparente con icona `SlidersHorizontal` (filtri), arrotondata a destra, ~32px di altezza
-   - **Destra**: linguetta semitrasparente con icona `Target` (AI/Mission), arrotondata a sinistra
-3. **Stile linguette**: `bg-muted/40 backdrop-blur-sm border border-border/30`, con hover che aumenta opacita' (`hover:bg-muted/60`)
-4. **Mantengono** la stessa logica hover con timer da 150ms
-5. **z-index** `z-[60]` confermato per stare sopra al contenuto
+### `src/pages/Cockpit.tsx`
+- Cambiare `h-[calc(100vh-3.5rem)]` → `h-full` per adattarsi al container parent invece di calcolare altezze assolute. Il parent in Outreach già gestisce `flex-1 min-h-0 overflow-hidden`.
 
-### Risultato visivo
-Due piccole tab ancorate ai bordi, appena sotto la header, con icona che indica cosa aprono. Area sensibile di 12px dal bordo.
-
-## Bug runtime (fix collaterale)
-In `src/hooks/useCockpitContacts.ts` riga 181: accesso a proprieta' undefined. Aggiungere optional chaining per evitare il crash.
-
+Questo fa sì che il Cockpit rispetti lo spazio disponibile nel container Outreach, rendendo visibili i bottoni di invio/copia/rigenera nel footer dell'AIDraftStudio.
