@@ -23,6 +23,7 @@ interface Props {
 export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
+  const fsExt = useFireScrapeExtensionBridge();
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
 

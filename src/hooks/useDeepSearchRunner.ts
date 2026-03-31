@@ -248,7 +248,7 @@ export function useDeepSearchRunner(): DeepSearchState {
       setRunning(false);
       setCurrent(null);
     }
-  }, [running, queryClient]);
+  }, [running, queryClient, localSearch]);
 
   const stop = useCallback(() => {
     abortRef.current = true;
