@@ -141,10 +141,10 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
 
   const handleSendLinkedIn = async () => {
     const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
-    if (liBridge.isAvailable) {
+    const profileUrl = draft.contactLinkedinUrl || "";
+    if (liBridge.isAvailable && profileUrl) {
       setSending(true);
       try {
-        const profileUrl = ""; // profile URL from contact if available
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
@@ -156,6 +156,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       } finally {
         setSending(false);
       }
+    } else if (!profileUrl) {
+      toast({ title: "URL profilo LinkedIn mancante", description: "Aggiungi il link LinkedIn al contatto prima di inviare.", variant: "destructive" });
     } else {
       // Fallback: open dialog
       setLiDmOpen(true);
