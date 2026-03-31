@@ -69,7 +69,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
         a.click();
         URL.revokeObjectURL(a.href);
         toast({
-          title: "🔥 FireScrape scaricato",
+          title: "🔌 Partner Connect scaricato",
           description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
         });
       })
