@@ -69,11 +69,11 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
         a.click();
         URL.revokeObjectURL(a.href);
         toast({
-          title: "🔥 FireScrape scaricato",
+          title: "🔌 Partner Connect scaricato",
           description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
         });
       })
-      .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare FireScrape" }));
+      .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare Partner Connect" }));
   }, []);
 
   const activateAll = useCallback(async () => {
@@ -120,11 +120,11 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     setConnecting(false);
 
-    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "FireScrape", "AI"].filter(Boolean);
+    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "Partner Connect", "AI"].filter(Boolean);
     const allOk = liOk && waOk && fsOk;
 
     if (!fsOk) {
-      // Auto-download FireScrape extension
+      // Auto-download Partner Connect extension
       downloadFireScrapeExtension();
     }
 
@@ -179,7 +179,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           <TooltipContent side="bottom" className="text-xs space-y-0.5">
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.li ? "bg-emerald-500" : "bg-destructive"}`} /> LinkedIn</div>
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.wa ? "bg-emerald-500" : "bg-destructive"}`} /> WhatsApp</div>
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> FireScrape</div>
+            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> Partner Connect</div>
             <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI Agent</div>
             <div className="text-muted-foreground pt-1">Clicca per verificare tutto</div>
           </TooltipContent>

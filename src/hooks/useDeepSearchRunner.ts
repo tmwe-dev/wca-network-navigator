@@ -125,7 +125,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     let processed = 0;
 
     if (useLocal) {
-      toast.info("🔥 FireScrape attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
+      toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
     }
 
     try {
@@ -183,7 +183,7 @@ export function useDeepSearchRunner(): DeepSearchState {
             data = await localSearch.searchPartner(id);
             if (!data.success) error = data.error;
           } catch (e: any) {
-            error = e?.message || "FireScrape error";
+            error = e?.message || "Partner Connect error";
           }
         } else {
           // Server-side via edge function (Firecrawl)
