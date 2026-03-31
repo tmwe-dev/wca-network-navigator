@@ -36,7 +36,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const estimatedMinutes = Math.ceil((withLinkedIn.length * delaySec) / 60);
 
   const handleStart = () => {
-    flow.startFlow(withLinkedIn, { delaySec, autoConnect, generateOutreach });
+    flow.startFlow(selectedContacts, { delaySec, autoConnect, generateOutreach, deepSearchWeb });
   };
 
   return (
