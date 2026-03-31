@@ -73,6 +73,7 @@ const Cockpit = () => {
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     contactLinkedinUrl: null, companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
+    scrapingPhase: "idle", linkedinProfile: null,
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const { filters: gf } = useGlobalFilters();
