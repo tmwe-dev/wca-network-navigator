@@ -100,25 +100,66 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
     toast({ title: "Copiato negli appunti" });
   };
 
-  const handleOpenWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     const phone = draft.contactPhone?.replace(/[^0-9+]/g, "").replace(/^\+/, "");
     if (!phone) {
       toast({ title: "Numero di telefono mancante", variant: "destructive" });
       return;
     }
-    const plainText = draft.body.replace(/<[^>]+>/g, "");
-    navigator.clipboard.writeText(plainText);
-    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
-    toast({
-      title: "📋 Messaggio copiato!",
-      description: "Clicca per aprire WhatsApp e incolla il messaggio.",
-      action: (
-        <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          className="text-xs font-semibold text-primary underline whitespace-nowrap">
-          Apri WhatsApp ↗
-        </a>
-      ),
-    });
+    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+
+    if (waBridge.isAvailable) {
+      setSending(true);
+      try {
+        const res = await waBridge.sendWhatsApp(phone, plainText);
+        if (res.success) {
+          toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
+        } else {
+          toast({ title: "Errore WhatsApp", description: res.error, variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Errore invio WhatsApp", variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+    } else {
+      // Fallback: copy + link
+      navigator.clipboard.writeText(plainText);
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
+      toast({
+        title: "📋 Messaggio copiato!",
+        description: "Estensione WA non rilevata. Clicca per aprire WhatsApp.",
+        action: (
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold text-primary underline whitespace-nowrap">
+            Apri WhatsApp ↗
+          </a>
+        ),
+      });
+    }
+  };
+
+  const handleSendLinkedIn = async () => {
+    const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
+    if (liBridge.isAvailable) {
+      setSending(true);
+      try {
+        const profileUrl = ""; // profile URL from contact if available
+        const res = await liBridge.sendDirectMessage(profileUrl, plainText);
+        if (res.success) {
+          toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
+        } else {
+          toast({ title: "Errore LinkedIn", description: res.error, variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Errore invio LinkedIn", variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+    } else {
+      // Fallback: open dialog
+      setLiDmOpen(true);
+    }
   };
 
   const handleSend = async () => {
