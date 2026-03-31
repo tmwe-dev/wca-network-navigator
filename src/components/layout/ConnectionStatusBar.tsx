@@ -33,7 +33,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   useEffect(() => {
     if (settings) {
       setLiConnected(settings["linkedin_connected"] === "true" || li.isAvailable);
-      setWaConnected(settings["whatsapp_connected"] === "true" || wa.isAvailable);
+      setWaConnected(settings["whatsapp_connected"] === "true" || wa.isAvailable || !!settings["whatsapp_sender"]);
     }
   }, [settings, li.isAvailable, wa.isAvailable]);
 
