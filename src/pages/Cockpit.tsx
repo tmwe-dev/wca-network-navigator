@@ -192,6 +192,7 @@ const Cockpit = () => {
       setDraftState(prev => ({
         ...prev, subject: result.subject || "", body: result.body || "",
         language: result.language || prev.language, isGenerating: false,
+        _debug: result._debug,
       }));
       refetchCredits();
     } else {
