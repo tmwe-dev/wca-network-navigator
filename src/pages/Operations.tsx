@@ -411,6 +411,7 @@ function BusinessCardsView() {
           hasDeepSearch: !!partner?.enrichment_data?.deep_search_at,
           isMatched: !!card.matched_partner_id,
           partnerId: card.matched_partner_id || null,
+          countryCode: partner?.country_code || guessCountryFromLocation(card.location, card.phone || card.mobile),
           cards: [],
         });
       }
