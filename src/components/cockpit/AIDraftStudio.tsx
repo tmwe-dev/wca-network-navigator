@@ -675,58 +675,68 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
               </button>
             ) : draft.channel === "linkedin" ? (
               <div className="flex-1 flex gap-1.5">
+                {/* DM button - always show but hint if not connected */}
                 <button
                   onClick={handleSendLinkedIn}
                   disabled={sending}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
+                    draft.linkedinProfile?.connectionStatus === "connected"
+                      ? "bg-[hsl(210,80%,45%)] hover:opacity-90"
+                      : "bg-[hsl(210,80%,45%)]/60 hover:opacity-90"
+                  )}
+                  title={draft.linkedinProfile?.connectionStatus !== "connected" ? "Non ancora connesso — potrebbe non essere recapitato" : "Invia messaggio diretto"}
                 >
                   {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
                   {sending ? "..." : "DM"}
                 </button>
-                <button
-                  onClick={async () => {
-                    if (!liBridge.isAvailable) {
-                      toast({ title: "Estensione LinkedIn non rilevata", description: "Installa e attiva l'estensione LinkedIn per inviare richieste di collegamento.", variant: "destructive" });
-                      return;
-                    }
-                    if (!draft.contactLinkedinUrl) {
-                      toast({ title: "URL LinkedIn mancante", description: "Questo contatto non ha un profilo LinkedIn associato.", variant: "destructive" });
-                      return;
-                    }
-                    setSending(true);
-                    try {
-                      const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
-                      const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
-                      if (res.success) {
-                        toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
-                      } else {
-                        toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
+                {/* Connect button - hide if already connected or pending */}
+                {draft.linkedinProfile?.connectionStatus !== "connected" && draft.linkedinProfile?.connectionStatus !== "pending" && (
+                  <button
+                    onClick={async () => {
+                      if (!liBridge.isAvailable) {
+                        toast({ title: "Estensione LinkedIn non rilevata", description: "Installa e attiva l'estensione LinkedIn per inviare richieste di collegamento.", variant: "destructive" });
+                        return;
                       }
-                    } catch {
-                      toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
-                    } finally {
-                      setSending(false);
-                    }
-                  }}
-                  disabled={sending}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity",
-                    liBridge.isAvailable && draft.contactLinkedinUrl
-                      ? "bg-[hsl(210,80%,35%)] hover:opacity-90"
-                      : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed",
-                    "disabled:opacity-50"
-                  )}
-                  title={
-                    !liBridge.isAvailable
-                      ? "Estensione LinkedIn non attiva"
-                      : !draft.contactLinkedinUrl
-                        ? "URL LinkedIn mancante per questo contatto"
-                        : "Invia richiesta di collegamento con nota personalizzata"
-                  }
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  {sending ? "..." : "Connetti"}
-                </button>
+                      if (!draft.contactLinkedinUrl) {
+                        toast({ title: "URL LinkedIn mancante", description: "Questo contatto non ha un profilo LinkedIn associato.", variant: "destructive" });
+                        return;
+                      }
+                      setSending(true);
+                      try {
+                        const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+                        const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
+                        if (res.success) {
+                          toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
+                          onDraftChange({ ...draft, linkedinProfile: { ...draft.linkedinProfile, connectionStatus: "pending" } });
+                        } else {
+                          toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
+                        }
+                      } catch {
+                        toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
+                      } finally {
+                        setSending(false);
+                      }
+                    }}
+                    disabled={sending || !liBridge.isAvailable || !draft.contactLinkedinUrl}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
+                      liBridge.isAvailable && draft.contactLinkedinUrl
+                        ? "bg-[hsl(210,80%,35%)] hover:opacity-90"
+                        : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed"
+                    )}
+                    title="Invia richiesta di collegamento con nota personalizzata"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {sending ? "..." : "Connetti"}
+                  </button>
+                )}
+                {draft.linkedinProfile?.connectionStatus === "pending" && (
+                  <span className="flex items-center gap-1 px-3 py-2 rounded-lg bg-warning/10 text-warning text-xs font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    In attesa
+                  </span>
+                )}
               </div>
             ) : (
               <button
