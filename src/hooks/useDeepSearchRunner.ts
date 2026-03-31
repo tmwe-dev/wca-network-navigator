@@ -125,7 +125,7 @@ export function useDeepSearchRunner(): DeepSearchState {
     let processed = 0;
 
     if (useLocal) {
-      toast.info("🔥 FireScrape attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
+      toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
     }
 
     try {
