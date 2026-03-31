@@ -1,16 +1,32 @@
 
 
-# Bandiere BCA Piu' Grandi
+# Fix Sincronizzazione Business Cards
 
 ## Problema
-Le bandiere emoji nelle card dei biglietti da visita sono troppo piccole (`text-base` = 16px). Devono essere almeno 3 volte piu' grandi per essere ben visibili.
 
-## Modifiche
+La Edge Function `sync-business-cards` cerca la tabella `business_cards` nel database esterno, ma la tabella si chiama **`wca_business_cards`**. Errore dai log:
 
-### `src/pages/Operations.tsx`
+```
+hint: "Perhaps you meant the table 'public.wca_business_cards'"
+```
 
-1. **Header gruppo azienda** (riga 592): cambiare `text-base` → `text-4xl` (36px, ~3x)
-2. **Card singolo contatto** (riga 642): il flag inline nel nome e' minuscolo. Estrarlo dal testo e metterlo come elemento separato con `text-3xl` accanto al nome, ben visibile
+## Soluzione
 
-Risultato: bandiere grandi e leggibili sia nell'header del gruppo che nella card del contatto.
+### `supabase/functions/sync-business-cards/index.ts`
+
+1. Cambiare la query esterna da `.from("business_cards")` a `.from("wca_business_cards")`
+2. Adattare il mapping dei campi — i nomi colonna nel DB esterno potrebbero differire (verificare dopo il fix)
+3. Rimuovere il limite di 1000 record (o paginare) per catturare tutte le 383+ card
+
+### Dopo il deploy
+
+- Lanciare la sync e verificare quante card arrivano
+- Confrontare il totale con le 296 attuali nel DB locale
+- Verificare che il trigger `match_business_card` si attivi correttamente sulle nuove card
+
+## File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/functions/sync-business-cards/index.ts` | Cambiare nome tabella esterna da `business_cards` a `wca_business_cards`, adattare mapping campi |
 
