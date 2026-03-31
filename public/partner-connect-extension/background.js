@@ -129,6 +129,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'el-stats':            handleElStats,
     'el-history':          handleElHistory,
     'el-languages':        handleElLanguages,
+    // Google Search
+    'google-search':       handleGoogleSearch,
   };
   const handler = handlers[msg.action];
   if (handler) {
