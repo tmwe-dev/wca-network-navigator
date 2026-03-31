@@ -160,7 +160,7 @@ export function AppLayout() {
             </div>
           </header>
 
-          <main className={cn("flex-1 min-h-0 overflow-hidden mx-[2px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
+          <main className={cn("flex-1 min-h-0 overflow-hidden mx-[10px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
             <Outlet />
           </main>
         </div>
