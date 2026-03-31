@@ -197,5 +197,12 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
         </div>
       </form>
     </motion.div>
+
+    {addOpen && (
+      <Suspense fallback={null}>
+        <AddContactDialog open={addOpen} onOpenChange={setAddOpen} defaultDestination="cockpit" />
+      </Suspense>
+    )}
+    </>
   );
 }
