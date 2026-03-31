@@ -22,7 +22,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-[140px]">
+    <div className="flex flex-col gap-3 w-full max-w-[240px]">
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
@@ -43,7 +43,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               }
             }}
             className={cn(
-              "relative flex flex-row items-center gap-2 p-3 rounded-xl border-2 border-dashed transition-all duration-300 cursor-default",
+              "relative flex flex-row items-center gap-3 p-5 rounded-xl border-2 border-dashed transition-all duration-300 cursor-default",
               isDragging ? "border-primary/40 bg-gradient-to-br " + ch.gradient : "border-border/60 bg-card/60",
               isHovered && "scale-105 border-primary shadow-xl " + ch.glowColor,
               !isDragging && "hover:border-border/50 hover:bg-card/40"
@@ -60,14 +60,14 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               animate={isDragging ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
               className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300",
+                "w-12 h-12 rounded-lg flex items-center justify-center transition-colors duration-300",
                 isHovered ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
               )}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-6 h-6" />
             </motion.div>
             <span className={cn(
-              "text-sm font-medium transition-colors duration-300",
+              "text-base font-medium transition-colors duration-300",
               isHovered ? "text-foreground" : "text-muted-foreground"
             )}>
               {ch.label}
