@@ -71,6 +71,7 @@ const Cockpit = () => {
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);
+  const [showLinkedInFlow, setShowLinkedInFlow] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     contactLinkedinUrl: null, companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
