@@ -38,6 +38,7 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
   report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", dot: "bg-chart-4" },
   import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", dot: "bg-chart-3" },
   bca: { label: "BCA", bg: "bg-amber-500/15", text: "text-amber-500", dot: "bg-amber-500" },
+  manual: { label: "Manuale", bg: "bg-emerald-500/15", text: "text-emerald-500", dot: "bg-emerald-500" },
 };
 
 export function CockpitContactListItem({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
