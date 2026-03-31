@@ -155,9 +155,12 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
 
   return (
     <Tabs defaultValue="canali" className="space-y-4">
-      <TabsList className="w-full justify-start">
+      <TabsList className="w-full justify-start flex-wrap">
         <TabsTrigger value="canali" className="gap-1.5 text-xs">
           <Wifi className="w-3.5 h-3.5" /> Canali
+        </TabsTrigger>
+        <TabsTrigger value="estensioni" className="gap-1.5 text-xs">
+          <Download className="w-3.5 h-3.5" /> Estensioni
         </TabsTrigger>
         <TabsTrigger value="wca" className="gap-1.5 text-xs">
           <Globe className="w-3.5 h-3.5" /> WCA
