@@ -18,6 +18,7 @@ interface AIDraftStudioProps {
   draft: DraftState;
   onDraftChange: (draft: DraftState) => void;
   onRegenerate?: () => void;
+  onGenerateAfterReview?: () => void;
 }
 
 const channelMeta: Record<string, { icon: any; label: string; color: string }> = {
