@@ -525,6 +525,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
   }
 
+  if (message.action === "sendConnectionRequest") {
+    (async function () {
+      try { var result = await sendConnectionRequest(message.url, message.note); sendResponse(result); }
+      catch (err) { sendResponse({ success: false, error: err.message }); }
+    })();
+    return true;
+  }
+
   return false;
 });
 
