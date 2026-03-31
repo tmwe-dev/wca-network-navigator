@@ -418,6 +418,56 @@ serve(async (req) => {
     const settings: Record<string, string> = {};
     (settingsRes.data || []).forEach((r: any) => { settings[r.key] = r.value || ""; });
 
+    // ─── Interaction History (batch-safe: DB only, no live scraping) ───
+    let historyContext = "";
+    if (isPartnerSource && activity.partner_id) {
+      const [interRes, prevActRes] = await Promise.all([
+        supabase
+          .from("interactions")
+          .select("interaction_type, subject, notes, interaction_date")
+          .eq("partner_id", activity.partner_id)
+          .order("interaction_date", { ascending: false })
+          .limit(5),
+        supabase
+          .from("activities")
+          .select("email_subject, sent_at, activity_type")
+          .eq("source_id", activity.partner_id)
+          .in("status", ["completed"])
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+      const inters = interRes.data || [];
+      const prevActs = prevActRes.data || [];
+      if (inters.length > 0) {
+        historyContext += `\nSTORIA INTERAZIONI PRECEDENTI:\n${inters.map((i: any) => `[${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}`).join("\n")}\n`;
+      }
+      if (prevActs.length > 0) {
+        historyContext += `\nEMAIL GIÀ INVIATE (NON ripetere lo stesso messaggio):\n${prevActs.map((a: any) => `[${a.sent_at?.slice(0, 10) || "?"}] "${a.email_subject || "N/A"}"`).join("\n")}\n`;
+      }
+    }
+
+    // ─── Cached Enrichment Data (website/LinkedIn summaries from DB) ───
+    let cachedEnrichmentContext = "";
+    if (isPartnerSource && activity.partner_id) {
+      const { data: partnerEd } = await supabase
+        .from("partners")
+        .select("enrichment_data")
+        .eq("id", activity.partner_id)
+        .single();
+      if (partnerEd?.enrichment_data) {
+        const ed = partnerEd.enrichment_data as Record<string, any>;
+        if (ed.website_summary) {
+          cachedEnrichmentContext += `\nINFORMAZIONI DAL SITO AZIENDALE:\n${String(ed.website_summary).slice(0, 600)}\n`;
+        }
+        if (ed.linkedin_summary) {
+          cachedEnrichmentContext += `\nPROFILO LINKEDIN:\n${String(ed.linkedin_summary).slice(0, 500)}\n`;
+        }
+        if (ed.deep_search_summary) {
+          cachedEnrichmentContext += `\nDEEP SEARCH:\n${String(ed.deep_search_summary).slice(0, 400)}\n`;
+        }
+      }
+    }
+
     // Fetch workspace documents text — skip for "fast"
     let documentsContext = "";
     if (quality !== "fast" && document_ids && document_ids.length > 0) {
