@@ -147,6 +147,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           })
         )}
       </div>
+
+      {addOpen && (
+        <Suspense fallback={null}>
+          <AddContactDialog open={addOpen} onOpenChange={setAddOpen} defaultDestination="contacts" />
+        </Suspense>
+      )}
     </div>
   );
 }
