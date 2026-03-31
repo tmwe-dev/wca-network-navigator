@@ -2,7 +2,7 @@ import { useLinkedInFlow } from "@/hooks/useLinkedInFlow";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Linkedin, Play, Square, RotateCcw, Moon, Zap, AlertCircle } from "lucide-react";
+import { Linkedin, Play, Square, RotateCcw, Moon, Zap, AlertCircle, Globe, BrainCircuit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +15,7 @@ interface LinkedInFlowPanelProps {
     name: string;
     company: string;
     linkedinUrl?: string | null;
+    website?: string | null;
   }>;
   onClose?: () => void;
 }
