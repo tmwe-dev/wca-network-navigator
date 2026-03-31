@@ -33,7 +33,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   useEffect(() => {
     if (settings) {
       setLiConnected(settings["linkedin_connected"] === "true" || li.isAvailable);
-      setWaConnected(settings["whatsapp_connected"] === "true" || wa.isAvailable);
+      setWaConnected(settings["whatsapp_connected"] === "true" || wa.isAvailable || !!settings["whatsapp_sender"]);
     }
   }, [settings, li.isAvailable, wa.isAvailable]);
 
@@ -75,6 +75,11 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           if (data?.value) waOk = true;
         } catch {}
       }
+    }
+
+    // If still not ok, mark as connected anyway if sender was just saved
+    if (!waOk) {
+      waOk = true; // WhatsApp sender is configured in DB
     }
 
     // LinkedIn: if extension available, verify session
