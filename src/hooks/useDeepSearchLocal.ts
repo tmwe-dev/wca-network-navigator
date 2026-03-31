@@ -101,7 +101,7 @@ export function useDeepSearchLocal() {
   }, [fs]);
 
   /**
-   * Scrape a URL using FireScrape — navigate then scrape.
+   * Scrape a URL using Partner Connect — navigate then scrape.
    */
   const scrapeUrl = useCallback(async (url: string) => {
     const navResult = await fs.agentAction({ action: "navigate", url });
