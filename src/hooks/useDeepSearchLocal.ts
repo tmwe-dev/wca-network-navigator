@@ -1,6 +1,7 @@
 /**
  * useDeepSearchLocal — Client-side Deep Search using Partner Connect extension + AI Gateway
- * Uses Partner Connect's agent sequences for Google search and scraping.
+ * Level 2: Standard Deep Search (LinkedIn, WhatsApp, Website, Company Profile, Contact Profile)
+ * NO Facebook personal, NO Instagram personal.
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,54 +56,29 @@ interface GoogleSearchResult {
 export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
 
-  /**
-   * Perform a Google search using Partner Connect's agent sequence.
-   * Opens Google in a background tab, extracts results.
-   */
+  /** Google search via Partner Connect agent sequence */
   const googleSearch = useCallback(async (query: string, limit = 5): Promise<GoogleSearchResult[]> => {
-    // Use agent-sequence: navigate to Google, then extract results
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${limit}&hl=en`;
-
-    // Navigate to Google search
     const navResult = await fs.agentAction({ action: "navigate", url: searchUrl });
     if (!navResult.success) return [];
-
     await delay(2000);
-
-    // Extract search results using CSS selectors
     const extractResult = await fs.extract({
       results_links: "div.g a[href^='http'] h3",
       results_urls: "div.g a[href^='http']",
       results_snippets: "div.g div.VwiC3b, div.g span.aCOpRe",
     });
-
     if (!extractResult.success || !extractResult.data) return [];
-
-    // Parse results
-    const titles = Array.isArray(extractResult.data.results_links)
-      ? extractResult.data.results_links
-      : extractResult.data.results_links ? [extractResult.data.results_links] : [];
-    const urls = Array.isArray(extractResult.data.results_urls)
-      ? extractResult.data.results_urls
-      : extractResult.data.results_urls ? [extractResult.data.results_urls] : [];
-    const snippets = Array.isArray(extractResult.data.results_snippets)
-      ? extractResult.data.results_snippets
-      : extractResult.data.results_snippets ? [extractResult.data.results_snippets] : [];
-
+    const titles = Array.isArray(extractResult.data.results_links) ? extractResult.data.results_links : extractResult.data.results_links ? [extractResult.data.results_links] : [];
+    const urls = Array.isArray(extractResult.data.results_urls) ? extractResult.data.results_urls : extractResult.data.results_urls ? [extractResult.data.results_urls] : [];
+    const snippets = Array.isArray(extractResult.data.results_snippets) ? extractResult.data.results_snippets : extractResult.data.results_snippets ? [extractResult.data.results_snippets] : [];
     const results: GoogleSearchResult[] = [];
     for (let i = 0; i < Math.min(titles.length, limit); i++) {
-      results.push({
-        url: urls[i] || "",
-        title: titles[i] || "",
-        snippet: snippets[i] || "",
-      });
+      results.push({ url: urls[i] || "", title: titles[i] || "", snippet: snippets[i] || "" });
     }
     return results;
   }, [fs]);
 
-  /**
-   * Scrape a URL using Partner Connect — navigate then scrape.
-   */
+  /** Scrape a URL via Partner Connect */
   const scrapeUrl = useCallback(async (url: string) => {
     const navResult = await fs.agentAction({ action: "navigate", url });
     if (!navResult.success) return null;
@@ -117,9 +93,174 @@ export function useDeepSearchLocal() {
     };
   }, [fs]);
 
-  /**
-   * Run Deep Search for a single partner entirely client-side.
-   */
+  // ═══════════════════════════════════════════════════════
+  // Shared search logic for both partners and contacts
+  // ═══════════════════════════════════════════════════════
+
+  /** Search LinkedIn profiles for contacts */
+  const searchLinkedInForContacts = useCallback(async (
+    contacts: Array<{ id: string; name: string; title?: string | null; email?: string | null; mobile?: string | null; direct_phone?: string | null }>,
+    companyName: string,
+    location: string,
+    partnerId: string,
+    existingSet: Set<string>,
+    apiKey: string | null,
+  ) => {
+    let socialLinksFound = 0;
+    const contactProfiles: Record<string, any> = {};
+
+    for (const contact of contacts) {
+      if (!contact.name || contact.name.length < 3) continue;
+
+      // --- LinkedIn Personal ---
+      if (!existingSet.has(`${contact.id}_linkedin`)) {
+        const query = `"${contact.name}" "${companyName}" site:linkedin.com/in`;
+        let results = (await googleSearch(query, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+        if (results.length === 0) {
+          const retry = `"${getLastName(contact.name)}" "${companyName}" logistics site:linkedin.com/in`;
+          results = (await googleSearch(retry, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+          await delay(500);
+        }
+        if (results.length > 0 && apiKey) {
+          const answer = await aiCall(
+            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}
+Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
+If one matches, respond with ONLY the URL. If none, respond "NONE".`,
+            apiKey
+          );
+          if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
+            const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
+            if (m) {
+              const { error } = await supabase.from("partner_social_links").insert({
+                partner_id: partnerId, contact_id: contact.id, platform: "linkedin", url: m[1].replace(/\/$/, ""),
+              });
+              if (!error) socialLinksFound++;
+              const sr = extractSeniority(results[0]?.title);
+              if (sr) contactProfiles[contact.id] = { name: contact.name, title: contact.title, ...sr };
+            }
+          }
+        }
+        await delay(800);
+      }
+
+      // --- WhatsApp auto-link ---
+      const waNumber = contact.mobile || contact.direct_phone;
+      if (waNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
+        const cleaned = toWhatsAppNumber(waNumber);
+        if (cleaned.length >= 8) {
+          const { error } = await supabase.from("partner_social_links").insert({
+            partner_id: partnerId, contact_id: contact.id, platform: "whatsapp", url: `https://wa.me/${cleaned}`,
+          });
+          if (!error) socialLinksFound++;
+        }
+      }
+    }
+
+    return { socialLinksFound, contactProfiles };
+  }, [googleSearch]);
+
+  /** Search company LinkedIn page */
+  const searchCompanyLinkedIn = useCallback(async (
+    companyName: string, partnerId: string, existingSet: Set<string>,
+  ) => {
+    if (existingSet.has("company_linkedin")) return 0;
+    const q = `"${companyName}" site:linkedin.com/company`;
+    const res = await googleSearch(q, 3);
+    const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
+    if (match) {
+      const { error } = await supabase.from("partner_social_links").insert({
+        partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, ""),
+      });
+      if (!error) { await delay(500); return 1; }
+    }
+    await delay(500);
+    return 0;
+  }, [googleSearch]);
+
+  /** Scrape website + logo + quality score */
+  const scrapeWebsite = useCallback(async (
+    website: string | null, partnerId: string, apiKey: string | null,
+    contacts?: Array<{ email?: string | null }>,
+  ) => {
+    let logoFound = false;
+    let websiteQualityScore = 0;
+
+    if (website) {
+      const websiteUrl = website.startsWith("http") ? website : `https://${website}`;
+      const scraped = await scrapeUrl(websiteUrl);
+      if (scraped) {
+        let logoUrl: string | null = null;
+        try {
+          const domain = new URL(websiteUrl).hostname;
+          logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        } catch {}
+        if (logoUrl) {
+          const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
+          if (!error) logoFound = true;
+        }
+        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
+          const qa = await aiCall(
+            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
+            apiKey
+          );
+          if (qa) {
+            const parsed = parseInt(qa.replace(/[^1-5]/g, ""));
+            if (parsed >= 1 && parsed <= 5) websiteQualityScore = parsed;
+          }
+        }
+      }
+    } else if (contacts && contacts.length > 0) {
+      const ce = contacts.find((c) => c.email && !/(gmail|yahoo|hotmail|outlook)/i.test(c.email));
+      if (ce?.email) {
+        const domain = ce.email.split("@")[1];
+        if (domain) await supabase.from("partners").update({ website: `https://${domain}` }).eq("id", partnerId);
+      }
+    }
+    return { logoFound, websiteQualityScore };
+  }, [scrapeUrl]);
+
+  /** Calculate partner rating */
+  const calculateRating = useCallback(async (
+    partnerId: string, websiteQualityScore: number, website: string | null,
+    memberSince: string | null, branchCities: any,
+  ) => {
+    const { data: services = [] } = await supabase.from("partner_services").select("service_category").eq("partner_id", partnerId);
+    const { data: networks = [] } = await supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId);
+
+    const websiteScore = websiteQualityScore || (website ? 2 : 1);
+    const svcSet = new Set(services.map((s: any) => s.service_category));
+    let serviceMix = 1;
+    if (svcSet.has("air_freight")) serviceMix += 1.5;
+    if (svcSet.has("road_freight")) serviceMix += 1;
+    if (svcSet.has("warehousing")) serviceMix += 1;
+    serviceMix = Math.min(5, Math.max(1, serviceMix));
+
+    let networkScore = 1;
+    if (networks.length >= 5) networkScore = 5;
+    else if (networks.length >= 3) networkScore = 3;
+    else if (networks.length >= 1) networkScore = 1.5;
+
+    let seniorityScore = 1;
+    if (memberSince) {
+      const years = (Date.now() - new Date(memberSince).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      if (years >= 20) seniorityScore = 5;
+      else if (years >= 10) seniorityScore = 3;
+      else if (years >= 5) seniorityScore = 2;
+    }
+
+    const bc = Array.isArray(branchCities) ? branchCities : [];
+    let internationalScore = 1;
+    if (bc.length >= 10) internationalScore = 5;
+    else if (bc.length >= 3) internationalScore = 3;
+    else if (bc.length >= 1) internationalScore = 2;
+
+    const rawRating = websiteScore * 0.2 + serviceMix * 0.2 + networkScore * 0.15 + seniorityScore * 0.15 + internationalScore * 0.1 + 1 * 0.1 + 1 * 0.1;
+    return Math.min(5, Math.max(1, Math.round(rawRating * 2) / 2));
+  }, []);
+
+  // ═══════════════════════════════════════════════════════
+  // searchPartner — Deep Search for a partner record
+  // ═══════════════════════════════════════════════════════
   const searchPartner = useCallback(async (partnerId: string): Promise<{
     success: boolean;
     socialLinksFound: number;
@@ -151,169 +292,23 @@ export function useDeepSearchLocal() {
       .select("contact_id, platform")
       .eq("partner_id", partnerId);
 
-    const { data: networks = [] } = await supabase
-      .from("partner_networks")
-      .select("network_name")
-      .eq("partner_id", partnerId);
-
     const existingSet = new Set(existingLinks.map((l) => `${l.contact_id || "company"}_${l.platform}`));
+    const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
 
-    let socialLinksFound = 0;
-    let logoFound = false;
-    const contactProfiles: Record<string, any> = {};
+    // LinkedIn + WhatsApp for contacts
+    const { socialLinksFound: contactLinks, contactProfiles } = await searchLinkedInForContacts(
+      contacts || [], partner.company_name, location, partnerId, existingSet, apiKey,
+    );
 
-    // ═══ SEARCH SOCIAL PROFILES ═══
-    for (const contact of contacts || []) {
-      if (!contact.name || contact.name.length < 3) continue;
-      const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
+    // Company LinkedIn
+    const companyLinks = await searchCompanyLinkedIn(partner.company_name, partnerId, existingSet);
 
-      // --- LinkedIn ---
-      if (!existingSet.has(`${contact.id}_linkedin`)) {
-        const query = `"${contact.name}" "${partner.company_name}" site:linkedin.com/in`;
-        let results = (await googleSearch(query, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+    // Website + Logo
+    const { logoFound, websiteQualityScore } = await scrapeWebsite(
+      partner.website, partnerId, apiKey, contacts,
+    );
 
-        if (results.length === 0) {
-          const retry = `"${getLastName(contact.name)}" "${partner.company_name}" logistics site:linkedin.com/in`;
-          results = (await googleSearch(retry, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
-          await delay(500);
-        }
-
-        if (results.length > 0 && apiKey) {
-          const answer = await aiCall(
-            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${partner.company_name}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}
-Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
-If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-            apiKey
-          );
-          if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
-            const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
-            if (m) {
-              const { error } = await supabase.from("partner_social_links").insert({
-                partner_id: partnerId, contact_id: contact.id, platform: "linkedin", url: m[1].replace(/\/$/, ""),
-              });
-              if (!error) socialLinksFound++;
-              const sr = extractSeniority(results[0]?.title);
-              if (sr) contactProfiles[contact.id] = { name: contact.name, title: contact.title, ...sr };
-            }
-          }
-        }
-        await delay(800);
-      }
-
-      // --- Facebook ---
-      if (!existingSet.has(`${contact.id}_facebook`)) {
-        const q = `"${contact.name}" "${partner.company_name}" site:facebook.com`;
-        const fbRes = (await googleSearch(q, 5)).filter((r) => r.url?.includes("facebook.com/") && !r.url?.includes("/groups/"));
-        if (fbRes.length > 0 && apiKey) {
-          const answer = await aiCall(
-            `Find the PERSONAL Facebook profile of "${contact.name}" at "${partner.company_name}" in ${location}.
-Results:\n${fbRes.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
-If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-            apiKey
-          );
-          if (answer && answer !== "NONE" && answer.includes("facebook.com")) {
-            const m = answer.match(/(https?:\/\/[^\s"<>]+facebook\.com[^\s"<>]*)/);
-            if (m) {
-              const { error } = await supabase.from("partner_social_links").insert({
-                partner_id: partnerId, contact_id: contact.id, platform: "facebook", url: m[1].replace(/\/$/, ""),
-              });
-              if (!error) socialLinksFound++;
-            }
-          }
-        }
-        await delay(800);
-      }
-
-      // --- Instagram ---
-      if (!existingSet.has(`${contact.id}_instagram`)) {
-        const q = `"${contact.name}" "${partner.company_name}" site:instagram.com`;
-        const igRes = (await googleSearch(q, 5)).filter((r) => r.url?.includes("instagram.com/"));
-        if (igRes.length > 0 && apiKey) {
-          const answer = await aiCall(
-            `Find the Instagram profile of "${contact.name}" at "${partner.company_name}" in ${location}.
-Results:\n${igRes.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
-If one matches, respond with ONLY the URL. If none, respond "NONE".`,
-            apiKey
-          );
-          if (answer && answer !== "NONE" && answer.includes("instagram.com")) {
-            const m = answer.match(/(https?:\/\/[^\s"<>]+instagram\.com[^\s"<>]*)/);
-            if (m) {
-              const { error } = await supabase.from("partner_social_links").insert({
-                partner_id: partnerId, contact_id: contact.id, platform: "instagram", url: m[1].replace(/\/$/, ""),
-              });
-              if (!error) socialLinksFound++;
-            }
-          }
-        }
-        await delay(800);
-      }
-
-      // --- WhatsApp auto-link ---
-      const waNumber = contact.mobile || contact.direct_phone;
-      if (waNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
-        const cleaned = toWhatsAppNumber(waNumber);
-        if (cleaned.length >= 8) {
-          const { error } = await supabase.from("partner_social_links").insert({
-            partner_id: partnerId, contact_id: contact.id, platform: "whatsapp", url: `https://wa.me/${cleaned}`,
-          });
-          if (!error) socialLinksFound++;
-        }
-      }
-    }
-
-    // ═══ COMPANY LINKEDIN ═══
-    if (!existingSet.has("company_linkedin")) {
-      const q = `"${partner.company_name}" site:linkedin.com/company`;
-      const res = await googleSearch(q, 3);
-      const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
-      if (match) {
-        const { error } = await supabase.from("partner_social_links").insert({
-          partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, ""),
-        });
-        if (!error) socialLinksFound++;
-      }
-      await delay(500);
-    }
-
-    // ═══ WEBSITE + LOGO via Partner Connect scrape ═══
-    let websiteQualityScore = 0;
-    if (partner.website) {
-      const websiteUrl = partner.website.startsWith("http") ? partner.website : `https://${partner.website}`;
-      const scraped = await scrapeUrl(websiteUrl);
-      if (scraped) {
-        // Try Google favicon
-        let logoUrl: string | null = null;
-        try {
-          const domain = new URL(websiteUrl).hostname;
-          logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        } catch {}
-
-        if (logoUrl) {
-          const { error } = await supabase.from("partners").update({ logo_url: logoUrl }).eq("id", partnerId);
-          if (!error) logoFound = true;
-        }
-
-        // Website quality via AI
-        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
-          const qa = await aiCall(
-            `Rate this logistics company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
-            apiKey
-          );
-          if (qa) {
-            const parsed = parseInt(qa.replace(/[^1-5]/g, ""));
-            if (parsed >= 1 && parsed <= 5) websiteQualityScore = parsed;
-          }
-        }
-      }
-    } else {
-      const ce = contacts?.find((c) => c.email && !/(gmail|yahoo|hotmail|outlook)/i.test(c.email));
-      if (ce?.email) {
-        const domain = ce.email.split("@")[1];
-        if (domain) await supabase.from("partners").update({ website: `https://${domain}` }).eq("id", partnerId);
-      }
-    }
-
-    // ═══ SAVE ENRICHMENT ═══
+    // Save enrichment
     const existing = (partner.enrichment_data as any) || {};
     const updated = {
       ...existing,
@@ -324,55 +319,191 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
     };
     await supabase.from("partners").update({ enrichment_data: updated }).eq("id", partnerId);
 
-    // ═══ RATING ═══
-    const { data: services = [] } = await supabase
-      .from("partner_services")
-      .select("service_category")
-      .eq("partner_id", partnerId);
-
-    const websiteScore = websiteQualityScore || (partner.website ? 2 : 1);
-    const svcSet = new Set(services.map((s: any) => s.service_category));
-    let serviceMix = 1;
-    if (svcSet.has("air_freight")) serviceMix += 1.5;
-    if (svcSet.has("road_freight")) serviceMix += 1;
-    if (svcSet.has("warehousing")) serviceMix += 1;
-    serviceMix = Math.min(5, Math.max(1, serviceMix));
-
-    let networkScore = 1;
-    if (networks.length >= 5) networkScore = 5;
-    else if (networks.length >= 3) networkScore = 3;
-    else if (networks.length >= 1) networkScore = 1.5;
-
-    let seniorityScore = 1;
-    if (partner.member_since) {
-      const years = (Date.now() - new Date(partner.member_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-      if (years >= 20) seniorityScore = 5;
-      else if (years >= 10) seniorityScore = 3;
-      else if (years >= 5) seniorityScore = 2;
-    }
-
-    const branchCities = Array.isArray(partner.branch_cities) ? partner.branch_cities : [];
-    let internationalScore = 1;
-    if (branchCities.length >= 10) internationalScore = 5;
-    else if (branchCities.length >= 3) internationalScore = 3;
-    else if (branchCities.length >= 1) internationalScore = 2;
-
-    const rawRating = websiteScore * 0.2 + serviceMix * 0.2 + networkScore * 0.15 + seniorityScore * 0.15 + internationalScore * 0.1 + 1 * 0.1 + 1 * 0.1;
-    const rating = Math.min(5, Math.max(1, Math.round(rawRating * 2) / 2));
-
+    // Rating
+    const rating = await calculateRating(partnerId, websiteQualityScore, partner.website, partner.member_since, partner.branch_cities);
     await supabase.from("partners").update({ rating }).eq("id", partnerId);
+
+    const socialLinksFound = contactLinks + companyLinks;
 
     return {
       success: true,
       socialLinksFound,
       logoFound,
       contactProfilesFound: Object.keys(contactProfiles).length,
-      companyProfileFound: false,
+      companyProfileFound: companyLinks > 0,
       rating,
       rateLimited: false,
       companyName: partner.company_name,
     };
+  }, [fs, googleSearch, scrapeUrl, searchLinkedInForContacts, searchCompanyLinkedIn, scrapeWebsite, calculateRating]);
+
+  // ═══════════════════════════════════════════════════════
+  // searchContact — Deep Search for an imported_contacts record
+  // ═══════════════════════════════════════════════════════
+  const searchContact = useCallback(async (contactId: string): Promise<{
+    success: boolean;
+    socialLinksFound: number;
+    logoFound: boolean;
+    contactProfilesFound: number;
+    companyProfileFound: boolean;
+    rating: number;
+    rateLimited: boolean;
+    companyName: string;
+    error?: string;
+  }> => {
+    const apiKey = import.meta.env.VITE_LOVABLE_API_KEY || null;
+
+    const { data: contact, error: cErr } = await supabase
+      .from("imported_contacts")
+      .select("id, name, company_name, email, phone, mobile, country, city, position, enrichment_data")
+      .eq("id", contactId)
+      .single();
+
+    if (cErr || !contact) return { success: false, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: "?", error: "Contact not found" };
+
+    const companyName = contact.company_name || "Unknown";
+    const location = `${contact.city || ""} ${contact.country || ""}`.trim();
+
+    // Check if this contact is linked to a partner
+    let partnerId: string | null = null;
+    if (contact.company_name) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("id")
+        .ilike("company_name", `%${contact.company_name}%`)
+        .maybeSingle();
+      partnerId = partner?.id || null;
+    }
+
+    let socialLinksFound = 0;
+    const contactProfiles: Record<string, any> = {};
+
+    // --- LinkedIn Personal ---
+    if (contact.name && contact.name.length >= 3 && apiKey) {
+      const query = `"${contact.name}" "${companyName}" site:linkedin.com/in`;
+      let results = (await googleSearch(query, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+      if (results.length === 0) {
+        const retry = `"${getLastName(contact.name)}" "${companyName}" logistics site:linkedin.com/in`;
+        results = (await googleSearch(retry, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+        await delay(500);
+      }
+      if (results.length > 0) {
+        const answer = await aiCall(
+          `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.position ? ` Title: "${contact.position}"` : ""}
+Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
+If one matches, respond with ONLY the URL. If none, respond "NONE".`,
+          apiKey
+        );
+        if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
+          const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
+          if (m) {
+            socialLinksFound++;
+            const sr = extractSeniority(results[0]?.title);
+            if (sr) contactProfiles[contactId] = { name: contact.name, title: contact.position, ...sr };
+
+            // Save to partner_social_links if linked partner exists
+            if (partnerId) {
+              await supabase.from("partner_social_links").insert({
+                partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, ""),
+              });
+            }
+          }
+        }
+      }
+      await delay(800);
+    }
+
+    // --- WhatsApp auto-link ---
+    const waNumber = contact.mobile || contact.phone;
+    if (waNumber) {
+      const cleaned = toWhatsAppNumber(waNumber);
+      if (cleaned.length >= 8) {
+        socialLinksFound++;
+        if (partnerId) {
+          await supabase.from("partner_social_links").insert({
+            partner_id: partnerId, contact_id: null, platform: "whatsapp", url: `https://wa.me/${cleaned}`,
+          });
+        }
+      }
+    }
+
+    // --- Company LinkedIn ---
+    let companyProfileFound = false;
+    if (companyName !== "Unknown") {
+      const q = `"${companyName}" site:linkedin.com/company`;
+      const res = await googleSearch(q, 3);
+      const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
+      if (match) {
+        companyProfileFound = true;
+        socialLinksFound++;
+        if (partnerId) {
+          await supabase.from("partner_social_links").insert({
+            partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, ""),
+          });
+        }
+      }
+      await delay(500);
+    }
+
+    // --- Website from email domain ---
+    let websiteUrl: string | null = null;
+    if (contact.email && !/(gmail|yahoo|hotmail|outlook|libero|alice|tin\.it)/i.test(contact.email)) {
+      const domain = contact.email.split("@")[1];
+      if (domain) websiteUrl = `https://${domain}`;
+    }
+
+    let logoFound = false;
+    let websiteQualityScore = 0;
+    if (websiteUrl) {
+      const scraped = await scrapeUrl(websiteUrl);
+      if (scraped) {
+        try {
+          const domain = new URL(websiteUrl).hostname;
+          const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+          if (logoUrl) logoFound = true;
+        } catch {}
+        if (scraped.markdown && scraped.markdown.length > 100 && apiKey) {
+          const qa = await aiCall(
+            `Rate this company website 1-5 for: design, content, professionalism, business quality. Respond with ONLY a number.\n\n${scraped.markdown.slice(0, 2000)}`,
+            apiKey
+          );
+          if (qa) {
+            const parsed = parseInt(qa.replace(/[^1-5]/g, ""));
+            if (parsed >= 1 && parsed <= 5) websiteQualityScore = parsed;
+          }
+        }
+      }
+    }
+
+    // --- Save enrichment data ---
+    const existing = (contact.enrichment_data as any) || {};
+    const linkedinUrl = Object.values(contactProfiles).length > 0 ? undefined : undefined; // stored via social_links
+    const updated = {
+      ...existing,
+      ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
+      ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
+      ...(websiteUrl ? { discovered_website: websiteUrl } : {}),
+      ...(companyProfileFound ? { company_linkedin_found: true } : {}),
+      deep_search_at: new Date().toISOString(),
+      deep_search_engine: "partner-connect-v3.3",
+    };
+
+    await supabase.from("imported_contacts").update({
+      enrichment_data: updated,
+      deep_search_at: new Date().toISOString(),
+    }).eq("id", contactId);
+
+    return {
+      success: true,
+      socialLinksFound,
+      logoFound,
+      contactProfilesFound: Object.keys(contactProfiles).length,
+      companyProfileFound,
+      rating: websiteQualityScore || 0,
+      rateLimited: false,
+      companyName,
+    };
   }, [fs, googleSearch, scrapeUrl]);
 
-  return { searchPartner, isAvailable: fs.isAvailable };
+  return { searchPartner, searchContact, isAvailable: fs.isAvailable };
 }
