@@ -535,9 +535,16 @@ async function saveEnrichmentToPartner(companyName: string, enrichment: Record<s
       }
 
       // Connection status
+      if (enrichment.connection_status) {
+        update.linkedin_connection_status = enrichment.connection_status;
+      }
       if (enrichment.connection_sent !== undefined) {
         update.linkedin_connection_sent = enrichment.connection_sent;
         update.linkedin_connection_at = enrichment.processed_at;
+      }
+      if (enrichment.connection_skipped) {
+        update.linkedin_connection_skipped = true;
+        update.linkedin_connection_skip_reason = enrichment.connection_skip_reason;
       }
 
       await supabase.from("partners").update({
