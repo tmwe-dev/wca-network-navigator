@@ -24,6 +24,8 @@ interface ConnectionsSettingsProps {
 
 export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSettingsProps) {
   const { isSessionActive, ensureSession } = useWcaSession();
+  const liExt = useLinkedInExtensionBridge();
+  const waExt = useWhatsAppExtensionBridge();
   const isWcaOk = isSessionActive === true;
 
   const [verifying, setVerifying] = useState(false);
