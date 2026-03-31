@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsApp Direct Send",
+  "version": "1.0",
+  "description": "Invio diretto messaggi WhatsApp dal Cockpit.",
+  "permissions": ["tabs", "activeTab", "scripting"],
+  "host_permissions": ["https://web.whatsapp.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.lovable.app/*",
+        "https://*.lovableproject.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

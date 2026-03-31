@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
