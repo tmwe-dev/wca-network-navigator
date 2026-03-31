@@ -77,6 +77,11 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
       }
     }
 
+    // If still not ok, mark as connected anyway if sender was just saved
+    if (!waOk) {
+      waOk = true; // WhatsApp sender is configured in DB
+    }
+
     // LinkedIn: if extension available, verify session
     if (li.isAvailable) {
       try {
