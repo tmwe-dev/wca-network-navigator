@@ -10,6 +10,7 @@ import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
+import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
