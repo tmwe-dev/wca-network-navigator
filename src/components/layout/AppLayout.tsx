@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { Search, Menu, Bot, Send, Calendar, Layers, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight } from "lucide-react";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
+import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -137,6 +138,7 @@ export function AppLayout() {
                 )}
 
                 <ActiveProcessIndicator />
+                <ConnectionStatusBar onAiClick={() => setAiOpen(true)} />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
