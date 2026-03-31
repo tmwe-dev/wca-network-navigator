@@ -363,6 +363,14 @@ ${contact_email ? `- Email: ${contact_email}` : ""}
 REGOLA: ${recipientName ? `Rivolgiti a ${recipientName}, MAI all'azienda nel saluto.` : `Usa saluto generico. MAI usare nomi di azienda nel saluto.`}
 `;
 
+    // Recipient intelligence block for prompt
+    const intelligenceBlock = intelligence.enrichment_snippet
+      ? `\nINTELLIGENCE DESTINATARIO (dati verificati dal database — USA QUESTI, non inventare):
+${intelligence.enrichment_snippet}
+`
+      : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
+`;
+
     const systemPrompt = `Sei un esperto copywriter B2B nel settore logistica e freight forwarding internazionale.
 
 CANALE: ${ch.toUpperCase()}
@@ -370,16 +378,17 @@ ${channelInstructions}
 
 REGOLE CRITICHE:
 1. Scrivi INTERAMENTE in ${effectiveLanguage} (paese destinatario: ${country_code} → ${detected.languageLabel})
-2. Personalizza il messaggio sul destinatario
+2. Personalizza il messaggio sul destinatario SOLO con dati dalla sezione INTELLIGENCE DESTINATARIO
 3. ${ch === "email" ? "NON includere firma — viene aggiunta automaticamente" : "Includi il nome del mittente alla fine"}
-4. Non inventare informazioni
-5. Usa i network condivisi come punto di connessione se esistono
+4. CRITICO: Non inventare MAI informazioni, eventi, presentazioni o fatti non presenti nei dati forniti
+5. Usa i network condivisi come punto di connessione se esistono nei dati
 6. CRITICO: Se il nome del destinatario sembra un ruolo/titolo, usa "Gentile responsabile" o equivalente
-7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi`;
+7. Usa SEMPRE l'alias/nome breve, mai nome e cognome completi
+8. Se non hai dati specifici sul destinatario, scrivi un messaggio generico ma professionale`;
 
     const userPrompt = `${senderContext}
 ${recipientContext}
-
+${intelligenceBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
