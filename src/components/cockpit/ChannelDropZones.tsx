@@ -43,7 +43,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               }
             }}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-default",
+              "relative flex flex-row items-center gap-2 p-3 rounded-xl border-2 border-dashed transition-all duration-300 cursor-default",
               isDragging ? "border-primary/40 bg-gradient-to-br " + ch.gradient : "border-border/60 bg-card/60",
               isHovered && "scale-105 border-primary shadow-xl " + ch.glowColor,
               !isDragging && "hover:border-border/50 hover:bg-card/40"
