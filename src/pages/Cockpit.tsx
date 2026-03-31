@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useAutoConnect } from "@/hooks/useAutoConnect";
 import type { OutreachDebug } from "@/hooks/useOutreachGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar, type CockpitAIAction, type SourceTab } from "@/components/cockpit/TopCommandBar";
@@ -48,6 +49,9 @@ export type { CockpitContact };
 
 const Cockpit = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+
+  // Auto-connect channels on mount
+  useAutoConnect();
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [activeFilters, setActiveFilters] = useState<CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);

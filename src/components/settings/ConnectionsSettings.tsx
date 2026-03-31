@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Save, Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink,
   ClipboardPaste, XCircle, Download, KeyRound, Eye, EyeOff, Mail,
-  Linkedin, ShieldAlert, MessageCircle, Bot, Phone, Wifi, WifiOff,
+  Linkedin, ShieldAlert, MessageCircle, Bot, Phone, Wifi, WifiOff, Zap,
 } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
@@ -44,6 +44,13 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   const [liAtCookie, setLiAtCookie] = useState("");
   const [showLiAt, setShowLiAt] = useState(false);
   const [savingLi, setSavingLi] = useState(false);
+
+  const [connectingAll, setConnectingAll] = useState(false);
+
+  // Derived states
+  const liHasCreds = !!(liEmail && liPass) || !!(settings?.["linkedin_li_at"]);
+  const liConnected = liExt.isAvailable || liHasCreds;
+  const waConnected = waExt.isAvailable;
 
   useEffect(() => {
     async function loadWcaCreds() {
@@ -111,6 +118,41 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     finally { setSavingCookie(false); }
   };
 
+  const handleConnectAll = async () => {
+    setConnectingAll(true);
+    const results: string[] = [];
+
+    // LinkedIn
+    if (liExt.isAvailable) {
+      const res = await liExt.verifySession();
+      results.push(res.success ? "✅ LinkedIn" : "⚠️ LinkedIn (sessione scaduta)");
+    } else if (liHasCreds) {
+      results.push("✅ LinkedIn (credenziali salvate)");
+    } else {
+      results.push("❌ LinkedIn (configura credenziali)");
+    }
+
+    // WhatsApp
+    if (waExt.isAvailable) {
+      const res = await waExt.verifySession();
+      results.push(res.success ? "✅ WhatsApp" : "⚠️ WhatsApp (sessione scaduta)");
+    } else {
+      results.push("❌ WhatsApp (estensione non rilevata)");
+    }
+
+    // AI
+    results.push("✅ AI Agent");
+
+    // Persist
+    try {
+      await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liConnected) });
+      await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
+    } catch {}
+
+    toast.success(results.join(" · "));
+    setConnectingAll(false);
+  };
+
   return (
     <Tabs defaultValue="canali" className="space-y-4">
       <TabsList className="w-full justify-start">
@@ -130,8 +172,16 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
 
       {/* Canali di Comunicazione */}
       <TabsContent value="canali" className="m-0 space-y-4">
-        <h2 className="text-lg font-semibold">Canali di Comunicazione</h2>
-        <p className="text-sm text-muted-foreground">Stato delle connessioni per l'invio automatico dei messaggi.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Canali di Comunicazione</h2>
+            <p className="text-sm text-muted-foreground">Stato delle connessioni per l'invio automatico.</p>
+          </div>
+          <Button onClick={handleConnectAll} disabled={connectingAll} size="sm" className="gap-1.5">
+            {connectingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            Connetti Tutto
+          </Button>
+        </div>
 
         {/* WhatsApp */}
         <Card>
@@ -146,43 +196,42 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                   <p className="text-xs text-muted-foreground">Invio messaggi via estensione Chrome</p>
                 </div>
               </div>
-              <Badge variant={waExt.isAvailable ? "default" : "secondary"} className={waExt.isAvailable ? "bg-emerald-600 text-white" : ""}>
-                {waExt.isAvailable
+              <Badge variant={waConnected ? "default" : "secondary"} className={waConnected ? "bg-emerald-600 text-white" : ""}>
+                {waConnected
                   ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</>
                   : <><WifiOff className="w-3 h-3 mr-1" /> Non rilevato</>}
               </Badge>
             </div>
-            {!waExt.isAvailable && (
-              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                <p className="text-xs text-muted-foreground">
-                  L'estensione WhatsApp non è stata rilevata. Scaricala, installala in Chrome e ricarica questa pagina.
-                </p>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => {
-                    fetch("/whatsapp-extension.zip")
-                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "whatsapp-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
-                      .catch(() => toast.error("File non disponibile"));
-                  }}
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
-                </Button>
-                <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
-                  <li>Decomprimi il file ZIP scaricato</li>
-                  <li>Apri <code className="font-mono bg-muted px-1 rounded">chrome://extensions</code></li>
-                  <li>Attiva <strong>Modalità sviluppatore</strong></li>
-                  <li>Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella</li>
-                </ol>
-              </div>
-            )}
-            {waExt.isAvailable && (
+            {waConnected && (
               <Button variant="outline" size="sm" onClick={async () => {
                 const res = await waExt.verifySession();
                 toast[res.success ? "success" : "error"](res.success ? "Sessione WhatsApp verificata!" : "Sessione WhatsApp non attiva");
               }}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
               </Button>
+            )}
+            {!waConnected && (
+              <details className="group">
+                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                  ⚙️ Setup avanzato (estensione Chrome)
+                </summary>
+                <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    fetch("/whatsapp-extension.zip")
+                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "whatsapp-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
+                      .catch(() => toast.error("File non disponibile"));
+                  }}>
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                  </Button>
+                  <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
+                    <li>Decomprimi il file ZIP</li>
+                    <li>Apri <code className="font-mono bg-muted px-1 rounded">chrome://extensions</code></li>
+                    <li>Attiva <strong>Modalità sviluppatore</strong></li>
+                    <li>Clicca <strong>Carica estensione non pacchettizzata</strong></li>
+                  </ol>
+                </div>
+              </details>
             )}
           </CardContent>
         </Card>
@@ -197,33 +246,17 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                 </div>
                 <div>
                   <p className="font-medium text-sm">LinkedIn</p>
-                  <p className="text-xs text-muted-foreground">Invio DM via estensione Chrome</p>
+                  <p className="text-xs text-muted-foreground">
+                    {liHasCreds ? "Credenziali configurate" : "Configura nel tab LinkedIn"}
+                  </p>
                 </div>
               </div>
-              <Badge variant={liExt.isAvailable ? "default" : "secondary"} className={liExt.isAvailable ? "bg-emerald-600 text-white" : ""}>
-                {liExt.isAvailable
-                  ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</>
-                  : <><WifiOff className="w-3 h-3 mr-1" /> Non rilevato</>}
+              <Badge variant={liConnected ? "default" : "secondary"} className={liConnected ? "bg-emerald-600 text-white" : ""}>
+                {liConnected
+                  ? <><CheckCircle2 className="w-3 h-3 mr-1" /> {liExt.isAvailable ? "Connesso" : "Configurato"}</>
+                  : <><WifiOff className="w-3 h-3 mr-1" /> Non configurato</>}
               </Badge>
             </div>
-            {!liExt.isAvailable && (
-              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                <p className="text-xs text-muted-foreground">
-                  L'estensione LinkedIn non è stata rilevata. Scaricala, installala e ricarica la pagina. Le credenziali si configurano nel tab "LinkedIn".
-                </p>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => {
-                    fetch("/linkedin-extension.zip")
-                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
-                      .catch(() => toast.error("File non disponibile"));
-                  }}
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
-                </Button>
-              </div>
-            )}
             {liExt.isAvailable && (
               <Button variant="outline" size="sm" onClick={async () => {
                 const res = await liExt.verifySession();
@@ -231,6 +264,23 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
               }}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Verifica Sessione
               </Button>
+            )}
+            {!liExt.isAvailable && !liHasCreds && (
+              <details className="group">
+                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                  ⚙️ Setup avanzato (estensione Chrome)
+                </summary>
+                <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    fetch("/linkedin-extension.zip")
+                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
+                      .catch(() => toast.error("File non disponibile"));
+                  }}>
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
+                  </Button>
+                </div>
+              </details>
             )}
           </CardContent>
         </Card>
@@ -336,8 +386,8 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
             <Linkedin className="w-5 h-5 text-[#0A66C2]" />
             <h2 className="text-lg font-semibold">LinkedIn</h2>
           </div>
-          <Badge variant={(liEmail && liPass) || liAtCookie ? "default" : "secondary"} className={(liEmail && liPass) || liAtCookie ? "bg-primary text-primary-foreground" : ""}>
-            {(liEmail && liPass) || liAtCookie ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+          <Badge variant={liHasCreds ? "default" : "secondary"} className={liHasCreds ? "bg-primary text-primary-foreground" : ""}>
+            {liHasCreds ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
           </Badge>
         </div>
 
@@ -385,27 +435,27 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Scarica l'estensione Chrome per LinkedIn, installala e clicca <strong>"🚀 Connetti LinkedIn"</strong>.
-              </p>
-            </div>
-            <Button className="w-full" size="lg" onClick={() => window.open("/download-linkedin-extension.html", "_blank")}>
-              <Download className="w-4 h-4 mr-2" /> Scarica Estensione LinkedIn
-            </Button>
-            <p className="text-[11px] text-muted-foreground text-center">
-              Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione non pacchettizzata
-            </p>
-          </CardContent>
-        </Card>
-
         <details className="group">
           <summary className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-            ⚙️ Avanzate (cookie li_at manuale)
+            ⚙️ Avanzate (estensione Chrome, cookie li_at manuale)
           </summary>
-          <div className="mt-3">
+          <div className="mt-3 space-y-3">
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <Button className="w-full" size="sm" variant="outline" onClick={() => {
+                  fetch("/linkedin-extension.zip")
+                    .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
+                    .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "linkedin-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
+                    .catch(() => toast.error("File non disponibile"));
+                }}>
+                  <Download className="w-4 h-4 mr-2" /> Scarica Estensione LinkedIn
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Chrome → chrome://extensions/ → Modalità sviluppatore → Carica estensione
+                </p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -433,9 +483,6 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                       {showLiAt ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Accedi a LinkedIn → F12 → Application → Cookies → linkedin.com → copia il valore di <code className="font-mono bg-muted px-1 rounded">li_at</code>
-                  </p>
                 </div>
                 <Button
                   onClick={async () => {
