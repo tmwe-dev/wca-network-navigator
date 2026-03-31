@@ -84,9 +84,10 @@ export function useCockpitContacts() {
       const pcIds = queue.filter((q: any) => q.source_type === "partner_contact").map((q: any) => q.source_id);
       const bcIds = queue.filter((q: any) => q.source_type === "business_card").map((q: any) => q.source_id);
       const prcIds = queue.filter((q: any) => q.source_type === "prospect_contact").map((q: any) => q.source_id);
+      const icIds = queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id);
 
       // Fetch source data in parallel
-      const [pcData, bcData, prcData] = await Promise.all([
+      const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
           ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id").in("id", pcIds).then(r => r.data || [])
           : Promise.resolve([]),
@@ -95,6 +96,9 @@ export function useCockpitContacts() {
           : Promise.resolve([]),
         prcIds.length > 0
           ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
+          : Promise.resolve([]),
+        icIds.length > 0
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
@@ -117,6 +121,8 @@ export function useCockpitContacts() {
       for (const c of bcData as any[]) bcMap[c.id] = c;
       const prcMap: Record<string, any> = {};
       for (const c of prcData as any[]) prcMap[c.id] = c;
+      const icMap: Record<string, any> = {};
+      for (const c of icData as any[]) icMap[c.id] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");
@@ -128,14 +134,14 @@ export function useCockpitContacts() {
         .eq("due_date", today)
         .limit(100);
 
-      return { queue, pcMap, bcMap, prcMap, partnersMap, scheduledActivities: scheduledActivities || [] };
+      return { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities: scheduledActivities || [] };
     },
     staleTime: 30_000,
   });
 
   const contacts = useMemo<CockpitContact[]>(() => {
     if (!q.data || Array.isArray(q.data)) return [];
-    const { queue, pcMap, bcMap, prcMap, partnersMap, scheduledActivities } = q.data;
+    const { queue, pcMap, bcMap, prcMap, icMap, partnersMap, scheduledActivities } = q.data;
     const result: CockpitContact[] = [];
 
     for (const item of queue) {
@@ -210,6 +216,28 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
         });
+      } else if (st === "contact") {
+        const ic = icMap[sid];
+        if (!ic) continue;
+        result.push({
+          id: `ic-${ic.id}`,
+          queueId: item.id,
+          name: ic.name || "—",
+          company: ic.company_name || "—",
+          role: ic.position || "",
+          country: ic.country || "",
+          language: inferLanguage(ic.country),
+          lastContact: formatRelativeDate(ic.created_at),
+          priority: computePriority(ic.email, ic.phone, ic.mobile),
+          channels: inferChannels(ic.email, ic.phone, ic.mobile),
+          email: ic.email || "",
+          phone: ic.mobile || ic.phone || "",
+          origin: "manual" as ContactOrigin,
+          originDetail: ic.origin || "Manuale",
+          sourceType: st,
+          sourceId: sid,
+          partnerId: item.partner_id,
+        });
       }
     }
 
@@ -270,6 +298,7 @@ export function useDeleteCockpitContacts() {
         if (pid.startsWith("pc-")) sourceEntries.push({ type: "partner_contact", id: pid.slice(3) });
         else if (pid.startsWith("bc-")) sourceEntries.push({ type: "business_card", id: pid.slice(3) });
         else if (pid.startsWith("prc-")) sourceEntries.push({ type: "prospect_contact", id: pid.slice(4) });
+        else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
       }
 
       // Delete from cockpit_queue by source matches

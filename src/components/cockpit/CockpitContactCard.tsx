@@ -71,6 +71,13 @@ const originConfig: Record<ContactOrigin, { label: string; bg: string; text: str
     border: "border-amber-500/30",
     dot: "bg-amber-500",
   },
+  manual: {
+    label: "Manuale",
+    bg: "bg-emerald-500/15",
+    text: "text-emerald-500",
+    border: "border-emerald-500/30",
+    dot: "bg-emerald-500",
+  },
 };
 
 // Left accent bar color per origin
@@ -79,6 +86,7 @@ const originAccent: Record<ContactOrigin, string> = {
   report_aziende: "from-chart-4/60 to-chart-4/10",
   import: "from-chart-3/60 to-chart-3/10",
   bca: "from-amber-500/60 to-amber-500/10",
+  manual: "from-emerald-500/60 to-emerald-500/10",
 };
 
 export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
