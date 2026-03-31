@@ -93,8 +93,28 @@ export function AppLayout() {
         <GlobalFiltersProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden" onClick={() => sidebarOpen && setSidebarOpen(false)}>
         {/* Edge hover zones */}
-        <div className="fixed left-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("left")} onMouseLeave={() => handleEdgeLeave("left")} />
-        <div className="fixed right-0 top-0 w-[5px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("right")} onMouseLeave={() => handleEdgeLeave("right")} />
+        <div className="fixed left-0 top-0 w-[12px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("left")} onMouseLeave={() => handleEdgeLeave("left")} />
+        <div className="fixed right-0 top-0 w-[12px] h-full z-[60] cursor-pointer" onMouseEnter={() => handleEdgeEnter("right")} onMouseLeave={() => handleEdgeLeave("right")} />
+
+        {/* Visual tab triggers */}
+        <button
+          onClick={() => setFiltersOpen(true)}
+          onMouseEnter={() => handleEdgeEnter("left")}
+          onMouseLeave={() => handleEdgeLeave("left")}
+          className="fixed left-0 top-14 z-[60] flex items-center justify-center w-6 h-10 rounded-r-md bg-muted/40 backdrop-blur-sm border border-l-0 border-border/30 hover:bg-muted/60 transition-colors cursor-pointer"
+          aria-label="Apri filtri"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => setMissionOpen(true)}
+          onMouseEnter={() => handleEdgeEnter("right")}
+          onMouseLeave={() => handleEdgeLeave("right")}
+          className="fixed right-0 top-14 z-[60] flex items-center justify-center w-6 h-10 rounded-l-md bg-muted/40 backdrop-blur-sm border border-r-0 border-border/30 hover:bg-muted/60 transition-colors cursor-pointer"
+          aria-label="Apri Mission"
+        >
+          <Target className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
         </div>
