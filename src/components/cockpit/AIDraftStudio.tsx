@@ -260,6 +260,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
             exit={{ opacity: 0, y: 10 }}
             className="px-4 py-3 border-t border-border/60 flex items-center gap-2"
           >
+            {/* Channel-specific primary action */}
             {draft.channel === "email" && draft.contactEmail ? (
               <button
                 onClick={handleSend}
@@ -267,7 +268,23 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                {sending ? "Invio..." : "Invia"}
+                {sending ? "Invio..." : "Invia Email"}
+              </button>
+            ) : draft.channel === "whatsapp" && draft.contactPhone ? (
+              <button
+                onClick={handleOpenWhatsApp}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Apri WhatsApp
+              </button>
+            ) : draft.channel === "linkedin" ? (
+              <button
+                onClick={() => setLiDmOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <Linkedin className="w-3.5 h-3.5" />
+                Invia su LinkedIn
               </button>
             ) : (
               <button
@@ -287,6 +304,19 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* LinkedIn DM Dialog */}
+      {liDmOpen && (
+        <Suspense fallback={null}>
+          <LinkedInDMDialog
+            open={liDmOpen}
+            onOpenChange={setLiDmOpen}
+            profileUrl=""
+            contactName={draft.contactName}
+            companyName={draft.companyName || ""}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
