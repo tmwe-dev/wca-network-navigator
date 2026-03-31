@@ -4,11 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Send, ChevronRight, Trophy } from "lucide-react";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
-import { getYearsMember } from "@/lib/countries";
+import { getYearsMember, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-import { getRealLogoUrl } from "@/lib/partnerUtils";
+import { getEffectiveLogoUrl, getEnrichmentSnippet, hasLinkedIn, hasWhatsApp, asEnrichment } from "@/lib/partnerUtils";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
-import { StatusDot } from "./partner-list/SubComponents";
+import { EnrichedStatusIcons } from "./partner-list/SubComponents";
 
 interface Props {
   partners: any[];
@@ -27,7 +27,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
   const virtualizer = useVirtualizer({
     count: partners.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
+    estimateSize: () => 62,
     overscan: 15,
   });
 
@@ -56,6 +56,11 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
           const hasPhone = !!partner.phone || contacts.some((c: any) => c.direct_phone || c.mobile);
           const hasDeep = !!(partner.enrichment_data as any)?.deep_search_at;
           const years = getYearsMember(partner.member_since);
+          const logoUrl = getEffectiveLogoUrl(partner);
+          const flag = getCountryFlag(partner.country_code);
+          const snippet = getEnrichmentSnippet(partner);
+          const hasLi = hasLinkedIn(partner);
+          const hasWa = hasWhatsApp(partner);
 
           return (
             <div
@@ -85,11 +90,12 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                     className="shrink-0"
                   />
                 )}
-                {getRealLogoUrl(partner.logo_url) ? (
-                  <img src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-7 h-7 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                {/* Logo / Flag fallback */}
+                {logoUrl ? (
+                  <img src={logoUrl} alt="" className="w-9 h-9 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                 ) : (
-                  <div className={cn("w-7 h-7 rounded-md shrink-0 flex items-center justify-center text-[10px] font-bold", isDark ? "bg-white/[0.06] text-slate-500" : "bg-slate-100 text-slate-400")}>
-                    {partner.company_name?.charAt(0)}
+                  <div className={cn("w-9 h-9 rounded-md shrink-0 flex items-center justify-center text-base leading-none", isDark ? "bg-white/[0.06]" : "bg-slate-100")}>
+                    {flag !== "🌍" ? flag : <span className={cn("text-[11px] font-bold", isDark ? "text-slate-500" : "text-slate-400")}>{partner.company_name?.charAt(0)}</span>}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -106,19 +112,26 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-sm leading-none shrink-0">{flag}</span>
                     <span className={cn("text-[11px] truncate", isDark ? "text-slate-400" : "text-slate-500")}>{partner.city}</span>
                     {partner.rating > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
                     {primaryContact && (
                       <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {primaryContact.name}</span>
                     )}
                   </div>
+                  {snippet && (
+                    <p className={cn("text-[9px] truncate mt-0.5 italic", isDark ? "text-slate-500" : "text-slate-400")}>{snippet}</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <StatusDot ok={hasProfile} label="Profilo" isDark={isDark} />
-                  <StatusDot ok={hasEmail} label="Email" isDark={isDark} />
-                  <StatusDot ok={hasPhone} label="Telefono" isDark={isDark} />
-                  <StatusDot ok={hasDeep} label="Deep Search" isDark={isDark} />
-                </div>
+                <EnrichedStatusIcons
+                  hasProfile={hasProfile}
+                  hasEmail={hasEmail}
+                  hasPhone={hasPhone}
+                  hasDeep={hasDeep}
+                  hasLi={hasLi}
+                  hasWa={hasWa}
+                  isDark={isDark}
+                />
                 <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {primaryContact?.email && (
                     <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: primaryContact.email, name: primaryContact.name, company: partner.company_name, partnerId: partner.id }); }}
