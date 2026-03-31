@@ -56,6 +56,26 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
   }, [fsExt.isAvailable]);
 
+  const downloadFireScrapeExtension = useCallback(() => {
+    fetch("/firescrape-extension.zip")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "firescrape-extension.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast({
+          title: "🔥 FireScrape scaricato",
+          description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
+        });
+      })
+      .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare FireScrape" }));
+  }, []);
+
   const activateAll = useCallback(async () => {
     setConnecting(true);
     let liOk = li.isAvailable;
