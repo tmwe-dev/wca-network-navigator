@@ -475,6 +475,20 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                     </span>
                   </div>
                 </div>
+
+                {/* Scraped LinkedIn Profile Card */}
+                {draft.linkedinProfile && (
+                  <div className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(210,80%,55%)] uppercase tracking-wider">
+                      <Linkedin className="w-3 h-3" />
+                      Profilo LinkedIn (Scraping Live)
+                    </div>
+                    {draft.linkedinProfile.name && <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>}
+                    {draft.linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>}
+                    {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground/80 line-clamp-3">{draft.linkedinProfile.about}</div>}
+                    {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground/60">📍 {draft.linkedinProfile.location}</div>}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
