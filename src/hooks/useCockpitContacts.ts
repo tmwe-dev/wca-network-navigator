@@ -298,6 +298,7 @@ export function useDeleteCockpitContacts() {
         if (pid.startsWith("pc-")) sourceEntries.push({ type: "partner_contact", id: pid.slice(3) });
         else if (pid.startsWith("bc-")) sourceEntries.push({ type: "business_card", id: pid.slice(3) });
         else if (pid.startsWith("prc-")) sourceEntries.push({ type: "prospect_contact", id: pid.slice(4) });
+        else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
       }
 
       // Delete from cockpit_queue by source matches
