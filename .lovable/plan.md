@@ -1,45 +1,68 @@
 
 
-# Business Cards nel Network: Deep Search, Card Migliorate e Raggruppamento per Azienda
+# Deep Search, Bandiere sulle BCA e Sincronizzazione
 
-## Cosa serve
+## 1. Bandiera sul Biglietto da Visita
 
-1. **Deep Search sulle Business Cards** — possibilita' di selezionare BCA e lanciare Deep Search (usa il partner matchato come target, o cerca per company_name se non matchato)
-2. **Card piu' grandi e informative** — mostrare logo del partner matchato, telefono, posizione, data evento, e risultato Deep Search (icona Brain dorata)
-3. **Raggruppamento per azienda** — le BCA con lo stesso `company_name` o `matched_partner_id` devono essere raggruppate visivamente (card azienda espandibile con sotto i contatti)
-4. **Select All** — checkbox "Seleziona tutti" nella toolbar
-5. **Verifica associazioni** — controllare i dati attuali nel DB per capire quante BCA ci sono e come sono matchate
+Attualmente le card BCA non mostrano alcuna bandiera del Paese. Il campo `country` non esiste nella tabella `business_cards`, ma possiamo ricavarlo dal partner matchato (`partners.country_code`) o dedurlo dal prefisso telefonico / indirizzo.
 
-## Dettagli tecnici
+**Soluzione**: nella vista Business Cards di Operations, mostrare la bandiera emoji accanto al nome del contatto. Fonte dati:
+- Se la BCA e' matchata a un partner → usa `partner.country_code` (gia' disponibile dal join)
+- Se non matchata → estrarre il country code dal campo `location` o dal prefisso telefonico (mapping prefisso → paese)
 
-### 1. `src/pages/Operations.tsx` — `BusinessCardsView` riscritta
+**File**: `src/pages/Operations.tsx` — aggiungere bandiera nel template card BCA
 
-- **Raggruppamento**: creare un `Map<string, BusinessCard[]>` raggruppato per `matched_partner_id` (se presente) oppure per `company_name` normalizzato. Ogni gruppo mostra una card-container con il nome azienda, logo (dal partner matchato via join), e sotto la lista dei contatti
-- **Card piu' grandi**: layout a 2-3 colonne invece di 4. Ogni card contatto mostra: nome, posizione, email, telefono, mobile, evento, data, badge matchato, icona Deep Search
-- **Select All**: checkbox nella toolbar che seleziona/deseleziona tutti i filtrati
-- **Deep Search button**: nella toolbar, attivo quando `selectedBca.size > 0`. Per ogni BCA selezionata:
-  - Se ha `matched_partner_id`: lancia Deep Search sul partner
-  - Se non matchata: usa `company_name` per cercare il partner o lancia deep search generica
-- **Logo**: fetch del `logo_url` dal partner matchato. Aggiungere una query che fa join `business_cards.matched_partner_id → partners.id` per ottenere `logo_url` e `company_alias`
+---
 
-### 2. `src/hooks/useBusinessCards.ts` — Arricchire query
+## 2. Dove cerca la Deep Search oggi
 
-- Modificare `useBusinessCards` per fare un select che includa i dati del partner matchato:
-  ```
-  .select("*, partner:matched_partner_id(id, company_name, logo_url, company_alias, enrichment_data)")
-  ```
-- Questo permette di mostrare logo e stato deep search direttamente nella card
+La Deep Search per i partner (`deep-search-partner`) esegue queste ricerche via **Firecrawl** (web scraping + search API):
 
-### 3. Deep Search integration
+| Cosa cerca | Dove | Note |
+|---|---|---|
+| LinkedIn personale | `site:linkedin.com/in` | 3 tentativi: nome+azienda, cognome+azienda, nome+citta'. AI seleziona il profilo corretto |
+| Facebook personale | `site:facebook.com` | Per ogni contatto |
+| Instagram personale | `site:instagram.com` | Per ogni contatto |
+| WhatsApp | Genera link `wa.me/` | Dal numero mobile o telefono diretto |
+| LinkedIn aziendale | `site:linkedin.com/company` | Una sola ricerca per azienda |
+| Profilo professionale | Web generico | 2-3 query per contatto, AI genera un JSON con background, interessi, lingue, seniority |
+| Profilo aziendale | Web generico | Cerca awards, certificazioni extra, news recenti, specialita', anno fondazione, dipendenti stimati |
+| Sito web | Dominio email / ricerca web | Se manca il website, lo deduce dall'email o lo cerca |
+| Logo | Scraping del sito web | Branding Firecrawl → OG image → Google favicon |
+| Qualita' sito web | AI valuta il markdown del sito | Score 1-5 su design, completezza, professionalita' |
+| Rating finale | Calcolo ponderato | 7 criteri: website(20%), servizi(20%), network(15%), anzianita'(15%), sedi(10%), LinkedIn(10%), profilo azienda(10%) |
 
-- Riutilizzare `useDeepSearch` gia' presente in Operations. Aggiungere un handler `handleBcaDeepSearch` che:
-  - Per ogni BCA selezionata con `matched_partner_id`, chiama `deepSearch.run(partnerId)`
-  - Mostra toast con progresso
+Tutto viene salvato in `partners.enrichment_data` e `partner_social_links`.
 
-## File coinvolti
+---
+
+## 3. Sincronizzazione con il server
+
+Attualmente **non esiste** una Edge Function `sync-wca-partners` o simile per sincronizzare dati dal database esterno. La memoria di sistema menziona un sistema SSE per la sincronizzazione cloud-to-cloud, ma la funzione non e' presente nel codice.
+
+Per sincronizzare le business cards con l'origine (la tabella `wca_business_cards` nel DB esterno `dlldkrzoxvjxpgkkttxu`), bisogna:
+- Creare una Edge Function `sync-business-cards` che legga dal DB esterno e faccia upsert nella tabella locale `business_cards`
+- Oppure aggiungere un pulsante "Sincronizza" nella UI che invochi la funzione
+
+**Per i partner**, la sincronizzazione avviene gia' tramite `scrape-wca-partners` che scarica e salva i profili.
+
+---
+
+## Piano di implementazione
+
+### Step 1 — Bandiere nelle BCA card
+- In `src/pages/Operations.tsx`, nel template delle card BCA, aggiungere la bandiera emoji
+- Creare un piccolo helper `countryCodeToFlag(code)` che converte "IT" → 🇮🇹
+- Usare `card.partner?.country_code` se matchato, altrimenti tentare di dedurre dal `location`
+
+### Step 2 — Funzione sync business cards (opzionale, se richiesto)
+- Creare `supabase/functions/sync-business-cards/index.ts` che legge da `dlldkrzoxvjxpgkkttxu` e upsert nella tabella locale
+- Aggiungere pulsante "Sincronizza" nella toolbar BCA di Operations
+
+### File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/pages/Operations.tsx` | Riscrivere `BusinessCardsView`: raggruppamento per azienda, card grandi, Select All, Deep Search button |
-| `src/hooks/useBusinessCards.ts` | Arricchire query con join su partners per logo/alias/enrichment |
+| `src/pages/Operations.tsx` | Aggiungere bandiera nelle card BCA |
+| `supabase/functions/sync-business-cards/index.ts` | **Nuovo** — sincronizzazione BCA dal DB esterno (se confermato) |
 
