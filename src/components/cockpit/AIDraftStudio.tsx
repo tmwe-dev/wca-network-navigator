@@ -102,9 +102,19 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       toast({ title: "Numero di telefono mancante", variant: "destructive" });
       return;
     }
-    const text = encodeURIComponent(draft.body.replace(/<[^>]+>/g, ""));
-    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
-    toast({ title: "WhatsApp aperto" });
+    const plainText = draft.body.replace(/<[^>]+>/g, "");
+    navigator.clipboard.writeText(plainText);
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(plainText)}`;
+    toast({
+      title: "📋 Messaggio copiato!",
+      description: "Clicca per aprire WhatsApp e incolla il messaggio.",
+      action: (
+        <a href={waUrl} target="_blank" rel="noopener noreferrer"
+          className="text-xs font-semibold text-primary underline whitespace-nowrap">
+          Apri WhatsApp ↗
+        </a>
+      ),
+    });
   };
 
   const handleSend = async () => {
