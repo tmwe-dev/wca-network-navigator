@@ -19,7 +19,7 @@ import {
 
 export type ViewMode = "card" | "list";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
-export type ContactOrigin = "wca" | "report_aziende" | "import" | "bca";
+export type ContactOrigin = "wca" | "report_aziende" | "import" | "bca" | "manual";
 
 export interface CockpitFilter {
   id: string;
