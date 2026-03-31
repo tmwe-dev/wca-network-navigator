@@ -1,74 +1,46 @@
 
 
-# Invio Diretto WhatsApp e LinkedIn dal Cockpit
+# Indicatori Connessione LinkedIn, WhatsApp e AI nell'Header
 
-## Problema
-WhatsApp apre `wa.me` che viene bloccato dal browser. LinkedIn apre un dialog che chiede di riscrivere il messaggio. L'utente vuole che entrambi i canali inviino il messaggio automaticamente senza passaggi manuali.
+## Cosa cambia
 
-## Soluzione: Estensione Chrome per WhatsApp (stesso pattern LinkedIn)
+Un gruppo di icone di stato nella header principale (accanto ai bottoni esistenti) che mostra lo stato delle connessioni LinkedIn, WhatsApp e AI Agent. Ogni icona ha un pallino verde/rosso e cliccandola si attiva/disattiva la connessione.
 
-L'architettura gia' in uso per LinkedIn funziona perfettamente: un'estensione Chrome che opera come bridge tra la webapp e il sito destinazione. Applichiamo lo stesso modello a WhatsApp Web.
+## Implementazione
 
-### 1. Nuova estensione Chrome — `public/whatsapp-extension/`
+### 1. Nuovo componente `src/components/layout/ConnectionStatusBar.tsx`
 
-**`manifest.json`**: Manifest V3, permessi per `web.whatsapp.com` cookies, scripting, tabs. Content script iniettato nella webapp.
+Tre icone affiancate (Linkedin, MessageCircle, Bot) con:
+- Pallino verde se `isAvailable`, rosso se no
+- Click su LinkedIn: chiama `verifySession()` dal bridge — se fallisce, mostra toast con link alla pagina download estensione
+- Click su WhatsApp: chiama `verifySession()` dal bridge — stesso pattern
+- Click su AI Agent: toggle visivo (sempre attivo, indica che l'AI engine e' operativo)
+- Tooltip su hover con stato ("LinkedIn connesso" / "WhatsApp non connesso — installa estensione")
+- Usa i due hook esistenti `useLinkedInExtensionBridge` e `useWhatsAppExtensionBridge`
 
-**`background.js`**: Service worker che:
-- Apre `web.whatsapp.com` in tab nascosta
-- Verifica se WhatsApp Web e' connesso (QR gia' scansionato)
-- Cerca il contatto per numero di telefono nella barra di ricerca
-- Inserisce il messaggio nella chat e clicca invio
-- Chiude la tab e restituisce `{ success: true }`
+### 2. Modifica `src/components/layout/AppLayout.tsx`
 
-**`content.js`**: Bridge identico a quello LinkedIn — ascolta `from-webapp-wa`, inoltra al background, risponde con `from-extension-wa`.
+- Importare `ConnectionStatusBar`
+- Inserirlo nella header, tra `ActiveProcessIndicator` e i bottoni di destra
+- Visibile solo su `sm:` e superiori per non affollare il mobile
 
-### 2. Nuovo hook — `src/hooks/useWhatsAppExtensionBridge.ts`
+### Comportamento
 
-Stesso pattern di `useLinkedInExtensionBridge`:
-- Polling ping ogni 3s con direction `from-webapp-wa`
-- `isAvailable` state
-- `sendMessage(phone, text)` → invia via estensione
-- `verifySession()` → controlla se WhatsApp Web e' connesso
+- All'apertura della pagina, i bridge fanno gia' polling ogni 3s — lo stato si aggiorna automaticamente
+- Se l'estensione non e' installata: icona con pallino rosso, click mostra toast "Installa estensione" con link
+- Se l'estensione e' installata e connessa: pallino verde, icona piena
+- AI Agent: sempre verde (indica engine attivo), click apre il dialog AI assistant
 
-### 3. Modifica `AIDraftStudio.tsx`
+### Stile
 
-- Importare `useWhatsAppExtensionBridge`
-- Il bottone WhatsApp diventa **"Invia WhatsApp"** (non piu' "Apri WhatsApp")
-- Se estensione disponibile: chiama `sendWhatsApp(phone, plainText)` → toast successo/errore
-- Se estensione NON disponibile: fallback attuale (copia + link `wa.me` nel toast)
-- Mostra indicatore se estensione WA e' connessa (pallino verde/rosso)
-
-### 4. LinkedIn — fix invio diretto
-
-Il `LinkedInDMDialog` gia' riceve `initialMessage` pre-compilato. Il problema e' che l'utente deve comunque premere "Invia" nel dialog. 
-
-Opzione: **invio diretto senza dialog** quando l'estensione LinkedIn e' disponibile:
-- Se `isAvailable` LinkedIn → chiama direttamente `sendDirectMessage(profileUrl, plainText)` senza aprire il dialog
-- Mostra toast con risultato
-- Se estensione non disponibile → apre il dialog come fallback
-
-### 5. Pagina download estensione — `public/download-wa-extension.html`
-
-Pagina istruzioni per installare l'estensione WhatsApp (stesso stile delle altre).
+- Icone `w-4 h-4` con pallino `w-2 h-2` assoluto in basso a destra
+- Verde: `bg-emerald-500`, Rosso: `bg-red-500`
+- Sfondo trasparente, hover leggero come gli altri bottoni header
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `public/whatsapp-extension/manifest.json` | Nuovo |
-| `public/whatsapp-extension/background.js` | Nuovo |
-| `public/whatsapp-extension/content.js` | Nuovo |
-| `public/whatsapp-extension/popup.html` | Nuovo |
-| `public/whatsapp-extension/popup.js` | Nuovo |
-| `public/download-wa-extension.html` | Nuovo |
-| `src/hooks/useWhatsAppExtensionBridge.ts` | Nuovo |
-| `src/components/cockpit/AIDraftStudio.tsx` | Invio diretto WA + LI senza dialog |
-
-## Flusso risultante
-
-```text
-WhatsApp:  Drag card → AI genera → "Invia WhatsApp" → estensione apre WA Web in background → cerca contatto → incolla messaggio → invia → toast ✅
-LinkedIn:  Drag card → AI genera → "Invia LinkedIn" → estensione apre profilo in background → clicca Messaggio → incolla → invia → toast ✅
-Fallback:  Se estensione non installata → comportamento attuale (copia + link)
-```
+| `src/components/layout/ConnectionStatusBar.tsx` | Nuovo |
+| `src/components/layout/AppLayout.tsx` | Inserire nel header |
 
