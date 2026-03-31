@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
-import type { DraftState, DraftChannel } from "@/pages/Cockpit";
+import type { DraftState, DraftChannel, ScrapingPhase } from "@/pages/Cockpit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +78,87 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
         />
       )}
     </span>
+  );
+}
+
+const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; color: string }> = {
+  idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },
+  visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },
+  extracting: { icon: Search, label: "Estrazione dati profilo...", color: "text-[hsl(210,80%,55%)]" },
+  enriching: { icon: Brain, label: "Analisi contesto e arricchimento...", color: "text-chart-3" },
+  generating: { icon: Sparkles, label: "Generazione messaggio AI...", color: "text-primary" },
+};
+
+function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPhase; linkedinProfile: DraftState["linkedinProfile"] }) {
+  const config = scrapingPhaseConfig[phase] || scrapingPhaseConfig.generating;
+  const PhaseIcon = config.icon;
+  const phases: ScrapingPhase[] = ["visiting", "extracting", "enriching", "generating"];
+  const currentIndex = phases.indexOf(phase);
+  const showSteps = phase !== "idle" && phase !== "generating" || (phase === "generating" && linkedinProfile);
+
+  return (
+    <div className="space-y-3">
+      {/* Current phase */}
+      <div className="flex items-center gap-2">
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+          <PhaseIcon className={cn("w-4 h-4", config.color)} />
+        </motion.div>
+        <span className={cn("text-xs font-medium", config.color)}>{config.label}</span>
+      </div>
+
+      {/* Step progress */}
+      {showSteps && (
+        <div className="space-y-1.5">
+          {phases.map((p, i) => {
+            const stepConfig = scrapingPhaseConfig[p];
+            const StepIcon = stepConfig.icon;
+            const isDone = i < currentIndex;
+            const isCurrent = i === currentIndex;
+            return (
+              <motion.div
+                key={p}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.15 }}
+                className={cn(
+                  "flex items-center gap-2 text-[11px] px-2 py-1 rounded",
+                  isDone ? "text-success bg-success/5" : isCurrent ? `${stepConfig.color} bg-muted/40` : "text-muted-foreground/40"
+                )}
+              >
+                {isDone ? <CheckCircle2 className="w-3 h-3" /> : <StepIcon className="w-3 h-3" />}
+                <span>{stepConfig.label}</span>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Scraped profile preview */}
+      {linkedinProfile && (phase === "enriching" || phase === "generating") && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-lg p-2.5 space-y-1"
+        >
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(210,80%,55%)] uppercase tracking-wider">
+            <Linkedin className="w-3 h-3" />
+            Profilo estratto
+          </div>
+          {linkedinProfile.name && (
+            <div className="text-xs font-medium text-foreground">{linkedinProfile.name}</div>
+          )}
+          {linkedinProfile.headline && (
+            <div className="text-[11px] text-muted-foreground">{linkedinProfile.headline}</div>
+          )}
+          {linkedinProfile.about && (
+            <div className="text-[10px] text-muted-foreground/80 line-clamp-2">{linkedinProfile.about}</div>
+          )}
+          {linkedinProfile.location && (
+            <div className="text-[10px] text-muted-foreground/60">📍 {linkedinProfile.location}</div>
+          )}
+        </motion.div>
+      )}
+    </div>
   );
 }
 
@@ -253,13 +334,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Messaggio</label>
             <div className="mt-2 text-sm text-foreground/90 leading-relaxed">
               {draft.isGenerating && !draft.body ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-primary/70">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                      <Sparkles className="w-4 h-4" />
-                    </motion.div>
-                    <span className="text-xs">AI sta generando il messaggio {draft.channel}...</span>
-                  </div>
+                <div className="space-y-3">
+                  <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
                   {[1, 2, 3].map(i => (
                     <motion.div
                       key={i}
@@ -399,6 +475,20 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                     </span>
                   </div>
                 </div>
+
+                {/* Scraped LinkedIn Profile Card */}
+                {draft.linkedinProfile && (
+                  <div className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(210,80%,55%)] uppercase tracking-wider">
+                      <Linkedin className="w-3 h-3" />
+                      Profilo LinkedIn (Scraping Live)
+                    </div>
+                    {draft.linkedinProfile.name && <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>}
+                    {draft.linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>}
+                    {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground/80 line-clamp-3">{draft.linkedinProfile.about}</div>}
+                    {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground/60">📍 {draft.linkedinProfile.location}</div>}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -515,14 +605,42 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 {sending ? "Invio..." : waBridge.isAvailable ? "Invia WhatsApp" : "Apri WhatsApp"}
               </button>
             ) : draft.channel === "linkedin" ? (
-              <button
-                onClick={handleSendLinkedIn}
-                disabled={sending}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
-                {sending ? "Invio..." : "Invia su LinkedIn"}
-              </button>
+              <div className="flex-1 flex gap-1.5">
+                <button
+                  onClick={handleSendLinkedIn}
+                  disabled={sending}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
+                  {sending ? "..." : "DM"}
+                </button>
+                {liBridge.isAvailable && draft.contactLinkedinUrl && (
+                  <button
+                    onClick={async () => {
+                      setSending(true);
+                      try {
+                        const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+                        const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
+                        if (res.success) {
+                          toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
+                        } else {
+                          toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
+                        }
+                      } catch {
+                        toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
+                      } finally {
+                        setSending(false);
+                      }
+                    }}
+                    disabled={sending}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,35%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                    title="Invia richiesta di collegamento con nota personalizzata"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {sending ? "..." : "Connetti"}
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={handleCopy}

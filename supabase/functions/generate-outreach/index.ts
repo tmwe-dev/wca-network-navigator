@@ -172,6 +172,7 @@ serve(async (req) => {
       goal,
       base_proposal,
       quality: rawQuality,
+      linkedin_profile,
     } = await req.json();
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
@@ -337,7 +338,23 @@ serve(async (req) => {
       }
     }
 
-    // 8) Website scraping (standard/premium, if website exists and not cached recently)
+    // 8b) Client-scraped LinkedIn profile (from extension)
+    if (linkedin_profile && typeof linkedin_profile === "object") {
+      const lp = linkedin_profile as Record<string, string>;
+      const lpParts: string[] = [];
+      if (lp.name) lpParts.push(`Nome: ${lp.name}`);
+      if (lp.headline) lpParts.push(`Headline: ${lp.headline}`);
+      if (lp.location) lpParts.push(`Località: ${lp.location}`);
+      if (lp.about) lpParts.push(`About: ${String(lp.about).slice(0, 800)}`);
+      if (lp.profileUrl) lpParts.push(`URL: ${lp.profileUrl}`);
+      if (lpParts.length > 0) {
+        contextParts.push(`[LINKEDIN PROFILO (scraping live dal browser)]\n${lpParts.join("\n")}`);
+        intelligence.data_found.linkedin_live = true;
+        intelligence.sources_checked.push("linkedin_live_scrape");
+        linkedinSource = "live_scraped";
+      }
+    }
+
     let websiteSource: "cached" | "live_scraped" | "not_available" = "not_available";
     if (partnerId && quality !== "fast") {
       // Check if partner has website and cached data

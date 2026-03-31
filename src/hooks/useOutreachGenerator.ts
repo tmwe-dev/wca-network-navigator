@@ -61,6 +61,13 @@ export function useOutreachGenerator() {
     goal?: string;
     base_proposal?: string;
     quality?: "fast" | "standard" | "premium";
+    linkedin_profile?: {
+      name?: string;
+      headline?: string;
+      location?: string;
+      about?: string;
+      profileUrl?: string;
+    };
   }) => {
     if (!params.channel) return null;
     setIsGenerating(true);

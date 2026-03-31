@@ -9,6 +9,7 @@ import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { Mail, Sparkles } from "lucide-react";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
@@ -29,6 +30,17 @@ export interface CockpitFilter {
   type: "search" | "country" | "status" | "language" | "channel" | "priority" | "custom";
 }
 
+export type ScrapingPhase = "idle" | "visiting" | "extracting" | "enriching" | "generating";
+
+export interface LinkedInProfileData {
+  name?: string;
+  headline?: string;
+  location?: string;
+  about?: string;
+  photoUrl?: string;
+  profileUrl?: string;
+}
+
 export interface DraftState {
   channel: DraftChannel;
   contactId: string | null;
@@ -42,6 +54,8 @@ export interface DraftState {
   body: string;
   language: string;
   isGenerating: boolean;
+  scrapingPhase: ScrapingPhase;
+  linkedinProfile: LinkedInProfileData | null;
   _debug?: OutreachDebug;
 }
 
@@ -59,6 +73,7 @@ const Cockpit = () => {
   const [draftState, setDraftState] = useState<DraftState>({
     channel: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
     contactLinkedinUrl: null, companyName: null, countryCode: null, subject: "", body: "", language: "english", isGenerating: false,
+    scrapingPhase: "idle", linkedinProfile: null,
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const { filters: gf } = useGlobalFilters();
@@ -76,6 +91,7 @@ const Cockpit = () => {
   const { generate } = useOutreachGenerator();
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
+  const liBridge = useLinkedInExtensionBridge();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -179,32 +195,108 @@ const Cockpit = () => {
 
     if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
+    const linkedinUrl = contact.linkedinUrl || null;
+    const isLinkedInChannel = channel === "linkedin";
+    const canScrapeLinkedIn = isLinkedInChannel && liBridge.isAvailable && linkedinUrl;
+
+    // Initialize draft with scraping phase if LinkedIn
     setDraftState({
       channel, contactId: firstId, contactName: contact.name,
       contactEmail: contact.email, contactPhone: contact.phone,
-      contactLinkedinUrl: contact.linkedinUrl || null,
+      contactLinkedinUrl: linkedinUrl,
       companyName: contact.company,
       countryCode: contact.country, subject: "", body: "",
       language: contact.language, isGenerating: true,
+      scrapingPhase: canScrapeLinkedIn ? "visiting" : "generating",
+      linkedinProfile: null,
     });
+
+    let scrapedProfile: LinkedInProfileData | null = null;
+
+    // ── Human-like flow: scrape LinkedIn profile first ──
+    if (canScrapeLinkedIn) {
+      try {
+        // Phase 1: Visiting profile
+        setDraftState(prev => ({ ...prev, scrapingPhase: "visiting" }));
+        await new Promise(r => setTimeout(r, 800)); // Brief pause for UX
+
+        // Phase 2: Extracting data
+        setDraftState(prev => ({ ...prev, scrapingPhase: "extracting" }));
+        const profileResult = await liBridge.extractProfile(linkedinUrl!);
+
+        if (profileResult.success && profileResult.profile) {
+          scrapedProfile = profileResult.profile;
+          setDraftState(prev => ({
+            ...prev,
+            scrapingPhase: "enriching",
+            linkedinProfile: scrapedProfile,
+          }));
+
+          // Save scraped data to DB (enrichment_data) in background
+          import("@/integrations/supabase/client").then(async ({ supabase }) => {
+            try {
+              // Find partner by company name to update enrichment_data
+              const { data: partnerRows } = await supabase
+                .from("partners")
+                .select("id, enrichment_data")
+                .ilike("company_name", `%${contact.company}%`)
+                .limit(1);
+              if (partnerRows?.[0]) {
+                const existing = (partnerRows[0].enrichment_data as Record<string, any>) || {};
+                await supabase.from("partners").update({
+                  enrichment_data: {
+                    ...existing,
+                    linkedin_profile_name: scrapedProfile?.name,
+                    linkedin_profile_headline: scrapedProfile?.headline,
+                    linkedin_profile_location: scrapedProfile?.location,
+                    linkedin_profile_about: scrapedProfile?.about?.slice(0, 2000),
+                    linkedin_profile_url: scrapedProfile?.profileUrl,
+                    linkedin_scraped_at: new Date().toISOString(),
+                    linkedin_summary: [
+                      scrapedProfile?.name,
+                      scrapedProfile?.headline,
+                      scrapedProfile?.about?.slice(0, 500),
+                    ].filter(Boolean).join(" — "),
+                  },
+                }).eq("id", partnerRows[0].id);
+              }
+            } catch (e) {
+              console.error("Failed to save LinkedIn profile to DB:", e);
+            }
+          });
+
+          await new Promise(r => setTimeout(r, 500));
+        } else {
+          toast.info("Profilo LinkedIn non estratto — generazione con dati DB");
+        }
+      } catch (e) {
+        console.error("LinkedIn scraping failed:", e);
+        toast.info("Scraping LinkedIn fallito — generazione con dati DB");
+      }
+    }
+
+    // Phase 3: AI Generation
+    setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
 
     const result = await generate({
       channel, contact_name: contact.name, contact_email: contact.email,
       company_name: contact.company, country_code: contact.country,
       goal: "Proposta di collaborazione nel freight forwarding", quality: "standard",
+      linkedin_profile: scrapedProfile || undefined,
     });
 
     if (result) {
       setDraftState(prev => ({
         ...prev, subject: result.subject || "", body: result.body || "",
         language: result.language || prev.language, isGenerating: false,
+        scrapingPhase: "idle",
         _debug: result._debug,
       }));
       refetchCredits();
     } else {
-      setDraftState(prev => ({ ...prev, isGenerating: false }));
+      setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
     }
-  }, [generate, refetchCredits, getDraggedIds, contactsMap]);
+  }, [generate, refetchCredits, getDraggedIds, contactsMap, liBridge]);
 
   const handleRegenerate = useCallback(async () => {
     if (!draftState.channel || !draftState.contactId) return;
