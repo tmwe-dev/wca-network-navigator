@@ -12,6 +12,7 @@ interface LinkedInDMDialogProps {
   profileUrl: string;
   contactName: string | null;
   companyName: string;
+  initialMessage?: string;
 }
 
 export default function LinkedInDMDialog({
