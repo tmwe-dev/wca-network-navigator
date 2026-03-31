@@ -382,10 +382,26 @@ function countryCodeToFlag(code: string | null): string {
 
 function BusinessCardsView() {
   const { data: cards = [], isLoading } = useBusinessCards();
+  const qc = useQueryClient();
   const sendToCockpit = useSendToCockpit();
   const deepSearch = useDeepSearch();
   const [selectedBca, setSelectedBca] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-business-cards");
+      if (error) throw error;
+      toast.success(`Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati`);
+      qc.invalidateQueries({ queryKey: ["business-cards"] });
+    } catch (e: any) {
+      toast.error("Errore sincronizzazione: " + (e.message || "sconosciuto"));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!search) return cards;
