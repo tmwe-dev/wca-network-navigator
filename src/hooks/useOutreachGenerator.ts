@@ -31,6 +31,9 @@ export interface OutreachDebug {
   channel_instructions: string;
   settings_keys_found: string[];
   recipient_intelligence?: RecipientIntelligence;
+  interaction_history_count?: number;
+  website_source?: "cached" | "live_scraped" | "not_available";
+  linkedin_source?: "cached" | "live_scraped" | "not_available";
 }
 
 export interface OutreachResult {

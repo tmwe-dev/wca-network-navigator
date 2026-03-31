@@ -637,6 +637,9 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
       channel_instructions: ch.toUpperCase(),
       settings_keys_found: Object.keys(settings),
       recipient_intelligence: intelligence,
+      interaction_history_count: interactionHistoryCount,
+      website_source: websiteSource,
+      linkedin_source: linkedinSource,
     };
 
     return new Response(
