@@ -64,7 +64,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                 isHovered ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
               )}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="w-4 h-4" />
             </motion.div>
             <span className={cn(
               "text-sm font-medium transition-colors duration-300",
