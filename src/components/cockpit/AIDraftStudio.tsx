@@ -719,8 +719,19 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
                         toast({ title: "Estensione LinkedIn non rilevata", description: "Installa e attiva l'estensione LinkedIn per inviare richieste di collegamento.", variant: "destructive" });
                         return;
                       }
-                      if (!draft.contactLinkedinUrl) {
-                        toast({ title: "URL LinkedIn mancante", description: "Questo contatto non ha un profilo LinkedIn associato.", variant: "destructive" });
+                      let url = draft.contactLinkedinUrl || "";
+                      if (!url && draft.contactName) {
+                        toast({ title: "🔍 Cercando profilo LinkedIn..." });
+                        try {
+                          const res = await liBridge.searchProfile(`${draft.contactName} ${draft.companyName || ""}`.trim());
+                          if (res.success && res.profile?.profileUrl) {
+                            url = res.profile.profileUrl;
+                            onDraftChange({ ...draft, contactLinkedinUrl: url });
+                          }
+                        } catch {}
+                      }
+                      if (!url) {
+                        toast({ title: "URL LinkedIn mancante", description: "Profilo non trovato automaticamente.", variant: "destructive" });
                         return;
                       }
                       setSending(true);
