@@ -174,7 +174,8 @@ const Cockpit = () => {
 
     setDraftState({
       channel, contactId: firstId, contactName: contact.name,
-      contactEmail: contact.email, companyName: contact.company,
+      contactEmail: contact.email, contactPhone: contact.phone,
+      companyName: contact.company,
       countryCode: contact.country, subject: "", body: "",
       language: contact.language, isGenerating: true,
     });
