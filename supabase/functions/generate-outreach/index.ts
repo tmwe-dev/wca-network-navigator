@@ -172,6 +172,7 @@ serve(async (req) => {
       goal,
       base_proposal,
       quality: rawQuality,
+      linkedin_profile,
     } = await req.json();
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
