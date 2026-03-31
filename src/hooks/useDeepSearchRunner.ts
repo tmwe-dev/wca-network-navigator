@@ -33,6 +33,7 @@ export function useDeepSearchRunner(): DeepSearchState {
   const [current, setCurrent] = useState<DeepSearchCurrent | null>(null);
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
+  const localSearch = useDeepSearchLocal();
 
   const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
     if (running || ids.length === 0) return;
