@@ -25,6 +25,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const [delaySec, setDelaySec] = useState(15);
   const [autoConnect, setAutoConnect] = useState(false);
   const [generateOutreach, setGenerateOutreach] = useState(true);
+  const [deepSearchWeb, setDeepSearchWeb] = useState(true);
 
   const withLinkedIn = selectedContacts.filter(c => c.linkedinUrl);
   const withoutLinkedIn = selectedContacts.filter(c => !c.linkedinUrl);
