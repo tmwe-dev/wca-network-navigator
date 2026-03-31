@@ -230,7 +230,10 @@ const Cockpit = () => {
         const profileResult = await liBridge.extractProfile(linkedinUrl!);
 
         if (profileResult.success && profileResult.profile) {
-          scrapedProfile = profileResult.profile;
+          scrapedProfile = {
+            ...profileResult.profile,
+            connectionStatus: (profileResult.profile as any).connectionStatus || "unknown",
+          };
           setDraftState(prev => ({
             ...prev,
             scrapingPhase: "enriching",
