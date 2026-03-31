@@ -180,6 +180,7 @@ export function useCockpitContacts() {
           priority: computePriority(bc.email, bc.phone, bc.mobile),
           channels: inferChannels(bc.email, bc.phone, bc.mobile),
           email: bc.email || "",
+          phone: bc.mobile || bc.phone || "",
           origin: "bca" as ContactOrigin,
           originDetail: bc.event_name ? `BCA · ${bc.event_name}` : "Biglietto da visita",
           sourceType: st,
