@@ -74,6 +74,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">{totalContacts} contatti • {groups.length} gruppi</span>
+          <Tooltip><TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setAddOpen(true)}>
+              <UserPlus className="w-3.5 h-3.5" /> Nuovo
+            </Button>
+          </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
         </div>
       </div>
 
