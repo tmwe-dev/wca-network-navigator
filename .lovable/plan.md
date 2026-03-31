@@ -1,50 +1,77 @@
 
 
-# Connessione One-Click: LinkedIn e WhatsApp
+# Deep Search via Estensione Chrome (Client-Side)
 
 ## Situazione attuale
 
-Il sistema mostra "Non rilevato" e istruzioni manuali per installare estensioni Chrome. L'utente vuole un singolo bottone "Connetti" che gestisca tutto.
+La Deep Search usa **Firecrawl API** (server-side, a pagamento) per cercare profili social e scraping siti web. Ogni partner costa 10-15 chiamate API Firecrawl.
 
-## Limiti tecnici reali
+## Soluzione
 
-Le estensioni Chrome **non possono** essere installate via codice — è una restrizione di sicurezza di Google. Tuttavia possiamo:
-1. **Simulare la connessione** per LinkedIn usando le credenziali già salvate + le API server-side (cookie `li_at` già disponibile nel DB)
-2. **Per WhatsApp** aprire una sessione WA Web embedded o usare il link `wa.me` come fallback
+Creare un'estensione Chrome **FireScrape** che esegue le ricerche Google e lo scraping direttamente dal browser dell'utente. Il frontend orchestra tutto: l'estensione cerca, l'AI analizza i risultati.
 
-## Cosa faremo
+```text
+ATTUALE:
+  Frontend → Edge Function → Firecrawl API ($$) → AI → DB
 
-### 1. Bottone "Connetti Tutto" nella header (`ConnectionStatusBar.tsx`)
+NUOVO:
+  Frontend → Estensione Chrome (Google Search + Scrape) → AI Gateway → DB
+  Fallback: se estensione non disponibile → Edge Function (come ora)
+```
 
-Un singolo bottone che:
-- **LinkedIn**: chiama l'edge function `get-linkedin-credentials` per verificare che le credenziali esistano → poi chiama `save-linkedin-cookie` se il cookie `li_at` è già nel DB → segna come connesso. Se le credenziali mancano, apre inline un mini-form per inserirle
-- **WhatsApp**: verifica se l'estensione risponde al ping. Se sì, auto-verifica la sessione. Se no, mostra un dialog compatto con download + 4 step (senza navigare altrove)
-- **AI Agent**: sempre attivo, conferma visiva
+## Implementazione
 
-### 2. Auto-connect all'apertura del Cockpit (`Cockpit.tsx`)
+### 1. Nuova estensione `firescrape-extension/`
 
-Quando si apre il Cockpit:
-- Tenta automaticamente di verificare LinkedIn (via cookie `li_at` salvato nel DB — non serve l'estensione per la Deep Search, solo per l'invio DM)
-- Tenta ping WhatsApp extension
-- Aggiorna lo stato delle icone nella header
+- **manifest.json**: permessi per `*://*.google.com/*`, `*://*/*` (scraping generico)
+- **background.js**: riceve comandi dal content script, apre tab in background, esegue ricerche Google, estrae risultati, scrapa pagine web (titolo, description, logo, markdown)
+- **content.js**: bridge postMessage con l'app (stesso pattern LinkedIn/WhatsApp)
+- Azioni supportate:
+  - `search` → cerca su Google, ritorna titolo + URL + snippet per ogni risultato
+  - `scrape` → apre URL in background, estrae testo, logo, metadata
+  - `ping` → verifica disponibilita'
 
-### 3. Semplificazione radicale del tab Canali (`ConnectionsSettings.tsx`)
+### 2. Hook `useFireScrapeExtensionBridge.ts`
 
-Rimuovere le istruzioni tecniche verbose. Per ogni canale:
-- **Connesso**: badge verde + bottone "Verifica"
-- **Non connesso**: singolo bottone "Connetti" che fa tutto il possibile automaticamente
-- Credenziali LinkedIn: se già salvate nel DB, mostrare "✅ Credenziali configurate" invece del form vuoto
-- Le istruzioni estensione Chrome diventano un piccolo `<details>` nascosto sotto "Setup avanzato"
+Stesso pattern di `useLinkedInExtensionBridge`: postMessage, heartbeat, `isAvailable`, metodi `search(query)` e `scrape(url)`.
 
-### 4. Stato connessione persistente
+### 3. Nuovo hook `useDeepSearchLocal.ts`
 
-Salvare lo stato delle connessioni in `app_settings` (`linkedin_connected`, `whatsapp_connected`) così all'apertura successiva le icone si mostrano subito verdi senza attendere il ping.
+Logica di Deep Search che gira **interamente nel frontend**:
+- Per ogni partner/contatto, usa l'estensione per cercare profili LinkedIn, Facebook, Instagram
+- Usa l'AI Gateway (Lovable AI, gia' disponibile lato client) per validare i risultati
+- Salva direttamente nel DB via Supabase client
+- Stessa logica di rating e enrichment delle edge functions attuali
+
+### 4. Modifica `useDeepSearchRunner.ts`
+
+- Al `start()`, controlla se l'estensione FireScrape e' disponibile
+- Se si': usa `useDeepSearchLocal` (gratis, nessun costo Firecrawl)
+- Se no: fallback alle edge functions attuali (Firecrawl)
+- Toast indica quale motore sta usando
+
+### 5. Indicatore in `ConnectionStatusBar.tsx`
+
+Aggiungere icona FireScrape accanto a LinkedIn/WhatsApp con stato verde/rosso.
 
 ## File coinvolti
 
-| File | Modifica |
-|------|----------|
-| `src/components/layout/ConnectionStatusBar.tsx` | Bottone "Connetti tutto" + auto-verify al mount |
-| `src/components/settings/ConnectionsSettings.tsx` | Semplificare UI, auto-detect credenziali, nascondere istruzioni tecniche |
-| `src/pages/Cockpit.tsx` | Auto-connect all'apertura |
+| File | Azione |
+|------|--------|
+| `public/firescrape-extension/manifest.json` | Nuovo |
+| `public/firescrape-extension/background.js` | Nuovo — Google search + scrape |
+| `public/firescrape-extension/content.js` | Nuovo — bridge postMessage |
+| `public/firescrape-extension/popup.html` | Nuovo — popup minimale |
+| `src/hooks/useFireScrapeExtensionBridge.ts` | Nuovo — bridge hook |
+| `src/hooks/useDeepSearchLocal.ts` | Nuovo — Deep Search client-side |
+| `src/hooks/useDeepSearchRunner.ts` | Modifica — auto-detect estensione, fallback |
+| `src/components/layout/ConnectionStatusBar.tsx` | Modifica — icona FireScrape |
+| `src/components/settings/ConnectionsSettings.tsx` | Modifica — sezione FireScrape |
+
+## Vantaggi
+
+- **Zero costi Firecrawl** quando l'estensione e' attiva
+- **Nessun rate limiting server-side** — le ricerche Google sono dal browser dell'utente
+- **Stealth**: l'estensione opera in tab nascosti, nessuna interazione visibile
+- **Fallback automatico** alle edge functions se l'estensione non c'e'
 
