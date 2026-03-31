@@ -99,7 +99,7 @@ export function useCockpitContacts() {
           ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at").in("id", icIds).then(r => r.data || [])
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
@@ -246,6 +246,11 @@ export function useCockpitContacts() {
       } else if (st === "contact") {
         const ic = icMap[sid];
         if (!ic) continue;
+        // Resolve LinkedIn URL from enrichment_data
+        const enrich = (ic.enrichment_data as any) || {};
+        const icLinkedin = enrich.social_links?.linkedin
+          || (Array.isArray(enrich.contact_profiles) ? enrich.contact_profiles.find((cp: any) => cp.linkedin_url)?.linkedin_url : null)
+          || "";
         result.push({
           id: `ic-${ic.id}`,
           queueId: item.id,
@@ -264,7 +269,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
-          linkedinUrl: "",
+          linkedinUrl: icLinkedin,
         });
       }
     }
