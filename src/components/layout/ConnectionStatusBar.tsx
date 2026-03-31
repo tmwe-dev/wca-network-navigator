@@ -124,7 +124,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     const allOk = liOk && waOk && fsOk;
 
     if (!fsOk) {
-      // Auto-download FireScrape extension
+      // Auto-download Partner Connect extension
       downloadFireScrapeExtension();
     }
 
