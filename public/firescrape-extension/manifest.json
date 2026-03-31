@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "FireScrape – Deep Search Engine",
+  "version": "1.0.0",
+  "description": "Client-side Google search and web scraping for Deep Search enrichment",
+  "permissions": ["activeTab", "tabs", "scripting"],
+  "host_permissions": ["*://*.google.com/*", "*://*/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.lovable.app/*", "http://localhost:*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {}
+}

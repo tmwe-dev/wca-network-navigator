@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Linkedin, MessageCircle, Bot, Send, Pause, Play, Zap, Loader2 } from "lucide-react";
+import { Linkedin, MessageCircle, Bot, Send, Pause, Play, Zap, Loader2, Flame } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ interface Props {
 export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
+  const fsExt = useFireScrapeExtensionBridge();
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
 
@@ -200,6 +202,16 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">AI Agent attivo</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors">
+              <Flame className="w-4 h-4 text-muted-foreground" />
+              <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-background ${fsExt.isAvailable ? "bg-emerald-500" : "bg-red-500"}`} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{fsExt.isAvailable ? "FireScrape attivo — Deep Search client-side" : "FireScrape non rilevato — installa l'estensione"}</TooltipContent>
         </Tooltip>
 
         {/* Outreach Queue indicator */}

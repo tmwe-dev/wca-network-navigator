@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
+import { useDeepSearchLocal } from "./useDeepSearchLocal";
 
 export type DeepSearchMode = "partner" | "contact";
 
@@ -32,6 +33,7 @@ export function useDeepSearchRunner(): DeepSearchState {
   const [current, setCurrent] = useState<DeepSearchCurrent | null>(null);
   const abortRef = useRef(false);
   const queryClient = useQueryClient();
+  const localSearch = useDeepSearchLocal();
 
   const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
     if (running || ids.length === 0) return;
@@ -112,12 +114,19 @@ export function useDeepSearchRunner(): DeepSearchState {
       }
     }
 
+    // Detect if FireScrape extension is available for client-side search
+    const useLocal = mode === "partner" && localSearch.isAvailable;
+
     setRunning(true);
     setResults([]);
     setCanvasOpen(true);
     abortRef.current = false;
     let done = 0;
     let processed = 0;
+
+    if (useLocal) {
+      toast.info("🔥 FireScrape attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
+    }
 
     try {
       for (const id of toProcess) {
@@ -163,13 +172,29 @@ export function useDeepSearchRunner(): DeepSearchState {
           total: toProcess.length,
         });
 
-        toast.loading(`Deep Search ${done}/${toProcess.length}...`, { id: "deep-search-global" });
+        toast.loading(`Deep Search ${done}/${toProcess.length}${useLocal ? " 🔥" : ""}...`, { id: "deep-search-global" });
 
-        const { data, error } = await supabase.functions.invoke(fnName, {
-          body: { [bodyKey]: id },
-        });
+        let data: any = null;
+        let error: any = null;
 
-        // Check abort immediately after the edge function returns
+        if (useLocal) {
+          // Client-side via FireScrape extension
+          try {
+            data = await localSearch.searchPartner(id);
+            if (!data.success) error = data.error;
+          } catch (e: any) {
+            error = e?.message || "FireScrape error";
+          }
+        } else {
+          // Server-side via edge function (Firecrawl)
+          const res = await supabase.functions.invoke(fnName, {
+            body: { [bodyKey]: id },
+          });
+          data = res.data;
+          error = res.error;
+        }
+
+        // Check abort immediately after the search returns
         if (abortRef.current) {
           processed = done;
           break;
@@ -223,7 +248,7 @@ export function useDeepSearchRunner(): DeepSearchState {
       setRunning(false);
       setCurrent(null);
     }
-  }, [running, queryClient]);
+  }, [running, queryClient, localSearch]);
 
   const stop = useCallback(() => {
     abortRef.current = true;
