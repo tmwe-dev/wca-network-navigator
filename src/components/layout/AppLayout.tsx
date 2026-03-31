@@ -32,6 +32,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
+  const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
