@@ -224,8 +224,32 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
 
   const handleSendLinkedIn = async () => {
     const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
-    const profileUrl = draft.contactLinkedinUrl || "";
-    if (liBridge.isAvailable && profileUrl) {
+    let profileUrl = draft.contactLinkedinUrl || "";
+
+    // If no URL, try to search via extension
+    if (!profileUrl && liBridge.isAvailable && draft.contactName) {
+      toast({ title: "🔍 Cercando profilo LinkedIn...", description: `Ricerca per ${draft.contactName}` });
+      try {
+        const searchQuery = `${draft.contactName} ${draft.companyName || ""}`.trim();
+        const res = await liBridge.sendMessage("searchProfile", { query: searchQuery }, 30000);
+        if (res.success && res.profile?.profileUrl) {
+          profileUrl = res.profile.profileUrl;
+          onDraftChange({ ...draft, contactLinkedinUrl: profileUrl });
+          toast({ title: "✅ Profilo trovato!", description: res.profile.name || profileUrl });
+        } else {
+          toast({ title: "Profilo LinkedIn non trovato", description: "Cercalo manualmente e aggiungi l'URL al contatto.", variant: "destructive" });
+          return;
+        }
+      } catch {
+        toast({ title: "Errore ricerca LinkedIn", variant: "destructive" });
+        return;
+      }
+    } else if (!profileUrl) {
+      toast({ title: "URL profilo LinkedIn mancante", description: "Installa l'estensione o aggiungi l'URL manualmente.", variant: "destructive" });
+      return;
+    }
+
+    if (liBridge.isAvailable) {
       setSending(true);
       try {
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
@@ -239,10 +263,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
       } finally {
         setSending(false);
       }
-    } else if (!profileUrl) {
-      toast({ title: "URL profilo LinkedIn mancante", description: "Aggiungi il link LinkedIn al contatto prima di inviare.", variant: "destructive" });
     } else {
-      // Fallback: open dialog
       setLiDmOpen(true);
     }
   };
