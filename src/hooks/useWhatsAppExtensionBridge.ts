@@ -20,7 +20,9 @@ export function useWhatsAppExtensionBridge() {
       if (!data || data.direction !== "from-extension-wa") return;
 
       if (data.action === "contentScriptReady") { setIsAvailable(true); return; }
+      if (data.action === "extensionDead") { setIsAvailable(false); return; }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
+      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); return; }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
