@@ -539,6 +539,10 @@ function BusinessCardsView() {
             </Button>
           </div>
         )}
+
+        <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
+          <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+        </Button>
       </div>
 
       {/* Deep Search Canvas */}
