@@ -164,7 +164,7 @@ function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPha
   );
 }
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStudioProps) {
+export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
