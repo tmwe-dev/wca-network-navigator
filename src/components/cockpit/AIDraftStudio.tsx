@@ -737,10 +737,10 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
                       setSending(true);
                       try {
                         const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
-                        const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
+                        const res = await liBridge.sendConnectionRequest(url, note);
                         if (res.success) {
                           toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
-                          onDraftChange({ ...draft, linkedinProfile: { ...draft.linkedinProfile, connectionStatus: "pending" } });
+                          onDraftChange({ ...draft, contactLinkedinUrl: url, linkedinProfile: { ...draft.linkedinProfile, connectionStatus: "pending" } });
                         } else {
                           toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
                         }
@@ -750,7 +750,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
                         setSending(false);
                       }
                     }}
-                    disabled={sending || !liBridge.isAvailable || !draft.contactLinkedinUrl}
+                    disabled={sending || !liBridge.isAvailable}
                     className={cn(
                       "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
                       liBridge.isAvailable && draft.contactLinkedinUrl
