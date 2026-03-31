@@ -230,6 +230,7 @@ export function useCockpitContacts() {
         priority: act.priority === "high" ? 8 : act.priority === "low" ? 3 : 5,
         channels: inferChannels(meta.email, null, null),
         email: meta.email || "",
+        phone: meta.phone || meta.mobile || "",
         origin: "wca" as ContactOrigin,
         originDetail: `📅 Riprogrammato`,
         sourceType: act.source_type,
