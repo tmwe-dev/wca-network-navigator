@@ -121,6 +121,8 @@ export function useCockpitContacts() {
       for (const c of bcData as any[]) bcMap[c.id] = c;
       const prcMap: Record<string, any> = {};
       for (const c of prcData as any[]) prcMap[c.id] = c;
+      const icMap: Record<string, any> = {};
+      for (const c of icData as any[]) icMap[c.id] = c;
 
       // Fetch today's scheduled activities
       const today = format(new Date(), "yyyy-MM-dd");
