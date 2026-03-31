@@ -3,6 +3,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { DraftChannel } from "@/pages/Cockpit";
 
+export interface OutreachDebug {
+  model: string;
+  quality: string;
+  language_detected: string;
+  language_used: string;
+  country_code: string;
+  recipient_name_resolved: string;
+  sender_alias: string;
+  sender_company: string;
+  sender_role: string;
+  kb_loaded: boolean;
+  sales_kb_loaded: boolean;
+  sales_kb_sections: string;
+  goal_used: string;
+  proposal_used: string;
+  tokens_input: number;
+  tokens_output: number;
+  credits_consumed: number;
+  channel_instructions: string;
+  settings_keys_found: string[];
+}
+
 export interface OutreachResult {
   channel: string;
   subject: string;
@@ -11,6 +33,7 @@ export interface OutreachResult {
   contact_email: string | null;
   company_name: string | null;
   language: string;
+  _debug?: OutreachDebug;
 }
 
 export function useOutreachGenerator() {

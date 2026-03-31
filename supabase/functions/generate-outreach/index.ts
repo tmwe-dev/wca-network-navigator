@@ -337,6 +337,29 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
       }
     }
 
+    // Build debug/sources info
+    const _debug = {
+      model,
+      quality,
+      language_detected: detected.languageLabel,
+      language_used: effectiveLanguage,
+      country_code: country_code || "N/A",
+      recipient_name_resolved: recipientName || "(generico)",
+      sender_alias: senderAlias || "(non configurato)",
+      sender_company: senderCompanyAlias || "(non configurato)",
+      sender_role: settings.ai_contact_role || "(non configurato)",
+      kb_loaded: !!settings.ai_knowledge_base,
+      sales_kb_loaded: !!fullSalesKB,
+      sales_kb_sections: quality === "premium" ? "tutte" : quality === "fast" ? "1,5" : "1-8",
+      goal_used: goal || "(default)",
+      proposal_used: base_proposal || "(default)",
+      tokens_input: result.usage?.prompt_tokens || 0,
+      tokens_output: result.usage?.completion_tokens || 0,
+      credits_consumed: result.usage ? Math.max(1, Math.ceil(((result.usage.prompt_tokens || 0) + (result.usage.completion_tokens || 0) * 2) / 1000)) : 0,
+      channel_instructions: ch.toUpperCase(),
+      settings_keys_found: Object.keys(settings),
+    };
+
     return new Response(
       JSON.stringify({
         channel: ch,
@@ -349,6 +372,7 @@ Genera il messaggio completo per il canale ${ch.toUpperCase()}.`;
         language: effectiveLanguage,
         quality,
         model,
+        _debug,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
