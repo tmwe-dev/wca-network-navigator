@@ -120,7 +120,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     setConnecting(false);
 
-    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "FireScrape", "AI"].filter(Boolean);
+    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "Partner Connect", "AI"].filter(Boolean);
     const allOk = liOk && waOk && fsOk;
 
     if (!fsOk) {
