@@ -101,19 +101,21 @@ export function AppLayout() {
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed left-0 top-14 z-[60] flex items-center justify-center w-6 h-10 rounded-r-md bg-muted/40 backdrop-blur-sm border border-l-0 border-border/30 hover:bg-muted/60 transition-colors cursor-pointer"
+          className="fixed left-0 top-16 z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
+          style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
           aria-label="Apri filtri"
         >
-          <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+          <SlidersHorizontal className="w-4 h-4 text-purple-300" />
         </button>
         <button
           onClick={() => setMissionOpen(true)}
           onMouseEnter={() => handleEdgeEnter("right")}
           onMouseLeave={() => handleEdgeLeave("right")}
-          className="fixed right-0 top-14 z-[60] flex items-center justify-center w-6 h-10 rounded-l-md bg-muted/40 backdrop-blur-sm border border-r-0 border-border/30 hover:bg-muted/60 transition-colors cursor-pointer"
+          className="fixed right-0 top-16 z-[60] flex items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
+          style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
           aria-label="Apri Mission"
         >
-          <Target className="w-3.5 h-3.5 text-muted-foreground" />
+          <Target className="w-4 h-4 text-purple-300" />
         </button>
         <div className={`fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`} onMouseLeave={() => setSidebarOpen(false)}>
           <AppSidebar collapsed={false} onToggle={() => setSidebarOpen(false)} />
@@ -158,7 +160,7 @@ export function AppLayout() {
             </div>
           </header>
 
-          <main className={cn("flex-1 min-h-0 overflow-hidden", isFullscreenRoute ? "" : "overflow-auto p-4")}>
+          <main className={cn("flex-1 min-h-0 overflow-hidden mx-[2px]", isFullscreenRoute ? "" : "overflow-auto p-4")}>
             <Outlet />
           </main>
         </div>
