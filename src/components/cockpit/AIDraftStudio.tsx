@@ -591,14 +591,42 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
                 {sending ? "Invio..." : waBridge.isAvailable ? "Invia WhatsApp" : "Apri WhatsApp"}
               </button>
             ) : draft.channel === "linkedin" ? (
-              <button
-                onClick={handleSendLinkedIn}
-                disabled={sending}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
-                {sending ? "Invio..." : "Invia su LinkedIn"}
-              </button>
+              <div className="flex-1 flex gap-1.5">
+                <button
+                  onClick={handleSendLinkedIn}
+                  disabled={sending}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,45%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
+                  {sending ? "..." : "DM"}
+                </button>
+                {liBridge.isAvailable && draft.contactLinkedinUrl && (
+                  <button
+                    onClick={async () => {
+                      setSending(true);
+                      try {
+                        const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+                        const res = await liBridge.sendConnectionRequest(draft.contactLinkedinUrl!, note);
+                        if (res.success) {
+                          toast({ title: "✅ Richiesta collegamento inviata!", description: `A: ${draft.contactName}` });
+                        } else {
+                          toast({ title: "Errore collegamento", description: res.error, variant: "destructive" });
+                        }
+                      } catch {
+                        toast({ title: "Errore collegamento LinkedIn", variant: "destructive" });
+                      } finally {
+                        setSending(false);
+                      }
+                    }}
+                    disabled={sending}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(210,80%,35%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                    title="Invia richiesta di collegamento con nota personalizzata"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {sending ? "..." : "Connetti"}
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={handleCopy}
