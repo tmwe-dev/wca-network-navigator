@@ -87,6 +87,7 @@ const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; col
   visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },
   extracting: { icon: Search, label: "Estrazione dati profilo...", color: "text-[hsl(210,80%,55%)]" },
   enriching: { icon: Brain, label: "Analisi contesto e arricchimento...", color: "text-chart-3" },
+  reviewing: { icon: User, label: "📋 Dati pronti — Rivedi prima di generare", color: "text-success" },
   generating: { icon: Sparkles, label: "Generazione messaggio AI...", color: "text-primary" },
 };
 

@@ -472,7 +472,7 @@ const Cockpit = () => {
           )}
         </div>
         <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
-          <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} />
+          <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} />
         </div>
       </div>
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
