@@ -84,9 +84,10 @@ export function useCockpitContacts() {
       const pcIds = queue.filter((q: any) => q.source_type === "partner_contact").map((q: any) => q.source_id);
       const bcIds = queue.filter((q: any) => q.source_type === "business_card").map((q: any) => q.source_id);
       const prcIds = queue.filter((q: any) => q.source_type === "prospect_contact").map((q: any) => q.source_id);
+      const icIds = queue.filter((q: any) => q.source_type === "contact").map((q: any) => q.source_id);
 
       // Fetch source data in parallel
-      const [pcData, bcData, prcData] = await Promise.all([
+      const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
           ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id").in("id", pcIds).then(r => r.data || [])
           : Promise.resolve([]),
@@ -95,6 +96,9 @@ export function useCockpitContacts() {
           : Promise.resolve([]),
         prcIds.length > 0
           ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
+          : Promise.resolve([]),
+        icIds.length > 0
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
