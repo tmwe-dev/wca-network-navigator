@@ -183,7 +183,7 @@ export function useDeepSearchRunner(): DeepSearchState {
             data = await localSearch.searchPartner(id);
             if (!data.success) error = data.error;
           } catch (e: any) {
-            error = e?.message || "FireScrape error";
+            error = e?.message || "Partner Connect error";
           }
         } else {
           // Server-side via edge function (Firecrawl)

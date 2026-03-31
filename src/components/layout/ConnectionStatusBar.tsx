@@ -73,7 +73,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
         });
       })
-      .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare FireScrape" }));
+      .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare Partner Connect" }));
   }, []);
 
   const activateAll = useCallback(async () => {
