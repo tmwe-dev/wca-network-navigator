@@ -241,6 +241,7 @@ export function useCockpitContacts() {
           sourceType: st,
           sourceId: sid,
           partnerId: item.partner_id,
+          linkedinUrl: prc.linkedin_url || "",
         });
       } else if (st === "contact") {
         const ic = icMap[sid];
