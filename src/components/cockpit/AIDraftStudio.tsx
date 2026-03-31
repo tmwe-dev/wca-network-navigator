@@ -81,6 +81,7 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
 
 export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStudioProps) {
   const [sending, setSending] = useState(false);
+  const [liDmOpen, setLiDmOpen] = useState(false);
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
@@ -93,6 +94,17 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate }: AIDraftStu
       : draft.body;
     navigator.clipboard.writeText(text);
     toast({ title: "Copiato negli appunti" });
+  };
+
+  const handleOpenWhatsApp = () => {
+    const phone = draft.contactPhone?.replace(/[^0-9+]/g, "").replace(/^\+/, "");
+    if (!phone) {
+      toast({ title: "Numero di telefono mancante", variant: "destructive" });
+      return;
+    }
+    const text = encodeURIComponent(draft.body.replace(/<[^>]+>/g, ""));
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+    toast({ title: "WhatsApp aperto" });
   };
 
   const handleSend = async () => {
