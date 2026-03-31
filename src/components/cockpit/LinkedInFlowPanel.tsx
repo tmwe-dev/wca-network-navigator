@@ -2,7 +2,7 @@ import { useLinkedInFlow } from "@/hooks/useLinkedInFlow";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Linkedin, Play, Square, RotateCcw, Moon, Zap, AlertCircle } from "lucide-react";
+import { Linkedin, Play, Square, RotateCcw, Moon, Zap, AlertCircle, Globe, BrainCircuit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +15,7 @@ interface LinkedInFlowPanelProps {
     name: string;
     company: string;
     linkedinUrl?: string | null;
+    website?: string | null;
   }>;
   onClose?: () => void;
 }
@@ -24,6 +25,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const [delaySec, setDelaySec] = useState(15);
   const [autoConnect, setAutoConnect] = useState(false);
   const [generateOutreach, setGenerateOutreach] = useState(true);
+  const [deepSearchWeb, setDeepSearchWeb] = useState(true);
 
   const withLinkedIn = selectedContacts.filter(c => c.linkedinUrl);
   const withoutLinkedIn = selectedContacts.filter(c => !c.linkedinUrl);
@@ -34,7 +36,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const estimatedMinutes = Math.ceil((withLinkedIn.length * delaySec) / 60);
 
   const handleStart = () => {
-    flow.startFlow(withLinkedIn, { delaySec, autoConnect, generateOutreach });
+    flow.startFlow(selectedContacts, { delaySec, autoConnect, generateOutreach, deepSearchWeb });
   };
 
   return (
@@ -81,10 +83,24 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
               <div className="flex items-center gap-2 text-xs">
                 <Zap className="w-3 h-3 text-primary animate-pulse" />
                 <span className="text-muted-foreground truncate">
-                  {flow.phase === "scraping" ? "Scraping" : "Enriching"}: {flow.currentContact}
+                  {flow.currentStep || flow.currentContact}
                 </span>
               </div>
             )}
+
+            {/* Extension indicators */}
+            <div className="flex gap-1.5">
+              {flow.linkedInAvailable && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  <Linkedin className="w-2.5 h-2.5 mr-0.5" /> LI
+                </Badge>
+              )}
+              {flow.partnerConnectAvailable && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  <Globe className="w-2.5 h-2.5 mr-0.5" /> PC
+                </Badge>
+              )}
+            </div>
 
             <div className="flex gap-2 text-xs">
               <Badge variant="secondary" className="text-xs">
@@ -143,28 +159,37 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
             className="space-y-4"
           >
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="rounded-lg bg-muted/50 p-2.5 text-center">
+                <p className="font-semibold text-foreground">{selectedContacts.length}</p>
+                <p className="text-muted-foreground">Contatti</p>
+              </div>
               <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                 <p className="font-semibold text-foreground">{withLinkedIn.length}</p>
-                <p className="text-muted-foreground">Con LinkedIn URL</p>
+                <p className="text-muted-foreground">Con LinkedIn</p>
               </div>
               <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                 <p className="font-semibold text-foreground">~{estimatedMinutes} min</p>
-                <p className="text-muted-foreground">Durata stimata</p>
+                <p className="text-muted-foreground">Stima</p>
               </div>
             </div>
 
-            {withoutLinkedIn.length > 0 && (
-              <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg p-2.5">
-                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                <span>{withoutLinkedIn.length} contatti senza URL LinkedIn (saranno saltati)</span>
-              </div>
-            )}
+            {/* Extension status */}
+            <div className="flex gap-2 text-xs">
+              <Badge variant={flow.linkedInAvailable ? "secondary" : "outline"} className="text-[10px]">
+                <Linkedin className="w-3 h-3 mr-1" />
+                LinkedIn {flow.linkedInAvailable ? "✓" : "✗"}
+              </Badge>
+              <Badge variant={flow.partnerConnectAvailable ? "secondary" : "outline"} className="text-[10px]">
+                <Globe className="w-3 h-3 mr-1" />
+                Partner Connect {flow.partnerConnectAvailable ? "✓" : "✗"}
+              </Badge>
+            </div>
 
             {!flow.extensionAvailable && (
               <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded-lg p-2.5">
                 <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                <span>Estensione Partner Connect non rilevata. Installala prima di avviare il flow.</span>
+                <span>Nessuna estensione rilevata. Installa almeno una tra Partner Connect e LinkedIn.</span>
               </div>
             )}
 
@@ -189,24 +214,32 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Genera bozza outreach</Label>
+                <div className="flex items-center gap-1.5">
+                  <BrainCircuit className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Label className="text-xs">Deep Search Web (Partner Connect)</Label>
+                </div>
+                <Switch checked={deepSearchWeb} onCheckedChange={setDeepSearchWeb} disabled={!flow.partnerConnectAvailable} />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Genera bozza outreach (AI)</Label>
                 <Switch checked={generateOutreach} onCheckedChange={setGenerateOutreach} />
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Auto-collegamento</Label>
-                <Switch checked={autoConnect} onCheckedChange={setAutoConnect} />
+                <Label className="text-xs">Auto-collegamento LinkedIn</Label>
+                <Switch checked={autoConnect} onCheckedChange={setAutoConnect} disabled={!flow.linkedInAvailable} />
               </div>
             </div>
 
             {/* Start */}
             <Button
               onClick={handleStart}
-              disabled={withLinkedIn.length === 0 || !flow.extensionAvailable}
+              disabled={selectedContacts.length === 0 || !flow.extensionAvailable}
               className="w-full"
             >
               <Play className="w-3.5 h-3.5 mr-1.5" />
-              Avvia LinkedIn Flow ({withLinkedIn.length} profili)
+              Avvia Flow ({selectedContacts.length} contatti)
             </Button>
           </motion.div>
         )}
