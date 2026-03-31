@@ -56,8 +56,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
   }, [fsExt.isAvailable]);
 
-  const downloadFireScrapeExtension = useCallback(() => {
-    fetch("/firescrape-extension.zip")
+  const downloadPartnerConnectExtension = useCallback(() => {
+    fetch("/partner-connect-extension.zip")
       .then((res) => {
         if (!res.ok) throw new Error(`Download failed: ${res.status}`);
         return res.blob();
@@ -65,7 +65,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "firescrape-extension.zip";
+        a.download = "partner-connect-extension.zip";
         a.click();
         URL.revokeObjectURL(a.href);
         toast({
@@ -125,7 +125,7 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     if (!fsOk) {
       // Auto-download Partner Connect extension
-      downloadFireScrapeExtension();
+      downloadPartnerConnectExtension();
     }
 
     toast({

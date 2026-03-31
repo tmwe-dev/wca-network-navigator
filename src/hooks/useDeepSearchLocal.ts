@@ -1,6 +1,6 @@
 /**
- * useDeepSearchLocal — Client-side Deep Search using FireScrape extension + AI Gateway
- * Uses FireScrape's agent sequences for Google search and scraping.
+ * useDeepSearchLocal — Client-side Deep Search using Partner Connect extension + AI Gateway
+ * Uses Partner Connect's agent sequences for Google search and scraping.
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,7 +56,7 @@ export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
 
   /**
-   * Perform a Google search using FireScrape's agent sequence.
+   * Perform a Google search using Partner Connect's agent sequence.
    * Opens Google in a background tab, extracts results.
    */
   const googleSearch = useCallback(async (query: string, limit = 5): Promise<GoogleSearchResult[]> => {
@@ -101,7 +101,7 @@ export function useDeepSearchLocal() {
   }, [fs]);
 
   /**
-   * Scrape a URL using FireScrape — navigate then scrape.
+   * Scrape a URL using Partner Connect — navigate then scrape.
    */
   const scrapeUrl = useCallback(async (url: string) => {
     const navResult = await fs.agentAction({ action: "navigate", url });
@@ -275,7 +275,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       await delay(500);
     }
 
-    // ═══ WEBSITE + LOGO via FireScrape scrape ═══
+    // ═══ WEBSITE + LOGO via Partner Connect scrape ═══
     let websiteQualityScore = 0;
     if (partner.website) {
       const websiteUrl = partner.website.startsWith("http") ? partner.website : `https://${partner.website}`;
@@ -320,7 +320,7 @@ If one matches, respond with ONLY the URL. If none, respond "NONE".`,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       deep_search_at: new Date().toISOString(),
-      deep_search_engine: "firescrape-v3.3",
+      deep_search_engine: "partner-connect-v3.3",
     };
     await supabase.from("partners").update({ enrichment_data: updated }).eq("id", partnerId);
 

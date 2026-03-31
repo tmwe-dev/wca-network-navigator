@@ -114,7 +114,7 @@ export function useDeepSearchRunner(): DeepSearchState {
       }
     }
 
-    // Detect if FireScrape extension is available for client-side search
+    // Detect if Partner Connect extension is available for client-side search
     const useLocal = mode === "partner" && localSearch.isAvailable;
 
     setRunning(true);
@@ -178,7 +178,7 @@ export function useDeepSearchRunner(): DeepSearchState {
         let error: any = null;
 
         if (useLocal) {
-          // Client-side via FireScrape extension
+          // Client-side via Partner Connect extension
           try {
             data = await localSearch.searchPartner(id);
             if (!data.success) error = data.error;
