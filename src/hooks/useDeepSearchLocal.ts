@@ -1,6 +1,6 @@
 /**
- * useDeepSearchLocal — Client-side Deep Search using FireScrape extension + AI Gateway
- * Uses FireScrape's agent sequences for Google search and scraping.
+ * useDeepSearchLocal — Client-side Deep Search using Partner Connect extension + AI Gateway
+ * Uses Partner Connect's agent sequences for Google search and scraping.
  */
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
