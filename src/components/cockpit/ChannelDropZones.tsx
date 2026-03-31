@@ -22,7 +22,7 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   return (
-    <div className="grid grid-cols-2 gap-4 w-full max-w-[480px]">
+    <div className="flex flex-col gap-2 w-full max-w-[140px]">
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
