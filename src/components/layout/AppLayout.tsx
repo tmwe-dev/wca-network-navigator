@@ -10,6 +10,7 @@ import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
+import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AiAssistantDialog } from "@/components/operations/AiAssistantDialog";
@@ -31,6 +32,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const deepSearch = useDeepSearchRunner();
+  const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
@@ -138,7 +140,7 @@ export function AppLayout() {
                 )}
 
                 <ActiveProcessIndicator />
-                <ConnectionStatusBar onAiClick={() => setAiOpen(true)} />
+                <ConnectionStatusBar onAiClick={() => setAiOpen(true)} outreachQueue={outreachQueue} />
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">

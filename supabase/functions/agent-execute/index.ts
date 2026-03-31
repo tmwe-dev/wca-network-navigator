@@ -565,6 +565,29 @@ const ALL_TOOLS: Record<string, any> = {
       parameters: { type: "object", properties: { focus: { type: "string", description: "Optional focus area: partners, contacts, emails, agents, conversions" } } },
     },
   },
+  queue_outreach: {
+    type: "function",
+    function: {
+      name: "queue_outreach",
+      description: "Queue an outreach message (WhatsApp, LinkedIn, email, SMS) to be sent automatically by the frontend via browser extensions. Use this to send messages through channels that require browser-side execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel: { type: "string", enum: ["email", "linkedin", "whatsapp", "sms"], description: "Delivery channel" },
+          recipient_name: { type: "string", description: "Recipient name" },
+          recipient_email: { type: "string", description: "Email (required for email channel)" },
+          recipient_phone: { type: "string", description: "Phone number (required for whatsapp/sms)" },
+          recipient_linkedin_url: { type: "string", description: "LinkedIn profile URL (for linkedin channel)" },
+          partner_id: { type: "string", description: "Partner UUID" },
+          contact_id: { type: "string", description: "Contact ID" },
+          subject: { type: "string", description: "Subject (for email)" },
+          body: { type: "string", description: "Message body (plain text for WA/LI/SMS, HTML for email)" },
+          priority: { type: "number", description: "Priority (0=normal, 1=high)" },
+        },
+        required: ["channel", "body"],
+      },
+    },
+  },
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1309,6 +1332,28 @@ async function executeTool(name: string, args: Record<string, unknown>, userId: 
       const { count: plansActive } = await supabase.from("ai_work_plans").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "active");
       results.work_plans = { active: plansActive };
       return results;
+    }
+
+    case "queue_outreach": {
+      const channel = String(args.channel || "email");
+      const body = String(args.body || "");
+      if (!body) return { error: "body è obbligatorio" };
+      const { data, error } = await supabase.from("outreach_queue").insert({
+        user_id: userId,
+        channel,
+        recipient_name: args.recipient_name ? String(args.recipient_name) : null,
+        recipient_email: args.recipient_email ? String(args.recipient_email) : null,
+        recipient_phone: args.recipient_phone ? String(args.recipient_phone) : null,
+        recipient_linkedin_url: args.recipient_linkedin_url ? String(args.recipient_linkedin_url) : null,
+        partner_id: args.partner_id ? String(args.partner_id) : null,
+        contact_id: args.contact_id ? String(args.contact_id) : null,
+        subject: args.subject ? String(args.subject) : null,
+        body,
+        priority: Number(args.priority) || 0,
+        created_by: "agent",
+      }).select("id, channel, recipient_name, status").single();
+      if (error) return { error: error.message };
+      return { success: true, queue_id: data.id, channel: data.channel, recipient: data.recipient_name, message: `Messaggio ${channel} accodato per ${data.recipient_name || "destinatario"}. Il frontend lo invierà automaticamente.` };
     }
 
     default:

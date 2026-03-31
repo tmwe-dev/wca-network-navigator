@@ -1,14 +1,22 @@
-import { Linkedin, MessageCircle, Bot } from "lucide-react";
+import { Linkedin, MessageCircle, Bot, Send, Pause, Play } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 
-interface Props {
-  onAiClick?: () => void;
+interface OutreachQueueState {
+  pendingCount: number;
+  processing: boolean;
+  paused: boolean;
+  setPaused: (v: boolean) => void;
 }
 
-export function ConnectionStatusBar({ onAiClick }: Props) {
+interface Props {
+  onAiClick?: () => void;
+  outreachQueue?: OutreachQueueState;
+}
+
+export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
 
@@ -64,6 +72,33 @@ export function ConnectionStatusBar({ onAiClick }: Props) {
           </TooltipTrigger>
           <TooltipContent side="bottom">AI Agent attivo</TooltipContent>
         </Tooltip>
+
+        {/* Outreach Queue indicator */}
+        {outreachQueue && outreachQueue.pendingCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
+                className="relative h-7 flex items-center gap-1 px-1.5 rounded-md hover:bg-muted/60 transition-colors"
+              >
+                {outreachQueue.paused ? (
+                  <Play className="w-3.5 h-3.5 text-muted-foreground" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 text-primary" />
+                )}
+                <span className="text-[10px] font-semibold tabular-nums text-foreground">{outreachQueue.pendingCount}</span>
+                {outreachQueue.processing && !outreachQueue.paused && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {outreachQueue.paused
+                ? `Coda in pausa — ${outreachQueue.pendingCount} messaggi. Clicca per riprendere`
+                : `${outreachQueue.pendingCount} messaggi in coda — clicca per mettere in pausa`}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   );
