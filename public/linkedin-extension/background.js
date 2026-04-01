@@ -876,6 +876,13 @@ async function searchLinkedInProfile(query) {
   }
 }
 
+// ── Tab operation queue to prevent race conditions ──
+var _tabQueue = Promise.resolve();
+function enqueueTabOp(fn) {
+  _tabQueue = _tabQueue.then(fn, fn);
+  return _tabQueue;
+}
+
 // ── Message handler ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   var source = message && message.source;
