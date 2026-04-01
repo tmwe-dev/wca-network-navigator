@@ -25,6 +25,7 @@ export type Database = {
           due_date: string | null
           email_body: string | null
           email_subject: string | null
+          executed_by_agent_id: string | null
           id: string
           partner_id: string | null
           priority: string
@@ -49,6 +50,7 @@ export type Database = {
           due_date?: string | null
           email_body?: string | null
           email_subject?: string | null
+          executed_by_agent_id?: string | null
           id?: string
           partner_id?: string | null
           priority?: string
@@ -73,6 +75,7 @@ export type Database = {
           due_date?: string | null
           email_body?: string | null
           email_subject?: string | null
+          executed_by_agent_id?: string | null
           id?: string
           partner_id?: string | null
           priority?: string
@@ -180,10 +183,13 @@ export type Database = {
           name: string
           role: string
           schedule_config: Json
+          signature_html: string | null
+          signature_image_url: string | null
           stats: Json
           system_prompt: string
           updated_at: string
           user_id: string
+          voice_call_url: string | null
         }
         Insert: {
           assigned_tools?: Json
@@ -197,10 +203,13 @@ export type Database = {
           name: string
           role?: string
           schedule_config?: Json
+          signature_html?: string | null
+          signature_image_url?: string | null
           stats?: Json
           system_prompt?: string
           updated_at?: string
           user_id: string
+          voice_call_url?: string | null
         }
         Update: {
           assigned_tools?: Json
@@ -214,10 +223,13 @@ export type Database = {
           name?: string
           role?: string
           schedule_config?: Json
+          signature_html?: string | null
+          signature_image_url?: string | null
           stats?: Json
           system_prompt?: string
           updated_at?: string
           user_id?: string
+          voice_call_url?: string | null
         }
         Relationships: []
       }

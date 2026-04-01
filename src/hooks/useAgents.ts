@@ -15,6 +15,9 @@ export interface Agent {
   schedule_config: any;
   is_active: boolean;
   stats: { tasks_completed: number; emails_sent: number; calls_made: number };
+  signature_html: string | null;
+  signature_image_url: string | null;
+  voice_call_url: string | null;
   created_at: string;
   updated_at: string;
 }

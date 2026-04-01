@@ -12,6 +12,7 @@ import { AgentKnowledgeBase } from "./AgentKnowledgeBase";
 import { AgentClientList } from "./AgentClientList";
 import { AgentTaskList } from "./AgentTaskList";
 import { AgentVoiceConfig } from "./AgentVoiceConfig";
+import { AgentSignatureConfig } from "./AgentSignatureConfig";
 import { AgentChat } from "./AgentChat";
 import { AGENT_ROLES } from "@/data/agentTemplates";
 import { toast } from "sonner";
@@ -77,13 +78,14 @@ export function AgentDetail({ agent, onDeleted }: Props) {
 
       {/* Tabs */}
       <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="w-full grid grid-cols-7 h-9">
+        <TabsList className="w-full grid grid-cols-8 h-9">
           <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
           <TabsTrigger value="clients" className="text-xs">Clienti</TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs">Compiti</TabsTrigger>
           <TabsTrigger value="prompt" className="text-xs">Prompt</TabsTrigger>
           <TabsTrigger value="tools" className="text-xs">Tool</TabsTrigger>
           <TabsTrigger value="kb" className="text-xs">KB</TabsTrigger>
+          <TabsTrigger value="signature" className="text-xs">Firma</TabsTrigger>
           <TabsTrigger value="voice" className="text-xs">Voce</TabsTrigger>
         </TabsList>
         <TabsContent value="chat"><AgentChat agent={agent} /></TabsContent>
@@ -92,6 +94,7 @@ export function AgentDetail({ agent, onDeleted }: Props) {
         <TabsContent value="prompt"><AgentPromptEditor agent={agent} /></TabsContent>
         <TabsContent value="tools"><AgentToolSelector agent={agent} /></TabsContent>
         <TabsContent value="kb"><AgentKnowledgeBase agent={agent} /></TabsContent>
+        <TabsContent value="signature"><AgentSignatureConfig agent={agent} /></TabsContent>
         <TabsContent value="voice"><AgentVoiceConfig agent={agent} /></TabsContent>
       </Tabs>
     </div>

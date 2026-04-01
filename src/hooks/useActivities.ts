@@ -115,6 +115,7 @@ export interface AllActivity {
   assigned_to: string | null;
   selected_contact_id: string | null;
   campaign_batch_id: string | null;
+  executed_by_agent_id: string | null;
   created_at: string;
   completed_at: string | null;
   partners: {

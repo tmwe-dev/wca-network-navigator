@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { to, subject, html, from, partner_id } = await req.json();
+    const { to, subject, html, from, partner_id, agent_id } = await req.json();
 
     if (!to || !subject || !html) {
       return new Response(
@@ -95,14 +95,52 @@ Deno.serve(async (req) => {
 
     // Inject signature and footer images into HTML
     let finalHtml = html;
-    const sigImg = s["ai_signature_image_url"];
-    const footerImg = s["ai_footer_image_url"];
 
-    if (sigImg) {
-      finalHtml += `<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`;
-    }
-    if (footerImg) {
-      finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+    // If sent by an AI agent, use agent's signature instead of default
+    if (agent_id) {
+      const { data: agentRow } = await supabase
+        .from("agents")
+        .select("signature_html, signature_image_url, avatar_emoji, name, role, voice_call_url")
+        .eq("id", agent_id)
+        .single();
+
+      if (agentRow?.signature_html) {
+        finalHtml += agentRow.signature_html;
+      } else if (agentRow) {
+        // Auto-generate minimal agent signature
+        const avatarPart = agentRow.signature_image_url
+          ? `<img src="${agentRow.signature_image_url}" alt="${agentRow.name}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" />`
+          : `<span style="font-size:28px;">${agentRow.avatar_emoji}</span>`;
+        const callPart = agentRow.voice_call_url
+          ? `<br/><a href="${agentRow.voice_call_url}" style="color:#2563eb;font-size:12px;text-decoration:none;">📞 Chiamami</a>`
+          : "";
+        finalHtml += `<div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:12px;">
+          <table cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;font-size:13px;color:#333;">
+            <tr>
+              <td style="padding-right:10px;vertical-align:top;">${avatarPart}</td>
+              <td style="vertical-align:top;">
+                <strong>${agentRow.name}</strong><br/>
+                <span style="color:#666;font-size:12px;">${agentRow.role}</span>${callPart}
+              </td>
+            </tr>
+          </table>
+        </div>`;
+      }
+      // Still add footer image if configured
+      const footerImg = s["ai_footer_image_url"];
+      if (footerImg) {
+        finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+      }
+    } else {
+      // Default user signature
+      const sigImg = s["ai_signature_image_url"];
+      const footerImg = s["ai_footer_image_url"];
+      if (sigImg) {
+        finalHtml += `<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`;
+      }
+      if (footerImg) {
+        finalHtml += `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`;
+      }
     }
 
     await client.send({
