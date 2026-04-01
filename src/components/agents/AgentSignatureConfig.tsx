@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, Image, Link2, Eye } from "lucide-react";
 import { useAgents, type Agent } from "@/hooks/useAgents";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { ROBIN_VOICE_CALL_URL } from "@/data/agentTemplates";
 import { toast } from "sonner";
 
 interface Props {
@@ -59,23 +61,31 @@ export function AgentSignatureConfig({ agent }: Props) {
   };
 
   const generateDefaultSignature = () => {
+    // Use avatar image from resolveAgentAvatar
+    const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
+    const avatarHtml = signatureImageUrl
+      ? `<img src="${signatureImageUrl}" alt="${agent.name}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />`
+      : avatarSrc
+        ? `<img src="${avatarSrc}" alt="${agent.name}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />`
+        : `<span style="font-size:36px;">${agent.avatar_emoji}</span>`;
+
+    const callUrl = voiceCallUrl || ROBIN_VOICE_CALL_URL;
+
     const html = `<table cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;font-size:13px;color:#333;">
   <tr>
     <td style="padding-right:12px;vertical-align:top;">
-      ${signatureImageUrl
-        ? `<img src="${signatureImageUrl}" alt="${agent.name}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />`
-        : `<span style="font-size:36px;">${agent.avatar_emoji}</span>`
-      }
+      ${avatarHtml}
     </td>
     <td style="vertical-align:top;">
       <strong style="font-size:14px;">${agent.name}</strong><br/>
-      <span style="color:#666;font-size:12px;">${agent.role} — AI Sales Assistant</span><br/>
-      ${voiceCallUrl ? `<a href="${voiceCallUrl}" style="color:#2563eb;font-size:12px;text-decoration:none;">📞 Chiamami</a>` : ""}
+      <span style="color:#666;font-size:12px;">Agente Digitale TMWI — ${agent.role}</span><br/>
+      <a href="${callUrl}" style="color:#2563eb;font-size:12px;text-decoration:none;">📞 Chiamami</a>
     </td>
   </tr>
 </table>`;
     setSignatureHtml(html);
-    toast.success("Firma generata — personalizzala se vuoi");
+    if (!voiceCallUrl) setVoiceCallUrl(ROBIN_VOICE_CALL_URL);
+    toast.success("Firma generata con branding TMWI e link chiamata Robin");
   };
 
   const previewHtml = signatureHtml || `<p style="color:#999;font-size:13px;">Nessuna firma configurata</p>`;
@@ -92,9 +102,14 @@ export function AgentSignatureConfig({ agent }: Props) {
         <div className="flex items-center gap-3 mt-1">
           {signatureImageUrl ? (
             <img src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
-          ) : (
-            <span className="text-3xl">{agent.avatar_emoji}</span>
-          )}
+          ) : (() => {
+            const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
+            return avatarSrc ? (
+              <img src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
+            ) : (
+              <span className="text-3xl">{agent.avatar_emoji}</span>
+            );
+          })()}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
           <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
             <Upload className="w-3.5 h-3.5 mr-1" />
@@ -106,16 +121,16 @@ export function AgentSignatureConfig({ agent }: Props) {
       {/* Voice call URL */}
       <div>
         <Label className="text-xs flex items-center gap-1">
-          <Link2 className="w-3 h-3" /> Link Chiamata Vocale
+          <Link2 className="w-3 h-3" /> Link Chiamata Vocale (Robin — agente telefonico)
         </Label>
         <Input
           value={voiceCallUrl}
           onChange={(e) => setVoiceCallUrl(e.target.value)}
-          placeholder="https://tuodominio.com/call/agent-id"
+          placeholder={ROBIN_VOICE_CALL_URL}
           className="text-sm mt-1"
         />
         <p className="text-[10px] text-muted-foreground mt-1">
-          Il cliente cliccherà questo link per parlare con l'agente via ElevenLabs
+          Robin è l'agente telefonico designato. Il link apparirà nella firma email.
         </p>
       </div>
 
