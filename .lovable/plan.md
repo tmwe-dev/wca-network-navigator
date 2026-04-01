@@ -1,107 +1,63 @@
 
 
-# Due Canali Bidirezionali: WhatsApp Inbox + Email Inbox
+# Centralizzare AI dell'Estensione su Lovable AI
 
-## Stato attuale
+## Situazione attuale
 
-| Canale | Invio | Ricezione/Lettura |
-|--------|-------|-------------------|
-| **WhatsApp** | ✅ Via estensione Chrome (web.whatsapp.com) | ❌ Nessuna lettura risposte |
-| **Email** | ✅ SMTP Aruba (send-email, process-email-queue) | ❌ Nessuna lettura inbox |
-| **LinkedIn** | ✅ Via estensione Chrome | ❌ Nessuna lettura risposte |
+Il modulo `brain.js` dell'estensione Partner Connect chiama direttamente `https://api.anthropic.com/v1/messages` con una API key Claude configurata dall'utente. Questo richiede:
+- L'utente deve procurarsi e inserire una API key Anthropic
+- Costi diretti per l'utente
+- Gestione cifratura chiavi nell'estensione
 
-Entrambi i canali sono **solo uscita**. Non c'è modo di sapere se un contatto ha risposto, nè di leggere o rispondere dal sistema.
+## Cosa cambia
 
----
+Sostituiamo la chiamata diretta ad Anthropic con una chiamata alla nostra Edge Function che usa Lovable AI (già pagato, zero config per l'utente).
 
-## 1. WhatsApp — Lettura risposte e conversazione
+## Piano
 
-### Problema
-L'estensione attuale apre una tab web.whatsapp.com, invia il messaggio e la chiude. Non monitora le risposte.
+### 1. Creare Edge Function `extension-brain`
 
-### Soluzione: WhatsApp Business API (Cloud API)
-Lo scraping di web.whatsapp.com per leggere messaggi è fragile e viola i ToS. L'unica via affidabile è la **WhatsApp Business API** (Meta Cloud API), che fornisce webhook per i messaggi in arrivo.
+Nuova funzione dedicata in `supabase/functions/extension-brain/index.ts`:
+- Riceve `{ messages, systemPrompt, maxTokens }` dall'estensione
+- Chiama il gateway Lovable AI (`https://ai.gateway.lovable.dev/v1/chat/completions`) con `LOVABLE_API_KEY`
+- Modello: `google/gemini-3-flash-preview` (veloce, gratis)
+- Ritorna il testo della risposta in formato compatibile con il parsing esistente di brain.js
+- CORS aperto (l'estensione chiama da qualsiasi dominio)
+- Nessuna autenticazione JWT richiesta (l'estensione non ha il token utente)
 
-**Flusso:**
-1. L'utente configura un numero WhatsApp Business (tramite Meta Business Manager)
-2. Meta invia un webhook a una Edge Function `whatsapp-webhook` per ogni messaggio ricevuto
-3. La Edge Function fa match del numero mittente con `partner_contacts.mobile`, `imported_contacts.phone`, `prospects.phone`
-4. Il messaggio viene salvato in una nuova tabella `channel_messages`
-5. La UI mostra una inbox WhatsApp con le conversazioni raggruppate per contatto
-6. L'utente può rispondere direttamente — il messaggio parte via Cloud API (non più via estensione)
+### 2. Modificare `brain.js` — metodo `think()`
 
-**Prerequisiti:** Account Meta Business, numero WhatsApp Business verificato, token API. Costo: gratuito per i primi 1000 messaggi/mese, poi ~$0.05/messaggio.
+- Rimuovere il check `if (!this.config.claudeApiKey)` — non serve più
+- Sostituire la fetch ad Anthropic (righe 187-201) con una fetch alla Edge Function:
+  ```
+  fetch(`${SUPABASE_URL}/functions/v1/extension-brain`, { ... })
+  ```
+- L'URL Supabase sarà hardcoded come costante (è pubblico)
+- Adattare il parsing della risposta: da `data.content[0].text` a `data.content` (stringa diretta)
+- Mantenere intatto tutto il resto: library check, Hydra enrichment, auto-save, token tracking
 
-**Alternativa senza API:** Estendere l'estensione Chrome per fare polling periodico su web.whatsapp.com e leggere i messaggi non letti. Più fragile, funziona solo a browser aperto, ma zero costi e zero setup esterno.
+### 3. Semplificare config e popup
 
-### 2. Email — Lettura inbox e match con contatti
+- Rimuovere da `brain.js` config: `claudeApiKey`, `claudeModel`, cifratura `_encApiKey`
+- Rimuovere da `popup.js`: campo API key Claude, campo modello Claude
+- Mantenere: budget token giornaliero, Supabase KB settings
+- Aggiornare `background.js`: rimuovere mascheramento `claudeApiKey` nel get-config
 
-### Problema
-Il sistema invia email via SMTP Aruba ma non legge le risposte. Non c'è modo di sapere chi ha risposto.
+### 4. Aggiornare `popup.html`
 
-### Soluzione: IMAP Polling via Edge Function
-Aruba supporta IMAP. Una Edge Function `check-inbox` si connette periodicamente alla casella, legge le email nuove, fa match del mittente con i contatti nel circuito di attesa.
+Rimuovere i campi input per API key Claude e selezione modello dalla sezione Brain Settings.
 
-**Flusso:**
-1. Edge Function `check-inbox` (cron ogni 5 minuti) si connette via IMAP alla casella configurata
-2. Legge le email non lette (UNSEEN)
-3. Per ogni email: match `From:` con `partners.email`, `partner_contacts.email`, `imported_contacts.email`, `prospects.email`
-4. Se match trovato → salva in `channel_messages` con riferimento al contatto
-5. Aggiorna `last_interaction_at` e `interaction_count` del contatto
-6. La UI mostra l'inbox con le conversazioni raggruppate
-7. L'utente può rispondere — il messaggio parte via SMTP (sistema già esistente)
-
-### DB: Tabella unificata `channel_messages`
-
-```
-channel_messages:
-  id, user_id, channel (whatsapp|email|linkedin|sms),
-  direction (inbound|outbound),
-  source_type (partner|contact|prospect|business_card|manual),
-  source_id,
-  partner_id (nullable),
-  from_address, to_address,
-  subject (nullable, solo email),
-  body_text, body_html (nullable),
-  message_id_external (message-id email o wa message id),
-  in_reply_to (nullable, per threading),
-  read_at (nullable),
-  created_at
-```
-
-Questa tabella unifica TUTTI i messaggi in/out su tutti i canali. Permette di vedere la cronologia completa di comunicazione con ogni contatto.
-
-### UI: Tab "Messaggi" nell'Outreach
-
-Nuovo sotto-tab nell'area Outreach con:
-- Lista conversazioni raggruppate per contatto, ordinate per ultimo messaggio
-- Badge con conteggio messaggi non letti
-- Filtro per canale (WhatsApp / Email / Tutti)
-- Click su conversazione → thread completo con possibilità di rispondere
-- Match automatico: ogni messaggio mostra il nome del contatto/partner associato e il suo status nel circuito di attesa
-
----
-
-## Domanda chiave prima di procedere
-
-Per WhatsApp ci sono due strade molto diverse. Per email, IMAP è l'unica via pratica con Aruba.
-
----
-
-## File coinvolti
+## File modificati
 
 | File | Cosa |
 |------|------|
-| Migration | Tabella `channel_messages` + indici |
-| `supabase/functions/check-inbox/index.ts` | IMAP polling, match contatti, salvataggio |
-| `supabase/functions/whatsapp-webhook/index.ts` | Webhook Meta per messaggi in arrivo (se Cloud API) |
-| `src/components/outreach/InboxView.tsx` | UI inbox con conversazioni |
-| `src/components/outreach/ConversationThread.tsx` | Thread singola conversazione |
-| `src/hooks/useChannelMessages.ts` | Hook per lettura/invio messaggi |
-| Cockpit/ContactCard | Badge messaggi non letti per contatto |
+| `supabase/functions/extension-brain/index.ts` | **Nuovo** — proxy verso Lovable AI |
+| `public/partner-connect-extension/brain.js` | Fetch → Edge Function, rimozione config Claude |
+| `public/partner-connect-extension/popup.js` | Rimozione campi API key/modello Claude |
+| `public/partner-connect-extension/popup.html` | Rimozione input Claude settings |
+| `public/partner-connect-extension/background.js` | Rimozione mascheramento claudeApiKey |
 
-## Ordine consigliato
+## Risultato
 
-1. **Email Inbox** (IMAP) — usa infrastruttura SMTP già configurata, nessun setup esterno
-2. **WhatsApp** — richiede decisione su approccio (API vs estensione)
+L'utente installa l'estensione e il Brain funziona **subito**, senza configurare nulla. Zero costi esterni, tutto centralizzato su Lovable AI.
 
