@@ -158,7 +158,15 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
   const isAiProcessed = !!contact.deepSearchAt;
   const enrichSummary = getEnrichmentSummary(contact.enrichmentData);
   const contactHeadline = contact.enrichmentData?.contact_profile?.linkedin_title;
-  const hasEnrichmentData = !!(contact.enrichmentData && (contact.enrichmentData.contact_profile || contact.enrichmentData.company_profile || contact.enrichmentData.linkedin_url));
+  const hasEnrichmentData = !!(contact.enrichmentData && (contact.enrichmentData.contact_profile || contact.enrichmentData.company_profile || contact.enrichmentData.linkedin_url || contact.enrichmentData.linkedin_profile_url));
+  const hasLiveLinkedin = !!enrichmentState?.linkedinProfile;
+  const hasAnyData = hasEnrichmentData || hasLiveLinkedin;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[role="checkbox"]') || target.closest('input') || target.closest('a')) return;
+    setIsExpanded(!isExpanded);
+  };
 
   return (
     <TooltipProvider>
@@ -171,8 +179,9 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         onDragEnd={onDragEnd}
         whileHover={isProcessing ? {} : { scale: 1.02, y: -2 }}
         whileTap={isProcessing ? {} : { scale: 0.98 }}
+        onClick={handleCardClick}
         className={cn(
-          "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 transition-all duration-300 hover:shadow-lg overflow-hidden",
+          "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 pr-8 transition-all duration-300 hover:shadow-lg overflow-hidden",
           isProcessing
             ? "border-[hsl(210,80%,55%)]/40 bg-[hsl(210,80%,55%)]/[0.03] shadow-sm shadow-[hsl(210,80%,55%)]/5 cursor-default animate-soft-pulse"
             : isWorked
@@ -191,7 +200,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
           )
         )}
       >
-        {/* Left accent bar — golden if AI, green if worked, otherwise origin-based */}
+        {/* Left accent bar */}
         <div className={cn(
           "absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-l-xl",
           isAiProcessed ? "from-amber-400/80 to-amber-500/20"
@@ -219,20 +228,25 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                   {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
                   <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
                   <span className="text-sm">{flag}</span>
-                  {isAiProcessed && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                      className="flex items-center gap-0.5 hover:bg-amber-500/10 rounded-md p-0.5 transition-colors"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                      {isExpanded ? <ChevronUp className="w-2.5 h-2.5 text-amber-400" /> : <ChevronDown className="w-2.5 h-2.5 text-amber-400" />}
-                    </button>
-                  )}
+                  {/* Expand toggle — always visible */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+                    className={cn(
+                      "flex items-center gap-0.5 rounded-md p-0.5 transition-colors",
+                      hasAnyData ? "hover:bg-amber-500/10" : "hover:bg-muted/50"
+                    )}
+                  >
+                    {hasAnyData
+                      ? <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                      : null
+                    }
+                    {isExpanded ? <ChevronUp className="w-2.5 h-2.5 text-muted-foreground" /> : <ChevronDown className="w-2.5 h-2.5 text-muted-foreground" />}
+                  </button>
                 </div>
                 <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
                 <div className="text-[11px] text-muted-foreground">{contact.role}</div>
                 {/* AI headline preview */}
-                {isAiProcessed && contactHeadline && !isExpanded && (
+                {contactHeadline && !isExpanded && (
                   <div className="flex items-center gap-1 mt-0.5">
                     <Briefcase className="w-2.5 h-2.5 text-amber-400/70 shrink-0" />
                     <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">{contactHeadline}</span>
@@ -243,7 +257,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                     {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
                   </div>
                 )}
-                {hasLinkedin && enrichmentState?.linkedinProfile?.headline && (
+                {hasLinkedin && enrichmentState?.linkedinProfile?.headline && !isExpanded && (
                   <div className="text-[10px] text-muted-foreground/80 mt-0.5 truncate max-w-[180px]">
                     💼 {enrichmentState.linkedinProfile.headline}
                   </div>
@@ -303,53 +317,33 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <SmartChannelIcons contact={contact} />
-                {assignment && (
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
-                      return avatarSrc ? (
-                        <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                          <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
-                        </InfoTooltip>
-                      ) : (
-                        <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                          <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-primary/30">
-                            {assignment.agentName.charAt(0)}
-                          </span>
-                        </InfoTooltip>
-                      );
-                    })()}
-                    {assignment.managerName && (
-                      <InfoTooltip content={`Manager: ${assignment.managerName}`}>
-                        <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
-                          <Briefcase className="w-2.5 h-2.5" />
-                          <span className="truncate max-w-[40px]">{assignment.managerName.split(" ")[0]}</span>
+              <SmartChannelIcons contact={contact} />
+              {assignment && (
+                <div className="flex items-center gap-1 ml-2">
+                  {(() => {
+                    const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
+                    return avatarSrc ? (
+                      <InfoTooltip content={`Agente: ${assignment.agentName}`}>
+                        <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
+                      </InfoTooltip>
+                    ) : (
+                      <InfoTooltip content={`Agente: ${assignment.agentName}`}>
+                        <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-primary/30">
+                          {assignment.agentName.charAt(0)}
                         </span>
                       </InfoTooltip>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <InfoTooltip content="Avvia Deep Search per arricchire i dati">
-                  <button
-                    className="p-1 rounded-md text-muted-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors"
-                    onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}
-                  >
-                    <Search className="w-3 h-3" />
-                  </button>
-                </InfoTooltip>
-                <InfoTooltip content="Genera alias personalizzato con AI">
-                  <button
-                    className="p-1 rounded-md text-muted-foreground/80 hover:text-chart-3 hover:bg-chart-3/10 transition-colors"
-                    onClick={(e) => { e.stopPropagation(); onAlias(); }}
-                  >
-                    <Sparkles className="w-3 h-3" />
-                  </button>
-                </InfoTooltip>
-              </div>
+                    );
+                  })()}
+                  {assignment.managerName && (
+                    <InfoTooltip content={`Manager: ${assignment.managerName}`}>
+                      <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
+                        <Briefcase className="w-2.5 h-2.5" />
+                        <span className="truncate max-w-[40px]">{assignment.managerName.split(" ")[0]}</span>
+                      </span>
+                    </InfoTooltip>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -364,13 +358,37 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="mt-3 pt-3 border-t border-amber-400/20 space-y-3">
+              <div className="mt-3 pt-3 border-t border-border/40 space-y-3">
+                {/* Live LinkedIn data */}
+                {hasLiveLinkedin && enrichmentState?.linkedinProfile && (
+                  <div className="rounded-lg border border-[hsl(210,80%,55%)]/30 bg-[hsl(210,80%,55%)]/[0.05] p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(210,80%,55%)]">
+                      <Linkedin className="w-3 h-3" /> Dati LinkedIn Live
+                    </div>
+                    {enrichmentState.linkedinProfile.name && (
+                      <div className="text-xs text-foreground">{enrichmentState.linkedinProfile.name}</div>
+                    )}
+                    {enrichmentState.linkedinProfile.headline && (
+                      <div className="text-[11px] text-muted-foreground">💼 {enrichmentState.linkedinProfile.headline}</div>
+                    )}
+                    {enrichmentState.linkedinProfile.location && (
+                      <div className="text-[11px] text-muted-foreground">📍 {enrichmentState.linkedinProfile.location}</div>
+                    )}
+                    {enrichmentState.linkedinProfile.connectionStatus && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {enrichmentState.linkedinProfile.connectionStatus === "connected" ? "✅ Connesso" : enrichmentState.linkedinProfile.connectionStatus === "pending" ? "⏳ In attesa" : `🔗 ${enrichmentState.linkedinProfile.connectionStatus}`}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Stored enrichment data */}
                 {hasEnrichmentData ? (
                   <ContactEnrichmentCard
                     enrichmentData={contact.enrichmentData}
                     deepSearchAt={contact.deepSearchAt || null}
                   />
-                ) : (
+                ) : !hasLiveLinkedin ? (
                   <div className="text-center py-3 space-y-2">
                     <p className="text-xs text-muted-foreground">Nessun dato AI disponibile</p>
                     <div className="flex items-center justify-center gap-2">
@@ -394,7 +412,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
                       )}
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             </motion.div>
           )}

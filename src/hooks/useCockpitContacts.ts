@@ -95,16 +95,16 @@ export function useCockpitContacts() {
       // Fetch source data in parallel
       const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
-          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id").in("id", pcIds).then(r => r.data || [])
+          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id, contact_alias").in("id", pcIds).then(r => r.data || [])
           : Promise.resolve([]),
         bcIds.length > 0
           ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
           : Promise.resolve([]),
         prcIds.length > 0
-          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
+          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id, linkedin_url").in("id", prcIds).then(r => r.data || [])
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at").in("id", icIds).then(r => r.data || [])
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
@@ -139,7 +139,7 @@ export function useCockpitContacts() {
       const uniquePartnerIds = [...new Set(partnerIds)];
       let partnersMap: Record<string, any> = {};
       if (uniquePartnerIds.length > 0) {
-        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code").in("id", uniquePartnerIds);
+        const { data: pData } = await supabase.from("partners").select("id, company_name, country_code, company_alias, enrichment_data, enriched_at, ai_parsed_at").in("id", uniquePartnerIds);
         for (const p of pData || []) partnersMap[p.id] = p;
       }
 
@@ -200,6 +200,10 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: pc.partner_id || item.partner_id,
           linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
+          contactAlias: pc.contact_alias || undefined,
+          companyAlias: partner?.company_alias || undefined,
+          deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
+          enrichmentData: partner?.enrichment_data || undefined,
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
@@ -286,6 +290,8 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
+          contactAlias: ic.contact_alias || undefined,
+          companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
           enrichmentData: ic.enrichment_data || undefined,
         });
