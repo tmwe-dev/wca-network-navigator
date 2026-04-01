@@ -214,6 +214,7 @@ export function useDeepSearchRunner(): DeepSearchState {
         if (mode === "contact") {
           queryClient.invalidateQueries({ queryKey: ["contacts"] });
           queryClient.invalidateQueries({ queryKey: ["contact-group-items"] });
+          queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
         } else {
           queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
         }
