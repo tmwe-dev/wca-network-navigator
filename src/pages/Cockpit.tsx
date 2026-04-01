@@ -34,7 +34,7 @@ export interface CockpitFilter {
   type: "search" | "country" | "status" | "language" | "channel" | "priority" | "custom";
 }
 
-export type ScrapingPhase = "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+export type ScrapingPhase = "idle" | "searching" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
 
 export type LinkedInConnectionStatus = "not_connected" | "connected" | "pending" | "unknown";
 
