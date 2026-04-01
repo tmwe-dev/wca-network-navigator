@@ -193,6 +193,20 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
               <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
                 P{contact.priority}
               </span>
+              {/* LinkedIn status badge */}
+              {hasLinkedin && (
+                <span className={cn(
+                  "text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1",
+                  enrichmentState?.linkedinProfile?.connectionStatus === "connected"
+                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                    : enrichmentState?.linkedinProfile?.connectionStatus === "pending"
+                    ? "bg-warning/15 text-warning border-warning/30"
+                    : "bg-[hsl(210,80%,55%)]/15 text-[hsl(210,80%,55%)] border-[hsl(210,80%,55%)]/30"
+                )}>
+                  <Linkedin className="w-2.5 h-2.5" />
+                  {enrichmentState?.linkedinProfile?.connectionStatus === "connected" ? "✓" : enrichmentState?.linkedinProfile?.connectionStatus === "pending" ? "⏳" : "✓"}
+                </span>
+              )}
             </div>
           </div>
 
