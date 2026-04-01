@@ -26,6 +26,7 @@ export function useContactActions(deps: Deps) {
   const updateLeadStatus = useUpdateLeadStatus();
   const [deepSearchLoading, setDeepSearchLoading] = useState(false);
   const [aliasLoading, setAliasLoading] = useState(false);
+  const [linkedInLookupLoading, setLinkedInLookupLoading] = useState(false);
 
   const invalidateContacts = () => {
     queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
@@ -96,6 +97,20 @@ export function useContactActions(deps: Deps) {
     });
   }, [currentGroupBy, selection, holdingPattern]);
 
+  const handleLinkedInLookup = useCallback(async (contactIds: string[], lookupFn: (ids: string[]) => Promise<void>) => {
+    if (linkedInLookupLoading || !contactIds.length) return;
+    setLinkedInLookupLoading(true);
+    try { await lookupFn(contactIds); } finally {
+      setLinkedInLookupLoading(false);
+      invalidateContacts();
+    }
+  }, [linkedInLookupLoading, queryClient]);
+
+  const handleGroupLinkedInLookup = useCallback(async (group: ContactGroupCount, lookupFn: (ids: string[]) => Promise<void>) => {
+    const ids = await fetchGroupContactIds(currentGroupBy, group.group_key, holdingPattern);
+    await handleLinkedInLookup(ids, lookupFn);
+  }, [currentGroupBy, holdingPattern, handleLinkedInLookup]);
+
   const handleBulkCampaign = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
     if (!ids.length) return;
@@ -141,7 +156,8 @@ export function useContactActions(deps: Deps) {
   return {
     handleDeepSearch, handleGroupDeepSearch, handleGroupAlias,
     handleToggleGroupSelect, handleBulkCampaign, handleAICommand,
-    deepSearchLoading, aliasLoading, updateLeadStatus,
+    handleLinkedInLookup, handleGroupLinkedInLookup,
+    deepSearchLoading, aliasLoading, linkedInLookupLoading, updateLeadStatus,
   };
 }
 

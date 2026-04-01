@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus,
+  Search, Megaphone, Briefcase, ClipboardList, Loader2, X, UserPlus, Linkedin,
 } from "lucide-react";
+import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { GroupStrip } from "./GroupStrip";
 import { ExpandedGroupContent } from "./ExpandedGroupContent";
@@ -39,6 +40,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const linkedInLookup = useLinkedInLookup();
 
   const currentGroupBy = filters.groupBy || "country";
 
@@ -105,6 +107,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Arricchisci con Deep Search (max 20)</TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild>
+              <Button size="sm" variant="ghost" className={btnClass} disabled={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
+                onClick={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}>
+                {actions.linkedInLookupLoading || linkedInLookup.progress.status === "running" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Linkedin className="w-3.5 h-3.5" />} LinkedIn
+              </Button>
+            </TooltipTrigger><TooltipContent className="text-xs">Cerca URL LinkedIn via Google</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
               <Button size="sm" variant="ghost" className={btnClass} onClick={actions.handleBulkCampaign}>
                 <Megaphone className="w-3.5 h-3.5" /> Campagna
               </Button>
@@ -113,6 +121,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               className="ml-auto hover:bg-violet-500/20 rounded-full p-0.5 transition-colors text-violet-400">
               <X className="w-3.5 h-3.5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {linkedInLookup.progress.status === "running" && (
+        <div className="px-3 py-1.5 border-b border-border/30 bg-muted/50 shrink-0">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+            <span className="truncate font-medium">{linkedInLookup.progress.currentName}</span>
+            <span className="ml-auto shrink-0">{linkedInLookup.progress.current}/{linkedInLookup.progress.total}</span>
+          </div>
+          <div className="flex gap-2 mt-0.5 text-[9px]">
+            <span className="text-green-500">✓ {linkedInLookup.progress.found}</span>
+            <span className="text-muted-foreground">✗ {linkedInLookup.progress.notFound}</span>
+            <span className="text-muted-foreground">⟳ {linkedInLookup.progress.skipped}</span>
+            <button onClick={linkedInLookup.abort} className="ml-auto text-destructive hover:underline">Stop</button>
           </div>
         </div>
       )}
@@ -132,9 +156,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   onToggle={() => toggleGroup(group.group_key)}
                   onDeepSearch={() => actions.handleGroupDeepSearch(group)}
                   onAlias={() => actions.handleGroupAlias(group)}
+                  onLinkedInLookup={() => actions.handleGroupLinkedInLookup(group, linkedInLookup.lookupBatch)}
                   isGroupSelected={selectedGroups.has(groupSelKey)}
                   onToggleGroupSelect={() => actions.handleToggleGroupSelect(group)}
                   isAliasLoading={actions.aliasLoading} isDeepSearchLoading={actions.deepSearchLoading}
+                  isLinkedInLookupLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
                 />
                 {isOpen && (
                   <ExpandedGroupContent groupType={currentGroupBy} groupKey={group.group_key}

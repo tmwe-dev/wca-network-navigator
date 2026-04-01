@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, Search, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import { Mail, Phone, Search, ChevronDown, Sparkles, Loader2, Linkedin } from "lucide-react";
 import { countryFlag } from "./contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 
@@ -12,13 +12,15 @@ interface GroupStripProps {
   onToggle: () => void;
   onDeepSearch: () => void;
   onAlias: () => void;
+  onLinkedInLookup?: () => void;
   isGroupSelected: boolean;
   onToggleGroupSelect: () => void;
   isAliasLoading?: boolean;
   isDeepSearchLoading?: boolean;
+  isLinkedInLookupLoading?: boolean;
 }
 
-export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading }: GroupStripProps) {
+export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, onLinkedInLookup, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading, isLinkedInLookupLoading }: GroupStripProps) {
   return (
     <div className="sticky top-0 z-10 border-b border-border bg-muted backdrop-blur-sm">
       <div className="flex items-center gap-2 px-3 py-2">
@@ -97,6 +99,20 @@ export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onA
               : <Sparkles className="w-3 h-3" />}
             Alias
           </Button>
+          {onLinkedInLookup && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 text-[10px] gap-1 px-1.5"
+              disabled={isLinkedInLookupLoading}
+              onClick={(e) => { e.stopPropagation(); onLinkedInLookup(); }}
+            >
+              {isLinkedInLookupLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Linkedin className="w-3 h-3" />}
+              LinkedIn Lookup
+            </Button>
+          )}
         </div>
       )}
     </div>
