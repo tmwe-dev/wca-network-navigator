@@ -338,6 +338,7 @@ serve(async (req) => {
       }
     }
 
+    let linkedinSource: "cached" | "live_scraped" | "not_available" = "not_available";
     // 8b) Client-scraped LinkedIn profile (from extension)
     if (linkedin_profile && typeof linkedin_profile === "object") {
       const lp = linkedin_profile as Record<string, string>;
@@ -407,7 +408,6 @@ serve(async (req) => {
     }
 
     // 9) LinkedIn scraping (premium only, if social link exists)
-    let linkedinSource: "cached" | "live_scraped" | "not_available" = "not_available";
     if (partnerId && quality === "premium") {
       const { data: liLinks } = await supabase
         .from("partner_social_links")
