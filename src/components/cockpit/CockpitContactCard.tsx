@@ -353,6 +353,52 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
             </div>
           </div>
         </div>
+
+        {/* Expandable AI Enrichment Panel */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 pt-3 border-t border-amber-400/20 space-y-3">
+                {hasEnrichmentData ? (
+                  <ContactEnrichmentCard
+                    enrichmentData={contact.enrichmentData}
+                    deepSearchAt={contact.deepSearchAt || null}
+                  />
+                ) : (
+                  <div className="text-center py-3 space-y-2">
+                    <p className="text-xs text-muted-foreground">Nessun dato AI disponibile</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={(e) => { e.stopPropagation(); onDeepSearch(); }}
+                      >
+                        <Search className="w-3 h-3" /> Deep Search
+                      </Button>
+                      {onLinkedInLookup && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={(e) => { e.stopPropagation(); onLinkedInLookup(); }}
+                        >
+                          <Linkedin className="w-3 h-3" /> LinkedIn Lookup
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </TooltipProvider>
   );
