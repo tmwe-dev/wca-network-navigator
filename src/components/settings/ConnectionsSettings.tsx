@@ -47,9 +47,10 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
 
   const [connectingAll, setConnectingAll] = useState(false);
 
-  // Derived states
+  // Derived states — credentials configured vs actually authenticated
   const liHasCreds = !!(liEmail && liPass) || !!(settings?.["linkedin_li_at"]);
-  const liConnected = liExt.isAvailable || liHasCreds;
+  const [liSessionOk, setLiSessionOk] = useState(false);
+  const liConnected = liSessionOk; // Only true if REAL session is verified
   const waConnected = waExt.isAvailable;
 
   useEffect(() => {
@@ -122,13 +123,17 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     setConnectingAll(true);
     const results: string[] = [];
 
-    // LinkedIn
+    // LinkedIn — real session check
     if (liExt.isAvailable) {
       const res = await liExt.verifySession();
-      results.push(res.success ? "✅ LinkedIn" : "⚠️ LinkedIn (sessione scaduta)");
+      const reallyOk = res.success === true && res.authenticated === true;
+      setLiSessionOk(reallyOk);
+      results.push(reallyOk ? "✅ LinkedIn (sessione attiva)" : "⚠️ LinkedIn (sessione non autenticata)");
     } else if (liHasCreds) {
-      results.push("✅ LinkedIn (credenziali salvate)");
+      setLiSessionOk(false);
+      results.push("⚠️ LinkedIn (credenziali salvate ma estensione non attiva)");
     } else {
+      setLiSessionOk(false);
       results.push("❌ LinkedIn (configura credenziali)");
     }
 
@@ -143,9 +148,9 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     // AI
     results.push("✅ AI Agent");
 
-    // Persist
+    // Persist real state
     try {
-      await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liConnected) });
+      await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
     } catch {}
 

@@ -106,6 +106,15 @@ export function useLinkedInFlow() {
       toast.error("Nessuna estensione rilevata. Installa Partner Connect e/o LinkedIn Extension.");
       return null;
     }
+
+    // Preflight: verify LinkedIn session is actually authenticated
+    if (hasLi) {
+      const authCheck = await liBridge.ensureAuthenticated(0);
+      if (!authCheck.ok) {
+        toast.error(`LinkedIn non autenticato (${authCheck.reason}). Accedi a LinkedIn e riprova.`);
+        return null;
+      }
+    }
     if (contacts.length === 0) {
       toast.warning("Nessun contatto selezionato");
       return null;

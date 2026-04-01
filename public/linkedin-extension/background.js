@@ -876,6 +876,13 @@ async function searchLinkedInProfile(query) {
   }
 }
 
+// ── Tab operation queue to prevent race conditions ──
+var _tabQueue = Promise.resolve();
+function enqueueTabOp(fn) {
+  _tabQueue = _tabQueue.then(fn, fn);
+  return _tabQueue;
+}
+
 // ── Message handler ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   var source = message && message.source;
@@ -887,60 +894,60 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   }
 
   if (message.action === "verifySession") {
-    (async function () {
+    enqueueTabOp(async function () {
       try {
         var result = await verifyLinkedInSession();
         sendResponse({ success: true, authenticated: result.authenticated, reason: result.reason });
       } catch (err) { sendResponse({ success: false, authenticated: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "syncCookie") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await syncLiCookieToServer(); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "autoLogin") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await autoLoginLinkedIn(); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "extractProfile") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await extractProfileByUrl(message.url); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "sendMessage") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await sendLinkedInMessage(message.url, message.message); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "sendConnectionRequest") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await sendConnectionRequest(message.url, message.note); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "searchProfile") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await searchLinkedInProfile(message.query); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 

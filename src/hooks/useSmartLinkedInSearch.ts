@@ -140,7 +140,21 @@ export function useSmartLinkedInSearch() {
     const queries = buildQueries(contact.name, contact.company, contact.email, contact.role);
 
     // Try LinkedIn People Search via extension (most reliable)
+    // Preflight: check real authentication before firing queries
+    let liAuthenticated = false;
     if (liBridge.isAvailable) {
+      try {
+        const authCheck = await liBridge.ensureAuthenticated(30000);
+        liAuthenticated = authCheck.ok;
+        if (!liAuthenticated) {
+          console.warn("[SmartSearch] LinkedIn extension available but NOT authenticated:", authCheck.reason);
+        }
+      } catch {
+        liAuthenticated = false;
+      }
+    }
+
+    if (liAuthenticated) {
       for (let i = 0; i < Math.min(queries.length, 4); i++) {
         if (abortRef.current) break;
         if (foundUrl) break;

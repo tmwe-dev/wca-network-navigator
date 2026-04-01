@@ -63,13 +63,13 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     setConnecting(true);
     const problems: string[] = [];
 
-    // --- LinkedIn: REAL verification only ---
+    // --- LinkedIn: REAL session check (extension + authenticated) ---
     let liOk = false;
     if (li.isAvailable) {
       try {
         const r = await li.verifySession();
-        liOk = r.success;
-        if (!liOk) problems.push("LinkedIn: sessione scaduta");
+        liOk = r.success === true && r.authenticated === true;
+        if (!liOk) problems.push("LinkedIn: sessione non autenticata");
       } catch {
         liOk = false;
         problems.push("LinkedIn: verifica fallita");
@@ -143,14 +143,8 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     }
   }, [li, wa, fsExt, settings, updateSetting, downloadPartnerConnectExtension]);
 
-  // Auto-activate on first mount (after settings load)
-  useEffect(() => {
-    if (!didAutoRun && settings) {
-      setDidAutoRun(true);
-      const timer = setTimeout(activateAll, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [settings, didAutoRun, activateAll]);
+  // NO auto-activate on mount — user clicks "⚡" to verify
+  // This prevents unwanted LinkedIn tabs/challenges on page load
 
   const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
   const allActive = activeCount === 4;

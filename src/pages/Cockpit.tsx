@@ -251,7 +251,17 @@ const Cockpit = () => {
     const isLinkedInChannel = channel === "linkedin";
 
     // Auto-search LinkedIn URL if missing and channel is LinkedIn
-    if (isLinkedInChannel && liBridge.isAvailable && !linkedinUrl) {
+    // Preflight: check real auth before searching
+    let liAuthOk = false;
+    if (isLinkedInChannel && liBridge.isAvailable) {
+      const authCheck = await liBridge.ensureAuthenticated(30000);
+      liAuthOk = authCheck.ok;
+      if (!liAuthOk) {
+        toast.error("LinkedIn non autenticato. Accedi a LinkedIn nel browser e riprova.");
+      }
+    }
+
+    if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
       setDraftState({
         channel, contactId: firstId, contactName: contact.name,
         contactEmail: contact.email, contactPhone: contact.phone,
@@ -277,7 +287,7 @@ const Cockpit = () => {
       setDraftState(prev => ({ ...prev, contactLinkedinUrl: linkedinUrl, searchLog: searchResult.searchLog }));
     }
 
-    const canScrapeLinkedIn = isLinkedInChannel && liBridge.isAvailable && linkedinUrl;
+    const canScrapeLinkedIn = isLinkedInChannel && liAuthOk && linkedinUrl;
 
     // Initialize draft with scraping phase if LinkedIn (if not already set by search)
     if (!isLinkedInChannel || !liBridge.isAvailable || linkedinUrl) {
