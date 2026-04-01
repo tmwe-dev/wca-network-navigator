@@ -168,6 +168,8 @@ export default function TestLinkedInSearch() {
               <th className="p-2 text-left w-8">#</th>
               <th className="p-2 text-left">Contatto</th>
               <th className="p-2 text-left">Azienda</th>
+              <th className="p-2 text-left">Dati</th>
+              <th className="p-2 text-left">Difficoltà</th>
               <th className="p-2 text-left">Stato</th>
               <th className="p-2 text-left">LinkedIn URL</th>
               <th className="p-2 text-left">Headline</th>
@@ -179,14 +181,27 @@ export default function TestLinkedInSearch() {
                 <td className="p-2">{i + 1}</td>
                 <td className="p-2 font-medium">{r.contact.name}</td>
                 <td className="p-2 text-muted-foreground">{r.contact.company}</td>
+                <td className="p-2">
+                  <div className="flex gap-1 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] px-1">nome</Badge>
+                    {r.contact.email && <Badge variant="secondary" className="text-[10px] px-1">email</Badge>}
+                    {r.contact.position && <Badge variant="secondary" className="text-[10px] px-1">ruolo</Badge>}
+                    {r.contact.country && <Badge variant="secondary" className="text-[10px] px-1">paese</Badge>}
+                  </div>
+                </td>
+                <td className="p-2">
+                  <Badge variant={r.contact.difficulty === "Difficile" ? "destructive" : r.contact.difficulty === "Medio" ? "default" : "secondary"} className="text-[10px]">
+                    {r.contact.difficulty}
+                  </Badge>
+                </td>
                 <td className="p-2">{statusIcon(r.status)}</td>
                 <td className="p-2">
                   {r.url ? (
-                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs truncate max-w-[200px] block">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs truncate max-w-[200px] block">
                       {r.url.replace("https://www.linkedin.com", "")}
                     </a>
                   ) : r.status === "error" ? (
-                    <span className="text-red-400 text-xs">{r.error}</span>
+                    <span className="text-destructive text-xs">{r.error}</span>
                   ) : "—"}
                 </td>
                 <td className="p-2 text-xs text-muted-foreground truncate max-w-[200px]">
