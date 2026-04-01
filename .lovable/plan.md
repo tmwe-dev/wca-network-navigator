@@ -1,35 +1,39 @@
 
 
-# Spostare la Barra Blu nel Top Header
+# Creare Edge Function sync-wca-partners
 
-## Problema
+## Situazione
 
-La pagina Network ha una barra interna (righe 141-185 di `Operations.tsx`) con: globo rotante, titolo "Network", toggle Partner/Business Cards, stats partner, e azioni. Questa barra occupa spazio verticale quando il header globale (`AppLayout.tsx`) ha già spazio sufficiente.
+- Il pulsante "Sincronizza WCA" nell'header chiama `sync-wca-partners` — ma **la funzione non esiste**
+- Il DB locale ha 12.193 partner ma **zero con raw_profile_html/markdown** — i profili completi sono sul DB esterno (`dlldkrzoxvjxpgkkttxu`)
+- Il pattern è già stabilito da `sync-business-cards`: connessione a DB esterno → lettura paginata → upsert locale
 
 ## Piano
 
-### 1. Usare un Portal/Slot per iniettare contenuto nell'header
+### 1. Creare `supabase/functions/sync-wca-partners/index.ts`
 
-L'header globale ha già un `div#campaign-header-controls` (riga 146) pensato come slot per contenuti delle pagine figlie. Lo sfruttiamo:
+Edge function che:
+- Riceve `{ countryCode }` dal frontend
+- Si connette al DB esterno via `WCA_EXTERNAL_SUPABASE_KEY`
+- Legge dalla tabella `partners` esterna filtrando per `country_code`, con paginazione da 500
+- Per ogni partner: upsert su `partners` locale usando `wca_id` come chiave univoca
+- Sincronizza anche `partner_contacts` e `partner_networks` associati
+- Usa SSE per streaming del progresso in tempo reale (come richiesto dalla memoria)
+- Mappa i campi pre-calcolati (`country_name`, `city`, `member_since`) direttamente
+- Fallback prioritario per `direct_phone`: `direct_phone` → `direct_line` → `phone` → `mobile`
 
-**`src/pages/Operations.tsx`**:
-- Rimuovere la barra interna (righe 141-186) come elemento fisso
-- Usare `createPortal` per renderizzare il contenuto (globo, toggle Partner/BCA, stats, azioni) dentro `#campaign-header-controls` nell'header globale
-- Il contenuto sarà compatto, inline, adatto all'altezza dell'header (h-11/h-12)
+### 2. Aggiornare il frontend in `Operations.tsx`
 
-### 2. Adattare lo stile
+- Il `handleSyncWca` attuale fa un semplice `invoke` — va adattato per leggere lo stream SSE e mostrare progresso (toast con conteggio)
 
-- Il globo rotante, il toggle Partner/Business Cards e le stats diventano elementi inline compatti (altezza ~28px) coerenti con l'header
-- Rimuovere bordi e background della barra — si fondono nel background dell'header
-- Il padding verticale del main content guadagna ~52px di spazio utile
-
-## File modificati
+## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/pages/Operations.tsx` | Barra interna → `createPortal` in `#campaign-header-controls`, stile compatto inline |
+| `supabase/functions/sync-wca-partners/index.ts` | **Nuovo** — Edge Function cloud-to-cloud sync |
+| `src/pages/Operations.tsx` | Adattare handleSyncWca per SSE streaming |
 
 ## Risultato
 
-Il contenuto della barra blu (globo, toggle, stats) appare direttamente nel top header globale. Nessuna barra separata sotto. Più spazio per le 3 colonne.
+Cliccando "Sincronizza WCA" con un paese selezionato, tutti i profili completi vengono scaricati dal DB esterno al locale, con progresso in tempo reale. I 12.193 partner si arricchiscono di profili, contatti, network.
 
