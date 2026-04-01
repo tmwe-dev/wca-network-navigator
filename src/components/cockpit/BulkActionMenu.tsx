@@ -126,6 +126,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       due_date: format(scheduleDate, "yyyy-MM-dd"),
       description: scheduleNote || undefined,
     });
+    await autoAssignBulk(selectedContacts);
     toast.success(`${count} contatti programmati per ${format(scheduleDate, "dd/MM/yyyy")}`);
     setScheduleDate(undefined);
     setScheduleNote("");
