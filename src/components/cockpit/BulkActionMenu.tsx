@@ -113,6 +113,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       description: noteText,
       completed_at: new Date().toISOString(),
     });
+    await autoAssignBulk(selectedContacts);
     toast.success(`Nota salvata su ${count} contatti`);
     setNoteText("");
     setNoteOpen(false);
