@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Linkedin, MessageCircle, Smartphone } from "lucide-react";
+import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DraftChannel } from "@/pages/Cockpit";
 
-const channels: { id: DraftChannel; label: string; icon: any; color: string }[] = [
-  { id: "email", label: "Email", icon: Mail, color: "hsl(var(--primary))" },
-  { id: "linkedin", label: "LinkedIn", icon: Linkedin, color: "hsl(210, 80%, 55%)" },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, color: "hsl(142, 71%, 45%)" },
-  { id: "sms", label: "SMS / Chat", icon: Smartphone, color: "hsl(var(--chart-3))" },
+const channels: { id: DraftChannel; label: string; icon: any; hoverBg: string; hoverBorder: string; hoverText: string }[] = [
+  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary" },
+  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]" },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]" },
+  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground" },
 ];
 
 interface ChannelDropZonesProps {
@@ -16,13 +16,45 @@ interface ChannelDropZonesProps {
   draggedContactId: string | null;
   dragCount: number;
   onDrop: (channel: DraftChannel, contactId: string, contactName: string) => void;
+  onReadProfile?: () => void;
+  onDeepSearch?: () => void;
+  hasActiveContact?: boolean;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop }: ChannelDropZonesProps) {
+export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact }: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-[240px]">
+    <div className="flex flex-col gap-4 w-full max-w-[360px]">
+      {/* Quick action bar */}
+      {(hasActiveContact || isDragging) && (onReadProfile || onDeepSearch) && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-2"
+        >
+          {onReadProfile && (
+            <button
+              onClick={onReadProfile}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-border/60 bg-card/80 hover:bg-muted/60 text-sm font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+              <BookOpen className="w-4 h-4" />
+              Leggi Profilo
+            </button>
+          )}
+          {onDeepSearch && (
+            <button
+              onClick={onDeepSearch}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-border/60 bg-card/80 hover:bg-muted/60 text-sm font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+              <Search className="w-4 h-4" />
+              Deep Search
+            </button>
+          )}
+        </motion.div>
+      )}
+
+      {/* Channel drop zones */}
       {channels.map((ch, i) => {
         const isHovered = hoveredChannel === ch.id;
         const Icon = ch.icon;
@@ -33,9 +65,9 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{
               opacity: 1,
-              scale: isHovered ? 1.06 : 1,
+              scale: isHovered ? 1.04 : 1,
             }}
-            transition={{ delay: i * 0.08, duration: 0.3, type: "spring", stiffness: 300, damping: 20 }}
+            transition={{ delay: i * 0.06, duration: 0.3, type: "spring", stiffness: 300, damping: 20 }}
             onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
             onDragLeave={() => setHoveredChannel(null)}
             onDrop={(e) => {
@@ -46,45 +78,55 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               }
             }}
             className={cn(
-              "relative flex flex-row items-center gap-3 p-5 rounded-xl border-2 border-dashed transition-all duration-300 cursor-default overflow-hidden",
-              // Idle state: subtle, neutral
+              "relative flex flex-row items-center gap-4 p-6 min-h-[80px] rounded-xl border-2 border-dashed transition-all duration-300 cursor-default overflow-hidden",
               !isDragging && "border-border/60 bg-card/60 hover:border-border/50",
-              // Dragging but NOT hovered: just show it's a valid target, no color
-              isDragging && !isHovered && "border-muted-foreground/30 bg-card/40",
-              // Hovered = active target: strong highlight
-              isHovered && "border-[hsl(210,80%,55%)] bg-[hsl(210,80%,55%)]/8 shadow-lg shadow-[hsl(210,80%,55%)]/15",
+              isDragging && !isHovered && "border-muted-foreground/40 bg-card/40 border-[3px]",
+              isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder),
             )}
           >
-            {/* Glow overlay only on hovered */}
+            {/* Glow overlay on hover */}
             {isHovered && (
               <motion.div
-                className="absolute inset-0 rounded-xl bg-[hsl(210,80%,55%)]/5"
+                className={cn("absolute inset-0 rounded-xl opacity-30", ch.hoverBg)}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                animate={{ opacity: 0.3 }}
                 transition={{ duration: 0.2 }}
               />
             )}
 
             <div
               className={cn(
-                "relative w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300",
+                "relative w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-300",
                 isHovered
-                  ? "bg-[hsl(210,80%,55%)]/15 text-[hsl(210,80%,55%)]"
+                  ? cn(ch.hoverBg, ch.hoverText)
                   : isDragging
                   ? "bg-muted/40 text-muted-foreground/60"
                   : "bg-muted/50 text-muted-foreground"
               )}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="w-8 h-8" />
             </div>
-            <span className={cn(
-              "text-base font-medium transition-colors duration-300",
-              isHovered ? "text-foreground" : "text-muted-foreground"
-            )}>
-              {ch.label}
-            </span>
-            {isDragging && dragCount > 1 && (
-              <span className="text-[9px] text-muted-foreground/70 ml-auto">
+
+            <div className="flex flex-col gap-0.5">
+              <span className={cn(
+                "text-lg font-semibold transition-colors duration-300",
+                isHovered ? "text-foreground" : "text-muted-foreground"
+              )}>
+                {ch.label}
+              </span>
+              {isHovered && isDragging && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={cn("text-xs font-medium", ch.hoverText)}
+                >
+                  Rilascia qui{dragCount > 1 ? ` (×${dragCount})` : ""}
+                </motion.span>
+              )}
+            </div>
+
+            {isDragging && !isHovered && dragCount > 1 && (
+              <span className="text-xs text-muted-foreground/70 ml-auto">
                 ×{dragCount}
               </span>
             )}

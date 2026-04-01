@@ -252,7 +252,6 @@ const Cockpit = () => {
     let linkedinUrl = contact.linkedinUrl || null;
     const isLinkedInChannel = channel === "linkedin";
 
-    // Auto-search LinkedIn URL if missing and channel is LinkedIn
     // Preflight: check real auth before searching
     let liAuthOk = false;
     if (isLinkedInChannel && liBridge.isAvailable) {
@@ -263,7 +262,19 @@ const Cockpit = () => {
       }
     }
 
-    if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
+    // If URL already present → skip search, go direct to profile extraction
+    if (isLinkedInChannel && liAuthOk && linkedinUrl) {
+      toast.info(`URL LinkedIn già presente — lettura profilo diretta`);
+      setDraftState({
+        channel, contactId: firstId, contactName: contact.name,
+        contactEmail: contact.email, contactPhone: contact.phone,
+        contactLinkedinUrl: linkedinUrl, companyName: contact.company,
+        countryCode: contact.country, subject: "", body: "",
+        language: contact.language, isGenerating: true,
+        scrapingPhase: "visiting", linkedinProfile: null, searchLog: [],
+      });
+    } else if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
+      // No URL → search for it
       setDraftState({
         channel, contactId: firstId, contactName: contact.name,
         contactEmail: contact.email, contactPhone: contact.phone,
