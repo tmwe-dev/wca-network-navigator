@@ -95,16 +95,16 @@ export function useCockpitContacts() {
       // Fetch source data in parallel
       const [pcData, bcData, prcData, icData] = await Promise.all([
         pcIds.length > 0
-          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id").in("id", pcIds).then(r => r.data || [])
+          ? supabase.from("partner_contacts").select("id, name, title, email, direct_phone, mobile, partner_id, contact_alias").in("id", pcIds).then(r => r.data || [])
           : Promise.resolve([]),
         bcIds.length > 0
           ? supabase.from("business_cards").select("id, contact_name, company_name, position, email, phone, mobile, event_name, met_at, created_at").in("id", bcIds).then(r => r.data || [])
           : Promise.resolve([]),
         prcIds.length > 0
-          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
+          ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id, linkedin_url").in("id", prcIds).then(r => r.data || [])
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at").in("id", icIds).then(r => r.data || [])
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at, contact_alias, company_alias").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
