@@ -1,39 +1,71 @@
 
 
-# Creare Edge Function sync-wca-partners
+# Ristrutturazione Navigazione: Tab Verticali a Sinistra + Allineamento Card CRM
 
-## Situazione
+## Problema
 
-- Il pulsante "Sincronizza WCA" nell'header chiama `sync-wca-partners` — ma **la funzione non esiste**
-- Il DB locale ha 12.193 partner ma **zero con raw_profile_html/markdown** — i profili completi sono sul DB esterno (`dlldkrzoxvjxpgkkttxu`)
-- Il pattern è già stabilito da `sync-business-cards`: connessione a DB esterno → lettura paginata → upsert locale
+1. **Tab orizzontali sotto l'header** occupano spazio verticale inutile in pagine come Outreach (5 tab), CRM (4 tab), Settings (7 tab). Questi tab vanno spostati in una **barra verticale sinistra compatta** (icone + label corte, ~48-56px di larghezza).
+
+2. **ContactCard nel CRM** ha layout disallineato: dati sparsi, non incolonnati. Va allineato a sinistra con struttura tabellare coerente con le card del Cockpit (`CockpitContactListItem`).
+
+## Pagine interessate dal cambio tab orizzontale → verticale
+
+| Pagina | Tab attuali (orizzontali) |
+|--------|--------------------------|
+| `Outreach.tsx` | Cockpit, In Uscita, Attività, Circuito, Messaggi |
+| `CRM.tsx` | Contatti, Import, Biglietti, Report Aziende |
+| `Settings.tsx` | Generale, Contenuti, Connessioni, Import/Export, RA, Abbonamento, Voce AI |
+
+Le pagine `Network` e `Global` non hanno sotto-tab orizzontali, quindi non sono toccate.
 
 ## Piano
 
-### 1. Creare `supabase/functions/sync-wca-partners/index.ts`
+### 1. Creare componente riusabile `VerticalTabNav`
 
-Edge function che:
-- Riceve `{ countryCode }` dal frontend
-- Si connette al DB esterno via `WCA_EXTERNAL_SUPABASE_KEY`
-- Legge dalla tabella `partners` esterna filtrando per `country_code`, con paginazione da 500
-- Per ogni partner: upsert su `partners` locale usando `wca_id` come chiave univoca
-- Sincronizza anche `partner_contacts` e `partner_networks` associati
-- Usa SSE per streaming del progresso in tempo reale (come richiesto dalla memoria)
-- Mappa i campi pre-calcolati (`country_name`, `city`, `member_since`) direttamente
-- Fallback prioritario per `direct_phone`: `direct_phone` → `direct_line` → `phone` → `mobile`
+Componente shared che riceve una lista di `{ value, label, icon, badge? }` e renderizza una barra verticale sinistra:
+- Larghezza: ~52px collassata (solo icone), ~140px espansa (icona + label)
+- Sfondo: `bg-muted/30`, bordo destro
+- Tab attivo: highlight con sfondo `bg-primary/10` e barra laterale colorata
+- Occupa l'intera altezza del contenuto
 
-### 2. Aggiornare il frontend in `Operations.tsx`
+```text
+┌──────────┬─────────────────────────────┐
+│ 🚀 Cock  │                             │
+│ ↑ Uscita │    Contenuto del tab        │
+│ ☐ Attiv  │    selezionato              │
+│ ✈ Circ   │                             │
+│ 📥 Msg   │                             │
+└──────────┴─────────────────────────────┘
+```
 
-- Il `handleSyncWca` attuale fa un semplice `invoke` — va adattato per leggere lo stream SSE e mostrare progresso (toast con conteggio)
+### 2. Applicare `VerticalTabNav` a Outreach, CRM, Settings
 
-## File coinvolti
+Ogni pagina sostituisce la barra `<Tabs>` orizzontale con il layout `flex` orizzontale:
+- Sinistra: `VerticalTabNav` con le stesse voci
+- Destra: contenuto del tab selezionato (flex-1)
+- Elimina il `<div>` con `border-b` che conteneva la TabsList orizzontale
+
+### 3. Riallineare `ContactCard` nel CRM
+
+La card contatti va ristrutturata per essere coerente con `CockpitContactListItem`:
+- Layout a riga singola con colonne allineate a sinistra
+- Checkbox | Azienda (truncate, larghezza fissa) | Contatto + ruolo | Città | Origine badge | Indicatori (LinkedIn, email, interazioni) a destra
+- Rimuovere il layout multi-riga attuale con tooltip ovunque
+- Tutto allineato a sinistra, incolonnato
+
+## File modificati
 
 | File | Modifica |
 |------|----------|
-| `supabase/functions/sync-wca-partners/index.ts` | **Nuovo** — Edge Function cloud-to-cloud sync |
-| `src/pages/Operations.tsx` | Adattare handleSyncWca per SSE streaming |
+| `src/components/ui/VerticalTabNav.tsx` | **Nuovo** — Componente riusabile tab verticali |
+| `src/pages/Outreach.tsx` | Tab orizzontali → VerticalTabNav a sinistra |
+| `src/pages/CRM.tsx` | Tab orizzontali → VerticalTabNav a sinistra |
+| `src/pages/Settings.tsx` | Tab orizzontali → VerticalTabNav a sinistra |
+| `src/components/contacts/ContactCard.tsx` | Layout riga singola allineato a sinistra, stile coerente con CockpitContactListItem |
 
 ## Risultato
 
-Cliccando "Sincronizza WCA" con un paese selezionato, tutti i profili completi vengono scaricati dal DB esterno al locale, con progresso in tempo reale. I 12.193 partner si arricchiscono di profili, contatti, network.
+- Guadagno di ~40px di spazio verticale su ogni pagina con sotto-tab
+- Navigazione più chiara: orizzontale = sezioni principali (sidebar/header), verticale = sotto-sezioni
+- Card contatti CRM allineate e leggibili come quelle del Cockpit
 
