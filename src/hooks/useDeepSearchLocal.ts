@@ -45,6 +45,17 @@ function getLastName(name: string): string {
   return parts[parts.length - 1];
 }
 
+/** Extract company keyword from email domain, excluding generic providers */
+function extractDomainKeyword(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const genericDomains = /^(gmail|yahoo|hotmail|outlook|live|msn|aol|icloud|me|mac|libero|alice|tin|virgilio|tiscali|fastwebnet|aruba|pec|legalmail|mail|protonmail|zoho|yandex|gmx|web|email|inbox)\b/i;
+  const parts = email.split("@");
+  if (parts.length !== 2) return null;
+  const domain = parts[1].split(".")[0];
+  if (!domain || domain.length < 2 || genericDomains.test(domain)) return null;
+  return domain;
+}
+
 async function delay(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 interface GoogleSearchResult {
