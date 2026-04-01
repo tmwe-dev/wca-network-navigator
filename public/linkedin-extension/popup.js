@@ -85,7 +85,7 @@ mainBtn.addEventListener("click", async function () {
     log("✓ Credenziali ottenute", "done");
 
     log("② Apro pagina di login LinkedIn...", "wait");
-    var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: false });
+    var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: true });
     log("✓ Pagina aperta", "done");
 
     log("③ Attendo caricamento...", "wait");
