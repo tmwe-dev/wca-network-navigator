@@ -103,8 +103,8 @@ const App = () => (
                    <Route path="/ra/company/:id" element={<RACompanyDetail />} />
 
                    {/* ── Legacy pages kept alive ── */}
-                   <Route path="/global" element={<Navigate to="/" replace />} />
-                  <Route path="/campaigns" element={<Navigate to="/" replace />} />
+                   <Route path="/global" element={<Global />} />
+                  <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />

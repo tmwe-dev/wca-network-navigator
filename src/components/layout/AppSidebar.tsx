@@ -39,6 +39,13 @@ function getNavSections(pathname: string) {
       ],
     },
     {
+      label: "Legacy",
+      items: [
+        { title: "Global", url: "/global", icon: Earth },
+        { title: "Campagne", url: "/campaigns", icon: Send },
+      ],
+    },
+    {
       label: "Sistema",
       items: [
         { title: "Impostazioni", url: "/settings", icon: Settings },
