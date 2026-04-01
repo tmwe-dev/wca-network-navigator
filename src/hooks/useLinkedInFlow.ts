@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
+import { getPatternPause } from "@/hooks/useScrapingSettings";
 
 export interface LinkedInFlowJob {
   id: string;
@@ -427,11 +428,11 @@ export function useLinkedInFlow() {
 
       setProgress({ total: items.length + processed - items.length, processed, success: successes, errors });
 
-      // Human-like delay between contacts
+      // Human-pattern pause between contacts (fixed sequence, no regularity)
       if (idx < items.length - 1) {
-        setCurrentStep(`Pausa ${delaySec}s...`);
-        const jitter = Math.random() * 5;
-        await sleep((delaySec + jitter) * 1000);
+        const patternPause = getPatternPause(idx);
+        setCurrentStep(`Pausa ${patternPause}s...`);
+        await sleep(patternPause * 1000);
       }
     }
 

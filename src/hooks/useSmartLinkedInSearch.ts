@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
 
 export interface SearchLogEntry {
   step: number;
@@ -160,11 +161,11 @@ export function useSmartLinkedInSearch() {
         if (foundUrl) break;
 
         const query = queries[i];
-        const start = Date.now();
+        const opStart = Date.now();
 
         try {
           const res = await liBridge.searchProfile(query);
-          const ms = Date.now() - start;
+          const ms = Date.now() - opStart;
 
           if (res.success && res.profile?.profileUrl) {
             const confidence = validateMatch(res.profile, contact);
@@ -185,6 +186,8 @@ export function useSmartLinkedInSearch() {
               foundUrl = res.profile.profileUrl;
               foundProfile = res.profile;
               resolvedMethod = "linkedin_people_search";
+              // Ensure even a successful match takes >= 16s
+              await ensureMinDuration(opStart);
               break;
             }
           } else {
@@ -209,16 +212,20 @@ export function useSmartLinkedInSearch() {
             results: 0,
             match: null,
             confidence: 0,
-            ms: Date.now() - start,
+            ms: Date.now() - opStart,
             reasoning: `Errore: ${(e as Error).message}`,
           };
           log.push(entry);
           addLog(entry);
         }
 
-        // Human-like delay between queries (randomized 5-10s)
+        // Ensure each query takes at least 16s
+        await ensureMinDuration(opStart);
+
+        // Human-pattern pause between queries
         if (i < Math.min(queries.length, 3) - 1 && !foundUrl) {
-          await new Promise(r => setTimeout(r, 5000 + Math.random() * 5000));
+          const pause = getPatternPause(i);
+          await new Promise(r => setTimeout(r, pause * 1000));
         }
       }
     }
