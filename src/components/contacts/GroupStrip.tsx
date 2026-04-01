@@ -1,7 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, Search, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import { Mail, Phone, Search, ChevronDown, Sparkles, Loader2, Linkedin } from "lucide-react";
 import { countryFlag } from "./contactHelpers";
 import type { ContactGroupCount } from "@/hooks/useContactGroups";
 
