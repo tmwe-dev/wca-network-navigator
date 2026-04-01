@@ -250,8 +250,8 @@ export function useLinkedInFlow() {
             enrichment.linkedin_error = result.error || "Extraction failed";
           }
 
-          // Brief human pause
-          await sleep(1500 + Math.random() * 1000);
+          // Human-like pause after scraping (3-6s)
+          await sleep(3000 + Math.random() * 3000);
         }
 
         // ═══════════════════════════════════════════
@@ -316,7 +316,7 @@ export function useLinkedInFlow() {
               enrichment.website_error = e.message;
             }
 
-            await sleep(2000 + Math.random() * 1500);
+            await sleep(4000 + Math.random() * 3000);
           } else if (isCacheFresh) {
             enrichment.website_ok = true;
             enrichment.website_cached = true;
@@ -387,7 +387,7 @@ export function useLinkedInFlow() {
           } catch (e: any) {
             enrichment.connection_error = e.message;
           }
-          await sleep(3000 + Math.random() * 2000);
+          await sleep(5000 + Math.random() * 4000);
         } else if (connStatus === "connected") {
           setCurrentStep("Già connesso — skip collegamento");
           enrichment.connection_skipped = true;
