@@ -187,6 +187,7 @@ export type Database = {
           signature_image_url: string | null
           stats: Json
           system_prompt: string
+          territory_codes: string[] | null
           updated_at: string
           user_id: string
           voice_call_url: string | null
@@ -207,6 +208,7 @@ export type Database = {
           signature_image_url?: string | null
           stats?: Json
           system_prompt?: string
+          territory_codes?: string[] | null
           updated_at?: string
           user_id: string
           voice_call_url?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           signature_image_url?: string | null
           stats?: Json
           system_prompt?: string
+          territory_codes?: string[] | null
           updated_at?: string
           user_id?: string
           voice_call_url?: string | null
