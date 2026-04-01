@@ -127,8 +127,9 @@ export default function TestLinkedInSearch() {
       }
 
       if (i < TEST_CONTACTS.length - 1 && !abortRef.current) {
-        log("info", "⏳ Attesa 5s...");
-        await new Promise(r => setTimeout(r, 5000));
+        const pause = 8000 + Math.random() * 7000; // 8-15s between contacts
+        log("info", `⏳ Pausa ${(pause/1000).toFixed(1)}s...`);
+        await new Promise(r => setTimeout(r, pause));
       }
     }
 

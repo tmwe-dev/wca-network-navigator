@@ -216,9 +216,9 @@ export function useSmartLinkedInSearch() {
           addLog(entry);
         }
 
-        // Small delay between queries
+        // Human-like delay between queries (randomized 3-6s)
         if (!foundUrl && i < queries.length - 1) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 3000 + Math.random() * 3000));
         }
       }
     }

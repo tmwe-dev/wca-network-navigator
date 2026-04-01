@@ -387,7 +387,7 @@ export function useLinkedInFlow() {
           } catch (e: any) {
             enrichment.connection_error = e.message;
           }
-          await sleep(3000 + Math.random() * 2000);
+          await sleep(5000 + Math.random() * 4000);
         } else if (connStatus === "connected") {
           setCurrentStep("Già connesso — skip collegamento");
           enrichment.connection_skipped = true;
