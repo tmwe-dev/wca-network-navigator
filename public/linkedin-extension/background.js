@@ -11,7 +11,7 @@ async function safeTabCreate(options, maxRetries) {
   maxRetries = maxRetries || 3;
   for (var attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await safeTabCreate(options);
+      return await chrome.tabs.create(options);
     } catch (err) {
       if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
         await new Promise(function(r) { setTimeout(r, 500); });
