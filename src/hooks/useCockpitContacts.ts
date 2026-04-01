@@ -24,6 +24,8 @@ export interface CockpitContact {
   sourceId: string;
   partnerId: string | null;
   linkedinUrl: string;
+  contactAlias?: string;
+  companyAlias?: string;
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
   deepSearchAt?: string;

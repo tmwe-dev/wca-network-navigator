@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAutoConnect } from "@/hooks/useAutoConnect";
 import type { OutreachDebug } from "@/hooks/useOutreachGenerator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,12 +14,14 @@ import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useSmartLinkedInSearch } from "@/hooks/useSmartLinkedInSearch";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { useAssignmentMap, useAssignClient, useClientAssignments } from "@/hooks/useClientAssignments";
 import { useAgents } from "@/hooks/useAgents";
+import { supabase } from "@/integrations/supabase/client";
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import { toast } from "sonner";
 import {

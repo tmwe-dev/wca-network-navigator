@@ -111,7 +111,7 @@ export function ContactActionMenu({ contact, children }: Props) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {children || (
-            <Button variant="ghost" size="icon" className="h-6 w-6">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md border border-border/50 bg-background/80 backdrop-blur-sm hover:bg-accent">
               <MoreVertical className="w-3.5 h-3.5" />
             </Button>
           )}
