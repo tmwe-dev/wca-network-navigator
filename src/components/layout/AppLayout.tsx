@@ -125,7 +125,6 @@ export function AppLayout() {
              <div className="flex h-full items-center justify-between px-2 sm:px-4">
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                 <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setFiltersOpen(true)} aria-label="Filtri"><SlidersHorizontal className="h-4 w-4" /></Button>
                 
                 {/* Area switch */}
                 {currentPath.startsWith("/network") && (
