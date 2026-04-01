@@ -24,6 +24,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const cCity = clean(c.city);
   const cOrigin = clean(c.origin);
   const quality = getContactQuality(c);
+  const isAiProcessed = !!c.deep_search_at;
   const cCompanyAlias = clean(c.company_alias);
   const cContactAlias = clean(c.contact_alias);
   const hasAlias = !!cCompanyAlias || !!cContactAlias;
