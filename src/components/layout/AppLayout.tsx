@@ -146,10 +146,7 @@ export function AppLayout() {
                 <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
-                <InfoTooltip content="Workspace"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/workspace")} aria-label="Workspace"><Layers className="h-4 w-4" /></Button></InfoTooltip>
-                <InfoTooltip content="Email"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/email-composer")} aria-label="Email"><Send className="h-4 w-4" /></Button></InfoTooltip>
-                <InfoTooltip content="Agenda"><Button variant="ghost" size="icon" className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => navigate("/reminders")} aria-label="Agenda"><Calendar className="h-4 w-4" /></Button></InfoTooltip>
-                <InfoTooltip content="Assistente AI"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAiOpen(true)} aria-label="AI Assistant"><Bot className="h-4 w-4" /></Button></InfoTooltip>
+                <InfoTooltip content="Assistente AI"><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" onClick={() => setAiOpen(true)} aria-label="AI Assistant"><Sparkles className="h-4 w-4 text-purple-400" /></Button></InfoTooltip>
               </div>
             </div>
             </TooltipProvider>
