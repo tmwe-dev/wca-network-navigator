@@ -127,10 +127,6 @@ OUTPUT FORMAT:
   // 2. THINK — Chiedi a Claude (con budget check + knowledge check)
   // ============================================================
   async think(userPrompt, context = {}) {
-    if (!this.config.claudeApiKey) {
-      throw new Error('API key Claude non configurata. Vai su Brain → Impostazioni.');
-    }
-
     // Budget check
     if (this.config.tokensUsedToday >= this.config.dailyTokenBudget) {
       throw new Error(`Budget token giornaliero esaurito (${this.config.dailyTokenBudget}). Riprova domani.`);
@@ -179,26 +175,22 @@ OUTPUT FORMAT:
     const budgetLeft = this.config.dailyTokenBudget - this.config.tokensUsedToday;
     const maxTokens = Math.min(this.config.claudeMaxTokens, budgetLeft);
 
-    // Chiama Claude
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Chiama Lovable AI via Edge Function
+    const response = await fetch(this.EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': this.config.claudeApiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: this.config.claudeModel,
-        max_tokens: maxTokens,
-        system: this.config.systemPrompt,
         messages,
+        systemPrompt: this.config.systemPrompt,
+        maxTokens,
       }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Claude API error: ${response.status}`);
+      throw new Error(err.error || `AI error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -209,7 +201,7 @@ OUTPUT FORMAT:
     await this.saveConfig();
 
     // Parse risposta
-    const text = data.content?.[0]?.text || '';
+    const text = data.content || '';
     let parsed;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
