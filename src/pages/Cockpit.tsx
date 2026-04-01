@@ -463,6 +463,14 @@ const Cockpit = () => {
     toast.info(`Generazione Alias per ${selection.count} contatti`);
   }, [selection.count]);
 
+  const handleBulkLinkedInLookup = useCallback(() => {
+    const ids = Array.from(selection.selectedIds);
+    if (!ids.length) return;
+    // CockpitContacts have source_id — we need to resolve to actual contact IDs
+    const sourceIds = ids.map(id => contactsMap[id]?.sourceId).filter(Boolean) as string[];
+    if (sourceIds.length) linkedInLookup.lookupBatch(sourceIds);
+  }, [selection.selectedIds, contactsMap, linkedInLookup]);
+
   const handleSingleDeepSearch = useCallback((id: string) => {
     toast.info(`Deep Search per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
