@@ -19,6 +19,17 @@ interface Contact {
   originDetail: string;
 }
 
+export interface EnrichmentState {
+  isActive: boolean;
+  scrapingPhase: "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+  linkedinProfile?: {
+    name?: string;
+    headline?: string;
+    location?: string;
+    connectionStatus?: string;
+  } | null;
+}
+
 interface CockpitContactCardProps {
   contact: Contact;
   flag: string;
@@ -29,6 +40,7 @@ interface CockpitContactCardProps {
   onDragEnd: () => void;
   onDeepSearch: () => void;
   onAlias: () => void;
+  enrichmentState?: EnrichmentState;
 }
 
 const channelIcon: Record<string, any> = {
