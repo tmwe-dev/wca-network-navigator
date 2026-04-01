@@ -39,6 +39,8 @@ interface ContactStreamProps {
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
   onBatchMode?: () => void;
+  activeContactId?: string | null;
+  enrichmentState?: EnrichmentState;
 }
 
 export function ContactStream({
