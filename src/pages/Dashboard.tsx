@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Globe, Users, ArrowRight, Activity, Mail, Bot } from "lucide-react";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { useOperationsCenter } from "@/hooks/useOperationsCenter";
-import OperationsCenter from "@/components/home/OperationsCenter";
+import { OperationsCenter } from "@/components/home/OperationsCenter";
 
 export default function Dashboard() {
   const navigate = useNavigate();
