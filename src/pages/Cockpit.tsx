@@ -477,6 +477,7 @@ const Cockpit = () => {
               scrapingPhase: draftState.scrapingPhase,
               linkedinProfile: draftState.linkedinProfile,
             } : undefined}
+            assignmentMap={assignmentInfoMap}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
