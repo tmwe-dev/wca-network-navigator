@@ -12,6 +12,7 @@ import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useSmartLinkedInSearch } from "@/hooks/useSmartLinkedInSearch";
+import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
@@ -103,6 +104,7 @@ const Cockpit = () => {
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
   const smartSearch = useSmartLinkedInSearch();
+  const linkedInLookup = useLinkedInLookup();
 
   // Agent assignment
   const { agents } = useAgents();
@@ -461,6 +463,14 @@ const Cockpit = () => {
     toast.info(`Generazione Alias per ${selection.count} contatti`);
   }, [selection.count]);
 
+  const handleBulkLinkedInLookup = useCallback(() => {
+    const ids = Array.from(selection.selectedIds);
+    if (!ids.length) return;
+    // CockpitContacts have source_id — we need to resolve to actual contact IDs
+    const sourceIds = ids.map(id => contactsMap[id]?.sourceId).filter(Boolean) as string[];
+    if (sourceIds.length) linkedInLookup.lookupBatch(sourceIds);
+  }, [selection.selectedIds, contactsMap, linkedInLookup]);
+
   const handleSingleDeepSearch = useCallback((id: string) => {
     toast.info(`Deep Search per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
@@ -515,6 +525,8 @@ const Cockpit = () => {
             onSelectAll={selection.selectAll} onClear={selection.clear}
             isAllSelected={selection.isAllSelected} selectionCount={selection.count}
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
+            onBulkLinkedInLookup={handleBulkLinkedInLookup}
+            isLinkedInLookupRunning={linkedInLookup.progress.status === "running"}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
             onBatchMode={() => setBatchMode(true)}

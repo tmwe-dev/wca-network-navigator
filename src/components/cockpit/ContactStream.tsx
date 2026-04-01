@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye, Linkedin, Loader2 } from "lucide-react";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
@@ -38,6 +38,8 @@ interface ContactStreamProps {
   selectionCount: number;
   onBulkDeepSearch: () => void;
   onBulkAlias: () => void;
+  onBulkLinkedInLookup?: () => void;
+  isLinkedInLookupRunning?: boolean;
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
@@ -51,7 +53,7 @@ export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
+  onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
@@ -175,6 +177,11 @@ export function ContactStream({
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkAlias}>
             <Sparkles className="w-3 h-3" /> Alias
           </Button>
+          {onBulkLinkedInLookup && (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
+              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
+            </Button>
+          )}
           {onBatchMode && (
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-primary" onClick={onBatchMode}>
               <Sparkles className="w-3 h-3" /> Genera
