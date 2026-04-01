@@ -370,7 +370,7 @@ export function useDeleteCockpitContacts() {
 export function useSendToCockpit() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (items: { sourceType: string; sourceId: string; partnerId?: string }[]) => {
+    mutationFn: async (items: { sourceType: string; sourceId: string; partnerId?: string; countryCode?: string }[]) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -387,10 +387,26 @@ export function useSendToCockpit() {
         ignoreDuplicates: true,
       });
       if (error) throw error;
+
+      // Auto-assign agents silently for each contact
+      for (const item of items) {
+        try {
+          await autoAssignAgent({
+            sourceId: item.sourceId,
+            sourceType: item.sourceType,
+            countryCode: item.countryCode || null,
+            userId: user.id,
+          });
+        } catch (e) {
+          console.warn("[SendToCockpit] Auto-assign failed for", item.sourceId, e);
+        }
+      }
+
       return inserts.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["client-assignments"] });
     },
   });
 }
