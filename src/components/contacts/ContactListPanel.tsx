@@ -107,6 +107,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Arricchisci con Deep Search (max 20)</TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild>
+              <Button size="sm" variant="ghost" className={btnClass} disabled={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
+                onClick={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}>
+                {actions.linkedInLookupLoading || linkedInLookup.progress.status === "running" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Linkedin className="w-3.5 h-3.5" />} LinkedIn
+              </Button>
+            </TooltipTrigger><TooltipContent className="text-xs">Cerca URL LinkedIn via Google</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
               <Button size="sm" variant="ghost" className={btnClass} onClick={actions.handleBulkCampaign}>
                 <Megaphone className="w-3.5 h-3.5" /> Campagna
               </Button>
