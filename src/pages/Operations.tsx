@@ -194,12 +194,55 @@ export default function Operations() {
     const toastId = toast.loading(`Sincronizzazione WCA per ${selectedCountries.map(c => c.name).join(", ")}...`);
     try {
       for (const country of selectedCountries) {
-        const { data, error } = await supabase.functions.invoke("sync-wca-partners", {
-          body: { countryCode: country.code },
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token}`,
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ countryCode: country.code }),
         });
-        if (error) throw error;
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No stream");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.slice(6));
+              if (evt.type === "progress") {
+                toast.loading(
+                  `${country.name}: ${evt.synced}/${evt.total} partner, ${evt.contacts} contatti`,
+                  { id: toastId }
+                );
+              } else if (evt.type === "complete") {
+                toast.success(
+                  `${country.name}: ${evt.synced} partner, ${evt.contacts} contatti, ${evt.networks} network sincronizzati`,
+                  { id: toastId }
+                );
+              } else if (evt.type === "error") {
+                console.error("Sync SSE error:", evt.message);
+              }
+            } catch {}
+          }
+        }
       }
-      toast.success("Sincronizzazione completata!", { id: toastId });
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       queryClient.invalidateQueries({ queryKey: ["country-stats"] });
     } catch (e: any) {
