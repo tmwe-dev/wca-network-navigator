@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Zap, Loader2, CheckCircle2 } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
@@ -29,29 +29,12 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
 
-  const [status, setStatus] = useState<ChannelStatus>({ li: false, wa: false, fs: false, ai: true });
+  // Start everything as FALSE — no lies
+  const [status, setStatus] = useState<ChannelStatus>({ li: false, wa: false, fs: false, ai: false });
   const [connecting, setConnecting] = useState(false);
   const [didAutoRun, setDidAutoRun] = useState(false);
 
-  // Restore persisted + live extension state
-  useEffect(() => {
-    if (!settings) return;
-    setStatus(prev => ({
-      ...prev,
-      li: settings["linkedin_connected"] === "true" || li.isAvailable,
-      wa: settings["whatsapp_connected"] === "true" || wa.isAvailable || !!settings["whatsapp_sender"],
-      fs: fsExt.isAvailable,
-      ai: true,
-    }));
-  }, [settings, li.isAvailable, wa.isAvailable, fsExt.isAvailable]);
-
-  // Live extension detection
-  useEffect(() => {
-    if (li.isAvailable) setStatus(p => ({ ...p, li: true }));
-  }, [li.isAvailable]);
-  useEffect(() => {
-    if (wa.isAvailable) setStatus(p => ({ ...p, wa: true }));
-  }, [wa.isAvailable]);
+  // Live extension detection — only for Partner Connect (no session needed)
   useEffect(() => {
     setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
   }, [fsExt.isAvailable]);
@@ -78,41 +61,63 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
   const activateAll = useCallback(async () => {
     setConnecting(true);
-    let liOk = li.isAvailable;
-    let waOk = wa.isAvailable;
-    const fsOk = fsExt.isAvailable;
+    const problems: string[] = [];
 
-    // LinkedIn: check credentials/cookie in DB
-    if (!liOk) {
-      try {
-        const { data } = await supabase.functions.invoke("get-linkedin-credentials");
-        if (data?.email || settings?.["linkedin_li_at"]) liOk = true;
-      } catch {}
-    }
-    // LinkedIn: verify session if extension present
+    // --- LinkedIn: REAL verification only ---
+    let liOk = false;
     if (li.isAvailable) {
-      try { const r = await li.verifySession(); liOk = r.success; } catch { liOk = true; }
+      try {
+        const r = await li.verifySession();
+        liOk = r.success;
+        if (!liOk) problems.push("LinkedIn: sessione scaduta");
+      } catch {
+        liOk = false;
+        problems.push("LinkedIn: verifica fallita");
+      }
+    } else {
+      problems.push("LinkedIn: estensione non rilevata");
     }
 
-    // WhatsApp: check sender number
-    if (!waOk) {
-      if (settings?.["whatsapp_sender"]) { waOk = true; }
-      else {
+    // --- WhatsApp: extension OR API mode ---
+    let waOk = false;
+    if (wa.isAvailable) {
+      try {
+        const r = await wa.verifySession();
+        waOk = r.success;
+        if (!waOk) problems.push("WhatsApp: sessione non attiva");
+      } catch {
+        waOk = false;
+        problems.push("WhatsApp: verifica fallita");
+      }
+    } else {
+      // API mode: check whatsapp_sender
+      const sender = settings?.["whatsapp_sender"];
+      if (sender) {
+        waOk = true;
+      } else {
         try {
-          const { data } = await supabase.from("app_settings").select("value").eq("key", "whatsapp_sender").maybeSingle();
+          const { data } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "whatsapp_sender")
+            .maybeSingle();
           if (data?.value) waOk = true;
         } catch {}
       }
-    }
-    // WhatsApp: verify session if extension present
-    if (wa.isAvailable) {
-      try { const r = await wa.verifySession(); waOk = r.success; } catch { waOk = true; }
+      if (!waOk) problems.push("WhatsApp: né estensione né API configurata");
     }
 
-    const newStatus: ChannelStatus = { li: liOk, wa: waOk, fs: fsOk, ai: true };
+    // --- Partner Connect ---
+    const fsOk = fsExt.isAvailable;
+    if (!fsOk) problems.push("Partner Connect: estensione non rilevata");
+
+    // --- AI: fallback true (no healthcheck endpoint yet) ---
+    const aiOk = true;
+
+    const newStatus: ChannelStatus = { li: liOk, wa: waOk, fs: fsOk, ai: aiOk };
     setStatus(newStatus);
 
-    // Persist
+    // Persist real state
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
@@ -120,28 +125,32 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
 
     setConnecting(false);
 
-    const active = [liOk && "LinkedIn", waOk && "WhatsApp", fsOk && "Partner Connect", "AI"].filter(Boolean);
-    const allOk = liOk && waOk && fsOk;
+    const activeCount = [liOk, waOk, fsOk, aiOk].filter(Boolean).length;
+    const allOk = activeCount === 4;
 
     if (!fsOk) {
-      // Auto-download Partner Connect extension
       downloadPartnerConnectExtension();
     }
 
-    toast({
-      title: allOk ? "✅ Tutto attivo" : "⚡ Connessioni verificate",
-      description: active.join(" · ") + (allOk ? "" : " — configura i canali mancanti in Impostazioni"),
-    });
-  }, [li, wa, fsExt, settings, updateSetting]);
+    if (allOk) {
+      toast({ title: "✅ Tutto attivo", description: "LinkedIn · WhatsApp · Partner Connect · AI" });
+    } else {
+      toast({
+        title: `⚠️ ${activeCount}/4 attivi`,
+        description: problems.slice(0, 3).join("\n"),
+        duration: 6000,
+      });
+    }
+  }, [li, wa, fsExt, settings, updateSetting, downloadPartnerConnectExtension]);
 
-  // Auto-activate on first mount
+  // Auto-activate on first mount (after settings load)
   useEffect(() => {
     if (!didAutoRun && settings) {
       setDidAutoRun(true);
       const timer = setTimeout(activateAll, 1500);
       return () => clearTimeout(timer);
     }
-  }, [settings, didAutoRun]);
+  }, [settings, didAutoRun, activateAll]);
 
   const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
   const allActive = activeCount === 4;
@@ -168,7 +177,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
                 <Zap className="w-3.5 h-3.5" />
               )}
               <span>{connecting ? "Verifico..." : allActive ? "Tutto attivo" : `${activeCount}/4 attivi`}</span>
-              {/* Mini dots */}
               <div className="flex items-center gap-0.5 ml-1">
                 {[status.li, status.wa, status.fs, status.ai].map((on, i) => (
                   <span key={i} className={`w-1.5 h-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-destructive"}`} />
@@ -185,7 +193,6 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
           </TooltipContent>
         </Tooltip>
 
-        {/* Outreach Queue */}
         {outreachQueue && outreachQueue.pendingCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
