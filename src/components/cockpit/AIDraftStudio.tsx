@@ -357,6 +357,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           <span>Lingua: {draft.language}</span>
           <span>·</span>
           <span>{draft.companyName}</span>
+          {draft.searchLog && draft.searchLog.length > 0 && (
+            <AISearchMonitorButton searchLog={draft.searchLog} isSearching={draft.scrapingPhase === "searching"} />
+          )}
         </div>
       </div>
 
