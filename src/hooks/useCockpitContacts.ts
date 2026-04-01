@@ -246,11 +246,22 @@ export function useCockpitContacts() {
       } else if (st === "contact") {
         const ic = icMap[sid];
         if (!ic) continue;
-        // Resolve LinkedIn URL from enrichment_data
+        // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
         const enrich = (ic.enrichment_data as any) || {};
-        const icLinkedin = enrich.social_links?.linkedin
-          || (Array.isArray(enrich.contact_profiles) ? enrich.contact_profiles.find((cp: any) => cp.linkedin_url)?.linkedin_url : null)
+        let icLinkedin = enrich.linkedin_profile_url  // written by LinkedIn Flow & SmartSearch
+          || enrich.social_links?.linkedin             // legacy field
           || "";
+        // contact_profiles is an OBJECT keyed by ID, not an array
+        if (!icLinkedin && enrich.contact_profiles && typeof enrich.contact_profiles === "object") {
+          const profiles = Object.values(enrich.contact_profiles) as any[];
+          const found = profiles.find((cp: any) => cp.linkedin_url);
+          if (found) icLinkedin = found.linkedin_url;
+        }
+        // Also check partner_social_links if we have a partner_id
+        const icPartnerId = item.partner_id;
+        if (!icLinkedin && icPartnerId && socialLinksMap[icPartnerId]) {
+          icLinkedin = socialLinksMap[icPartnerId];
+        }
         result.push({
           id: `ic-${ic.id}`,
           queueId: item.id,

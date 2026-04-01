@@ -226,11 +226,11 @@ export function useSmartLinkedInSearch() {
             await supabase.from("imported_contacts").update({
               enrichment_data: {
                 ...existing,
-                linkedin_search_log: log,
+                linkedin_search_log: log as unknown as Record<string, unknown>[],
                 linkedin_resolved_at: foundUrl ? new Date().toISOString() : null,
                 linkedin_resolved_method: resolvedMethod,
                 linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
-              },
+              } as unknown as Record<string, unknown>,
             }).eq("id", contact.sourceId);
           }
         }
