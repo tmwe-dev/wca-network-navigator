@@ -11,7 +11,7 @@ async function safeTabCreate(options, maxRetries) {
   maxRetries = maxRetries || 3;
   for (var attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await chrome.tabs.create(options);
+      return await safeTabCreate(options);
     } catch (err) {
       if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
         await new Promise(function(r) { setTimeout(r, 500); });
@@ -160,7 +160,7 @@ async function syncLiCookieToServer() {
 
 // ── Verify LinkedIn session ──
 async function verifyLinkedInSession() {
-  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/feed/", active: false });
+  var tab = await safeTabCreate({ url: "https://www.linkedin.com/feed/", active: false });
   try {
     await waitForTabLoad(tab.id, 20000);
     var results = await chrome.scripting.executeScript({
@@ -175,7 +175,7 @@ async function verifyLinkedInSession() {
   } catch (err) {
     return { authenticated: false, reason: "error: " + err.message };
   } finally {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    safeTabRemove(tab.id)
   }
 }
 
@@ -463,7 +463,7 @@ async function autoLoginLinkedIn() {
     throw new Error("Credenziali LinkedIn non configurate.");
   }
 
-  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/", active: true });
+  var tab = await safeTabCreate({ url: "https://www.linkedin.com/", active: true });
 
   try {
     await waitForTabLoad(tab.id, 25000);
@@ -476,7 +476,7 @@ async function autoLoginLinkedIn() {
 
     if (initialState && initialState.authenticated) {
       var syncInitial = await syncLiCookieToServer();
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -492,7 +492,7 @@ async function autoLoginLinkedIn() {
     });
     var prep = prepRes[0] && prepRes[0].result;
     if (!prep || !prep.success) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -513,7 +513,7 @@ async function autoLoginLinkedIn() {
 
     if (readyState && readyState.authenticated) {
       var syncReady = await syncLiCookieToServer();
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -526,13 +526,13 @@ async function autoLoginLinkedIn() {
     if (readyState && readyState.hasGoogleButton && !readyState.hasLoginForm) {
       var googleFlow = await pollForLinkedInAuthCompletion(tab.id, 180000, { sawGoogle: true });
       if (googleFlow.success || !googleFlow.tabStillOpen) {
-        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        safeTabRemove(tab.id)
       }
       return googleFlow;
     }
 
     if (!readyState || !readyState.hasLoginForm) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -549,7 +549,7 @@ async function autoLoginLinkedIn() {
     });
     var formResult = injRes[0] && injRes[0].result;
     if (!formResult || !formResult.success) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -562,11 +562,11 @@ async function autoLoginLinkedIn() {
 
     var completion = await pollForLinkedInAuthCompletion(tab.id, 180000);
     if (completion.success || !completion.tabStillOpen) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
     }
     return completion;
   } catch (err) {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    safeTabRemove(tab.id)
     return {
       success: false,
       authenticated: false,
@@ -618,7 +618,7 @@ async function sendLinkedInMessage(profileUrl, message) {
   // If it's a profile URL, open the overlay messaging
   if (!/\/messaging\//.test(messagingUrl)) {
     // Open profile first to trigger the message button
-    var tab = await chrome.tabs.create({ url: messagingUrl, active: false });
+    var tab = await safeTabCreate({ url: messagingUrl, active: false });
     try {
       await waitForTabLoad(tab.id, 20000);
 
@@ -637,7 +637,7 @@ async function sendLinkedInMessage(profileUrl, message) {
 
       var clickResult = clickRes[0] && clickRes[0].result;
       if (!clickResult || !clickResult.success) {
-        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        safeTabRemove(tab.id)
         return { success: false, error: (clickResult && clickResult.error) || "Bottone messaggio non trovato" };
       }
 
@@ -652,10 +652,10 @@ async function sendLinkedInMessage(profileUrl, message) {
       });
       var typeResult = typeRes[0] && typeRes[0].result;
 
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return typeResult || { success: false, error: "Nessun risultato" };
     } catch (err) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return { success: false, error: err.message };
     }
   }
@@ -750,7 +750,7 @@ function addConnectionNote(noteText) {
 async function sendConnectionRequest(profileUrl, note) {
   if (!profileUrl) return { success: false, error: "URL profilo mancante" };
 
-  var tab = await chrome.tabs.create({ url: profileUrl.replace(/\/$/, ""), active: false });
+  var tab = await safeTabCreate({ url: profileUrl.replace(/\/$/, ""), active: false });
   try {
     await waitForTabLoad(tab.id, 20000);
 
@@ -762,7 +762,7 @@ async function sendConnectionRequest(profileUrl, note) {
     var clickResult = clickRes[0] && clickRes[0].result;
 
     if (!clickResult || !clickResult.success) {
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return { success: false, error: (clickResult && clickResult.error) || "Bottone Connect non trovato" };
     }
 
@@ -777,7 +777,7 @@ async function sendConnectionRequest(profileUrl, note) {
         args: [note],
       });
       var noteResult = noteRes[0] && noteRes[0].result;
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: !!(noteResult && noteResult.success),
         method: "connect_with_note",
@@ -799,7 +799,7 @@ async function sendConnectionRequest(profileUrl, note) {
         },
       });
       var sendResult = sendRes[0] && sendRes[0].result;
-      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      safeTabRemove(tab.id)
       return {
         success: !!(sendResult && sendResult.success),
         method: "connect_without_note",
@@ -807,7 +807,7 @@ async function sendConnectionRequest(profileUrl, note) {
       };
     }
   } catch (err) {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    safeTabRemove(tab.id)
     return { success: false, error: err.message };
   }
 }
@@ -816,7 +816,7 @@ async function sendConnectionRequest(profileUrl, note) {
 async function extractProfileByUrl(url) {
   if (!url) return { success: false, error: "URL mancante" };
 
-  var tab = await chrome.tabs.create({ url: url, active: false });
+  var tab = await safeTabCreate({ url: url, active: false });
   try {
     await waitForTabLoad(tab.id, 20000);
 
@@ -829,7 +829,7 @@ async function extractProfileByUrl(url) {
   } catch (err) {
     return { success: false, error: err.message };
   } finally {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    safeTabRemove(tab.id)
   }
 }
 
@@ -839,7 +839,7 @@ async function searchLinkedInProfile(query) {
 
   // Build a LinkedIn people search URL
   var searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
-  var tab = await chrome.tabs.create({ url: searchUrl, active: false });
+  var tab = await safeTabCreate({ url: searchUrl, active: false });
   try {
     await waitForTabLoad(tab.id, 20000);
 
@@ -892,7 +892,7 @@ async function searchLinkedInProfile(query) {
   } catch (err) {
     return { success: false, error: err.message };
   } finally {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    safeTabRemove(tab.id)
   }
 }
 
