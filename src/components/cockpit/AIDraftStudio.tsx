@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
@@ -84,6 +85,7 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
 
 const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; color: string }> = {
   idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },
+  searching: { icon: Search, label: "🔍 Ricerca profilo LinkedIn...", color: "text-chart-3" },
   visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },
   extracting: { icon: Search, label: "Estrazione dati profilo...", color: "text-[hsl(210,80%,55%)]" },
   enriching: { icon: Brain, label: "Analisi contesto e arricchimento...", color: "text-chart-3" },
@@ -94,7 +96,7 @@ const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; col
 function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPhase; linkedinProfile: DraftState["linkedinProfile"] }) {
   const config = scrapingPhaseConfig[phase] || scrapingPhaseConfig.generating;
   const PhaseIcon = config.icon;
-  const phases: ScrapingPhase[] = ["visiting", "extracting", "enriching", "generating"];
+  const phases: ScrapingPhase[] = ["searching", "visiting", "extracting", "enriching", "generating"];
   const currentIndex = phases.indexOf(phase);
   const showSteps = phase !== "idle" && phase !== "generating" || (phase === "generating" && linkedinProfile);
 
@@ -355,6 +357,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           <span>Lingua: {draft.language}</span>
           <span>·</span>
           <span>{draft.companyName}</span>
+          {draft.searchLog && draft.searchLog.length > 0 && (
+            <AISearchMonitorButton searchLog={draft.searchLog} isSearching={draft.scrapingPhase === "searching"} />
+          )}
         </div>
       </div>
 

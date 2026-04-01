@@ -24,7 +24,7 @@ interface Contact {
 
 export interface EnrichmentState {
   isActive: boolean;
-  scrapingPhase: "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+  scrapingPhase: "idle" | "searching" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
   linkedinProfile?: {
     name?: string;
     headline?: string;
@@ -78,6 +78,7 @@ const originAccent: Record<ContactOrigin, string> = {
 };
 
 const phaseLabel: Record<string, string> = {
+  searching: "🔎 Ricerca LinkedIn...",
   visiting: "🔍 Visita profilo...",
   extracting: "📋 Estrazione dati...",
   enriching: "🧠 Arricchimento...",
