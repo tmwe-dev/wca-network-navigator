@@ -78,6 +78,7 @@ const originAccent: Record<ContactOrigin, string> = {
 };
 
 const phaseLabel: Record<string, string> = {
+  searching: "🔎 Ricerca LinkedIn...",
   visiting: "🔍 Visita profilo...",
   extracting: "📋 Estrazione dati...",
   enriching: "🧠 Arricchimento...",
