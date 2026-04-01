@@ -5,7 +5,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { QueueItem, CanvasData, CanvasPhase, ContactSource } from "@/components/acquisition/types";
 import { NetworkStats, NetworkRegression } from "@/components/acquisition/NetworkPerformanceBar";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
-import { useScrapingSettings, calcDelay } from "@/hooks/useScrapingSettings";
+import { useScrapingSettings, calcDelay, getPatternPause, ensureMinDuration } from "@/hooks/useScrapingSettings";
 import { useAcquisitionResume } from "@/hooks/useAcquisitionResume";
 import { scanDirectory, enrichQueueWithNetworks, loadPartnerPreview } from "@/lib/acquisition/scanDirectory";
 
