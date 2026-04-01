@@ -1,45 +1,98 @@
 
 
-# Ristrutturazione Mission Drawer (Sidebar Destra)
+# Pre-Setting Completo degli Agenti: Voce, Compiti, Firma, Knowledge Base
 
-## Problemi attuali
+## Obiettivo
 
-1. **Obiettivo e Proposta** sono semplici textarea senza il ContentPicker automatizzato (già disponibile e usato altrove)
-2. **Qualità AI** è in basso — dovrebbe stare in alto come prima scelta strategica
-3. **Preset** è in fondo, poco visibile — va spostato in alto come selettore rapido di configurazione
-4. **Textarea troppo piccole** per contenuti ampi (80px e 100px min-height)
+Configurare automaticamente tutti gli 11 agenti con: voce ElevenLabs basata sul genere, firme HTML con avatar e link chiamata, knowledge base operativa iniziale, e tool completi incluso `queue_outreach`. Ogni agente avrà compiti chiari pre-assegnati nel prompt e nella KB.
 
-## Modifiche — `src/components/global/MissionDrawer.tsx`
+## Struttura del Team e Assegnazioni
 
-### Nuovo ordine delle sezioni (dall'alto verso il basso):
+| Agente | Ruolo | Genere | Voce ElevenLabs | Compiti principali |
+|--------|-------|--------|-----------------|-------------------|
+| **Luca** | Director | M | Daniel (british) | Supervisione, pianificazione strategica, assegnazione task, controllo qualità |
+| **Robin** | Sales | M | Roger (american) | Vendita, chiusura contratti, chiamata vocale ElevenLabs (agente telefonico designato) |
+| **Bruce** | Sales | M | George (british) | Vendita, negoziazione, follow-up caldi |
+| **Renato** | Outreach | F* | Sarah (american) | Outreach regionale, primo contatto email/WhatsApp/LinkedIn |
+| **Carlo** | Outreach | F* | Laura (italian) | Outreach Italia/Europa, comunicazioni multilingue |
+| **Leonardo** | Outreach | M | Daniel (british) | Outreach mercati anglofoni, LinkedIn messaging |
+| **Imane** | Research | F | Sarah (american) | Deep search, intelligence, analisi profili, report aziende |
+| **Gigi** | Account Mgr | M | Roger (american) | Controllo qualità comunicazioni, verifica parametri, KPI |
+| **Felice** | Account Mgr | F | Laura (italian) | Monitoraggio attività team, verifica conformità |
+| **Gianfranco** | Strategy | M | George (british) | Analisi copertura, prioritizzazione contatti, selezione geografica |
+| **Marco** | Download | M | Daniel (british) | Sincronizzazione WCA, gestione download (attualmente inibito per ricerca esterna) |
 
-1. **Header** (invariato)
-2. **Preset** — spostato subito sotto l'header come selettore rapido (Select + salva/elimina) con sfondo leggero per distinguerlo
-3. **Qualità AI** — spostato subito dopo il preset, sempre visibile (non collassabile), con QualitySelector size="md"
-4. **Obiettivo** — textarea più grande (`min-h-[120px]`) + **ContentPicker type="goals"** sopra la textarea per selezionare rapidamente un obiettivo predefinito che popola il campo
-5. **Proposta Base** — textarea più grande (`min-h-[160px]`) + **ContentPicker type="proposals"** sopra la textarea per selezionare rapidamente una proposta che popola il campo
-6. **Documenti** (invariato, collapsible)
-7. **Link di Riferimento** (invariato, collapsible)
+*\*Nota: Renato e Carlo hanno gender "female" nel file avatars — la voce seguirà il genere dichiarato.*
 
-### Integrazione ContentPicker
+## Modifiche tecniche
 
-Per Obiettivo e Proposta, aggiungere `<ContentPicker>` sopra la Textarea:
-- `type="goals"` per Obiettivo, `type="proposals"` per Proposta
-- `onSelect` popola la textarea corrispondente (`m.setGoal` / `m.setBaseProposal`)
-- `selectedText` mostra quale preset contenuto è attivo
-- Il ContentPicker mostra la griglia di card con icone e categorie già implementata
+### 1. `src/data/agentTemplates.ts` — Aggiornamenti
 
-### Preset in alto
+**Tool aggiuntivi per tutti**: aggiungere `queue_outreach` ad `ALL_OPERATIONAL_TOOLS` (manca attualmente, ma è disponibile nell'edge function).
 
-Il blocco Preset (Select + Input nome + Salva/Elimina) viene spostato subito sotto l'header in un box con `bg-muted/20 rounded-lg p-3` per dare rilevanza visiva.
+**Prompt aggiornati** per ogni ruolo con compiti operativi specifici:
+- **sales**: Aggiungere flusso cockpit (seleziona contatti → genera comunicazione via mission context → invia tramite email/WhatsApp/LinkedIn → inserisci link chiamata vocale con Robin nell'email). Menzionare uso di preset/goal/proposte.
+- **outreach**: Specificare che opera dal cockpit, usa i mission context assegnati dal responsabile, e invia tramite `queue_outreach` per WhatsApp/LinkedIn.
+- **account**: Aggiungere compiti di verifica: numero contatti, qualità, aderenza istruzioni.
+- **strategy**: Aggiungere selezione contatti per qualità e interesse geografico, decisione su chi contattare per primo.
+- **research**: Specificare che le attività di ricerca esterna (report aziende, altri sistemi) sono temporaneamente inibite; focus su deep search e arricchimento profili interni.
 
-### Qualità AI non collassabile
+### 2. `src/data/agentTemplates.ts` — Nuova mappa voci di default
 
-Rimuovere il wrapper `Section` collapsible per Qualità AI — mostrarla direttamente con un label e il `QualitySelector` a tutta larghezza.
+```typescript
+export const AGENT_DEFAULT_VOICES: Record<string, { voiceId: string; voiceName: string }> = {
+  male: { voiceId: "onwK4e9ZLuTAKqWW03F9", voiceName: "Daniel 🇬🇧" },
+  female: { voiceId: "EXAVITQu4vr4xnSDxMaL", voiceName: "Sarah 🇺🇸" },
+};
+```
+
+### 3. `src/components/agents/CreateAgentDialog.tsx` — Auto-setting alla creazione
+
+Quando si crea un agente:
+- Leggere il `gender` dall'avatar selezionato (`AGENT_AVATARS`)
+- Assegnare automaticamente `elevenlabs_voice_id` in base al genere
+- Generare automaticamente `signature_html` con:
+  - Avatar dell'agente (immagine)
+  - Nome + "Agente Digitale TMWI"
+  - Link chiamata vocale Robin (se disponibile)
+- Assegnare una `knowledge_base` iniziale con entry tipo:
+  ```json
+  [{ "title": "Compiti operativi", "content": "..." }]
+  ```
+
+### 4. `src/components/agents/AgentSignatureConfig.tsx` — Aggiornare `generateDefaultSignature`
+
+Modificare la firma auto-generata per includere:
+- Avatar come immagine (da `resolveAgentAvatar`)
+- Nome agente
+- Dicitura "Agente Digitale TMWI"
+- Link "📞 Chiamami" che punta all'agente vocale Robin (configurabile)
+
+### 5. `src/data/agentTemplates.ts` — Knowledge Base di default per ruolo
+
+Aggiungere export `AGENT_DEFAULT_KB` con entry iniziali per ruolo:
+- **sales/outreach**: Regole di comunicazione, uso mission context, canali disponibili
+- **account**: Parametri di controllo qualità, KPI da verificare
+- **strategy**: Criteri di selezione contatti, priorità geografiche
+- **research**: Procedure di deep search, fonti disponibili
+- **download**: Stato sistema WCA, procedure di sync
 
 ## File modificati
 
 | File | Cosa |
 |------|------|
-| `src/components/global/MissionDrawer.tsx` | Riordino sezioni, ContentPicker per goal/proposal, textarea più grandi, preset in alto, qualità AI fissa in alto |
+| `src/data/agentTemplates.ts` | `queue_outreach` nei tool, prompt potenziati, mappa voci default, KB default per ruolo |
+| `src/components/agents/CreateAgentDialog.tsx` | Auto-assegnazione voce per genere, firma auto-generata, KB iniziale alla creazione |
+| `src/components/agents/AgentSignatureConfig.tsx` | Firma default con avatar immagine + "Agente Digitale TMWI" + link chiamata Robin |
+
+## Risultato
+
+Ogni nuovo agente creato avrà immediatamente:
+- Voce ElevenLabs corretta per il suo genere
+- Firma professionale con avatar, titolo "Agente Digitale TMWI" e link chiamata
+- Knowledge base operativa con i compiti specifici del ruolo
+- Tool completi incluso `queue_outreach` per invio messaggi su tutti i canali
+- Prompt dettagliato con flusso operativo chiaro (cockpit → mission context → comunicazione → invio)
+
+Robin è designato come agente telefonico: il suo link chiamata vocale ElevenLabs apparirà nelle firme di tutti gli agenti venditori.
 
