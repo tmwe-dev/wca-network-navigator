@@ -72,6 +72,12 @@ export function AISearchMonitorButton({ searchLog, isSearching }: AISearchMonito
 function SearchStepCard({ entry }: { entry: SearchLogEntry }) {
   const [expanded, setExpanded] = useState(false);
   const hasMatch = entry.match && entry.confidence >= 0.5;
+  const methodLabel =
+    entry.method === "partner_connect_google_search"
+      ? "Google via Partner Connect"
+      : entry.method === "linkedin_people_search"
+        ? "LinkedIn Search"
+        : entry.method;
 
   return (
     <motion.div
@@ -90,9 +96,7 @@ function SearchStepCard({ entry }: { entry: SearchLogEntry }) {
           ) : (
             <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
           )}
-          <span className="font-medium">
-            {entry.method === "linkedin_people_search" ? "LinkedIn Search" : entry.method}
-          </span>
+          <span className="font-medium">{methodLabel}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-0.5 text-muted-foreground">
