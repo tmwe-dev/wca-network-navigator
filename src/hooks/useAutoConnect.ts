@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Auto-verifies LinkedIn and WhatsApp connections on mount
  * and persists the result in app_settings.
+ * 
+ * LinkedIn: requires BOTH extension available AND authenticated session.
+ * WhatsApp: extension session OR API sender configured.
  */
 export function useAutoConnect() {
   const li = useLinkedInExtensionBridge();
@@ -19,10 +22,24 @@ export function useAutoConnect() {
     didRun.current = true;
 
     const run = async () => {
-      let liOk = li.isAvailable;
-      let waOk = wa.isAvailable;
+      // ── LinkedIn: real auth only ──
+      let liOk = false;
+      if (li.isAvailable) {
+        try {
+          const r = await li.verifySession();
+          liOk = r.success === true && r.authenticated === true;
+        } catch {}
+      }
+      // No fallback to DB credentials — they don't mean you're logged in locally
 
-      // WhatsApp: check if sender number is configured
+      // ── WhatsApp: extension OR API sender ──
+      let waOk = false;
+      if (wa.isAvailable) {
+        try {
+          const r = await wa.verifySession();
+          waOk = r.success === true;
+        } catch {}
+      }
       if (!waOk) {
         try {
           const { data } = await supabase
@@ -34,45 +51,13 @@ export function useAutoConnect() {
         } catch {}
       }
 
-      // LinkedIn: check DB credentials if extension not available
-      if (!liOk) {
-        try {
-          const { data } = await supabase.functions.invoke("get-linkedin-credentials");
-          if (data?.email) liOk = true;
-        } catch {}
-        // Also check li_at cookie
-        try {
-          const { data } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "linkedin_li_at")
-            .maybeSingle();
-          if (data?.value) liOk = true;
-        } catch {}
-      }
-
-      // Verify sessions if extensions are available
-      if (li.isAvailable) {
-        try {
-          const res = await li.verifySession();
-          liOk = res.success;
-        } catch {}
-      }
-      if (wa.isAvailable) {
-        try {
-          const res = await wa.verifySession();
-          waOk = res.success;
-        } catch {}
-      }
-
-      // Persist
+      // Persist real state
       try {
         await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
         await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
       } catch {}
     };
 
-    // Delay slightly to let extension pings settle
     const timer = setTimeout(run, 2000);
     return () => clearTimeout(timer);
   }, []);

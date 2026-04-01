@@ -55,7 +55,23 @@ export default function TestLinkedInSearch() {
     setLines([]);
     setResults(TEST_CONTACTS.map(c => ({ contact: c, status: "pending", url: null, profile: null, log: [], scrapeResult: null })));
 
-    log("info", `Estensione LinkedIn: ${liBridge.isAvailable ? "✅ connessa" : "❌ non disponibile"}`);
+    log("info", `Estensione LinkedIn: ${liBridge.isAvailable ? "✅ rilevata" : "❌ non disponibile"}`);
+
+    // ── PREFLIGHT: real auth check before starting ──
+    if (!liBridge.isAvailable) {
+      log("error", "❌ Estensione LinkedIn non rilevata. Installa e ricarica.");
+      setRunning(false);
+      return;
+    }
+
+    log("info", "🔐 Verifica sessione LinkedIn...");
+    const authCheck = await liBridge.ensureAuthenticated(0); // force fresh check
+    if (!authCheck.ok) {
+      log("error", `❌ LinkedIn NON autenticato (${authCheck.reason}). Accedi a LinkedIn nel browser e riprova.`);
+      setRunning(false);
+      return;
+    }
+    log("success", "✅ Sessione LinkedIn autenticata — avvio test");
 
     for (let i = 0; i < TEST_CONTACTS.length; i++) {
       if (abortRef.current) { log("warn", "Test interrotto dall'utente"); break; }

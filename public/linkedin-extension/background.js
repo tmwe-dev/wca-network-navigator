@@ -920,34 +920,34 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   }
 
   if (message.action === "extractProfile") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await extractProfileByUrl(message.url); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "sendMessage") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await sendLinkedInMessage(message.url, message.message); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "sendConnectionRequest") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await sendConnectionRequest(message.url, message.note); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "searchProfile") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await searchLinkedInProfile(message.query); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 

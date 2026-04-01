@@ -148,9 +148,9 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     // AI
     results.push("✅ AI Agent");
 
-    // Persist
+    // Persist real state
     try {
-      await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liConnected) });
+      await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
     } catch {}
 

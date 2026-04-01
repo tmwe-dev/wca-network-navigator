@@ -287,7 +287,7 @@ const Cockpit = () => {
       setDraftState(prev => ({ ...prev, contactLinkedinUrl: linkedinUrl, searchLog: searchResult.searchLog }));
     }
 
-    const canScrapeLinkedIn = isLinkedInChannel && liBridge.isAvailable && linkedinUrl;
+    const canScrapeLinkedIn = isLinkedInChannel && liAuthOk && linkedinUrl;
 
     // Initialize draft with scraping phase if LinkedIn (if not already set by search)
     if (!isLinkedInChannel || !liBridge.isAvailable || linkedinUrl) {

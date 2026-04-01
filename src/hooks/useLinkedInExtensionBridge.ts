@@ -126,5 +126,34 @@ export function useLinkedInExtensionBridge() {
     [sendMessage]
   );
 
-  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile };
+  /**
+   * Centralized auth guard — checks extension + real session.
+   * Caches result for `cacheTtlMs` to avoid spamming verifySession.
+   */
+  const lastAuthCheck = useRef<{ ok: boolean; ts: number }>({ ok: false, ts: 0 });
+
+  const ensureAuthenticated = useCallback(
+    async (cacheTtlMs = 30000): Promise<{ ok: boolean; reason: string }> => {
+      if (!availableRef.current) {
+        return { ok: false, reason: "extension_not_available" };
+      }
+      // Use cache if fresh
+      const now = Date.now();
+      if (now - lastAuthCheck.current.ts < cacheTtlMs) {
+        return { ok: lastAuthCheck.current.ok, reason: lastAuthCheck.current.ok ? "cached_ok" : "cached_not_authenticated" };
+      }
+      try {
+        const r = await sendMessage("verifySession", {}, 30000);
+        const ok = r.success === true && r.authenticated === true;
+        lastAuthCheck.current = { ok, ts: Date.now() };
+        return { ok, reason: ok ? "authenticated" : r.reason || "not_authenticated" };
+      } catch {
+        lastAuthCheck.current = { ok: false, ts: Date.now() };
+        return { ok: false, reason: "verify_error" };
+      }
+    },
+    [sendMessage]
+  );
+
+  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile, ensureAuthenticated };
 }
