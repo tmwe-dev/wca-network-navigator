@@ -1,13 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
+import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye } from "lucide-react";
 import { CockpitContactCard, type EnrichmentState } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
+import { BulkActionMenu } from "./BulkActionMenu";
+import { TodayActivityCarousel } from "./TodayActivityCarousel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useWorkedToday } from "@/hooks/useWorkedToday";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
@@ -49,6 +52,14 @@ export function ContactStream({
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
   onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState,
 }: ContactStreamProps) {
+  const [hideWorked, setHideWorked] = useState(false);
+  const { workedIds } = useWorkedToday();
+
+  // Helper to check if a contact's source_id was worked today
+  const isContactWorked = (c: CockpitContact) => {
+    return workedIds.has(c.partnerId || c.sourceId);
+  };
+
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
     if (searchQuery) {
@@ -62,8 +73,17 @@ export function ContactStream({
       if (f.type === "channel" && f.label.toLowerCase().includes("linkedin")) result = result.filter(c => c.channels.includes("linkedin"));
       if (f.type === "priority") result = result.filter(c => c.priority >= 7);
     }
+    // Hide worked filter
+    if (hideWorked) {
+      result = result.filter(c => !isContactWorked(c));
+    }
     return result.sort((a, b) => b.priority - a.priority);
-  }, [searchQuery, filters, contacts]);
+  }, [searchQuery, filters, contacts, hideWorked, workedIds]);
+
+  // Get selected contacts for bulk actions
+  const selectedContacts = useMemo(() =>
+    contacts.filter(c => selectedIds.has(c.id)),
+  [contacts, selectedIds]);
 
   if (isLoading) {
     return (
@@ -89,6 +109,8 @@ export function ContactStream({
 
   return (
     <div className="p-3 space-y-2">
+      {/* Today activity carousel */}
+      <TodayActivityCarousel />
 
       {/* Search field */}
       <div className="px-1">
@@ -109,7 +131,7 @@ export function ContactStream({
         </div>
       </div>
 
-      {/* Header with select-all and bulk actions */}
+      {/* Header with select-all, hide-worked toggle, and count */}
       <div className="flex items-center justify-between px-1 mb-1 gap-2">
         <div className="flex items-center gap-2">
           <Checkbox
@@ -121,6 +143,19 @@ export function ContactStream({
             {selectionCount > 0 ? `${selectionCount} selezionati` : `${filteredContacts.length} contatti`}
           </span>
         </div>
+        <button
+          onClick={() => setHideWorked(!hideWorked)}
+          className={cn(
+            "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
+            hideWorked
+              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          title={hideWorked ? "Mostra tutti" : "Nascondi lavorati"}
+        >
+          {hideWorked ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+          {hideWorked ? "Tutti" : "Nascondi lavorati"}
+        </button>
       </div>
 
       {/* Bulk action bar */}
@@ -129,8 +164,10 @@ export function ContactStream({
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="flex items-center gap-1.5 px-1"
+          className="flex items-center gap-1.5 px-1 flex-wrap"
         >
+          {/* Bulk activity actions (mark done, note, schedule) */}
+          <BulkActionMenu selectedContacts={selectedContacts} onComplete={onClear} />
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkDeepSearch}>
             <Search className="w-3 h-3" /> Deep Search
           </Button>
@@ -160,6 +197,7 @@ export function ContactStream({
               <CockpitContactCard
                 contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
                 isSelected={selectedIds.has(contact.id)}
+                isWorked={isContactWorked(contact)}
                 onToggleSelect={() => onToggle(contact.id)}
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}

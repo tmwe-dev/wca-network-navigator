@@ -226,12 +226,16 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
     const plainText = draft.body.replace(/<[^>]+>/g, "").trim();
     let profileUrl = draft.contactLinkedinUrl || "";
 
+    console.log("[LinkedIn Send] Starting. profileUrl:", profileUrl, "bridge available:", liBridge.isAvailable);
+
     // If no URL, try to search via extension
     if (!profileUrl && liBridge.isAvailable && draft.contactName) {
       toast({ title: "🔍 Cercando profilo LinkedIn...", description: `Ricerca per ${draft.contactName}` });
       try {
         const searchQuery = `${draft.contactName} ${draft.companyName || ""}`.trim();
+        console.log("[LinkedIn Send] Searching profile:", searchQuery);
         const res = await liBridge.searchProfile(searchQuery);
+        console.log("[LinkedIn Send] Search result:", res);
         if (res.success && res.profile?.profileUrl) {
           profileUrl = res.profile.profileUrl;
           onDraftChange({ ...draft, contactLinkedinUrl: profileUrl });
@@ -240,7 +244,8 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           toast({ title: "Profilo LinkedIn non trovato", description: "Cercalo manualmente e aggiungi l'URL al contatto.", variant: "destructive" });
           return;
         }
-      } catch {
+      } catch (err) {
+        console.error("[LinkedIn Send] Search error:", err);
         toast({ title: "Errore ricerca LinkedIn", variant: "destructive" });
         return;
       }
@@ -252,19 +257,45 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
     if (liBridge.isAvailable) {
       setSending(true);
       try {
+        console.log("[LinkedIn Send] Sending DM to:", profileUrl, "message length:", plainText.length);
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
+        console.log("[LinkedIn Send] DM result:", res);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
         } else {
-          toast({ title: "Errore LinkedIn", description: res.error, variant: "destructive" });
+          console.warn("[LinkedIn Send] DM failed:", res.error);
+          toast({ title: "Errore LinkedIn", description: res.error || "Invio fallito", variant: "destructive" });
+          // Fallback: copy to clipboard and open profile
+          navigator.clipboard.writeText(plainText);
+          toast({
+            title: "📋 Messaggio copiato",
+            description: "Apri il profilo LinkedIn e incolla il messaggio.",
+          });
+          if (profileUrl) {
+            window.open(profileUrl, "_blank");
+          }
         }
-      } catch {
-        toast({ title: "Errore invio LinkedIn", variant: "destructive" });
+      } catch (err) {
+        console.error("[LinkedIn Send] DM exception:", err);
+        // Fallback: copy + open
+        navigator.clipboard.writeText(plainText);
+        toast({
+          title: "📋 Messaggio copiato negli appunti",
+          description: "Errore nell'invio automatico. Apri LinkedIn e incolla.",
+        });
+        if (profileUrl) window.open(profileUrl, "_blank");
       } finally {
         setSending(false);
       }
     } else {
-      setLiDmOpen(true);
+      // No extension: copy + open profile or show dialog
+      if (profileUrl) {
+        navigator.clipboard.writeText(plainText);
+        toast({ title: "📋 Messaggio copiato!", description: "Estensione non rilevata. Apertura profilo LinkedIn..." });
+        window.open(profileUrl, "_blank");
+      } else {
+        setLiDmOpen(true);
+      }
     }
   };
 
