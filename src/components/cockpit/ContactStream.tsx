@@ -42,6 +42,7 @@ interface ContactStreamProps {
   isLinkedInLookupRunning?: boolean;
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
+  onSingleLinkedInLookup?: (id: string) => void;
   onBulkDelete?: () => void;
   onBatchMode?: () => void;
   activeContactId?: string | null;
