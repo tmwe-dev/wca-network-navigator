@@ -84,6 +84,7 @@ function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; sp
 
 const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; color: string }> = {
   idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },
+  searching: { icon: Search, label: "🔍 Ricerca profilo LinkedIn...", color: "text-chart-3" },
   visiting: { icon: Globe, label: "Visita profilo LinkedIn...", color: "text-[hsl(210,80%,55%)]" },
   extracting: { icon: Search, label: "Estrazione dati profilo...", color: "text-[hsl(210,80%,55%)]" },
   enriching: { icon: Brain, label: "Analisi contesto e arricchimento...", color: "text-chart-3" },
