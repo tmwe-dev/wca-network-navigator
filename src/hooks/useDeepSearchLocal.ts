@@ -123,18 +123,29 @@ export function useDeepSearchLocal() {
     for (const contact of contacts) {
       if (!contact.name || contact.name.length < 3) continue;
 
-      // --- LinkedIn Personal ---
+      // --- LinkedIn Personal (Cascade Search) ---
       if (!existingSet.has(`${contact.id}_linkedin`)) {
-        const query = `"${contact.name}" "${companyName}" site:linkedin.com/in`;
-        let results = (await googleSearch(query, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
-        if (results.length === 0) {
-          const retry = `"${getLastName(contact.name)}" "${companyName}" logistics site:linkedin.com/in`;
-          results = (await googleSearch(retry, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+        const domainKw = extractDomainKeyword(contact.email);
+        const lastName = getLastName(contact.name);
+        const cascadeQueries = [
+          `"${contact.name}" "${companyName}" site:linkedin.com/in`,
+          ...(domainKw ? [`"${contact.name}" "${domainKw}" site:linkedin.com/in`] : []),
+          `"${contact.name}" site:linkedin.com/in`,
+          ...(domainKw ? [`"${lastName}" "${domainKw}" site:linkedin.com/in`] : []),
+          `${contact.name} LinkedIn`,
+        ];
+
+        let results: GoogleSearchResult[] = [];
+        for (const q of cascadeQueries) {
+          results = (await googleSearch(q, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+          if (results.length > 0) break;
           await delay(500);
         }
+
         if (results.length > 0 && apiKey) {
+          const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
           const answer = await aiCall(
-            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}
+            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}${domainHint}
 Results:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}
 If one matches, respond with ONLY the URL. If none, respond "NONE".`,
             apiKey
