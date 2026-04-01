@@ -6,6 +6,26 @@
 var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
 var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
+// ── Safe tab create/remove with retry for "cannot be edited" errors ──
+async function safeTabCreate(options, maxRetries) {
+  maxRetries = maxRetries || 3;
+  for (var attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await chrome.tabs.create(options);
+    } catch (err) {
+      if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
+        await new Promise(function(r) { setTimeout(r, 500); });
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
+async function safeTabRemove(tabId) {
+  try { await chrome.tabs.remove(tabId); } catch (e) {}
+}
+
 // ── Wait for tab to finish loading ──
 function waitForTabLoad(tabId, ms) {
   ms = ms || 20000;
