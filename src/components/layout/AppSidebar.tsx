@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, Mail, Globe, Home, Moon, Sun, Settings,
   Wifi, WifiOff, Bot, Users, Command, Rocket, MessageCircle,
+  Earth, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
