@@ -1,7 +1,6 @@
 import { useState, useRef, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus, FlaskConical } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus } from "lucide-react";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +44,6 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[]
 ];
 
 export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {
-  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -97,35 +95,60 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
       animate={{ opacity: 1, y: 0 }}
       className="px-4 pt-3 pb-2 space-y-2"
     >
-      {/* Source Tabs */}
-      <div className="flex items-center gap-1">
-        {SOURCE_TABS.map(st => (
+      {/* Row 1: Source Tabs + View Toggle + Nuovo */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          {SOURCE_TABS.map(st => (
+            <button
+              key={st.value}
+              type="button"
+              onClick={() => onSourceTabChange(st.value)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                sourceTab === st.value
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40"
+              )}
+            >
+              <st.icon className="w-3.5 h-3.5" />
+              {st.label}
+            </button>
+          ))}
           <button
-            key={st.value}
             type="button"
-            onClick={() => onSourceTabChange(st.value)}
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-1 border border-dashed border-border/50"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Nuovo
+          </button>
+        </div>
+        <div className="flex items-center rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm p-0.5">
+          <button
+            type="button"
+            onClick={() => onViewChange("card")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
-              sourceTab === st.value
-                ? "bg-primary/15 text-primary border border-primary/30"
-                : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40"
+              "p-1.5 rounded-md transition-all duration-200",
+              viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
             )}
           >
-            <st.icon className="w-3.5 h-3.5" />
-            {st.label}
+            <LayoutGrid className="w-4 h-4" />
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 transition-all duration-200 ml-1 border border-dashed border-border/50"
-        >
-          <UserPlus className="w-3.5 h-3.5" />
-          Nuovo
-        </button>
+          <button
+            type="button"
+            onClick={() => onViewChange("list")}
+            className={cn(
+              "p-1.5 rounded-md transition-all duration-200",
+              viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
+            )}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
+      {/* Row 2: AI Command Input + Mic */}
       <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
-        {/* Command Input */}
         <div className="relative flex-1 group">
           <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-accent/20 to-chart-3/20 blur-xl opacity-0 group-focus-within:opacity-60 transition-opacity duration-500" />
           <div className="relative flex items-center gap-2 rounded-xl border border-border/60 bg-card/80 backdrop-blur-xl px-4 py-2.5 focus-within:border-primary/50 transition-all duration-200">
@@ -172,40 +195,6 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
               transition={{ repeat: Infinity, duration: 1.5 }}
             />
           )}
-        </button>
-
-        {/* View Toggle */}
-        <div className="flex items-center rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm p-0.5">
-          <button
-            type="button"
-            onClick={() => onViewChange("card")}
-            className={cn(
-              "p-1.5 rounded-md transition-all duration-200",
-              viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
-            )}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewChange("list")}
-            className={cn(
-              "p-1.5 rounded-md transition-all duration-200",
-              viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground/80 hover:text-foreground"
-            )}
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Test LinkedIn */}
-        <button
-          type="button"
-          onClick={() => navigate("/test-linkedin")}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
-        >
-          <FlaskConical className="w-3.5 h-3.5" />
-          Test LI
         </button>
       </form>
     </motion.div>
