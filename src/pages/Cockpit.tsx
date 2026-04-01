@@ -490,6 +490,13 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
 
+  const handleSingleLinkedInLookup = useCallback((id: string) => {
+    const contact = contactsMap[id];
+    if (!contact) return;
+    const sourceId = contact.sourceId;
+    if (sourceId) linkedInLookup.lookupBatch([sourceId]);
+  }, [contactsMap, linkedInLookup]);
+
   const handleBulkDelete = useCallback(() => {
     setShowDeleteConfirm(true);
   }, []);
@@ -539,6 +546,7 @@ const Cockpit = () => {
             onBulkLinkedInLookup={handleBulkLinkedInLookup}
             isLinkedInLookupRunning={linkedInLookup.progress.status === "running"}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
+            onSingleLinkedInLookup={handleSingleLinkedInLookup}
             onBulkDelete={handleBulkDelete}
             onBatchMode={() => setBatchMode(true)}
             activeContactId={draftState.contactId}

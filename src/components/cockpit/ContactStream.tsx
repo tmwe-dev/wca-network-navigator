@@ -42,6 +42,7 @@ interface ContactStreamProps {
   isLinkedInLookupRunning?: boolean;
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
+  onSingleLinkedInLookup?: (id: string) => void;
   onBulkDelete?: () => void;
   onBatchMode?: () => void;
   activeContactId?: string | null;
@@ -53,7 +54,7 @@ export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
+  onBulkDeepSearch, onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
@@ -211,6 +212,7 @@ export function ContactStream({
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
                 onAlias={() => onSingleAlias(contact.id)}
+                onLinkedInLookup={onSingleLinkedInLookup ? () => onSingleLinkedInLookup(contact.id) : undefined}
                 enrichmentState={activeContactId === contact.id ? enrichmentState : undefined}
               />
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
