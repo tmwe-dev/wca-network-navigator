@@ -592,6 +592,17 @@ const Cockpit = () => {
             <ChannelDropZones
               isDragging={!!draggedContactId} draggedContactId={draggedContactId}
               dragCount={dragCount} onDrop={handleDrop}
+              hasActiveContact={!!draftState.contactId}
+              onReadProfile={() => {
+                if (draftState.contactId) {
+                  const c = contactsMap[draftState.contactId];
+                  if (c?.linkedinUrl) handleDrop("linkedin", draftState.contactId, c.name);
+                  else toast.info("Nessun URL LinkedIn disponibile — esegui prima LinkedIn Lookup");
+                }
+              }}
+              onDeepSearch={() => {
+                if (draftState.contactId) handleSingleDeepSearch(draftState.contactId);
+              }}
             />
           )}
         </div>
