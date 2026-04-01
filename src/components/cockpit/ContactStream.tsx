@@ -44,6 +44,7 @@ interface ContactStreamProps {
   onBatchMode?: () => void;
   activeContactId?: string | null;
   enrichmentState?: EnrichmentState;
+  assignmentMap?: Map<string, AssignmentInfo>;
 }
 
 export function ContactStream({
