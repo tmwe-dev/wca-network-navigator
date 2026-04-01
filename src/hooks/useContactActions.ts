@@ -156,7 +156,8 @@ export function useContactActions(deps: Deps) {
   return {
     handleDeepSearch, handleGroupDeepSearch, handleGroupAlias,
     handleToggleGroupSelect, handleBulkCampaign, handleAICommand,
-    deepSearchLoading, aliasLoading, updateLeadStatus,
+    handleLinkedInLookup, handleGroupLinkedInLookup,
+    deepSearchLoading, aliasLoading, linkedInLookupLoading, updateLeadStatus,
   };
 }
 
