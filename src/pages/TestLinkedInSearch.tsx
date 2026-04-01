@@ -141,7 +141,7 @@ export default function TestLinkedInSearch() {
         <div>
           <h1 className="text-2xl font-bold">🧪 Test LinkedIn Search Pipeline</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            5 contatti dal DB — verifica Smart Search + Scraping
+            5 biglietti da visita con dati minimi — stress test Smart Search
           </p>
         </div>
         <div className="flex gap-2 items-center">
