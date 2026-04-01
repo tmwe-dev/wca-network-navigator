@@ -148,6 +148,7 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
           {search && (
             <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">"{search}"</span>
           )}
+        </div>
         <div className="flex items-center gap-1.5">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
             <SelectTrigger className={`h-7 text-[11px] w-[110px] flex-shrink-0 ${isDark ? "bg-white/[0.04] border-white/[0.1] text-slate-200" : "bg-white/70 border-slate-200 text-slate-700"}`}>
