@@ -26,6 +26,8 @@ export interface CockpitContact {
   linkedinUrl: string;
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
+  deepSearchAt?: string;
+  enrichmentData?: any;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
