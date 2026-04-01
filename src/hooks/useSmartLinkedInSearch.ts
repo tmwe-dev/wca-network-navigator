@@ -223,15 +223,15 @@ export function useSmartLinkedInSearch() {
             .single();
           if (ic) {
             const existing = (ic.enrichment_data as Record<string, any>) || {};
-            await supabase.from("imported_contacts").update({
-              enrichment_data: {
+            await (supabase.from("imported_contacts").update({
+              enrichment_data: JSON.parse(JSON.stringify({
                 ...existing,
-                linkedin_search_log: log as unknown as Record<string, unknown>[],
+                linkedin_search_log: log,
                 linkedin_resolved_at: foundUrl ? new Date().toISOString() : null,
                 linkedin_resolved_method: resolvedMethod,
                 linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
-              } as unknown as Record<string, unknown>,
-            }).eq("id", contact.sourceId);
+              })),
+            }) as any).eq("id", contact.sourceId);
           }
         }
       } catch (e) {
