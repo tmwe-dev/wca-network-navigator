@@ -139,18 +139,62 @@ async function verifySession() {
   }
 }
 
+async function readUnreadMessages() {
+  let tab;
+  try {
+    tab = await safeCreateTab(WA_BASE, false);
+    const loaded = await waitForLoad(tab.id, 25000);
+    if (!loaded) {
+      await safeRemoveTab(tab.id);
+      return { success: false, error: "WhatsApp Web non ha caricato in tempo" };
+    }
+    await sleep(4000);
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const messages = [];
+        // Find chats with unread badges
+        const chatItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
+        for (const chat of chatItems) {
+          const unreadBadge = chat.querySelector('[aria-label*="non lett"], [aria-label*="unread"]');
+          if (!unreadBadge) continue;
+
+          const titleEl = chat.querySelector('[data-testid="cell-frame-title"] span[title]');
+          const lastMsgEl = chat.querySelector('[data-testid="last-msg-status"]');
+          const timeEl = chat.querySelector('[data-testid="cell-frame-primary-detail"]');
+
+          messages.push({
+            contact: titleEl?.getAttribute("title") || "Sconosciuto",
+            lastMessage: lastMsgEl?.textContent?.trim() || "",
+            time: timeEl?.textContent?.trim() || "",
+            unreadCount: parseInt(unreadBadge.textContent) || 1,
+          });
+        }
+        return { success: true, messages };
+      },
+    });
+
+    await safeRemoveTab(tab.id);
+    return results?.[0]?.result || { success: false, error: "Nessun risultato" };
+  } catch (err) {
+    if (tab?.id) await safeRemoveTab(tab.id);
+    return { success: false, error: err.message };
+  }
+}
+
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.source !== "wa-content-bridge") return false;
 
   if (msg.action === "ping") {
-    sendResponse({ success: true, version: "1.0" });
+    sendResponse({ success: true, version: "1.1" });
     return false;
   }
 
   if (msg.action === "verifySession") {
     verifySession().then(sendResponse);
-    return true; // async
+    return true;
   }
 
   if (msg.action === "sendWhatsApp") {
@@ -159,7 +203,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return false;
     }
     sendWhatsAppMessage(msg.phone, msg.text).then(sendResponse);
-    return true; // async
+    return true;
+  }
+
+  if (msg.action === "readUnread") {
+    readUnreadMessages().then(sendResponse);
+    return true;
   }
 
   sendResponse({ success: false, error: "Azione sconosciuta: " + msg.action });
