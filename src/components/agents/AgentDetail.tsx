@@ -77,8 +77,9 @@ export function AgentDetail({ agent, onDeleted }: Props) {
 
       {/* Tabs */}
       <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="w-full grid grid-cols-6 h-9">
+        <TabsList className="w-full grid grid-cols-7 h-9">
           <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+          <TabsTrigger value="clients" className="text-xs">Clienti</TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs">Compiti</TabsTrigger>
           <TabsTrigger value="prompt" className="text-xs">Prompt</TabsTrigger>
           <TabsTrigger value="tools" className="text-xs">Tool</TabsTrigger>
@@ -86,6 +87,7 @@ export function AgentDetail({ agent, onDeleted }: Props) {
           <TabsTrigger value="voice" className="text-xs">Voce</TabsTrigger>
         </TabsList>
         <TabsContent value="chat"><AgentChat agent={agent} /></TabsContent>
+        <TabsContent value="clients"><AgentClientList agent={agent} /></TabsContent>
         <TabsContent value="tasks"><AgentTaskList agent={agent} /></TabsContent>
         <TabsContent value="prompt"><AgentPromptEditor agent={agent} /></TabsContent>
         <TabsContent value="tools"><AgentToolSelector agent={agent} /></TabsContent>
