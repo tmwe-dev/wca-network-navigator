@@ -181,12 +181,6 @@ export default function Operations() {
                   <Eye className="w-4 h-4" />
                 </button>
               )}
-              <button onClick={() => setAiOpen(true)} className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted" title="Assistente AI">
-                <Bot className="w-4 h-4" />
-              </button>
-              <button onClick={toggleTheme} className="p-1.5 rounded-md transition-all text-muted-foreground hover:text-foreground hover:bg-muted">
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
             </div>
           </div>
           </TooltipProvider>

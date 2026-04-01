@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -127,14 +128,26 @@ export function CountryGrid({ selected, onToggle, onRemove, filterMode, compact 
     <div className="flex flex-col h-full min-h-0 overflow-hidden gap-1.5">
       {/* ═══ TOOLBAR ═══ */}
       <div className="flex-shrink-0 space-y-1.5">
-        <div className="relative">
-          <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${th.dim}`} />
-          <Input
-            placeholder="Cerca paese..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className={`pl-8 h-8 rounded-lg text-xs ${th.input}`}
-          />
+        <div className="flex items-center gap-1.5">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <Search className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-2">
+              <Input
+                placeholder="Cerca paese..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="h-8 text-xs"
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
+          {search && (
+            <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">"{search}"</span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
