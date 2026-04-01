@@ -1,13 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Globe, Users, ArrowRight, Activity, Mail, Calendar } from "lucide-react";
+import { Globe, Users, ArrowRight, Activity, Mail, Bot } from "lucide-react";
 import { useCountryStats } from "@/hooks/useCountryStats";
+import { useOperationsCenter } from "@/hooks/useOperationsCenter";
+import OperationsCenter from "@/components/home/OperationsCenter";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const countryStats = useCountryStats();
   const globalStats = countryStats.data?.global;
   const totalPartners = globalStats?.total ?? 0;
+  const { stats } = useOperationsCenter();
 
   const areas = [
     {
@@ -39,13 +42,13 @@ export default function Dashboard() {
   ];
 
   const quickStats = [
-    { icon: Activity, label: "Attività in sospeso", value: 0 },
-    { icon: Mail, label: "Email in coda", value: 0 },
-    { icon: Calendar, label: "Appuntamenti oggi", value: 0 },
+    { icon: Activity, label: "Attività in sospeso", value: stats.pendingActivities },
+    { icon: Mail, label: "Email in coda", value: stats.pendingEmails },
+    { icon: Bot, label: "Task agenti attivi", value: stats.runningTasks },
   ];
 
   return (
-    <div className="flex h-full items-center justify-center p-6 overflow-hidden">
+    <div className="flex flex-col items-center p-6 overflow-auto h-full">
       <div className="w-full max-w-3xl space-y-8">
         {/* Header */}
         <motion.div
@@ -113,6 +116,15 @@ export default function Dashboard() {
               <span className="text-xs font-semibold text-foreground">{s.value}</span>
             </div>
           ))}
+        </motion.div>
+
+        {/* Operations Center */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        >
+          <OperationsCenter />
         </motion.div>
       </div>
     </div>
