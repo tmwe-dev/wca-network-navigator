@@ -215,8 +215,10 @@ export function ContactStream({
                 onLinkedInLookup={onSingleLinkedInLookup ? () => onSingleLinkedInLookup(contact.id) : undefined}
                 enrichmentState={activeContactId === contact.id ? enrichmentState : undefined}
               />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <ContactActionMenu contact={contact} />
+              <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="bg-card/90 backdrop-blur-sm rounded-md border border-border/50">
+                  <ContactActionMenu contact={contact} />
+                </div>
               </div>
             </div>
           ))}

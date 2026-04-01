@@ -290,6 +290,8 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
+          contactAlias: ic.contact_alias || undefined,
+          companyAlias: ic.company_alias || undefined,
           deepSearchAt: ic.deep_search_at || undefined,
           enrichmentData: ic.enrichment_data || undefined,
         });
