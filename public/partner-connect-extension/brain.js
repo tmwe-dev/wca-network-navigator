@@ -372,9 +372,9 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
       dailyBudget: this.config.dailyTokenBudget,
       budgetRemaining: this.config.dailyTokenBudget - this.config.tokensUsedToday,
       budgetPercent: Math.round(((this.config.dailyTokenBudget - this.config.tokensUsedToday) / this.config.dailyTokenBudget) * 100),
-      model: this.config.claudeModel,
+      model: 'Lovable AI (Gemini Flash)',
       supabaseConnected: !!(this.config.supabaseUrl && this.config.supabaseKey),
-      claudeConfigured: !!this.config.claudeApiKey,
+      aiConfigured: true, // Always true — no external key needed
       library: libraryStats,
     };
   },

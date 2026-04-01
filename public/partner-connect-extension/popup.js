@@ -606,26 +606,19 @@ $('libClearBtn')?.addEventListener('click', async () => {
   }
 });
 
-// Settings — API key inviate direttamente, non mostrate
+// Settings — solo budget e Supabase KB
 $('brainSaveSettings')?.addEventListener('click', async () => {
   try {
     await sendMsg({
       action: 'brain-config',
       config: {
-        claudeApiKey: $('brainApiKey')?.value?.trim(),
-        claudeModel: $('brainModel')?.value,
         dailyTokenBudget: parseInt($('brainBudget')?.value) || 50000,
         supabaseUrl: $('brainSupaUrl')?.value?.trim(),
         supabaseKey: $('brainSupaKey')?.value?.trim(),
       }
     });
-    setStatus('brainSettingsStatus', '\u2705 Salvato (chiavi cifrate)', 'success');
-    // Pulisci campi sensibili dopo il salvataggio
-    const apiKeyEl = $('brainApiKey');
-    if (apiKeyEl) {
-      apiKeyEl.value = '';
-      apiKeyEl.placeholder = '\u2022\u2022\u2022\u2022 salvata e cifrata';
-    }
+    setStatus('brainSettingsStatus', '\u2705 Salvato', 'success');
+    // Pulisci campo Supabase key dopo il salvataggio
     const supaKeyEl = $('brainSupaKey');
     if (supaKeyEl) {
       supaKeyEl.value = '';
@@ -635,17 +628,10 @@ $('brainSaveSettings')?.addEventListener('click', async () => {
   } catch (e) { setStatus('brainSettingsStatus', '\u274c ' + e.message, 'error'); }
 });
 
-// Load settings al caricamento (solo config non-sensibile)
+// Load settings al caricamento
 (async () => {
   try {
     const s = await sendMsg({ action: 'brain-get-config' });
-    // Le chiavi API arrivano mascherate dal background
-    const apiKeyEl = $('brainApiKey');
-    if (apiKeyEl && s.claudeApiKey && s.claudeApiKey.includes('...')) {
-      apiKeyEl.placeholder = '\u2022\u2022\u2022\u2022 configurata';
-    }
-    const modelEl = $('brainModel');
-    if (modelEl && s.claudeModel) modelEl.value = s.claudeModel;
     const budgetEl = $('brainBudget');
     if (budgetEl && s.dailyTokenBudget) budgetEl.value = s.dailyTokenBudget;
     const supaUrlEl = $('brainSupaUrl');
