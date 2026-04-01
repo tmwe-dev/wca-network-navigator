@@ -95,7 +95,7 @@ const scrapingPhaseConfig: Record<ScrapingPhase, { icon: any; label: string; col
 function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPhase; linkedinProfile: DraftState["linkedinProfile"] }) {
   const config = scrapingPhaseConfig[phase] || scrapingPhaseConfig.generating;
   const PhaseIcon = config.icon;
-  const phases: ScrapingPhase[] = ["visiting", "extracting", "enriching", "generating"];
+  const phases: ScrapingPhase[] = ["searching", "visiting", "extracting", "enriching", "generating"];
   const currentIndex = phases.indexOf(phase);
   const showSteps = phase !== "idle" && phase !== "generating" || (phase === "generating" && linkedinProfile);
 
