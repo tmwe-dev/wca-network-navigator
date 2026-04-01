@@ -9,6 +9,7 @@ import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import QualitySelector from "@/components/workspace/QualitySelector";
+import ContentPicker from "@/components/shared/ContentPicker";
 
 interface MissionDrawerProps {
   open: boolean;
@@ -22,7 +23,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [openSections, setOpenSections] = useState({
-    goal: true, proposal: true, documents: false, links: false, quality: true,
+    goal: true, proposal: true, documents: false, links: false,
   });
 
   const toggle = (key: keyof typeof openSections) =>
@@ -58,23 +59,75 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {/* Goal */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* Preset — in alto */}
+          <div className="bg-muted/20 rounded-lg p-3 space-y-2">
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">📋 Preset</p>
+            {m.presets.length > 0 && (
+              <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Carica preset..." /></SelectTrigger>
+                <SelectContent>
+                  {m.presets.map(p => (
+                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex gap-1.5">
+              <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome preset..." className="h-8 text-xs flex-1" />
+              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={handleSavePreset}><Save className="w-3 h-3" /> Salva</Button>
+            </div>
+            {m.activePresetId && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive gap-1 w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
+                <Trash2 className="w-3 h-3" /> Elimina preset attivo
+              </Button>
+            )}
+          </div>
+
+          {/* Qualità AI — sempre visibile, non collassabile */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1.5">
+              ⚡ Qualità AI
+            </p>
+            <p className="text-[10px] text-muted-foreground">Livello di generazione per email e outreach AI</p>
+            <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
+          </div>
+
+          {/* Obiettivo con ContentPicker */}
           <Section title="Obiettivo" icon="🎯" open={openSections.goal} onToggle={() => toggle("goal")}>
-            <Textarea
-              value={m.goal} onChange={e => m.setGoal(e.target.value)}
-              placeholder="Descrivi l'obiettivo delle comunicazioni..."
-              className="min-h-[80px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
-            />
+            <div className="space-y-2">
+              <ContentPicker
+                type="goals"
+                onSelect={(text) => m.setGoal(text)}
+                selectedText={m.goal}
+                triggerLabel="Seleziona obiettivo..."
+                className="w-full"
+              />
+              <Textarea
+                value={m.goal} onChange={e => m.setGoal(e.target.value)}
+                placeholder="Descrivi l'obiettivo delle comunicazioni..."
+                className="min-h-[120px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
+              />
+            </div>
           </Section>
 
-          {/* Proposal */}
+          {/* Proposta Base con ContentPicker */}
           <Section title="Proposta Base" icon="📝" open={openSections.proposal} onToggle={() => toggle("proposal")}>
-            <Textarea
-              value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)}
-              placeholder="La proposta commerciale di base..."
-              className="min-h-[100px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
-            />
+            <div className="space-y-2">
+              <ContentPicker
+                type="proposals"
+                onSelect={(text) => m.setBaseProposal(text)}
+                selectedText={m.baseProposal}
+                triggerLabel="Seleziona proposta..."
+                className="w-full"
+              />
+              <Textarea
+                value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)}
+                placeholder="La proposta commerciale di base..."
+                className="min-h-[160px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
+              />
+            </div>
           </Section>
 
           {/* Documents */}
@@ -115,38 +168,6 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               </div>
             </div>
           </Section>
-
-          {/* Quality AI */}
-          <Section title="Qualità AI" icon="⚡" open={openSections.quality} onToggle={() => toggle("quality")}>
-            <div className="space-y-2">
-              <p className="text-[11px] text-muted-foreground">Livello di generazione per email e outreach AI</p>
-              <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
-            </div>
-          </Section>
-
-          {/* Presets */}
-          <div className="pt-2 border-t border-border/30 space-y-2">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Preset</p>
-            {m.presets.length > 0 && (
-              <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Carica preset..." /></SelectTrigger>
-                <SelectContent>
-                  {m.presets.map(p => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="flex gap-1.5">
-              <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome preset..." className="h-8 text-xs flex-1" />
-              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={handleSavePreset}><Save className="w-3 h-3" /> Salva</Button>
-            </div>
-            {m.activePresetId && (
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive gap-1 w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
-                <Trash2 className="w-3 h-3" /> Elimina preset attivo
-              </Button>
-            )}
-          </div>
         </div>
       </SheetContent>
     </Sheet>
