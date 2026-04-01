@@ -1,33 +1,21 @@
 
 
-# Test LinkedIn con Biglietti da Visita — Dati Minimi per Stress Test
+# Aggiungere Bottone "Test LinkedIn" nel Cockpit
 
-## Idea
+## Cosa si fa
 
-Invece dei 5 contatti hardcoded, la pagina `/test-linkedin` caricherà **5 biglietti da visita dal DB** selezionati per livelli crescenti di completezza dati, per testare come il sistema si comporta con informazioni scarse.
+Aggiungere un bottone visibile nella barra superiore del Cockpit (TopCommandBar) che apre direttamente la pagina `/test-linkedin` all'interno dell'applicazione, senza dover digitare URL.
 
-## 5 Contatti Selezionati (dal DB reale)
+## Modifica
 
-| # | Nome | Azienda | Email | Phone | Livello |
-|---|------|---------|-------|-------|---------|
-| 1 | Manikandan M | Shiftco | ❌ | ❌ | Solo nome+azienda+posizione |
-| 2 | Carlos Fernandez | Racing Cargo | ❌ | ❌ | Solo nome+azienda (nome comune) |
-| 3 | Sunil Mampallil Joseph | Shepherd Shipping | ✅ | ❌ | Nome+azienda+email |
-| 4 | Raechel Lobo | Skyfer Logistic Inc. | ✅ | ❌ | Nome+azienda+email+posizione |
-| 5 | Henry Zheng | Genius Int'l Logistics | ✅ | ❌ | Nome+azienda+email+posizione (nome cinese) |
+### File: `src/components/cockpit/TopCommandBar.tsx`
 
-Questo testa: ricerca senza email, con email aziendale, nomi comuni, nomi internazionali, aziende con nomi complessi.
+- Importare `useNavigate` da `react-router-dom` e l'icona `FlaskConical` da lucide-react
+- Aggiungere un bottone compatto (icona + testo "Test LI") nella barra, accanto ai controlli esistenti (view mode, search)
+- Al click → `navigate("/test-linkedin")`
+- Stile: `variant="outline"` piccolo, con icona beaker/flask per indicare che è un test diagnostico
 
-## Modifiche
+### Dettagli tecnici
 
-### File: `src/pages/TestLinkedInSearch.tsx`
-
-1. Sostituire l'array `TEST_CONTACTS` hardcoded con i 5 biglietti da visita selezionati sopra
-2. Aggiungere colonna "Dati disponibili" nella tabella risultati che mostra quali campi sono presenti (badge colorati: ✅ nome, ✅ email, ❌ phone, ecc.)
-3. Aggiungere etichetta "Livello difficoltà" per ogni contatto (Facile/Medio/Difficile) in base alla quantità di dati
-4. Rendere i campi email/country opzionali nell'interfaccia `TestContact` (dato che molti biglietti non hanno email)
-
-### Dettagli
-- Un solo file modificato: `TestLinkedInSearch.tsx`
-- I dati sono hardcoded dal DB (non serve query live) per semplicità e riproducibilità del test
+Un solo file modificato, una sola aggiunta: un `<Button>` con `onClick={() => navigate("/test-linkedin")}`.
 
