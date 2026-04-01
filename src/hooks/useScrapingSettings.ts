@@ -33,6 +33,10 @@ export const SCRAPING_KEY_MAP: Record<keyof ScrapingSettings, string> = {
 
 export const SCRAPING_DEFAULTS = DEFAULTS;
 
+export function useScrapingSettings(): { settings: ScrapingSettings; isLoading: boolean } {
+  return { settings: DEFAULTS, isLoading: false };
+}
+
 /**
  * Fixed human-like pause pattern (seconds) — cycles through this sequence
  * to avoid detectable regularity while maintaining natural rhythm.

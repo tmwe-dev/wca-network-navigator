@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { toast } from "sonner";
+import { getPatternPause } from "@/hooks/useScrapingSettings";
 
 export interface LinkedInFlowJob {
   id: string;
