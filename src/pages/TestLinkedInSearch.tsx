@@ -57,7 +57,7 @@ export default function TestLinkedInSearch() {
 
     log("info", `Estensione LinkedIn: ${liBridge.isAvailable ? "✅ rilevata" : "❌ non disponibile"}`);
 
-    // ── PREFLIGHT: real auth check before starting ──
+    // ── PREFLIGHT: single auth check, then cache for entire batch ──
     if (!liBridge.isAvailable) {
       log("error", "❌ Estensione LinkedIn non rilevata. Installa e ricarica.");
       setRunning(false);
