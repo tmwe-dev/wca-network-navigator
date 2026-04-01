@@ -123,7 +123,8 @@ export function AppLayout() {
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
+           <header className="sticky top-0 z-30 h-11 sm:h-12 border-b border-border bg-background/80 backdrop-blur-md">
+            <TooltipProvider>
              <div className="flex h-full items-center justify-between px-2 sm:px-4">
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                 <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle sidebar"><Menu className="h-4 w-4" /></Button>
