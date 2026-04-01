@@ -525,6 +525,8 @@ const Cockpit = () => {
             onSelectAll={selection.selectAll} onClear={selection.clear}
             isAllSelected={selection.isAllSelected} selectionCount={selection.count}
             onBulkDeepSearch={handleBulkDeepSearch} onBulkAlias={handleBulkAlias}
+            onBulkLinkedInLookup={handleBulkLinkedInLookup}
+            isLinkedInLookupRunning={linkedInLookup.progress.status === "running"}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
             onBulkDelete={handleBulkDelete}
             onBatchMode={() => setBatchMode(true)}
