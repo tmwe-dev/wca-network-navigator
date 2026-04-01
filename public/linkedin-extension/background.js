@@ -894,28 +894,28 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   }
 
   if (message.action === "verifySession") {
-    (async function () {
+    enqueueTabOp(async function () {
       try {
         var result = await verifyLinkedInSession();
         sendResponse({ success: true, authenticated: result.authenticated, reason: result.reason });
       } catch (err) { sendResponse({ success: false, authenticated: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "syncCookie") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await syncLiCookieToServer(); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
   if (message.action === "autoLogin") {
-    (async function () {
+    enqueueTabOp(async function () {
       try { var result = await autoLoginLinkedIn(); sendResponse(result); }
       catch (err) { sendResponse({ success: false, error: err.message }); }
-    })();
+    });
     return true;
   }
 
