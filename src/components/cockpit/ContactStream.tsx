@@ -38,6 +38,8 @@ interface ContactStreamProps {
   selectionCount: number;
   onBulkDeepSearch: () => void;
   onBulkAlias: () => void;
+  onBulkLinkedInLookup?: () => void;
+  isLinkedInLookupRunning?: boolean;
   onSingleDeepSearch: (id: string) => void;
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
