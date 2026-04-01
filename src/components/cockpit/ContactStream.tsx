@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye } from "lucide-react";
-import { CockpitContactCard, type EnrichmentState } from "./CockpitContactCard";
+import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
 import { BulkActionMenu } from "./BulkActionMenu";
