@@ -99,6 +99,20 @@ export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onA
               : <Sparkles className="w-3 h-3" />}
             Alias
           </Button>
+          {onLinkedInLookup && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 text-[10px] gap-1 px-1.5"
+              disabled={isLinkedInLookupLoading}
+              onClick={(e) => { e.stopPropagation(); onLinkedInLookup(); }}
+            >
+              {isLinkedInLookupLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Linkedin className="w-3 h-3" />}
+              LinkedIn Lookup
+            </Button>
+          )}
         </div>
       )}
     </div>
