@@ -241,8 +241,8 @@ export function useAcquisitionPipeline() {
               contacts_missing_count: localStats.empty + localStats.failedLoads,
             }).eq("id", jobId);
             if (i < items.length - 1 && !cancelRef.current) {
-              const actualDelay = calcDelay(scrapingSettings.baseDelay, scrapingSettings.variation);
-              await new Promise((r) => setTimeout(r, actualDelay * 1000));
+              const pause = getPatternPause(i);
+              await new Promise((r) => setTimeout(r, pause * 1000));
             }
             continue;
           }
