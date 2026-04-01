@@ -1,51 +1,48 @@
 
 
-# Ottimizzazioni Cockpit: LinkedIn Smart + Drop Zone Migliorate
+# Pannello Dati AI Visibile e Cliccabile nelle Card del Cockpit
 
-## 3 interventi
+## Problema
 
-### 1. LinkedIn: skip ricerca se URL già presente, lettura profilo diretta
+Quando lanci LinkedIn Lookup o Deep Search dal Cockpit, non vedi nessun feedback di progresso e dopo il completamento non puoi accedere ai dati estratti. L'unico modo attuale è passare il mouse sopra una piccola icona ✨ che mostra un tooltip con poche righe — inutilizzabile.
 
-Quando si fa drop su LinkedIn e il contatto ha già `enrichment_data.linkedin_url` o `linkedinUrl`:
-- **Non cercare** il profilo (skip fase "searching")
-- **Vai diretto** a leggere il profilo (`extractProfile`) per raccogliere headline, about, location
-- Mostra i dati estratti nella fase "reviewing" come già avviene
-- L'utente poi decide se generare il messaggio o approfondire con Deep Search
+## Soluzione
 
-**File**: `src/pages/Cockpit.tsx` (linee 252-290) — aggiungere check `if (linkedinUrl)` per saltare la ricerca e andare diretto a "visiting"
+Rendere la card del Cockpit **cliccabile** per espandere un pannello inline che mostra tutti i dati AI estratti, riutilizzando il componente `ContactEnrichmentCard` già esistente (profilo professionale, profilo aziendale, link social, seniority, lingue, specialties, awards, news).
 
-### 2. Pulsante "Leggi Profilo / Deep Search" sopra le Drop Zone
+## Modifiche
 
-Aggiungere una **barra azioni rapide** sopra i 4 riquadri canale con:
-- **"📖 Leggi Profilo"** — fa solo scraping del profilo LinkedIn senza generare messaggio (usa URL esistente o cerca)
-- **"🔍 Deep Search"** — lancia la deep search completa
+### 1. `CockpitContactCard.tsx` — Card espandibile al click
 
-Questi pulsanti si attivano quando c'è un contatto in drag o selezionato. Visibili solo quando la sezione drop zone è attiva (non in batch mode / LinkedIn flow).
+- Aggiungere stato `isExpanded` locale
+- Click sulla card (non su checkbox/drag/buttons) togla `isExpanded`
+- Quando espansa, sotto il contenuto attuale mostrare il `ContactEnrichmentCard` con `enrichmentData` e `deepSearchAt`
+- Se non ci sono dati enrichment: mostrare un messaggio "Nessun dato AI — lancia Deep Search o LinkedIn Lookup"
+- L'icona ✨ diventa un **pulsante** cliccabile (non solo tooltip) che espande/chiude il pannello
+- Aggiungere una piccola icona chevron ▾/▴ accanto alla ✨ per indicare che è espandibile
 
-**File**: `src/components/cockpit/ChannelDropZones.tsx` — aggiungere sezione sopra i canali
-**File**: `src/pages/Cockpit.tsx` — passare callbacks per le nuove azioni
+### 2. `ContactStream.tsx` — Passare callback per LinkedIn Lookup singolo
 
-### 3. Drop Zone molto più grandi e robuste
+- Aggiungere prop `onSingleLinkedInLookup` per permettere il lookup dal pannello espanso della card
+- Il pannello espanso mostra pulsanti "🔍 Deep Search" e "🔗 LinkedIn Lookup" se i dati mancano
 
-Problemi attuali visibili dallo screenshot:
-- Le zone sono `p-5` con `max-w-[240px]` — troppo piccole rispetto alle card
-- Il drag non dà sicurezza visiva
-- La card draggata è più grande dell'area target
+### 3. `CockpitContactCard.tsx` — Aggiungere prop `onLinkedInLookup`
 
-Modifiche a `ChannelDropZones.tsx`:
-- Rimuovere `max-w-[240px]` → le zone riempiono tutto lo spazio disponibile
-- Aumentare altezza minima a `min-h-[80px]` (almeno quanto una card contatto)
-- Aumentare padding a `p-6`
-- Icone più grandi (`w-8 h-8` invece di `w-6 h-6`)
-- Testo più grande (`text-lg` invece di `text-base`)
-- Bordo più visibile durante il drag (`border-3`)
-- Effetto hover più evidente: sfondo colorato per canale (blu LinkedIn, verde WhatsApp, etc.) invece del blu uniforme
-- Aggiungere testo helper "Rilascia qui" quando si trascina sopra
+- Nuovo callback opzionale per lanciare il lookup dalla card
+- Nel pannello espanso: pulsanti azione per Deep Search e LinkedIn Lookup
 
-## File modificati
+## File coinvolti
 
-| File | Cosa |
-|------|------|
-| `src/pages/Cockpit.tsx` | Skip ricerca LinkedIn se URL presente; passare callbacks profilo/deep search |
-| `src/components/cockpit/ChannelDropZones.tsx` | Zone molto più grandi; barra azioni sopra; colori per canale; feedback "Rilascia qui" |
+| File | Modifica |
+|------|----------|
+| `src/components/cockpit/CockpitContactCard.tsx` | Stato espandibile, render `ContactEnrichmentCard`, pulsanti azione inline |
+| `src/components/cockpit/ContactStream.tsx` | Passare `onSingleLinkedInLookup` alla card |
+| `src/pages/Cockpit.tsx` | Collegare `onSingleLinkedInLookup` al hook esistente |
+
+## Risultato
+
+- Click su ✨ o sulla card → si espande il pannello con tutti i dati AI
+- Profilo professionale, aziendale, link social, awards tutto visibile
+- Se dati assenti → pulsanti per lanciare Deep Search o LinkedIn Lookup direttamente dalla card
+- Nessun componente nuovo — riuso di `ContactEnrichmentCard` già pronto
 
