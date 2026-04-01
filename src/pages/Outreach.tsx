@@ -1,10 +1,12 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Inbox } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
 import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
+import { InboxView } from "@/components/outreach/InboxView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useUnreadCount } from "@/hooks/useChannelMessages";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 
