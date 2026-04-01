@@ -9,6 +9,7 @@ import { useAgents } from "@/hooks/useAgents";
 import { AgentPromptEditor } from "./AgentPromptEditor";
 import { AgentToolSelector } from "./AgentToolSelector";
 import { AgentKnowledgeBase } from "./AgentKnowledgeBase";
+import { AgentClientList } from "./AgentClientList";
 import { AgentTaskList } from "./AgentTaskList";
 import { AgentVoiceConfig } from "./AgentVoiceConfig";
 import { AgentChat } from "./AgentChat";
