@@ -33,12 +33,19 @@ export interface EnrichmentState {
   } | null;
 }
 
+export interface AssignmentInfo {
+  agentName: string;
+  agentAvatar?: string;
+  managerName?: string;
+}
+
 interface CockpitContactCardProps {
   contact: Contact;
   flag: string;
   index: number;
   isSelected: boolean;
   isWorked?: boolean;
+  assignment?: AssignmentInfo;
   onToggleSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
