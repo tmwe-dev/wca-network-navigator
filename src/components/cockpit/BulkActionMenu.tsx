@@ -40,12 +40,26 @@ interface Props {
 
 export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const qc = useQueryClient();
+  const assignClient = useAssignClient();
+  const { agents } = useAgents();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [scheduleDate, setScheduleDate] = useState<Date>();
   const [scheduleNote, setScheduleNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const autoAssignBulk = async (contacts: CockpitContact[]) => {
+    const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
+      || agents.find(a => a.is_active);
+    if (!salesAgent) return;
+    for (const c of contacts) {
+      const sourceType = c.sourceType === "partner_contact" ? "partner" : c.sourceType === "prospect_contact" ? "prospect" : "contact";
+      try {
+        await assignClient.mutateAsync({ sourceId: c.partnerId || c.sourceId, sourceType, agentId: salesAgent.id });
+      } catch { /* skip already assigned */ }
+    }
+  };
 
   const createBulkActivities = async (
     activityType: ActivityType,
