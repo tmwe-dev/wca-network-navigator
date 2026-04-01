@@ -666,6 +666,66 @@ export type Database = {
           },
         ]
       }
+      channel_messages: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          channel: string
+          created_at: string
+          direction: string
+          from_address: string | null
+          id: string
+          in_reply_to: string | null
+          message_id_external: string | null
+          partner_id: string | null
+          raw_payload: Json | null
+          read_at: string | null
+          source_id: string | null
+          source_type: string | null
+          subject: string | null
+          to_address: string | null
+          user_id: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          channel: string
+          created_at?: string
+          direction: string
+          from_address?: string | null
+          id?: string
+          in_reply_to?: string | null
+          message_id_external?: string | null
+          partner_id?: string | null
+          raw_payload?: Json | null
+          read_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          subject?: string | null
+          to_address?: string | null
+          user_id: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          from_address?: string | null
+          id?: string
+          in_reply_to?: string | null
+          message_id_external?: string | null
+          partner_id?: string | null
+          raw_payload?: Json | null
+          read_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          subject?: string | null
+          to_address?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_assignments: {
         Row: {
           agent_id: string
@@ -1203,6 +1263,39 @@ export type Database = {
           status?: string
           subject?: string | null
           total_count?: number
+        }
+        Relationships: []
+      }
+      email_sync_state: {
+        Row: {
+          created_at: string
+          id: string
+          imap_host: string
+          imap_user: string
+          last_sync_at: string | null
+          last_uid: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          imap_host?: string
+          imap_user?: string
+          last_sync_at?: string | null
+          last_uid?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          imap_host?: string
+          imap_user?: string
+          last_sync_at?: string | null
+          last_uid?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
