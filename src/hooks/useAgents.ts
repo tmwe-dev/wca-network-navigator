@@ -18,6 +18,7 @@ export interface Agent {
   signature_html: string | null;
   signature_image_url: string | null;
   voice_call_url: string | null;
+  territory_codes: string[];
   created_at: string;
   updated_at: string;
 }
