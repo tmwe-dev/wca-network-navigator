@@ -105,3 +105,6 @@ verify_jwt = false
 
 [functions.check-inbox]
 verify_jwt = false
+
+[functions.extension-brain]
+verify_jwt = false

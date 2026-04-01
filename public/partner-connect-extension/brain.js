@@ -1,17 +1,18 @@
 // FireScrape v3 — Brain Module
-// Agente Claude integrato con knowledge base Supabase
+// AI integrato via Lovable AI (Edge Function) + knowledge base Supabase
 // Gestisce: decisioni, prompt, token budget, apprendimento
-// API keys cifrate con AES-GCM via CryptoUtils
+// Nessuna API key esterna richiesta
 
 const Brain = {
 
   // ============================================================
   // CONFIG
   // ============================================================
+  // Edge Function URL for Lovable AI proxy
+  EDGE_FUNCTION_URL: 'https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/extension-brain',
+
   config: {
-    // Claude API (chiavi cifrate in storage, qui solo in memoria decifrate)
-    claudeApiKey: '',
-    claudeModel: 'claude-sonnet-4-20250514',
+    // AI via Lovable AI (no API key needed)
     claudeMaxTokens: 1024,
 
     // Supabase (knowledge base)
@@ -70,11 +71,11 @@ OUTPUT FORMAT:
     const stored = await chrome.storage.local.get('brain_config');
     if (stored.brain_config) {
       const cfg = stored.brain_config;
-      // Decifra le chiavi sensibili
-      if (cfg._encApiKey) {
-        cfg.claudeApiKey = await CryptoUtils.decrypt(cfg._encApiKey) || '';
-        delete cfg._encApiKey;
-      }
+      // Legacy: remove old encrypted keys if present
+      delete cfg._encApiKey;
+      delete cfg.claudeApiKey;
+      delete cfg.claudeModel;
+      // Decifra Supabase key se presente
       if (cfg._encSupaKey) {
         cfg.supabaseKey = await CryptoUtils.decrypt(cfg._encSupaKey) || '';
         delete cfg._encSupaKey;
@@ -98,10 +99,7 @@ OUTPUT FORMAT:
   async saveConfig() {
     // Salva con chiavi cifrate — mai in chiaro
     const toSave = { ...this.config };
-    if (toSave.claudeApiKey) {
-      toSave._encApiKey = await CryptoUtils.encrypt(toSave.claudeApiKey);
-      delete toSave.claudeApiKey;
-    }
+    // No more claudeApiKey to encrypt
     if (toSave.supabaseKey) {
       toSave._encSupaKey = await CryptoUtils.encrypt(toSave.supabaseKey);
       delete toSave.supabaseKey;
@@ -110,17 +108,15 @@ OUTPUT FORMAT:
   },
 
   async updateConfig(partial) {
-    // FIX 2: Don't overwrite existing config with empty strings
     const merged = { ...this.config };
     for (const key in partial) {
       const value = partial[key];
-      // Skip empty string values for sensitive keys — don't clear stored keys
-      if (key === 'claudeApiKey' || key === 'supabaseKey') {
-        if (value === '') {
-          // Empty string: keep existing value, don't overwrite
-          continue;
-        }
+      // Skip empty string values for sensitive keys
+      if (key === 'supabaseKey') {
+        if (value === '') continue;
       }
+      // Ignore legacy Claude keys
+      if (key === 'claudeApiKey' || key === 'claudeModel') continue;
       merged[key] = value;
     }
     Object.assign(this.config, merged);
@@ -131,10 +127,6 @@ OUTPUT FORMAT:
   // 2. THINK — Chiedi a Claude (con budget check + knowledge check)
   // ============================================================
   async think(userPrompt, context = {}) {
-    if (!this.config.claudeApiKey) {
-      throw new Error('API key Claude non configurata. Vai su Brain → Impostazioni.');
-    }
-
     // Budget check
     if (this.config.tokensUsedToday >= this.config.dailyTokenBudget) {
       throw new Error(`Budget token giornaliero esaurito (${this.config.dailyTokenBudget}). Riprova domani.`);
@@ -183,26 +175,22 @@ OUTPUT FORMAT:
     const budgetLeft = this.config.dailyTokenBudget - this.config.tokensUsedToday;
     const maxTokens = Math.min(this.config.claudeMaxTokens, budgetLeft);
 
-    // Chiama Claude
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Chiama Lovable AI via Edge Function
+    const response = await fetch(this.EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': this.config.claudeApiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: this.config.claudeModel,
-        max_tokens: maxTokens,
-        system: this.config.systemPrompt,
         messages,
+        systemPrompt: this.config.systemPrompt,
+        maxTokens,
       }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Claude API error: ${response.status}`);
+      throw new Error(err.error || `AI error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -213,7 +201,7 @@ OUTPUT FORMAT:
     await this.saveConfig();
 
     // Parse risposta
-    const text = data.content?.[0]?.text || '';
+    const text = data.content || '';
     let parsed;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -384,9 +372,9 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
       dailyBudget: this.config.dailyTokenBudget,
       budgetRemaining: this.config.dailyTokenBudget - this.config.tokensUsedToday,
       budgetPercent: Math.round(((this.config.dailyTokenBudget - this.config.tokensUsedToday) / this.config.dailyTokenBudget) * 100),
-      model: this.config.claudeModel,
+      model: 'Lovable AI (Gemini Flash)',
       supabaseConnected: !!(this.config.supabaseUrl && this.config.supabaseKey),
-      claudeConfigured: !!this.config.claudeApiKey,
+      aiConfigured: true, // Always true — no external key needed
       library: libraryStats,
     };
   },

@@ -1045,10 +1045,12 @@ async function handleBrainConfig(msg) {
 
 async function handleBrainGetConfig() {
   await Brain.init();
-  // NON restituire le chiavi in chiaro, solo mascherato
+  // Return safe config — no sensitive keys exposed
   const safe = { ...Brain.config };
-  if (safe.claudeApiKey) safe.claudeApiKey = safe.claudeApiKey.slice(0, 10) + '...' + safe.claudeApiKey.slice(-4);
   if (safe.supabaseKey) safe.supabaseKey = safe.supabaseKey.slice(0, 10) + '...' + safe.supabaseKey.slice(-4);
+  // Remove any legacy Claude fields
+  delete safe.claudeApiKey;
+  delete safe.claudeModel;
   return safe;
 }
 
