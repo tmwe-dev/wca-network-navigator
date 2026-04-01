@@ -2,6 +2,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import { format } from "date-fns";
+import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
+import type { ContactOrigin } from "@/pages/Cockpit";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 export interface CockpitContact {
