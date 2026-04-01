@@ -42,6 +42,15 @@ export default function Outreach() {
               <Plane className="w-3.5 h-3.5" />
               Circuito
             </TabsTrigger>
+            <TabsTrigger value="messaggi" className="gap-1.5 text-xs relative">
+              <Inbox className="w-3.5 h-3.5" />
+              Messaggi
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
