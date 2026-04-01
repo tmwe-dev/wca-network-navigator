@@ -85,7 +85,7 @@ mainBtn.addEventListener("click", async function () {
     log("✓ Credenziali ottenute", "done");
 
     log("② Apro pagina di login LinkedIn...", "wait");
-    var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: false });
+    var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: true });
     log("✓ Pagina aperta", "done");
 
     log("③ Attendo caricamento...", "wait");
@@ -105,23 +105,59 @@ mainBtn.addEventListener("click", async function () {
     await waitForTabLoad(tab.id, 15000);
     log("✓ OK", "done");
 
+    // Check for challenge/checkpoint
+    log("⑤b Verifico challenge...", "wait");
+    var challengeRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: function () {
+        var url = window.location.href;
+        var isChallenge = /checkpoint|challenge|security-verification|two-step|verify|captcha/i.test(url);
+        var hasCaptcha = !!document.querySelector("iframe[src*='captcha'], #captcha, .recaptcha");
+        var hasPhoneVerify = !!document.querySelector("#input__phone_verification_pin, input[name='pin']");
+        return { isChallenge: isChallenge || hasCaptcha || hasPhoneVerify, url: url };
+      },
+    });
+    var challenge = challengeRes[0] && challengeRes[0].result;
+    if (challenge && challenge.isChallenge) {
+      log("⚠️ Challenge rilevato! Completa la verifica nel tab aperto...", "wait");
+      setStatus("⏳ Completa la verifica nel tab LinkedIn...", "working");
+      // Poll for cookie for 90 seconds
+      var resolved = false;
+      for (var i = 0; i < 45; i++) {
+        await sleep(2000);
+        var pollCookie = await chrome.cookies.get({ url: "https://www.linkedin.com/", name: "li_at" });
+        if (pollCookie && pollCookie.value) {
+          resolved = true;
+          log("✓ Challenge completato!", "done");
+          break;
+        }
+      }
+      if (!resolved) {
+        setStatus("❌ Timeout verifica", "error");
+        log("Non hai completato la verifica in tempo. Riprova.", "fail");
+        mainBtn.disabled = false;
+        return;
+      }
+    }
+
     log("⑥ Verifico sessione...", "wait");
     var sessionRes = await chrome.scripting.executeScript({
       target: { tabId: tab.id }, func: checkLinkedInSession,
     });
     var session = sessionRes[0] && sessionRes[0].result;
     var isLoggedIn = session && session.authenticated;
-    log(isLoggedIn ? "   ✓ Login riuscito!" : "   ✗ Sessione non verificata", isLoggedIn ? "done" : "fail");
+    log(isLoggedIn ? "   ✓ Login riuscito!" : "   ⚠️ Sessione non verificata (potrebbe essere OK)", isLoggedIn ? "done" : "wait");
 
     log("⑦ Leggo cookie li_at...", "wait");
     var liAtCookie = await chrome.cookies.get({ url: "https://www.linkedin.com/", name: "li_at" });
     var hasLiAt = !!(liAtCookie && liAtCookie.value);
-    log("   li_at: " + (hasLiAt ? "✅ trovato" : "❌ non trovato"), hasLiAt ? "done" : "fail");
+    log("   li_at: " + (hasLiAt ? "✅ trovato (" + liAtCookie.value.length + " chars)" : "❌ non trovato"), hasLiAt ? "done" : "fail");
 
     if (!hasLiAt && !isLoggedIn) {
       try { chrome.tabs.remove(tab.id); } catch (e) {}
       setStatus("❌ Login fallito", "error");
       log("Login non riuscito e cookie li_at assente.", "fail");
+      log("Possibili cause: credenziali errate, challenge non completato, o blocco LinkedIn.", "fail");
       mainBtn.disabled = false;
       return;
     }
