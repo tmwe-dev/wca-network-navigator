@@ -102,3 +102,6 @@ verify_jwt = false
 
 [functions.sync-business-cards]
 verify_jwt = false
+
+[functions.check-inbox]
+verify_jwt = false
