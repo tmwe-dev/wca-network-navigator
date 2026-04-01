@@ -140,9 +140,11 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                   onToggle={() => toggleGroup(group.group_key)}
                   onDeepSearch={() => actions.handleGroupDeepSearch(group)}
                   onAlias={() => actions.handleGroupAlias(group)}
+                  onLinkedInLookup={() => actions.handleGroupLinkedInLookup(group, linkedInLookup.lookupBatch)}
                   isGroupSelected={selectedGroups.has(groupSelKey)}
                   onToggleGroupSelect={() => actions.handleToggleGroupSelect(group)}
                   isAliasLoading={actions.aliasLoading} isDeepSearchLoading={actions.deepSearchLoading}
+                  isLinkedInLookupLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
                 />
                 {isOpen && (
                   <ExpandedGroupContent groupType={currentGroupBy} groupKey={group.group_key}
