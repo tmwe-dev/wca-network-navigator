@@ -199,6 +199,7 @@ export function ContactStream({
                 contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
                 isSelected={selectedIds.has(contact.id)}
                 isWorked={isContactWorked(contact)}
+                assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
                 onToggleSelect={() => onToggle(contact.id)}
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
