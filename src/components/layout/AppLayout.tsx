@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
-import { CreditCounter } from "./CreditCounter";
+
 import { ActiveProcessIndicator } from "./ActiveProcessIndicator";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Menu, Bot, Send, Calendar, Layers, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight } from "lucide-react";
