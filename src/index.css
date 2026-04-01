@@ -311,6 +311,12 @@
   .animate-breathe { animation: orb-breathe 4s ease-in-out infinite; }
   .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
   .animate-fade-up { animation: fade-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+  .animate-soft-pulse { animation: soft-pulse 3s ease-in-out infinite; }
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsla(210, 80%, 55%, 0); }
+  50% { opacity: 0.92; box-shadow: 0 0 12px 2px hsla(210, 80%, 55%, 0.08); }
 }
 
 /* Keyframes */
