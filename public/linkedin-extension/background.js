@@ -137,6 +137,7 @@ async function syncLiCookieToServer() {
   }
 }
 
+
 // ── Verify LinkedIn session ──
 async function verifyLinkedInSession() {
   var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/feed/", active: false });
@@ -158,14 +159,124 @@ async function verifyLinkedInSession() {
   }
 }
 
+function inspectLinkedInPage() {
+  try {
+    function firstVisible(selectorList) {
+      for (var i = 0; i < selectorList.length; i++) {
+        var nodes = document.querySelectorAll(selectorList[i]);
+        for (var j = 0; j < nodes.length; j++) {
+          var el = nodes[j];
+          if (!el) continue;
+          var style = window.getComputedStyle(el);
+          var visible = style.display !== "none" && style.visibility !== "hidden" && !el.disabled && (el.offsetParent !== null || style.position === "fixed");
+          if (visible) return el;
+        }
+      }
+      return null;
+    }
+
+    var session = checkLinkedInSession();
+    var url = window.location.href;
+    var title = document.title || "";
+    var userInput = firstVisible(["#username", "input[name='session_key']", "input[autocomplete='username']"]);
+    var passInput = firstVisible(["#password", "input[name='session_password']", "input[autocomplete='current-password']"]);
+    var loginForm = !!(userInput || passInput || document.querySelector(".login__form, form[action*='login-submit'], form[action*='checkpoint/lg/login-submit']"));
+    var googleButton = Array.from(document.querySelectorAll("a, button")).find(function (el) {
+      var text = (el.textContent || "").trim();
+      return /continue with google|continua con google|sign in with google|accedi con google/i.test(text) && el.offsetParent !== null;
+    });
+    var signInLink = Array.from(document.querySelectorAll("a, button")).find(function (el) {
+      var text = (el.textContent || "").trim();
+      if (!el || el.offsetParent === null) return false;
+      if (/google/i.test(text)) return false;
+      if (/join|iscriviti|registrati/i.test(text)) return false;
+      if (/^sign in$|^log in$|^accedi$/i.test(text)) return true;
+      if (el.tagName === "A" && /\/login/.test(el.getAttribute("href") || "")) return true;
+      return false;
+    });
+    var hasCaptcha = !!document.querySelector("iframe[src*='captcha'], #captcha, .recaptcha, [data-captcha]");
+    var hasPhoneVerify = !!document.querySelector("#input__phone_verification_pin, input[name='pin']");
+    var hasTwoStep = !!document.querySelector("input[name='verificationCode'], input[name='otpPin'], input[autocomplete='one-time-code']");
+    var errorMsg = document.querySelector(".alert-content, .form__label--error, #error-for-password, [role='alert']");
+
+    return {
+      url: url,
+      title: title,
+      authenticated: !!(session && session.authenticated),
+      sessionReason: session && session.reason ? session.reason : "unknown",
+      hasLoginForm: loginForm,
+      hasUsername: !!userInput,
+      hasPassword: !!passInput,
+      hasGoogleButton: !!googleButton,
+      hasSignInLink: !!signInLink,
+      isChallenge: /checkpoint|challenge|security-verification|two-step|verify|captcha/i.test(url) || hasCaptcha || hasPhoneVerify || hasTwoStep,
+      errorText: errorMsg ? (errorMsg.textContent || "").trim() : null,
+    };
+  } catch (e) {
+    return {
+      url: window.location.href,
+      title: document.title || "",
+      authenticated: false,
+      hasLoginForm: false,
+      hasGoogleButton: false,
+      hasSignInLink: false,
+      isChallenge: false,
+      errorText: null,
+      error: e.message,
+    };
+  }
+}
+
+function prepareOfficialLinkedInLoginPage() {
+  try {
+    var state = inspectLinkedInPage();
+    if (state.authenticated) return { success: true, state: "authenticated", url: state.url };
+    if (state.hasLoginForm) return { success: true, state: "form_ready", url: state.url };
+
+    var signInLink = Array.from(document.querySelectorAll("a, button")).find(function (el) {
+      var text = (el.textContent || "").trim();
+      if (!el || el.offsetParent === null) return false;
+      if (/google/i.test(text)) return false;
+      if (/join|iscriviti|registrati/i.test(text)) return false;
+      if (/^sign in$|^log in$|^accedi$/i.test(text)) return true;
+      if (el.tagName === "A" && /\/login/.test(el.getAttribute("href") || "")) return true;
+      return false;
+    });
+
+    if (signInLink) {
+      signInLink.click();
+      return { success: true, state: "clicked_sign_in", url: window.location.href };
+    }
+
+    window.location.href = "https://www.linkedin.com/login";
+    return { success: true, state: "navigated_to_login", url: window.location.href };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 // ── Auto-login to LinkedIn ──
 function fillLinkedInLogin(email, password) {
   try {
-    var userInput = document.querySelector("#username") || document.querySelector("input[name='session_key']");
-    var passInput = document.querySelector("#password") || document.querySelector("input[name='session_password']");
+    function firstVisible(selectorList) {
+      for (var i = 0; i < selectorList.length; i++) {
+        var nodes = document.querySelectorAll(selectorList[i]);
+        for (var j = 0; j < nodes.length; j++) {
+          var el = nodes[j];
+          if (!el) continue;
+          var style = window.getComputedStyle(el);
+          var visible = style.display !== "none" && style.visibility !== "hidden" && !el.disabled && (el.offsetParent !== null || style.position === "fixed");
+          if (visible) return el;
+        }
+      }
+      return null;
+    }
+
+    var userInput = firstVisible(["#username", "input[name='session_key']", "input[autocomplete='username']"]);
+    var passInput = firstVisible(["#password", "input[name='session_password']", "input[autocomplete='current-password']"]);
 
     if (!userInput || !passInput) {
-      return { success: false, error: "Campi login non trovati. User:" + !!userInput + " Pass:" + !!passInput };
+      return { success: false, error: "Campi login non trovati nella pagina ufficiale. User:" + !!userInput + " Pass:" + !!passInput };
     }
 
     var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
@@ -179,158 +290,270 @@ function fillLinkedInLogin(email, password) {
     passInput.dispatchEvent(new Event("input", { bubbles: true }));
     passInput.dispatchEvent(new Event("change", { bubbles: true }));
 
-    var submitBtn = document.querySelector("button[type='submit']")
-      || document.querySelector(".login__form_action_container button")
-      || document.querySelector("button.btn__primary--large");
+    var submitBtn = firstVisible([
+      "button[type='submit']",
+      ".login__form_action_container button",
+      "button.btn__primary--large",
+      "button[data-litms-control-urn*='login-submit']"
+    ]);
 
-    if (submitBtn) { submitBtn.click(); return { success: true, method: "button" }; }
+    if (submitBtn) {
+      submitBtn.click();
+      return { success: true, method: "button" };
+    }
 
     var form = userInput.closest("form");
-    if (form) { form.submit(); return { success: true, method: "form" }; }
+    if (form) {
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+      return { success: true, method: "form" };
+    }
 
     return { success: false, error: "Nessun submit trovato" };
-  } catch (e) { return { success: false, error: e.message }; }
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function pollForLinkedInAuthCompletion(tabId, timeoutMs, options) {
+  timeoutMs = timeoutMs || 180000;
+  options = options || {};
+
+  var sawGoogle = !!options.sawGoogle;
+  var sawChallenge = !!options.sawChallenge;
+  var lastUrl = "";
+  var startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise(function (r) { setTimeout(r, 2000); });
+
+    var tab;
+    try {
+      tab = await chrome.tabs.get(tabId);
+    } catch (e) {
+      return {
+        success: false,
+        authenticated: false,
+        reason: "tab_closed",
+        message: "Il tab LinkedIn è stato chiuso prima del completamento del login.",
+      };
+    }
+
+    lastUrl = tab && tab.url ? tab.url : lastUrl;
+
+    if (/accounts\.google\.com/i.test(lastUrl)) sawGoogle = true;
+    if (/checkpoint|challenge|security-verification|two-step|verify|captcha/i.test(lastUrl)) sawChallenge = true;
+
+    var liAt = await getLiAtCookie();
+    if (liAt) {
+      var syncResult = await syncLiCookieToServer();
+      var authenticated = true;
+
+      if (/linkedin\.com/i.test(lastUrl)) {
+        try {
+          var sessionRes = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: checkLinkedInSession,
+          });
+          var session = sessionRes[0] && sessionRes[0].result;
+          authenticated = !session || !!session.authenticated;
+        } catch (e) {}
+      }
+
+      return {
+        success: authenticated,
+        authenticated: authenticated,
+        cookieSynced: !!syncResult.success,
+        reason: sawGoogle ? "google_auth_completed" : sawChallenge ? "challenge_resolved_manually" : "login_success",
+        currentUrl: lastUrl,
+      };
+    }
+
+    if (/linkedin\.com/i.test(lastUrl)) {
+      try {
+        var stateRes = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: inspectLinkedInPage,
+        });
+        var state = stateRes[0] && stateRes[0].result;
+
+        if (state) {
+          if (state.authenticated) {
+            var syncIfAuthenticated = await syncLiCookieToServer();
+            return {
+              success: true,
+              authenticated: true,
+              cookieSynced: !!syncIfAuthenticated.success,
+              reason: sawGoogle ? "google_auth_completed" : "login_success",
+              currentUrl: state.url || lastUrl,
+            };
+          }
+
+          if (state.errorText) {
+            return {
+              success: false,
+              authenticated: false,
+              reason: "login_error",
+              message: state.errorText,
+              currentUrl: state.url || lastUrl,
+            };
+          }
+
+          if (state.isChallenge) sawChallenge = true;
+          if (state.hasGoogleButton && !state.hasLoginForm) sawGoogle = true;
+        }
+      } catch (e) {}
+    }
+  }
+
+  return {
+    success: false,
+    authenticated: false,
+    reason: sawGoogle ? "google_auth_timeout" : sawChallenge ? "challenge_timeout" : "login_timeout",
+    message: sawGoogle
+      ? "Google ha aperto la sua autenticazione. Completa l'accesso nel tab aperto: appena LinkedIn torna online il cookie verrà sincronizzato."
+      : sawChallenge
+      ? "LinkedIn richiede una verifica di sicurezza. Completa la verifica nel tab aperto e riprova."
+      : "Login LinkedIn non completato in tempo.",
+    tabStillOpen: true,
+    currentUrl: lastUrl,
+    needsGoogleAuth: sawGoogle,
+  };
 }
 
 async function autoLoginLinkedIn() {
-  // 0. Check if already logged in (have li_at cookie)
   var existingCookie = await getLiAtCookie();
   if (existingCookie) {
-    // Already have a cookie — verify session
     var sessionCheck = await verifyLinkedInSession();
     if (sessionCheck.authenticated) {
       return { success: true, authenticated: true, reason: "already_logged_in", cookieSynced: true };
     }
-    // Cookie exists but session invalid — proceed with re-login
   }
 
-  // 1. Get credentials from server
   var credRes = await fetch(SUPABASE_URL + "/functions/v1/get-linkedin-credentials", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+    },
     body: JSON.stringify({}),
   });
   var creds = await credRes.json();
-  if (!creds.email || !creds.password) throw new Error("Credenziali LinkedIn non configurate.");
-
-  // 2. Open login page — ACTIVE tab so user can handle challenges
-  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: true });
-  await waitForTabLoad(tab.id, 20000);
-
-  // 3. Fill and submit login form
-  var injRes = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: fillLinkedInLogin,
-    args: [creds.email, creds.password],
-  });
-  var formResult = injRes[0] && injRes[0].result;
-  if (!formResult || !formResult.success) {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
-    throw new Error((formResult && formResult.error) || "Form non trovato");
+  if (!creds.email || !creds.password) {
+    throw new Error("Credenziali LinkedIn non configurate.");
   }
 
-  // 4. Wait for redirect (longer timeout for challenges)
-  await waitForTabLoad(tab.id, 25000);
+  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/", active: true });
 
-  // 5. Check for challenge/checkpoint pages
-  var challengeCheck = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: function () {
-      var url = window.location.href;
-      var isChallenge = /checkpoint|challenge|security-verification|two-step|verify|captcha/i.test(url);
-      var isLoginPage = /\/login/i.test(url) && !/\/feed/i.test(url);
-      var hasCaptcha = !!document.querySelector("iframe[src*='captcha'], #captcha, .recaptcha, [data-captcha]");
-      var hasPhoneVerify = !!document.querySelector("#input__phone_verification_pin, input[name='pin']");
-      var hasEmailVerify = /verif|conferma|confirm/i.test(document.title);
-      var errorMsg = document.querySelector(".alert-content, .form__label--error, #error-for-password");
-      var errorText = errorMsg ? errorMsg.textContent.trim() : null;
+  try {
+    await waitForTabLoad(tab.id, 25000);
 
+    var initialStateRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: inspectLinkedInPage,
+    });
+    var initialState = initialStateRes[0] && initialStateRes[0].result;
+
+    if (initialState && initialState.authenticated) {
+      var syncInitial = await syncLiCookieToServer();
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
       return {
-        url: url,
-        isChallenge: isChallenge || hasCaptcha || hasPhoneVerify,
-        isLoginPage: isLoginPage,
-        hasCaptcha: hasCaptcha,
-        hasPhoneVerify: hasPhoneVerify,
-        hasEmailVerify: hasEmailVerify,
-        errorText: errorText,
-        title: document.title,
+        success: true,
+        authenticated: true,
+        cookieSynced: !!syncInitial.success,
+        reason: "already_logged_in",
+        currentUrl: initialState.url,
       };
-    },
-  });
-
-  var challenge = challengeCheck[0] && challengeCheck[0].result;
-
-  if (challenge && (challenge.isChallenge || challenge.hasCaptcha || challenge.hasPhoneVerify)) {
-    // Don't close the tab — let user handle the challenge manually
-    // Start polling for li_at cookie (user completes challenge manually)
-    var cookieFound = false;
-    for (var attempt = 0; attempt < 30; attempt++) { // Poll for 60 seconds
-      await new Promise(function (r) { setTimeout(r, 2000); });
-      var pollCookie = await getLiAtCookie();
-      if (pollCookie) {
-        cookieFound = true;
-        await syncLiCookieToServer();
-        try { chrome.tabs.remove(tab.id); } catch (e) {}
-        return {
-          success: true,
-          authenticated: true,
-          cookieSynced: true,
-          reason: "challenge_resolved_manually",
-          challengeType: challenge.hasCaptcha ? "captcha" : challenge.hasPhoneVerify ? "phone_verify" : "checkpoint",
-        };
-      }
     }
 
-    // Timeout — user didn't complete challenge
-    return {
-      success: false,
-      authenticated: false,
-      reason: "challenge_timeout",
-      challengeType: challenge.hasCaptcha ? "captcha" : challenge.hasPhoneVerify ? "phone_verify" : "checkpoint",
-      message: "LinkedIn richiede una verifica di sicurezza. Completa la verifica nel tab aperto, poi riprova.",
-      tabStillOpen: true,
-    };
-  }
+    var prepRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: prepareOfficialLinkedInLoginPage,
+    });
+    var prep = prepRes[0] && prepRes[0].result;
+    if (!prep || !prep.success) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: false,
+        authenticated: false,
+        reason: "login_prepare_failed",
+        message: (prep && prep.error) || "Impossibile aprire la pagina ufficiale di login LinkedIn.",
+      };
+    }
 
-  // Check if login failed with error
-  if (challenge && challenge.errorText) {
+    if (prep.state !== "form_ready" && prep.state !== "authenticated") {
+      await waitForTabLoad(tab.id, 25000);
+    }
+
+    var readyStateRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: inspectLinkedInPage,
+    });
+    var readyState = readyStateRes[0] && readyStateRes[0].result;
+
+    if (readyState && readyState.authenticated) {
+      var syncReady = await syncLiCookieToServer();
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: true,
+        authenticated: true,
+        cookieSynced: !!syncReady.success,
+        reason: "already_logged_in",
+        currentUrl: readyState.url,
+      };
+    }
+
+    if (readyState && readyState.hasGoogleButton && !readyState.hasLoginForm) {
+      var googleFlow = await pollForLinkedInAuthCompletion(tab.id, 180000, { sawGoogle: true });
+      if (googleFlow.success || !googleFlow.tabStillOpen) {
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+      }
+      return googleFlow;
+    }
+
+    if (!readyState || !readyState.hasLoginForm) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: false,
+        authenticated: false,
+        reason: "login_form_not_found",
+        message: "Non trovo il form di login nella pagina ufficiale di LinkedIn.",
+        currentUrl: readyState && readyState.url,
+      };
+    }
+
+    var injRes = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: fillLinkedInLogin,
+      args: [creds.email, creds.password],
+    });
+    var formResult = injRes[0] && injRes[0].result;
+    if (!formResult || !formResult.success) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+      return {
+        success: false,
+        authenticated: false,
+        reason: "login_fill_failed",
+        message: (formResult && formResult.error) || "Form di login non compilabile.",
+      };
+    }
+
+    await waitForTabLoad(tab.id, 30000);
+
+    var completion = await pollForLinkedInAuthCompletion(tab.id, 180000);
+    if (completion.success || !completion.tabStillOpen) {
+      try { chrome.tabs.remove(tab.id); } catch (e) {}
+    }
+    return completion;
+  } catch (err) {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
     return {
       success: false,
       authenticated: false,
-      reason: "login_error",
-      message: challenge.errorText,
+      error: err.message,
+      reason: "unexpected_error",
     };
   }
-
-  // Check if still on login page (wrong credentials?)
-  if (challenge && challenge.isLoginPage) {
-    try { chrome.tabs.remove(tab.id); } catch (e) {}
-    return {
-      success: false,
-      authenticated: false,
-      reason: "wrong_credentials",
-      message: "Login fallito. Verifica email e password nelle impostazioni.",
-    };
-  }
-
-  // 6. Successful redirect — check session and sync cookie
-  var sessionRes = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: checkLinkedInSession,
-  });
-  var session = sessionRes[0] && sessionRes[0].result;
-
-  var syncResult = await syncLiCookieToServer();
-
-  try { chrome.tabs.remove(tab.id); } catch (e) {}
-
-  return {
-    success: !!(session && session.authenticated),
-    authenticated: session ? session.authenticated : false,
-    cookieSynced: syncResult.success,
-    reason: session ? session.reason : "unknown",
-  };
 }
 
 // ── Send a direct message on LinkedIn ──
@@ -655,7 +878,8 @@ async function searchLinkedInProfile(query) {
 
 // ── Message handler ──
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  if (message.source !== "li-content-bridge") return false;
+  var source = message && message.source;
+  if (source !== "li-content-bridge" && source !== "li-popup") return false;
 
   if (message.action === "ping") {
     sendResponse({ success: true, version: "1.0" });
