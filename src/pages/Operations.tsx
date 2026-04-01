@@ -193,54 +193,13 @@ export default function Operations() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.06),transparent)]" />
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
-          {/* ═══ TOP BAR ═══ */}
-          <TooltipProvider delayDuration={150}>
-          <div className="flex items-center justify-between px-3 sm:px-4 h-11 sm:h-[52px] flex-shrink-0 border-b border-border/50 glass-panel">
-            {/* Left: Title + View Toggle */}
-            <div className="flex items-center gap-3">
-              <Globe className="w-4.5 h-4.5 text-blue-400 animate-spin-slow" />
-              <h1 className="text-sm font-semibold text-gradient-blue">Network</h1>
-              <div className="flex items-center ml-2 rounded-lg border border-border/60 bg-card/60 p-0.5">
-                <button
-                  onClick={() => setNetworkView("partners")}
-                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                    networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Users className="w-3.5 h-3.5" /> Partner
-                </button>
-                <button
-                  onClick={() => setNetworkView("bca")}
-                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                    networkView === "bca" ? "bg-amber-500/15 text-amber-500" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <CreditCard className="w-3.5 h-3.5" /> Business Cards
-                </button>
-              </div>
-            </div>
-
-            {/* Center: Stats */}
-            {globalStats && (
-              <div className="hidden md:flex items-center gap-1.5">
-                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <Users className="w-3.5 h-3.5" />
-                  <span className="font-mono">{globalStats.totalPartners}</span>
-                  <span>Partner</span>
-                </span>
-              </div>
-            )}
-
-            {/* Right: Actions */}
-            <div className="flex items-center gap-1.5">
-              {(deepSearch.running || deepSearch.results.length > 0) && !deepSearch.canvasOpen && (
-                <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1.5 rounded-md transition-all bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Mostra Deep Search">
-                  <Eye className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-          </TooltipProvider>
+          {/* Portal into global header */}
+          <HeaderBarPortal
+            networkView={networkView}
+            setNetworkView={setNetworkView}
+            globalStats={globalStats}
+            deepSearch={deepSearch}
+          />
 
           {/* ═══ MAIN ═══ */}
           {networkView === "bca" ? (
