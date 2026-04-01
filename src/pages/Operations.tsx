@@ -185,6 +185,33 @@ export default function Operations() {
     }
   }, [aliasGenerating, queryClient]);
 
+  // Listen for sync-wca-trigger from global header button
+  const handleSyncWca = useCallback(async () => {
+    if (selectedCountries.length === 0) {
+      toast.warning("Seleziona almeno un paese per sincronizzare");
+      return;
+    }
+    const toastId = toast.loading(`Sincronizzazione WCA per ${selectedCountries.map(c => c.name).join(", ")}...`);
+    try {
+      for (const country of selectedCountries) {
+        const { data, error } = await supabase.functions.invoke("sync-wca-partners", {
+          body: { countryCode: country.code },
+        });
+        if (error) throw error;
+      }
+      toast.success("Sincronizzazione completata!", { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["country-stats"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Errore sincronizzazione", { id: toastId });
+    }
+  }, [selectedCountries, queryClient]);
+
+  useEffect(() => {
+    window.addEventListener("sync-wca-trigger", handleSyncWca);
+    return () => window.removeEventListener("sync-wca-trigger", handleSyncWca);
+  }, [handleSyncWca]);
+
   const hasDetailOpen = !isMobile && hasSelection;
 
   return (
