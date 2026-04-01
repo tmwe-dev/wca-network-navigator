@@ -155,7 +155,7 @@ export function useSmartLinkedInSearch() {
     }
 
     if (liAuthenticated) {
-      for (let i = 0; i < Math.min(queries.length, 4); i++) {
+      for (let i = 0; i < Math.min(queries.length, 3); i++) {
         if (abortRef.current) break;
         if (foundUrl) break;
 
