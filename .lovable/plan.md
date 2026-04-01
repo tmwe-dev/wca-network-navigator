@@ -1,55 +1,55 @@
 
 
-# Auto-Assegnazione Agente per Zona al Momento dell'Ingresso nel Cockpit
+# Piano: Pagina Test LinkedIn Search — 5 Contatti dal DB
 
-## Situazione Attuale
+## Contesto
 
-- La tabella `agents` **non ha** campi per zona geografica o tipologia di clienti
-- L'assegnazione (`client_assignments`) avviene solo alla prima attività nel Cockpit (handleDrop)
-- `useSendToCockpit()` inserisce nella `cockpit_queue` senza assegnare agenti
+I test non possono essere eseguiti via browser automation perché le estensioni Chrome (LinkedIn, Partner Connect) sono installate solo nel browser locale dell'utente. Serve una **pagina di test dedicata** che l'utente può aprire nel suo browser con le estensioni attive.
 
-## Cosa Cambia
+## Contatti selezionati dal DB
 
-L'agente viene assegnato **automaticamente nel momento in cui il contatto entra nel Cockpit** (non più alla prima attività), in base alla zona geografica del contatto.
+| # | Nome | Azienda | Email | Paese |
+|---|------|---------|-------|-------|
+| 1 | Henry Hui | Welton Shipping Co., Inc. | henry.hui@weltongroup.com | US |
+| 2 | Mr. Sanjeev Kumar Pandey | Shoolin Shipping Services (India) | sanjeev@shoolin.in | India |
+| 3 | Mr. Marcello Glass | Continental Freight Forwarding, Inc. | mglass@cff-inc.com | US |
+| 4 | Mr. V. Nagarajan | La Freightlift Pvt. Ltd. | nagaraj@laflcargo.com | India |
+| 5 | Mr. Vishal Saxena | Aeroship Logistics Pvt. Ltd. | vishal.saxena@aeroshipgroup.com | India |
 
-## Piano
+## Implementazione
 
-### 1. Aggiungere campo `territory_codes` alla tabella `agents`
-Migrazione DB: aggiungere una colonna `territory_codes text[] default '{}'` alla tabella agents. Questo campo contiene i codici paese (es. `["IT", "FR", "DE"]`) che l'agente copre. Un agente senza territory_codes è "generico" e funziona come fallback.
+### Nuovo file: `src/pages/TestLinkedInSearch.tsx`
 
-### 2. Creare hook `useAutoAssignAgent`
-Logica:
-1. Dato un `country_code`, cerca l'agente attivo con quel codice in `territory_codes`
-2. Se nessun match → assegna il primo agente con ruolo "Sales" o "Outreach"
-3. Se nessun agente → skip (nessuna assegnazione)
-4. Crea record in `client_assignments` con agente + manager (primo agente con ruolo contenente "Manager")
+Pagina diagnostica che:
+1. Mostra i 5 contatti con i loro dati
+2. Pulsante **"Avvia Test"** → per ogni contatto:
+   - Verifica disponibilità estensione LinkedIn (`liBridge.isAvailable`)
+   - Verifica disponibilità Partner Connect (`fsBridge.isAvailable`)
+   - Esegue `useSmartLinkedInSearch.search()` con i dati del contatto
+   - Mostra in tempo reale: query tentate, risultati, confidence, URL trovata
+   - Se URL trovata → tenta `liBridge.extractProfile(url)` per verificare lo scraping
+3. Terminal-style log con colori (verde/rosso/giallo)
+4. Risultato finale: tabella riepilogativa con ✅/❌ per ogni contatto
 
-### 3. Integrare in `useSendToCockpit()`
-Dopo l'inserimento nella `cockpit_queue`, per ogni contatto:
-- Determinare il `country_code` dal sourceType/sourceId
-- Chiamare la logica di auto-assign
-- L'assegnazione avviene in modo silenzioso (no toast, solo creazione record)
+### Modifiche a `src/App.tsx`
+Aggiungere route `/test-linkedin` → `TestLinkedInSearch`
 
-### 4. UI AgentDetail: sezione "Zone di Competenza"
-Aggiungere un campo multi-select con i codici paese nella pagina di dettaglio agente, per configurare i territori.
+### Dettagli tecnici
+- Usa direttamente `useSmartLinkedInSearch`, `useLinkedInExtensionBridge`, `useFireScrapeExtensionBridge`
+- Delay di 5s tra ogni contatto per evitare rate limiting
+- Salva i risultati nel DB in `enrichment_data` tramite il meccanismo già integrato in SmartSearch
+- Nessuna nuova dipendenza
 
-### File coinvolti
-
-| File | Azione |
-|------|--------|
-| Migrazione SQL | `ALTER TABLE agents ADD COLUMN territory_codes text[] DEFAULT '{}'` |
-| `src/hooks/useAutoAssignAgent.ts` | **Nuovo** — logica assegnazione per zona |
-| `src/hooks/useAgents.ts` | Aggiornare interfaccia Agent con `territory_codes` |
-| `src/hooks/useCockpitContacts.ts` | Integrare auto-assign in `useSendToCockpit` |
-| `src/components/agents/AgentDetail.tsx` | Aggiungere config zone di competenza |
-
-### Flusso risultante
-
+### Flusso test
 ```text
-1. Utente seleziona contatti → "Invia al Cockpit"
-2. Sistema inserisce in cockpit_queue
-3. Per ogni contatto: legge country_code → trova agente per zona → crea client_assignment
-4. Contatto appare nel Cockpit con agente già assegnato sulla card
-5. Nella pagina Agenti, l'agente vede i clienti nella sua lista
+1. Utente apre /test-linkedin nel browser con estensioni attive
+2. Click "Avvia Test"
+3. Per ogni contatto:
+   a. Log: "🔍 Cercando Henry Hui @ Welton Shipping..."
+   b. SmartSearch cascade: query 1 → query 2 → ...
+   c. Log: "✅ Trovato: linkedin.com/in/henry-hui (confidence: 0.85)"
+   d. Se trovato → extractProfile → mostra headline, about
+   e. Log: "⏳ Attesa 5s..."
+4. Tabella finale con riepilogo
 ```
 
