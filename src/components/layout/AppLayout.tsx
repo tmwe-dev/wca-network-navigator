@@ -102,7 +102,7 @@ export function AppLayout() {
           onClick={() => setFiltersOpen(true)}
           onMouseEnter={() => handleEdgeEnter("left")}
           onMouseLeave={() => handleEdgeLeave("left")}
-          className="fixed left-0 top-16 z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
+          className="fixed left-0 top-[4.5rem] z-[60] flex items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-purple-400/30 hover:border-purple-400/50 transition-all cursor-pointer"
           style={{ background: "hsla(270, 60%, 65%, 0.25)", backdropFilter: "blur(8px)" }}
           aria-label="Apri filtri"
         >
