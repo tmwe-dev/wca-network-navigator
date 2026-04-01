@@ -247,21 +247,55 @@ const Cockpit = () => {
 
     if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
-    const linkedinUrl = contact.linkedinUrl || null;
+    let linkedinUrl = contact.linkedinUrl || null;
     const isLinkedInChannel = channel === "linkedin";
+
+    // Auto-search LinkedIn URL if missing and channel is LinkedIn
+    if (isLinkedInChannel && liBridge.isAvailable && !linkedinUrl) {
+      setDraftState({
+        channel, contactId: firstId, contactName: contact.name,
+        contactEmail: contact.email, contactPhone: contact.phone,
+        contactLinkedinUrl: null, companyName: contact.company,
+        countryCode: contact.country, subject: "", body: "",
+        language: contact.language, isGenerating: true,
+        scrapingPhase: "searching", linkedinProfile: null, searchLog: [],
+      });
+
+      const searchResult = await smartSearch.search({
+        name: contact.name, company: contact.company, email: contact.email,
+        role: contact.role, country: contact.country,
+        sourceType: contact.sourceType, sourceId: contact.sourceId,
+      });
+
+      if (searchResult.url) {
+        linkedinUrl = searchResult.url;
+        toast.success(`Profilo LinkedIn trovato: ${searchResult.profile?.name || linkedinUrl}`);
+      } else {
+        toast.info("Profilo LinkedIn non trovato — generazione con dati DB");
+      }
+
+      setDraftState(prev => ({ ...prev, contactLinkedinUrl: linkedinUrl, searchLog: searchResult.searchLog }));
+    }
+
     const canScrapeLinkedIn = isLinkedInChannel && liBridge.isAvailable && linkedinUrl;
 
-    // Initialize draft with scraping phase if LinkedIn
-    setDraftState({
-      channel, contactId: firstId, contactName: contact.name,
-      contactEmail: contact.email, contactPhone: contact.phone,
-      contactLinkedinUrl: linkedinUrl,
-      companyName: contact.company,
-      countryCode: contact.country, subject: "", body: "",
-      language: contact.language, isGenerating: true,
-      scrapingPhase: canScrapeLinkedIn ? "visiting" : "generating",
-      linkedinProfile: null,
-    });
+    // Initialize draft with scraping phase if LinkedIn (if not already set by search)
+    if (!isLinkedInChannel || !liBridge.isAvailable || linkedinUrl) {
+      setDraftState(prev => ({
+        ...prev,
+        channel, contactId: firstId, contactName: contact.name,
+        contactEmail: contact.email, contactPhone: contact.phone,
+        contactLinkedinUrl: linkedinUrl, companyName: contact.company,
+        countryCode: contact.country, subject: "", body: "",
+        language: contact.language, isGenerating: true,
+        scrapingPhase: canScrapeLinkedIn ? "visiting" : "generating",
+        linkedinProfile: null,
+      }));
+    } else {
+      setDraftState(prev => ({
+        ...prev, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null,
+      }));
+    }
 
     let scrapedProfile: LinkedInProfileData | null = null;
 
