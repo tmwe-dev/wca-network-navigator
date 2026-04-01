@@ -1,55 +1,33 @@
 
 
-# Piano: Pagina Test LinkedIn Search — 5 Contatti dal DB
+# Test LinkedIn con Biglietti da Visita — Dati Minimi per Stress Test
 
-## Contesto
+## Idea
 
-I test non possono essere eseguiti via browser automation perché le estensioni Chrome (LinkedIn, Partner Connect) sono installate solo nel browser locale dell'utente. Serve una **pagina di test dedicata** che l'utente può aprire nel suo browser con le estensioni attive.
+Invece dei 5 contatti hardcoded, la pagina `/test-linkedin` caricherà **5 biglietti da visita dal DB** selezionati per livelli crescenti di completezza dati, per testare come il sistema si comporta con informazioni scarse.
 
-## Contatti selezionati dal DB
+## 5 Contatti Selezionati (dal DB reale)
 
-| # | Nome | Azienda | Email | Paese |
-|---|------|---------|-------|-------|
-| 1 | Henry Hui | Welton Shipping Co., Inc. | henry.hui@weltongroup.com | US |
-| 2 | Mr. Sanjeev Kumar Pandey | Shoolin Shipping Services (India) | sanjeev@shoolin.in | India |
-| 3 | Mr. Marcello Glass | Continental Freight Forwarding, Inc. | mglass@cff-inc.com | US |
-| 4 | Mr. V. Nagarajan | La Freightlift Pvt. Ltd. | nagaraj@laflcargo.com | India |
-| 5 | Mr. Vishal Saxena | Aeroship Logistics Pvt. Ltd. | vishal.saxena@aeroshipgroup.com | India |
+| # | Nome | Azienda | Email | Phone | Livello |
+|---|------|---------|-------|-------|---------|
+| 1 | Manikandan M | Shiftco | ❌ | ❌ | Solo nome+azienda+posizione |
+| 2 | Carlos Fernandez | Racing Cargo | ❌ | ❌ | Solo nome+azienda (nome comune) |
+| 3 | Sunil Mampallil Joseph | Shepherd Shipping | ✅ | ❌ | Nome+azienda+email |
+| 4 | Raechel Lobo | Skyfer Logistic Inc. | ✅ | ❌ | Nome+azienda+email+posizione |
+| 5 | Henry Zheng | Genius Int'l Logistics | ✅ | ❌ | Nome+azienda+email+posizione (nome cinese) |
 
-## Implementazione
+Questo testa: ricerca senza email, con email aziendale, nomi comuni, nomi internazionali, aziende con nomi complessi.
 
-### Nuovo file: `src/pages/TestLinkedInSearch.tsx`
+## Modifiche
 
-Pagina diagnostica che:
-1. Mostra i 5 contatti con i loro dati
-2. Pulsante **"Avvia Test"** → per ogni contatto:
-   - Verifica disponibilità estensione LinkedIn (`liBridge.isAvailable`)
-   - Verifica disponibilità Partner Connect (`fsBridge.isAvailable`)
-   - Esegue `useSmartLinkedInSearch.search()` con i dati del contatto
-   - Mostra in tempo reale: query tentate, risultati, confidence, URL trovata
-   - Se URL trovata → tenta `liBridge.extractProfile(url)` per verificare lo scraping
-3. Terminal-style log con colori (verde/rosso/giallo)
-4. Risultato finale: tabella riepilogativa con ✅/❌ per ogni contatto
+### File: `src/pages/TestLinkedInSearch.tsx`
 
-### Modifiche a `src/App.tsx`
-Aggiungere route `/test-linkedin` → `TestLinkedInSearch`
+1. Sostituire l'array `TEST_CONTACTS` hardcoded con i 5 biglietti da visita selezionati sopra
+2. Aggiungere colonna "Dati disponibili" nella tabella risultati che mostra quali campi sono presenti (badge colorati: ✅ nome, ✅ email, ❌ phone, ecc.)
+3. Aggiungere etichetta "Livello difficoltà" per ogni contatto (Facile/Medio/Difficile) in base alla quantità di dati
+4. Rendere i campi email/country opzionali nell'interfaccia `TestContact` (dato che molti biglietti non hanno email)
 
-### Dettagli tecnici
-- Usa direttamente `useSmartLinkedInSearch`, `useLinkedInExtensionBridge`, `useFireScrapeExtensionBridge`
-- Delay di 5s tra ogni contatto per evitare rate limiting
-- Salva i risultati nel DB in `enrichment_data` tramite il meccanismo già integrato in SmartSearch
-- Nessuna nuova dipendenza
-
-### Flusso test
-```text
-1. Utente apre /test-linkedin nel browser con estensioni attive
-2. Click "Avvia Test"
-3. Per ogni contatto:
-   a. Log: "🔍 Cercando Henry Hui @ Welton Shipping..."
-   b. SmartSearch cascade: query 1 → query 2 → ...
-   c. Log: "✅ Trovato: linkedin.com/in/henry-hui (confidence: 0.85)"
-   d. Se trovato → extractProfile → mostra headline, about
-   e. Log: "⏳ Attesa 5s..."
-4. Tabella finale con riepilogo
-```
+### Dettagli
+- Un solo file modificato: `TestLinkedInSearch.tsx`
+- I dati sono hardcoded dal DB (non serve query live) per semplicità e riproducibilità del test
 
