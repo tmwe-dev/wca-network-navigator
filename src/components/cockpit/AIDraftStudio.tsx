@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import ContentPicker from "@/components/shared/ContentPicker";
