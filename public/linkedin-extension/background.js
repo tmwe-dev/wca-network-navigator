@@ -193,6 +193,17 @@ function fillLinkedInLogin(email, password) {
 }
 
 async function autoLoginLinkedIn() {
+  // 0. Check if already logged in (have li_at cookie)
+  var existingCookie = await getLiAtCookie();
+  if (existingCookie) {
+    // Already have a cookie — verify session
+    var sessionCheck = await verifyLinkedInSession();
+    if (sessionCheck.authenticated) {
+      return { success: true, authenticated: true, reason: "already_logged_in", cookieSynced: true };
+    }
+    // Cookie exists but session invalid — proceed with re-login
+  }
+
   // 1. Get credentials from server
   var credRes = await fetch(SUPABASE_URL + "/functions/v1/get-linkedin-credentials", {
     method: "POST",
@@ -202,8 +213,8 @@ async function autoLoginLinkedIn() {
   var creds = await credRes.json();
   if (!creds.email || !creds.password) throw new Error("Credenziali LinkedIn non configurate.");
 
-  // 2. Open login page
-  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: false });
+  // 2. Open login page — ACTIVE tab so user can handle challenges
+  var tab = await chrome.tabs.create({ url: "https://www.linkedin.com/login", active: true });
   await waitForTabLoad(tab.id, 20000);
 
   // 3. Fill and submit login form
@@ -218,17 +229,98 @@ async function autoLoginLinkedIn() {
     throw new Error((formResult && formResult.error) || "Form non trovato");
   }
 
-  // 4. Wait for redirect
-  await waitForTabLoad(tab.id, 15000);
+  // 4. Wait for redirect (longer timeout for challenges)
+  await waitForTabLoad(tab.id, 25000);
 
-  // 5. Check session
+  // 5. Check for challenge/checkpoint pages
+  var challengeCheck = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: function () {
+      var url = window.location.href;
+      var isChallenge = /checkpoint|challenge|security-verification|two-step|verify|captcha/i.test(url);
+      var isLoginPage = /\/login/i.test(url) && !/\/feed/i.test(url);
+      var hasCaptcha = !!document.querySelector("iframe[src*='captcha'], #captcha, .recaptcha, [data-captcha]");
+      var hasPhoneVerify = !!document.querySelector("#input__phone_verification_pin, input[name='pin']");
+      var hasEmailVerify = /verif|conferma|confirm/i.test(document.title);
+      var errorMsg = document.querySelector(".alert-content, .form__label--error, #error-for-password");
+      var errorText = errorMsg ? errorMsg.textContent.trim() : null;
+
+      return {
+        url: url,
+        isChallenge: isChallenge || hasCaptcha || hasPhoneVerify,
+        isLoginPage: isLoginPage,
+        hasCaptcha: hasCaptcha,
+        hasPhoneVerify: hasPhoneVerify,
+        hasEmailVerify: hasEmailVerify,
+        errorText: errorText,
+        title: document.title,
+      };
+    },
+  });
+
+  var challenge = challengeCheck[0] && challengeCheck[0].result;
+
+  if (challenge && (challenge.isChallenge || challenge.hasCaptcha || challenge.hasPhoneVerify)) {
+    // Don't close the tab — let user handle the challenge manually
+    // Start polling for li_at cookie (user completes challenge manually)
+    var cookieFound = false;
+    for (var attempt = 0; attempt < 30; attempt++) { // Poll for 60 seconds
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      var pollCookie = await getLiAtCookie();
+      if (pollCookie) {
+        cookieFound = true;
+        await syncLiCookieToServer();
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        return {
+          success: true,
+          authenticated: true,
+          cookieSynced: true,
+          reason: "challenge_resolved_manually",
+          challengeType: challenge.hasCaptcha ? "captcha" : challenge.hasPhoneVerify ? "phone_verify" : "checkpoint",
+        };
+      }
+    }
+
+    // Timeout — user didn't complete challenge
+    return {
+      success: false,
+      authenticated: false,
+      reason: "challenge_timeout",
+      challengeType: challenge.hasCaptcha ? "captcha" : challenge.hasPhoneVerify ? "phone_verify" : "checkpoint",
+      message: "LinkedIn richiede una verifica di sicurezza. Completa la verifica nel tab aperto, poi riprova.",
+      tabStillOpen: true,
+    };
+  }
+
+  // Check if login failed with error
+  if (challenge && challenge.errorText) {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    return {
+      success: false,
+      authenticated: false,
+      reason: "login_error",
+      message: challenge.errorText,
+    };
+  }
+
+  // Check if still on login page (wrong credentials?)
+  if (challenge && challenge.isLoginPage) {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    return {
+      success: false,
+      authenticated: false,
+      reason: "wrong_credentials",
+      message: "Login fallito. Verifica email e password nelle impostazioni.",
+    };
+  }
+
+  // 6. Successful redirect — check session and sync cookie
   var sessionRes = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: checkLinkedInSession,
   });
   var session = sessionRes[0] && sessionRes[0].result;
 
-  // 6. Sync cookie
   var syncResult = await syncLiCookieToServer();
 
   try { chrome.tabs.remove(tab.id); } catch (e) {}
