@@ -44,7 +44,6 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[]
 ];
 
 export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {
-  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
