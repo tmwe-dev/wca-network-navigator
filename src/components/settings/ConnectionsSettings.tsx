@@ -123,13 +123,17 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     setConnectingAll(true);
     const results: string[] = [];
 
-    // LinkedIn
+    // LinkedIn — real session check
     if (liExt.isAvailable) {
       const res = await liExt.verifySession();
-      results.push(res.success ? "✅ LinkedIn" : "⚠️ LinkedIn (sessione scaduta)");
+      const reallyOk = res.success === true && res.authenticated === true;
+      setLiSessionOk(reallyOk);
+      results.push(reallyOk ? "✅ LinkedIn (sessione attiva)" : "⚠️ LinkedIn (sessione non autenticata)");
     } else if (liHasCreds) {
-      results.push("✅ LinkedIn (credenziali salvate)");
+      setLiSessionOk(false);
+      results.push("⚠️ LinkedIn (credenziali salvate ma estensione non attiva)");
     } else {
+      setLiSessionOk(false);
       results.push("❌ LinkedIn (configura credenziali)");
     }
 
