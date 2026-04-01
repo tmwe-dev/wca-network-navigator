@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard } from "lucide-react";
+import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard, Briefcase } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 interface Contact {
@@ -32,12 +33,19 @@ export interface EnrichmentState {
   } | null;
 }
 
+export interface AssignmentInfo {
+  agentName: string;
+  agentAvatar?: string;
+  managerName?: string;
+}
+
 interface CockpitContactCardProps {
   contact: Contact;
   flag: string;
   index: number;
   isSelected: boolean;
   isWorked?: boolean;
+  assignment?: AssignmentInfo;
   onToggleSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -108,7 +116,7 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
   );
 }
 
-export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, enrichmentState }: CockpitContactCardProps) {
+export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, assignment, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, enrichmentState }: CockpitContactCardProps) {
   const oc = originConfig[contact.origin];
   const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
   const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
@@ -226,7 +234,30 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
 
           <div className="flex items-center justify-between">
             {/* Smart channel icons */}
-            <SmartChannelIcons contact={contact} />
+            <div className="flex items-center gap-2">
+              <SmartChannelIcons contact={contact} />
+              {/* Agent & Manager badges */}
+              {assignment && (
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
+                    return avatarSrc ? (
+                      <img src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" title={`Agente: ${assignment.agentName}`} />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-primary/30" title={`Agente: ${assignment.agentName}`}>
+                        {assignment.agentName.charAt(0)}
+                      </span>
+                    );
+                  })()}
+                  {assignment.managerName && (
+                    <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground" title={`Manager: ${assignment.managerName}`}>
+                      <Briefcase className="w-2.5 h-2.5" />
+                      <span className="truncate max-w-[40px]">{assignment.managerName.split(" ")[0]}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 className="p-1 rounded-md text-muted-foreground/80 hover:text-primary hover:bg-primary/10 transition-colors"

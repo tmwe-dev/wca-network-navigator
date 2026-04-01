@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Sparkles, X, Users, Trash2, EyeOff, Eye } from "lucide-react";
-import { CockpitContactCard, type EnrichmentState } from "./CockpitContactCard";
+import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
 import { BulkActionMenu } from "./BulkActionMenu";
@@ -44,13 +44,14 @@ interface ContactStreamProps {
   onBatchMode?: () => void;
   activeContactId?: string | null;
   enrichmentState?: EnrichmentState;
+  assignmentMap?: Map<string, AssignmentInfo>;
 }
 
 export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState,
+  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
 }: ContactStreamProps) {
   const [hideWorked, setHideWorked] = useState(false);
   const { workedIds } = useWorkedToday();
@@ -198,6 +199,7 @@ export function ContactStream({
                 contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
                 isSelected={selectedIds.has(contact.id)}
                 isWorked={isContactWorked(contact)}
+                assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
                 onToggleSelect={() => onToggle(contact.id)}
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}

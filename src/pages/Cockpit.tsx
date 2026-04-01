@@ -15,6 +15,9 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { useAssignmentMap, useAssignClient, useClientAssignments } from "@/hooks/useClientAssignments";
+import { useAgents } from "@/hooks/useAgents";
+import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -97,6 +100,43 @@ const Cockpit = () => {
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
+
+  // Agent assignment
+  const { agents } = useAgents();
+  const { data: allAssignments } = useClientAssignments();
+  const assignClient = useAssignClient();
+
+  // Build assignment info map for cards
+  const assignmentInfoMap = useMemo(() => {
+    const map = new Map<string, AssignmentInfo>();
+    if (!allAssignments || !agents.length) return map;
+    for (const a of allAssignments) {
+      const agent = agents.find(ag => ag.id === a.agent_id);
+      if (agent) {
+        map.set(a.source_id, {
+          agentName: agent.name,
+          agentAvatar: agent.avatar_emoji,
+          managerName: undefined, // TODO: resolve from team_members
+        });
+      }
+    }
+    return map;
+  }, [allAssignments, agents]);
+
+  // Auto-assign helper: assigns default sales agent on first activity
+  const autoAssign = useCallback(async (sourceId: string, sourceType: string) => {
+    // Skip if already assigned
+    if (assignmentInfoMap.has(sourceId)) return;
+    // Find first active sales/outreach agent
+    const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
+      || agents.find(a => a.is_active);
+    if (!salesAgent) return;
+    try {
+      await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id });
+    } catch (e) {
+      console.error("Auto-assign failed:", e);
+    }
+  }, [agents, assignmentInfoMap, assignClient]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -197,6 +237,10 @@ const Cockpit = () => {
     const firstId = ids[0];
     const contact = contactsMap[firstId];
     if (!contact) return;
+
+    // Auto-assign agent on first activity
+    const sourceType = contact.origin === "report_aziende" ? "prospect" : contact.origin === "import" ? "contact" : "partner";
+    autoAssign(contact.partnerId || contact.sourceId, sourceType);
 
     if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
@@ -433,6 +477,7 @@ const Cockpit = () => {
               scrapingPhase: draftState.scrapingPhase,
               linkedinProfile: draftState.linkedinProfile,
             } : undefined}
+            assignmentMap={assignmentInfoMap}
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">

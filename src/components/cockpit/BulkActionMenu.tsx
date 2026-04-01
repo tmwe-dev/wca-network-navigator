@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAssignClient } from "@/hooks/useClientAssignments";
+import { useAgents } from "@/hooks/useAgents";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -38,12 +40,26 @@ interface Props {
 
 export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const qc = useQueryClient();
+  const assignClient = useAssignClient();
+  const { agents } = useAgents();
   const [noteOpen, setNoteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [scheduleDate, setScheduleDate] = useState<Date>();
   const [scheduleNote, setScheduleNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const autoAssignBulk = async (contacts: CockpitContact[]) => {
+    const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
+      || agents.find(a => a.is_active);
+    if (!salesAgent) return;
+    for (const c of contacts) {
+      const sourceType = c.sourceType === "partner_contact" ? "partner" : c.sourceType === "prospect_contact" ? "prospect" : "contact";
+      try {
+        await assignClient.mutateAsync({ sourceId: c.partnerId || c.sourceId, sourceType, agentId: salesAgent.id });
+      } catch { /* skip already assigned */ }
+    }
+  };
 
   const createBulkActivities = async (
     activityType: ActivityType,
@@ -86,6 +102,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
 
   const handleBulkMarkDone = async (type: ActivityType) => {
     const count = await createBulkActivities(type, "completed", { completed_at: new Date().toISOString() });
+    await autoAssignBulk(selectedContacts);
     toast.success(`${count} attività completate`);
     onComplete();
   };
@@ -96,6 +113,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       description: noteText,
       completed_at: new Date().toISOString(),
     });
+    await autoAssignBulk(selectedContacts);
     toast.success(`Nota salvata su ${count} contatti`);
     setNoteText("");
     setNoteOpen(false);
@@ -108,6 +126,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       due_date: format(scheduleDate, "yyyy-MM-dd"),
       description: scheduleNote || undefined,
     });
+    await autoAssignBulk(selectedContacts);
     toast.success(`${count} contatti programmati per ${format(scheduleDate, "dd/MM/yyyy")}`);
     setScheduleDate(undefined);
     setScheduleNote("");
