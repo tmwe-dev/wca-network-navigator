@@ -88,7 +88,8 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   {/* ── 5 consolidated environments ── */}
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/" element={<SuperHome3D />} />
+                  <Route path="/dashboard-legacy" element={<Dashboard />} />
                   <Route path="/network" element={<NetworkPage />} />
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/outreach" element={<Outreach />} />
