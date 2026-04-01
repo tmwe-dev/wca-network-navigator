@@ -1,58 +1,30 @@
 
 
-# Fix: "Tabs cannot be edited right now" Error in LinkedIn Extension
+# Sfondo Dorato per Contatti Gestiti da AI
 
-## Problem
+## Cosa cambia
 
-Chrome throws `"Tabs cannot be edited right now (user may be dragging a tab)"` when calling `chrome.tabs.create()` while the user is interacting with browser tabs (dragging, closing, etc.). The queue we added serializes operations but doesn't retry on this transient Chrome error.
+Nella lista contatti a sinistra, le card dei contatti che hanno `deep_search_at` valorizzato (= processati da AI/Deep Search) avranno uno **sfondo dorato** invece del normale sfondo.
 
-## Root Cause
+## Modifica
 
-Every LinkedIn operation (`verifySession`, `searchProfile`, `extractProfile`, `sendMessage`, `sendConnectionRequest`, `autoLogin`) calls `chrome.tabs.create()` directly. If Chrome's tab system is temporarily locked, the call throws immediately and the whole operation fails.
+### File: `src/components/contacts/ContactCard.tsx`
 
-## Solution
+- Aggiungere un check: `const isAiProcessed = !!c.deep_search_at`
+- Modificare le classi CSS della card:
+  - Se `isAiProcessed` e NON attivo/selezionato → bordo ambra leggero + sfondo `bg-amber-500/8` (dorato tenue)
+  - Se `isAiProcessed` e attivo → `border-amber-400 bg-amber-500/15 shadow-md` (dorato forte)
+  - Se `isAiProcessed` e selezionato → `border-amber-400/40 bg-amber-500/10`
+  - Se NON `isAiProcessed` → resta tutto come ora (bordo standard, sfondo card)
+- Aggiungere una piccola icona ✨ (Sparkles) color ambra accanto al nome per rendere chiaro visivamente che è stato gestito da AI
 
-Add a **retry wrapper** around `chrome.tabs.create` and `chrome.tabs.remove` in `background.js` that catches this specific error and retries after a short delay (up to 3 attempts, 500ms apart).
+### Risultato visivo
 
-### File: `public/linkedin-extension/background.js`
+| Stato | Sfondo attuale | Sfondo nuovo |
+|-------|---------------|-------------|
+| Contatto normale | Grigio/card | Grigio/card (invariato) |
+| Contatto AI | Grigio/card | **Dorato tenue** |
+| Contatto AI attivo | Blu/primary | **Dorato intenso** |
 
-**Add helper function** (near top, after `waitForTabLoad`):
-
-```js
-async function safeTabCreate(options, maxRetries) {
-  maxRetries = maxRetries || 3;
-  for (var attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await chrome.tabs.create(options);
-    } catch (err) {
-      if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
-        await new Promise(function(r) { setTimeout(r, 500); });
-      } else {
-        throw err;
-      }
-    }
-  }
-}
-
-async function safeTabRemove(tabId) {
-  try { await chrome.tabs.remove(tabId); } catch (e) {}
-}
-```
-
-**Replace all occurrences** of:
-- `chrome.tabs.create({...})` → `safeTabCreate({...})`
-- `try { chrome.tabs.remove(tab.id); } catch (e) {}` → `safeTabRemove(tab.id)`
-
-This affects ~15 `chrome.tabs.create` calls and ~20 `chrome.tabs.remove` calls across these functions:
-- `verifyLinkedInSession`
-- `autoLoginLinkedIn`
-- `sendLinkedInMessage`
-- `sendConnectionRequest`
-- `extractProfileByUrl`
-- `searchLinkedInProfile`
-
-### Result
-- Transient Chrome tab-lock errors get retried automatically (up to 3x)
-- No more unhandled promise rejections from tab operations
-- All existing queue serialization remains intact
+Un file modificato, nessuna logica backend.
 
