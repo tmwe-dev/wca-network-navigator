@@ -15,6 +15,9 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
+import { useAssignmentMap, useAssignClient, useClientAssignments } from "@/hooks/useClientAssignments";
+import { useAgents } from "@/hooks/useAgents";
+import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
