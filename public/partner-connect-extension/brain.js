@@ -8,10 +8,11 @@ const Brain = {
   // ============================================================
   // CONFIG
   // ============================================================
+  // Edge Function URL for Lovable AI proxy
+  EDGE_FUNCTION_URL: 'https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/extension-brain',
+
   config: {
-    // Claude API (chiavi cifrate in storage, qui solo in memoria decifrate)
-    claudeApiKey: '',
-    claudeModel: 'claude-sonnet-4-20250514',
+    // AI via Lovable AI (no API key needed)
     claudeMaxTokens: 1024,
 
     // Supabase (knowledge base)
