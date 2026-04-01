@@ -12,6 +12,7 @@ import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 
 
 // ── New consolidated pages (with prefetch for high-traffic routes) ──
+const SuperHome3D = lazy(() => import("./pages/SuperHome3D"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const NetworkPage = lazy(() => import("./pages/Network"));
 const CRM = lazy(() => import("./pages/CRM"));
