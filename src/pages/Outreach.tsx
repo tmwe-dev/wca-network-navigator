@@ -1,10 +1,12 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Inbox } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
 import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
+import { InboxView } from "@/components/outreach/InboxView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useUnreadCount } from "@/hooks/useChannelMessages";
 
 const Cockpit = lazy(() => import("./Cockpit"));
 
@@ -15,6 +17,7 @@ function TabFallback() {
 export default function Outreach() {
   const [tab, setTab] = useState("cockpit");
   const { setOutreachTab } = useGlobalFilters();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
@@ -39,6 +42,15 @@ export default function Outreach() {
               <Plane className="w-3.5 h-3.5" />
               Circuito
             </TabsTrigger>
+            <TabsTrigger value="messaggi" className="gap-1.5 text-xs relative">
+              <Inbox className="w-3.5 h-3.5" />
+              Messaggi
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -52,6 +64,7 @@ export default function Outreach() {
         {tab === "inuscita" && <InUscitaTab />}
         {tab === "attivita" && <AttivitaTab />}
         {tab === "circuito" && <HoldingPatternTab />}
+        {tab === "messaggi" && <InboxView />}
       </div>
     </div>
   );

@@ -80,5 +80,10 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  return { isAvailable, verifySession, sendWhatsApp };
+  const readUnread = useCallback(
+    () => sendMsg("readUnread", {}, 30000),
+    [sendMsg]
+  );
+
+  return { isAvailable, verifySession, sendWhatsApp, readUnread };
 }
