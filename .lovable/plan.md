@@ -1,52 +1,25 @@
 
 
-# Arricchire le Card Partner dopo Deep Search
+# Ripristino Accesso Pagine Global e Campagne
 
-## Problema Attuale
+## Problema
+In `App.tsx` righe 106-107, le route `/global` e `/campaigns` sono state sostituite con `<Navigate to="/" replace />`, quindi qualsiasi accesso viene reindirizzato alla homepage. Le pagine esistono ancora come file ma non sono raggiungibili.
 
-La card nella lista partner (`PartnerVirtualList`) mostra:
-- **Logo**: box 7x7 con iniziale se `logo_url` è null — ma anche dopo Deep Search il logo spesso non appare (troppo piccolo, onError lo nasconde)
-- **Bandiera paese**: **NON ESISTE** — `getCountryFlag()` è disponibile in `src/lib/countries.ts` ma non viene mai usata nella lista
-- **StatusDot**: 4 pallini verde/grigio generici (Profilo, Email, Telefono, Deep Search) — zero contesto visivo
-- **LinkedIn**: nessuna icona, nessuno stato connessione
-- **Enrichment data**: completamente nascosto — nessun dato dalla Deep Search visibile
+Dalla memory: *"Il Sistema Multi-UI esclude esplicitamente le maschere 'Global' e 'Campagne', che mantengono la loro struttura originale"* — quindi queste pagine devono restare accessibili.
 
-## Cosa Cambia
+## Piano
 
-### 1. Aggiungere bandiera paese alla card
-- Importare `getCountryFlag` da `@/lib/countries`
-- Mostrare emoji bandiera accanto alla città (es. "🇮🇹 Milano")
-- Dimensione `text-sm` per visibilità
+### 1. Ripristinare le route in App.tsx
+- Riga 106: `<Route path="/global" element={<Global />} />` (rimuovere il Navigate)
+- Riga 107: `<Route path="/campaigns" element={<Campaigns />} />` (rimuovere il Navigate)
+- Verificare che i lazy import di `Global` e `Campaigns` siano presenti (Global c'è già, Campaigns va verificato)
 
-### 2. Migliorare visualizzazione logo
-- Aumentare da `w-7 h-7` a `w-9 h-9`
-- Se no logo ma c'è `enrichment_data?.logo_url` → usare quello come fallback
-- Se nessun logo → mostrare bandiera grande nel placeholder invece della sola iniziale
+### 2. Aggiungere link nella sidebar/drawer
+- Aggiungere le voci **Global** (icona Globe) e **Campagne** (icona Mail/Send) nel `SidebarDrawer` nella sezione appropriata, probabilmente nella sezione strumenti o come voci dedicate
+- Rispettare la logica context-aware della sidebar (visibili in entrambi i contesti Network/CRM)
 
-### 3. Aggiungere icone social dalla Deep Search
-- Leggere `partner_social_links` (già caricato via join?) o `enrichment_data.social_links`
-- Mostrare micro-icone: LinkedIn (blu se trovato), WhatsApp (verde se telefono disponibile)
-- Se `enrichment_data.linkedin_connection_status` esiste → mostrare badge stato (connected/pending)
-
-### 4. Sostituire StatusDot generico con indicatori informativi
-- Mantenere i 4 dot ma aggiungere **colori differenziati**:
-  - Deep Search completato → icona `Telescope` mini invece di pallino
-  - LinkedIn trovato → icona `Linkedin` mini
-  - Email verificata → pallino verde con check
-- Aggiungere **AI rating** se presente in `enrichment_data.ai_profile?.rating`
-
-### 5. Mostrare snippet enrichment
-- Se Deep Search fatto: mostrare una riga sotto con headline/settore da `enrichment_data.ai_profile`
-- Troncato, colore muted, max 1 riga
-
-## File da Modificare
-
-1. **`src/components/operations/PartnerVirtualList.tsx`** — Tutte le modifiche UI sopra
-2. **`src/components/operations/partner-list/SubComponents.tsx`** — Nuovo componente `EnrichedStatusIcons` per sostituire i 4 `StatusDot`
-3. **`src/lib/partnerUtils.ts`** — Helper `getEffectiveLogoUrl(partner)` che controlla `logo_url` → `enrichment_data.logo_url` → null
-
-## Impatto
-- Altezza riga da `estimateSize: 52` a `estimateSize: 62` (una riga in più per snippet)
-- Zero nuove query DB — tutti i dati sono già nel partner object caricato
-- La card diventa visivamente ricca dopo Deep Search, mostrando l'effettivo valore dei dati raccolti
+### Dettagli tecnici
+- File modificati: `src/App.tsx`, componente sidebar/drawer
+- Nessuna nuova dipendenza
+- Il fix del runtime error React ("Should have a queue") verrà investigato separatamente
 
