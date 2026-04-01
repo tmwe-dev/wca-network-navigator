@@ -177,6 +177,11 @@ export function ContactStream({
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkAlias}>
             <Sparkles className="w-3 h-3" /> Alias
           </Button>
+          {onBulkLinkedInLookup && (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
+              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
+            </Button>
+          )}
           {onBatchMode && (
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-primary" onClick={onBatchMode}>
               <Sparkles className="w-3 h-3" /> Genera
