@@ -125,6 +125,22 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </div>
       )}
 
+      {linkedInLookup.progress.status === "running" && (
+        <div className="px-3 py-1.5 border-b border-border/30 bg-muted/50 shrink-0">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+            <span className="truncate font-medium">{linkedInLookup.progress.currentName}</span>
+            <span className="ml-auto shrink-0">{linkedInLookup.progress.current}/{linkedInLookup.progress.total}</span>
+          </div>
+          <div className="flex gap-2 mt-0.5 text-[9px]">
+            <span className="text-green-500">✓ {linkedInLookup.progress.found}</span>
+            <span className="text-muted-foreground">✗ {linkedInLookup.progress.notFound}</span>
+            <span className="text-muted-foreground">⟳ {linkedInLookup.progress.skipped}</span>
+            <button onClick={linkedInLookup.abort} className="ml-auto text-destructive hover:underline">Stop</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {groupsLoading ? (
           <div className="p-3 space-y-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
