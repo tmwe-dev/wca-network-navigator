@@ -250,8 +250,8 @@ export function useLinkedInFlow() {
             enrichment.linkedin_error = result.error || "Extraction failed";
           }
 
-          // Brief human pause
-          await sleep(1500 + Math.random() * 1000);
+          // Human-like pause after scraping (3-6s)
+          await sleep(3000 + Math.random() * 3000);
         }
 
         // ═══════════════════════════════════════════
