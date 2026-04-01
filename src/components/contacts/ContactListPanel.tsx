@@ -40,6 +40,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const linkedInLookup = useLinkedInLookup();
 
   const currentGroupBy = filters.groupBy || "country";
 
