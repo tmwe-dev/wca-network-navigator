@@ -69,7 +69,8 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             <span className={`font-bold truncate ${!cName && !cCompanyAlias ? "text-muted-foreground italic" : "text-foreground"}`}>
               {displayCompany}
             </span>
-            {hasAlias && <Sparkles className="w-3 h-3 text-accent-foreground shrink-0 opacity-70" />}
+            {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
+            {hasAlias && !isAiProcessed && <Sparkles className="w-3 h-3 text-accent-foreground shrink-0 opacity-70" />}
             {quality === "poor" && (
               <span title="Dati incompleti"><AlertTriangle className="w-3 h-3 text-destructive shrink-0" /></span>
             )}
