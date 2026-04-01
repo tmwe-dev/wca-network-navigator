@@ -20,7 +20,7 @@ interface GroupStripProps {
   isLinkedInLookupLoading?: boolean;
 }
 
-export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading }: GroupStripProps) {
+export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, onLinkedInLookup, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading, isLinkedInLookupLoading }: GroupStripProps) {
   return (
     <div className="sticky top-0 z-10 border-b border-border bg-muted backdrop-blur-sm">
       <div className="flex items-center gap-2 px-3 py-2">
