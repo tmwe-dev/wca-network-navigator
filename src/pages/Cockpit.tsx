@@ -546,6 +546,7 @@ const Cockpit = () => {
             onBulkLinkedInLookup={handleBulkLinkedInLookup}
             isLinkedInLookupRunning={linkedInLookup.progress.status === "running"}
             onSingleDeepSearch={handleSingleDeepSearch} onSingleAlias={handleSingleAlias}
+            onSingleLinkedInLookup={handleSingleLinkedInLookup}
             onBulkDelete={handleBulkDelete}
             onBatchMode={() => setBatchMode(true)}
             activeContactId={draftState.contactId}
