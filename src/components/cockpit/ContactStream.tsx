@@ -47,7 +47,7 @@ export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode,
+  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
