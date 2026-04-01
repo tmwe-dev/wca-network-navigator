@@ -7,6 +7,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipTrigger
 } from "@/components/ui/tooltip";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
@@ -54,16 +55,7 @@ function getEnrichmentSummary(c: any): string[] {
   return parts;
 }
 
-function InfoTooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
-  return (
-    <Tooltip delayDuration={200}>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-        {content}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+// InfoTooltip is now imported from shared component
 
 export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index }: ContactCardProps) {
   const cName = clean(c.company_name);

@@ -26,6 +26,8 @@ export interface CockpitContact {
   linkedinUrl: string;
   isScheduledReturn?: boolean;
   isBusinessCard?: boolean;
+  deepSearchAt?: string;
+  enrichmentData?: any;
 }
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
@@ -100,7 +102,7 @@ export function useCockpitContacts() {
           ? supabase.from("prospect_contacts").select("id, name, role, email, phone, prospect_id").in("id", prcIds).then(r => r.data || [])
           : Promise.resolve([]),
         icIds.length > 0
-          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data").in("id", icIds).then(r => r.data || [])
+          ? supabase.from("imported_contacts").select("id, name, company_name, position, email, phone, mobile, country, city, origin, created_at, enrichment_data, deep_search_at").in("id", icIds).then(r => r.data || [])
           : Promise.resolve([]),
       ]);
 
@@ -282,6 +284,8 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
+          deepSearchAt: ic.deep_search_at || undefined,
+          enrichmentData: ic.enrichment_data || undefined,
         });
       }
     }
