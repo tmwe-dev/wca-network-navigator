@@ -257,7 +257,8 @@ export function useCockpitContacts() {
         if (!ic) continue;
         // Resolve LinkedIn URL from enrichment_data (multiple fallbacks)
         const enrich = (ic.enrichment_data as any) || {};
-        let icLinkedin = enrich.linkedin_profile_url  // written by LinkedIn Flow & SmartSearch
+        let icLinkedin = enrich.linkedin_profile_url  // canonical field
+          || enrich.linkedin_url                       // legacy from old lookup
           || enrich.social_links?.linkedin             // legacy field
           || "";
         // contact_profiles is an OBJECT keyed by ID, not an array

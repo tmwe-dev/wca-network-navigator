@@ -477,13 +477,23 @@ const Cockpit = () => {
     toast.info(`Generazione Alias per ${selection.count} contatti`);
   }, [selection.count]);
 
-  const handleBulkLinkedInLookup = useCallback(() => {
+  const queryClient = useQueryClient();
+  const handleBulkLinkedInLookup = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
     if (!ids.length) return;
-    // CockpitContacts have source_id — we need to resolve to actual contact IDs
-    const sourceIds = ids.map(id => contactsMap[id]?.sourceId).filter(Boolean) as string[];
-    if (sourceIds.length) linkedInLookup.lookupBatch(sourceIds);
-  }, [selection.selectedIds, contactsMap, linkedInLookup]);
+    // Filter to imported_contacts only (other source types use different tables)
+    const sourceIds = ids
+      .map(id => contactsMap[id])
+      .filter(c => c && c.sourceType === "contact")
+      .map(c => c!.sourceId);
+    if (!sourceIds.length) {
+      toast.info("Seleziona contatti importati per il LinkedIn Lookup");
+      return;
+    }
+    await linkedInLookup.lookupBatch(sourceIds);
+    // Refetch cockpit data to show updated LinkedIn URLs immediately
+    queryClient.invalidateQueries({ queryKey: ["cockpit-queue"] });
+  }, [selection.selectedIds, contactsMap, linkedInLookup, queryClient]);
 
   const handleSingleDeepSearch = useCallback((id: string) => {
     toast.info(`Deep Search per ${contactsMap[id]?.name || id}`);
