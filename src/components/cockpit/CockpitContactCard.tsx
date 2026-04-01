@@ -24,7 +24,7 @@ interface Contact {
 
 export interface EnrichmentState {
   isActive: boolean;
-  scrapingPhase: "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+  scrapingPhase: "idle" | "searching" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
   linkedinProfile?: {
     name?: string;
     headline?: string;
