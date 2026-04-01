@@ -150,13 +150,15 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
   );
 }
 
-export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, assignment, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, enrichmentState }: CockpitContactCardProps) {
+export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, assignment, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, onLinkedInLookup, enrichmentState }: CockpitContactCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const oc = originConfig[contact.origin];
   const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
   const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
   const isAiProcessed = !!contact.deepSearchAt;
   const enrichSummary = getEnrichmentSummary(contact.enrichmentData);
   const contactHeadline = contact.enrichmentData?.contact_profile?.linkedin_title;
+  const hasEnrichmentData = !!(contact.enrichmentData && (contact.enrichmentData.contact_profile || contact.enrichmentData.company_profile || contact.enrichmentData.linkedin_url));
 
   return (
     <TooltipProvider>
