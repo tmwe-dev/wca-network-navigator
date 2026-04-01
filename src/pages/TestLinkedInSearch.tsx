@@ -68,8 +68,8 @@ export default function TestLinkedInSearch() {
         const searchResult = await smartSearch.search({
           name: contact.name,
           company: contact.company,
-          email: contact.email,
-          country: contact.country,
+          ...(contact.email && { email: contact.email }),
+          ...(contact.country && { country: contact.country }),
         });
 
         if (searchResult.url) {
