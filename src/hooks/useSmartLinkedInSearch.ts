@@ -140,11 +140,11 @@ export function useSmartLinkedInSearch() {
     const queries = buildQueries(contact.name, contact.company, contact.email, contact.role);
 
     // Try LinkedIn People Search via extension (most reliable)
-    // Preflight: check real authentication before firing queries
+    // Use long cache TTL — caller should have already verified session
     let liAuthenticated = false;
     if (liBridge.isAvailable) {
       try {
-        const authCheck = await liBridge.ensureAuthenticated(30000);
+        const authCheck = await liBridge.ensureAuthenticated(120000); // 2min cache — avoid re-verifying during batch
         liAuthenticated = authCheck.ok;
         if (!liAuthenticated) {
           console.warn("[SmartSearch] LinkedIn extension available but NOT authenticated:", authCheck.reason);
