@@ -26,6 +26,7 @@ export function useContactActions(deps: Deps) {
   const updateLeadStatus = useUpdateLeadStatus();
   const [deepSearchLoading, setDeepSearchLoading] = useState(false);
   const [aliasLoading, setAliasLoading] = useState(false);
+  const [linkedInLookupLoading, setLinkedInLookupLoading] = useState(false);
 
   const invalidateContacts = () => {
     queryClient.invalidateQueries({ queryKey: ["contact-group-counts"] });
