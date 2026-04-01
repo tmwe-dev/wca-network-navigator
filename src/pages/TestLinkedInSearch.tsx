@@ -10,27 +10,18 @@ import { Play, Square, CheckCircle2, XCircle, Loader2, Search } from "lucide-rea
 interface TestContact {
   name: string;
   company: string;
-  email: string;
-  country: string;
+  email?: string;
+  country?: string;
   position?: string;
-}
-
-interface TestResult {
-  contact: TestContact;
-  status: "pending" | "running" | "done" | "error";
-  url: string | null;
-  profile: any;
-  log: SearchLogEntry[];
-  scrapeResult: any;
-  error?: string;
+  difficulty: "Facile" | "Medio" | "Difficile";
 }
 
 const TEST_CONTACTS: TestContact[] = [
-  { name: "Henry Hui", company: "Welton Shipping Co., Inc.", email: "henry.hui@weltongroup.com", country: "US" },
-  { name: "Sanjeev Kumar Pandey", company: "Shoolin Shipping Services (India)", email: "sanjeev@shoolin.in", country: "India" },
-  { name: "Marcello Glass", company: "Continental Freight Forwarding, Inc.", email: "mglass@cff-inc.com", country: "US" },
-  { name: "V. Nagarajan", company: "La Freightlift Pvt. Ltd.", email: "nagaraj@laflcargo.com", country: "India" },
-  { name: "Vishal Saxena", company: "Aeroship Logistics Pvt. Ltd.", email: "vishal.saxena@aeroshipgroup.com", country: "India" },
+  { name: "Manikandan M", company: "Shiftco", position: "Operations Manager", difficulty: "Difficile" },
+  { name: "Carlos Fernandez", company: "Racing Cargo", difficulty: "Difficile" },
+  { name: "Sunil Mampallil Joseph", company: "Shepherd Shipping", email: "sunil@shepherdshipping.com", difficulty: "Medio" },
+  { name: "Raechel Lobo", company: "Skyfer Logistic Inc.", email: "raechel@skyferlogistic.com", position: "Business Development", difficulty: "Facile" },
+  { name: "Henry Zheng", company: "Genius Int'l Logistics", email: "henry.zheng@geniuslogistics.com", position: "Sales Director", country: "China", difficulty: "Medio" },
 ];
 
 type LogLine = { ts: string; level: "info" | "success" | "warn" | "error"; text: string };
