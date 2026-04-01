@@ -10,11 +10,19 @@ import { Play, Square, CheckCircle2, XCircle, Loader2, Search } from "lucide-rea
 interface TestContact {
   name: string;
   company: string;
-  email: string;
-  country: string;
+  email?: string;
+  country?: string;
   position?: string;
+  difficulty: "Facile" | "Medio" | "Difficile";
 }
 
+const TEST_CONTACTS: TestContact[] = [
+  { name: "Manikandan M", company: "Shiftco", position: "Operations Manager", difficulty: "Difficile" },
+  { name: "Carlos Fernandez", company: "Racing Cargo", difficulty: "Difficile" },
+  { name: "Sunil Mampallil Joseph", company: "Shepherd Shipping", email: "sunil@shepherdshipping.com", difficulty: "Medio" },
+  { name: "Raechel Lobo", company: "Skyfer Logistic Inc.", email: "raechel@skyferlogistic.com", position: "Business Development", difficulty: "Facile" },
+  { name: "Henry Zheng", company: "Genius Int'l Logistics", email: "henry.zheng@geniuslogistics.com", position: "Sales Director", country: "China", difficulty: "Medio" },
+];
 interface TestResult {
   contact: TestContact;
   status: "pending" | "running" | "done" | "error";
@@ -24,14 +32,6 @@ interface TestResult {
   scrapeResult: any;
   error?: string;
 }
-
-const TEST_CONTACTS: TestContact[] = [
-  { name: "Henry Hui", company: "Welton Shipping Co., Inc.", email: "henry.hui@weltongroup.com", country: "US" },
-  { name: "Sanjeev Kumar Pandey", company: "Shoolin Shipping Services (India)", email: "sanjeev@shoolin.in", country: "India" },
-  { name: "Marcello Glass", company: "Continental Freight Forwarding, Inc.", email: "mglass@cff-inc.com", country: "US" },
-  { name: "V. Nagarajan", company: "La Freightlift Pvt. Ltd.", email: "nagaraj@laflcargo.com", country: "India" },
-  { name: "Vishal Saxena", company: "Aeroship Logistics Pvt. Ltd.", email: "vishal.saxena@aeroshipgroup.com", country: "India" },
-];
 
 type LogLine = { ts: string; level: "info" | "success" | "warn" | "error"; text: string };
 
@@ -68,8 +68,8 @@ export default function TestLinkedInSearch() {
         const searchResult = await smartSearch.search({
           name: contact.name,
           company: contact.company,
-          email: contact.email,
-          country: contact.country,
+          ...(contact.email && { email: contact.email }),
+          ...(contact.country && { country: contact.country }),
         });
 
         if (searchResult.url) {
@@ -141,7 +141,7 @@ export default function TestLinkedInSearch() {
         <div>
           <h1 className="text-2xl font-bold">🧪 Test LinkedIn Search Pipeline</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            5 contatti dal DB — verifica Smart Search + Scraping
+            5 biglietti da visita con dati minimi — stress test Smart Search
           </p>
         </div>
         <div className="flex gap-2 items-center">
@@ -168,6 +168,8 @@ export default function TestLinkedInSearch() {
               <th className="p-2 text-left w-8">#</th>
               <th className="p-2 text-left">Contatto</th>
               <th className="p-2 text-left">Azienda</th>
+              <th className="p-2 text-left">Dati</th>
+              <th className="p-2 text-left">Difficoltà</th>
               <th className="p-2 text-left">Stato</th>
               <th className="p-2 text-left">LinkedIn URL</th>
               <th className="p-2 text-left">Headline</th>
@@ -179,14 +181,27 @@ export default function TestLinkedInSearch() {
                 <td className="p-2">{i + 1}</td>
                 <td className="p-2 font-medium">{r.contact.name}</td>
                 <td className="p-2 text-muted-foreground">{r.contact.company}</td>
+                <td className="p-2">
+                  <div className="flex gap-1 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] px-1">nome</Badge>
+                    {r.contact.email && <Badge variant="secondary" className="text-[10px] px-1">email</Badge>}
+                    {r.contact.position && <Badge variant="secondary" className="text-[10px] px-1">ruolo</Badge>}
+                    {r.contact.country && <Badge variant="secondary" className="text-[10px] px-1">paese</Badge>}
+                  </div>
+                </td>
+                <td className="p-2">
+                  <Badge variant={r.contact.difficulty === "Difficile" ? "destructive" : r.contact.difficulty === "Medio" ? "default" : "secondary"} className="text-[10px]">
+                    {r.contact.difficulty}
+                  </Badge>
+                </td>
                 <td className="p-2">{statusIcon(r.status)}</td>
                 <td className="p-2">
                   {r.url ? (
-                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs truncate max-w-[200px] block">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs truncate max-w-[200px] block">
                       {r.url.replace("https://www.linkedin.com", "")}
                     </a>
                   ) : r.status === "error" ? (
-                    <span className="text-red-400 text-xs">{r.error}</span>
+                    <span className="text-destructive text-xs">{r.error}</span>
                   ) : "—"}
                 </td>
                 <td className="p-2 text-xs text-muted-foreground truncate max-w-[200px]">
