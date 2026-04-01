@@ -168,6 +168,18 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
               </div>
               <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
               <div className="text-[11px] text-muted-foreground">{contact.role}</div>
+              {/* Live enrichment phase indicator */}
+              {isProcessing && enrichmentState?.scrapingPhase && (
+                <div className="text-[10px] font-medium text-[hsl(210,80%,55%)] mt-0.5">
+                  {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
+                </div>
+              )}
+              {/* LinkedIn headline after enrichment */}
+              {hasLinkedin && enrichmentState?.linkedinProfile?.headline && (
+                <div className="text-[10px] text-muted-foreground/80 mt-0.5 truncate max-w-[180px]" title={enrichmentState.linkedinProfile.headline}>
+                  💼 {enrichmentState.linkedinProfile.headline}
+                </div>
+              )}
             </div>
             {/* Origin badge + Priority */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
