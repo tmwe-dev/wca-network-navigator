@@ -23,6 +23,15 @@ const TEST_CONTACTS: TestContact[] = [
   { name: "Raechel Lobo", company: "Skyfer Logistic Inc.", email: "raechel@skyferlogistic.com", position: "Business Development", difficulty: "Facile" },
   { name: "Henry Zheng", company: "Genius Int'l Logistics", email: "henry.zheng@geniuslogistics.com", position: "Sales Director", country: "China", difficulty: "Medio" },
 ];
+interface TestResult {
+  contact: TestContact;
+  status: "pending" | "running" | "done" | "error";
+  url: string | null;
+  profile: any;
+  log: SearchLogEntry[];
+  scrapeResult: any;
+  error?: string;
+}
 
 type LogLine = { ts: string; level: "info" | "success" | "warn" | "error"; text: string };
 
