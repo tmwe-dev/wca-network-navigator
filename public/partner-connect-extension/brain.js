@@ -71,11 +71,11 @@ OUTPUT FORMAT:
     const stored = await chrome.storage.local.get('brain_config');
     if (stored.brain_config) {
       const cfg = stored.brain_config;
-      // Decifra le chiavi sensibili
-      if (cfg._encApiKey) {
-        cfg.claudeApiKey = await CryptoUtils.decrypt(cfg._encApiKey) || '';
-        delete cfg._encApiKey;
-      }
+      // Legacy: remove old encrypted keys if present
+      delete cfg._encApiKey;
+      delete cfg.claudeApiKey;
+      delete cfg.claudeModel;
+      // Decifra Supabase key se presente
       if (cfg._encSupaKey) {
         cfg.supabaseKey = await CryptoUtils.decrypt(cfg._encSupaKey) || '';
         delete cfg._encSupaKey;
