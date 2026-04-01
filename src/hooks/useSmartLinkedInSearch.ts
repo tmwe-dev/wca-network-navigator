@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
 
 export interface SearchLogEntry {
   step: number;
