@@ -1,57 +1,60 @@
 
 
-# Come AI + Partner Connect Aiutano nella Ricerca LinkedIn — e Cosa Migliorare
+# Aggiornamento Card in Tempo Reale nel Cockpit
 
-## Flusso Attuale
+## Problema
+
+Quando trascini un contatto su LinkedIn, il sistema scrapa il profilo e mostra i dati estratti solo nell'**AIDraftStudio** (pannello destro). La **card del contatto nella lista** (pannello sinistro) rimane statica con i dati originali — non mostra mai il profilo LinkedIn trovato, l'headline, la bandiera aggiornata, etc. L'utente non vede il valore dell'arricchimento sulla card stessa.
+
+## Soluzione
+
+### 1. Aggiornare la CockpitContactCard con stato "attivo/arricchito"
+
+**File: `src/components/cockpit/CockpitContactCard.tsx`**
+
+- Aggiungere prop `enrichmentState` opzionale con i dati live:
+  - `linkedinProfile` (name, headline, location, connectionStatus)
+  - `scrapingPhase` (idle, visiting, extracting, enriching, reviewing, generating)
+  - `isActive` (se è il contatto attualmente in lavorazione)
+- Quando `isActive`:
+  - Bordo animato (pulse) per indicare elaborazione in corso
+  - Mostra fase corrente sotto il nome (es. "🔍 Estrazione profilo...")
+- Quando `scrapingPhase === "reviewing"` o messaggio generato:
+  - Mostra headline LinkedIn sotto il ruolo
+  - Badge "✓ LinkedIn" se profilo trovato
+  - Badge connectionStatus (Connesso/Non connesso)
+  - Disabilita drag (card già in uso)
+
+### 2. Passare draftState alla card attiva
+
+**File: `src/pages/Cockpit.tsx`**
+
+- Nel rendering di `ContactStream` / lista card, confrontare `contact.id === draftState.contactId`
+- Se match, passare `enrichmentState={{ scrapingPhase: draftState.scrapingPhase, linkedinProfile: draftState.linkedinProfile, isActive: true }}`
+
+### 3. Indicatore visivo per il tasto di invio
+
+**File: `src/components/cockpit/AIDraftStudio.tsx`**
+
+- Il tasto "Invia" / "Connetti su LinkedIn" resta disabilitato finché:
+  - `scrapingPhase !== "idle"` (ancora in elaborazione)
+  - `body` è vuoto (messaggio non generato)
+- Aggiungere stato visivo "pronto" con check verde quando tutti i dati sono disponibili e il messaggio è generato
+
+### Flusso Risultante
 
 ```text
-1. Google Search (via Partner Connect extension)
-   Query: "Luca Arcana" "Transport Management SRL" site:linkedin.com/in
-   ↓
-2. Se 0 risultati → Retry con solo cognome:
-   "Arcana" "Transport Management SRL" logistics site:linkedin.com/in
-   ↓
-3. Se risultati trovati → AI (Lovable Gateway) valida il match:
-   "Quale di questi URL è il profilo di Luca Arcana at Transport Management?"
-   ↓
-4. Se AI conferma → salva URL in partner_social_links
+1. Drag card su LinkedIn
+2. Card nella lista: bordo animato + "🔍 Visita profilo..."
+3. Card aggiorna: "📋 Estrazione dati..." → mostra headline
+4. Card mostra: badge LinkedIn ✓ + connectionStatus
+5. AIDraftStudio: review panel con dati + tasto "Genera"
+6. Dopo generazione: tasto Invia si attiva
 ```
 
-## Problemi Identificati
+### Dettagli Tecnici
 
-1. **Solo 2 tentativi** — se il nome azienda non corrisponde (es. "Transport Management SRL" vs "TMWE" su LinkedIn), entrambi falliscono
-2. **Email non usata** — il campo `email` è disponibile ma ignorato. Da `l.arcana@tmwe.it` si potrebbe estrarre "tmwe" come keyword alternativa
-3. **Nessuna query senza azienda** — non prova mai solo `"Luca Arcana" site:linkedin.com/in`
-4. **Nessuna query libera** — non prova mai `Luca Arcana LinkedIn` (senza site:)
-
-## Piano: Cascata Intelligente con Email Domain
-
-### Modifiche in `src/hooks/useDeepSearchLocal.ts`
-
-**Nuovo helper** `extractDomainKeyword(email)`:
-- Estrae dominio da email (es. `tmwe` da `l.arcana@tmwe.it`)
-- Esclude domini generici (gmail, yahoo, hotmail, outlook, libero, etc.)
-
-**Cascata di 5 query** (si ferma al primo risultato LinkedIn valido):
-
-```text
-1. "Nome Cognome" "NomeAzienda" site:linkedin.com/in     ← attuale
-2. "Nome Cognome" "dominio-email" site:linkedin.com/in   ← NUOVO
-3. "Nome Cognome" site:linkedin.com/in                    ← NUOVO (senza azienda)
-4. "Cognome" "dominio-email" site:linkedin.com/in         ← NUOVO (solo cognome)
-5. Nome Cognome LinkedIn                                   ← NUOVO (query libera)
-```
-
-**AI validazione migliorata** — il prompt includerà anche dominio email e posizione per disambiguare meglio tra omonimi.
-
-### Applicazione
-
-La stessa cascata viene applicata in entrambe le funzioni:
-- `searchLinkedInForContacts` (righe 100-160) — per partner
-- `searchContact` (righe 381-414) — per contatti singoli
-
-### Impatto
-- Zero costi aggiuntivi (stesse chiamate Google via Partner Connect)
-- Massimo 5 query Google per contatto, ma nella maggior parte dei casi si ferma al tentativo 1-3
-- Tasso di successo atteso: da ~40% a ~85% per contatti con email aziendale
+- Nessuna nuova query DB — usa solo `draftState` già disponibile in memoria
+- Le modifiche toccano 3 file: `CockpitContactCard.tsx`, `Cockpit.tsx`, `AIDraftStudio.tsx`
+- Il tasto invio in AIDraftStudio è già parzialmente gated (controlla `draft.body`), va solo reso esplicito con stati visivi
 
