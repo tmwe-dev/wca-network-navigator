@@ -1,63 +1,95 @@
 
+## Diagnosi rapida
 
-# Centralizzare AI dell'Estensione su Lovable AI
+Ho verificato il flusso e il problema non sembra la sessione LinkedIn: dai log `verifySession` risulta `success: true` e `authenticated: true`.
 
-## Situazione attuale
+Il guasto reale è nella pipeline LinkedIn del Cockpit:
 
-Il modulo `brain.js` dell'estensione Partner Connect chiama direttamente `https://api.anthropic.com/v1/messages` con una API key Claude configurata dall'utente. Questo richiede:
-- L'utente deve procurarsi e inserire una API key Anthropic
-- Costi diretti per l'utente
-- Gestione cifratura chiavi nell'estensione
+1. Il pulsante bulk `LinkedIn` del Cockpit oggi non usa un flusso LinkedIn completo: `useLinkedInLookup` fa solo Google Search via Partner Connect.
+2. `useLinkedInLookup` considera “già risolto” solo `enrichment_data.linkedin_url`.
+3. Il Cockpit e gli altri flow leggono invece soprattutto `enrichment_data.linkedin_profile_url`.
+4. Quindi un contatto già risolto può risultare come “0 già risolti”, venire ricercato di nuovo e finire “non trovato”.
+5. In più, il bulk lookup del Cockpit passa `sourceId` di card unificate, ma la funzione batch interroga solo `imported_contacts`, quindi la feature non è coerente con tutte le sorgenti del Cockpit.
 
-## Cosa cambia
+Ho anche verificato nel database che esistono contatti con `linkedin_profile_url` valorizzato ma `linkedin_url` vuoto: questo conferma il mismatch.
 
-Sostituiamo la chiamata diretta ad Anthropic con una chiamata alla nostra Edge Function che usa Lovable AI (già pagato, zero config per l'utente).
+## Cosa penso del sistema
 
-## Piano
+Le potenzialità ci sono già:
+- verifica reale della connessione,
+- ricerca URL LinkedIn,
+- estrazione profilo,
+- generazione draft,
+- invio multicanale.
 
-### 1. Creare Edge Function `extension-brain`
+Il problema non è che “LinkedIn non esiste”: è che oggi ricerca, persistenza e lettura usano regole diverse. Quindi il sistema sembra rotto anche quando una parte ha già funzionato.
 
-Nuova funzione dedicata in `supabase/functions/extension-brain/index.ts`:
-- Riceve `{ messages, systemPrompt, maxTokens }` dall'estensione
-- Chiama il gateway Lovable AI (`https://ai.gateway.lovable.dev/v1/chat/completions`) con `LOVABLE_API_KEY`
-- Modello: `google/gemini-3-flash-preview` (veloce, gratis)
-- Ritorna il testo della risposta in formato compatibile con il parsing esistente di brain.js
-- CORS aperto (l'estensione chiama da qualsiasi dominio)
-- Nessuna autenticazione JWT richiesta (l'estensione non ha il token utente)
+## Piano di correzione
 
-### 2. Modificare `brain.js` — metodo `think()`
+1. Unificare il motore di discovery LinkedIn
+- Far usare al bulk lookup del Cockpit la logica di `useSmartLinkedInSearch`.
+- Quindi il batch userà davvero:
+  - Google via Partner Connect come primo tentativo
+  - fallback estensione LinkedIn quando disponibile e autenticata
 
-- Rimuovere il check `if (!this.config.claudeApiKey)` — non serve più
-- Sostituire la fetch ad Anthropic (righe 187-201) con una fetch alla Edge Function:
-  ```
-  fetch(`${SUPABASE_URL}/functions/v1/extension-brain`, { ... })
-  ```
-- L'URL Supabase sarà hardcoded come costante (è pubblico)
-- Adattare il parsing della risposta: da `data.content[0].text` a `data.content` (stringa diretta)
-- Mantenere intatto tutto il resto: library check, Hydra enrichment, auto-save, token tracking
+2. Definire un solo campo canonico
+- Usare `linkedin_profile_url` come campo principale in tutto il Cockpit.
+- Tenere `linkedin_url` solo come fallback legacy in lettura.
+- Aggiornare anche il conteggio “già risolti” per considerare tutti i campi legacy/canonici.
 
-### 3. Semplificare config e popup
+3. Rendere il salvataggio coerente per sorgente
+- `imported_contacts`: salvare in `enrichment_data.linkedin_profile_url`, `linkedin_lookup_at`, `linkedin_resolved_method`, log ricerca
+- `prospect_contacts`: aggiornare `linkedin_url`
+- `partner_contact`: salvare/aggiornare `partner_social_links`
+- evitare che il Cockpit lanci una funzione “universale” che oggi supporta solo `imported_contacts`
 
-- Rimuovere da `brain.js` config: `claudeApiKey`, `claudeModel`, cifratura `_encApiKey`
-- Rimuovere da `popup.js`: campo API key Claude, campo modello Claude
-- Mantenere: budget token giornaliero, Supabase KB settings
-- Aggiornare `background.js`: rimuovere mascheramento `claudeApiKey` nel get-config
+4. Allineare la lettura del Cockpit
+- Far sì che `useCockpitContacts` e le card leggano sempre prima il campo canonico
+- invalidare/refetch subito dopo il salvataggio, così il risultato appare senza ambiguità
 
-### 4. Aggiornare `popup.html`
+5. Chiarire la UI
+- Rinominare il bottone bulk da generico `LinkedIn` a `Trova profilo LinkedIn`
+- mostrare nel progresso quale motore sta lavorando: `Partner Connect`, `LinkedIn fallback`, `già risolto`
+- distinguere chiaramente:
+  - estensione disponibile
+  - sessione autenticata
+  - profilo trovato / non trovato / già presente
 
-Rimuovere i campi input per API key Claude e selezione modello dalla sezione Brain Settings.
+6. Verifica end-to-end
+- Caso A: contatto con `linkedin_profile_url` già presente → deve andare in `già risolti`
+- Caso B: contatto senza URL ma trovabile → deve andare in `trovati` e comparire subito in card
+- Caso C: contatto non trovabile → `non trovati`
+- Caso D: estensione LinkedIn attiva ma Partner Connect assente → fallback coerente o messaggio chiaro
+- Caso E: selezione mista nel Cockpit → nessun errore dovuto al tipo sorgente
 
-## File modificati
+## Dettagli tecnici
 
-| File | Cosa |
-|------|------|
-| `supabase/functions/extension-brain/index.ts` | **Nuovo** — proxy verso Lovable AI |
-| `public/partner-connect-extension/brain.js` | Fetch → Edge Function, rimozione config Claude |
-| `public/partner-connect-extension/popup.js` | Rimozione campi API key/modello Claude |
-| `public/partner-connect-extension/popup.html` | Rimozione input Claude settings |
-| `public/partner-connect-extension/background.js` | Rimozione mascheramento claudeApiKey |
+File principali:
+- `src/hooks/useLinkedInLookup.ts`
+- `src/hooks/useSmartLinkedInSearch.ts`
+- `src/hooks/useCockpitContacts.ts`
+- `src/pages/Cockpit.tsx`
 
-## Risultato
+Approccio consigliato:
+```text
+Cockpit action
+  -> unified LinkedIn resolver
+     -> check existing canonical URL
+     -> Partner Connect Google search
+     -> LinkedIn extension fallback
+     -> save to correct table/field by source type
+     -> invalidate cockpit query
+     -> update progress UI
+```
 
-L'utente installa l'estensione e il Brain funziona **subito**, senza configurare nulla. Zero costi esterni, tutto centralizzato su Lovable AI.
+Nella prima iterazione non serve introdurre nuove tabelle: il problema è soprattutto di coerenza applicativa e di persistenza sui campi già esistenti.
 
+## Risultato atteso
+
+Dopo questo intervento, quando lanci LinkedIn dal Cockpit:
+- non ricercherà contatti già risolti,
+- userà davvero il motore migliore disponibile,
+- mostrerà uno stato leggibile,
+- e il risultato apparirà subito sulla card giusta.
+
+In sintesi: non farei altre pezze sulla connessione. Sistemerei la pipeline LinkedIn end-to-end, perché è lì che oggi si rompe tutto.
