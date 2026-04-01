@@ -63,13 +63,13 @@ export function ConnectionStatusBar({ onAiClick, outreachQueue }: Props) {
     setConnecting(true);
     const problems: string[] = [];
 
-    // --- LinkedIn: REAL verification only ---
+    // --- LinkedIn: REAL session check (extension + authenticated) ---
     let liOk = false;
     if (li.isAvailable) {
       try {
         const r = await li.verifySession();
-        liOk = r.success;
-        if (!liOk) problems.push("LinkedIn: sessione scaduta");
+        liOk = r.success === true && r.authenticated === true;
+        if (!liOk) problems.push("LinkedIn: sessione non autenticata");
       } catch {
         liOk = false;
         problems.push("LinkedIn: verifica fallita");
