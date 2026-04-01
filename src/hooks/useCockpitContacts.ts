@@ -284,6 +284,8 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: item.partner_id,
           linkedinUrl: icLinkedin,
+          deepSearchAt: ic.deep_search_at || undefined,
+          enrichmentData: ic.enrichment_data || undefined,
         });
       }
     }
