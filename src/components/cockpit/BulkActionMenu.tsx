@@ -102,6 +102,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
 
   const handleBulkMarkDone = async (type: ActivityType) => {
     const count = await createBulkActivities(type, "completed", { completed_at: new Date().toISOString() });
+    await autoAssignBulk(selectedContacts);
     toast.success(`${count} attività completate`);
     onComplete();
   };
