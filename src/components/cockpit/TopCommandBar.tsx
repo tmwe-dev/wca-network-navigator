@@ -1,6 +1,7 @@
 import { useState, useRef, lazy, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus } from "lucide-react";
+import { Search, Mic, MicOff, LayoutGrid, List, Sparkles, Loader2, Building2, FileSearch, Users, CreditCard, UserPlus, FlaskConical } from "lucide-react";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; icon: typeof Building2 }[]
 ];
 
 export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery, onSearchChange, contacts, sourceTab, onSourceTabChange }: TopCommandBarProps) {
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [micState, setMicState] = useState<MicState>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -195,6 +197,16 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
             <List className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Test LinkedIn */}
+        <button
+          type="button"
+          onClick={() => navigate("/test-linkedin")}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
+        >
+          <FlaskConical className="w-3.5 h-3.5" />
+          Test LI
+        </button>
       </form>
     </motion.div>
 
