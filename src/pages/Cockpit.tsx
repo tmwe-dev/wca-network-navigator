@@ -101,6 +101,43 @@ const Cockpit = () => {
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
 
+  // Agent assignment
+  const { agents } = useAgents();
+  const { data: allAssignments } = useClientAssignments();
+  const assignClient = useAssignClient();
+
+  // Build assignment info map for cards
+  const assignmentInfoMap = useMemo(() => {
+    const map = new Map<string, AssignmentInfo>();
+    if (!allAssignments || !agents.length) return map;
+    for (const a of allAssignments) {
+      const agent = agents.find(ag => ag.id === a.agent_id);
+      if (agent) {
+        map.set(a.source_id, {
+          agentName: agent.name,
+          agentAvatar: agent.avatar_emoji,
+          managerName: undefined, // TODO: resolve from team_members
+        });
+      }
+    }
+    return map;
+  }, [allAssignments, agents]);
+
+  // Auto-assign helper: assigns default sales agent on first activity
+  const autoAssign = useCallback(async (sourceId: string, sourceType: string) => {
+    // Skip if already assigned
+    if (assignmentInfoMap.has(sourceId)) return;
+    // Find first active sales/outreach agent
+    const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
+      || agents.find(a => a.is_active);
+    if (!salesAgent) return;
+    try {
+      await assignClient.mutateAsync({ sourceId, sourceType, agentId: salesAgent.id });
+    } catch (e) {
+      console.error("Auto-assign failed:", e);
+    }
+  }, [agents, assignmentInfoMap, assignClient]);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ── AI Action Executor ──
