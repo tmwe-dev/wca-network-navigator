@@ -181,7 +181,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
         whileTap={isProcessing ? {} : { scale: 0.98 }}
         onClick={handleCardClick}
         className={cn(
-          "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 pr-8 transition-all duration-300 hover:shadow-lg overflow-hidden",
+          "group relative rounded-xl border bg-card backdrop-blur-xl p-4 pr-8 transition-all duration-300 hover:shadow-lg overflow-hidden",
           isProcessing
             ? "border-[hsl(210,80%,55%)]/40 bg-[hsl(210,80%,55%)]/[0.03] shadow-sm shadow-[hsl(210,80%,55%)]/5 cursor-default animate-soft-pulse"
             : isWorked
