@@ -1,7 +1,7 @@
 // FireScrape v3 — Brain Module
-// Agente Claude integrato con knowledge base Supabase
+// AI integrato via Lovable AI (Edge Function) + knowledge base Supabase
 // Gestisce: decisioni, prompt, token budget, apprendimento
-// API keys cifrate con AES-GCM via CryptoUtils
+// Nessuna API key esterna richiesta
 
 const Brain = {
 
