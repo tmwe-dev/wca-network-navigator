@@ -1,48 +1,48 @@
 
 
-# Pannello Dati AI Visibile e Cliccabile nelle Card del Cockpit
+# Fix Visibilità Dati AI nelle Card del Cockpit
 
-## Problema
+## Problemi identificati
 
-Quando lanci LinkedIn Lookup o Deep Search dal Cockpit, non vedi nessun feedback di progresso e dopo il completamento non puoi accedere ai dati estratti. L'unico modo attuale è passare il mouse sopra una piccola icona ✨ che mostra un tooltip con poche righe — inutilizzabile.
-
-## Soluzione
-
-Rendere la card del Cockpit **cliccabile** per espandere un pannello inline che mostra tutti i dati AI estratti, riutilizzando il componente `ContactEnrichmentCard` già esistente (profilo professionale, profilo aziendale, link social, seniority, lingue, specialties, awards, news).
+1. **Il pannello espandibile si apre SOLO per contatti con `deepSearchAt`** — se fai Deep Search o LinkedIn Lookup su un contatto "manuale" e i dati non si salvano ancora, non hai modo di espandere la card
+2. **Solo il pulsante ✨ togla l'espansione** — il click sulla card non fa nulla
+3. **I dati LinkedIn "live" (dal flusso in corso) non vengono mostrati** nel pannello espanso — `enrichmentState.linkedinProfile` viene ignorato
+4. **I dati enrichment vengono caricati solo per `imported_contacts`** — i `partner_contacts` non passano `enrichmentData` né `deepSearchAt` dal DB
+5. **Pulsanti Deep Search e Alias nel footer sono fake** — mostrano solo un toast, creano confusione
+6. **Menu 3 puntini sovrapposto ai badge** — posizionamento `absolute top-2 right-2` si scontra con Manuale/P6
 
 ## Modifiche
 
-### 1. `CockpitContactCard.tsx` — Card espandibile al click
+### 1. `CockpitContactCard.tsx` — Card espandibile ovunque + dati live
 
-- Aggiungere stato `isExpanded` locale
-- Click sulla card (non su checkbox/drag/buttons) togla `isExpanded`
-- Quando espansa, sotto il contenuto attuale mostrare il `ContactEnrichmentCard` con `enrichmentData` e `deepSearchAt`
-- Se non ci sono dati enrichment: mostrare un messaggio "Nessun dato AI — lancia Deep Search o LinkedIn Lookup"
-- L'icona ✨ diventa un **pulsante** cliccabile (non solo tooltip) che espande/chiude il pannello
-- Aggiungere una piccola icona chevron ▾/▴ accanto alla ✨ per indicare che è espandibile
+- **Click sulla card** togla `isExpanded` (esclusi checkbox, drag handle, pulsanti)
+- Il pulsante ✨/chevron diventa visibile **sempre** (non solo se `isAiProcessed`), cambia icona: se ci sono dati → ✨, altrimenti → ChevronDown generico
+- **Rimuovere le icone duplicate nel footer** (Search e Sparkles hover) — le azioni restano solo nel pannello espanso
+- Nel pannello espanso, aggiungere sezione **"Dati LinkedIn Live"** se `enrichmentState?.linkedinProfile` esiste: mostra nome, headline, location, connectionStatus in un mini-riquadro blu
+- Se `hasEnrichmentData` → mostra `ContactEnrichmentCard` (come ora)
+- Se nessun dato → mostra pulsanti Deep Search + LinkedIn Lookup (come ora)
+- Aggiungere `pr-8` al container interno per lasciare spazio al menu 3 puntini
 
-### 2. `ContactStream.tsx` — Passare callback per LinkedIn Lookup singolo
+### 2. `ContactStream.tsx` — Menu non sovrapposto
 
-- Aggiungere prop `onSingleLinkedInLookup` per permettere il lookup dal pannello espanso della card
-- Il pannello espanso mostra pulsanti "🔍 Deep Search" e "🔗 LinkedIn Lookup" se i dati mancano
+- Spostare il wrapper del `ContactActionMenu` da `absolute top-2 right-2` a `absolute bottom-2 right-2` con sfondo semi-trasparente (`bg-card/90 rounded-md`)
+- Passare `enrichmentState` correttamente alla card (già fatto, ma verificare che `activeContactId` matchi)
 
-### 3. `CockpitContactCard.tsx` — Aggiungere prop `onLinkedInLookup`
+### 3. `useCockpitContacts.ts` — Enrichment per partner_contacts
 
-- Nuovo callback opzionale per lanciare il lookup dalla card
-- Nel pannello espanso: pulsanti azione per Deep Search e LinkedIn Lookup
+- Nella query dei partner, aggiungere `enrichment_data, enriched_at, ai_parsed_at` dalla tabella `partners`
+- Mappare `deepSearchAt` e `enrichmentData` anche per `partner_contact` e `business_card` (se disponibili)
+- Aggiungere `company_alias, contact_alias` nella select di `imported_contacts` e mapparli nell'interfaccia
 
-## File coinvolti
+### 4. `Cockpit.tsx` — Passare enrichmentState a ContactStream
 
-| File | Modifica |
-|------|----------|
-| `src/components/cockpit/CockpitContactCard.tsx` | Stato espandibile, render `ContactEnrichmentCard`, pulsanti azione inline |
-| `src/components/cockpit/ContactStream.tsx` | Passare `onSingleLinkedInLookup` alla card |
-| `src/pages/Cockpit.tsx` | Collegare `onSingleLinkedInLookup` al hook esistente |
+- Verificare che `enrichmentState` (con `linkedinProfile`) venga correttamente propagato alla card attiva, anche durante LinkedIn Lookup singolo e Deep Search singolo
 
-## Risultato
+## File modificati
 
-- Click su ✨ o sulla card → si espande il pannello con tutti i dati AI
-- Profilo professionale, aziendale, link social, awards tutto visibile
-- Se dati assenti → pulsanti per lanciare Deep Search o LinkedIn Lookup direttamente dalla card
-- Nessun componente nuovo — riuso di `ContactEnrichmentCard` già pronto
+| File | Cosa |
+|------|------|
+| `src/components/cockpit/CockpitContactCard.tsx` | Card cliccabile, dati live LinkedIn, rimozione footer fake, padding per menu |
+| `src/components/cockpit/ContactStream.tsx` | Menu spostato in basso, nessuna sovrapposizione |
+| `src/hooks/useCockpitContacts.ts` | Enrichment data per tutti i source_type, alias visibili |
 
