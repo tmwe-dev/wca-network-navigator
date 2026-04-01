@@ -490,6 +490,13 @@ const Cockpit = () => {
     toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`);
   }, [contactsMap]);
 
+  const handleSingleLinkedInLookup = useCallback((id: string) => {
+    const contact = contactsMap[id];
+    if (!contact) return;
+    const sourceId = contact.sourceId;
+    if (sourceId) linkedInLookup.lookupBatch([sourceId]);
+  }, [contactsMap, linkedInLookup]);
+
   const handleBulkDelete = useCallback(() => {
     setShowDeleteConfirm(true);
   }, []);
