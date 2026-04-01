@@ -11,6 +11,7 @@ import { Mail, Sparkles, Linkedin } from "lucide-react";
 import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useSmartLinkedInSearch } from "@/hooks/useSmartLinkedInSearch";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
