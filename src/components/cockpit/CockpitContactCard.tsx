@@ -101,8 +101,18 @@ const originAccent: Record<ContactOrigin, string> = {
   manual: "from-emerald-500/60 to-emerald-500/10",
 };
 
-export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
+const phaseLabel: Record<string, string> = {
+  visiting: "🔍 Visita profilo...",
+  extracting: "📋 Estrazione dati...",
+  enriching: "🧠 Arricchimento...",
+  reviewing: "👁️ In revisione",
+  generating: "✨ Generazione messaggio...",
+};
+
+export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, enrichmentState }: CockpitContactCardProps) {
   const oc = originConfig[contact.origin];
+  const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
+  const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
 
   return (
     <motion.div
