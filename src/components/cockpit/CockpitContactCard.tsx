@@ -60,6 +60,7 @@ interface CockpitContactCardProps {
   onDragEnd: () => void;
   onDeepSearch: () => void;
   onAlias: () => void;
+  onLinkedInLookup?: () => void;
   enrichmentState?: EnrichmentState;
 }
 
