@@ -24,6 +24,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const cCity = clean(c.city);
   const cOrigin = clean(c.origin);
   const quality = getContactQuality(c);
+  const isAiProcessed = !!c.deep_search_at;
   const cCompanyAlias = clean(c.company_alias);
   const cContactAlias = clean(c.contact_alias);
   const hasAlias = !!cCompanyAlias || !!cContactAlias;
@@ -34,9 +35,15 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
     <div
       className={`group relative rounded-lg border p-2 text-xs cursor-pointer transition-all ${
         isActive
-          ? "border-primary bg-primary/15 shadow-md"
+          ? isAiProcessed
+            ? "border-amber-400 bg-amber-500/15 shadow-md"
+            : "border-primary bg-primary/15 shadow-md"
           : isSelected
-          ? "border-primary/40 bg-primary/10 shadow-sm"
+          ? isAiProcessed
+            ? "border-amber-400/40 bg-amber-500/10 shadow-sm"
+            : "border-primary/40 bg-primary/10 shadow-sm"
+          : isAiProcessed
+          ? "border-amber-400/30 bg-amber-500/[0.08] hover:border-amber-400/50 hover:shadow-sm"
           : "border-border/60 bg-card hover:border-primary/40 hover:shadow-sm"
       }`}
       onClick={onSelect}
@@ -62,7 +69,8 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             <span className={`font-bold truncate ${!cName && !cCompanyAlias ? "text-muted-foreground italic" : "text-foreground"}`}>
               {displayCompany}
             </span>
-            {hasAlias && <Sparkles className="w-3 h-3 text-accent-foreground shrink-0 opacity-70" />}
+            {isAiProcessed && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
+            {hasAlias && !isAiProcessed && <Sparkles className="w-3 h-3 text-accent-foreground shrink-0 opacity-70" />}
             {quality === "poor" && (
               <span title="Dati incompleti"><AlertTriangle className="w-3 h-3 text-destructive shrink-0" /></span>
             )}
