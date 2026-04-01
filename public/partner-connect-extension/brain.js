@@ -99,10 +99,7 @@ OUTPUT FORMAT:
   async saveConfig() {
     // Salva con chiavi cifrate — mai in chiaro
     const toSave = { ...this.config };
-    if (toSave.claudeApiKey) {
-      toSave._encApiKey = await CryptoUtils.encrypt(toSave.claudeApiKey);
-      delete toSave.claudeApiKey;
-    }
+    // No more claudeApiKey to encrypt
     if (toSave.supabaseKey) {
       toSave._encSupaKey = await CryptoUtils.encrypt(toSave.supabaseKey);
       delete toSave.supabaseKey;
@@ -111,17 +108,15 @@ OUTPUT FORMAT:
   },
 
   async updateConfig(partial) {
-    // FIX 2: Don't overwrite existing config with empty strings
     const merged = { ...this.config };
     for (const key in partial) {
       const value = partial[key];
-      // Skip empty string values for sensitive keys — don't clear stored keys
-      if (key === 'claudeApiKey' || key === 'supabaseKey') {
-        if (value === '') {
-          // Empty string: keep existing value, don't overwrite
-          continue;
-        }
+      // Skip empty string values for sensitive keys
+      if (key === 'supabaseKey') {
+        if (value === '') continue;
       }
+      // Ignore legacy Claude keys
+      if (key === 'claudeApiKey' || key === 'claudeModel') continue;
       merged[key] = value;
     }
     Object.assign(this.config, merged);
