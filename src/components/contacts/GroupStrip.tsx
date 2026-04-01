@@ -12,10 +12,12 @@ interface GroupStripProps {
   onToggle: () => void;
   onDeepSearch: () => void;
   onAlias: () => void;
+  onLinkedInLookup?: () => void;
   isGroupSelected: boolean;
   onToggleGroupSelect: () => void;
   isAliasLoading?: boolean;
   isDeepSearchLoading?: boolean;
+  isLinkedInLookupLoading?: boolean;
 }
 
 export function GroupStrip({ group, groupBy, isOpen, onToggle, onDeepSearch, onAlias, isGroupSelected, onToggleGroupSelect, isAliasLoading, isDeepSearchLoading }: GroupStripProps) {
