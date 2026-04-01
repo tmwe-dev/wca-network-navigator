@@ -200,6 +200,10 @@ export function useCockpitContacts() {
           sourceId: sid,
           partnerId: pc.partner_id || item.partner_id,
           linkedinUrl: contactSocialMap[pc.id] || socialLinksMap[pc.partner_id] || "",
+          contactAlias: pc.contact_alias || undefined,
+          companyAlias: partner?.company_alias || undefined,
+          deepSearchAt: partner?.enriched_at || partner?.ai_parsed_at || undefined,
+          enrichmentData: partner?.enrichment_data || undefined,
         });
       } else if (st === "business_card") {
         const bc = bcMap[sid];
