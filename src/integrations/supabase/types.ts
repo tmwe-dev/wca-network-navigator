@@ -651,6 +651,51 @@ export type Database = {
           },
         ]
       }
+      client_assignments: {
+        Row: {
+          agent_id: string
+          assigned_at: string
+          id: string
+          manager_id: string | null
+          source_id: string
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          assigned_at?: string
+          id?: string
+          manager_id?: string | null
+          source_id: string
+          source_type?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          assigned_at?: string
+          id?: string
+          manager_id?: string | null
+          source_id?: string
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assignments_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cockpit_queue: {
         Row: {
           created_at: string
