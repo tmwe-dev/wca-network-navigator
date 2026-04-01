@@ -1,53 +1,35 @@
 
 
-# Pulizia Header e Barra — Rimuovere Doppioni, Spostare Elementi
+# Spostare la Barra Blu nel Top Header
 
-## Situazione attuale
+## Problema
 
-### Header globale (AppLayout)
-- **Destra**: 3 icone doppione (Workspace, Email, Agenda) + icona Bot AI → le prime 3 vanno eliminate
-- **Centro**: ConnectionStatusBar (barra azzurra con stato connessioni, globo, outreach queue)
-- **Sinistra**: Hamburger menu + switch area (CRM/Network)
-
-### Barra interna Operations (Network)
-- **Destra**: Bot AI (doppione dell'header) + Sun/Moon (toggle tema, doppione del sidebar)
-
-### Bottom
-- **Destra**: Sparkles (IntelliFlow) — resta
-- **Sinistra**: ClaudeBadge — resta
+La pagina Network ha una barra interna (righe 141-185 di `Operations.tsx`) con: globo rotante, titolo "Network", toggle Partner/Business Cards, stats partner, e azioni. Questa barra occupa spazio verticale quando il header globale (`AppLayout.tsx`) ha già spazio sufficiente.
 
 ## Piano
 
-### 1. Rimuovere i 3 pulsanti doppione dall'header globale
-**File**: `src/components/layout/AppLayout.tsx`
-- Eliminare i 3 `<Button>` per Workspace, Email, Agenda (righe 149-151)
-- Mantenere solo il pulsante Bot AI (riga 152)
+### 1. Usare un Portal/Slot per iniettare contenuto nell'header
 
-### 2. Spostare contenuti della ConnectionStatusBar nell'header
-**File**: `src/components/layout/AppLayout.tsx`
-- La ConnectionStatusBar (barra azzurra con i 4 pallini di stato connessioni + coda outreach) viene integrata direttamente nell'header, vicino al pulsante AI, guadagnando spazio ora che le 3 icone sono state rimosse
-- Lo stile diventa più compatto, inline con l'header, senza barra separata
+L'header globale ha già un `div#campaign-header-controls` (riga 146) pensato come slot per contenuti delle pagine figlie. Lo sfruttiamo:
 
-### 3. Rimuovere toggle tema e Bot dalla barra interna Operations
-**File**: `src/pages/Operations.tsx`
-- Eliminare il pulsante Sun/Moon (riga 187-189) — il toggle tema è già nel sidebar hamburger
-- Eliminare il pulsante Bot AI (riga 184-186) — c'è già nell'header globale
+**`src/pages/Operations.tsx`**:
+- Rimuovere la barra interna (righe 141-186) come elemento fisso
+- Usare `createPortal` per renderizzare il contenuto (globo, toggle Partner/BCA, stats, azioni) dentro `#campaign-header-controls` nell'header globale
+- Il contenuto sarà compatto, inline, adatto all'altezza dell'header (h-11/h-12)
 
-### 4. Trasformare "Cerca paese" in icona + popup
-**File**: `src/components/download/CountryGrid.tsx`
-- Il campo di ricerca testuale per i paesi diventa un'icona Search
-- Click sull'icona → apre un popover/dialog con l'elenco paesi selezionabile
-- Libera spazio verticale nella colonna sinistra
+### 2. Adattare lo stile
+
+- Il globo rotante, il toggle Partner/Business Cards e le stats diventano elementi inline compatti (altezza ~28px) coerenti con l'header
+- Rimuovere bordi e background della barra — si fondono nel background dell'header
+- Il padding verticale del main content guadagna ~52px di spazio utile
 
 ## File modificati
 
 | File | Modifica |
 |------|----------|
-| `src/components/layout/AppLayout.tsx` | Rimuovere 3 icone doppione, integrare ConnectionStatusBar nell'header |
-| `src/pages/Operations.tsx` | Rimuovere Bot AI e toggle tema dalla barra interna |
-| `src/components/download/CountryGrid.tsx` | Cerca paese → icona + popover |
+| `src/pages/Operations.tsx` | Barra interna → `createPortal` in `#campaign-header-controls`, stile compatto inline |
 
 ## Risultato
 
-Header pulito con solo: hamburger, switch area, stato connessioni compatto, pulsante AI. Nessun doppione. Cerca paese compatto come icona.
+Il contenuto della barra blu (globo, toggle, stats) appare direttamente nel top header globale. Nessuna barra separata sotto. Più spazio per le 3 colonne.
 
