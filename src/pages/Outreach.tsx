@@ -64,6 +64,7 @@ export default function Outreach() {
         {tab === "inuscita" && <InUscitaTab />}
         {tab === "attivita" && <AttivitaTab />}
         {tab === "circuito" && <HoldingPatternTab />}
+        {tab === "messaggi" && <InboxView />}
       </div>
     </div>
   );
