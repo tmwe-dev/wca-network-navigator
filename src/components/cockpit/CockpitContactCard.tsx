@@ -19,6 +19,17 @@ interface Contact {
   originDetail: string;
 }
 
+export interface EnrichmentState {
+  isActive: boolean;
+  scrapingPhase: "idle" | "visiting" | "extracting" | "enriching" | "reviewing" | "generating";
+  linkedinProfile?: {
+    name?: string;
+    headline?: string;
+    location?: string;
+    connectionStatus?: string;
+  } | null;
+}
+
 interface CockpitContactCardProps {
   contact: Contact;
   flag: string;
@@ -29,6 +40,7 @@ interface CockpitContactCardProps {
   onDragEnd: () => void;
   onDeepSearch: () => void;
   onAlias: () => void;
+  enrichmentState?: EnrichmentState;
 }
 
 const channelIcon: Record<string, any> = {
@@ -89,28 +101,43 @@ const originAccent: Record<ContactOrigin, string> = {
   manual: "from-emerald-500/60 to-emerald-500/10",
 };
 
-export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias }: CockpitContactCardProps) {
+const phaseLabel: Record<string, string> = {
+  visiting: "🔍 Visita profilo...",
+  extracting: "📋 Estrazione dati...",
+  enriching: "🧠 Arricchimento...",
+  reviewing: "👁️ In revisione",
+  generating: "✨ Generazione messaggio...",
+};
+
+export function CockpitContactCard({ contact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, enrichmentState }: CockpitContactCardProps) {
   const oc = originConfig[contact.origin];
+  const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
+  const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
-      draggable
+      draggable={!isProcessing}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={isProcessing ? {} : { scale: 1.02, y: -2 }}
+      whileTap={isProcessing ? {} : { scale: 0.98 }}
       className={cn(
-        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-lg overflow-hidden",
-        contact.origin === "bca"
-          ? isSelected
-            ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10 hover:shadow-amber-500/10"
-            : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
-          : isSelected
-            ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10 hover:shadow-primary/5"
-            : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
+        "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 transition-all duration-300 hover:shadow-lg overflow-hidden",
+        isProcessing
+          ? "border-[hsl(210,80%,55%)]/60 bg-[hsl(210,80%,55%)]/5 shadow-md shadow-[hsl(210,80%,55%)]/10 cursor-default animate-pulse"
+          : "cursor-grab active:cursor-grabbing",
+        !isProcessing && (
+          contact.origin === "bca"
+            ? isSelected
+              ? "border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/10 hover:shadow-amber-500/10"
+              : "border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/5"
+            : isSelected
+              ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10 hover:shadow-primary/5"
+              : "border-border/80 hover:border-primary/30 hover:shadow-primary/5"
+        )
       )}
     >
       {/* Left accent bar based on origin */}
@@ -141,6 +168,18 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
               </div>
               <div className="text-xs text-foreground/80 truncate">{contact.company}</div>
               <div className="text-[11px] text-muted-foreground">{contact.role}</div>
+              {/* Live enrichment phase indicator */}
+              {isProcessing && enrichmentState?.scrapingPhase && (
+                <div className="text-[10px] font-medium text-[hsl(210,80%,55%)] mt-0.5">
+                  {phaseLabel[enrichmentState.scrapingPhase] || "⏳ Elaborazione..."}
+                </div>
+              )}
+              {/* LinkedIn headline after enrichment */}
+              {hasLinkedin && enrichmentState?.linkedinProfile?.headline && (
+                <div className="text-[10px] text-muted-foreground/80 mt-0.5 truncate max-w-[180px]" title={enrichmentState.linkedinProfile.headline}>
+                  💼 {enrichmentState.linkedinProfile.headline}
+                </div>
+              )}
             </div>
             {/* Origin badge + Priority */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -154,6 +193,20 @@ export function CockpitContactCard({ contact, flag, index, isSelected, onToggleS
               <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
                 P{contact.priority}
               </span>
+              {/* LinkedIn status badge */}
+              {hasLinkedin && (
+                <span className={cn(
+                  "text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1",
+                  enrichmentState?.linkedinProfile?.connectionStatus === "connected"
+                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                    : enrichmentState?.linkedinProfile?.connectionStatus === "pending"
+                    ? "bg-warning/15 text-warning border-warning/30"
+                    : "bg-[hsl(210,80%,55%)]/15 text-[hsl(210,80%,55%)] border-[hsl(210,80%,55%)]/30"
+                )}>
+                  <Linkedin className="w-2.5 h-2.5" />
+                  {enrichmentState?.linkedinProfile?.connectionStatus === "connected" ? "✓" : enrichmentState?.linkedinProfile?.connectionStatus === "pending" ? "⏳" : "✓"}
+                </span>
+              )}
             </div>
           </div>
 

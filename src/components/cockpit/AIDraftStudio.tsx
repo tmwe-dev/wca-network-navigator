@@ -668,7 +668,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
 
       {/* Actions footer */}
       <AnimatePresence>
-        {draft.body && !draft.isGenerating && (
+        {draft.body && !draft.isGenerating && draft.scrapingPhase === "idle" && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

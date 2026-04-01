@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Sparkles, X, Users, Trash2 } from "lucide-react";
-import { CockpitContactCard } from "./CockpitContactCard";
+import { CockpitContactCard, type EnrichmentState } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,13 +39,15 @@ interface ContactStreamProps {
   onSingleAlias: (id: string) => void;
   onBulkDelete?: () => void;
   onBatchMode?: () => void;
+  activeContactId?: string | null;
+  enrichmentState?: EnrichmentState;
 }
 
 export function ContactStream({
   viewMode, searchQuery, onSearchChange, filters, contacts, isLoading,
   onDragStart, onDragEnd,
   selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode,
+  onBulkDeepSearch, onBulkAlias, onSingleDeepSearch, onSingleAlias, onBulkDelete, onBatchMode, activeContactId, enrichmentState,
 }: ContactStreamProps) {
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
@@ -162,6 +164,7 @@ export function ContactStream({
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
                 onAlias={() => onSingleAlias(contact.id)}
+                enrichmentState={activeContactId === contact.id ? enrichmentState : undefined}
               />
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ContactActionMenu contact={contact} />
