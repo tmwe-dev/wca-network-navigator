@@ -164,6 +164,7 @@ export function ContactStream({
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
                 onAlias={() => onSingleAlias(contact.id)}
+                enrichmentState={activeContactId === contact.id ? enrichmentState : undefined}
               />
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ContactActionMenu contact={contact} />
