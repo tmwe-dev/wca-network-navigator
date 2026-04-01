@@ -48,6 +48,7 @@ const Global = lazy(() => import("./pages/Global"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
+const TestLinkedInSearch = lazy(() => import("./pages/TestLinkedInSearch"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
 const SystemMap = lazy(() => import("./pages/SystemMap"));
 const Guida = lazy(() => import("./pages/Guida"));
