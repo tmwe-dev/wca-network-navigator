@@ -104,6 +104,7 @@ const Cockpit = () => {
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
   const smartSearch = useSmartLinkedInSearch();
+  const linkedInLookup = useLinkedInLookup();
 
   // Agent assignment
   const { agents } = useAgents();
