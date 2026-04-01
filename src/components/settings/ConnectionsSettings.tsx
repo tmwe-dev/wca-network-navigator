@@ -47,9 +47,10 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
 
   const [connectingAll, setConnectingAll] = useState(false);
 
-  // Derived states
+  // Derived states — credentials configured vs actually authenticated
   const liHasCreds = !!(liEmail && liPass) || !!(settings?.["linkedin_li_at"]);
-  const liConnected = liExt.isAvailable || liHasCreds;
+  const [liSessionOk, setLiSessionOk] = useState(false);
+  const liConnected = liSessionOk; // Only true if REAL session is verified
   const waConnected = waExt.isAvailable;
 
   useEffect(() => {
