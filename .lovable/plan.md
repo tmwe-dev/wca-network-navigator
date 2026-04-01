@@ -1,48 +1,68 @@
 
 
-# Fix Visibilità Dati AI nelle Card del Cockpit
+# Ristrutturazione Header e Cockpit — Pulizia Totale
 
-## Problemi identificati
+## Problemi dallo screenshot
 
-1. **Il pannello espandibile si apre SOLO per contatti con `deepSearchAt`** — se fai Deep Search o LinkedIn Lookup su un contatto "manuale" e i dati non si salvano ancora, non hai modo di espandere la card
-2. **Solo il pulsante ✨ togla l'espansione** — il click sulla card non fa nulla
-3. **I dati LinkedIn "live" (dal flusso in corso) non vengono mostrati** nel pannello espanso — `enrichmentState.linkedinProfile` viene ignorato
-4. **I dati enrichment vengono caricati solo per `imported_contacts`** — i `partner_contacts` non passano `enrichmentData` né `deepSearchAt` dal DB
-5. **Pulsanti Deep Search e Alias nel footer sono fake** — mostrano solo un toast, creano confusione
-6. **Menu 3 puntini sovrapposto ai badge** — posizionamento `absolute top-2 right-2` si scontra con Manuale/P6
+1. **Header duplicati**: il pulsante `SlidersHorizontal` nell'header (riga 128) duplica la linguetta lilla a sinistra (riga 99-108). Il pulsante `Target` nell'header (riga 148) duplica la linguetta lilla a destra (riga 109-118).
+2. **CreditCounter** occupa spazio prezioso nell'header con dati non utili (372 crediti, 228 consumati) — da rimuovere dall'header.
+3. **Icone header senza tooltip**: Workspace, Email, Agenda, Bot, Search — nessuna spiega cosa fa al hover.
+4. **Search ⌘K in alto a destra** si confonde con la barra AI del Cockpit e il "Cerca contatto" nella ContactStream — 3 campi di ricerca visibili contemporaneamente.
+5. **Doppio livello di tab**: il Cockpit ha le tab di navigazione (Cockpit/In Uscita/Attività/Circuito) PIÙ le source tab (Tutti/WCA/Prospect/Contatti/BCA) PIÙ la barra AI — troppi livelli orizzontali.
+6. **Linguette sidebar** si sovrappongono agli elementi del contenuto per mancanza di margini.
+7. **Card contatto troppo piccola** per la quantità di informazioni che contiene.
 
-## Modifiche
+## Piano di intervento
 
-### 1. `CockpitContactCard.tsx` — Card espandibile ovunque + dati live
+### 1. `AppLayout.tsx` — Pulizia header
 
-- **Click sulla card** togla `isExpanded` (esclusi checkbox, drag handle, pulsanti)
-- Il pulsante ✨/chevron diventa visibile **sempre** (non solo se `isAiProcessed`), cambia icona: se ci sono dati → ✨, altrimenti → ChevronDown generico
-- **Rimuovere le icone duplicate nel footer** (Search e Sparkles hover) — le azioni restano solo nel pannello espanso
-- Nel pannello espanso, aggiungere sezione **"Dati LinkedIn Live"** se `enrichmentState?.linkedinProfile` esiste: mostra nome, headline, location, connectionStatus in un mini-riquadro blu
-- Se `hasEnrichmentData` → mostra `ContactEnrichmentCard` (come ora)
-- Se nessun dato → mostra pulsanti Deep Search + LinkedIn Lookup (come ora)
-- Aggiungere `pr-8` al container interno per lasciare spazio al menu 3 puntini
+**Rimuovere**:
+- `CreditCounter` dall'header (riga 147) — i crediti restano accessibili solo nelle Impostazioni
+- Pulsante `SlidersHorizontal` duplicato dall'header (riga 128) — c'è già la linguetta lilla
+- Pulsante `Target` duplicato dall'header (riga 148) — c'è già la linguetta lilla
 
-### 2. `ContactStream.tsx` — Menu non sovrapposto
+**Aggiungere tooltip** a tutte le icone rimaste nell'header (Workspace, Email, Agenda, Bot) con testo chiaro in italiano.
 
-- Spostare il wrapper del `ContactActionMenu` da `absolute top-2 right-2` a `absolute bottom-2 right-2` con sfondo semi-trasparente (`bg-card/90 rounded-md`)
-- Passare `enrichmentState` correttamente alla card (già fatto, ma verificare che `activeContactId` matchi)
+**Linguette lilla**: aggiungere `mt-2` o spostare `top-16` → `top-[4.5rem]` per creare margine con l'header ed evitare sovrapposizioni.
 
-### 3. `useCockpitContacts.ts` — Enrichment per partner_contacts
+### 2. `TopCommandBar.tsx` — Compattare la barra comandi
 
-- Nella query dei partner, aggiungere `enrichment_data, enriched_at, ai_parsed_at` dalla tabella `partners`
-- Mappare `deepSearchAt` e `enrichmentData` anche per `partner_contact` e `business_card` (se disponibili)
-- Aggiungere `company_alias, contact_alias` nella select di `imported_contacts` e mapparli nell'interfaccia
+- **Rimuovere** la barra `Search…` ⌘K dall'header — l'unica search sarà il campo "Cerca contatto" nella ContactStream, e il comando AI nella TopCommandBar
+- **Unificare**: le source tab (Tutti/WCA/Prospect etc.) e i controlli vista (card/list) sulla stessa riga, così si risparmia un livello verticale
+- **Rimuovere** il pulsante "Test LI" (debug) dalla produzione
+- Compattare il layout: source tab a sinistra, toggle vista a destra, barra AI sotto — totale 2 righe invece di 3
 
-### 4. `Cockpit.tsx` — Passare enrichmentState a ContactStream
+### 3. `ContactStream.tsx` — Pulizia barra filtri/selezione
 
-- Verificare che `enrichmentState` (con `linkedinProfile`) venga correttamente propagato alla card attiva, anche durante LinkedIn Lookup singolo e Deep Search singolo
+- Compattare la barra di selezione e i pulsanti bulk: quando selectionCount > 0, i pulsanti si mostrano su una riga con wrap, ma con dimensioni uniformi e senza overflow
+- Rimuovere il campo "Cerca contatto, azienda..." — la ricerca avviene già nella TopCommandBar (campo AI) che filtra i contatti
+
+### 4. `CockpitContactCard.tsx` — Card più grande e leggibile
+
+- Aumentare padding da `p-3` a `p-4`
+- Nome contatto con `text-sm font-semibold` invece di `text-xs`
+- Azienda e ruolo con `text-xs` invece di `text-[10px]`
+- Icone canali con `w-4 h-4` invece di `w-3.5 h-3.5`
+- Dare più spazio verticale tra le righe di informazioni
+
+### 5. `main.css / contenuto` — Margini per linguette sidebar
+
+- Il contenitore `main` ha `mx-[14px]` — verificare che sia sufficiente per non sovrapporsi alle linguette lilla (w-8 = 32px). Aumentare a `mx-[36px]` per garantire clearance.
 
 ## File modificati
 
 | File | Cosa |
 |------|------|
-| `src/components/cockpit/CockpitContactCard.tsx` | Card cliccabile, dati live LinkedIn, rimozione footer fake, padding per menu |
-| `src/components/cockpit/ContactStream.tsx` | Menu spostato in basso, nessuna sovrapposizione |
-| `src/hooks/useCockpitContacts.ts` | Enrichment data per tutti i source_type, alias visibili |
+| `src/components/layout/AppLayout.tsx` | Rimuovere CreditCounter, duplicati sidebar, aggiungere tooltip, fix margini linguette |
+| `src/components/cockpit/TopCommandBar.tsx` | Compattare su 2 righe, rimuovere Test LI |
+| `src/components/cockpit/ContactStream.tsx` | Rimuovere campo cerca duplicato, compattare bulk actions |
+| `src/components/cockpit/CockpitContactCard.tsx` | Card più grande con testo e icone leggibili |
+
+## Risultato
+
+- Header pulito: hamburger + area switch + indicatore processi + status connessioni + 4 icone con tooltip
+- Cockpit: 2 righe di controllo (tab + vista | barra AI) invece di 4
+- Un solo campo di ricerca visibile (nella barra AI)
+- Card contatto più grande e leggibile
+- Nessuna sovrapposizione tra linguette e contenuto
 
