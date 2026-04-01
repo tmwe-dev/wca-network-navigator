@@ -126,7 +126,7 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
       className={cn(
         "group relative rounded-xl border bg-card backdrop-blur-xl p-3.5 transition-all duration-300 hover:shadow-lg overflow-hidden",
         isProcessing
-          ? "border-[hsl(210,80%,55%)]/60 bg-[hsl(210,80%,55%)]/5 shadow-md shadow-[hsl(210,80%,55%)]/10 cursor-default animate-pulse"
+          ? "border-[hsl(210,80%,55%)]/40 bg-[hsl(210,80%,55%)]/[0.03] shadow-sm shadow-[hsl(210,80%,55%)]/5 cursor-default animate-soft-pulse"
           : isWorked
           ? "border-emerald-500/60 bg-emerald-500/5 cursor-grab active:cursor-grabbing"
           : "cursor-grab active:cursor-grabbing",
