@@ -251,7 +251,17 @@ const Cockpit = () => {
     const isLinkedInChannel = channel === "linkedin";
 
     // Auto-search LinkedIn URL if missing and channel is LinkedIn
-    if (isLinkedInChannel && liBridge.isAvailable && !linkedinUrl) {
+    // Preflight: check real auth before searching
+    let liAuthOk = false;
+    if (isLinkedInChannel && liBridge.isAvailable) {
+      const authCheck = await liBridge.ensureAuthenticated(30000);
+      liAuthOk = authCheck.ok;
+      if (!liAuthOk) {
+        toast.error("LinkedIn non autenticato. Accedi a LinkedIn nel browser e riprova.");
+      }
+    }
+
+    if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
       setDraftState({
         channel, contactId: firstId, contactName: contact.name,
         contactEmail: contact.email, contactPhone: contact.phone,
