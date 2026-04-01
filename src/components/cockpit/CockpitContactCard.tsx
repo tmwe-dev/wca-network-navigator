@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard } from "lucide-react";
+import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard, Briefcase } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
 import type { ContactOrigin } from "@/pages/Cockpit";
 
 interface Contact {
