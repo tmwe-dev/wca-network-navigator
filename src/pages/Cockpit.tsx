@@ -238,6 +238,10 @@ const Cockpit = () => {
     const contact = contactsMap[firstId];
     if (!contact) return;
 
+    // Auto-assign agent on first activity
+    const sourceType = contact.origin === "report_aziende" ? "prospect" : contact.origin === "import" ? "contact" : "partner";
+    autoAssign(contact.partnerId || contact.sourceId, sourceType);
+
     if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
     const linkedinUrl = contact.linkedinUrl || null;
