@@ -45,7 +45,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 
 // ── Legacy pages kept alive for direct access / deep links ──
 const Global = lazy(() => import("./pages/Global"));
-
+const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
