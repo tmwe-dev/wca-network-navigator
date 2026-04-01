@@ -316,7 +316,7 @@ export function useLinkedInFlow() {
               enrichment.website_error = e.message;
             }
 
-            await sleep(2000 + Math.random() * 1500);
+            await sleep(4000 + Math.random() * 3000);
           } else if (isCacheFresh) {
             enrichment.website_ok = true;
             enrichment.website_cached = true;
