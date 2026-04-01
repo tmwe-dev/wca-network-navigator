@@ -197,6 +197,16 @@ export function TopCommandBar({ onAIActions, viewMode, onViewChange, searchQuery
             <List className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Test LinkedIn */}
+        <button
+          type="button"
+          onClick={() => navigate("/test-linkedin")}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 backdrop-blur-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
+        >
+          <FlaskConical className="w-3.5 h-3.5" />
+          Test LI
+        </button>
       </form>
     </motion.div>
 
