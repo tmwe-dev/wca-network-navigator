@@ -142,7 +142,7 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
               active ? activeClass : "bg-muted/30 text-muted-foreground/25"
             )}
           >
-            <Icon className="w-3 h-3" />
+            <Icon className="w-4 h-4" />
           </span>
         </InfoTooltip>
       ))}
