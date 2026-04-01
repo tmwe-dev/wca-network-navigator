@@ -17,6 +17,7 @@ function TabFallback() {
 export default function Outreach() {
   const [tab, setTab] = useState("cockpit");
   const { setOutreachTab } = useGlobalFilters();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
