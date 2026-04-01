@@ -8,6 +8,7 @@ import {
   Tooltip, TooltipContent, TooltipTrigger
 } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { clean, getContactQuality } from "./contactHelpers";
 import type { LeadStatus } from "@/hooks/useContacts";
 import { format } from "date-fns";
