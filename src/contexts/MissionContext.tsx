@@ -3,6 +3,17 @@ import { useWorkspaceDocuments, type WorkspaceDoc } from "@/hooks/useWorkspaceDo
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import type { EmailQuality } from "@/components/workspace/QualitySelector";
 
+export interface SelectedRecipient {
+  partnerId: string;
+  companyName: string;
+  contactId?: string;
+  contactName?: string;
+  email: string | null;
+  city: string;
+  countryName: string;
+  isEnriched: boolean;
+}
+
 interface MissionState {
   goal: string;
   setGoal: (v: string) => void;
@@ -22,6 +33,10 @@ interface MissionState {
   loadPreset: (preset: WorkspacePreset) => void;
   quality: EmailQuality;
   setQuality: (q: EmailQuality) => void;
+  recipients: SelectedRecipient[];
+  addRecipient: (r: SelectedRecipient) => void;
+  removeRecipient: (idx: number) => void;
+  clearRecipients: () => void;
 }
 
 const MissionCtx = createContext<MissionState | null>(null);
