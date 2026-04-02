@@ -383,9 +383,9 @@ async function handleGoogleSearch(msg) {
   const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(msg.query) + '&num=' + limit;
 
   // Check cache first
-  const cacheKey = 'gsearch:' + msg.query;
+  const cacheKey = 'gsearch:v2:' + msg.query;
   if (!msg.skipCache) {
-    const cached = await Cache.get('domain', cacheKey);
+    const cached = await Cache.get('search', cacheKey);
     if (cached) return { ...cached, _fromCache: true };
   }
 
