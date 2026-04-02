@@ -19,7 +19,6 @@ export default function CRM() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <ActiveContextBar />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
         <div className="flex-1 min-w-0 overflow-hidden">

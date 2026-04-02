@@ -238,7 +238,7 @@ export default function HubOperativo() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)] bg-background">
-      <ActiveContextBar />
+      
       {/* Glass top bar */}
       <div className="shrink-0 px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-3">
