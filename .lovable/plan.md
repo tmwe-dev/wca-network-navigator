@@ -1,138 +1,78 @@
 
-Diagnosi chirurgica della procedura email
 
-1. Cosa ho verificato
-- `supabase/functions/check-inbox/index.ts`
-- `src/components/outreach/EmailInboxView.tsx`
-- `src/hooks/useChannelMessages.ts`
-- dati reali salvati in `channel_messages`
-- log reali della funzione `check-inbox`
+# Piano: Download Corpo Email + Allegati con deno-imap
 
-2. Il problema vero del body
-Il body c’è, ma viene salvato e mostrato male.
+## Situazione
 
-Perché:
-- il backend scarica sezioni MIME (`bodyParts`) e le tratta come testo già pronto
-- poi usa `TextDecoder()` direttamente, senza decodificare davvero il contenuto email
-- non gestisce correttamente `base64` e `quoted-printable`
-- in più, in alcuni casi salva pezzi sbagliati del MIME invece del contenuto reale
+La libreria `@workingdevshero/deno-imap` supporta nativamente:
+- `bodyStructure: true` nel fetch per ottenere la struttura MIME
+- `hasAttachments()` / `findAttachments()` per individuare allegati
+- `decodeAttachment()` per decodificarli
+- Fetch di sezioni MIME specifiche (es. `BODY[1]` per text/plain, `BODY[1.1]` per HTML)
 
-Risultato concreto:
-- vedi stringhe tipo `SG9sYS...==` = body ancora in base64
-- vedi `=3D`, `=20` = quoted-printable non decodificato
-- vedi `BODY[1.2] {27}` = wrapper/protocollo IMAP finito nel body
-- vedi `--_000...` e header `Content-Type:` = boundary MIME/container, non testo finale
-- a volte finisce HTML grezzo dentro `body_text`
+Attualmente il fetch usa `body: true` ma il corpo arriva vuoto perché serve il fetch per sezione MIME specifica.
 
-3. Perché si vede “di merda” a schermo
-Il frontend oggi mostra solo `body_text`.
+## Modifiche
 
-In `EmailInboxView.tsx` il dettaglio usa:
-- `selectedMsg.body_text || "(corpo vuoto)"`
+### 1. Edge Function `check-inbox/index.ts`
 
-Quindi:
-- se il backend salva HTML in `body_html`, l’interfaccia non lo usa
-- se il backend mette HTML dentro `body_text`, tu lo vedi come testo sporco
-- se il backend salva base64 o boundary MIME, tu vedi esattamente quella sporcizia
+- Importare le utility: `hasAttachments`, `findAttachments`, `decodeAttachment`
+- Prima fetch: ottenere `envelope` + `bodyStructure` per tutti i messaggi
+- Analizzare la bodyStructure per trovare le sezioni text/plain e text/html
+- Seconda fetch per UID: richiedere `BODY[sezione]` per il testo e per ogni allegato
+- Per ogni allegato: decodificare con `decodeAttachment()`, uploadare su Storage bucket `workspace-docs` nel path `email-attachments/{userId}/{messageId}/{filename}`
+- Salvare `body_text` e `body_html` in `channel_messages`
+- Registrare ogni allegato nella nuova tabella `email_attachments`
+- Limiti di sicurezza: max 10 allegati per email, max 10MB per file
 
-Quindi il problema è sia di estrazione backend sia di rendering frontend.
+### 2. Migrazione SQL — Nuova tabella `email_attachments`
 
-4. Perché alcune mail risultano “Sconosciuto”
-Ci sono due casi distinti.
+```sql
+CREATE TABLE public.email_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID REFERENCES channel_messages(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
+  filename TEXT NOT NULL,
+  content_type TEXT,
+  size_bytes INTEGER,
+  storage_path TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-Caso A: mittente visualizzato come `Sconosciuto`
-- succede quando `raw_payload.sender_name` e `from_address` sono vuoti
-- questo non vuol dire che la mail non abbia mittente
-- vuol dire che il parser non è riuscito a estrarlo
+ALTER TABLE public.email_attachments ENABLE ROW LEVEL SECURITY;
 
-La causa precisa è qui:
-- la funzione fa un fetch unico con `envelope + bodyStructure`
-- se il parsing di `bodyStructure` fallisce, salta anche l’`envelope`
-- quando questo succede, il codice continua con `envelope = {}`
-- quindi salva:
-  - `from_address` vuoto
-  - `subject` vuoto
-  - `date` vuota
-  - `sender_name` vuoto
-  - `message_id_external` di fallback tipo `uid_...`
+CREATE POLICY "Users manage own email_attachments"
+  ON public.email_attachments FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+```
 
-Questo è confermato dai log:
-- `ImapParseError: Invalid body structure format`
-- errore su messaggi MIME complessi, ad esempio con `message/rfc822` allegato `.eml`
+### 3. Flusso per ogni messaggio
 
-Nel database ho trovato:
-- 8 email con `from_address` vuoto
+```text
+1. fetch(uids, { envelope, bodyStructure })
+2. Per ogni msg:
+   a. Trova sezione text/plain → fetch BODY[sezione] → body_text
+   b. Trova sezione text/html → fetch BODY[sezione] → body_html
+   c. Se hasAttachments(bodyStructure):
+      - findAttachments() → lista {filename, section, encoding, size}
+      - Per ogni allegato ≤10MB:
+        fetch BODY[section] → decodeAttachment() → upload Storage
+        insert in email_attachments
+3. Upsert channel_messages con body_text + body_html
+```
 
-Caso B: `source_type = "unknown"`
-- questo non significa “mittente sconosciuto”
-- significa solo “email non associata a partner/contatto/prospect nel database interno”
+### File coinvolti
 
-Quindi:
-- una mail può avere mittente perfettamente letto
-- ma essere comunque `source_type = unknown` perché non matcha nessun record interno
+| File | Azione |
+|------|--------|
+| `supabase/functions/check-inbox/index.ts` | Aggiungere import utility, fetch bodyStructure, estrarre corpo e allegati, upload su Storage |
+| Migrazione SQL | Creare tabella `email_attachments` con RLS |
 
-Al momento, sulle 20 email recenti:
-- tutte hanno `source_type = 'unknown'`
+### Note tecniche
 
-Questo è un problema di matching CRM, non di ricezione email.
+- La libreria è la stessa (`@workingdevshero/deno-imap`), nessun cambio di dipendenze
+- Il bucket `workspace-docs` esiste già (privato) — perfetto per gli allegati
+- La colonna `body_html` esiste già in `channel_messages` ma non viene popolata — ora lo faremo
+- Il fetch per sezione MIME potrebbe richiedere fetch individuali per UID (un fetch per sezione per messaggio), quindi per evitare timeout limitiamo a 20 messaggi per sync invece di 50
 
-5. Errore architetturale principale
-Il punto più fragile è questo:
-- `client.fetch(... { envelope: true, bodyStructure: true })`
-
-Perché:
-- stai legando i dati “semplici” del messaggio (mittente, oggetto, data)
-- a una parte molto fragile (parsing MIME/bodyStructure)
-
-Quindi un errore sul MIME ti rompe anche mittente, subject e date.
-
-6. Problemi collaterali emersi
-Ne sono usciti altri due, importanti:
-
-- Data/ora in lista falsata:
-  - la funzione non salva la data reale del messaggio in `created_at`
-  - la mette solo in `raw_payload.date`
-  - quindi la UI ordina/mostra l’ora di import, non quella reale della mail
-  - per questo molte email risultano tutte con la stessa ora
-
-- Fallback troppo aggressivo:
-  - se non trova `text/plain` o `text/html`, il codice prende “qualunque part disponibile”
-  - questo spiega perché spesso finisce nel DB un boundary MIME o un blocco tecnico invece del contenuto leggibile
-
-7. Evidenze raccolte
-Dai dati reali:
-- 8 email con `from_address` vuoto
-- 10 email con subject vuoto o `(nessun oggetto)`
-- 2 email con body che inizia con `BODY[...]`
-- 4 email con body che inizia con boundary MIME `--_...`
-- 1 email con HTML salvato dentro `body_text`
-- 8 email con `body_html` presente, ma non usato dalla UI
-
-Dai log reali:
-- errori `ImapParseError: Invalid body structure format`
-- errore su MIME complessi / allegati `.eml`
-
-8. Sintesi finale
-Il body non manca.
-Il body viene:
-- estratto in modo fragile
-- salvato spesso nel formato sbagliato
-- mostrato dal frontend nel campo sbagliato
-
-E i “mittenti sconosciuti” non sono davvero sconosciuti:
-- in alcuni casi il parser ha perso l’envelope
-- negli altri casi `unknown` vuol dire solo “non associato ai tuoi contatti interni”
-
-Dettagli tecnici
-- Backend critico: `supabase/functions/check-inbox/index.ts`
-  - fetch envelope/bodyStructure: circa righe `281-286`
-  - parsing body sections: circa righe `337-379`
-  - salvataggio messaggio: circa righe `390-405`
-- Frontend critico: `src/components/outreach/EmailInboxView.tsx`
-  - lista mittente: `raw_payload?.sender_name || from_address || "Sconosciuto"`
-  - dettaglio body: mostra solo `body_text`
-
-Se vuoi, il passo successivo giusto non è “rifare tutto”, ma fare una correzione chirurgica in 3 punti:
-1. separare envelope e body fetch
-2. decodificare davvero il contenuto MIME
-3. far rendere `body_html` quando presente

@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { findAttachments as findAtts } from "jsr:@workingdevshero/deno-imap";
 import PostalMime from "npm:postal-mime@2.4.1";
 
 const corsHeaders = {
@@ -170,20 +169,30 @@ function getCaCertsForHost(host: string): string[] {
 /* ── Sender matching ── */
 
 async function matchSender(supabase: any, email: string) {
-  if (!email) return { source_type: "unknown", source_id: null, partner_id: null, name: "" };
+  if (!email || email === "@" || !email.includes("@")) return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto" };
   const emailLower = email.toLowerCase();
+  const domain = emailLower.split("@")[1];
+
+  // Exact match first
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
   if (pc) return { source_type: "partner_contact", source_id: pc.id, partner_id: pc.partner_id, name: pc.name };
   const { data: ic } = await supabase.from("imported_contacts").select("id, company_name, name").ilike("email", emailLower).limit(1).maybeSingle();
   if (ic) return { source_type: "imported_contact", source_id: ic.id, partner_id: null, name: ic.name || ic.company_name };
-  return { source_type: "unknown", source_id: null, partner_id: null, name: email };
-}
+  const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
+  if (prospect) return { source_type: "prospect", source_id: prospect.id, partner_id: null, name: prospect.company_name };
 
-function extractEmailAddress(addr: { mailbox?: string; host?: string } | undefined): string {
-  if (!addr) return "";
-  return `${addr.mailbox || ""}@${addr.host || ""}`.toLowerCase();
+  // Domain fallback — match by @domain
+  if (domain) {
+    const domainPattern = `%@${domain}`;
+    const { data: dp } = await supabase.from("partners").select("id, company_name").ilike("email", domainPattern).limit(1).maybeSingle();
+    if (dp) return { source_type: "partner", source_id: dp.id, partner_id: dp.id, name: dp.company_name };
+    const { data: dpc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", domainPattern).limit(1).maybeSingle();
+    if (dpc) return { source_type: "partner_contact", source_id: dpc.id, partner_id: dpc.partner_id, name: dpc.name };
+  }
+
+  return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
 
 /* ── Main handler ── */
@@ -264,127 +273,133 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 5);
 
     const messages: any[] = [];
     let maxUid = lastUid;
-    const parser = new PostalMime();
+
+    const postalParser = new PostalMime();
 
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
         try {
-          // ── Step 1: Fetch envelope ONLY (robust, never fails on MIME) ──
-          let envelope: any = {};
+          // Always fetch full RFC822 and parse with postal-mime for reliability
+          let rawEmail: Uint8Array | null = null;
           try {
-            const envResult = await client.fetch(String(uid), {
+            const rawFetch = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
-              envelope: true,
+              full: true,
             } as any);
-            if (envResult?.[0]) {
-              envelope = envResult[0].envelope || {};
+            if (rawFetch?.[0]?.raw) {
+              rawEmail = rawFetch[0].raw;
             }
-          } catch (envErr: any) {
-            console.warn(`[check-inbox] Envelope fetch error UID ${uid}:`, envErr.message);
+          } catch (rawErr: any) {
+            console.warn(`[check-inbox] RFC822 fetch error UID ${uid}:`, rawErr.message);
           }
 
-          const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
-          const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
-          const subject = envelope.subject || "(nessun oggetto)";
-          const messageId = envelope.messageId || `uid_${uid}_${Date.now()}`;
-          const emailDate = envelope.date || "";
-          const senderName = envelope.from?.[0]
-            ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
-            : fromAddr;
-
+          let fromAddr = "";
+          let toAddr = "";
+          let subject = "(nessun oggetto)";
+          let messageId = `uid_${uid}_${Date.now()}`;
+          let date = "";
+          let senderName = "";
           let bodyText = "";
           let bodyHtml = "";
           let attachmentCount = 0;
+          let inReplyTo: string | null = null;
 
-          // ── Step 2: Fetch full RFC822 source and parse with postal-mime ──
-          try {
-            const bodyResult = await client.fetch(String(uid), {
-              byUid: true,
-              uid: true,
-              source: true,
-            } as any);
-
-            let rawSource: Uint8Array | null = null;
-
-            if (bodyResult?.[0]) {
-              const msg = bodyResult[0];
-              // Try different ways the library might return source data
-              if (msg.source instanceof Uint8Array) {
-                rawSource = msg.source;
-              } else if (typeof msg.source === "string") {
-                rawSource = new TextEncoder().encode(msg.source);
-              } else if (msg.raw instanceof Uint8Array) {
-                rawSource = msg.raw;
-              } else if (typeof msg.raw === "string") {
-                rawSource = new TextEncoder().encode(msg.raw);
-              }
-            }
-
-            // If source fetch didn't work, try BODY[] via executeCommand
-            if (!rawSource) {
-              try {
-                const rawCmd = `UID FETCH ${uid} BODY[]`;
-                const rawResponse = await (client as any).executeCommand(rawCmd);
-                // The response contains literal data - find it
-                let collecting = false;
-                const chunks: string[] = [];
-                for (const line of rawResponse) {
-                  if (typeof line === "string") {
-                    if (line.includes("BODY[]") && line.includes("{")) {
-                      collecting = true;
-                      continue;
-                    }
-                    if (collecting) {
-                      if (line.startsWith(")") || line.match(/^\S+ OK/)) {
-                        collecting = false;
-                      } else {
-                        chunks.push(line);
-                      }
-                    }
-                  } else if (line instanceof Uint8Array) {
-                    rawSource = line;
-                    break;
-                  }
+          if (rawEmail) {
+            try {
+              const parsed = await postalParser.parse(rawEmail);
+              
+              // From
+              if (parsed.from?.address) {
+                fromAddr = parsed.from.address.toLowerCase();
+                senderName = parsed.from.name || fromAddr;
+              } else if (parsed.headers) {
+                // Fallback: parse raw From header
+                const fromHeader = parsed.headers.find((h: any) => h.key === "from");
+                if (fromHeader?.value) {
+                  const emailMatch = fromHeader.value.match(/<([^>]+)>/);
+                  fromAddr = emailMatch ? emailMatch[1].toLowerCase() : fromHeader.value.trim().toLowerCase();
+                  senderName = fromHeader.value.replace(/<[^>]+>/, "").trim() || fromAddr;
                 }
-                if (!rawSource && chunks.length > 0) {
-                  rawSource = new TextEncoder().encode(chunks.join("\r\n"));
-                }
-              } catch (rawErr: any) {
-                console.warn(`[check-inbox] BODY[] fetch error UID ${uid}:`, rawErr.message);
               }
-            }
 
-            if (rawSource && rawSource.length > 0) {
-              // Parse with postal-mime - handles base64, quoted-printable, multipart, everything
-              const parsed = await parser.parse(rawSource);
+              // To
+              if (parsed.to?.[0]?.address) {
+                toAddr = parsed.to[0].address.toLowerCase();
+              }
+
+              // Subject
+              subject = parsed.subject || "(nessun oggetto)";
+
+              // Message-ID
+              messageId = parsed.messageId || messageId;
+
+              // Date
+              date = parsed.date || "";
+
+              // In-Reply-To
+              if (parsed.inReplyTo) {
+                inReplyTo = Array.isArray(parsed.inReplyTo) ? parsed.inReplyTo[0] : parsed.inReplyTo;
+              } else {
+                const replyHeader = parsed.headers?.find((h: any) => h.key === "in-reply-to");
+                if (replyHeader?.value) inReplyTo = replyHeader.value;
+              }
+
+              // Body — postal-mime decodes quoted-printable/base64 automatically
               bodyText = parsed.text || "";
               bodyHtml = parsed.html || "";
-              attachmentCount = (parsed.attachments || []).length;
-              console.log(`[check-inbox] UID ${uid}: postal-mime OK, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentCount}`);
-            } else {
-              console.warn(`[check-inbox] UID ${uid}: no raw source available`);
+
+              // Attachments count
+              attachmentCount = parsed.attachments?.length || 0;
+
+            } catch (parseErr: any) {
+              console.warn(`[check-inbox] postal-mime parse error UID ${uid}:`, parseErr.message);
             }
-          } catch (bodyErr: any) {
-            console.warn(`[check-inbox] Body parse error UID ${uid}:`, bodyErr.message);
           }
 
-          // Use real email date for created_at
-          let createdAt: string | undefined;
-          if (emailDate) {
+          // Fallback: if postal-mime failed, try envelope
+          if (!fromAddr) {
             try {
-              const d = new Date(emailDate);
-              if (!isNaN(d.getTime())) createdAt = d.toISOString();
-            } catch (_) { /* use default */ }
+              const envFetch = await client.fetch(String(uid), {
+                byUid: true,
+                uid: true,
+                envelope: true,
+              } as any);
+              if (envFetch?.[0]?.envelope) {
+                const env = envFetch[0].envelope;
+                if (env.from?.[0]) {
+                  const mb = env.from[0].mailbox || "";
+                  const host = env.from[0].host || "";
+                  if (mb && host) fromAddr = `${mb}@${host}`.toLowerCase();
+                  senderName = env.from[0].name || fromAddr;
+                }
+                if (env.to?.[0]) {
+                  const mb = env.to[0].mailbox || "";
+                  const host = env.to[0].host || "";
+                  if (mb && host) toAddr = `${mb}@${host}`.toLowerCase();
+                }
+                subject = env.subject || subject;
+                messageId = env.messageId || messageId;
+                date = env.date || date;
+                inReplyTo = env.inReplyTo || inReplyTo;
+              }
+            } catch (_) { /* ignore envelope fallback errors */ }
           }
+
+          // Final safety: skip if still no from
+          if (!fromAddr || fromAddr === "@") {
+            fromAddr = "sconosciuto@unknown";
+          }
+
+          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentCount}, subj: ${subject}`);
 
           const match = await matchSender(supabase, fromAddr);
 
-          const record: any = {
+          messages.push({
             user_id: userId,
             channel: "email",
             direction: "inbound",
@@ -397,12 +412,10 @@ Deno.serve(async (req) => {
             body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
             body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
             message_id_external: messageId,
-            in_reply_to: envelope.inReplyTo || null,
-            raw_payload: { uid, date: emailDate, sender_name: match.name || senderName, attachment_count: attachmentCount },
-          };
-          if (createdAt) record.created_at = createdAt;
+            in_reply_to: inReplyTo,
+            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentCount },
+          });
 
-          messages.push(record);
           if (uid > maxUid) maxUid = uid;
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
@@ -413,7 +426,7 @@ Deno.serve(async (req) => {
     // Disconnect
     try { client.disconnect(); } catch (_) { /* ignore */ }
 
-    // Deduplicate and save
+    // Deduplicate by message_id_external before saving
     if (messages.length > 0) {
       const seen = new Set<string>();
       const uniqueMessages = messages.filter(m => {
@@ -432,6 +445,7 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
+      // Increment interaction count for known contacts
       for (const msg of messages) {
         if (msg.source_type === "imported_contact" && msg.source_id) {
           await supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id });
