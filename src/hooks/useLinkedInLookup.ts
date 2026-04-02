@@ -105,22 +105,22 @@ export function useLinkedInLookup() {
       // ── Strategy 1: Google via Partner Connect ──
       if (pcBridge.isAvailable && !foundUrl) {
         setProgress(p => ({ ...p, currentMethod: "Partner Connect" }));
-        const queries = buildGoogleQuery(searchName, c.company_name, c.email);
+        const queries = buildLinkedInGoogleQueries(searchName, c.company_name, c.email);
 
         for (const query of queries) {
           if (abortRef.current || foundUrl) break;
           try {
             const res = await pcBridge.googleSearch(query, 5);
-            if (res.success && Array.isArray(res.data)) {
-              for (const item of res.data) {
-                if (!isLinkedInProfileUrl(item.url)) continue;
-                const confidence = validateMatch(item.title || "", item.description || "", searchName, c.company_name);
-                if (confidence >= 0.5) {
-                  foundUrl = normalizeUrl(item.url);
-                  resolvedMethod = "partner_connect_google_search";
-                  break;
-                }
-              }
+            const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
+            const { candidate, confidence } = pickBestLinkedInCandidate(rawResults, {
+              name: searchName,
+              company: c.company_name,
+            });
+
+            if (candidate && confidence >= 0.5) {
+              foundUrl = candidate.profileUrl;
+              resolvedMethod = "partner_connect_google_search";
+              break;
             }
           } catch (e) {
             console.warn("[LinkedInLookup] Google search error:", e);
@@ -133,11 +133,18 @@ export function useLinkedInLookup() {
         setProgress(p => ({ ...p, currentMethod: "LinkedIn Search" }));
         try {
           const res = await liBridge.searchProfile(searchName + (c.company_name ? ` ${c.company_name}` : ""));
-          if (res.success && res.profile?.profileUrl && isLinkedInProfileUrl(res.profile.profileUrl)) {
-            const profileText = `${res.profile.name || ""} ${res.profile.headline || ""}`;
-            const confidence = validateMatch(profileText, "", searchName, c.company_name);
+          const normalizedProfileUrl = normalizeLinkedInProfileUrl(res.profile?.profileUrl);
+          if (res.success && normalizedProfileUrl) {
+            const confidence = scoreLinkedInCandidate({
+              name: res.profile?.name,
+              headline: res.profile?.headline,
+              profileUrl: normalizedProfileUrl,
+            }, {
+              name: searchName,
+              company: c.company_name,
+            });
             if (confidence >= 0.5) {
-              foundUrl = normalizeUrl(res.profile.profileUrl);
+              foundUrl = normalizedProfileUrl;
               resolvedMethod = "linkedin_people_search";
             }
           }
