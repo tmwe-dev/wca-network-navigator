@@ -29,6 +29,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           title: i.subject,
           description: i.notes,
           outcome: null,
+          created_by: null,
           created_at: i.interaction_date || i.created_at,
         }));
       }
@@ -55,6 +56,7 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           title: i.title,
           description: i.description,
           outcome: i.outcome,
+          created_by: i.created_by || null,
           created_at: i.created_at,
         }));
       }
