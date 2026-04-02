@@ -109,7 +109,7 @@ export default function TestLinkedInSearch() {
       log("info", `━━━ Test ${i + 1}/5: ${contact.name} @ ${contact.company} ━━━`);
 
       try {
-        const searchResult = await smartSearch.search({
+        const searchResult = await smartSearch.searchSingle({
           name: contact.name,
           company: contact.company,
           role: contact.position,
