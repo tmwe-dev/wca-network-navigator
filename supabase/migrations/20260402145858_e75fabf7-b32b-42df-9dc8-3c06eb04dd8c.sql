@@ -1,0 +1,1 @@
+UPDATE email_sync_state SET last_uid = 100244;
