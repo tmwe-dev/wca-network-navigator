@@ -1,64 +1,40 @@
 
 
-# Ristrutturare la Sezione Messaggi: Tab Separati Email e WhatsApp
+# Fix Bug Email e WhatsApp — Piano di Implementazione
 
-## Situazione attuale
+## Situazione
 
-- `InboxView.tsx` è un componente unico che mostra tutti i canali insieme con un filtro tab (Tutti/Email/WA)
-- Il tab "Messaggi" in Outreach carica direttamente `InboxView`
-- La tabella `channel_messages` è vuota ma pronta per entrambi i canali
-- L'hook `useWhatsAppExtensionBridge.readUnread()` esiste ma non è collegato a nessuna UI
-- `useCheckInbox` (email IMAP) funziona ed è collegato al pulsante "Scarica Posta"
+Il DB ha già l'indice UNIQUE su `message_id_external` (migration `20260402071555`). Restano da fixare i file di codice.
 
-## Piano
+## Modifiche
 
-### 1. Sostituire il tab "Messaggi" con due tab separati nella barra verticale
+### 1. `supabase/functions/check-inbox/index.ts` — Fix IMAP + upsert
 
-Nella `VerticalTabNav` di Outreach, il tab "Messaggi" viene sostituito da:
-- **Email** (icona Mail, badge unread email)
-- **WhatsApp** (icona MessageCircle, badge unread WA)
+- **Rimuovere `node:tls`** e usare `Deno.connectTls()` nativo (funziona con certificati CA validi)
+- L'host di default è già `imaps.aruba.it` (riga 150) — il secret `IMAP_HOST` va aggiornato dall'utente se punta ancora a `mx01.vmteca.net`
+- **Riga 270**: `.insert(messages)` → `.upsert(messages, { onConflict: "message_id_external" })`
+- **Righe 283-293**: Rimuovere il blocco morto `interaction_count: undefined` e sostituire con `supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id })` solo per `source_type === "imported_contact"`
 
-### 2. Creare `EmailInboxView.tsx` — Vista dedicata Email
+### 2. `src/hooks/useWhatsAppInbox.ts` — Fix mapping campi + hash
 
-Layout master-detail (lista a sinistra, dettaglio a destra):
-- Pulsante "Scarica Posta" (usa `useCheckInbox` esistente)
-- Barra ricerca
-- Lista messaggi email filtrata per `channel = 'email'`
-- Dettaglio messaggio con subject, mittente, destinatario, body, badge associazione CRM
-- Stile coerente con il resto della piattaforma
+- **Riga 55**: `msg.text` → `msg.lastMessage || msg.text` (il background.js restituisce `lastMessage`)
+- **Riga 43**: `msg.timestamp` → `msg.time` (il background.js restituisce `time`)
+- **Hash**: Sostituire la funzione `hashMessage` a 32-bit con concatenazione diretta `wa_${contact}_${timestamp}_${text.slice(0,50)}` (più robusto, nessuna collisione)
 
-### 3. Creare `WhatsAppInboxView.tsx` — Vista dedicata WhatsApp
+### 3. `public/whatsapp-extension/manifest.json` — Compatibilità iframe
 
-Layout chat-style (lista contatti a sinistra, conversazione a destra):
-- Pulsante "Leggi WhatsApp" che chiama `readUnread()` dall'estensione
-- Indicatore stato estensione (connessa/disconnessa)
-- I messaggi ricevuti vengono salvati in `channel_messages` con `channel: 'whatsapp'`
-- Lista contatti con ultimo messaggio e conteggio non letti
-- Vista conversazione raggruppata per contatto (stile chat bubbles)
+- Aggiungere `"match_about_blank": true` e `"match_origin_as_fallback": true` ai `content_scripts`
+- Aggiungere `"all_frames": true` (già presente, verificare)
 
-### 4. Creare hook `useWhatsAppInbox.ts`
+### 4. Secret `IMAP_HOST`
 
-Hook che:
-- Usa `useWhatsAppExtensionBridge().readUnread()` per leggere i messaggi
-- Salva ogni messaggio in `channel_messages` (upsert, dedup su `message_id_external` = hash contatto+ora+testo)
-- Invalida le query per aggiornare la lista
-- Ritorna stato (loading, count importati, errori)
-
-### 5. Aggiornare conteggi unread separati
-
-Modificare `useUnreadCount` per supportare filtro per canale, così ogni tab mostra il proprio badge.
+- Chiedere all'utente di verificare/aggiornare il secret `IMAP_HOST` a `imaps.aruba.it`
 
 ## File coinvolti
 
 | File | Modifica |
 |------|----------|
-| `src/components/outreach/EmailInboxView.tsx` | **Nuovo** — Vista email dedicata |
-| `src/components/outreach/WhatsAppInboxView.tsx` | **Nuovo** — Vista WhatsApp stile chat |
-| `src/hooks/useWhatsAppInbox.ts` | **Nuovo** — Hook lettura + salvataggio WA |
-| `src/hooks/useChannelMessages.ts` | Aggiungere `useUnreadCountByChannel` |
-| `src/pages/Outreach.tsx` | Sostituire tab Messaggi con Email + WhatsApp, 7 tab totali |
-
-## Risultato
-
-Due sezioni dedicate nella barra verticale di Outreach: Email con layout classico inbox, WhatsApp con layout conversazione stile chat. Ognuna con il proprio pulsante di sync e badge unread indipendente.
+| `supabase/functions/check-inbox/index.ts` | Riscrivere `imapConnect` con `Deno.connectTls`, insert→upsert, fix interaction_count |
+| `src/hooks/useWhatsAppInbox.ts` | Fix `msg.lastMessage`, `msg.time`, hash robusto |
+| `public/whatsapp-extension/manifest.json` | `match_about_blank`, `match_origin_as_fallback` |
 
