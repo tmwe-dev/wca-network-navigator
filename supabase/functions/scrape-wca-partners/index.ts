@@ -1232,21 +1232,7 @@ Deno.serve(async (req) => {
               authStatus = 'authenticated'
             }
           }
-          if (!altHtml) {
-            const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
-            if (apiKey) {
-              const sr = await fetch('https://api.firecrawl.dev/v1/scrape', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: altUrl, formats: ['markdown', 'rawHtml'] }),
-              })
-              const sd = await sr.json()
-              if (sr.ok) {
-                altMarkdown = sd?.data?.markdown || sd?.markdown || ''
-                altHtml = sd?.data?.rawHtml || sd?.rawHtml || ''
-              }
-            }
-          }
+          // No Firecrawl fallback for alt domains
           if (altHtml && !altMarkdown) altMarkdown = htmlToSimpleMarkdown(altHtml)
           const altParsed = parseProfileFromContent(altHtml, altMarkdown, wcaId)
           if (altParsed?.company_name) {
