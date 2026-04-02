@@ -75,7 +75,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 min-h-0">
 
           {/* ── PRESET + QUALITY row ── */}
           <div className="grid grid-cols-2 gap-3">
