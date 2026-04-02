@@ -296,11 +296,17 @@ Deno.serve(async (req) => {
           try {
             const rfc822Fetch = await client.fetch(String(uid), {
               uid: true,
-              source: true,  // source = full RFC822 raw message
+              source: true,
             } as any);
 
             if (rfc822Fetch?.[0]) {
-              const rawMessage = rfc822Fetch[0].source || rfc822Fetch[0].body || rfc822Fetch[0].text || "";
+              const fetchResult = rfc822Fetch[0];
+              // Debug: log available keys to find where the raw message is
+              const keys = Object.keys(fetchResult);
+              console.log(`[check-inbox] UID ${uid} fetch keys: ${keys.join(", ")}`);
+              
+              // Try all possible property names
+              const rawMessage = fetchResult.source || fetchResult.raw || fetchResult.body || fetchResult.text || fetchResult.data || fetchResult.content || "";
               
               if (rawMessage) {
                 let messageBytes: Uint8Array;
