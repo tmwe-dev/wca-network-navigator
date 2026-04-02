@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 10);
 
     const messages: any[] = [];
     const attachmentRecords: any[] = [];
@@ -346,7 +346,10 @@ Deno.serve(async (req) => {
 
             const filename = att.filename || `attachment.${att.mimeType?.split("/")?.[1] || "bin"}`;
             const contentType = att.mimeType || "application/octet-stream";
-            const storagePath = `email-attachments/${userId}/${messageId}/${filename}`;
+            // Sanitize messageId for storage path (remove <>, spaces, special chars)
+            const safeMessageId = messageId.replace(/[<>:\s"'|?*]/g, "_").slice(0, 100);
+            const safeFilename = filename.replace(/[<>:\s"'|?*]/g, "_").slice(0, 200);
+            const storagePath = `email-attachments/${userId}/${safeMessageId}/${safeFilename}`;
 
             try {
               const fileBytes = new Uint8Array(att.content);
