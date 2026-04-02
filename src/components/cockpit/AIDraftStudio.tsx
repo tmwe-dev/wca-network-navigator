@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
