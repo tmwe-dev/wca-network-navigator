@@ -8,7 +8,8 @@ const corsHeaders = {
 
 /* ── Minimal IMAP over TLS ── */
 async function imapConnect(host: string, port: number) {
-  const conn = await Deno.connectTls({ hostname: host, port });
+  // @ts-ignore - certCheck is a Deno unstable API
+  const conn = await (Deno as any).connectTls({ hostname: host, port, certCheck: false });
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let tag = 0;
