@@ -1172,7 +1172,7 @@ Deno.serve(async (req) => {
     let authStatus: 'authenticated' | 'members_only' | 'no_credentials' | 'login_failed' = 'no_credentials'
     let loginDetails = ''
 
-    // Try 1: Direct fetch with session cookie (bypasses Firecrawl completely)
+    // Direct fetch with session cookie
     if (wcaSessionCookie) {
       console.log('Direct fetch with session cookie...')
       const result = await directFetchPage(url, wcaSessionCookie)

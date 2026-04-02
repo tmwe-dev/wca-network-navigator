@@ -1,7 +1,5 @@
 project_id = "zrbditqddhjkutzjycgi"
 
-# NOTE: firecrawl-search function has been removed
-
 [functions.scrape-wca-partners]
 verify_jwt = false
 
