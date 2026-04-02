@@ -103,6 +103,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       presets, activePresetId, setActivePresetId,
       savePreset, deletePreset, loadPreset,
       quality, setQuality,
+      recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
     }}>
       {children}
     </MissionCtx.Provider>
