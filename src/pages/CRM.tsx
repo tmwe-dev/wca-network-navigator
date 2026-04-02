@@ -22,18 +22,19 @@ export default function CRM() {
     <div className="flex flex-col h-full overflow-hidden">
       <ActiveContextBar />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
-      <div className="flex-1 min-w-0 overflow-hidden">
-        {tab === "contatti" && (
-          <Suspense fallback={<TabFallback />}>
-            <Contacts />
-          </Suspense>
-        )}
-        {tab === "biglietti" && (
-          <Suspense fallback={<TabFallback />}>
-            <BusinessCardsHub />
-          </Suspense>
-        )}
+        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
+        <div className="flex-1 min-w-0 overflow-hidden">
+          {tab === "contatti" && (
+            <Suspense fallback={<TabFallback />}>
+              <Contacts />
+            </Suspense>
+          )}
+          {tab === "biglietti" && (
+            <Suspense fallback={<TabFallback />}>
+              <BusinessCardsHub />
+            </Suspense>
+          )}
+        </div>
       </div>
     </div>
   );
