@@ -1,7 +1,8 @@
 import { lazy, Suspense, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowUpFromLine, Send } from "lucide-react";
+import { ArrowUpFromLine, Send, Rocket } from "lucide-react";
 import { CampagneTab } from "./CampagneTab";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const Sorting = lazy(() => import("@/pages/Sorting"));
 
@@ -14,7 +15,7 @@ export function InUscitaTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-2 pb-1">
+      <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40">
         <Tabs value={sub} onValueChange={setSub}>
           <TabsList className="bg-muted/40 h-8">
             <TabsTrigger value="diretti" className="gap-1.5 text-xs h-7">
