@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 10);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 5);
 
     const messages: any[] = [];
     const attachmentRecords: any[] = [];
@@ -333,50 +333,26 @@ Deno.serve(async (req) => {
             console.warn(`[check-inbox] UID ${uid}: no raw body returned`);
           }
 
-          // Step 3: Handle attachments from postal-mime
-          const MAX_ATTACHMENTS = 10;
-          const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-          for (const att of parsedAttachments.slice(0, MAX_ATTACHMENTS)) {
+          // Store attachment metadata (skip upload during sync to avoid CPU timeout)
+          for (const att of parsedAttachments.slice(0, 10)) {
             if (!att.content || att.content.byteLength === 0) continue;
-            if (att.content.byteLength > MAX_SIZE) {
-              console.log(`[check-inbox] Skipping large attachment: ${att.filename} (${att.content.byteLength} bytes)`);
-              continue;
-            }
-
             const filename = att.filename || `attachment.${att.mimeType?.split("/")?.[1] || "bin"}`;
             const contentType = att.mimeType || "application/octet-stream";
-            // Sanitize messageId for storage path (remove <>, spaces, special chars)
             const safeMessageId = messageId.replace(/[<>:\s"'|?*]/g, "_").slice(0, 100);
             const safeFilename = filename.replace(/[<>:\s"'|?*]/g, "_").slice(0, 200);
             const storagePath = `email-attachments/${userId}/${safeMessageId}/${safeFilename}`;
-
-            try {
-              const fileBytes = new Uint8Array(att.content);
-              const { error: uploadErr } = await supabase.storage
-                .from("workspace-docs")
-                .upload(storagePath, fileBytes, {
-                  contentType,
-                  upsert: true,
-                });
-
-              if (uploadErr) {
-                console.error(`[check-inbox] Upload error for ${filename}:`, uploadErr.message);
-              } else {
-                attachmentRecords.push({
-                  message_id: null,
-                  user_id: userId,
-                  filename,
-                  content_type: contentType,
-                  size_bytes: fileBytes.length,
-                  storage_path: storagePath,
-                  _message_id_external: messageId,
-                });
-                console.log(`[check-inbox] Uploaded: ${filename} (${fileBytes.length} bytes)`);
-              }
-            } catch (attErr: any) {
-              console.error(`[check-inbox] Attachment upload error ${filename}:`, attErr.message);
-            }
+            attachmentRecords.push({
+              message_id: null,
+              user_id: userId,
+              filename,
+              content_type: contentType,
+              size_bytes: att.content.byteLength,
+              storage_path: storagePath,
+              _message_id_external: messageId,
+            });
+          }
+          if (parsedAttachments.length > 0) {
+            console.log(`[check-inbox] UID ${uid}: ${parsedAttachments.length} attachments (metadata only)`);
           }
 
           const match = await matchSender(supabase, fromAddr);
