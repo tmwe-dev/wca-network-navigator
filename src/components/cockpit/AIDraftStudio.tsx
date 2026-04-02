@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
-import ContentPicker from "@/components/shared/ContentPicker";
+// ContentPicker removed — now uses sidebar
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState, DraftChannel, ScrapingPhase } from "@/pages/Cockpit";
@@ -170,7 +170,7 @@ function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPha
 export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
-  const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
+  const { goal, baseProposal } = useMission();
   const waBridge = useWhatsAppExtensionBridge();
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
@@ -706,14 +706,16 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
 
         <TabsContent value="variables" className="flex-1 overflow-y-auto p-4">
           <div className="space-y-3">
-            {/* Content pickers */}
+            {/* Context — reads from sidebar */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <Target className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI (da sidebar)</span>
               </div>
-              <ContentPicker type="goals" onSelect={setGoal} selectedText={goal} triggerLabel="Goal" className="w-full" />
-              <ContentPicker type="proposals" onSelect={setBaseProposal} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
+              <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Goal</span><span className="text-foreground truncate max-w-[180px]">{goal || "—"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Proposta</span><span className="text-foreground truncate max-w-[180px]">{baseProposal ? baseProposal.slice(0, 40) + "…" : "—"}</span></div>
+              </div>
             </div>
             <div className="border-t border-border/30 pt-2 space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-muted-foreground">recipient_name</span><span className="text-foreground">{draft.contactName}</span></div>

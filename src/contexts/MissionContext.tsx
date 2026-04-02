@@ -3,6 +3,17 @@ import { useWorkspaceDocuments, type WorkspaceDoc } from "@/hooks/useWorkspaceDo
 import { useWorkspacePresets, type WorkspacePreset } from "@/hooks/useWorkspacePresets";
 import type { EmailQuality } from "@/components/workspace/QualitySelector";
 
+export interface SelectedRecipient {
+  partnerId: string;
+  companyName: string;
+  contactId?: string;
+  contactName?: string;
+  email: string | null;
+  city: string;
+  countryName: string;
+  isEnriched: boolean;
+}
+
 interface MissionState {
   goal: string;
   setGoal: (v: string) => void;
@@ -22,6 +33,10 @@ interface MissionState {
   loadPreset: (preset: WorkspacePreset) => void;
   quality: EmailQuality;
   setQuality: (q: EmailQuality) => void;
+  recipients: SelectedRecipient[];
+  addRecipient: (r: SelectedRecipient) => void;
+  removeRecipient: (idx: number) => void;
+  clearRecipients: () => void;
 }
 
 const MissionCtx = createContext<MissionState | null>(null);
@@ -38,6 +53,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [quality, setQuality] = useState<EmailQuality>("standard");
+  const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
+
+  const addRecipient = (r: SelectedRecipient) => {
+    setRecipients(prev => {
+      const key = r.contactId ? `${r.partnerId}-${r.contactId}` : r.partnerId;
+      if (prev.some(x => (x.contactId ? `${x.partnerId}-${x.contactId}` : x.partnerId) === key)) return prev;
+      return [...prev, r];
+    });
+  };
+
+  const removeRecipientByIdx = (idx: number) => {
+    setRecipients(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const clearRecipients = () => setRecipients([]);
 
   const { documents, uploading, upload, remove } = useWorkspaceDocuments();
   const { presets, save: savePresetMut, remove: removePresetMut } = useWorkspacePresets();
@@ -73,6 +103,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       presets, activePresetId, setActivePresetId,
       savePreset, deletePreset, loadPreset,
       quality, setQuality,
+      recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
     }}>
       {children}
     </MissionCtx.Provider>

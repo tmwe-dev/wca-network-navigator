@@ -8,6 +8,7 @@ import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
 import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
+import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
 import { Mail, Sparkles, Linkedin } from "lucide-react";
 import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
@@ -533,6 +534,7 @@ const Cockpit = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      <ActiveContextBar />
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
