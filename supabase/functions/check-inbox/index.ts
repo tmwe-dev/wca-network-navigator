@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import PostalMime from "https://esm.sh/postal-mime@2.3.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,9 +165,155 @@ function getCaCertsForHost(host: string): string[] {
   return [ACTALIS_INTERMEDIATE_CA, ACTALIS_ROOT_CA];
 }
 
-/* ── Sender matching (unchanged business logic) ── */
+/* ── Raw IMAP over TLS ── */
+
+class RawImapClient {
+  private conn!: Deno.TlsConn;
+  private reader!: ReadableStreamDefaultReader<Uint8Array>;
+  private buf = "";
+  private tagCounter = 0;
+  private encoder = new TextEncoder();
+  private decoder = new TextDecoder();
+
+  constructor(private host: string, private port: number, private caCerts: string[]) {}
+
+  async connect() {
+    this.conn = await Deno.connectTls({
+      hostname: this.host,
+      port: this.port,
+      caCerts: this.caCerts,
+    });
+    this.reader = this.conn.readable.getReader();
+    // Read greeting
+    await this.readUntilTag("*");
+  }
+
+  private nextTag(): string {
+    this.tagCounter++;
+    return `A${this.tagCounter}`;
+  }
+
+  private async readMore(): Promise<string> {
+    const { value, done } = await this.reader.read();
+    if (done) throw new Error("Connection closed");
+    return this.decoder.decode(value);
+  }
+
+  private async readUntilTag(tag: string): Promise<string> {
+    let result = "";
+    while (true) {
+      // Check if we have complete lines in buffer
+      while (this.buf.includes("\r\n")) {
+        const idx = this.buf.indexOf("\r\n");
+        const line = this.buf.substring(0, idx);
+        this.buf = this.buf.substring(idx + 2);
+        result += line + "\r\n";
+
+        if (tag === "*" && line.startsWith("* ")) return result;
+        if (line.startsWith(tag + " ")) return result;
+      }
+      this.buf += await this.readMore();
+    }
+  }
+
+  async command(cmd: string): Promise<string> {
+    const tag = this.nextTag();
+    const fullCmd = `${tag} ${cmd}\r\n`;
+    await this.conn.write(this.encoder.encode(fullCmd));
+    return await this.readUntilTag(tag);
+  }
+
+  async login(user: string, pass: string) {
+    // Escape password for IMAP literal
+    const escapedUser = `"${user.replace(/["\\]/g, '\\$&')}"`;
+    const escapedPass = `"${pass.replace(/["\\]/g, '\\$&')}"`;
+    const res = await this.command(`LOGIN ${escapedUser} ${escapedPass}`);
+    const match = res.match(/^A\d+\s+(OK|NO|BAD)/m);
+    if (!match || match[1] !== "OK") throw new Error("Login failed: " + res.substring(0, 200));
+    return res;
+  }
+
+  async select(mailbox: string): Promise<{ exists: number }> {
+    const res = await this.command(`SELECT "${mailbox}"`);
+    const existsMatch = res.match(/\*\s+(\d+)\s+EXISTS/);
+    return { exists: existsMatch ? parseInt(existsMatch[1]) : 0 };
+  }
+
+  async uidSearch(criteria: string): Promise<number[]> {
+    const res = await this.command(`UID SEARCH ${criteria}`);
+    const searchLine = res.split("\r\n").find(l => l.startsWith("* SEARCH"));
+    if (!searchLine) return [];
+    const parts = searchLine.replace("* SEARCH", "").trim().split(/\s+/);
+    return parts.filter(p => p.length > 0).map(Number).filter(n => !isNaN(n));
+  }
+
+  async uidFetchRaw(uid: number): Promise<string> {
+    // Fetch the entire RFC822 message
+    const tag = this.nextTag();
+    const cmd = `${tag} UID FETCH ${uid} (BODY.PEEK[])\r\n`;
+    await this.conn.write(this.encoder.encode(cmd));
+
+    // Read response which includes a literal {size}
+    let result = "";
+    let literalSize = -1;
+    let literalRead = 0;
+    let readingLiteral = false;
+    let literalData = "";
+
+    while (true) {
+      while (this.buf.includes("\r\n") || readingLiteral) {
+        if (readingLiteral) {
+          // Read literal data
+          const remaining = literalSize - literalRead;
+          if (this.buf.length >= remaining) {
+            literalData += this.buf.substring(0, remaining);
+            this.buf = this.buf.substring(remaining);
+            literalRead = literalSize;
+            readingLiteral = false;
+            result += literalData;
+          } else {
+            literalData += this.buf;
+            literalRead += this.buf.length;
+            this.buf = "";
+            break;
+          }
+        } else {
+          const idx = this.buf.indexOf("\r\n");
+          if (idx === -1) break;
+          const line = this.buf.substring(0, idx);
+          this.buf = this.buf.substring(idx + 2);
+
+          // Check for literal marker {N}
+          const litMatch = line.match(/\{(\d+)\}\s*$/);
+          if (litMatch && literalSize === -1) {
+            literalSize = parseInt(litMatch[1]);
+            literalRead = 0;
+            readingLiteral = true;
+            literalData = "";
+            continue;
+          }
+
+          if (line.startsWith(tag + " ")) {
+            return result;
+          }
+        }
+      }
+      this.buf += await this.readMore();
+    }
+  }
+
+  async logout() {
+    try {
+      await this.command("LOGOUT");
+    } catch (_) { /* ignore */ }
+    try { this.conn.close(); } catch (_) { /* ignore */ }
+  }
+}
+
+/* ── Sender matching ── */
 
 async function matchSender(supabase: any, email: string) {
+  if (!email || !email.includes("@")) return { source_type: "unknown", source_id: null, partner_id: null, name: email };
   const emailLower = email.toLowerCase();
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
@@ -180,18 +326,12 @@ async function matchSender(supabase: any, email: string) {
   return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
 
-function extractEmailAddress(addr: { mailbox?: string; host?: string } | undefined): string {
-  if (!addr) return "";
-  return `${addr.mailbox || ""}@${addr.host || ""}`.toLowerCase();
-}
-
 /* ── Main handler ── */
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -205,7 +345,7 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // IMAP credentials
+    // IMAP config
     const imapHost = Deno.env.get("IMAP_HOST") || "imaps.aruba.it";
     const imapUser = Deno.env.get("IMAP_USER");
     const imapPass = Deno.env.get("IMAP_PASSWORD");
@@ -221,43 +361,23 @@ Deno.serve(async (req) => {
     }
     const lastUid = syncState?.last_uid || 0;
 
-    console.log(`[check-inbox] Connecting to ${imapHost}:993 via @workingdevshero/deno-imap...`);
+    console.log(`[check-inbox] Connecting to ${imapHost}:993, lastUid=${lastUid}`);
 
-    // Create IMAP client with library
-    const client = new ImapClient({
-      host: imapHost,
-      port: 993,
-      tls: true,
-      username: imapUser,
-      password: imapPass,
-      authMechanism: "LOGIN",
-      autoReconnect: false,
-      commandTimeout: 30000,
-      connectionTimeout: 15000,
-      tlsOptions: {
-        caCerts: getCaCertsForHost(imapHost),
-      },
-    });
-
-    await client.connect();
-    console.log("[check-inbox] Connected, authenticating...");
-    await client.authenticate();
+    // Connect via raw TLS IMAP
+    const imap = new RawImapClient(imapHost, 993, getCaCertsForHost(imapHost));
+    await imap.connect();
+    await imap.login(imapUser, imapPass);
     console.log("[check-inbox] Authenticated OK");
 
-    // Select INBOX
-    const inbox = await client.selectMailbox("INBOX");
+    const inbox = await imap.select("INBOX");
     console.log(`[check-inbox] INBOX: ${inbox.exists} messages`);
 
-    // Search for new messages by UID
+    // Search new UIDs
     let uids: number[] = [];
     if (lastUid > 0) {
-      // Search UIDs greater than last synced
-      const searchResult = await client.search({ uid: `${lastUid + 1}:*` } as any);
-      uids = (searchResult || []).filter((uid: number) => uid > lastUid);
+      uids = (await imap.uidSearch(`UID ${lastUid + 1}:*`)).filter(u => u > lastUid);
     } else {
-      // First sync: get all (limited)
-      const searchResult = await client.search({});
-      uids = searchResult || [];
+      uids = await imap.uidSearch("ALL");
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
@@ -266,63 +386,68 @@ Deno.serve(async (req) => {
     const messages: any[] = [];
     let maxUid = lastUid;
 
-    if (toFetch.length > 0) {
-      // Fetch messages with envelope and body
-      const fetchRange = toFetch.map(u => String(u)).join(",");
+    for (const uid of toFetch) {
       try {
-        const fetched = await client.fetch(fetchRange, {
-          uid: true,
-          envelope: true,
-          body: true,
-          headers: ["Subject", "From", "To", "Date", "Message-ID", "In-Reply-To"],
-        } as any);
-
-        for (const msg of fetched) {
-          try {
-            const uid = msg.uid || 0;
-            const envelope = msg.envelope || {};
-            const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
-            const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
-            const subject = envelope.subject || "(nessun oggetto)";
-            const messageId = envelope.messageId || `uid_${uid}_${Date.now()}`;
-            const date = envelope.date || "";
-            const senderName = envelope.from?.[0]
-              ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
-              : fromAddr;
-
-            // Get body text from fetched data
-            const bodyText = msg.body || msg.text || "";
-
-            const match = await matchSender(supabase, fromAddr);
-
-            messages.push({
-              user_id: userId,
-              channel: "email",
-              direction: "inbound",
-              source_type: match.source_type,
-              source_id: match.source_id,
-              partner_id: match.partner_id,
-              from_address: fromAddr,
-              to_address: toAddr,
-              subject,
-              body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
-              message_id_external: messageId,
-              in_reply_to: envelope.inReplyTo || null,
-              raw_payload: { uid, date, sender_name: match.name || senderName },
-            });
-
-            if (uid > maxUid) maxUid = uid;
-          } catch (e) {
-            console.error(`[check-inbox] Error processing message:`, e.message);
-          }
+        const rawMessage = await imap.uidFetchRaw(uid);
+        if (!rawMessage || rawMessage.length < 10) {
+          console.log(`[check-inbox] UID ${uid}: empty message, skipping`);
+          continue;
         }
-      } catch (fetchErr) {
-        console.error(`[check-inbox] Fetch error:`, fetchErr.message);
+
+        // Parse MIME with postal-mime
+        const parser = new PostalMime();
+        const parsed = await parser.parse(rawMessage);
+
+        const fromAddr = parsed.from?.address?.toLowerCase() || "";
+        const toAddr = parsed.to?.[0]?.address?.toLowerCase() || "";
+        const subject = parsed.subject || "(nessun oggetto)";
+        const messageId = parsed.messageId || `uid_${uid}_${Date.now()}`;
+        const senderName = parsed.from?.name || fromAddr;
+        const date = parsed.date || "";
+
+        // Extract body
+        const bodyText = parsed.text || "";
+        const bodyHtml = parsed.html || "";
+
+        // Extract attachment metadata (don't store binary data)
+        const attachments = (parsed.attachments || []).map((att: any) => ({
+          filename: att.filename || "unnamed",
+          mimeType: att.mimeType || "application/octet-stream",
+          size: att.content?.byteLength || 0,
+        }));
+
+        const match = await matchSender(supabase, fromAddr);
+
+        messages.push({
+          user_id: userId,
+          channel: "email",
+          direction: "inbound",
+          source_type: match.source_type,
+          source_id: match.source_id,
+          partner_id: match.partner_id,
+          from_address: fromAddr,
+          to_address: toAddr,
+          subject,
+          body_text: bodyText.slice(0, 50000),
+          body_html: bodyHtml.slice(0, 100000),
+          message_id_external: messageId,
+          in_reply_to: parsed.inReplyTo || null,
+          raw_payload: {
+            uid,
+            date,
+            sender_name: match.name || senderName,
+            attachments: attachments.length > 0 ? attachments : undefined,
+          },
+        });
+
+        if (uid > maxUid) maxUid = uid;
+        console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, subj=${subject.slice(0, 40)}, body=${bodyText.length}ch, attach=${attachments.length}`);
+      } catch (e) {
+        console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
       }
     }
 
-    // Disconnect
-    try { client.disconnect(); } catch (_) { /* ignore */ }
+    await imap.logout();
 
     // Save to DB
     if (messages.length > 0) {
@@ -336,7 +461,6 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      // Increment interaction count for known contacts
       for (const msg of messages) {
         if (msg.source_type === "imported_contact" && msg.source_id) {
           await supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id });
@@ -356,15 +480,16 @@ Deno.serve(async (req) => {
         subject: m.subject,
         source_type: m.source_type,
         sender_name: m.raw_payload?.sender_name,
-        date: m.raw_payload?.date,
+        body_length: m.body_text?.length || 0,
+        attachments: m.raw_payload?.attachments?.length || 0,
       })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {
     console.error("[check-inbox] Error:", err);
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message || "Errore sconosciuto" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
