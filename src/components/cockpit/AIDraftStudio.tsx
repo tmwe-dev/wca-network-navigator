@@ -173,6 +173,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
   const { goal, baseProposal, setGoal, setBaseProposal } = useMission();
   const waBridge = useWhatsAppExtensionBridge();
   const liBridge = useLinkedInExtensionBridge();
+  const pcBridge = useFireScrapeExtensionBridge();
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
 
@@ -232,17 +233,45 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
     console.log("[LinkedIn Send] Starting. profileUrl:", profileUrl, "bridge available:", liBridge.isAvailable);
 
     // If no URL, try to search via extension
-    if (!profileUrl && liBridge.isAvailable && draft.contactName) {
+    if (!profileUrl && (pcBridge.isAvailable || liBridge.isAvailable) && draft.contactName) {
       toast({ title: "🔍 Cercando profilo LinkedIn...", description: `Ricerca per ${draft.contactName}` });
       try {
         const searchQuery = `${draft.contactName} ${draft.companyName || ""}`.trim();
         console.log("[LinkedIn Send] Searching profile:", searchQuery);
-        const res = await liBridge.searchProfile(searchQuery);
-        console.log("[LinkedIn Send] Search result:", res);
-        if (res.success && res.profile?.profileUrl) {
-          profileUrl = res.profile.profileUrl;
+
+        // Strategy 1: Google via Partner Connect (most reliable)
+        if (pcBridge.isAvailable) {
+          const googleQuery = `site:linkedin.com/in "${draft.contactName}"${draft.companyName ? ` "${draft.companyName}"` : ""}`;
+          console.log("[LinkedIn Send] Google search:", googleQuery);
+          const gRes = await pcBridge.googleSearch(googleQuery, 5);
+          if (gRes.success && Array.isArray(gRes.data)) {
+            for (const item of gRes.data) {
+              if (item.url && /linkedin\.com\/(in|pub)\/[^/]+/.test(item.url)) {
+                try {
+                  const parsed = new URL(item.url);
+                  profileUrl = `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`.replace(/\/$/, "");
+                } catch {
+                  profileUrl = item.url.split("?")[0].replace(/\/$/, "");
+                }
+                console.log("[LinkedIn Send] Found via Google:", profileUrl);
+                break;
+              }
+            }
+          }
+        }
+
+        // Strategy 2: LinkedIn People Search (fallback)
+        if (!profileUrl && liBridge.isAvailable) {
+          console.log("[LinkedIn Send] Falling back to LinkedIn search");
+          const res = await liBridge.searchProfile(searchQuery);
+          if (res.success && res.profile?.profileUrl) {
+            profileUrl = res.profile.profileUrl;
+          }
+        }
+
+        if (profileUrl) {
           onDraftChange({ ...draft, contactLinkedinUrl: profileUrl });
-          toast({ title: "✅ Profilo trovato!", description: res.profile.name || profileUrl });
+          toast({ title: "✅ Profilo trovato!", description: profileUrl });
         } else {
           toast({ title: "Profilo LinkedIn non trovato", description: "Cercalo manualmente e aggiungi l'URL al contatto.", variant: "destructive" });
           return;
@@ -760,9 +789,26 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
                       if (!url && draft.contactName) {
                         toast({ title: "🔍 Cercando profilo LinkedIn..." });
                         try {
-                          const res = await liBridge.searchProfile(`${draft.contactName} ${draft.companyName || ""}`.trim());
-                          if (res.success && res.profile?.profileUrl) {
-                            url = res.profile.profileUrl;
+                          // Google-first search
+                          if (pcBridge.isAvailable) {
+                            const gq = `site:linkedin.com/in "${draft.contactName}"${draft.companyName ? ` "${draft.companyName}"` : ""}`;
+                            const gRes = await pcBridge.googleSearch(gq, 5);
+                            if (gRes.success && Array.isArray(gRes.data)) {
+                              for (const item of gRes.data) {
+                                if (item.url && /linkedin\.com\/(in|pub)\/[^/]+/.test(item.url)) {
+                                  url = item.url.split("?")[0].replace(/\/$/, "");
+                                  break;
+                                }
+                              }
+                            }
+                          }
+                          if (!url && liBridge.isAvailable) {
+                            const res = await liBridge.searchProfile(`${draft.contactName} ${draft.companyName || ""}`.trim());
+                            if (res.success && res.profile?.profileUrl) {
+                              url = res.profile.profileUrl;
+                            }
+                          }
+                          if (url) {
                             onDraftChange({ ...draft, contactLinkedinUrl: url });
                           }
                         } catch {}
