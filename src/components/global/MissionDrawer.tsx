@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ChevronDown, FileText, Link2, Plus, X, Upload, Save, Trash2 } from "lucide-react";
-import { useMission } from "@/contexts/MissionContext";
+import { Target, ChevronDown, FileText, Link2, Plus, X, Upload, Save, Trash2, Search, Building2, Mail, Users } from "lucide-react";
+import { useMission, type SelectedRecipient } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import QualitySelector from "@/components/workspace/QualitySelector";
 import ContentPicker from "@/components/shared/ContentPicker";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MissionDrawerProps {
   open: boolean;
