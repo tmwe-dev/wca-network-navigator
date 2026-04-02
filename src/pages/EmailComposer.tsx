@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   Send, Save, Eye, Loader2, Mail, Sparkles,
-  Paperclip, Link as LinkIcon, Plus, X,
+  Paperclip, Link as LinkIcon, Plus, X, Braces,
 } from "lucide-react";
 import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
@@ -29,7 +30,6 @@ interface LinkItem { label: string; url: string; }
 export default function EmailComposer() {
   const { goal, baseProposal, documents, referenceLinks, recipients } = useMission();
 
-  // Email state
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [selectedAttachments, setSelectedAttachments] = useState<string[]>([]);
@@ -37,13 +37,13 @@ export default function EmailComposer() {
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
 
-  // Queue state
   const [sending, setSending] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeQueueStatus, setActiveQueueStatus] = useState("idle");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const enqueueCampaign = useEnqueueCampaign();
   const { processing, startProcessing } = useProcessQueue();
@@ -91,7 +91,6 @@ export default function EmailComposer() {
     });
   };
 
-  // AI generation
   const handleAIGenerate = async () => {
     if (!goal && !baseProposal) {
       toast.error("Configura obiettivo o proposta dalla sidebar Mission (icona target a destra)");
@@ -101,15 +100,10 @@ export default function EmailComposer() {
     try {
       const { data, error } = await supabase.functions.invoke("generate-email", {
         body: {
-          goal,
-          base_proposal: baseProposal,
-          language: "italiano",
-          document_ids: documents.map((d) => d.id),
-          reference_urls: referenceLinks,
-          quality: "standard",
-          activity_id: "00000000-0000-0000-0000-000000000000",
-          standalone: true,
-          recipient_count: recipientsWithEmail.length,
+          goal, base_proposal: baseProposal, language: "italiano",
+          document_ids: documents.map((d) => d.id), reference_urls: referenceLinks,
+          quality: "standard", activity_id: "00000000-0000-0000-0000-000000000000",
+          standalone: true, recipient_count: recipientsWithEmail.length,
           recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
         },
       });
@@ -119,9 +113,7 @@ export default function EmailComposer() {
       toast.success("Email generata con AI");
     } catch (err: any) {
       toast.error("Errore generazione AI: " + (err.message || "Sconosciuto"));
-    } finally {
-      setAiGenerating(false);
-    }
+    } finally { setAiGenerating(false); }
   };
 
   const handleSaveDraft = async () => {
@@ -153,19 +145,11 @@ export default function EmailComposer() {
         } as any).select().single();
       if (draftError) throw draftError;
       const draftId = (savedDraft as any).id;
-
       const resolvedRecipients = recipientsWithEmail.map((r) => ({
-        partner_id: r.partnerId,
-        email: r.email!,
-        name: r.companyName,
-        subject: subject
-          .replace(/\{\{company_name\}\}/g, r.companyName)
-          .replace(/\{\{contact_name\}\}/g, r.contactName || "")
-          .replace(/\{\{city\}\}/g, r.city || "")
-          .replace(/\{\{country\}\}/g, r.countryName || ""),
+        partner_id: r.partnerId, email: r.email!, name: r.companyName,
+        subject: subject.replace(/\{\{company_name\}\}/g, r.companyName).replace(/\{\{contact_name\}\}/g, r.contactName || "").replace(/\{\{city\}\}/g, r.city || "").replace(/\{\{country\}\}/g, r.countryName || ""),
         html: buildFinalHtml(htmlBody, r, r.contactName || ""),
       }));
-
       await enqueueCampaign.mutateAsync({ draftId, recipients: resolvedRecipients, delaySeconds: 5 });
       setActiveDraftId(draftId);
       setActiveQueueStatus("idle");
@@ -184,161 +168,168 @@ export default function EmailComposer() {
     return groups;
   }, [templates]);
 
+  const insertVariable = (v: string) => setHtmlBody(prev => prev + v);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Context Bar */}
       <ActiveContextBar />
 
-      {/* Main Content — single column */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-6 space-y-5 max-w-3xl mx-auto">
-
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Mail className="w-4.5 h-4.5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold text-foreground">Email Composer</h1>
-                <p className="text-xs text-muted-foreground">Componi e invia email personalizzate</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-xs">
-              <Mail className="w-3 h-3 mr-1" />
-              {recipientsWithEmail.length} con email
-            </Badge>
-          </div>
-
-          {/* Subject */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Oggetto</label>
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 p-4 pb-0 max-w-3xl mx-auto w-full">
+          {/* Subject row */}
+          <div className="flex items-center gap-2 mb-3">
+            <Mail className="w-4 h-4 text-primary shrink-0" />
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Oggetto della email..."
-              className="h-10 text-sm font-medium"
+              className="h-9 text-sm font-medium flex-1"
             />
+            <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
+              {recipientsWithEmail.length} dest.
+            </Badge>
           </div>
 
-          {/* Variables */}
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] text-muted-foreground mr-1 self-center">Variabili:</span>
-            {VARIABLES.map((v) => (
-              <Badge key={v} variant="outline" className="cursor-pointer text-[10px] hover:bg-primary/10"
-                onClick={() => setHtmlBody((prev) => prev + v)}>{v}</Badge>
-            ))}
-          </div>
-
-          {/* Body */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Corpo email</label>
-            <Textarea
-              value={htmlBody}
-              onChange={(e) => setHtmlBody(e.target.value)}
-              placeholder="Scrivi il contenuto della email... Puoi usare HTML e variabili come {{company_name}}"
-              className="min-h-[220px] text-sm bg-muted/20 resize-y"
-            />
-          </div>
-
-          {/* AI Generate */}
-          <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full gap-2 h-10" variant="outline">
-            {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
-            {aiGenerating ? "Generazione AI in corso..." : "✨ Genera con AI"}
-          </Button>
-
-          {/* Links — collapsible */}
-          <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
-            <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg hover:bg-muted/40 transition-colors">
-              <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium flex-1 text-left">Link</span>
-              {emailLinks.length > 0 && <Badge variant="secondary" className="text-[10px] h-4">{emailLinks.length}</Badge>}
-              <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", linksOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-3 pb-2 pt-1 space-y-2">
-              {emailLinks.map((l, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs bg-muted/30 rounded-lg p-2">
-                  <span className="truncate flex-1">{l.label}: {l.url}</span>
-                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => setEmailLinks((prev) => prev.filter((_, idx) => idx !== i))}>
-                    <X className="w-3 h-3" />
-                  </Button>
+          {/* Toolbar — right aligned above textarea */}
+          <div className="flex items-center justify-end gap-1 mb-1.5">
+            {/* Variables popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Variabili">
+                  <Braces className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2" align="end">
+                <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Inserisci variabile</p>
+                <div className="flex flex-col gap-1">
+                  {VARIABLES.map(v => (
+                    <button key={v} onClick={() => insertVariable(v)}
+                      className="text-xs text-left px-2 py-1.5 rounded hover:bg-muted/50 font-mono text-primary transition-colors">
+                      {v}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              <div className="flex gap-1.5">
-                <Input placeholder="Etichetta" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} className="flex-1 h-8 text-xs" />
-                <Input placeholder="https://..." value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="flex-1 h-8 text-xs" />
-                <Button size="sm" variant="outline" className="h-8 px-2" onClick={addLink}><Plus className="w-3 h-3" /></Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              </PopoverContent>
+            </Popover>
 
-          {/* Attachments — collapsible */}
-          {templates.length > 0 && (
-            <Collapsible open={attachOpen} onOpenChange={setAttachOpen}>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg hover:bg-muted/40 transition-colors">
-                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium flex-1 text-left">Allegati</span>
-                {selectedAttachments.length > 0 && <Badge variant="secondary" className="text-[10px] h-4">{selectedAttachments.length}</Badge>}
-                <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", attachOpen && "rotate-180")} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-3 pb-2 pt-1 space-y-1">
-                {Object.entries(templatesByCategory).map(([cat, files]) => (
-                  <div key={cat} className="space-y-0.5">
-                    {files.map((t: any) => (
-                      <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-muted/30">
-                        <input type="checkbox" checked={selectedAttachments.includes(t.id)}
-                          onChange={() => setSelectedAttachments((prev) => prev.includes(t.id) ? prev.filter((a) => a !== t.id) : [...prev, t.id])}
-                          className="h-3.5 w-3.5 rounded"
-                        />
-                        <span className="truncate">{t.file_name}</span>
-                      </label>
-                    ))}
+            {/* Links */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Link">
+                  <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                  {emailLinks.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">{emailLinks.length}</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-3" align="end">
+                <p className="text-xs font-medium mb-2">Link da includere</p>
+                {emailLinks.map((l, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs bg-muted/30 rounded p-1.5 mb-1">
+                    <span className="truncate flex-1">{l.label}</span>
+                    <button onClick={() => setEmailLinks(prev => prev.filter((_, idx) => idx !== i))} className="p-0.5 hover:bg-destructive/10 rounded">
+                      <X className="w-3 h-3 text-destructive" />
+                    </button>
                   </div>
                 ))}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+                <div className="flex gap-1 mt-1.5">
+                  <Input placeholder="Etichetta" value={newLinkLabel} onChange={e => setNewLinkLabel(e.target.value)} className="flex-1 h-7 text-xs" />
+                  <Input placeholder="https://..." value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} className="flex-1 h-7 text-xs" />
+                  <Button size="sm" variant="outline" className="h-7 px-1.5" onClick={addLink}><Plus className="w-3 h-3" /></Button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-          {/* Preview */}
-          {(subject || htmlBody) && (
-            <div className="border border-border/30 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/30">
-                <Eye className="w-4 h-4 text-primary" />
+            {/* Attachments */}
+            {templates.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Allegati">
+                    <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                    {selectedAttachments.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">{selectedAttachments.length}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="end">
+                  <p className="text-xs font-medium mb-2">Allegati</p>
+                  {Object.entries(templatesByCategory).map(([cat, files]) => (
+                    <div key={cat} className="space-y-0.5">
+                      {files.map((t: any) => (
+                        <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-muted/30">
+                          <input type="checkbox" checked={selectedAttachments.includes(t.id)}
+                            onChange={() => setSelectedAttachments(prev => prev.includes(t.id) ? prev.filter(a => a !== t.id) : [...prev, t.id])}
+                            className="h-3.5 w-3.5 rounded" />
+                          <span className="truncate">{t.file_name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Preview toggle */}
+            <Button variant={previewOpen ? "secondary" : "ghost"} size="sm" className="h-7 w-7 p-0" title="Anteprima"
+              onClick={() => setPreviewOpen(p => !p)}>
+              <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+            </Button>
+
+            {/* AI Generate */}
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={handleAIGenerate} disabled={aiGenerating}>
+              {aiGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-primary" />}
+              Genera AI
+            </Button>
+          </div>
+
+          {/* Body textarea — max space */}
+          <Textarea
+            value={htmlBody}
+            onChange={(e) => setHtmlBody(e.target.value)}
+            placeholder="Scrivi il contenuto della email... Usa variabili come {{company_name}} tramite l'icona { } sopra"
+            className="flex-1 min-h-[280px] h-full text-sm bg-muted/10 resize-y border-border/40 focus:border-primary/50"
+          />
+
+          {/* Preview inline */}
+          {previewOpen && (subject || htmlBody) && (
+            <div className="mt-3 border border-border/30 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/30">
+                <Eye className="w-3.5 h-3.5 text-primary" />
                 <span className="text-xs font-semibold">Anteprima</span>
               </div>
               <div className="px-4 py-3 bg-muted/10">
                 <p className="text-sm font-medium mb-1">
                   {subject.replace(/\{\{company_name\}\}/g, "Acme Logistics").replace(/\{\{contact_name\}\}/g, "John Doe").replace(/\{\{city\}\}/g, "Milano").replace(/\{\{country\}\}/g, "Italy") || "Nessun oggetto"}
                 </p>
-                <p className="text-[10px] text-muted-foreground mb-3">A: partner@example.com</p>
+                <p className="text-[10px] text-muted-foreground mb-2">A: partner@example.com</p>
                 <div className="text-xs prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: buildFinalHtml(htmlBody,
-                      { companyName: "Acme Logistics", city: "Milano", countryName: "Italy" },
-                      "John Doe"),
+                    __html: buildFinalHtml(htmlBody, { companyName: "Acme Logistics", city: "Milano", countryName: "Italy" }, "John Doe"),
                   }}
                 />
               </div>
             </div>
           )}
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" onClick={handleSaveDraft} disabled={sending} className="gap-2 h-10">
-              <Save className="w-4 h-4" /> Salva bozza
+        {/* Bottom action bar — always visible */}
+        <div className="shrink-0 border-t border-border/30 bg-muted/10 px-4 py-2.5 max-w-3xl mx-auto w-full">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={sending} className="gap-1.5 h-9 text-xs">
+              <Save className="w-3.5 h-3.5" /> Bozza
             </Button>
-            <Button onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-2 h-10 flex-1">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <Button size="sm" onClick={handleEnqueue} disabled={sending || processing || recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               {sending ? "Preparazione..." : `Invia a ${recipientsWithEmail.length} destinatari`}
             </Button>
           </div>
-
-          {/* Queue Monitor */}
           {activeDraftId && (
-            <CampaignQueueMonitor draftId={activeDraftId} queueStatus={activeQueueStatus} />
+            <div className="mt-2">
+              <CampaignQueueMonitor draftId={activeDraftId} queueStatus={activeQueueStatus} />
+            </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
