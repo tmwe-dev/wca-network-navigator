@@ -36,7 +36,7 @@ function FieldRow({ icon, label, value, editing, onChange, type = "text" }: Fiel
   return (
     <div className="flex items-center gap-2 py-1.5">
       <span className="text-muted-foreground flex-shrink-0">{icon}</span>
-      <span className="text-[11px] text-muted-foreground w-16 flex-shrink-0">{label}</span>
+      <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">{label}</span>
       {editing ? (
         <Input
           value={value}
