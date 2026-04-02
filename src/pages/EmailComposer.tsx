@@ -18,7 +18,7 @@ import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useMission } from "@/contexts/MissionContext";
-import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -172,7 +172,7 @@ export default function EmailComposer() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <ActiveContextBar />
+      
 
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0 p-4 pb-0 max-w-3xl mx-auto w-full">
