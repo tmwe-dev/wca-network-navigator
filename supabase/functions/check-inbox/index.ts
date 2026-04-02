@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import PostalMime from "npm:postal-mime@2.4.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,7 +172,6 @@ async function matchSender(supabase: any, email: string) {
   const emailLower = email.toLowerCase();
   const domain = emailLower.split("@")[1];
 
-  // Exact match first
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
@@ -183,7 +181,6 @@ async function matchSender(supabase: any, email: string) {
   const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (prospect) return { source_type: "prospect", source_id: prospect.id, partner_id: null, name: prospect.company_name };
 
-  // Domain fallback — match by @domain
   if (domain) {
     const domainPattern = `%@${domain}`;
     const { data: dp } = await supabase.from("partners").select("id, company_name").ilike("email", domainPattern).limit(1).maybeSingle();
@@ -194,6 +191,49 @@ async function matchSender(supabase: any, email: string) {
 
   return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
+
+/* ── Helper: extract email from envelope address ── */
+function envelopeAddr(addr: any): string {
+  if (!addr) return "";
+  const mb = addr.mailbox || "";
+  const host = addr.host || "";
+  if (mb && host) return `${mb}@${host}`.toLowerCase();
+  return "";
+}
+
+/* ── Helper: parse raw IMAP FETCH response to extract literal content ── */
+function extractLiteralFromResponse(lines: any[]): string {
+  let result = "";
+  let inLiteral = false;
+  let literalBytesLeft = 0;
+
+  for (const line of lines) {
+    if (line instanceof Uint8Array) {
+      result += new TextDecoder().decode(line);
+      continue;
+    }
+    if (typeof line === "string") {
+      // Check for literal start: {1234}
+      const litMatch = line.match(/\{(\d+)\}\s*$/);
+      if (litMatch) {
+        inLiteral = true;
+        literalBytesLeft = parseInt(litMatch[1]);
+        continue;
+      }
+      if (inLiteral) {
+        if (line.trim() === ")" || line.match(/^\S+ OK/)) {
+          inLiteral = false;
+        } else {
+          result += line + "\n";
+        }
+      }
+    }
+  }
+  return result.trim();
+}
+
+/* ── BATCH SIZE ── */
+const BATCH_SIZE = 3;
 
 /* ── Main handler ── */
 
@@ -273,133 +313,85 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 5);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, BATCH_SIZE);
 
     const messages: any[] = [];
     let maxUid = lastUid;
 
-    const postalParser = new PostalMime();
-
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
         try {
-          // Always fetch full RFC822 and parse with postal-mime for reliability
-          let rawEmail: Uint8Array | null = null;
-          try {
-            const rawFetch = await client.fetch(String(uid), {
-              byUid: true,
-              uid: true,
-              full: true,
-            } as any);
-            if (rawFetch?.[0]?.raw) {
-              rawEmail = rawFetch[0].raw;
-            }
-          } catch (rawErr: any) {
-            console.warn(`[check-inbox] RFC822 fetch error UID ${uid}:`, rawErr.message);
-          }
-
+          // Step 1: Fetch ENVELOPE only (NO bodyStructure — it crashes on complex emails)
           let fromAddr = "";
           let toAddr = "";
+          let senderName = "";
           let subject = "(nessun oggetto)";
           let messageId = `uid_${uid}_${Date.now()}`;
           let date = "";
-          let senderName = "";
-          let bodyText = "";
-          let bodyHtml = "";
-          let attachmentCount = 0;
           let inReplyTo: string | null = null;
 
-          if (rawEmail) {
-            try {
-              const parsed = await postalParser.parse(rawEmail);
-              
-              // From
-              if (parsed.from?.address) {
-                fromAddr = parsed.from.address.toLowerCase();
-                senderName = parsed.from.name || fromAddr;
-              } else if (parsed.headers) {
-                // Fallback: parse raw From header
-                const fromHeader = parsed.headers.find((h: any) => h.key === "from");
-                if (fromHeader?.value) {
-                  const emailMatch = fromHeader.value.match(/<([^>]+)>/);
-                  fromAddr = emailMatch ? emailMatch[1].toLowerCase() : fromHeader.value.trim().toLowerCase();
-                  senderName = fromHeader.value.replace(/<[^>]+>/, "").trim() || fromAddr;
-                }
-              }
+          try {
+            const envFetch = await client.fetch(String(uid), {
+              byUid: true,
+              uid: true,
+              envelope: true,
+            } as any);
 
-              // To
-              if (parsed.to?.[0]?.address) {
-                toAddr = parsed.to[0].address.toLowerCase();
-              }
-
-              // Subject
-              subject = parsed.subject || "(nessun oggetto)";
-
-              // Message-ID
-              messageId = parsed.messageId || messageId;
-
-              // Date
-              date = parsed.date || "";
-
-              // In-Reply-To
-              if (parsed.inReplyTo) {
-                inReplyTo = Array.isArray(parsed.inReplyTo) ? parsed.inReplyTo[0] : parsed.inReplyTo;
-              } else {
-                const replyHeader = parsed.headers?.find((h: any) => h.key === "in-reply-to");
-                if (replyHeader?.value) inReplyTo = replyHeader.value;
-              }
-
-              // Body — postal-mime decodes quoted-printable/base64 automatically
-              bodyText = parsed.text || "";
-              bodyHtml = parsed.html || "";
-
-              // Attachments count
-              attachmentCount = parsed.attachments?.length || 0;
-
-            } catch (parseErr: any) {
-              console.warn(`[check-inbox] postal-mime parse error UID ${uid}:`, parseErr.message);
+            const env = envFetch?.[0]?.envelope;
+            if (env) {
+              fromAddr = envelopeAddr(env.from?.[0]);
+              toAddr = envelopeAddr(env.to?.[0]);
+              senderName = env.from?.[0]?.name || fromAddr;
+              subject = env.subject || "(nessun oggetto)";
+              messageId = env.messageId || messageId;
+              date = env.date || "";
+              inReplyTo = env.inReplyTo || null;
             }
+          } catch (envErr: any) {
+            console.warn(`[check-inbox] Envelope error UID ${uid}:`, envErr.message);
           }
 
-          // Fallback: if postal-mime failed, try envelope
-          if (!fromAddr) {
-            try {
-              const envFetch = await client.fetch(String(uid), {
-                byUid: true,
-                uid: true,
-                envelope: true,
-              } as any);
-              if (envFetch?.[0]?.envelope) {
-                const env = envFetch[0].envelope;
-                if (env.from?.[0]) {
-                  const mb = env.from[0].mailbox || "";
-                  const host = env.from[0].host || "";
-                  if (mb && host) fromAddr = `${mb}@${host}`.toLowerCase();
-                  senderName = env.from[0].name || fromAddr;
-                }
-                if (env.to?.[0]) {
-                  const mb = env.to[0].mailbox || "";
-                  const host = env.to[0].host || "";
-                  if (mb && host) toAddr = `${mb}@${host}`.toLowerCase();
-                }
-                subject = env.subject || subject;
-                messageId = env.messageId || messageId;
-                date = env.date || date;
-                inReplyTo = env.inReplyTo || inReplyTo;
-              }
-            } catch (_) { /* ignore envelope fallback errors */ }
-          }
-
-          // Final safety: skip if still no from
           if (!fromAddr || fromAddr === "@") {
             fromAddr = "sconosciuto@unknown";
           }
 
-          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentCount}, subj: ${subject}`);
+          // Step 2: Fetch body text via raw IMAP command
+          // Try BODY.PEEK[1] first (text/plain in simple or first part of multipart)
+          // Then try BODY.PEEK[1.1] (text/plain inside multipart/alternative within multipart/mixed)
+          let bodyText = "";
+          let bodyHtml = "";
+
+          const sectionsToTry = ["1", "1.1", "1.2"];
+          for (const section of sectionsToTry) {
+            if (bodyText && bodyHtml) break; // got both, stop
+
+            try {
+              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${section}])`;
+              const bodyResponse = await (client as any).executeCommand(bodyCmd);
+              const content = extractLiteralFromResponse(bodyResponse);
+
+              if (content && content.length > 5) {
+                // Heuristic: if it has HTML tags, it's HTML; otherwise text
+                if (content.includes("<html") || content.includes("<div") || content.includes("<p>") || content.includes("<br") || content.includes("<table")) {
+                  if (!bodyHtml) bodyHtml = content.slice(0, 100000);
+                } else {
+                  if (!bodyText) bodyText = content.slice(0, 50000);
+                }
+              }
+            } catch (bodyErr: any) {
+              // Section doesn't exist — that's fine, try next
+              if (!bodyErr.message?.includes("parse")) {
+                console.warn(`[check-inbox] Body section ${section} error UID ${uid}:`, bodyErr.message);
+              }
+              break; // If IMAP errors, stop trying more sections
+            }
+          }
+
+          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, subj: ${subject}`);
 
           const match = await matchSender(supabase, fromAddr);
 
-          messages.push({
+          const msgData = {
             user_id: userId,
             channel: "email",
             direction: "inbound",
@@ -409,49 +401,52 @@ Deno.serve(async (req) => {
             from_address: fromAddr,
             to_address: toAddr,
             subject,
-            body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
-            body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
+            body_text: bodyText,
+            body_html: bodyHtml,
             message_id_external: messageId,
             in_reply_to: inReplyTo,
-            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentCount },
-          });
+            raw_payload: { uid, date, sender_name: match.name || senderName },
+          };
 
-          if (uid > maxUid) maxUid = uid;
+          // Save immediately (checkpoint per message)
+          const { error: saveErr } = await supabase
+            .from("channel_messages")
+            .upsert([msgData], { onConflict: "message_id_external" });
+
+          if (saveErr) {
+            console.error(`[check-inbox] Save error UID ${uid}:`, saveErr.message);
+          } else {
+            messages.push(msgData);
+            maxUid = uid;
+
+            // Checkpoint: update last_uid after each successful save
+            await supabase
+              .from("email_sync_state")
+              .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+              .eq("user_id", userId);
+
+            // Increment interaction count for known contacts
+            if (match.source_type === "imported_contact" && match.source_id) {
+              await supabase.rpc("increment_contact_interaction", { p_contact_id: match.source_id });
+            }
+          }
+
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
+          // Even on error, advance past this UID to avoid getting stuck
+          if (uid > maxUid) {
+            maxUid = uid;
+            await supabase
+              .from("email_sync_state")
+              .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+              .eq("user_id", userId);
+          }
         }
       }
     }
 
     // Disconnect
     try { client.disconnect(); } catch (_) { /* ignore */ }
-
-    // Deduplicate by message_id_external before saving
-    if (messages.length > 0) {
-      const seen = new Set<string>();
-      const uniqueMessages = messages.filter(m => {
-        if (seen.has(m.message_id_external)) return false;
-        seen.add(m.message_id_external);
-        return true;
-      });
-
-      const { error: ue } = await supabase
-        .from("channel_messages")
-        .upsert(uniqueMessages, { onConflict: "message_id_external" });
-      if (ue) throw new Error("Errore salvataggio: " + ue.message);
-
-      await supabase
-        .from("email_sync_state")
-        .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
-        .eq("user_id", userId);
-
-      // Increment interaction count for known contacts
-      for (const msg of messages) {
-        if (msg.source_type === "imported_contact" && msg.source_id) {
-          await supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id });
-        }
-      }
-    }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
 
@@ -461,6 +456,7 @@ Deno.serve(async (req) => {
       matched,
       unmatched: messages.length - matched,
       last_uid: maxUid,
+      remaining: Math.max(0, uids.length - BATCH_SIZE),
       messages: messages.map(m => ({
         from: m.from_address,
         subject: m.subject,
@@ -470,7 +466,6 @@ Deno.serve(async (req) => {
         has_body: !!(m.body_text || m.body_html),
         body_text_length: m.body_text?.length || 0,
         body_html_length: m.body_html?.length || 0,
-        attachment_count: m.raw_payload?.attachment_count || 0,
       })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
