@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
+import PostalMime from "npm:postal-mime@2.4.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +9,77 @@ const corsHeaders = {
 };
 
 /* ── CA Certificates ── */
+
+const SECTIGO_RSA_DOMAIN_VALIDATION_CA = `-----BEGIN CERTIFICATE-----
+MIIGEzCCA/ugAwIBAgIQfVtRJrR2uhHbdBYLvFMNpzANBgkqhkiG9w0BAQwFADCB
+iDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0pl
+cnNleSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNV
+BAMTJVVTRVJUcnVzdCBSU0EgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTgx
+MTAyMDAwMDAwWhcNMzAxMjMxMjM1OTU5WjCBjzELMAkGA1UEBhMCR0IxGzAZBgNV
+BAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UE
+ChMPU2VjdGlnbyBMaW1pdGVkMTcwNQYDVQQDEy5TZWN0aWdvIFJTQSBEb21haW4g
+VmFsaWRhdGlvbiBTZWN1cmUgU2VydmVyIENBMIIBIjANBgkqhkiG9w0BAQEFAAOC
+AQ8AMIIBCgKCAQEA1nMz1tc8INAA0hdFuNY+B6I/x0HuMjDJsGz99J/LEpgPLT+N
+TQEMgg8Xf2Iu6bhIefsWg06t1zIlk7cHv7lQP6lMw0Aq6Tn/2YHKHxYyQdqAJrk
+jeocgHuP/IJo8lURvh3UGkEC0MpMWCRAIIz7S3YcPb11RFGoKacVPAXJpz9OTTG0E
+oKMbgn6xmrntxZ7FN3ifmgg0+1YuWMQJDgZkW7w33PGfKGioVrCSo1yfu4iYCBsk
+Haswha6vsC6eep3BwEIc4gLw6uBK0u+QDrTBQBbwb4VCSmT3pDCg/r8uoydajotY
+uK3DGReEY+1vVv2Dy2A0xHS+5p3b4eTlygxfFQIDAQABo4IBbjCCAWowHwYDVR0j
+BBgwFoAUU3m/WqorSs9UgOHYm8Cd8rIDZsswHQYDVR0OBBYEFI2MXsRUrYrhd+mb
++ZsF4bgBjWHhMA4GA1UdDwEB/wQEAwIBhjASBgNVHRMBAf8ECDAGAQH/AgEAMB0G
+A1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAbBgNVHSAEFDASMAYGBFUdIAAw
+CAYGZ4EMAQIBMFAGA1UdHwRJMEcwRaBDoEGGP2h0dHA6Ly9jcmwudXNlcnRydXN0
+LmNvbS9VU0VSVHJ1c3RSU0FDZXJ0aWZpY2F0aW9uQXV0aG9yaXR5LmNybDB2Bggr
+BgEFBQcBAQRqMGgwPwYIKwYBBQUHMAKGM2h0dHA6Ly9jcnQudXNlcnRydXN0LmNv
+bS9VU0VSVHJ1c3RSU0FBZGRUcnVzdENBLmNydDAlBggrBgEFBQcwAYYZaHR0cDov
+L29jc3AudXNlcnRydXN0LmNvbTANBgkqhkiG9w0BAQwFAAOCAgEAMr9hvQ5Iw0/H
+ukdN+Jx4GQHcEx2Ab/zDcLRSmjEzmldS+zGea6TvVKqJjUAXaPgREHzSyrHxVYbH
+7rM2kYb2OVG/Rr8PoLq0935JxCo2F57kaDl6r5ROVm+yezu/Coa9zcV3HAO4OLGi
+H19+24rcRki2aArPsrW04jTkZ6k4Zgle0rj8nSg6F0AnwnJOKf0hPHzPE/uWLMUx
+RP0T7dWbqWlod3zu4f+k+TY4CFM5ooQ0nBnzvg6s1SQ36yOoeNDT5++SR2RiOSLv
+xvcRviKFxmZEJCaOEDKNyJOuB56DPi/Z+fVGjmO+wea03KbNIaiGCpXZLoUmGv38
+sbZXQm2V0TP2ORQGgkE49Y9Y3IBbpNV9lXj9p5v//cWoaasm56ekBYdbqbe4oyAL
+l6lFhd2zi+WJN44pDfwGF/Y4QA5C5BIG+3vzxhFoYt/jmPQT2BVPi7Fp2RBgvGQq
+6jG35LWjOhSbJuMLe/0CjraZwTiXWTb2qHSihrZe68Zk6s+go/lunrotEbaGmAhY
+LcmsJWTyXnW0OMGuf1pGg+pRyrbxmRE1a6Vqe8YAsOf4vmSyrcjC8azjUeqkk+B5
+yOGBQMkKW+ESPMFgKuOXwIlCypTPRpgSabuY0MLTDXJLR27lk8QyKGOHQ+SwMj4K
+00u/I5sUKUErmgQfky3xxzlIPK1aEn8=
+-----END CERTIFICATE-----`;
+
+const USERTRUST_RSA_ROOT_CA = `-----BEGIN CERTIFICATE-----
+MIIF3jCCA8agAwIBAgIQAf1tMPyjylGoG7xkDjUDLTANBgkqhkiG9w0BAQwFADCB
+iDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0pl
+cnNleSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNV
+BAMTJVVTRVJUcnVzdCBSU0EgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTAw
+MjAxMDAwMDAwWhcNMzgwMTE4MjM1OTU5WjCBiDELMAkGA1UEBhMCVVMxEzARBgNV
+BAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNleSBDaXR5MR4wHAYDVQQKExVU
+aGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMTJVVTRVJUcnVzdCBSU0EgQ2Vy
+dGlmaWNhdGlvbiBBdXRob3JpdHkwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
+AoICAQCAEmUXNg7D2wiz0KxXDXbtzSfTTK1Qg2HiqiBNCS1kCdzOiZ/MPans9s/B
+3PHTsdZ7NygRK0faOca8Ohm0X6a9fZ2jY0K2dvKpOyuR+OJv0OwWIJAJPuLodMkY
+tJHUYmTbf6MG8YgYapAiPLz+E/CHFHv25B+O1ORRxhFnRghRy4YUVD+8M/5+bJz/
+Fp0YvVGONaanZshyZ9shZrHUm3gDwFA66Mzw3LyeTP6vBZY1H1dat//O+T23LLb2
+VN3I5xI6Ta5MirdcmrS3ID3KfyI0rn47aGYBROcBTkZTmzNg95S+UzeQc0PzMsNT
+79uq/nROacdrjGCT3sTHDN/hMq7MkztReJVni+49Vv4M0GkPGw/zJSZrM233bkf6
+c0Plfg6lZrEpfDKEY1WJxA3Bk1QwGROs0303p+tdOmw1XNtB1xLaqUkL39iAigmT
+Yo61Zs8liM2EuLE/pDkP2QKe6xJMlXzzawWpXhaDzLhn4ugTncxbgtNMs+1b/97l
+c6wjOy0AvzVVdAlJ2ElYGn+SNuZRkg7zJn0cTRe8yexDJtC/QV9AqURE9JnnV4ee
+UB9XVKg+/XRjL7FQZQnmWEIuQxpMtPAlR1n6BB6T1CZGSlCBst6+eLf8ZxXhyVeE
+Hg9j1uliutZfVS7qXMYoCAQlObgOK6nyTJccBz8NUvXt7y+CDwIDAQABo0IwQDAd
+BgNVHQ4EFgQUU3m/WqorSs9UgOHYm8Cd8rIDZsswDgYDVR0PAQH/BAQDAgEGMA8G
+A1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEMBQADggIBAFzUfA3P9wF9QZllDHPF
+Up/L+M+ZBn8b2kMVn54CVVeWFPFSPCeHlCjtHzoBN6J2/FNQwISbxmtOuowhT6KO
+VWKR82kV2LyI48SqC/3vqOlLVSoGIG1VeCkZ7l8wXEskEVX/JJpuXior7gtNn3/3
+ATiUFJVDBwn7YKnuHKsSjKCaXqeYalltiz8I+8jRRa8YFWSQEg9zKC7F4iRO/Fjs
+8PRF/iKz6y+O0tlFYQXBl2+odnKPi4w2r78NBc5xjeambx9spnFixdjQg3IM8WcR
+iQycE0xyNN+81XHfqnHd4blsjDwSXWXavVcStkNr/+XeTWYRUc+ZruwXtuhxkYze
+Sf7dNXGiFSeUHM9h4ya7b6NnJSFd5t0dCy5oGzuCr+yDZ4XUmFF0sbmZgIn/f3gZ
+XHlKYC6SQK5MNyosycdiyA5d9zZbyuAlJQG03RoHnHcAP9Dc1ew91Pq7P8yF1m9/
+qS3fuQL39ZeatTXaw2ewh0qpKJ4jjv9cJ2vhsE/zB+4ALtRZh8tSQZXq9EfX7mRB
+VXyNWQKV3WKdwrnuWih0hKWbt5DHDAff9Yk2dDLWKMGwsAvgnEzDHNb842m1R0aB
+L6KCq9NjRHDEjf8tM7qtj3u1cIiuPhnPQCjY/MiQu12ZIvVS5ljFH4gxQ+6IHdfG
+jjxDah2nGN59PRbxYvnKkKj9
+-----END CERTIFICATE-----`;
 
 const ACTALIS_INTERMEDIATE_CA = `-----BEGIN CERTIFICATE-----
 MIIHdTCCBV2gAwIBAgIQXDs/N638KP4Pz9Or+D+FUTANBgkqhkiG9w0BAQsFADBr
@@ -86,77 +158,6 @@ LysRJyU3eExRarDzzFhdFPFqSBX/wge2sY0PjlxQRrM9vwGYT7JZVEc+NHt4bVaT
 LnPqZih4zR0Uv6CPLy64Lo7yFIrM6bV8+2ydDKXhlg==
 -----END CERTIFICATE-----`;
 
-const SECTIGO_RSA_DOMAIN_VALIDATION_CA = `-----BEGIN CERTIFICATE-----
-MIIGEzCCA/ugAwIBAgIQfVtRJrR2uhHbdBYLvFMNpzANBgkqhkiG9w0BAQwFADCB
-iDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0pl
-cnNleSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNV
-BAMTJVVTRVJUcnVzdCBSU0EgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTgx
-MTAyMDAwMDAwWhcNMzAxMjMxMjM1OTU5WjCBjzELMAkGA1UEBhMCR0IxGzAZBgNV
-BAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UE
-ChMPU2VjdGlnbyBMaW1pdGVkMTcwNQYDVQQDEy5TZWN0aWdvIFJTQSBEb21haW4g
-VmFsaWRhdGlvbiBTZWN1cmUgU2VydmVyIENBMIIBIjANBgkqhkiG9w0BAQEFAAOC
-AQ8AMIIBCgKCAQEA1nMz1tc8INAA0hdFuNY+B6I/x0HuMjDJsGz99J/LEpgPLT+N
-TQEMgg8Xf2Iu6bhIefsWg06t1zIlk7cHv7lQP6lMw0Aq6Tn/2YHKHxYyQdqAJrk
-jeocgHuP/IJo8lURvh3UGkEC0MpMWCRAIIz7S3YcPb11RFGoKacVPAXJpz9OTTG0E
-oKMbgn6xmrntxZ7FN3ifmgg0+1YuWMQJDgZkW7w33PGfKGioVrCSo1yfu4iYCBsk
-Haswha6vsC6eep3BwEIc4gLw6uBK0u+QDrTBQBbwb4VCSmT3pDCg/r8uoydajotY
-uK3DGReEY+1vVv2Dy2A0xHS+5p3b4eTlygxfFQIDAQABo4IBbjCCAWowHwYDVR0j
-BBgwFoAUU3m/WqorSs9UgOHYm8Cd8rIDZsswHQYDVR0OBBYEFI2MXsRUrYrhd+mb
-+ZsF4bgBjWHhMA4GA1UdDwEB/wQEAwIBhjASBgNVHRMBAf8ECDAGAQH/AgEAMB0G
-A1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAbBgNVHSAEFDASMAYGBFUdIAAw
-CAYGZ4EMAQIBMFAGA1UdHwRJMEcwRaBDoEGGP2h0dHA6Ly9jcmwudXNlcnRydXN0
-LmNvbS9VU0VSVHJ1c3RSU0FDZXJ0aWZpY2F0aW9uQXV0aG9yaXR5LmNybDB2Bggr
-BgEFBQcBAQRqMGgwPwYIKwYBBQUHMAKGM2h0dHA6Ly9jcnQudXNlcnRydXN0LmNv
-bS9VU0VSVHJ1c3RSU0FBZGRUcnVzdENBLmNydDAlBggrBgEFBQcwAYYZaHR0cDov
-L29jc3AudXNlcnRydXN0LmNvbTANBgkqhkiG9w0BAQwFAAOCAgEAMr9hvQ5Iw0/H
-ukdN+Jx4GQHcEx2Ab/zDcLRSmjEzmldS+zGea6TvVKqJjUAXaPgREHzSyrHxVYbH
-7rM2kYb2OVG/Rr8PoLq0935JxCo2F57kaDl6r5ROVm+yezu/Coa9zcV3HAO4OLGi
-H19+24rcRki2aArPsrW04jTkZ6k4Zgle0rj8nSg6F0AnwnJOKf0hPHzPE/uWLMUx
-RP0T7dWbqWlod3zu4f+k+TY4CFM5ooQ0nBnzvg6s1SQ36yOoeNDT5++SR2RiOSLv
-xvcRviKFxmZEJCaOEDKNyJOuB56DPi/Z+fVGjmO+wea03KbNIaiGCpXZLoUmGv38
-sbZXQm2V0TP2ORQGgkE49Y9Y3IBbpNV9lXj9p5v//cWoaasm56ekBYdbqbe4oyAL
-l6lFhd2zi+WJN44pDfwGF/Y4QA5C5BIG+3vzxhFoYt/jmPQT2BVPi7Fp2RBgvGQq
-6jG35LWjOhSbJuMLe/0CjraZwTiXWTb2qHSihrZe68Zk6s+go/lunrotEbaGmAhY
-LcmsJWTyXnW0OMGuf1pGg+pRyrbxmRE1a6Vqe8YAsOf4vmSyrcjC8azjUeqkk+B5
-yOGBQMkKW+ESPMFgKuOXwIlCypTPRpgSabuY0MLTDXJLR27lk8QyKGOHQ+SwMj4K
-00u/I5sUKUErmgQfky3xxzlIPK1aEn8=
------END CERTIFICATE-----`;
-
-const USERTRUST_RSA_ROOT_CA = `-----BEGIN CERTIFICATE-----
-MIIF3jCCA8agAwIBAgIQAf1tMPyjylGoG7xkDjUDLTANBgkqhkiG9w0BAQwFADCB
-iDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0pl
-cnNleSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNV
-BAMTJVVTRVJUcnVzdCBSU0EgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTAw
-MjAxMDAwMDAwWhcNMzgwMTE4MjM1OTU5WjCBiDELMAkGA1UEBhMCVVMxEzARBgNV
-BAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNleSBDaXR5MR4wHAYDVQQKExVU
-aGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMTJVVTRVJUcnVzdCBSU0EgQ2Vy
-dGlmaWNhdGlvbiBBdXRob3JpdHkwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
-AoICAQCAEmUXNg7D2wiz0KxXDXbtzSfTTK1Qg2HiqiBNCS1kCdzOiZ/MPans9s/B
-3PHTsdZ7NygRK0faOca8Ohm0X6a9fZ2jY0K2dvKpOyuR+OJv0OwWIJAJPuLodMkY
-tJHUYmTbf6MG8YgYapAiPLz+E/CHFHv25B+O1ORRxhFnRghRy4YUVD+8M/5+bJz/
-Fp0YvVGONaanZshyZ9shZrHUm3gDwFA66Mzw3LyeTP6vBZY1H1dat//O+T23LLb2
-VN3I5xI6Ta5MirdcmrS3ID3KfyI0rn47aGYBROcBTkZTmzNg95S+UzeQc0PzMsNT
-79uq/nROacdrjGCT3sTHDN/hMq7MkztReJVni+49Vv4M0GkPGw/zJSZrM233bkf6
-c0Plfg6lZrEpfDKEY1WJxA3Bk1QwGROs0303p+tdOmw1XNtB1xLaqUkL39iAigmT
-Yo61Zs8liM2EuLE/pDkP2QKe6xJMlXzzawWpXhaDzLhn4ugTncxbgtNMs+1b/97l
-c6wjOy0AvzVVdAlJ2ElYGn+SNuZRkg7zJn0cTRe8yexDJtC/QV9AqURE9JnnV4ee
-UB9XVKg+/XRjL7FQZQnmWEIuQxpMtPAlR1n6BB6T1CZGSlCBst6+eLf8ZxXhyVeE
-Hg9j1uliutZfVS7qXMYoCAQlObgOK6nyTJccBz8NUvXt7y+CDwIDAQABo0IwQDAd
-BgNVHQ4EFgQUU3m/WqorSs9UgOHYm8Cd8rIDZsswDgYDVR0PAQH/BAQDAgEGMA8G
-A1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEMBQADggIBAFzUfA3P9wF9QZllDHPF
-Up/L+M+ZBn8b2kMVn54CVVeWFPFSPCeHlCjtHzoBN6J2/FNQwISbxmtOuowhT6KO
-VWKR82kV2LyI48SqC/3vqOlLVSoGIG1VeCkZ7l8wXEskEVX/JJpuXior7gtNn3/3
-ATiUFJVDBwn7YKnuHKsSjKCaXqeYalltiz8I+8jRRa8YFWSQEg9zKC7F4iRO/Fjs
-8PRF/iKz6y+O0tlFYQXBl2+odnKPi4w2r78NBc5xjeambx9spnFixdjQg3IM8WcR
-iQycE0xyNN+81XHfqnHd4blsjDwSXWXavVcStkNr/+XeTWYRUc+ZruwXtuhxkYze
-Sf7dNXGiFSeUHM9h4ya7b6NnJSFd5t0dCy5oGzuCr+yDZ4XUmFF0sbmZgIn/f3gZ
-XHlKYC6SQK5MNyosycdiyA5d9zZbyuAlJQG03RoHnHcAP9Dc1ew91Pq7P8yF1m9/
-qS3fuQL39ZeatTXaw2ewh0qpKJ4jjv9cJ2vhsE/zB+4ALtRZh8tSQZXq9EfX7mRB
-VXyNWQKV3WKdwrnuWih0hKWbt5DHDAff9Yk2dDLWKMGwsAvgnEzDHNb842m1R0aB
-L6KCq9NjRHDEjf8tM7qtj3u1cIiuPhnPQCjY/MiQu12ZIvVS5ljFH4gxQ+6IHdfG
-jjxDah2nGN59PRbxYvnKkKj9
------END CERTIFICATE-----`;
-
 function getCaCertsForHost(host: string): string[] {
   const h = host.trim().toLowerCase();
   if (h.endsWith(".vmteca.net") || h === "vmteca.net") {
@@ -183,139 +184,6 @@ async function matchSender(supabase: any, email: string) {
 function extractEmailAddress(addr: { mailbox?: string; host?: string } | undefined): string {
   if (!addr) return "";
   return `${addr.mailbox || ""}@${addr.host || ""}`.toLowerCase();
-}
-
-/* ── MIME body structure helpers ── */
-
-interface MimePart {
-  type: string;
-  subtype: string;
-  section: string;
-  encoding?: string;
-  size?: number;
-  disposition?: string;
-  filename?: string;
-  params?: Record<string, string>;
-}
-
-function parseMimeStructure(bs: any, section: string = ""): MimePart[] {
-  const parts: MimePart[] = [];
-  if (!bs) return parts;
-
-  // If it's a multipart structure (array of arrays)
-  if (Array.isArray(bs) && bs.length > 0 && Array.isArray(bs[0])) {
-    for (let i = 0; i < bs.length; i++) {
-      if (Array.isArray(bs[i])) {
-        const childSection = section ? `${section}.${i + 1}` : `${i + 1}`;
-        parts.push(...parseMimeStructure(bs[i], childSection));
-      }
-    }
-    return parts;
-  }
-
-  // Single part - try to extract info
-  if (Array.isArray(bs) && bs.length >= 2) {
-    const type = (typeof bs[0] === "string" ? bs[0] : "").toLowerCase();
-    const subtype = (typeof bs[1] === "string" ? bs[1] : "").toLowerCase();
-    const encoding = bs.length > 5 && typeof bs[5] === "string" ? bs[5].toLowerCase() : "";
-    const size = bs.length > 6 && typeof bs[6] === "number" ? bs[6] : 0;
-    
-    // Check disposition for attachments
-    let disposition = "";
-    let filename = "";
-    const params: Record<string, string> = {};
-    
-    // Parameters are typically at index 2
-    if (bs[2] && typeof bs[2] === "object" && !Array.isArray(bs[2])) {
-      Object.assign(params, bs[2]);
-      if (params.name) filename = params.name;
-    }
-    
-    // Disposition is typically later in the array
-    for (let i = 7; i < bs.length; i++) {
-      if (Array.isArray(bs[i]) && bs[i].length >= 1) {
-        const d = typeof bs[i][0] === "string" ? bs[i][0].toLowerCase() : "";
-        if (d === "attachment" || d === "inline") {
-          disposition = d;
-          if (bs[i][1] && typeof bs[i][1] === "object") {
-            const dparams = bs[i][1];
-            if (dparams.filename) filename = dparams.filename;
-          }
-        }
-      }
-    }
-    
-    const currentSection = section || "1";
-    parts.push({ type, subtype, section: currentSection, encoding, size, disposition, filename, params });
-  }
-
-  // Object-style bodyStructure (library may return objects)
-  if (bs && typeof bs === "object" && !Array.isArray(bs)) {
-    if (bs.childNodes && Array.isArray(bs.childNodes)) {
-      for (let i = 0; i < bs.childNodes.length; i++) {
-        const childSection = section ? `${section}.${i + 1}` : `${i + 1}`;
-        parts.push(...parseMimeStructure(bs.childNodes[i], childSection));
-      }
-    } else {
-      const type = (bs.type || "").toLowerCase();
-      const subtype = (bs.subtype || "").toLowerCase();
-      const encoding = (bs.encoding || "").toLowerCase();
-      const size = bs.size || 0;
-      const disposition = (bs.disposition || "").toLowerCase();
-      const filename = bs.dispositionParameters?.filename || bs.parameters?.name || "";
-      const currentSection = section || "1";
-      parts.push({ type, subtype, section: currentSection, encoding, size, disposition, filename });
-    }
-  }
-
-  return parts;
-}
-
-function findTextPart(parts: MimePart[], subtype: string): MimePart | undefined {
-  return parts.find(p => p.type === "text" && p.subtype === subtype);
-}
-
-function findAttachmentParts(parts: MimePart[]): MimePart[] {
-  return parts.filter(p => {
-    if (p.disposition === "attachment") return true;
-    if (p.filename && p.type !== "text") return true;
-    if (p.type !== "text" && p.type !== "multipart" && p.type !== "") return true;
-    return false;
-  });
-}
-
-function decodeBody(raw: string | Uint8Array, encoding: string): string {
-  if (!raw) return "";
-  let text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
-  
-  if (encoding === "base64") {
-    try {
-      const decoded = atob(text.replace(/\r?\n/g, ""));
-      return decoded;
-    } catch { return text; }
-  }
-  if (encoding === "quoted-printable") {
-    return text
-      .replace(/=\r?\n/g, "")
-      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  }
-  return text;
-}
-
-function decodeAttachmentBytes(raw: string | Uint8Array, encoding: string): Uint8Array {
-  if (!raw) return new Uint8Array(0);
-  
-  if (encoding === "base64") {
-    const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
-    const cleaned = text.replace(/\r?\n/g, "");
-    const binaryStr = atob(cleaned);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-    return bytes;
-  }
-  
-  if (typeof raw === "string") return new TextEncoder().encode(raw);
-  return raw;
 }
 
 /* ── Main handler ── */
@@ -387,176 +255,146 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 20); // limit to 20 for body+attachment processing
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
 
     const messages: any[] = [];
     const attachmentRecords: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
+      // Step 1: Fetch envelopes only (no bodyStructure - it crashes on complex MIME)
       const fetchRange = toFetch.map(u => String(u)).join(",");
+      let envelopeMap = new Map<number, any>();
 
       try {
-        // Step 1: Fetch envelope + bodyStructure for all messages
-        const fetched = await client.fetch(fetchRange, {
+        const envelopes = await client.fetch(fetchRange, {
           uid: true,
           envelope: true,
-          bodyStructure: true,
         } as any);
-
-        for (const msg of fetched) {
-          try {
-            const uid = msg.uid || 0;
-            const envelope = msg.envelope || {};
-            const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
-            const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
-            const subject = envelope.subject || "(nessun oggetto)";
-            const messageId = envelope.messageId || `uid_${uid}_${Date.now()}`;
-            const date = envelope.date || "";
-            const senderName = envelope.from?.[0]
-              ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
-              : fromAddr;
-
-            // Parse MIME structure
-            const bs = msg.bodyStructure || msg.bodystructure;
-            const mimeParts = parseMimeStructure(bs);
-            console.log(`[check-inbox] UID ${uid}: ${mimeParts.length} MIME parts, subject: ${subject}`);
-
-            let bodyText = "";
-            let bodyHtml = "";
-
-            // Step 2: Fetch text body parts
-            const plainPart = findTextPart(mimeParts, "plain");
-            const htmlPart = findTextPart(mimeParts, "html");
-
-            if (plainPart || htmlPart) {
-              // Build BODY sections to fetch
-              const sectionsToFetch: string[] = [];
-              if (plainPart) sectionsToFetch.push(plainPart.section);
-              if (htmlPart) sectionsToFetch.push(htmlPart.section);
-
-              try {
-                // Fetch each body section individually
-                for (const section of sectionsToFetch) {
-                  const bodyFetch = await client.fetch(String(uid), {
-                    uid: true,
-                    body: section,
-                  } as any);
-
-                  if (bodyFetch && bodyFetch.length > 0) {
-                    const bodyData = bodyFetch[0];
-                    const rawBody = bodyData.body || bodyData.text || "";
-                    
-                    if (plainPart && section === plainPart.section) {
-                      bodyText = decodeBody(rawBody, plainPart.encoding || "");
-                    }
-                    if (htmlPart && section === htmlPart.section) {
-                      bodyHtml = decodeBody(rawBody, htmlPart.encoding || "");
-                    }
-                  }
-                }
-              } catch (bodyErr: any) {
-                console.error(`[check-inbox] Body fetch error UID ${uid}:`, bodyErr.message);
-                // Fallback: try fetching entire body
-                try {
-                  const fallback = await client.fetch(String(uid), { uid: true, body: true } as any);
-                  if (fallback?.[0]) {
-                    bodyText = typeof fallback[0].body === "string" ? fallback[0].body : "";
-                  }
-                } catch (_) { /* ignore */ }
-              }
-            } else {
-              // Simple message without MIME parts - fetch body directly
-              try {
-                const simpleFetch = await client.fetch(String(uid), { uid: true, body: true } as any);
-                if (simpleFetch?.[0]) {
-                  const raw = simpleFetch[0].body || simpleFetch[0].text || "";
-                  bodyText = typeof raw === "string" ? raw.trim() : "";
-                }
-              } catch (_) { /* ignore */ }
-            }
-
-            // Step 3: Handle attachments
-            const attachments = findAttachmentParts(mimeParts);
-            const MAX_ATTACHMENTS = 10;
-            const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-            for (const att of attachments.slice(0, MAX_ATTACHMENTS)) {
-              if (att.size && att.size > MAX_SIZE) {
-                console.log(`[check-inbox] Skipping large attachment: ${att.filename} (${att.size} bytes)`);
-                continue;
-              }
-
-              const filename = att.filename || `attachment_${att.section}.${att.subtype || "bin"}`;
-              
-              try {
-                const attFetch = await client.fetch(String(uid), {
-                  uid: true,
-                  body: att.section,
-                } as any);
-
-                if (attFetch?.[0]) {
-                  const rawAtt = attFetch[0].body || attFetch[0].text || "";
-                  const fileBytes = decodeAttachmentBytes(rawAtt, att.encoding || "");
-                  
-                  if (fileBytes.length > 0 && fileBytes.length <= MAX_SIZE) {
-                    const storagePath = `email-attachments/${userId}/${messageId}/${filename}`;
-                    const contentType = `${att.type}/${att.subtype}` || "application/octet-stream";
-
-                    const { error: uploadErr } = await supabase.storage
-                      .from("workspace-docs")
-                      .upload(storagePath, fileBytes, {
-                        contentType,
-                        upsert: true,
-                      });
-
-                    if (uploadErr) {
-                      console.error(`[check-inbox] Upload error for ${filename}:`, uploadErr.message);
-                    } else {
-                      attachmentRecords.push({
-                        message_id: null, // will be set after upsert
-                        user_id: userId,
-                        filename,
-                        content_type: contentType,
-                        size_bytes: fileBytes.length,
-                        storage_path: storagePath,
-                        _message_id_external: messageId, // temp reference
-                      });
-                      console.log(`[check-inbox] Uploaded: ${filename} (${fileBytes.length} bytes)`);
-                    }
-                  }
-                }
-              } catch (attErr: any) {
-                console.error(`[check-inbox] Attachment fetch error ${filename}:`, attErr.message);
-              }
-            }
-
-            const match = await matchSender(supabase, fromAddr);
-
-            messages.push({
-              user_id: userId,
-              channel: "email",
-              direction: "inbound",
-              source_type: match.source_type,
-              source_id: match.source_id,
-              partner_id: match.partner_id,
-              from_address: fromAddr,
-              to_address: toAddr,
-              subject,
-              body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
-              body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
-              message_id_external: messageId,
-              in_reply_to: envelope.inReplyTo || null,
-              raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachments.length },
-            });
-
-            if (uid > maxUid) maxUid = uid;
-          } catch (e: any) {
-            console.error(`[check-inbox] Error processing message:`, e.message);
-          }
+        for (const msg of envelopes) {
+          envelopeMap.set(msg.uid, msg.envelope);
         }
-      } catch (fetchErr: any) {
-        console.error(`[check-inbox] Fetch error:`, fetchErr.message);
+      } catch (envErr: any) {
+        console.error("[check-inbox] Envelope fetch error:", envErr.message);
+      }
+
+      // Step 2: For each UID, fetch full RFC822 body and parse with postal-mime
+      for (const uid of toFetch) {
+        try {
+          const envelope = envelopeMap.get(uid) || {};
+          const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
+          const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
+          const subject = envelope.subject || "(nessun oggetto)";
+          const messageId = envelope.messageId || `uid_${uid}_${Date.now()}`;
+          const date = envelope.date || "";
+          const senderName = envelope.from?.[0]
+            ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
+            : fromAddr;
+
+          let bodyText = "";
+          let bodyHtml = "";
+          let parsedAttachments: any[] = [];
+
+          // Fetch full RFC822 message
+          try {
+            const rfc822Fetch = await client.fetch(String(uid), {
+              uid: true,
+              body: "",  // empty string = full RFC822 body
+            } as any);
+
+            if (rfc822Fetch?.[0]) {
+              const rawMessage = rfc822Fetch[0].body || rfc822Fetch[0].text || "";
+              
+              if (rawMessage) {
+                // Convert to Uint8Array for postal-mime
+                let messageBytes: Uint8Array;
+                if (typeof rawMessage === "string") {
+                  messageBytes = new TextEncoder().encode(rawMessage);
+                } else {
+                  messageBytes = rawMessage;
+                }
+
+                // Parse with postal-mime
+                const parser = new PostalMime();
+                const parsed = await parser.parse(messageBytes);
+
+                bodyText = parsed.text || "";
+                bodyHtml = parsed.html || "";
+                parsedAttachments = parsed.attachments || [];
+
+                console.log(`[check-inbox] UID ${uid}: parsed OK, text=${bodyText.length}c, html=${bodyHtml.length}c, attachments=${parsedAttachments.length}, subject: ${subject}`);
+              }
+            }
+          } catch (bodyErr: any) {
+            console.error(`[check-inbox] RFC822 fetch/parse error UID ${uid}:`, bodyErr.message);
+          }
+
+          // Step 3: Handle attachments from postal-mime
+          const MAX_ATTACHMENTS = 10;
+          const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+          for (const att of parsedAttachments.slice(0, MAX_ATTACHMENTS)) {
+            if (!att.content || att.content.byteLength === 0) continue;
+            if (att.content.byteLength > MAX_SIZE) {
+              console.log(`[check-inbox] Skipping large attachment: ${att.filename} (${att.content.byteLength} bytes)`);
+              continue;
+            }
+
+            const filename = att.filename || `attachment.${att.mimeType?.split("/")?.[1] || "bin"}`;
+            const contentType = att.mimeType || "application/octet-stream";
+            const storagePath = `email-attachments/${userId}/${messageId}/${filename}`;
+
+            try {
+              const fileBytes = new Uint8Array(att.content);
+              const { error: uploadErr } = await supabase.storage
+                .from("workspace-docs")
+                .upload(storagePath, fileBytes, {
+                  contentType,
+                  upsert: true,
+                });
+
+              if (uploadErr) {
+                console.error(`[check-inbox] Upload error for ${filename}:`, uploadErr.message);
+              } else {
+                attachmentRecords.push({
+                  message_id: null,
+                  user_id: userId,
+                  filename,
+                  content_type: contentType,
+                  size_bytes: fileBytes.length,
+                  storage_path: storagePath,
+                  _message_id_external: messageId,
+                });
+                console.log(`[check-inbox] Uploaded: ${filename} (${fileBytes.length} bytes)`);
+              }
+            } catch (attErr: any) {
+              console.error(`[check-inbox] Attachment upload error ${filename}:`, attErr.message);
+            }
+          }
+
+          const match = await matchSender(supabase, fromAddr);
+
+          messages.push({
+            user_id: userId,
+            channel: "email",
+            direction: "inbound",
+            source_type: match.source_type,
+            source_id: match.source_id,
+            partner_id: match.partner_id,
+            from_address: fromAddr,
+            to_address: toAddr,
+            subject,
+            body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
+            body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
+            message_id_external: messageId,
+            in_reply_to: envelope.inReplyTo || null,
+            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: parsedAttachments.length },
+          });
+
+          if (uid > maxUid) maxUid = uid;
+        } catch (e: any) {
+          console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
+        }
       }
     }
 
@@ -577,7 +415,6 @@ Deno.serve(async (req) => {
 
       // Link attachments to saved messages
       if (attachmentRecords.length > 0) {
-        // Get message IDs for saved messages
         const extIds = attachmentRecords.map(a => a._message_id_external);
         const { data: savedMsgs } = await supabase
           .from("channel_messages")
@@ -633,6 +470,8 @@ Deno.serve(async (req) => {
         sender_name: m.raw_payload?.sender_name,
         date: m.raw_payload?.date,
         has_body: !!(m.body_text || m.body_html),
+        body_text_length: m.body_text?.length || 0,
+        body_html_length: m.body_html?.length || 0,
         attachment_count: m.raw_payload?.attachment_count || 0,
       })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
