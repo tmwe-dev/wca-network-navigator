@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
+
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
