@@ -4,29 +4,14 @@ import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
+import {
+  buildLinkedInGoogleQueries,
+  normalizeLinkedInProfileUrl,
+  pickBestLinkedInCandidate,
+  scoreLinkedInCandidate,
+} from "@/lib/linkedinSearch";
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-const isLinkedInProfileUrl = (url?: string | null): boolean => {
-  if (!url) return false;
-  try {
-    const p = new URL(url);
-    const h = p.hostname.toLowerCase();
-    return (h === "linkedin.com" || h === "www.linkedin.com" || h.endsWith(".linkedin.com")) && /^\/(in|pub)\//.test(p.pathname);
-  } catch { return false; }
-};
-
-const normalizeUrl = (url: string): string => {
-  try { const p = new URL(url); return `${p.protocol}//${p.hostname}${p.pathname}`.replace(/\/$/, ""); } catch { return url; }
-};
-
-const getEmailDomain = (email?: string | null): string | null => {
-  if (!email) return null;
-  const d = email.split("@")[1]?.toLowerCase();
-  if (!d) return null;
-  const generic = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com", "icloud.com", "aol.com", "mail.com", "protonmail.com", "libero.it", "virgilio.it", "alice.it", "tin.it", "fastwebnet.it", "tiscali.it", "email.it", "pec.it"];
-  return generic.includes(d) ? null : d;
-};
 
 /** Get existing LinkedIn URL from enrichment_data (check all known fields) */
 const getExistingLinkedInUrl = (enrichmentData: Record<string, any> | null): string | null => {
@@ -56,30 +41,6 @@ export function useLinkedInLookup() {
   const liBridge = useLinkedInExtensionBridge();
   const [progress, setProgress] = useState<LookupProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
-
-  const buildGoogleQuery = (name: string, company?: string | null, email?: string | null): string[] => {
-    const queries: string[] = [];
-    const emailDomain = getEmailDomain(email);
-    if (company && company !== "—") queries.push(`site:linkedin.com/in "${name}" "${company}"`);
-    if (emailDomain) queries.push(`site:linkedin.com/in "${name}" "${emailDomain}"`);
-    if (!queries.length) queries.push(`site:linkedin.com/in "${name}"`);
-    return queries;
-  };
-
-  const validateMatch = (title: string, description: string, expectedName: string, expectedCompany?: string | null): number => {
-    const text = `${title} ${description}`.toLowerCase();
-    const nameLower = expectedName.toLowerCase();
-    const nameParts = nameLower.split(/\s+/).filter(w => w.length > 2);
-    let score = 0.3;
-    if (text.includes(nameLower)) score += 0.4;
-    else if (nameParts.some(p => text.includes(p))) score += 0.2;
-    if (expectedCompany && expectedCompany !== "—") {
-      const cLower = expectedCompany.toLowerCase();
-      const cWords = cLower.split(/\s+/).filter(w => w.length > 3);
-      if (text.includes(cLower) || cWords.some(w => text.includes(w))) score += 0.25;
-    }
-    return Math.min(score, 1);
-  };
 
   const lookupBatch = useCallback(async (contactIds: string[]) => {
     if (!pcBridge.isAvailable && !liBridge.isAvailable) {
