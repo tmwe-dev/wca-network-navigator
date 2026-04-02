@@ -18,7 +18,7 @@ import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useMission } from "@/contexts/MissionContext";
-import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
