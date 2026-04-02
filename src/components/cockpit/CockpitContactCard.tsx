@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useContactDrawer, type RecordSourceType } from "@/contexts/ContactDrawerContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Search, Sparkles, CreditCard, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,6 +56,8 @@ interface CockpitContactCardProps {
   isSelected: boolean;
   isWorked?: boolean;
   assignment?: AssignmentInfo;
+  sourceType?: RecordSourceType;
+  sourceId?: string;
   onToggleSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -150,8 +153,9 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
   );
 }
 
-export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, assignment, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, onLinkedInLookup, enrichmentState }: CockpitContactCardProps) {
+export function CockpitContactCard({ contact, flag, index, isSelected, isWorked, assignment, sourceType, sourceId, onToggleSelect, onDragStart, onDragEnd, onDeepSearch, onAlias, onLinkedInLookup, enrichmentState }: CockpitContactCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { open: openDrawer } = useContactDrawer();
   const oc = originConfig[contact.origin];
   const isProcessing = enrichmentState?.isActive && enrichmentState.scrapingPhase !== "idle";
   const hasLinkedin = enrichmentState?.linkedinProfile && (enrichmentState.scrapingPhase === "reviewing" || enrichmentState.scrapingPhase === "generating" || enrichmentState.scrapingPhase === "idle");
@@ -165,7 +169,11 @@ export function CockpitContactCard({ contact, flag, index, isSelected, isWorked,
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[role="checkbox"]') || target.closest('input') || target.closest('a')) return;
-    setIsExpanded(!isExpanded);
+    if (e.detail === 2 && sourceType && sourceId) {
+      openDrawer({ sourceType, sourceId });
+    } else {
+      setIsExpanded(!isExpanded);
+    }
   };
 
   return (
