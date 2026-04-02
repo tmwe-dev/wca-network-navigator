@@ -301,11 +301,12 @@ Deno.serve(async (req) => {
 
             if (rfc822Fetch?.[0]) {
               const fetchResult = rfc822Fetch[0];
-              // Debug: log available keys to find where the raw message is
-              const keys = Object.keys(fetchResult);
-              console.log(`[check-inbox] UID ${uid} fetch keys: ${keys.join(", ")}`);
+              // Debug: log raw type and size
+              const rawVal = fetchResult.raw;
+              const rawType = rawVal === null ? "null" : rawVal === undefined ? "undefined" : typeof rawVal === "string" ? `string(${rawVal.length})` : rawVal instanceof Uint8Array ? `Uint8Array(${rawVal.length})` : `${typeof rawVal}`;
+              console.log(`[check-inbox] UID ${uid} raw type: ${rawType}, keys: ${Object.keys(fetchResult).join(",")}`);
               
-              // Try all possible property names - library uses "raw" for RFC822
+              // The library returns "raw" as Uint8Array when source:true
               const rawMessage = fetchResult.raw || fetchResult.source || fetchResult.body || fetchResult.text || "";
               
               if (rawMessage) {
