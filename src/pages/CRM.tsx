@@ -1,7 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { UserCheck, ContactRound } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
 
 const Contacts = lazy(() => import("./Contacts"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
