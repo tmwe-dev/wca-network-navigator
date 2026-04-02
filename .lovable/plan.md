@@ -1,64 +1,106 @@
 
-# Piano: Sidebar come unica fonte — Context Bar in alto
 
-## Principio
+# Piano: Sidebar Chiare, Dinamiche e Usabili — Redesign Completo
 
-Le due sidebar globali (Filtri a sinistra, Mission a destra) sono gli UNICI strumenti per impostare Goal, Proposta, Filtri, e Ricerca. Ogni maschera mostra in alto una **Context Bar** compatta che riflette le scelte attive delle sidebar, senza duplicare i controlli.
+## Obiettivo
 
-## Problema attuale
+Ridisegnare entrambe le sidebar (Mission e Filtri) con un design **grande, chiaro, con icone evidenti**, dropdown per selezionare i preset di Goal/Proposta e la possibilità di registrare nuovi contenuti. Tutto deve essere comprensibile anche da un utente anziano: font grandi, icone esplicite, spaziatura generosa, zero ambiguità.
 
-- **EmailComposer** duplica Goal/Proposta con ContentPicker inline (righe 481-494)
-- **EmailComposer** ha un pannello sinistro di ricerca destinatari che dovrebbe stare nella sidebar
-- **AIDraftStudio** (Cockpit) duplica Goal/Proposta con ContentPicker
-- Nessuna pagina mostra un riepilogo delle scelte attive delle sidebar
+## Problemi Attuali
 
-## Cosa cambia
+- **MissionDrawer**: Font 10-11px, emoji come icone (🎯📝), sezioni collapsibili che nascondono contenuti importanti, ContentPicker in un popover minuscolo con griglia 3 colonne illeggibile
+- **FiltersDrawer**: Chip piccoli (text-xs), nessuna icona nei filtri, etichette in maiuscolo 11px poco leggibili
+- **ContentPicker**: Popover 420px con card 10px — impossibile da usare su schermi piccoli o per utenti con problemi di vista
 
-### 1. Nuovo componente `ActiveContextBar.tsx`
-Barra orizzontale compatta (h-9) sotto l'header di ogni pagina:
+## Cosa Cambia
 
+### 1. MissionDrawer — Redesign Completo
+
+**Layout nuovo:**
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│ 🎯 Acquisizione partner  │ 📝 Servizio LCL...  │ 📧 3 dest.  │ 🔍 2 filtri │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 🎯 MISSION CONTEXT             │
+│ Configura obiettivo e materiali │
+├─────────────────────────────────┤
+│                                 │
+│ ⭐ PRESET RAPIDO               │
+│ [▼ Seleziona preset...      ]  │
+│ [Nome]  [💾 Salva]  [🗑️]      │
+│                                 │
+│ ⚡ QUALITÀ AI                  │
+│ [Rapida] [Standard] [Premium]  │
+│                                 │
+│ ─────────────────────────────── │
+│                                 │
+│ 🎯 OBIETTIVO                   │
+│ [▼ Seleziona da libreria...  ] │  ← Select/dropdown grande
+│ [+ Crea nuovo obiettivo]       │  ← Bottone per aggiungere
+│ ┌─────────────────────────────┐│
+│ │ Testo obiettivo editabile   ││  ← Textarea grande
+│ └─────────────────────────────┘│
+│                                 │
+│ 📝 PROPOSTA                    │
+│ [▼ Seleziona da libreria...  ] │
+│ [+ Crea nuova proposta]        │
+│ ┌─────────────────────────────┐│
+│ │ Testo proposta editabile    ││
+│ └─────────────────────────────┘│
+│                                 │
+│ 📧 DESTINATARI (3)             │
+│ [🔍 Cerca azienda...        ] │
+│ [chip] [chip] [chip] [Rimuovi] │
+│                                 │
+│ 📎 DOCUMENTI ▾                 │
+│ 🔗 LINK ▾                      │
+└─────────────────────────────────┘
 ```
 
-- Chips cliccabili: click su Goal/Proposta apre MissionDrawer, click su Filtri apre FiltersDrawer
-- Se vuoto: chip grigio "Configura obiettivo →"
+**Cambiamenti chiave:**
+- Font **14px** per titoli sezione, **13px** per contenuti (non più 10-11px)
+- Icone Lucide reali (Target, FileText, Users, Paperclip, Link2) al posto delle emoji
+- **Select/dropdown nativi** per Goal e Proposta: mostrano la lista dei default raggruppati per categoria, con opzione "Crea nuovo" in fondo
+- Bottone **"+ Crea nuovo"** che apre un dialog inline per nome + testo + categoria
+- Textarea con `min-h-[100px]` e font leggibile
+- Sezioni Goal/Proposta/Destinatari **sempre aperte** (non collapsibili) — solo Documenti e Link collassabili
+- Spaziatura `space-y-6` tra sezioni
 
-### 2. Destinatari nel MissionContext
-Estendere `MissionContext` con `recipients[]`, `addRecipient()`, `removeRecipient()`. Spostare la ricerca destinatari nella **MissionDrawer** come nuova sezione.
+### 2. Nuovo Componente `ContentSelect.tsx`
 
-### 3. Refactor EmailComposer — Layout singola colonna
-Rimuovere: pannello sinistro, ResizablePanelGroup, ContentPicker duplicati.
+Sostituisce il ContentPicker con un **Select dropdown** chiaro:
+- Opzioni raggruppate per categoria con icone Lucide
+- Ogni opzione mostra nome + anteprima testo (troncata)
+- In fondo: separator + "➕ Crea nuovo..." che apre Dialog
+- Dialog per creare/modificare: Nome, Categoria (select), Testo (textarea)
+- Salvataggio in app_settings come fa il ContentPicker attuale
 
-```text
-┌─────────────────────────────────────────┐
-│ ActiveContextBar (Goal, Proposta, Dest) │
-├─────────────────────────────────────────┤
-│ Oggetto: [___________________________] │
-│ Variabili: {{company}} {{contact}}...   │
-│ [       Textarea corpo email         ]  │
-│ [✨ Genera con AI]                      │
-│ Link + Allegati (collapsible)           │
-│ Anteprima (collapsible)                 │
-│ [Salva bozza]  [==== Invia a N ====]   │
-└─────────────────────────────────────────┘
-```
+### 3. FiltersDrawer — Miglioramenti
 
-### 4. Rimuovere ContentPicker dal Cockpit AIDraftStudio
+- Icone Lucide accanto a ogni titolo sezione (Search, ArrowUpDown, Database, Users, Shield)
+- Font sezione **13px** bold (non 11px uppercase)
+- Chip filtro più grandi: `py-2 px-4 text-sm` (non py-1.5 px-3 text-xs)
+- Ogni chip con icona piccola a sinistra
+- Bottone Reset e Applica più grandi (`h-10`)
 
-### 5. ActiveContextBar in tutte le pagine
-EmailComposer, Cockpit, Outreach, CRM — ogni click apre la sidebar giusta.
+### 4. Larghezza Sidebar
 
-## File coinvolti
+- MissionDrawer: da `w-[360px]` a `w-[400px] sm:max-w-[440px]`
+- FiltersDrawer: da `w-[320px]` a `w-[360px] sm:max-w-[400px]`
+
+## File Coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/shared/ActiveContextBar.tsx` | **Nuovo** |
-| `src/contexts/MissionContext.tsx` | Aggiungere recipients |
-| `src/components/global/MissionDrawer.tsx` | Sezione "Destinatari" con ricerca |
-| `src/pages/EmailComposer.tsx` | Refactor singola colonna |
-| `src/components/cockpit/AIDraftStudio.tsx` | Rimuovere ContentPicker |
-| `src/pages/Cockpit.tsx` | Aggiungere ActiveContextBar |
-| `src/pages/CRM.tsx` | Aggiungere ActiveContextBar |
+| `src/components/shared/ContentSelect.tsx` | **Nuovo** — Select dropdown per Goal/Proposta con crea nuovo |
+| `src/components/global/MissionDrawer.tsx` | Redesign completo: layout, font, icone, ContentSelect |
+| `src/components/global/FiltersDrawer.tsx` | Font più grandi, icone sezione, chip più grandi |
+| `src/components/shared/ContentPicker.tsx` | Mantenuto per retrocompatibilità ma non più usato nelle sidebar |
+
+## Principi di Design
+
+1. **Leggibilità**: Minimo 13px per testo, 14px per label sezioni
+2. **Icone esplicite**: Lucide icons reali, colorate, 18-20px nelle sezioni
+3. **Dropdown nativi**: Select standard per scegliere da libreria, non popover con griglia
+4. **Crea + Modifica**: Ogni dropdown ha "Crea nuovo" e ogni item è modificabile
+5. **Spaziatura**: gap-6 tra sezioni, padding generoso (p-5)
+6. **Zero collapsible per le sezioni principali**: Goal, Proposta, Destinatari sempre visibili
+
