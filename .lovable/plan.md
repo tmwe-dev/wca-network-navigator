@@ -1,106 +1,68 @@
+# Piano: MissionDrawer Ultra-Compatto
 
+## Concetto
 
-# Piano: Sidebar Chiare, Dinamiche e Usabili — Redesign Completo
+Eliminare tutto lo spazio verticale sprecato. Tutto in alto, compatto, con icone. Le scelte si fanno tramite popup (Dialog).
 
-## Obiettivo
+## Layout nuovo
 
-Ridisegnare entrambe le sidebar (Mission e Filtri) con un design **grande, chiaro, con icone evidenti**, dropdown per selezionare i preset di Goal/Proposta e la possibilità di registrare nuovi contenuti. Tutto deve essere comprensibile anche da un utente anziano: font grandi, icone esplicite, spaziatura generosa, zero ambiguità.
-
-## Problemi Attuali
-
-- **MissionDrawer**: Font 10-11px, emoji come icone (🎯📝), sezioni collapsibili che nascondono contenuti importanti, ContentPicker in un popover minuscolo con griglia 3 colonne illeggibile
-- **FiltersDrawer**: Chip piccoli (text-xs), nessuna icona nei filtri, etichette in maiuscolo 11px poco leggibili
-- **ContentPicker**: Popover 420px con card 10px — impossibile da usare su schermi piccoli o per utenti con problemi di vista
-
-## Cosa Cambia
-
-### 1. MissionDrawer — Redesign Completo
-
-**Layout nuovo:**
 ```text
-┌─────────────────────────────────┐
-│ 🎯 MISSION CONTEXT             │
-│ Configura obiettivo e materiali │
-├─────────────────────────────────┤
-│                                 │
-│ ⭐ PRESET RAPIDO               │
-│ [▼ Seleziona preset...      ]  │
-│ [Nome]  [💾 Salva]  [🗑️]      │
-│                                 │
-│ ⚡ QUALITÀ AI                  │
-│ [Rapida] [Standard] [Premium]  │
-│                                 │
-│ ─────────────────────────────── │
-│                                 │
-│ 🎯 OBIETTIVO                   │
-│ [▼ Seleziona da libreria...  ] │  ← Select/dropdown grande
-│ [+ Crea nuovo obiettivo]       │  ← Bottone per aggiungere
-│ ┌─────────────────────────────┐│
-│ │ Testo obiettivo editabile   ││  ← Textarea grande
-│ └─────────────────────────────┘│
-│                                 │
-│ 📝 PROPOSTA                    │
-│ [▼ Seleziona da libreria...  ] │
-│ [+ Crea nuova proposta]        │
-│ ┌─────────────────────────────┐│
-│ │ Testo proposta editabile    ││
-│ └─────────────────────────────┘│
-│                                 │
-│ 📧 DESTINATARI (3)             │
-│ [🔍 Cerca azienda...        ] │
-│ [chip] [chip] [chip] [Rimuovi] │
-│                                 │
-│ 📎 DOCUMENTI ▾                 │
-│ 🔗 LINK ▾                      │
-└─────────────────────────────────┘
+┌──────────────────────────────────────┐
+│ 🎯 Mission Context                  │
+├──────────────────────────────────────┤
+│ RIGA 1: Preset (bottoni/icone)       │
+│ [P1] [P2] [P3] [+] [⚡Rapida|Std]  │
+│ (se >5 preset → dropdown)           │
+├──────────────────────────────────────┤
+│ RIGA 2: Azioni compatte (icone)      │
+│ [🎯 Obiettivo] [📝 Proposta]        │
+│ [📎 Docs (2)] [🔗 Link (1)]         │
+│ Ogni icona apre popup per scegliere  │
+├──────────────────────────────────────┤
+│ RIGA 3: Destinatari                  │
+│ [🔍 Cerca azienda...]               │
+│ [risultati ricerca]                  │
+│ [chip] [chip] [chip] [Rimuovi]       │
+└──────────────────────────────────────┘
 ```
 
-**Cambiamenti chiave:**
-- Font **14px** per titoli sezione, **13px** per contenuti (non più 10-11px)
-- Icone Lucide reali (Target, FileText, Users, Paperclip, Link2) al posto delle emoji
-- **Select/dropdown nativi** per Goal e Proposta: mostrano la lista dei default raggruppati per categoria, con opzione "Crea nuovo" in fondo
-- Bottone **"+ Crea nuovo"** che apre un dialog inline per nome + testo + categoria
-- Textarea con `min-h-[100px]` e font leggibile
-- Sezioni Goal/Proposta/Destinatari **sempre aperte** (non collapsibili) — solo Documenti e Link collassabili
-- Spaziatura `space-y-6` tra sezioni
+## Dettaglio modifiche
 
-### 2. Nuovo Componente `ContentSelect.tsx`
+### 1. Preset — Bottoni icona, non form
 
-Sostituisce il ContentPicker con un **Select dropdown** chiaro:
-- Opzioni raggruppate per categoria con icone Lucide
-- Ogni opzione mostra nome + anteprima testo (troncata)
-- In fondo: separator + "➕ Crea nuovo..." che apre Dialog
-- Dialog per creare/modificare: Nome, Categoria (select), Testo (textarea)
-- Salvataggio in app_settings come fa il ContentPicker attuale
+- Se ≤5 preset: renderli come **bottoni compatti** in fila con nome abbreviato, quello attivo evidenziato
+- Se >5: convertire in dropdown Select
+- Bottone [+] per salvare nuovo preset (apre mini Dialog con campo nome)
+- Bottone [🗑️] solo se un preset è attivo
+- Qualità AI resta inline nella stessa riga come toggle compatto
 
-### 3. FiltersDrawer — Miglioramenti
+### 2. Obiettivo e Proposta — Icone compatte con popup
 
-- Icone Lucide accanto a ogni titolo sezione (Search, ArrowUpDown, Database, Users, Shield)
-- Font sezione **13px** bold (non 11px uppercase)
-- Chip filtro più grandi: `py-2 px-4 text-sm` (non py-1.5 px-3 text-xs)
-- Ogni chip con icona piccola a sinistra
-- Bottone Reset e Applica più grandi (`h-10`)
+- **Eliminare** le textarea e i ContentSelect dal body della sidebar
+- Sostituire con **2 bottoni icona** compatti in una riga:
+  - Icona Target + "Obiettivo" (o il nome selezionato troncato)
+  - Icona FileText + "Proposta" (o il nome selezionato troncato)
+- Click su ciascuno → apre il **Dialog popup** (ContentSelect) per scegliere/editare
+- Il testo completo è visibile solo nel popup, non nella sidebar
 
-### 4. Larghezza Sidebar
+### 3. Documenti e Link — Icone badge, non collapsible
 
-- MissionDrawer: da `w-[360px]` a `w-[400px] sm:max-w-[440px]`
-- FiltersDrawer: da `w-[320px]` a `w-[360px] sm:max-w-[400px]`
+- Eliminare le sezioni collapsible
+- 2 bottoni icona compatti: Paperclip + count, Link2 + count
+- Click → Dialog popup per gestire (lista + aggiungi/rimuovi)
 
-## File Coinvolti
+### 4. Destinatari — Resta sotto ma più compatto
+
+- Ricerca + lista chip come ora, ma subito sotto le icone azioni
+- Più spazio verticale disponibile grazie alla compattazione sopra
+
+## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/shared/ContentSelect.tsx` | **Nuovo** — Select dropdown per Goal/Proposta con crea nuovo |
-| `src/components/global/MissionDrawer.tsx` | Redesign completo: layout, font, icone, ContentSelect |
-| `src/components/global/FiltersDrawer.tsx` | Font più grandi, icone sezione, chip più grandi |
-| `src/components/shared/ContentPicker.tsx` | Mantenuto per retrocompatibilità ma non più usato nelle sidebar |
+| `src/components/global/MissionDrawer.tsx` | Rewrite completo del layout |
+| `src/components/shared/ContentSelect.tsx` | Nessuna modifica (popup già pronto) |
 
-## Principi di Design
+## Risultato
 
-1. **Leggibilità**: Minimo 13px per testo, 14px per label sezioni
-2. **Icone esplicite**: Lucide icons reali, colorate, 18-20px nelle sezioni
-3. **Dropdown nativi**: Select standard per scegliere da libreria, non popover con griglia
-4. **Crea + Modifica**: Ogni dropdown ha "Crea nuovo" e ogni item è modificabile
-5. **Spaziatura**: gap-6 tra sezioni, padding generoso (p-5)
-6. **Zero collapsible per le sezioni principali**: Goal, Proposta, Destinatari sempre visibili
-
+La sidebar passa da ~600px di scroll a ~250px di contenuto visibile tutto in una schermata, con popup per i dettagli.
