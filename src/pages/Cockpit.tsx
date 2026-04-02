@@ -67,7 +67,7 @@ export interface DraftState {
   isGenerating: boolean;
   scrapingPhase: ScrapingPhase;
   linkedinProfile: LinkedInProfileData | null;
-  searchLog?: import("@/hooks/useSmartLinkedInSearch").SearchLogEntry[];
+  searchLog?: import("@/hooks/useLinkedInLookup").SearchLogEntry[];
   _debug?: OutreachDebug;
 }
 
