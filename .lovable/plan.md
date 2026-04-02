@@ -1,3 +1,4 @@
+
 # Piano: Sidebar come unica fonte — Context Bar in alto
 
 ## Principio
@@ -7,79 +8,57 @@ Le due sidebar globali (Filtri a sinistra, Mission a destra) sono gli UNICI stru
 ## Problema attuale
 
 - **EmailComposer** duplica Goal/Proposta con ContentPicker inline (righe 481-494)
-- **EmailComposer** ha un pannello sinistro di ricerca destinatari che dovrebbe stare nella FiltersDrawer
+- **EmailComposer** ha un pannello sinistro di ricerca destinatari che dovrebbe stare nella sidebar
 - **AIDraftStudio** (Cockpit) duplica Goal/Proposta con ContentPicker
 - Nessuna pagina mostra un riepilogo delle scelte attive delle sidebar
 
 ## Cosa cambia
 
 ### 1. Nuovo componente `ActiveContextBar.tsx`
-Barra orizzontale compatta (h-9) da posizionare sotto l'header di ogni pagina. Mostra:
+Barra orizzontale compatta (h-9) sotto l'header di ogni pagina:
 
 ```text
-┌──────────────────────────────────────────────────────────┐
-│ 🎯 Acquisizione nuovi partner  │ 📝 Servizio LCL...  │ 📧 3 destinatari  │ 🔍 2 filtri attivi │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ 🎯 Acquisizione partner  │ 📝 Servizio LCL...  │ 📧 3 dest.  │ 🔍 2 filtri │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 - Chips cliccabili: click su Goal/Proposta apre MissionDrawer, click su Filtri apre FiltersDrawer
-- Chips removibili con X (es. rimuovi un destinatario)
-- Se nessuna selezione: chip grigio "Configura obiettivo →"
+- Se vuoto: chip grigio "Configura obiettivo →"
 
-### 2. Aggiungere "Destinatari" alla MissionContext
-Estendere `MissionContext` con:
-- `recipients: SelectedRecipient[]`
-- `addRecipient / removeRecipient`
-- Ricerca destinatari spostata nella **MissionDrawer** come nuova sezione "Destinatari"
+### 2. Destinatari nel MissionContext
+Estendere `MissionContext` con `recipients[]`, `addRecipient()`, `removeRecipient()`. Spostare la ricerca destinatari nella **MissionDrawer** come nuova sezione.
 
-### 3. Refactor EmailComposer
-Rimuovere:
-- Pannello sinistro ResizablePanel (ricerca + lista destinatari)
-- Sezione "Contesto AI" con ContentPicker duplicati
-- ResizablePanelGroup (non serve piu)
+### 3. Refactor EmailComposer — Layout singola colonna
+Rimuovere: pannello sinistro, ResizablePanelGroup, ContentPicker duplicati.
 
-Il composer diventa **full-width, singola colonna**:
 ```text
 ┌─────────────────────────────────────────┐
 │ ActiveContextBar (Goal, Proposta, Dest) │
 ├─────────────────────────────────────────┤
 │ Oggetto: [___________________________] │
 │ Variabili: {{company}} {{contact}}...   │
-│                                         │
 │ [       Textarea corpo email         ]  │
-│ [                                    ]  │
-│                                         │
 │ [✨ Genera con AI]                      │
-│                                         │
 │ Link + Allegati (collapsible)           │
-│                                         │
 │ Anteprima (collapsible)                 │
-│                                         │
 │ [Salva bozza]  [==== Invia a N ====]   │
 └─────────────────────────────────────────┘
 ```
 
-### 4. Refactor AIDraftStudio (Cockpit)
-Rimuovere ContentPicker duplicati per Goal/Proposta — leggere da `useMission()` e mostrare nella ActiveContextBar.
+### 4. Rimuovere ContentPicker dal Cockpit AIDraftStudio
 
 ### 5. ActiveContextBar in tutte le pagine
-Inserire `ActiveContextBar` in: EmailComposer, Cockpit, Outreach, CRM. Ogni click apre la sidebar appropriata.
+EmailComposer, Cockpit, Outreach, CRM — ogni click apre la sidebar giusta.
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/shared/ActiveContextBar.tsx` | **Nuovo** — barra compatta con chips |
-| `src/contexts/MissionContext.tsx` | Aggiungere recipients state |
-| `src/components/global/MissionDrawer.tsx` | Aggiungere sezione "Destinatari" con ricerca |
-| `src/pages/EmailComposer.tsx` | Rimuovere pannello sinistro e ContentPicker, layout singola colonna |
-| `src/components/cockpit/AIDraftStudio.tsx` | Rimuovere ContentPicker duplicati |
+| `src/components/shared/ActiveContextBar.tsx` | **Nuovo** |
+| `src/contexts/MissionContext.tsx` | Aggiungere recipients |
+| `src/components/global/MissionDrawer.tsx` | Sezione "Destinatari" con ricerca |
+| `src/pages/EmailComposer.tsx` | Refactor singola colonna |
+| `src/components/cockpit/AIDraftStudio.tsx` | Rimuovere ContentPicker |
 | `src/pages/Cockpit.tsx` | Aggiungere ActiveContextBar |
 | `src/pages/CRM.tsx` | Aggiungere ActiveContextBar |
-| `src/components/outreach/WorkspaceTab.tsx` | Aggiungere ActiveContextBar (se presente) |
-
-## Risultato
-- Zero duplicazioni di controlli tra sidebar e maschere
-- Ogni pagina mostra in alto cosa e' selezionato
-- Un click sulla Context Bar apre la sidebar giusta
-- Email Composer pulito e focalizzato solo sulla composizione
