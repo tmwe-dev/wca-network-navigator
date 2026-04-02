@@ -50,10 +50,10 @@ export function ActiveContextBar() {
 
   const activeFilterCount = [
     filters.search,
-    filters.countries.length > 0,
-    filters.statuses.length > 0,
-    filters.services.length > 0,
-    filters.certifications.length > 0,
+    filters.origin.size > 0,
+    filters.quality && filters.quality !== "all",
+    filters.leadStatus && filters.leadStatus !== "all",
+    filters.holdingPattern && filters.holdingPattern !== "all",
   ].filter(Boolean).length;
 
   const hasAnything = goal || baseProposal || recipients.length > 0 || activeFilterCount > 0;
