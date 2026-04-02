@@ -50,6 +50,7 @@ export default function Outreach() {
         {tab === "email" && <EmailInboxView />}
         {tab === "whatsapp" && <WhatsAppInboxView />}
       </div>
+      </div>
     </div>
   );
 }

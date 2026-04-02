@@ -534,7 +534,6 @@ const Cockpit = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ActiveContextBar />
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
