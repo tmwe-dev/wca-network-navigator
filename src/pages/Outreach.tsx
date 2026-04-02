@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
+import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
 import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
@@ -33,7 +34,9 @@ export default function Outreach() {
   ];
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+      <ActiveContextBar />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
       <div className="flex-1 min-w-0 overflow-hidden">
         {tab === "cockpit" && (
@@ -46,6 +49,7 @@ export default function Outreach() {
         {tab === "circuito" && <HoldingPatternTab />}
         {tab === "email" && <EmailInboxView />}
         {tab === "whatsapp" && <WhatsAppInboxView />}
+      </div>
       </div>
     </div>
   );
