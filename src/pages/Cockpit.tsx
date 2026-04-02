@@ -285,7 +285,7 @@ const Cockpit = () => {
         scrapingPhase: "searching", linkedinProfile: null, searchLog: [],
       });
 
-      const searchResult = await smartSearch.search({
+      const searchResult = await linkedInLookup.searchSingle({
         name: contact.name, company: contact.company, email: contact.email,
         role: contact.role, country: contact.country,
         sourceType: contact.sourceType, sourceId: contact.sourceId,
