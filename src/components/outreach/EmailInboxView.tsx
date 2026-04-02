@@ -2,14 +2,14 @@ import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  Mail, RefreshCw, Loader2, Search, Inbox, User, Building2,
+  Mail, RefreshCw, Loader2, Search, Inbox, User, Building2, Download, Square,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useChannelMessages, useCheckInbox, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
 
 export function EmailInboxView() {
   const [search, setSearch] = useState("");
@@ -18,6 +18,7 @@ export function EmailInboxView() {
   const { data: messages = [], isLoading } = useChannelMessages("email");
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
+  const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
 
   const filtered = useMemo(() => {
     if (!search.trim()) return messages;
@@ -53,7 +54,7 @@ export function EmailInboxView() {
               size="sm"
               variant="outline"
               onClick={() => checkInbox.mutate()}
-              disabled={checkInbox.isPending}
+              disabled={checkInbox.isPending || isSyncing}
               className="gap-1.5"
             >
               {checkInbox.isPending ? (
@@ -61,8 +62,30 @@ export function EmailInboxView() {
               ) : (
                 <RefreshCw className="w-3.5 h-3.5" />
               )}
-              Scarica Posta
+              Nuove
             </Button>
+            {isSyncing ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stopSync}
+                className="gap-1.5"
+              >
+                <Square className="w-3.5 h-3.5" />
+                Stop ({progress.downloaded})
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={startSync}
+                disabled={checkInbox.isPending}
+                className="gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Scarica Tutto
+              </Button>
+            )}
             <div className="flex-1 relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
