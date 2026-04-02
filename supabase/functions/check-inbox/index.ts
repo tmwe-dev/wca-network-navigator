@@ -305,8 +305,8 @@ Deno.serve(async (req) => {
               const keys = Object.keys(fetchResult);
               console.log(`[check-inbox] UID ${uid} fetch keys: ${keys.join(", ")}`);
               
-              // Try all possible property names
-              const rawMessage = fetchResult.source || fetchResult.raw || fetchResult.body || fetchResult.text || fetchResult.data || fetchResult.content || "";
+              // Try all possible property names - library uses "raw" for RFC822
+              const rawMessage = fetchResult.raw || fetchResult.source || fetchResult.body || fetchResult.text || "";
               
               if (rawMessage) {
                 let messageBytes: Uint8Array;
