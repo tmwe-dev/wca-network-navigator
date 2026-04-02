@@ -140,7 +140,7 @@ export function HoldingPatternTab() {
                             {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
                         </div>
-                        <HoldingPatternIndicator status={item.leadStatus as LeadStatus} size="sm" />
+                        <HoldingPatternIndicator status={item.leadStatus as LeadStatus} />
                       </button>
                     ))}
                   </CollapsibleContent>
