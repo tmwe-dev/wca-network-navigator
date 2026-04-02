@@ -135,9 +135,9 @@ export function HoldingPatternTab() {
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{item.companyName}</div>
+                        <div className="font-medium truncate">{item.name}</div>
                           <div className="text-[10px] text-muted-foreground truncate">
-                            {item.contactName || "—"} · {SOURCE_LABELS[item.source] || item.source}
+                            {item.email || "—"} · {SOURCE_LABELS[item.source] || item.source}
                           </div>
                         </div>
                         <HoldingPatternIndicator status={item.leadStatus} size="sm" />
