@@ -1166,7 +1166,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Step 2: Direct fetch (primary) or Firecrawl (fallback) ──
+    // ── Step 2: Direct fetch ──
     let html = ''
     let markdown = ''
     let authStatus: 'authenticated' | 'members_only' | 'no_credentials' | 'login_failed' = 'no_credentials'
