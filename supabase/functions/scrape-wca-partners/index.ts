@@ -808,7 +808,7 @@ async function fetchProfileDirect(wcaId: number, cookies: string): Promise<any> 
   }
 }
 
-// ─── Direct HTTP Fetch (bypasses Firecrawl) ─────────
+// ─── Direct HTTP Fetch ─────────
 
 async function directFetchPage(url: string, cookies: string): Promise<{ html: string; membersOnly: boolean; loginPrompt: boolean; contactsAuthenticated: boolean }> {
   const res = await fetch(url, {
