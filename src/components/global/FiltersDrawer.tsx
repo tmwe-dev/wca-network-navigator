@@ -147,7 +147,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[360px] sm:max-w-[400px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="left" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[640px] sm:max-w-[660px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
           <div className="flex items-center gap-3">

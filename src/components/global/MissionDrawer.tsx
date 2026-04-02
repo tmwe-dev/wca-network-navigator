@@ -52,7 +52,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] sm:max-w-[440px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="right" className="w-[90vw] sm:w-[520px] md:w-[600px] lg:w-[680px] sm:max-w-[700px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
           <div className="flex items-center gap-3">
@@ -75,7 +75,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 min-h-0">
 
           {/* ── PRESET + QUALITY row ── */}
           <div className="grid grid-cols-2 gap-3">
