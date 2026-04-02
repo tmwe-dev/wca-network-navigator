@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
   Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
-  ChevronDown,
+  ChevronDown, Check,
 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
@@ -44,101 +44,114 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
     setPresetName("");
   };
 
+  // Summary chips for the top
+  const hasGoal = !!m.goal;
+  const hasProposal = !!m.baseProposal;
+  const goalName = hasGoal ? (m.goal.length > 25 ? m.goal.slice(0, 25) + "…" : m.goal) : null;
+  const proposalName = hasProposal ? (m.baseProposal.length > 25 ? m.baseProposal.slice(0, 25) + "…" : m.baseProposal) : null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:max-w-[440px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
+        <div className="px-5 py-3.5 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner shadow-primary/10">
               <Target className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground">Mission Context</h3>
-              <p className="text-xs text-muted-foreground">Configura obiettivo e materiali per AI</p>
+              <p className="text-xs text-muted-foreground">Configura obiettivo e materiali</p>
             </div>
+          </div>
+
+          {/* Summary chips — active choices at a glance */}
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
+            <SummaryChip icon={Target} label={goalName} placeholder="Obiettivo" active={hasGoal} />
+            <SummaryChip icon={FileText} label={proposalName} placeholder="Proposta" active={hasProposal} />
+            <SummaryChip icon={Users} label={m.recipients.length > 0 ? `${m.recipients.length} dest.` : null} placeholder="Destinatari" active={m.recipients.length > 0} />
+            <SummaryChip icon={Paperclip} label={m.documents.length > 0 ? `${m.documents.length}` : null} placeholder="Docs" active={m.documents.length > 0} />
           </div>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
-          {/* ── PRESET ── */}
-          <div className="bg-muted/20 rounded-xl p-4 space-y-3 border border-border/30">
-            <div className="flex items-center gap-2">
-              <Bookmark className="w-4.5 h-4.5 text-amber-500" />
-              <span className="text-sm font-bold text-foreground">Preset Rapido</span>
+          {/* ── PRESET + QUALITY row ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-muted/20 rounded-xl p-3 space-y-2 border border-border/20">
+              <div className="flex items-center gap-1.5">
+                <Bookmark className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold text-foreground">Preset</span>
+              </div>
+              {m.presets.length > 0 && (
+                <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Carica..." /></SelectTrigger>
+                  <SelectContent>
+                    {m.presets.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <div className="flex gap-1">
+                <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome..." className="h-7 text-xs flex-1" />
+                <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleSavePreset}><Save className="w-3 h-3" /></Button>
+              </div>
+              {m.activePresetId && (
+                <Button size="sm" variant="ghost" className="h-6 text-[10px] text-destructive w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Elimina
+                </Button>
+              )}
             </div>
-            {m.presets.length > 0 && (
-              <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
-                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Carica un preset salvato..." /></SelectTrigger>
-                <SelectContent>
-                  {m.presets.map(p => (
-                    <SelectItem key={p.id} value={p.id} className="text-sm">{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="flex gap-2">
-              <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome preset..." className="h-10 text-sm flex-1" />
-              <Button variant="outline" className="h-10 gap-1.5 text-sm px-3" onClick={handleSavePreset}>
-                <Save className="w-4 h-4" /> Salva
-              </Button>
+            <div className="bg-muted/20 rounded-xl p-3 space-y-2 border border-border/20">
+              <div className="flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs font-bold text-foreground">Qualità AI</span>
+              </div>
+              <QualitySelector value={m.quality} onChange={m.setQuality} size="sm" />
             </div>
-            {m.activePresetId && (
-              <Button variant="ghost" className="h-9 text-sm text-destructive gap-1.5 w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
-                <Trash2 className="w-4 h-4" /> Elimina preset attivo
-              </Button>
-            )}
           </div>
-
-          {/* ── QUALITÀ AI ── */}
-          <div className="space-y-2.5">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4.5 h-4.5 text-yellow-500" />
-              <span className="text-sm font-bold text-foreground">Qualità AI</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Livello di generazione per email e outreach</p>
-            <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
-          </div>
-
-          <hr className="border-border/30" />
 
           {/* ── OBIETTIVO ── */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center">
+                <Target className="w-4 h-4 text-primary" />
+              </div>
               <span className="text-sm font-bold text-foreground">Obiettivo</span>
             </div>
             <ContentSelect
               type="goals"
               onSelect={(text) => m.setGoal(text)}
               selectedText={m.goal}
-              placeholder="Seleziona obiettivo dalla libreria..."
+              placeholder="Seleziona obiettivo..."
             />
             <Textarea
               value={m.goal} onChange={e => m.setGoal(e.target.value)}
-              placeholder="Descrivi l'obiettivo delle comunicazioni..."
-              className="min-h-[100px] text-sm bg-muted/20 border-border/40 resize-none focus:border-primary/50"
+              placeholder="Descrivi l'obiettivo..."
+              className="min-h-[80px] text-sm bg-muted/10 border-border/30 resize-none"
             />
           </div>
 
           {/* ── PROPOSTA ── */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/25 to-blue-500/5 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-blue-500" />
+              </div>
               <span className="text-sm font-bold text-foreground">Proposta Base</span>
             </div>
             <ContentSelect
               type="proposals"
               onSelect={(text) => m.setBaseProposal(text)}
               selectedText={m.baseProposal}
-              placeholder="Seleziona proposta dalla libreria..."
+              placeholder="Seleziona proposta..."
             />
             <Textarea
               value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)}
-              placeholder="La proposta commerciale di base..."
-              className="min-h-[120px] text-sm bg-muted/20 border-border/40 resize-none focus:border-primary/50"
+              placeholder="La proposta commerciale..."
+              className="min-h-[80px] text-sm bg-muted/10 border-border/30 resize-none"
             />
           </div>
 
@@ -148,27 +161,26 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           {/* ── DOCUMENTI (collapsible) ── */}
           <Collapsible open={docsOpen} onOpenChange={setDocsOpen}>
             <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 group">
-              <Paperclip className="w-4.5 h-4.5 text-muted-foreground" />
+              <Paperclip className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-bold text-foreground flex-1 text-left">Documenti</span>
               {m.documents.length > 0 && (
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{m.documents.length}</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{m.documents.length}</span>
               )}
               <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", docsOpen && "rotate-180")} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-2 space-y-2">
+            <CollapsibleContent className="pt-2 space-y-1.5">
               {m.documents.map(doc => (
-                <div key={doc.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
-                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm text-foreground truncate flex-1">{doc.file_name}</span>
-                  <span className="text-xs text-muted-foreground">{(doc.file_size / 1024).toFixed(0)}KB</span>
-                  <button onClick={() => m.removeDocument(doc.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
-                    <X className="w-3.5 h-3.5 text-destructive" />
+                <div key={doc.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border border-border/20 group">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-foreground truncate flex-1">{doc.file_name}</span>
+                  <button onClick={() => m.removeDocument(doc.id)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
+                    <X className="w-3 h-3 text-destructive" />
                   </button>
                 </div>
               ))}
               <input ref={fileRef} type="file" className="hidden" onChange={e => { if (e.target.files?.[0]) m.upload(e.target.files[0]); }} />
-              <Button variant="outline" className="w-full h-10 text-sm gap-2 border-dashed" onClick={() => fileRef.current?.click()} disabled={m.uploading}>
-                <Upload className="w-4 h-4" /> {m.uploading ? "Caricamento..." : "Carica documento"}
+              <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5 border-dashed" onClick={() => fileRef.current?.click()} disabled={m.uploading}>
+                <Upload className="w-3.5 h-3.5" /> {m.uploading ? "Caricamento..." : "Carica"}
               </Button>
             </CollapsibleContent>
           </Collapsible>
@@ -176,26 +188,26 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
           {/* ── LINK (collapsible) ── */}
           <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
             <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 group">
-              <Link2 className="w-4.5 h-4.5 text-muted-foreground" />
-              <span className="text-sm font-bold text-foreground flex-1 text-left">Link di Riferimento</span>
+              <Link2 className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground flex-1 text-left">Link</span>
               {m.referenceLinks.length > 0 && (
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{m.referenceLinks.length}</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{m.referenceLinks.length}</span>
               )}
               <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", linksOpen && "rotate-180")} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-2 space-y-2">
+            <CollapsibleContent className="pt-2 space-y-1.5">
               {m.referenceLinks.map((url, i) => (
-                <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
-                  <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm text-foreground truncate flex-1">{url}</span>
-                  <button onClick={() => m.setReferenceLinks(prev => prev.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
-                    <X className="w-3.5 h-3.5 text-destructive" />
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border border-border/20 group">
+                  <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs truncate flex-1">{url}</span>
+                  <button onClick={() => m.setReferenceLinks(prev => prev.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
+                    <X className="w-3 h-3 text-destructive" />
                   </button>
                 </div>
               ))}
-              <div className="flex gap-2">
-                <Input value={newLink} onChange={e => setNewLink(e.target.value)} placeholder="https://..." className="h-10 text-sm flex-1" onKeyDown={e => e.key === "Enter" && addLink()} />
-                <Button variant="outline" className="h-10 w-10 p-0" onClick={addLink}><Plus className="w-4 h-4" /></Button>
+              <div className="flex gap-1.5">
+                <Input value={newLink} onChange={e => setNewLink(e.target.value)} placeholder="https://..." className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && addLink()} />
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={addLink}><Plus className="w-3.5 h-3.5" /></Button>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -205,6 +217,25 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   );
 }
 
+/* ── Summary chip for header ── */
+function SummaryChip({ icon: Icon, label, placeholder, active }: {
+  icon: any; label: string | null; placeholder: string; active: boolean;
+}) {
+  return (
+    <div className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border",
+      active
+        ? "border-primary/20 bg-primary/5 text-foreground"
+        : "border-border/30 bg-muted/10 text-muted-foreground/60"
+    )}>
+      <Icon className={cn("w-3 h-3", active ? "text-primary" : "text-muted-foreground/40")} />
+      <span className="truncate max-w-[80px]">{label || placeholder}</span>
+      {active && <Check className="w-2.5 h-2.5 text-primary" />}
+    </div>
+  );
+}
+
+/* ── Recipients section ── */
 function RecipientsSection({ search, setSearch }: { search: string; setSearch: (s: string) => void }) {
   const m = useMission();
 
@@ -227,81 +258,68 @@ function RecipientsSection({ search, setSearch }: { search: string; setSearch: (
 
   const handleAdd = (p: any) => {
     m.addRecipient({
-      partnerId: p.id,
-      companyName: p.company_name,
-      email: p.email,
-      city: p.city,
-      countryName: p.country_name,
+      partnerId: p.id, companyName: p.company_name,
+      email: p.email, city: p.city, countryName: p.country_name,
       isEnriched: !!p.enriched_at,
     });
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center gap-2">
-        <Users className="w-5 h-5 text-emerald-500" />
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/25 to-emerald-500/5 flex items-center justify-center">
+          <Users className="w-4 h-4 text-emerald-500" />
+        </div>
         <span className="text-sm font-bold text-foreground">Destinatari</span>
         {m.recipients.length > 0 && (
-          <span className="text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full font-medium">{m.recipients.length}</span>
+          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">{m.recipients.length}</span>
         )}
       </div>
 
-      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca azienda da aggiungere..."
-          className="h-10 text-sm pl-10 border-border/50 bg-muted/20"
-        />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cerca azienda..." className="h-9 text-xs pl-9 border-border/40 bg-muted/10" />
       </div>
 
-      {/* Results */}
       {search.length >= 2 && searchResults.length > 0 && (
-        <div className="max-h-[180px] overflow-y-auto space-y-1 rounded-lg border border-border/30 p-1.5">
+        <div className="max-h-[140px] overflow-y-auto space-y-0.5 rounded-lg border border-border/20 p-1">
           {searchResults.map((p: any) => (
-            <button
-              key={p.id}
-              onClick={() => handleAdd(p)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-muted/50 transition-colors"
-            >
-              <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+            <button key={p.id} onClick={() => handleAdd(p)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/50 transition-colors">
+              <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{p.company_name}</p>
-                <p className="text-xs text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+                <p className="text-xs font-medium truncate">{p.company_name}</p>
+                <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
               </div>
-              {p.email && <Mail className="w-4 h-4 text-emerald-500 shrink-0" />}
-              <Plus className="w-4 h-4 text-primary shrink-0" />
+              {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
+              <Plus className="w-3 h-3 text-primary shrink-0" />
             </button>
           ))}
         </div>
       )}
 
-      {/* Selected */}
       {m.recipients.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground font-medium">{m.recipients.length} selezionati</p>
+        <div className="space-y-0.5">
           {m.recipients.map((r, idx) => (
-            <div key={idx} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
+            <div key={idx} className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/20 border border-border/20 group">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{r.companyName}</p>
-                {r.contactName && <p className="text-xs text-muted-foreground truncate">{r.contactName}</p>}
+                <p className="text-xs font-medium truncate">{r.companyName}</p>
               </div>
-              {r.email ? <Mail className="w-4 h-4 text-emerald-500 shrink-0" /> : <span className="text-xs text-destructive">no email</span>}
-              <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
-                <X className="w-3.5 h-3.5 text-destructive" />
+              {r.email ? <Mail className="w-3 h-3 text-emerald-500 shrink-0" /> : <span className="text-[8px] text-destructive">no email</span>}
+              <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
+                <X className="w-3 h-3 text-destructive" />
               </button>
             </div>
           ))}
-          <Button variant="ghost" className="w-full h-8 text-xs text-muted-foreground" onClick={m.clearRecipients}>
+          <Button variant="ghost" size="sm" className="w-full h-6 text-[10px] text-muted-foreground" onClick={m.clearRecipients}>
             Rimuovi tutti
           </Button>
         </div>
       )}
 
       {m.recipients.length === 0 && search.length < 2 && (
-        <p className="text-xs text-muted-foreground text-center py-3">Cerca e aggiungi destinatari per le comunicazioni</p>
+        <p className="text-[10px] text-muted-foreground text-center py-2">Cerca e aggiungi destinatari</p>
       )}
     </div>
   );
