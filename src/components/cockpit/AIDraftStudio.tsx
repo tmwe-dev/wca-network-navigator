@@ -706,14 +706,16 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
 
         <TabsContent value="variables" className="flex-1 overflow-y-auto p-4">
           <div className="space-y-3">
-            {/* Content pickers */}
+            {/* Context — reads from sidebar */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <Target className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contesto AI (da sidebar)</span>
               </div>
-              <ContentPicker type="goals" onSelect={setGoal} selectedText={goal} triggerLabel="Goal" className="w-full" />
-              <ContentPicker type="proposals" onSelect={setBaseProposal} selectedText={baseProposal} triggerLabel="Proposta" className="w-full" />
+              <div className="bg-muted/30 rounded-lg p-2.5 space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Goal</span><span className="text-foreground truncate max-w-[180px]">{goal || "—"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Proposta</span><span className="text-foreground truncate max-w-[180px]">{baseProposal ? baseProposal.slice(0, 40) + "…" : "—"}</span></div>
+              </div>
             </div>
             <div className="border-t border-border/30 pt-2 space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-muted-foreground">recipient_name</span><span className="text-foreground">{draft.contactName}</span></div>
