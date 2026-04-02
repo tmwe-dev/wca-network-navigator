@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { ActiveContextBar } from "@/components/shared/ActiveContextBar";
+
 import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
