@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 5);
 
     const messages: any[] = [];
     let maxUid = lastUid;
