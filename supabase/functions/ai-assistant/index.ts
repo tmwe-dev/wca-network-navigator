@@ -945,7 +945,7 @@ const tools = [
     type: "function",
     function: {
       name: "deep_search_partner",
-      description: "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Firecrawl. Costs credits.",
+      description: "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Partner Connect extension. Costs credits.",
       parameters: {
         type: "object",
         properties: {
