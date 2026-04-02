@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 export type ChannelMessage = {
   id: string;
@@ -78,34 +78,37 @@ export function useUnreadCount(channel?: string) {
   });
 }
 
+async function callCheckInbox(): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Non autenticato");
+
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const res = await fetch(
+    `https://${projectId}.supabase.co/functions/v1/check-inbox`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({}),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Errore sconosciuto" }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+
+  return await res.json();
+}
+
+/** Single-batch sync (manual, one press = one batch) */
 export function useCheckInbox() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Non autenticato");
-
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/check-inbox`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({}),
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Errore sconosciuto" }));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-
-      return await res.json();
-    },
+    mutationFn: callCheckInbox,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
       queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
@@ -119,6 +122,75 @@ export function useCheckInbox() {
       toast.error("Errore scaricamento posta: " + err.message);
     },
   });
+}
+
+/** Continuous sync — keeps calling check-inbox until no new messages */
+export function useContinuousSync() {
+  const queryClient = useQueryClient();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [progress, setProgress] = useState({ downloaded: 0, batch: 0, lastSubject: "" });
+  const abortRef = useRef(false);
+
+  const startSync = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    abortRef.current = false;
+    let totalDownloaded = 0;
+    let batchNum = 0;
+
+    const toastId = toast.loading("📬 Sincronizzazione completa in corso...", { duration: Infinity });
+
+    try {
+      while (!abortRef.current) {
+        batchNum++;
+        const result = await callCheckInbox();
+
+        if (result.total === 0) {
+          // No more new messages
+          break;
+        }
+
+        totalDownloaded += result.total;
+        const lastMsg = result.messages?.[result.messages.length - 1];
+        setProgress({
+          downloaded: totalDownloaded,
+          batch: batchNum,
+          lastSubject: lastMsg?.subject || "",
+        });
+
+        toast.loading(
+          `📬 Blocco ${batchNum}: ${result.total} email | Totale: ${totalDownloaded}`,
+          { id: toastId, duration: Infinity }
+        );
+
+        // Refresh the list periodically
+        queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+
+        // Small delay between batches to avoid overwhelming
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+      toast.success(
+        totalDownloaded > 0
+          ? `✅ Sync completa! ${totalDownloaded} email scaricate in ${batchNum} blocchi`
+          : "✅ Posta già aggiornata",
+        { id: toastId, duration: 5000 }
+      );
+    } catch (err: any) {
+      toast.error(`❌ Errore al blocco ${batchNum}: ${err.message}`, { id: toastId, duration: 8000 });
+    } finally {
+      setIsSyncing(false);
+      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+    }
+  }, [isSyncing, queryClient]);
+
+  const stopSync = useCallback(() => {
+    abortRef.current = true;
+    toast.info("⏹ Sincronizzazione interrotta");
+  }, []);
+
+  return { startSync, stopSync, isSyncing, progress };
 }
 
 export function useMarkAsRead() {
