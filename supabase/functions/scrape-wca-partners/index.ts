@@ -1195,37 +1195,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Try 2: Firecrawl fallback (unauthenticated)
+    // No Firecrawl fallback — direct fetch is the only method
     if (!html) {
-      const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
-      if (apiKey) {
-        console.log('Falling back to Firecrawl (unauthenticated)...')
-        try {
-          const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ url, formats: ['markdown', 'rawHtml'] }),
-          })
-          const scrapeData = await scrapeResponse.json()
-          if (scrapeResponse.ok) {
-            markdown = scrapeData?.data?.markdown || scrapeData?.markdown || ''
-            html = scrapeData?.data?.rawHtml || scrapeData?.rawHtml || ''
-            if (authStatus === 'no_credentials') {
-              loginDetails = 'Firecrawl fallback (no credentials configured)'
-            }
-            console.log(`Firecrawl fallback: got ${html.length}c HTML, ${markdown.length}c MD`)
-          }
-        } catch (fcErr) {
-          console.error('Firecrawl fallback failed:', fcErr)
-        }
-      }
-      
       if (!html && !markdown) {
         return new Response(
-          JSON.stringify({ success: false, error: 'No auth credentials and Firecrawl unavailable', wcaId, authStatus }),
+          JSON.stringify({ success: false, error: 'No auth credentials available — configure WCA session cookie', wcaId, authStatus }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
