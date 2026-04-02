@@ -3,6 +3,13 @@ import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
+import {
+  buildLinkedInGoogleQueries,
+  getEmailDomain,
+  normalizeLinkedInProfileUrl,
+  pickBestLinkedInCandidate,
+  scoreLinkedInCandidate,
+} from "@/lib/linkedinSearch";
 
 export interface SearchLogEntry {
   step: number;
@@ -29,68 +36,7 @@ export interface SmartSearchResult {
   resolvedMethod: string | null;
 }
 
-type GoogleSearchItem = {
-  url: string;
-  title?: string;
-  description?: string;
-};
-
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const isLinkedInProfileUrl = (url?: string | null): boolean => {
-  if (!url) return false;
-
-  try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
-    const isLinkedInHost =
-      hostname === "linkedin.com" ||
-      hostname === "www.linkedin.com" ||
-      hostname.endsWith(".linkedin.com");
-
-    return isLinkedInHost && /^\/(in|pub)\//.test(parsed.pathname);
-  } catch {
-    return false;
-  }
-};
-
-const normalizeLinkedInProfileUrl = (url?: string | null): string | null => {
-  if (!isLinkedInProfileUrl(url)) return null;
-
-  try {
-    const parsed = new URL(url!);
-    return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`.replace(/\/$/, "");
-  } catch {
-    return null;
-  }
-};
-
-const cleanGoogleLinkedInTitle = (title?: string): string => {
-  if (!title) return "";
-
-  return title
-    .replace(/\s+[|·•]\s+LinkedIn.*$/i, "")
-    .replace(/\s+-\s+LinkedIn.*$/i, "")
-    .trim();
-};
-
-const extractGoogleCandidate = (item: GoogleSearchItem): SmartSearchResult["profile"] => {
-  const profileUrl = normalizeLinkedInProfileUrl(item.url);
-  if (!profileUrl) return null;
-
-  const cleanedTitle = cleanGoogleLinkedInTitle(item.title);
-  const name = cleanedTitle.split(/\s+[|–—-]\s+/)[0]?.trim() || cleanedTitle;
-  const headlineParts = [
-    cleanedTitle && cleanedTitle !== name ? cleanedTitle : "",
-    item.description?.trim() || "",
-  ].filter(Boolean);
-
-  return {
-    name: name || undefined,
-    headline: headlineParts.join(" — ") || item.description?.trim() || undefined,
-    profileUrl,
-  };
-};
 
 export function useSmartLinkedInSearch() {
   const liBridge = useLinkedInExtensionBridge();
@@ -102,17 +48,6 @@ export function useSmartLinkedInSearch() {
   const addLog = useCallback((entry: SearchLogEntry) => {
     setSearchLog(prev => [...prev, entry]);
   }, []);
-
-  /**
-   * Extract email domain (skip generic providers)
-   */
-  const getEmailDomain = (email?: string | null): string | null => {
-    if (!email) return null;
-    const domain = email.split("@")[1]?.toLowerCase();
-    if (!domain) return null;
-    const generic = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com", "icloud.com", "aol.com", "mail.com", "protonmail.com", "libero.it", "virgilio.it", "alice.it", "tin.it", "fastwebnet.it", "tiscali.it", "email.it", "pec.it"];
-    return generic.includes(domain) ? null : domain;
-  };
 
   /**
    * Build fallback LinkedIn queries for the dedicated LinkedIn extension.
@@ -138,62 +73,6 @@ export function useSmartLinkedInSearch() {
     }
 
     return Array.from(new Set(queries.map(query => query.trim()).filter(Boolean)));
-  };
-
-  /**
-   * Build Google queries for Partner Connect.
-   * Google is the first attempt because it often gives the profile URL directly.
-   */
-  const buildGoogleQueries = (name: string, company?: string | null, email?: string | null, role?: string | null): string[] => {
-    const queries: string[] = [];
-    const emailDomain = getEmailDomain(email);
-
-    if (company && company !== "—") {
-      queries.push(`site:linkedin.com/in "${name}" "${company}"`);
-    }
-    if (role && company && company !== "—") {
-      queries.push(`site:linkedin.com/in "${name}" "${role}" "${company}"`);
-    }
-    if (emailDomain) {
-      queries.push(`site:linkedin.com/in "${name}" "${emailDomain}"`);
-    }
-    queries.push(`site:linkedin.com/in "${name}"`);
-
-    return Array.from(new Set(queries.map(query => query.replace(/\s+/g, " ").trim()).filter(Boolean)));
-  };
-
-  /**
-   * Validate if a found profile matches our contact using basic heuristics
-   */
-  const validateMatch = (found: { name?: string; headline?: string; profileUrl?: string }, expected: { name: string; company?: string | null; role?: string | null }): number => {
-    if (!found.profileUrl) return 0;
-    let score = 0.3; // base score for having a URL
-
-    const foundName = (found.name || "").toLowerCase();
-    const expectedName = expected.name.toLowerCase();
-    const expectedParts = expectedName.split(/\s+/);
-
-    if (foundName.includes(expectedName) || expectedName.includes(foundName)) {
-      score += 0.4;
-    } else if (expectedParts.some(p => p.length > 2 && foundName.includes(p))) {
-      score += 0.2;
-    }
-
-    const headline = (found.headline || "").toLowerCase();
-    if (expected.company && expected.company !== "—") {
-      const companyLower = expected.company.toLowerCase();
-      const companyWords = companyLower.split(/\s+/).filter(w => w.length > 3);
-      if (headline.includes(companyLower) || companyWords.some(w => headline.includes(w))) {
-        score += 0.25;
-      }
-    }
-
-    if (expected.role) {
-      const roleLower = expected.role.toLowerCase();
-      if (headline.includes(roleLower)) score += 0.05;
-    }
-
-    return Math.min(score, 1);
   };
 
   /**
@@ -230,7 +109,7 @@ export function useSmartLinkedInSearch() {
     };
 
     try {
-      const googleQueries = buildGoogleQueries(contact.name, contact.company, contact.email, contact.role).slice(0, 2);
+      const googleQueries = buildLinkedInGoogleQueries(contact.name, contact.company, contact.email, contact.role).slice(0, 2);
       const linkedinQueries = buildQueries(contact.name, contact.company, contact.email, contact.role);
 
       if (pcBridge.isAvailable) {
@@ -244,38 +123,28 @@ export function useSmartLinkedInSearch() {
             const res = await pcBridge.googleSearch(query, 5);
             const ms = Date.now() - opStart;
             const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
-            const candidates = rawResults
-              .map(extractGoogleCandidate)
-              .filter((candidate): candidate is NonNullable<SmartSearchResult["profile"]> => Boolean(candidate?.profileUrl));
+            const { candidate: bestCandidate, confidence, candidates } = pickBestLinkedInCandidate(rawResults, contact);
 
-            const scored = candidates
-              .map(candidate => ({
-                candidate,
-                confidence: validateMatch(candidate, contact),
-              }))
-              .sort((a, b) => b.confidence - a.confidence);
-
-            const best = scored[0];
             const entry: SearchLogEntry = {
               step: log.length + 1,
               method: "partner_connect_google_search",
               query,
               results: candidates.length,
-              match: best?.candidate.profileUrl || null,
-              confidence: best?.confidence || 0,
+              match: bestCandidate?.profileUrl || null,
+              confidence,
               ms,
               reasoning: res.success
-                ? best
-                  ? `Google via Partner Connect: ${candidates.length} profili LinkedIn, migliore "${best.candidate.name || "sconosciuto"}"${res._fromCache ? " (cache)" : ""}`
+                ? bestCandidate
+                  ? `Google via Partner Connect: ${candidates.length} profili LinkedIn, migliore "${bestCandidate.name || "sconosciuto"}"${res._fromCache ? " (cache)" : ""}`
                   : `Google via Partner Connect: nessun profilo LinkedIn utile${res._fromCache ? " (cache)" : ""}`
                 : res.error || "Ricerca Google fallita",
             };
 
             pushLog(entry);
 
-            if (best && best.confidence >= 0.5 && best.candidate.profileUrl) {
-              foundUrl = best.candidate.profileUrl;
-              foundProfile = best.candidate;
+            if (bestCandidate && confidence >= 0.5) {
+              foundUrl = bestCandidate.profileUrl;
+              foundProfile = bestCandidate;
               resolvedMethod = "partner_connect_google_search";
               await ensureMinDuration(opStart);
               break;

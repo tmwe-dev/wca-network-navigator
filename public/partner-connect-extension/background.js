@@ -383,9 +383,9 @@ async function handleGoogleSearch(msg) {
   const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(msg.query) + '&num=' + limit;
 
   // Check cache first
-  const cacheKey = 'gsearch:' + msg.query;
+  const cacheKey = 'gsearch:v2:' + msg.query;
   if (!msg.skipCache) {
-    const cached = await Cache.get('domain', cacheKey);
+    const cached = await Cache.get('search', cacheKey);
     if (cached) return { ...cached, _fromCache: true };
   }
 
@@ -402,12 +402,26 @@ async function handleGoogleSearch(msg) {
       target: { tabId: tab.id },
       func: function (maxResults) {
         var items = [];
+        var unwrapGoogleUrl = function (href) {
+          try {
+            var parsed = new URL(href);
+            var host = parsed.hostname.toLowerCase();
+            var isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
+            if (isGoogleHost && (parsed.pathname === '/url' || parsed.pathname === '/imgres')) {
+              return parsed.searchParams.get('url') || parsed.searchParams.get('q') || parsed.searchParams.get('imgurl') || href;
+            }
+            return parsed.href;
+          } catch (e) {
+            return href;
+          }
+        };
+
         var els = document.querySelectorAll('div.g, div[data-sokoban-container]');
         for (var i = 0; i < els.length && items.length < maxResults; i++) {
-          var linkEl = els[i].querySelector('a[href^="http"]');
+          var linkEl = els[i].querySelector('a[href]');
           if (!linkEl) continue;
-          var url = linkEl.href;
-          // Skip Google's own links
+          var url = unwrapGoogleUrl(linkEl.href);
+          if (!url) continue;
           if (/google\.com\/(search|maps|imgres|sorry)/.test(url)) continue;
           var titleEl = els[i].querySelector('h3');
           var title = titleEl ? titleEl.textContent.trim() : '';
@@ -423,7 +437,7 @@ async function handleGoogleSearch(msg) {
     var data = (results[0] && results[0].result) || [];
     RateLimiter.recordRequest(searchUrl);
     var response = { success: true, data: data, query: msg.query, count: data.length };
-    await Cache.set('domain', cacheKey, response);
+    await Cache.set('search', cacheKey, response);
     return response;
   } catch (err) {
     throw new FireScrapeError('Google search failed: ' + err.message, 'SEARCH_ERROR');
