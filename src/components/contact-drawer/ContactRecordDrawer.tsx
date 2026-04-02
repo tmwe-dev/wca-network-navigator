@@ -68,7 +68,7 @@ export function ContactRecordDrawer() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-card border-l border-border shadow-2xl flex flex-col"
+            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl bg-card border-l border-border shadow-2xl flex flex-col"
           >
             {record && target ? (
               <>
@@ -84,7 +84,7 @@ export function ContactRecordDrawer() {
                 />
 
                 <ScrollArea className="flex-1">
-                  <div className="p-5 space-y-5">
+                  <div className="p-6 space-y-5">
                     {/* Editable fields + status */}
                     <ContactRecordFields
                       record={record}
@@ -96,7 +96,7 @@ export function ContactRecordDrawer() {
                     <ContactRecordActions record={record} />
 
                     {/* Agent assignment */}
-                    <ContactRecordAgent sourceId={record.sourceId} />
+                    <ContactRecordAgent sourceId={record.sourceId} sourceType={record.sourceType} />
 
                     {/* Enrichment data */}
                     {hasEnrichment && (

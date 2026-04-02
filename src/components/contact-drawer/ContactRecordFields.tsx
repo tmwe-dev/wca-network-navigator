@@ -36,7 +36,7 @@ function FieldRow({ icon, label, value, editing, onChange, type = "text" }: Fiel
   return (
     <div className="flex items-center gap-2 py-1.5">
       <span className="text-muted-foreground flex-shrink-0">{icon}</span>
-      <span className="text-[11px] text-muted-foreground w-16 flex-shrink-0">{label}</span>
+      <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">{label}</span>
       {editing ? (
         <Input
           value={value}
@@ -113,39 +113,39 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Status + Holding Pattern */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <HoldingPatternIndicator status={record.leadStatus as any} />
-          {editing ? (
-            <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
-              <SelectTrigger className="h-7 w-32 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ) : (
-            <span className="text-xs font-medium">{STATUS_OPTIONS.find(s => s.value === record.leadStatus)?.label || record.leadStatus}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {editing ? (
-            <>
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={cancelEdit}>
-                <X className="w-3 h-3" /> Annulla
-              </Button>
-              <Button size="sm" className="h-7 text-xs gap-1" onClick={handleSave} disabled={isSaving}>
-                <Save className="w-3 h-3" /> Salva
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={startEdit}>
-              <Pencil className="w-3 h-3" /> Modifica
+      {/* Edit/Save toolbar */}
+      <div className="flex items-center justify-end gap-1.5 mb-1">
+        {editing ? (
+          <>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={cancelEdit}>
+              <X className="w-3 h-3" /> Annulla
             </Button>
-          )}
-        </div>
+            <Button size="sm" className="h-7 text-xs gap-1" onClick={handleSave} disabled={isSaving}>
+              <Save className="w-3 h-3" /> Salva
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={startEdit}>
+            <Pencil className="w-3 h-3" /> Modifica
+          </Button>
+        )}
+      </div>
+
+      {/* Status + Holding Pattern */}
+      <div className="flex items-center gap-2">
+        <HoldingPatternIndicator status={record.leadStatus as any} />
+        {editing ? (
+          <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
+            <SelectTrigger className="h-7 w-36 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs font-medium">{STATUS_OPTIONS.find(s => s.value === record.leadStatus)?.label || record.leadStatus}</span>
+        )}
       </div>
 
       {/* Fields grid */}
