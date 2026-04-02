@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, MessageCircle, User, Building2, MapPin, Tag, Sparkles, Handshake,
@@ -22,6 +23,7 @@ interface ContactCardProps {
 }
 
 export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect, onToggle, index }: ContactCardProps) {
+  const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
   const cPosition = clean(c.position);
@@ -50,6 +52,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           : "hover:bg-muted/40"
       }`}
       onClick={onSelect}
+      onDoubleClick={() => openDrawer({ sourceType: "contact", sourceId: c.id })}
     >
       {/* Index + Checkbox */}
       <div className="flex items-center gap-1 shrink-0 w-[42px]">

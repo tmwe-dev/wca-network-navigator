@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useWorkedToday } from "@/hooks/useWorkedToday";
+import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
 import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
@@ -189,6 +190,8 @@ export function ContactStream({
                 isSelected={selectedIds.has(contact.id)}
                 isWorked={isContactWorked(contact)}
                 assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
+                sourceType={contact.sourceType as RecordSourceType}
+                sourceId={contact.sourceId}
                 onToggleSelect={() => onToggle(contact.id)}
                 onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
