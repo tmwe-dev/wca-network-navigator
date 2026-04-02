@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useSmartLinkedInSearch, SearchLogEntry } from "@/hooks/useSmartLinkedInSearch";
+import { useLinkedInLookup, type SearchLogEntry } from "@/hooks/useLinkedInLookup";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { Badge } from "@/components/ui/badge";
