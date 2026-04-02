@@ -2,14 +2,22 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, Mail, Phone, Users, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | "pending" | "in_progress" | "completed";
+
+const ACTIVITY_ICONS: Record<string, any> = {
+  send_email: Mail,
+  email: Mail,
+  phone_call: Phone,
+  meeting: Users,
+  follow_up: RotateCcw,
+};
 
 export function AttivitaTab() {
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -38,67 +46,48 @@ export function AttivitaTab() {
 
   const priorityColor = (p: string) => {
     if (p === "high" || p === "urgent") return "text-destructive";
-    if (p === "medium") return "text-warning";
+    if (p === "medium") return "text-amber-500";
     return "text-muted-foreground";
   };
 
-  const statusBadge = (s: string) => {
-    if (s === "completed") return "default";
-    if (s === "in_progress") return "secondary";
-    return "outline";
+  const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+    pending: { label: "In attesa", color: "text-amber-500", bg: "bg-amber-500/15", icon: Clock },
+    in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
+    completed: { label: "Completata", color: "text-emerald-500", bg: "bg-emerald-500/15", icon: CheckCircle2 },
   };
 
-  return (
-    <div className="flex flex-col h-full p-4 gap-4 overflow-hidden">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-        <Card className="p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <ListTodo className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Totali</p>
-            <p className="text-lg font-bold">{stats.total}</p>
-          </div>
-        </Card>
-        <Card className="p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
-            <Clock className="w-4 h-4 text-warning" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Pending</p>
-            <p className="text-lg font-bold">{stats.pending}</p>
-          </div>
-        </Card>
-        <Card className="p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <AlertTriangle className="w-4 h-4 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">In corso</p>
-            <p className="text-lg font-bold">{stats.in_progress}</p>
-          </div>
-        </Card>
-        <Card className="p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center">
-            <CheckCircle2 className="w-4 h-4 text-success" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Completate</p>
-            <p className="text-lg font-bold">{stats.completed}</p>
-          </div>
-        </Card>
-      </div>
+  const filterButtons: { key: StatusFilter; label: string; count: number; icon: any; color: string }[] = [
+    { key: "all", label: "Tutte", count: stats.total, icon: ListTodo, color: "text-foreground" },
+    { key: "pending", label: "In attesa", count: stats.pending, icon: Clock, color: "text-amber-500" },
+    { key: "in_progress", label: "In corso", count: stats.in_progress, icon: AlertTriangle, color: "text-primary" },
+    { key: "completed", label: "Completate", count: stats.completed, icon: CheckCircle2, color: "text-emerald-500" },
+  ];
 
-      {/* Filter */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as StatusFilter)} className="shrink-0">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="all" className="text-xs">Tutte ({stats.total})</TabsTrigger>
-          <TabsTrigger value="pending" className="text-xs">Pending ({stats.pending})</TabsTrigger>
-          <TabsTrigger value="in_progress" className="text-xs">In corso ({stats.in_progress})</TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs">Completate ({stats.completed})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Compact header with inline stats */}
+      <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-1">
+        {filterButtons.map((f) => {
+          const Icon = f.icon;
+          const active = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
+                active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/40"
+              )}
+            >
+              <Icon className="w-3 h-3" />
+              {f.label}
+              <span className={cn("text-[10px] font-bold", active ? "text-primary" : "text-muted-foreground/60")}>
+                {f.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* List */}
       <ScrollArea className="flex-1 min-h-0">
@@ -107,32 +96,61 @@ export function AttivitaTab() {
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">
-            Nessuna attività trovata
-          </div>
+          <EmptyState
+            icon={CheckCircle2}
+            title={filter === "all" ? "Nessuna attività" : "Nessuna attività in questo stato"}
+            description={filter === "all" 
+              ? "Le attività verranno create automaticamente quando lavori dal Cockpit" 
+              : "Cambia filtro per vedere le altre attività"}
+          />
         ) : (
-          <div className="space-y-2">
-            {filtered.map((item) => (
-              <Card key={item.id} className="p-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">{item.title}</p>
-                    <span className={`text-[10px] font-semibold uppercase ${priorityColor(item.priority)}`}>
-                      {item.priority}
-                    </span>
+          <div className="p-2 space-y-1">
+            {filtered.map((item) => {
+              const sc = statusConfig[item.status] || statusConfig.pending;
+              const StatusIcon = sc.icon;
+              const TypeIcon = ACTIVITY_ICONS[item.activity_type] || ListTodo;
+              const isOverdue = item.due_date && new Date(item.due_date) < new Date() && item.status !== "completed";
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                >
+                  {/* Type icon */}
+                  <div className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0", sc.bg)}>
+                    <TypeIcon className={cn("w-3.5 h-3.5", sc.color)} />
                   </div>
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{item.description}</p>
-                  )}
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground truncate">{item.title}</span>
+                      <span className={cn("text-[9px] font-bold uppercase", priorityColor(item.priority))}>
+                        {item.priority}
+                      </span>
+                    </div>
+                    {item.description && (
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  <span className={cn("text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shrink-0", sc.bg, sc.color)}>
+                    {sc.label}
+                  </span>
+
+                  {/* Date */}
+                  <span className={cn(
+                    "text-[10px] shrink-0",
+                    isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
+                  )}>
+                    {item.due_date
+                      ? format(new Date(item.due_date), "dd MMM", { locale: it })
+                      : format(new Date(item.created_at), "dd MMM", { locale: it })}
+                  </span>
                 </div>
-                <Badge variant={statusBadge(item.status)} className="text-[10px] flex-shrink-0">
-                  {item.status === "in_progress" ? "in corso" : item.status}
-                </Badge>
-                <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                  {format(new Date(item.created_at), "dd MMM", { locale: it })}
-                </span>
-              </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </ScrollArea>
