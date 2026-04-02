@@ -163,8 +163,8 @@ export function HoldingPatternTab() {
         ) : (
           <>
             <div className="px-4 py-3 border-b border-border/40">
-              <h3 className="text-sm font-semibold">{selected.companyName}</h3>
-              <p className="text-xs text-muted-foreground">{selected.contactName || "Nessun contatto"}</p>
+              <h3 className="text-sm font-semibold">{selected.name}</h3>
+              <p className="text-xs text-muted-foreground">{selected.email || "Nessun contatto"}</p>
             </div>
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
