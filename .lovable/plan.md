@@ -1,78 +1,43 @@
 
 
-# Piano: Download Corpo Email + Allegati con deno-imap
+# Fix: Email Sync che non va in timeout
 
-## Situazione
+## Problema
+La funzione `check-inbox` usa `full: true` per scaricare l'intero messaggio RFC822 (inclusi allegati da MB). Con 3891 email e allegati pesanti, il CPU della Edge Function esplode anche con batch di 5.
 
-La libreria `@workingdevshero/deno-imap` supporta nativamente:
-- `bodyStructure: true` nel fetch per ottenere la struttura MIME
-- `hasAttachments()` / `findAttachments()` per individuare allegati
-- `decodeAttachment()` per decodificarli
-- Fetch di sezioni MIME specifiche (es. `BODY[1]` per text/plain, `BODY[1.1]` per HTML)
+## Soluzione
+Sostituire `full: true` con un approccio a 2 step leggero:
 
-Attualmente il fetch usa `body: true` ma il corpo arriva vuoto perché serve il fetch per sezione MIME specifica.
+1. **ENVELOPE** per headers (from, to, subject, date, message-id) — pochi byte
+2. **BODY[1]** o **BODY[1.1]** per il testo — solo la parte text/plain, senza allegati
 
-## Modifiche
+Niente più download di allegati interi durante il sync. Gli allegati si scaricano dopo, on-demand.
 
-### 1. Edge Function `check-inbox/index.ts`
+## Modifiche a `supabase/functions/check-inbox/index.ts`
 
-- Importare le utility: `hasAttachments`, `findAttachments`, `decodeAttachment`
-- Prima fetch: ottenere `envelope` + `bodyStructure` per tutti i messaggi
-- Analizzare la bodyStructure per trovare le sezioni text/plain e text/html
-- Seconda fetch per UID: richiedere `BODY[sezione]` per il testo e per ogni allegato
-- Per ogni allegato: decodificare con `decodeAttachment()`, uploadare su Storage bucket `workspace-docs` nel path `email-attachments/{userId}/{messageId}/{filename}`
-- Salvare `body_text` e `body_html` in `channel_messages`
-- Registrare ogni allegato nella nuova tabella `email_attachments`
-- Limiti di sicurezza: max 10 allegati per email, max 10MB per file
+### Step 1 — Rimuovere il fetch `full: true` e PostalMime
+- Eliminare l'import di `postal-mime` (non serve più)
+- Eliminare il blocco `rawFetch` con `full: true` (righe 287-299)
+- Eliminare tutto il parsing PostalMime (righe 312-361)
 
-### 2. Migrazione SQL — Nuova tabella `email_attachments`
-
-```sql
-CREATE TABLE public.email_attachments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  message_id UUID REFERENCES channel_messages(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL,
-  filename TEXT NOT NULL,
-  content_type TEXT,
-  size_bytes INTEGER,
-  storage_path TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE public.email_attachments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users manage own email_attachments"
-  ON public.email_attachments FOR ALL TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+### Step 2 — Usare solo ENVELOPE + BODY text section
+Per ogni UID:
 ```
-
-### 3. Flusso per ogni messaggio
-
-```text
-1. fetch(uids, { envelope, bodyStructure })
-2. Per ogni msg:
-   a. Trova sezione text/plain → fetch BODY[sezione] → body_text
-   b. Trova sezione text/html → fetch BODY[sezione] → body_html
-   c. Se hasAttachments(bodyStructure):
-      - findAttachments() → lista {filename, section, encoding, size}
-      - Per ogni allegato ≤10MB:
-        fetch BODY[section] → decodeAttachment() → upload Storage
-        insert in email_attachments
-3. Upsert channel_messages con body_text + body_html
+fetch(uid, { byUid: true, uid: true, envelope: true, bodyStructure: true })
 ```
+- Da `envelope`: from, to, subject, date, messageId, inReplyTo
+- Da `bodyStructure`: individuare la sezione text/plain (tipicamente "1" o "1.1")
+- Poi un secondo fetch leggero: `BODY[sezione_testo]` per il body
 
-### File coinvolti
+### Step 3 — Checkpoint per messaggio
+Dopo ogni messaggio salvato con successo, aggiornare `last_uid` nel DB. Così se il timeout arriva al messaggio 4, i primi 3 sono già salvi e il prossimo batch riparte dal 4.
 
-| File | Azione |
-|------|--------|
-| `supabase/functions/check-inbox/index.ts` | Aggiungere import utility, fetch bodyStructure, estrarre corpo e allegati, upload su Storage |
-| Migrazione SQL | Creare tabella `email_attachments` con RLS |
+### Step 4 — Batch size a 3
+Ridurre da 5 a 3 messaggi per batch per stare larghi nei limiti CPU.
 
-### Note tecniche
-
-- La libreria è la stessa (`@workingdevshero/deno-imap`), nessun cambio di dipendenze
-- Il bucket `workspace-docs` esiste già (privato) — perfetto per gli allegati
-- La colonna `body_html` esiste già in `channel_messages` ma non viene popolata — ora lo faremo
-- Il fetch per sezione MIME potrebbe richiedere fetch individuali per UID (un fetch per sezione per messaggio), quindi per evitare timeout limitiamo a 20 messaggi per sync invece di 50
+## Risultato atteso
+- Ogni messaggio richiede ~100-500ms invece di secondi
+- Nessun download di allegati (solo metadati)
+- Sync progressiva: ogni call avanza di 3 messaggi, il frontend chiama in loop
+- Con ~1300 call si sincronizzano tutte le 3891 email (la sync continua automatica già esiste)
 
