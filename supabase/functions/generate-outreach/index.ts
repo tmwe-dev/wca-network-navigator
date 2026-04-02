@@ -356,9 +356,8 @@ serve(async (req) => {
       }
     }
 
-    let websiteSource: "cached" | "live_scraped" | "not_available" = "not_available";
+    let websiteSource: "cached" | "not_available" = "not_available";
     if (partnerId && quality !== "fast") {
-      // Check if partner has website and cached data
       const { data: partnerFull } = await supabase
         .from("partners")
         .select("website, enrichment_data")
@@ -367,42 +366,10 @@ serve(async (req) => {
       
       if (partnerFull?.website) {
         const ed = (partnerFull.enrichment_data || {}) as Record<string, any>;
-        const scrapedAt = ed.website_scraped_at ? new Date(ed.website_scraped_at) : null;
-        const isStale = !scrapedAt || (Date.now() - scrapedAt.getTime()) > 30 * 24 * 3600 * 1000;
-        
-        if (ed.website_summary && !isStale) {
-          // Use cached
+        if (ed.website_summary) {
           websiteSource = "cached";
           contextParts.push(`[SITO AZIENDALE (cached)]\n${String(ed.website_summary).slice(0, 600)}`);
           intelligence.data_found.website = true;
-        } else {
-          // Try live scrape
-          const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-          if (FIRECRAWL_API_KEY) {
-            try {
-              let url = partnerFull.website.trim();
-              if (!url.startsWith("http")) url = `https://${url}`;
-              const fcResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ url, formats: ["summary"], onlyMainContent: true }),
-              });
-              if (fcResp.ok) {
-                const fcData = await fcResp.json();
-                const summary = fcData?.data?.summary || fcData?.summary || "";
-                if (summary) {
-                  websiteSource = "live_scraped";
-                  contextParts.push(`[SITO AZIENDALE (live)]\n${String(summary).slice(0, 600)}`);
-                  intelligence.data_found.website = true;
-                  // Persist
-                  const updatedEd = { ...ed, website_summary: String(summary).slice(0, 2000), website_scraped_at: new Date().toISOString() };
-                  await supabase.from("partners").update({ enrichment_data: updatedEd }).eq("id", partnerId);
-                }
-              }
-            } catch (e) {
-              console.error("Website scrape failed:", e);
-            }
-          }
         }
       }
     }
