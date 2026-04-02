@@ -1,10 +1,9 @@
 import { lazy, Suspense, useState } from "react";
-import { UserCheck, Upload, ContactRound, Building2 } from "lucide-react";
+import { UserCheck, ContactRound, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 
 const Contacts = lazy(() => import("./Contacts"));
-const Import = lazy(() => import("./Import"));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 
 function TabFallback() {
@@ -25,7 +24,6 @@ export default function CRM() {
 
   const tabs: VerticalTab[] = [
     { value: "contatti", label: "Contatti", icon: UserCheck },
-    { value: "import", label: "Import", icon: Upload },
     { value: "biglietti", label: "Biglietti", icon: ContactRound },
     { value: "ra", label: "Report Aziende", icon: Building2 },
   ];
@@ -37,11 +35,6 @@ export default function CRM() {
         {tab === "contatti" && (
           <Suspense fallback={<TabFallback />}>
             <Contacts />
-          </Suspense>
-        )}
-        {tab === "import" && (
-          <Suspense fallback={<TabFallback />}>
-            <Import />
           </Suspense>
         )}
         {tab === "biglietti" && (
