@@ -1,0 +1,1 @@
+DELETE FROM public.channel_messages WHERE channel = 'email' AND (body_text IS NULL OR length(body_text) = 0) AND (body_html IS NULL OR length(body_html) = 0);

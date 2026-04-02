@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import PostalMime from "npm:postal-mime@2.4.1";
+import { findAttachments as findAtts } from "jsr:@workingdevshero/deno-imap";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -244,39 +244,52 @@ Deno.serve(async (req) => {
     const inbox = await client.selectMailbox("INBOX");
     console.log(`[check-inbox] INBOX: ${inbox.exists} messages`);
 
-    // Search for new UIDs
+    // Search for new UIDs using UID SEARCH (returns actual UIDs, not sequence numbers)
     let uids: number[] = [];
-    if (lastUid > 0) {
-      const searchResult = await client.search({ uid: `${lastUid + 1}:*` } as any);
-      uids = (searchResult || []).filter((uid: number) => uid > lastUid);
-    } else {
-      const searchResult = await client.search({});
-      uids = searchResult || [];
+    try {
+      const searchCmd = lastUid > 0 ? `UID SEARCH UID ${lastUid + 1}:*` : `UID SEARCH ALL`;
+      const searchResponse = await (client as any).executeCommand(searchCmd);
+      for (const line of searchResponse) {
+        if (typeof line === "string" && line.startsWith("* SEARCH")) {
+          uids = line.replace("* SEARCH", "").trim().split(/\s+/).filter(Boolean).map(Number);
+          break;
+        }
+      }
+      // Filter out any UIDs <= lastUid (safety)
+      if (lastUid > 0) {
+        uids = uids.filter(u => u > lastUid);
+      }
+    } catch (searchErr: any) {
+      console.error("[check-inbox] UID SEARCH error:", searchErr.message);
+      uids = [];
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
     const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
 
     const messages: any[] = [];
-    const attachmentRecords: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
-      // For each UID, fetch envelope + full RFC822 source and parse with postal-mime
+      // For each UID: 1) fetch envelope+bodyStructure, 2) fetch only text MIME sections
       for (const uid of toFetch) {
         try {
-          // Fetch envelope for metadata
+          // Step 1: envelope + bodyStructure (lightweight, no body data)
           let envelope: any = {};
+          let bodyStructure: any = null;
           try {
-            const envFetch = await client.fetch(String(uid), {
+            const fetchResult = await client.fetch(String(uid), {
+              byUid: true,
               uid: true,
               envelope: true,
+              bodyStructure: true,
             } as any);
-            if (envFetch?.[0]) {
-              envelope = envFetch[0].envelope || {};
+            if (fetchResult?.[0]) {
+              envelope = fetchResult[0].envelope || {};
+              bodyStructure = fetchResult[0].bodyStructure || null;
             }
-          } catch (envErr: any) {
-            console.warn(`[check-inbox] Envelope fetch error UID ${uid}:`, envErr.message);
+          } catch (fetchErr: any) {
+            console.warn(`[check-inbox] UID FETCH error UID ${uid}:`, fetchErr.message);
           }
 
           const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
@@ -290,99 +303,87 @@ Deno.serve(async (req) => {
 
           let bodyText = "";
           let bodyHtml = "";
-          let parsedAttachments: any[] = [];
+          let attachmentInfos: any[] = [];
 
-          // Fetch full RFC822 source message
-          try {
-            const rfc822Fetch = await client.fetch(String(uid), {
-              uid: true,
-              source: true,
-            } as any);
+          // Step 2: Determine text sections from bodyStructure and fetch them
+          const textSections: string[] = [];
+          const htmlSections: string[] = [];
 
-            if (rfc822Fetch?.[0]) {
-              const fetchResult = rfc822Fetch[0];
-              // Debug: log raw type and size
-              const rawVal = fetchResult.raw;
-              const rawType = rawVal === null ? "null" : rawVal === undefined ? "undefined" : typeof rawVal === "string" ? `string(${rawVal.length})` : rawVal instanceof Uint8Array ? `Uint8Array(${rawVal.length})` : `${typeof rawVal}`;
-              console.log(`[check-inbox] UID ${uid} raw type: ${rawType}, keys: ${Object.keys(fetchResult).join(",")}`);
-              
-              // The library returns "raw" as Uint8Array when source:true
-              const rawMessage = fetchResult.raw || fetchResult.source || fetchResult.body || fetchResult.text || "";
-              
-              if (rawMessage) {
-                let messageBytes: Uint8Array;
-                if (typeof rawMessage === "string") {
-                  messageBytes = new TextEncoder().encode(rawMessage);
-                } else if (rawMessage instanceof ArrayBuffer) {
-                  messageBytes = new Uint8Array(rawMessage);
-                } else {
-                  messageBytes = rawMessage;
+          if (bodyStructure) {
+            // Find text parts by walking the structure
+            function walkParts(bs: any, path: string) {
+              if (!bs) return;
+              const t = (bs.type || "").toUpperCase();
+              const s = (bs.subtype || "").toUpperCase();
+              if (t === "TEXT" && s === "PLAIN") textSections.push(path || "1");
+              else if (t === "TEXT" && s === "HTML") htmlSections.push(path || "1");
+              if (bs.childParts) {
+                for (let i = 0; i < bs.childParts.length; i++) {
+                  walkParts(bs.childParts[i], path ? `${path}.${i + 1}` : `${i + 1}`);
                 }
-
-                // Parse with postal-mime
-                const parser = new PostalMime();
-                const parsed = await parser.parse(messageBytes);
-
-                bodyText = parsed.text || "";
-                bodyHtml = parsed.html || "";
-                parsedAttachments = parsed.attachments || [];
-
-                // If envelope was empty, extract from parsed headers
-                if (!fromAddr && parsed.from?.address) {
-                  // Will use parsed.from below
-                }
-
-                console.log(`[check-inbox] UID ${uid}: parsed OK, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${parsedAttachments.length}, subj: ${subject}`);
-              } else {
-                console.warn(`[check-inbox] UID ${uid}: empty source returned`);
+              }
+              if (bs.messageBodyStructure) {
+                walkParts(bs.messageBodyStructure, path ? `${path}.1` : "1");
               }
             }
-          } catch (bodyErr: any) {
-            console.error(`[check-inbox] RFC822 fetch/parse error UID ${uid}:`, bodyErr.message);
-          }
+            walkParts(bodyStructure, "");
 
-          // Step 3: Handle attachments from postal-mime
-          const MAX_ATTACHMENTS = 10;
-          const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-          for (const att of parsedAttachments.slice(0, MAX_ATTACHMENTS)) {
-            if (!att.content || att.content.byteLength === 0) continue;
-            if (att.content.byteLength > MAX_SIZE) {
-              console.log(`[check-inbox] Skipping large attachment: ${att.filename} (${att.content.byteLength} bytes)`);
-              continue;
-            }
-
-            const filename = att.filename || `attachment.${att.mimeType?.split("/")?.[1] || "bin"}`;
-            const contentType = att.mimeType || "application/octet-stream";
-            const storagePath = `email-attachments/${userId}/${messageId}/${filename}`;
-
+            // Extract attachment info from bodyStructure (no download)
             try {
-              const fileBytes = new Uint8Array(att.content);
-              const { error: uploadErr } = await supabase.storage
-                .from("workspace-docs")
-                .upload(storagePath, fileBytes, {
-                  contentType,
-                  upsert: true,
-                });
+              attachmentInfos = findAtts(bodyStructure) || [];
+            } catch (_) { /* ignore */ }
+          }
 
-              if (uploadErr) {
-                console.error(`[check-inbox] Upload error for ${filename}:`, uploadErr.message);
-              } else {
-                attachmentRecords.push({
-                  message_id: null,
-                  user_id: userId,
-                  filename,
-                  content_type: contentType,
-                  size_bytes: fileBytes.length,
-                  storage_path: storagePath,
-                  _message_id_external: messageId,
-                });
-                console.log(`[check-inbox] Uploaded: ${filename} (${fileBytes.length} bytes)`);
+          // Fetch only text/html sections (very lightweight)
+          const sectionsToFetch = [
+            ...textSections.slice(0, 1),
+            ...htmlSections.slice(0, 1),
+          ];
+          // Fallback: try common sections if bodyStructure parsing failed
+          if (sectionsToFetch.length === 0) {
+            sectionsToFetch.push("1", "1.1", "1.2");
+          }
+
+          if (sectionsToFetch.length > 0) {
+            try {
+              const bodyFetch = await client.fetch(String(uid), {
+                byUid: true,
+                uid: true,
+                bodyParts: sectionsToFetch,
+              } as any);
+              if (bodyFetch?.[0]?.parts) {
+                const parts = bodyFetch[0].parts;
+                const decoder = new TextDecoder();
+                // Get text from the first text section found
+                for (const sec of textSections.length > 0 ? textSections : ["1", "1.1"]) {
+                  if (parts[sec]?.data) {
+                    bodyText = decoder.decode(parts[sec].data);
+                    break;
+                  }
+                }
+                // Get HTML from the first html section found
+                for (const sec of htmlSections.length > 0 ? htmlSections : ["1.2", "2"]) {
+                  if (parts[sec]?.data) {
+                    bodyHtml = decoder.decode(parts[sec].data);
+                    break;
+                  }
+                }
+                // If no text found yet, try any available part
+                if (!bodyText && !bodyHtml) {
+                  for (const [key, val] of Object.entries(parts)) {
+                    if ((val as any)?.data) {
+                      bodyText = decoder.decode((val as any).data);
+                      break;
+                    }
+                  }
+                }
               }
-            } catch (attErr: any) {
-              console.error(`[check-inbox] Attachment upload error ${filename}:`, attErr.message);
+            } catch (bodyErr: any) {
+              console.warn(`[check-inbox] Body section fetch error UID ${uid}:`, bodyErr.message);
             }
           }
+
+          console.log(`[check-inbox] UID ${uid}: text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentInfos.length}, subj: ${subject}`);
 
           const match = await matchSender(supabase, fromAddr);
 
@@ -400,7 +401,7 @@ Deno.serve(async (req) => {
             body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
             message_id_external: messageId,
             in_reply_to: envelope.inReplyTo || null,
-            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: parsedAttachments.length },
+            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentInfos.length },
           });
 
           if (uid > maxUid) maxUid = uid;
@@ -413,11 +414,18 @@ Deno.serve(async (req) => {
     // Disconnect
     try { client.disconnect(); } catch (_) { /* ignore */ }
 
-    // Save to DB
+    // Deduplicate by message_id_external before saving
     if (messages.length > 0) {
+      const seen = new Set<string>();
+      const uniqueMessages = messages.filter(m => {
+        if (seen.has(m.message_id_external)) return false;
+        seen.add(m.message_id_external);
+        return true;
+      });
+
       const { error: ue } = await supabase
         .from("channel_messages")
-        .upsert(messages, { onConflict: "message_id_external" });
+        .upsert(uniqueMessages, { onConflict: "message_id_external" });
       if (ue) throw new Error("Errore salvataggio: " + ue.message);
 
       await supabase
@@ -425,37 +433,7 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      // Link attachments to saved messages
-      if (attachmentRecords.length > 0) {
-        const extIds = attachmentRecords.map(a => a._message_id_external);
-        const { data: savedMsgs } = await supabase
-          .from("channel_messages")
-          .select("id, message_id_external")
-          .in("message_id_external", extIds);
-
-        const idMap = new Map((savedMsgs || []).map((m: any) => [m.message_id_external, m.id]));
-
-        const toInsert = attachmentRecords
-          .map(a => {
-            const msgId = idMap.get(a._message_id_external);
-            if (!msgId) return null;
-            return {
-              message_id: msgId,
-              user_id: a.user_id,
-              filename: a.filename,
-              content_type: a.content_type,
-              size_bytes: a.size_bytes,
-              storage_path: a.storage_path,
-            };
-          })
-          .filter(Boolean);
-
-        if (toInsert.length > 0) {
-          const { error: attErr } = await supabase.from("email_attachments").insert(toInsert);
-          if (attErr) console.error("[check-inbox] Attachment record save error:", attErr.message);
-          else console.log(`[check-inbox] Saved ${toInsert.length} attachment records`);
-        }
-      }
+      // Note: attachment upload deferred to save CPU; metadata in raw_payload
 
       // Increment interaction count for known contacts
       for (const msg of messages) {
@@ -466,7 +444,7 @@ Deno.serve(async (req) => {
     }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
-    const totalAttachments = attachmentRecords.length;
+    const totalAttachments = 0;
 
     return new Response(JSON.stringify({
       success: true,

@@ -1,0 +1,1 @@
+UPDATE public.email_sync_state SET last_uid = 0;
