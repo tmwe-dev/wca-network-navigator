@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import PostalMime from "npm:postal-mime@2.4.1";
+import { findAttachments as findAtts } from "jsr:@workingdevshero/deno-imap";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -265,29 +265,29 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 5);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
 
     const messages: any[] = [];
     const attachmentRecords: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
-      // For each UID, fetch envelope + full BODY[] and parse with postal-mime
+      // For each UID: 1) fetch envelope+bodyStructure, 2) fetch only text MIME sections
       for (const uid of toFetch) {
         try {
-          // Fetch envelope + full body in one call using UID FETCH
+          // Step 1: envelope + bodyStructure (lightweight, no body data)
           let envelope: any = {};
-          let rawBytes: Uint8Array | null = null;
+          let bodyStructure: any = null;
           try {
             const fetchResult = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
               envelope: true,
-              full: true,
+              bodyStructure: true,
             } as any);
             if (fetchResult?.[0]) {
               envelope = fetchResult[0].envelope || {};
-              rawBytes = fetchResult[0].raw || null;
+              bodyStructure = fetchResult[0].bodyStructure || null;
             }
           } catch (fetchErr: any) {
             console.warn(`[check-inbox] UID FETCH error UID ${uid}:`, fetchErr.message);
@@ -304,56 +304,87 @@ Deno.serve(async (req) => {
 
           let bodyText = "";
           let bodyHtml = "";
-          let parsedAttachments: any[] = [];
+          let attachmentInfos: any[] = [];
 
-          // Parse the raw RFC822 message with postal-mime
-          if (rawBytes && rawBytes.length > 0) {
-            try {
-              let messageBytes: Uint8Array;
-              if (typeof rawBytes === "string") {
-                messageBytes = new TextEncoder().encode(rawBytes);
-              } else if (rawBytes instanceof ArrayBuffer) {
-                messageBytes = new Uint8Array(rawBytes);
-              } else {
-                messageBytes = rawBytes;
+          // Step 2: Determine text sections from bodyStructure and fetch them
+          const textSections: string[] = [];
+          const htmlSections: string[] = [];
+
+          if (bodyStructure) {
+            // Find text parts by walking the structure
+            function walkParts(bs: any, path: string) {
+              if (!bs) return;
+              const t = (bs.type || "").toUpperCase();
+              const s = (bs.subtype || "").toUpperCase();
+              if (t === "TEXT" && s === "PLAIN") textSections.push(path || "1");
+              else if (t === "TEXT" && s === "HTML") htmlSections.push(path || "1");
+              if (bs.childParts) {
+                for (let i = 0; i < bs.childParts.length; i++) {
+                  walkParts(bs.childParts[i], path ? `${path}.${i + 1}` : `${i + 1}`);
+                }
               }
-
-              const parser = new PostalMime();
-              const parsed = await parser.parse(messageBytes);
-
-              bodyText = parsed.text || "";
-              bodyHtml = parsed.html || "";
-              parsedAttachments = parsed.attachments || [];
-
-              console.log(`[check-inbox] UID ${uid}: parsed OK, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${parsedAttachments.length}, subj: ${subject}`);
-            } catch (parseErr: any) {
-              console.error(`[check-inbox] Parse error UID ${uid}:`, parseErr.message);
+              if (bs.messageBodyStructure) {
+                walkParts(bs.messageBodyStructure, path ? `${path}.1` : "1");
+              }
             }
-          } else {
-            console.warn(`[check-inbox] UID ${uid}: no raw body returned`);
+            walkParts(bodyStructure, "");
+
+            // Extract attachment info from bodyStructure (no download)
+            try {
+              attachmentInfos = findAtts(bodyStructure) || [];
+            } catch (_) { /* ignore */ }
           }
 
-          // Store attachment metadata (skip upload during sync to avoid CPU timeout)
-          for (const att of parsedAttachments.slice(0, 10)) {
-            if (!att.content || att.content.byteLength === 0) continue;
-            const filename = att.filename || `attachment.${att.mimeType?.split("/")?.[1] || "bin"}`;
-            const contentType = att.mimeType || "application/octet-stream";
-            const safeMessageId = messageId.replace(/[<>:\s"'|?*]/g, "_").slice(0, 100);
-            const safeFilename = filename.replace(/[<>:\s"'|?*]/g, "_").slice(0, 200);
-            const storagePath = `email-attachments/${userId}/${safeMessageId}/${safeFilename}`;
-            attachmentRecords.push({
-              message_id: null,
-              user_id: userId,
-              filename,
-              content_type: contentType,
-              size_bytes: att.content.byteLength,
-              storage_path: storagePath,
-              _message_id_external: messageId,
-            });
+          // Fetch only text/html sections (very lightweight)
+          const sectionsToFetch = [
+            ...textSections.slice(0, 1),
+            ...htmlSections.slice(0, 1),
+          ];
+          // Fallback: try common sections if bodyStructure parsing failed
+          if (sectionsToFetch.length === 0) {
+            sectionsToFetch.push("1", "1.1", "1.2");
           }
-          if (parsedAttachments.length > 0) {
-            console.log(`[check-inbox] UID ${uid}: ${parsedAttachments.length} attachments (metadata only)`);
+
+          if (sectionsToFetch.length > 0) {
+            try {
+              const bodyFetch = await client.fetch(String(uid), {
+                byUid: true,
+                uid: true,
+                bodyParts: sectionsToFetch,
+              } as any);
+              if (bodyFetch?.[0]?.parts) {
+                const parts = bodyFetch[0].parts;
+                const decoder = new TextDecoder();
+                // Get text from the first text section found
+                for (const sec of textSections.length > 0 ? textSections : ["1", "1.1"]) {
+                  if (parts[sec]?.data) {
+                    bodyText = decoder.decode(parts[sec].data);
+                    break;
+                  }
+                }
+                // Get HTML from the first html section found
+                for (const sec of htmlSections.length > 0 ? htmlSections : ["1.2", "2"]) {
+                  if (parts[sec]?.data) {
+                    bodyHtml = decoder.decode(parts[sec].data);
+                    break;
+                  }
+                }
+                // If no text found yet, try any available part
+                if (!bodyText && !bodyHtml) {
+                  for (const [key, val] of Object.entries(parts)) {
+                    if ((val as any)?.data) {
+                      bodyText = decoder.decode((val as any).data);
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (bodyErr: any) {
+              console.warn(`[check-inbox] Body section fetch error UID ${uid}:`, bodyErr.message);
+            }
           }
+
+          console.log(`[check-inbox] UID ${uid}: text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentInfos.length}, subj: ${subject}`);
 
           const match = await matchSender(supabase, fromAddr);
 
