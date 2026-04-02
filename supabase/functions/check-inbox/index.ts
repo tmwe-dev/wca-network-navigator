@@ -6,35 +6,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/* ── Minimal IMAP over TLS ── */
+/* ── Minimal IMAP over TLS (Node compat for untrusted certs) ── */
 async function imapConnect(host: string, port: number) {
-  // @ts-ignore - certCheck is a Deno unstable API
-  const conn = await (Deno as any).connectTls({ hostname: host, port, certCheck: false });
+  const tls = await import("node:tls");
+
+  const conn = await new Promise<import("node:tls").TLSSocket>((resolve, reject) => {
+    const sock = tls.connect({ host, port, rejectUnauthorized: false }, () => resolve(sock));
+    sock.once("error", reject);
+  });
+
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let tag = 0;
-  const buf = new Uint8Array(65536);
 
-  async function readUntilComplete(): Promise<string> {
-    let result = "";
-    const maxReads = 100;
-    for (let i = 0; i < maxReads; i++) {
-      const n = await conn.read(buf);
-      if (n === null) break;
-      result += decoder.decode(buf.subarray(0, n));
-      // Check if we have a tagged response (completion)
-      if (/^A\d+ (OK|NO|BAD)/m.test(result)) break;
-      // Or greeting
-      if (result.startsWith("* OK") && i === 0 && tag === 0) break;
-    }
-    return result;
+  function readUntilComplete(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let result = "";
+      const timeout = setTimeout(() => resolve(result), 10000);
+      const onData = (chunk: Buffer) => {
+        result += decoder.decode(chunk);
+        if (/^A\d+ (OK|NO|BAD)/m.test(result) || (result.startsWith("* OK") && tag === 0)) {
+          clearTimeout(timeout);
+          conn.removeListener("data", onData);
+          resolve(result);
+        }
+      };
+      conn.on("data", onData);
+      conn.once("error", (err: Error) => { clearTimeout(timeout); reject(err); });
+    });
   }
 
   async function command(cmd: string): Promise<string> {
     tag++;
     const tagStr = `A${tag}`;
     const line = `${tagStr} ${cmd}\r\n`;
-    await conn.write(encoder.encode(line));
+    conn.write(encoder.encode(line));
     return await readUntilComplete();
   }
 
@@ -42,7 +48,7 @@ async function imapConnect(host: string, port: number) {
   const greeting = await readUntilComplete();
   if (!greeting.includes("OK")) throw new Error("IMAP greeting failed: " + greeting.slice(0, 200));
 
-  return { command, close: () => conn.close(), greeting };
+  return { command, close: () => conn.destroy(), greeting };
 }
 
 function parseEmailAddress(raw: string): string {
