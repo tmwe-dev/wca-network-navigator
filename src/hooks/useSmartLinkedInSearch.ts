@@ -198,7 +198,7 @@ export function useSmartLinkedInSearch() {
             const ms = Date.now() - opStart;
 
             if (res.success && res.profile?.profileUrl) {
-              const confidence = validateMatch(res.profile, contact);
+              const confidence = scoreLinkedInCandidate(res.profile, contact);
               const entry: SearchLogEntry = {
                 step: log.length + 1,
                 method: "linkedin_people_search",
