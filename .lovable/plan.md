@@ -1,130 +1,85 @@
+# Piano: Sidebar come unica fonte — Context Bar in alto
 
-# Piano di Uniformazione UI — "Semplice come un gioco"
+## Principio
 
-## Principio guida
-Ogni maschera deve avere la stessa struttura: **Nav verticale sx (con filtri integrati) → Contenuto principale**. Un bambino di 10 anni deve capire dove cliccare.
+Le due sidebar globali (Filtri a sinistra, Mission a destra) sono gli UNICI strumenti per impostare Goal, Proposta, Filtri, e Ricerca. Ogni maschera mostra in alto una **Context Bar** compatta che riflette le scelte attive delle sidebar, senza duplicare i controlli.
 
----
+## Problema attuale
 
-## 1. Componente Standard: `SectionShell`
+- **EmailComposer** duplica Goal/Proposta con ContentPicker inline (righe 481-494)
+- **EmailComposer** ha un pannello sinistro di ricerca destinatari che dovrebbe stare nella FiltersDrawer
+- **AIDraftStudio** (Cockpit) duplica Goal/Proposta con ContentPicker
+- Nessuna pagina mostra un riepilogo delle scelte attive delle sidebar
 
-Creare un wrapper riutilizzabile che tutte le maschere useranno:
+## Cosa cambia
 
-```
-┌──────────────────────────────────────────────┐
-│ [Header compatto: titolo + conteggio + azioni]│
-├──────────┬───────────────────────────────────┤
-│ Nav sx   │                                   │
-│ + Filtri │     Contenuto principale          │
-│ integrati│     (lista, calendario, ecc.)     │
-│          │                                   │
-└──────────┴───────────────────────────────────┘
-```
+### 1. Nuovo componente `ActiveContextBar.tsx`
+Barra orizzontale compatta (h-9) da posizionare sotto l'header di ogni pagina. Mostra:
 
-**File:** `src/components/layout/SectionShell.tsx`
-- Props: `title`, `count`, `filters[]`, `actions[]`, `children`
-- Il nav verticale è PARTE del contenuto di ogni tab, non della shell Outreach
-
-## 2. VerticalTabNav → Aggiungere slot filtri
-
-La sidebar 140px attuale mostra solo i link. Modifica:
-- Sotto i tab: sezione **Filtri** collassabile
-- Ricerca testuale (input compatto)
-- Chip filtro per stato, agente, tipo, priorità
-- Conteggio risultati in tempo reale
-
-**File:** `src/components/ui/VerticalTabNav.tsx` — aggiungere prop `filterSlot?: ReactNode`
-
-## 3. Cards Standardizzate — `UnifiedContactRow`
-
-Creare UN componente card usato ovunque:
-
-```
-┌─────────────────────────────────────────────────┐
-│ ☐ │ 🏢 Azienda        │ 👤 Nome · Ruolo │ 🏙 Città │ ● Stato │ ⚡ Canali │
-└─────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────┐
+│ 🎯 Acquisizione nuovi partner  │ 📝 Servizio LCL...  │ 📧 3 destinatari  │ 🔍 2 filtri attivi │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**File:** `src/components/shared/UnifiedContactRow.tsx`
-- Layout a riga singola, colonne fisse
-- Checkbox opzionale
-- Badge stato colorato (Nuovo=grigio, Contattato=blu, Trattativa=arancione, Chiuso=verde)
-- Icone canali compatte (mail, linkedin, whatsapp)
-- Doppio clic → apre ContactRecordDrawer
-- Usato in: Cockpit, Circuito, CRM Contatti, Attività
+- Chips cliccabili: click su Goal/Proposta apre MissionDrawer, click su Filtri apre FiltersDrawer
+- Chips removibili con X (es. rimuovi un destinatario)
+- Se nessuna selezione: chip grigio "Configura obiettivo →"
 
-## 4. Empty States Utili
+### 2. Aggiungere "Destinatari" alla MissionContext
+Estendere `MissionContext` con:
+- `recipients: SelectedRecipient[]`
+- `addRecipient / removeRecipient`
+- Ricerca destinatari spostata nella **MissionDrawer** come nuova sezione "Destinatari"
 
-Creare `src/components/shared/EmptyState.tsx`:
-- Icona grande animata
-- Titolo chiaro ("Non ci sono contatti qui")
-- Sottotitolo con azione suggerita ("Vai al Cockpit per aggiungerne")
-- Pulsante CTA primario
+### 3. Refactor EmailComposer
+Rimuovere:
+- Pannello sinistro ResizablePanel (ricerca + lista destinatari)
+- Sezione "Contesto AI" con ContentPicker duplicati
+- ResizablePanelGroup (non serve piu)
 
-Applicare a:
-- **Circuito**: "Nessun contatto in attesa → Contatta qualcuno dal Cockpit per iniziare"
-- **In Uscita**: "Nessun invio in coda → Trascina un contatto nel Cockpit per generare un messaggio"
-- **CRM vuoto**: "Nessun contatto importato → Importa un file CSV o aggiungi manualmente"
-- **Attività vuote**: "Tutto fatto! Nessuna attività in sospeso"
+Il composer diventa **full-width, singola colonna**:
+```text
+┌─────────────────────────────────────────┐
+│ ActiveContextBar (Goal, Proposta, Dest) │
+├─────────────────────────────────────────┤
+│ Oggetto: [___________________________] │
+│ Variabili: {{company}} {{contact}}...   │
+│                                         │
+│ [       Textarea corpo email         ]  │
+│ [                                    ]  │
+│                                         │
+│ [✨ Genera con AI]                      │
+│                                         │
+│ Link + Allegati (collapsible)           │
+│                                         │
+│ Anteprima (collapsible)                 │
+│                                         │
+│ [Salva bozza]  [==== Invia a N ====]   │
+└─────────────────────────────────────────┘
+```
 
-## 5. Cockpit — Semplificazione Drop Zone
+### 4. Refactor AIDraftStudio (Cockpit)
+Rimuovere ContentPicker duplicati per Goal/Proposta — leggere da `useMission()` e mostrare nella ActiveContextBar.
 
-Le 4 drop zone occupano il 50% dello schermo vuote. Modifica:
-- **Stato normale** (nessun drag): mostrare un pannello compatto con 4 pulsanti canale in riga orizzontale, non 4 box giganti
-- **Stato drag**: espandere le zone con animazione
-- Ridurre da `min-h-[80px]` a `min-h-[56px]` per le zone
-
-**File:** `src/components/cockpit/ChannelDropZones.tsx`
-
-## 6. Attività — Card più ricca
-
-La card attività attuale mostra solo titolo + priorità. Aggiungere:
-- Icona tipo attività (email, call, meeting)
-- Nome azienda/contatto
-- Agente assegnato (avatar emoji)
-- Data scadenza con colore (rosso se scaduta)
-
-**File:** `src/components/outreach/AttivitaTab.tsx`
-- Rimuovere le 4 card metriche giganti → sostituire con contatori inline nella toolbar
-
-## 7. Circuito — Da vuoto a funzionale
-
-Attualmente schermo vuoto con aereo. Anche con 0 contatti, mostrare:
-- Header con titolo + filtri stato (Contattati/In Corso/Trattativa)
-- Empty state utile con CTA
-- Quando ci sono dati: layout a colonne kanban (drag between status)
-
-**File:** `src/components/outreach/HoldingPatternTab.tsx`
-
-## 8. Header Coerente
-
-Rimuovere la barra blu portal di Network. Tutte le pagine usano lo stesso header globale:
-- Hamburger sx
-- Titolo sezione al centro (opzionale)  
-- Azioni dx (sync, AI assistant)
-
-Non toccare Global/Campagne (escluse dal sistema UI).
-
----
+### 5. ActiveContextBar in tutte le pagine
+Inserire `ActiveContextBar` in: EmailComposer, Cockpit, Outreach, CRM. Ogni click apre la sidebar appropriata.
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/shared/EmptyState.tsx` | **NUOVO** — empty state riutilizzabile |
-| `src/components/shared/UnifiedContactRow.tsx` | **NUOVO** — card contatto standard |
-| `src/components/ui/VerticalTabNav.tsx` | Aggiungere `filterSlot` |
-| `src/components/cockpit/ChannelDropZones.tsx` | Ridurre dimensioni, layout orizzontale |
-| `src/components/outreach/AttivitaTab.tsx` | Card più ricche, rimuovere metriche giganti |
-| `src/components/outreach/HoldingPatternTab.tsx` | Empty state, header filtri |
-| `src/components/outreach/InUscitaTab.tsx` | Empty state |
-| `src/pages/Cockpit.tsx` | Usare UnifiedContactRow in modalità lista |
+| `src/components/shared/ActiveContextBar.tsx` | **Nuovo** — barra compatta con chips |
+| `src/contexts/MissionContext.tsx` | Aggiungere recipients state |
+| `src/components/global/MissionDrawer.tsx` | Aggiungere sezione "Destinatari" con ricerca |
+| `src/pages/EmailComposer.tsx` | Rimuovere pannello sinistro e ContentPicker, layout singola colonna |
+| `src/components/cockpit/AIDraftStudio.tsx` | Rimuovere ContentPicker duplicati |
+| `src/pages/Cockpit.tsx` | Aggiungere ActiveContextBar |
+| `src/pages/CRM.tsx` | Aggiungere ActiveContextBar |
+| `src/components/outreach/WorkspaceTab.tsx` | Aggiungere ActiveContextBar (se presente) |
 
-## Ordine di esecuzione
-
-1. EmptyState + UnifiedContactRow (componenti base)
-2. VerticalTabNav con filtri
-3. Cockpit drop zones compatte
-4. Attività card ricche
-5. Circuito funzionale
-6. In Uscita empty state
+## Risultato
+- Zero duplicazioni di controlli tra sidebar e maschere
+- Ogni pagina mostra in alto cosa e' selezionato
+- Un click sulla Context Bar apre la sidebar giusta
+- Email Composer pulito e focalizzato solo sulla composizione
