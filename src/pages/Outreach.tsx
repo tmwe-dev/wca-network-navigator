@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { Rocket, ArrowUpFromLine, ListTodo, Plane, Inbox } from "lucide-react";
+import { Rocket, ArrowUpFromLine, ListTodo, Plane, Mail, MessageCircle } from "lucide-react";
 import { AttivitaTab } from "@/components/outreach/AttivitaTab";
 import { InUscitaTab } from "@/components/outreach/InUscitaTab";
 import { HoldingPatternTab } from "@/components/outreach/HoldingPatternTab";
-import { InboxView } from "@/components/outreach/InboxView";
+import { EmailInboxView } from "@/components/outreach/EmailInboxView";
+import { WhatsAppInboxView } from "@/components/outreach/WhatsAppInboxView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -17,7 +18,8 @@ function TabFallback() {
 export default function Outreach() {
   const [tab, setTab] = useState("cockpit");
   const { setOutreachTab } = useGlobalFilters();
-  const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: emailUnread = 0 } = useUnreadCount("email");
+  const { data: waUnread = 0 } = useUnreadCount("whatsapp");
 
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
@@ -26,7 +28,8 @@ export default function Outreach() {
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
     { value: "attivita", label: "Attività", icon: ListTodo },
     { value: "circuito", label: "Circuito", icon: Plane },
-    { value: "messaggi", label: "Messaggi", icon: Inbox, badge: unreadCount },
+    { value: "email", label: "Email", icon: Mail, badge: emailUnread },
+    { value: "whatsapp", label: "WhatsApp", icon: MessageCircle, badge: waUnread },
   ];
 
   return (
@@ -41,7 +44,8 @@ export default function Outreach() {
         {tab === "inuscita" && <InUscitaTab />}
         {tab === "attivita" && <AttivitaTab />}
         {tab === "circuito" && <HoldingPatternTab />}
-        {tab === "messaggi" && <InboxView />}
+        {tab === "email" && <EmailInboxView />}
+        {tab === "whatsapp" && <WhatsAppInboxView />}
       </div>
     </div>
   );

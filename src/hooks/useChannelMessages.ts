@@ -60,15 +60,17 @@ export function useChannelMessages(channel?: string) {
   return query;
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(channel?: string) {
   return useQuery({
-    queryKey: ["channel-messages-unread"],
+    queryKey: ["channel-messages-unread", channel],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let q = supabase
         .from("channel_messages")
         .select("*", { count: "exact", head: true })
         .eq("direction", "inbound")
         .is("read_at", null);
+      if (channel) q = q.eq("channel", channel);
+      const { count, error } = await q;
       if (error) throw error;
       return count || 0;
     },
