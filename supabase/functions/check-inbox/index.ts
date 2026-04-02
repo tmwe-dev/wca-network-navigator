@@ -165,7 +165,7 @@ function getCaCertsForHost(host: string): string[] {
   return [ACTALIS_INTERMEDIATE_CA, ACTALIS_ROOT_CA];
 }
 
-/* ── Sender matching (unchanged business logic) ── */
+/* ── Sender matching ── */
 
 async function matchSender(supabase: any, email: string) {
   const emailLower = email.toLowerCase();
@@ -183,6 +183,139 @@ async function matchSender(supabase: any, email: string) {
 function extractEmailAddress(addr: { mailbox?: string; host?: string } | undefined): string {
   if (!addr) return "";
   return `${addr.mailbox || ""}@${addr.host || ""}`.toLowerCase();
+}
+
+/* ── MIME body structure helpers ── */
+
+interface MimePart {
+  type: string;
+  subtype: string;
+  section: string;
+  encoding?: string;
+  size?: number;
+  disposition?: string;
+  filename?: string;
+  params?: Record<string, string>;
+}
+
+function parseMimeStructure(bs: any, section: string = ""): MimePart[] {
+  const parts: MimePart[] = [];
+  if (!bs) return parts;
+
+  // If it's a multipart structure (array of arrays)
+  if (Array.isArray(bs) && bs.length > 0 && Array.isArray(bs[0])) {
+    for (let i = 0; i < bs.length; i++) {
+      if (Array.isArray(bs[i])) {
+        const childSection = section ? `${section}.${i + 1}` : `${i + 1}`;
+        parts.push(...parseMimeStructure(bs[i], childSection));
+      }
+    }
+    return parts;
+  }
+
+  // Single part - try to extract info
+  if (Array.isArray(bs) && bs.length >= 2) {
+    const type = (typeof bs[0] === "string" ? bs[0] : "").toLowerCase();
+    const subtype = (typeof bs[1] === "string" ? bs[1] : "").toLowerCase();
+    const encoding = bs.length > 5 && typeof bs[5] === "string" ? bs[5].toLowerCase() : "";
+    const size = bs.length > 6 && typeof bs[6] === "number" ? bs[6] : 0;
+    
+    // Check disposition for attachments
+    let disposition = "";
+    let filename = "";
+    const params: Record<string, string> = {};
+    
+    // Parameters are typically at index 2
+    if (bs[2] && typeof bs[2] === "object" && !Array.isArray(bs[2])) {
+      Object.assign(params, bs[2]);
+      if (params.name) filename = params.name;
+    }
+    
+    // Disposition is typically later in the array
+    for (let i = 7; i < bs.length; i++) {
+      if (Array.isArray(bs[i]) && bs[i].length >= 1) {
+        const d = typeof bs[i][0] === "string" ? bs[i][0].toLowerCase() : "";
+        if (d === "attachment" || d === "inline") {
+          disposition = d;
+          if (bs[i][1] && typeof bs[i][1] === "object") {
+            const dparams = bs[i][1];
+            if (dparams.filename) filename = dparams.filename;
+          }
+        }
+      }
+    }
+    
+    const currentSection = section || "1";
+    parts.push({ type, subtype, section: currentSection, encoding, size, disposition, filename, params });
+  }
+
+  // Object-style bodyStructure (library may return objects)
+  if (bs && typeof bs === "object" && !Array.isArray(bs)) {
+    if (bs.childNodes && Array.isArray(bs.childNodes)) {
+      for (let i = 0; i < bs.childNodes.length; i++) {
+        const childSection = section ? `${section}.${i + 1}` : `${i + 1}`;
+        parts.push(...parseMimeStructure(bs.childNodes[i], childSection));
+      }
+    } else {
+      const type = (bs.type || "").toLowerCase();
+      const subtype = (bs.subtype || "").toLowerCase();
+      const encoding = (bs.encoding || "").toLowerCase();
+      const size = bs.size || 0;
+      const disposition = (bs.disposition || "").toLowerCase();
+      const filename = bs.dispositionParameters?.filename || bs.parameters?.name || "";
+      const currentSection = section || "1";
+      parts.push({ type, subtype, section: currentSection, encoding, size, disposition, filename });
+    }
+  }
+
+  return parts;
+}
+
+function findTextPart(parts: MimePart[], subtype: string): MimePart | undefined {
+  return parts.find(p => p.type === "text" && p.subtype === subtype);
+}
+
+function findAttachmentParts(parts: MimePart[]): MimePart[] {
+  return parts.filter(p => {
+    if (p.disposition === "attachment") return true;
+    if (p.filename && p.type !== "text") return true;
+    if (p.type !== "text" && p.type !== "multipart" && p.type !== "") return true;
+    return false;
+  });
+}
+
+function decodeBody(raw: string | Uint8Array, encoding: string): string {
+  if (!raw) return "";
+  let text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+  
+  if (encoding === "base64") {
+    try {
+      const decoded = atob(text.replace(/\r?\n/g, ""));
+      return decoded;
+    } catch { return text; }
+  }
+  if (encoding === "quoted-printable") {
+    return text
+      .replace(/=\r?\n/g, "")
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  }
+  return text;
+}
+
+function decodeAttachmentBytes(raw: string | Uint8Array, encoding: string): Uint8Array {
+  if (!raw) return new Uint8Array(0);
+  
+  if (encoding === "base64") {
+    const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+    const cleaned = text.replace(/\r?\n/g, "");
+    const binaryStr = atob(cleaned);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    return bytes;
+  }
+  
+  if (typeof raw === "string") return new TextEncoder().encode(raw);
+  return raw;
 }
 
 /* ── Main handler ── */
@@ -221,9 +354,8 @@ Deno.serve(async (req) => {
     }
     const lastUid = syncState?.last_uid || 0;
 
-    console.log(`[check-inbox] Connecting to ${imapHost}:993 via @workingdevshero/deno-imap...`);
+    console.log(`[check-inbox] Connecting to ${imapHost}:993...`);
 
-    // Create IMAP client with library
     const client = new ImapClient({
       host: imapHost,
       port: 993,
@@ -234,47 +366,42 @@ Deno.serve(async (req) => {
       autoReconnect: false,
       commandTimeout: 30000,
       connectionTimeout: 15000,
-      tlsOptions: {
-        caCerts: getCaCertsForHost(imapHost),
-      },
+      tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
     });
 
     await client.connect();
-    console.log("[check-inbox] Connected, authenticating...");
     await client.authenticate();
     console.log("[check-inbox] Authenticated OK");
 
-    // Select INBOX
     const inbox = await client.selectMailbox("INBOX");
     console.log(`[check-inbox] INBOX: ${inbox.exists} messages`);
 
-    // Search for new messages by UID
+    // Search for new UIDs
     let uids: number[] = [];
     if (lastUid > 0) {
-      // Search UIDs greater than last synced
       const searchResult = await client.search({ uid: `${lastUid + 1}:*` } as any);
       uids = (searchResult || []).filter((uid: number) => uid > lastUid);
     } else {
-      // First sync: get all (limited)
       const searchResult = await client.search({});
       uids = searchResult || [];
     }
 
     console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, 50);
+    const toFetch = uids.sort((a, b) => a - b).slice(0, 20); // limit to 20 for body+attachment processing
 
     const messages: any[] = [];
+    const attachmentRecords: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
-      // Fetch messages with envelope and body
       const fetchRange = toFetch.map(u => String(u)).join(",");
+
       try {
+        // Step 1: Fetch envelope + bodyStructure for all messages
         const fetched = await client.fetch(fetchRange, {
           uid: true,
           envelope: true,
-          body: true,
-          headers: ["Subject", "From", "To", "Date", "Message-ID", "In-Reply-To"],
+          bodyStructure: true,
         } as any);
 
         for (const msg of fetched) {
@@ -290,8 +417,119 @@ Deno.serve(async (req) => {
               ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
               : fromAddr;
 
-            // Get body text from fetched data
-            const bodyText = msg.body || msg.text || "";
+            // Parse MIME structure
+            const bs = msg.bodyStructure || msg.bodystructure;
+            const mimeParts = parseMimeStructure(bs);
+            console.log(`[check-inbox] UID ${uid}: ${mimeParts.length} MIME parts, subject: ${subject}`);
+
+            let bodyText = "";
+            let bodyHtml = "";
+
+            // Step 2: Fetch text body parts
+            const plainPart = findTextPart(mimeParts, "plain");
+            const htmlPart = findTextPart(mimeParts, "html");
+
+            if (plainPart || htmlPart) {
+              // Build BODY sections to fetch
+              const sectionsToFetch: string[] = [];
+              if (plainPart) sectionsToFetch.push(plainPart.section);
+              if (htmlPart) sectionsToFetch.push(htmlPart.section);
+
+              try {
+                // Fetch each body section individually
+                for (const section of sectionsToFetch) {
+                  const bodyFetch = await client.fetch(String(uid), {
+                    uid: true,
+                    body: section,
+                  } as any);
+
+                  if (bodyFetch && bodyFetch.length > 0) {
+                    const bodyData = bodyFetch[0];
+                    const rawBody = bodyData.body || bodyData.text || "";
+                    
+                    if (plainPart && section === plainPart.section) {
+                      bodyText = decodeBody(rawBody, plainPart.encoding || "");
+                    }
+                    if (htmlPart && section === htmlPart.section) {
+                      bodyHtml = decodeBody(rawBody, htmlPart.encoding || "");
+                    }
+                  }
+                }
+              } catch (bodyErr: any) {
+                console.error(`[check-inbox] Body fetch error UID ${uid}:`, bodyErr.message);
+                // Fallback: try fetching entire body
+                try {
+                  const fallback = await client.fetch(String(uid), { uid: true, body: true } as any);
+                  if (fallback?.[0]) {
+                    bodyText = typeof fallback[0].body === "string" ? fallback[0].body : "";
+                  }
+                } catch (_) { /* ignore */ }
+              }
+            } else {
+              // Simple message without MIME parts - fetch body directly
+              try {
+                const simpleFetch = await client.fetch(String(uid), { uid: true, body: true } as any);
+                if (simpleFetch?.[0]) {
+                  const raw = simpleFetch[0].body || simpleFetch[0].text || "";
+                  bodyText = typeof raw === "string" ? raw.trim() : "";
+                }
+              } catch (_) { /* ignore */ }
+            }
+
+            // Step 3: Handle attachments
+            const attachments = findAttachmentParts(mimeParts);
+            const MAX_ATTACHMENTS = 10;
+            const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+            for (const att of attachments.slice(0, MAX_ATTACHMENTS)) {
+              if (att.size && att.size > MAX_SIZE) {
+                console.log(`[check-inbox] Skipping large attachment: ${att.filename} (${att.size} bytes)`);
+                continue;
+              }
+
+              const filename = att.filename || `attachment_${att.section}.${att.subtype || "bin"}`;
+              
+              try {
+                const attFetch = await client.fetch(String(uid), {
+                  uid: true,
+                  body: att.section,
+                } as any);
+
+                if (attFetch?.[0]) {
+                  const rawAtt = attFetch[0].body || attFetch[0].text || "";
+                  const fileBytes = decodeAttachmentBytes(rawAtt, att.encoding || "");
+                  
+                  if (fileBytes.length > 0 && fileBytes.length <= MAX_SIZE) {
+                    const storagePath = `email-attachments/${userId}/${messageId}/${filename}`;
+                    const contentType = `${att.type}/${att.subtype}` || "application/octet-stream";
+
+                    const { error: uploadErr } = await supabase.storage
+                      .from("workspace-docs")
+                      .upload(storagePath, fileBytes, {
+                        contentType,
+                        upsert: true,
+                      });
+
+                    if (uploadErr) {
+                      console.error(`[check-inbox] Upload error for ${filename}:`, uploadErr.message);
+                    } else {
+                      attachmentRecords.push({
+                        message_id: null, // will be set after upsert
+                        user_id: userId,
+                        filename,
+                        content_type: contentType,
+                        size_bytes: fileBytes.length,
+                        storage_path: storagePath,
+                        _message_id_external: messageId, // temp reference
+                      });
+                      console.log(`[check-inbox] Uploaded: ${filename} (${fileBytes.length} bytes)`);
+                    }
+                  }
+                }
+              } catch (attErr: any) {
+                console.error(`[check-inbox] Attachment fetch error ${filename}:`, attErr.message);
+              }
+            }
 
             const match = await matchSender(supabase, fromAddr);
 
@@ -306,17 +544,18 @@ Deno.serve(async (req) => {
               to_address: toAddr,
               subject,
               body_text: typeof bodyText === "string" ? bodyText.trim().slice(0, 50000) : "",
+              body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
               message_id_external: messageId,
               in_reply_to: envelope.inReplyTo || null,
-              raw_payload: { uid, date, sender_name: match.name || senderName },
+              raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachments.length },
             });
 
             if (uid > maxUid) maxUid = uid;
-          } catch (e) {
+          } catch (e: any) {
             console.error(`[check-inbox] Error processing message:`, e.message);
           }
         }
-      } catch (fetchErr) {
+      } catch (fetchErr: any) {
         console.error(`[check-inbox] Fetch error:`, fetchErr.message);
       }
     }
@@ -336,6 +575,39 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
+      // Link attachments to saved messages
+      if (attachmentRecords.length > 0) {
+        // Get message IDs for saved messages
+        const extIds = attachmentRecords.map(a => a._message_id_external);
+        const { data: savedMsgs } = await supabase
+          .from("channel_messages")
+          .select("id, message_id_external")
+          .in("message_id_external", extIds);
+
+        const idMap = new Map((savedMsgs || []).map((m: any) => [m.message_id_external, m.id]));
+
+        const toInsert = attachmentRecords
+          .map(a => {
+            const msgId = idMap.get(a._message_id_external);
+            if (!msgId) return null;
+            return {
+              message_id: msgId,
+              user_id: a.user_id,
+              filename: a.filename,
+              content_type: a.content_type,
+              size_bytes: a.size_bytes,
+              storage_path: a.storage_path,
+            };
+          })
+          .filter(Boolean);
+
+        if (toInsert.length > 0) {
+          const { error: attErr } = await supabase.from("email_attachments").insert(toInsert);
+          if (attErr) console.error("[check-inbox] Attachment record save error:", attErr.message);
+          else console.log(`[check-inbox] Saved ${toInsert.length} attachment records`);
+        }
+      }
+
       // Increment interaction count for known contacts
       for (const msg of messages) {
         if (msg.source_type === "imported_contact" && msg.source_id) {
@@ -345,11 +617,14 @@ Deno.serve(async (req) => {
     }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
+    const totalAttachments = attachmentRecords.length;
+
     return new Response(JSON.stringify({
       success: true,
       total: messages.length,
       matched,
       unmatched: messages.length - matched,
+      attachments_saved: totalAttachments,
       last_uid: maxUid,
       messages: messages.map(m => ({
         from: m.from_address,
@@ -357,10 +632,12 @@ Deno.serve(async (req) => {
         source_type: m.source_type,
         sender_name: m.raw_payload?.sender_name,
         date: m.raw_payload?.date,
+        has_body: !!(m.body_text || m.body_html),
+        attachment_count: m.raw_payload?.attachment_count || 0,
       })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error("[check-inbox] Error:", err);
     return new Response(
       JSON.stringify({ error: err.message }),
