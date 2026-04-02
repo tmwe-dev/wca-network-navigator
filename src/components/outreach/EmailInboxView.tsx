@@ -10,6 +10,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
+import DOMPurify from "dompurify";
+
+function EmailBody({ message }: { message: ChannelMessage }) {
+  // Prefer HTML rendering when available
+  if (message.body_html) {
+    const clean = DOMPurify.sanitize(message.body_html, {
+      USE_PROFILES: { html: true },
+      ADD_TAGS: ["style"],
+      ADD_ATTR: ["target"],
+    });
+    return (
+      <div
+        className="prose prose-sm max-w-none text-sm [&_img]:max-w-full [&_table]:text-xs"
+        dangerouslySetInnerHTML={{ __html: clean }}
+      />
+    );
+  }
+
+  if (message.body_text) {
+    return (
+      <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
+        {message.body_text}
+      </div>
+    );
+  }
+
+  return <p className="text-sm text-muted-foreground">(corpo vuoto)</p>;
+}
 
 export function EmailInboxView() {
   const [search, setSearch] = useState("");
@@ -192,9 +220,7 @@ export function EmailInboxView() {
             )}
           </div>
           <ScrollArea className="flex-1 p-4">
-            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
-              {selectedMsg.body_text || "(corpo vuoto)"}
-            </div>
+            <EmailBody message={selectedMsg} />
           </ScrollArea>
         </div>
       )}

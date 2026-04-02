@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { findAttachments as findAtts } from "jsr:@workingdevshero/deno-imap";
+import PostalMime from "npm:postal-mime@2.4.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -169,6 +170,7 @@ function getCaCertsForHost(host: string): string[] {
 /* ── Sender matching ── */
 
 async function matchSender(supabase: any, email: string) {
+  if (!email) return { source_type: "unknown", source_id: null, partner_id: null, name: "" };
   const emailLower = email.toLowerCase();
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
@@ -176,8 +178,6 @@ async function matchSender(supabase: any, email: string) {
   if (pc) return { source_type: "partner_contact", source_id: pc.id, partner_id: pc.partner_id, name: pc.name };
   const { data: ic } = await supabase.from("imported_contacts").select("id, company_name, name").ilike("email", emailLower).limit(1).maybeSingle();
   if (ic) return { source_type: "imported_contact", source_id: ic.id, partner_id: null, name: ic.name || ic.company_name };
-  const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (prospect) return { source_type: "prospect", source_id: prospect.id, partner_id: null, name: prospect.company_name };
   return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
 
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
     const inbox = await client.selectMailbox("INBOX");
     console.log(`[check-inbox] INBOX: ${inbox.exists} messages`);
 
-    // Search for new UIDs using UID SEARCH (returns actual UIDs, not sequence numbers)
+    // Search for new UIDs
     let uids: number[] = [];
     try {
       const searchCmd = lastUid > 0 ? `UID SEARCH UID ${lastUid + 1}:*` : `UID SEARCH ALL`;
@@ -255,7 +255,6 @@ Deno.serve(async (req) => {
           break;
         }
       }
-      // Filter out any UIDs <= lastUid (safety)
       if (lastUid > 0) {
         uids = uids.filter(u => u > lastUid);
       }
@@ -269,125 +268,123 @@ Deno.serve(async (req) => {
 
     const messages: any[] = [];
     let maxUid = lastUid;
+    const parser = new PostalMime();
 
     if (toFetch.length > 0) {
-      // For each UID: 1) fetch envelope+bodyStructure, 2) fetch only text MIME sections
       for (const uid of toFetch) {
         try {
-          // Step 1: envelope + bodyStructure (lightweight, no body data)
+          // ── Step 1: Fetch envelope ONLY (robust, never fails on MIME) ──
           let envelope: any = {};
-          let bodyStructure: any = null;
           try {
-            const fetchResult = await client.fetch(String(uid), {
+            const envResult = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
               envelope: true,
-              bodyStructure: true,
             } as any);
-            if (fetchResult?.[0]) {
-              envelope = fetchResult[0].envelope || {};
-              bodyStructure = fetchResult[0].bodyStructure || null;
+            if (envResult?.[0]) {
+              envelope = envResult[0].envelope || {};
             }
-          } catch (fetchErr: any) {
-            console.warn(`[check-inbox] UID FETCH error UID ${uid}:`, fetchErr.message);
+          } catch (envErr: any) {
+            console.warn(`[check-inbox] Envelope fetch error UID ${uid}:`, envErr.message);
           }
 
           const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
           const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
           const subject = envelope.subject || "(nessun oggetto)";
           const messageId = envelope.messageId || `uid_${uid}_${Date.now()}`;
-          const date = envelope.date || "";
+          const emailDate = envelope.date || "";
           const senderName = envelope.from?.[0]
             ? `${envelope.from[0].name || ""} ${envelope.from[0].mailbox || ""}`.trim()
             : fromAddr;
 
           let bodyText = "";
           let bodyHtml = "";
-          let attachmentInfos: any[] = [];
+          let attachmentCount = 0;
 
-          // Step 2: Determine text sections from bodyStructure and fetch them
-          const textSections: string[] = [];
-          const htmlSections: string[] = [];
+          // ── Step 2: Fetch full RFC822 source and parse with postal-mime ──
+          try {
+            const bodyResult = await client.fetch(String(uid), {
+              byUid: true,
+              uid: true,
+              source: true,
+            } as any);
 
-          if (bodyStructure) {
-            // Find text parts by walking the structure
-            function walkParts(bs: any, path: string) {
-              if (!bs) return;
-              const t = (bs.type || "").toUpperCase();
-              const s = (bs.subtype || "").toUpperCase();
-              if (t === "TEXT" && s === "PLAIN") textSections.push(path || "1");
-              else if (t === "TEXT" && s === "HTML") htmlSections.push(path || "1");
-              if (bs.childParts) {
-                for (let i = 0; i < bs.childParts.length; i++) {
-                  walkParts(bs.childParts[i], path ? `${path}.${i + 1}` : `${i + 1}`);
-                }
-              }
-              if (bs.messageBodyStructure) {
-                walkParts(bs.messageBodyStructure, path ? `${path}.1` : "1");
+            let rawSource: Uint8Array | null = null;
+
+            if (bodyResult?.[0]) {
+              const msg = bodyResult[0];
+              // Try different ways the library might return source data
+              if (msg.source instanceof Uint8Array) {
+                rawSource = msg.source;
+              } else if (typeof msg.source === "string") {
+                rawSource = new TextEncoder().encode(msg.source);
+              } else if (msg.raw instanceof Uint8Array) {
+                rawSource = msg.raw;
+              } else if (typeof msg.raw === "string") {
+                rawSource = new TextEncoder().encode(msg.raw);
               }
             }
-            walkParts(bodyStructure, "");
 
-            // Extract attachment info from bodyStructure (no download)
-            try {
-              attachmentInfos = findAtts(bodyStructure) || [];
-            } catch (_) { /* ignore */ }
-          }
-
-          // Fetch only text/html sections (very lightweight)
-          const sectionsToFetch = [
-            ...textSections.slice(0, 1),
-            ...htmlSections.slice(0, 1),
-          ];
-          // Fallback: try common sections if bodyStructure parsing failed
-          if (sectionsToFetch.length === 0) {
-            sectionsToFetch.push("1", "1.1", "1.2");
-          }
-
-          if (sectionsToFetch.length > 0) {
-            try {
-              const bodyFetch = await client.fetch(String(uid), {
-                byUid: true,
-                uid: true,
-                bodyParts: sectionsToFetch,
-              } as any);
-              if (bodyFetch?.[0]?.parts) {
-                const parts = bodyFetch[0].parts;
-                const decoder = new TextDecoder();
-                // Get text from the first text section found
-                for (const sec of textSections.length > 0 ? textSections : ["1", "1.1"]) {
-                  if (parts[sec]?.data) {
-                    bodyText = decoder.decode(parts[sec].data);
-                    break;
-                  }
-                }
-                // Get HTML from the first html section found
-                for (const sec of htmlSections.length > 0 ? htmlSections : ["1.2", "2"]) {
-                  if (parts[sec]?.data) {
-                    bodyHtml = decoder.decode(parts[sec].data);
-                    break;
-                  }
-                }
-                // If no text found yet, try any available part
-                if (!bodyText && !bodyHtml) {
-                  for (const [key, val] of Object.entries(parts)) {
-                    if ((val as any)?.data) {
-                      bodyText = decoder.decode((val as any).data);
-                      break;
+            // If source fetch didn't work, try BODY[] via executeCommand
+            if (!rawSource) {
+              try {
+                const rawCmd = `UID FETCH ${uid} BODY[]`;
+                const rawResponse = await (client as any).executeCommand(rawCmd);
+                // The response contains literal data - find it
+                let collecting = false;
+                const chunks: string[] = [];
+                for (const line of rawResponse) {
+                  if (typeof line === "string") {
+                    if (line.includes("BODY[]") && line.includes("{")) {
+                      collecting = true;
+                      continue;
                     }
+                    if (collecting) {
+                      if (line.startsWith(")") || line.match(/^\S+ OK/)) {
+                        collecting = false;
+                      } else {
+                        chunks.push(line);
+                      }
+                    }
+                  } else if (line instanceof Uint8Array) {
+                    rawSource = line;
+                    break;
                   }
                 }
+                if (!rawSource && chunks.length > 0) {
+                  rawSource = new TextEncoder().encode(chunks.join("\r\n"));
+                }
+              } catch (rawErr: any) {
+                console.warn(`[check-inbox] BODY[] fetch error UID ${uid}:`, rawErr.message);
               }
-            } catch (bodyErr: any) {
-              console.warn(`[check-inbox] Body section fetch error UID ${uid}:`, bodyErr.message);
             }
+
+            if (rawSource && rawSource.length > 0) {
+              // Parse with postal-mime - handles base64, quoted-printable, multipart, everything
+              const parsed = await parser.parse(rawSource);
+              bodyText = parsed.text || "";
+              bodyHtml = parsed.html || "";
+              attachmentCount = (parsed.attachments || []).length;
+              console.log(`[check-inbox] UID ${uid}: postal-mime OK, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentCount}`);
+            } else {
+              console.warn(`[check-inbox] UID ${uid}: no raw source available`);
+            }
+          } catch (bodyErr: any) {
+            console.warn(`[check-inbox] Body parse error UID ${uid}:`, bodyErr.message);
           }
 
-          console.log(`[check-inbox] UID ${uid}: text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentInfos.length}, subj: ${subject}`);
+          // Use real email date for created_at
+          let createdAt: string | undefined;
+          if (emailDate) {
+            try {
+              const d = new Date(emailDate);
+              if (!isNaN(d.getTime())) createdAt = d.toISOString();
+            } catch (_) { /* use default */ }
+          }
 
           const match = await matchSender(supabase, fromAddr);
 
-          messages.push({
+          const record: any = {
             user_id: userId,
             channel: "email",
             direction: "inbound",
@@ -401,9 +398,11 @@ Deno.serve(async (req) => {
             body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
             message_id_external: messageId,
             in_reply_to: envelope.inReplyTo || null,
-            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentInfos.length },
-          });
+            raw_payload: { uid, date: emailDate, sender_name: match.name || senderName, attachment_count: attachmentCount },
+          };
+          if (createdAt) record.created_at = createdAt;
 
+          messages.push(record);
           if (uid > maxUid) maxUid = uid;
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
@@ -414,7 +413,7 @@ Deno.serve(async (req) => {
     // Disconnect
     try { client.disconnect(); } catch (_) { /* ignore */ }
 
-    // Deduplicate by message_id_external before saving
+    // Deduplicate and save
     if (messages.length > 0) {
       const seen = new Set<string>();
       const uniqueMessages = messages.filter(m => {
@@ -433,9 +432,6 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      // Note: attachment upload deferred to save CPU; metadata in raw_payload
-
-      // Increment interaction count for known contacts
       for (const msg of messages) {
         if (msg.source_type === "imported_contact" && msg.source_id) {
           await supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id });
@@ -444,14 +440,12 @@ Deno.serve(async (req) => {
     }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
-    const totalAttachments = 0;
 
     return new Response(JSON.stringify({
       success: true,
       total: messages.length,
       matched,
       unmatched: messages.length - matched,
-      attachments_saved: totalAttachments,
       last_uid: maxUid,
       messages: messages.map(m => ({
         from: m.from_address,
