@@ -210,7 +210,7 @@ La leggibilità è PRIORITÀ ASSOLUTA. Ogni risposta DEVE essere formattata segu
    Formato (array JSON):
    \`\`\`
    ---OPERATIONS---
-   [{"op_type":"download","status":"running","title":"Download profilo","target":"Transport Management Srl (IT)","count":1,"source":"WCA Directory","job_id":"uuid-del-job","eta_minutes":2},{"op_type":"deep_search","status":"completed","title":"Deep Search completato","target":"ABC Logistics","detail":"Trovati 3 contatti, logo e profilo LinkedIn","source":"Firecrawl + Google"}]
+   [{"op_type":"download","status":"running","title":"Download profilo","target":"Transport Management Srl (IT)","count":1,"source":"WCA Directory","job_id":"uuid-del-job","eta_minutes":2},{"op_type":"deep_search","status":"completed","title":"Deep Search completato","target":"ABC Logistics","detail":"Trovati 3 contatti, logo e profilo LinkedIn","source":"Partner Connect + Google"}]
    \`\`\`
    
     Valori op_type: download, deep_search, email_send, linkedin_scrape, directory_scan, enrichment, bulk_update, import, blacklist_check, generic
