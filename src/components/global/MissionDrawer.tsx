@@ -202,3 +202,101 @@ function Section({ title, icon, open, onToggle, badge, children }: {
     </Collapsible>
   );
 }
+
+function RecipientsSection({ search, setSearch, open, onToggle }: {
+  search: string; setSearch: (s: string) => void; open: boolean; onToggle: () => void;
+}) {
+  const m = useMission();
+
+  const { data: searchResults = [] } = useQuery({
+    queryKey: ["mission-recipient-search", search],
+    queryFn: async () => {
+      if (search.length < 2) return [];
+      const q = `%${search}%`;
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, company_name, country_name, city, email, enriched_at")
+        .or(`company_name.ilike.${q},city.ilike.${q},country_name.ilike.${q}`)
+        .order("company_name")
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: search.length >= 2,
+  });
+
+  const handleAdd = (p: any) => {
+    m.addRecipient({
+      partnerId: p.id,
+      companyName: p.company_name,
+      email: p.email,
+      city: p.city,
+      countryName: p.country_name,
+      isEnriched: !!p.enriched_at,
+    });
+  };
+
+  return (
+    <Section title="Destinatari" icon="📧" open={open} onToggle={onToggle} badge={m.recipients.length || undefined}>
+      <div className="space-y-2">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca azienda..."
+            className="h-8 text-xs pl-8 border-border bg-muted/30"
+          />
+        </div>
+
+        {/* Results */}
+        {search.length >= 2 && searchResults.length > 0 && (
+          <div className="max-h-[150px] overflow-y-auto space-y-0.5">
+            {searchResults.map((p: any) => (
+              <button
+                key={p.id}
+                onClick={() => handleAdd(p)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/50 transition-colors"
+              >
+                <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-medium truncate">{p.company_name}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+                </div>
+                {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
+                <Plus className="w-3 h-3 text-primary shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Selected */}
+        {m.recipients.length > 0 && (
+          <div className="space-y-0.5">
+            <p className="text-[10px] text-muted-foreground font-medium">{m.recipients.length} selezionati</p>
+            {m.recipients.map((r, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30 border border-border/30 group">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-medium truncate">{r.companyName}</p>
+                  {r.contactName && <p className="text-[9px] text-muted-foreground truncate">{r.contactName}</p>}
+                </div>
+                {r.email ? <Mail className="w-3 h-3 text-emerald-500 shrink-0" /> : <span className="text-[8px] text-destructive">no email</span>}
+                <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded">
+                  <X className="w-3 h-3 text-destructive" />
+                </button>
+              </div>
+            ))}
+            <Button variant="ghost" size="sm" className="w-full h-6 text-[10px] text-muted-foreground" onClick={m.clearRecipients}>
+              Rimuovi tutti
+            </Button>
+          </div>
+        )}
+
+        {m.recipients.length === 0 && search.length < 2 && (
+          <p className="text-[10px] text-muted-foreground text-center py-2">Cerca e aggiungi destinatari</p>
+        )}
+      </div>
+    </Section>
+  );
+}
