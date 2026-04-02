@@ -2,7 +2,10 @@ import { useState, useMemo } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SlidersHorizontal, Search, RotateCcw, Check } from "lucide-react";
+import {
+  SlidersHorizontal, Search, RotateCcw, Check, ArrowUpDown,
+  Database, Users, Shield, Mail, Layers,
+} from "lucide-react";
 import { useGlobalFilters, type WorkspaceFilterKey, type EmailGenFilter, type SortingFilterMode } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 
@@ -53,10 +56,10 @@ const LEAD_STATUS_OPTIONS = [
   { value: "converted", label: "Convertito" },
 ];
 
-/* ── Workspace filter definitions ── */
-const WS_FILTER_SECTIONS: { label: string; chips: { key: WorkspaceFilterKey; label: string }[] }[] = [
+const WS_FILTER_SECTIONS: { label: string; icon: any; chips: { key: WorkspaceFilterKey; label: string }[] }[] = [
   {
     label: "Dati Contatto",
+    icon: Users,
     chips: [
       { key: "with_email", label: "Con email" },
       { key: "no_email", label: "Senza email" },
@@ -66,6 +69,7 @@ const WS_FILTER_SECTIONS: { label: string; chips: { key: WorkspaceFilterKey; lab
   },
   {
     label: "Arricchimento",
+    icon: Database,
     chips: [
       { key: "enriched", label: "Arricchito" },
       { key: "not_enriched", label: "Non arricchito" },
@@ -81,7 +85,6 @@ const EMAIL_GEN_OPTIONS: { key: EmailGenFilter; label: string }[] = [
   { key: "to_generate", label: "Da generare" },
 ];
 
-/* ── Sorting filter definitions ── */
 const SORTING_FILTER_OPTIONS: { key: SortingFilterMode; label: string }[] = [
   { key: "all", label: "Tutti" },
   { key: "immediate", label: "⚡ Immediati" },
@@ -142,65 +145,61 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     return c;
   }, [g.filters]);
 
-  const searchPlaceholder = showSorting ? "Cerca azienda o contatto..." : showWorkspace ? "Cerca partner, contatto..." : "Cerca partner, contatto...";
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[320px] sm:max-w-[360px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="left" className="w-[360px] sm:max-w-[400px] p-0 flex flex-col border-r border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-r from-transparent to-primary/[0.04]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <SlidersHorizontal className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <SlidersHorizontal className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground">Filtri & Ordinamento</h3>
-              <p className="text-[11px] text-muted-foreground">
+              <h3 className="text-sm font-bold text-foreground">Filtri & Ordinamento</h3>
+              <p className="text-xs text-muted-foreground">
                 {showWorkspace ? "Filtri Workspace" : showSorting ? "Filtri In Uscita" : "Filtra i dati della vista corrente"}
               </p>
             </div>
             {activeCount > 0 && (
-              <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold">{activeCount} attivi</span>
+              <span className="text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full font-semibold">{activeCount} attivi</span>
             )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-          {/* Global Search */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+          {/* Search */}
           {!showSorting && (
-            <FilterSection title="Cerca">
+            <FilterSection title="Cerca" icon={Search}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={localSearch} onChange={e => setLocalSearch(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="pl-9 h-9 text-sm bg-muted/30 border-border/40"
+                  placeholder="Cerca partner, contatto..."
+                  className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
                   onKeyDown={e => e.key === "Enter" && handleApply()}
                 />
               </div>
             </FilterSection>
           )}
 
-          {/* Sorting-specific search */}
           {showSorting && (
-            <FilterSection title="Cerca">
+            <FilterSection title="Cerca" icon={Search}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={g.filters.sortingSearch}
                   onChange={e => g.setSortingSearch(e.target.value)}
                   placeholder="Cerca azienda o contatto..."
-                  className="pl-9 h-9 text-sm bg-muted/30 border-border/40"
+                  className="pl-10 h-10 text-sm bg-muted/20 border-border/40"
                 />
               </div>
             </FilterSection>
           )}
 
-          {/* Sort (non-outreach) */}
           {!showWorkspace && !showSorting && (
-            <FilterSection title="Ordinamento">
-              <div className="flex flex-wrap gap-1.5">
+            <FilterSection title="Ordinamento" icon={ArrowUpDown}>
+              <div className="flex flex-wrap gap-2">
                 {SORT_OPTIONS.map(opt => (
                   <ChipButton key={opt.value} active={g.filters.sortBy === opt.value} onClick={() => g.setSortBy(opt.value)}>
                     {opt.label}
@@ -210,19 +209,18 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
-          {/* Origin */}
           {showOrigin && (
-            <FilterSection title="Origine dati">
-              <div className="flex flex-wrap gap-1.5">
+            <FilterSection title="Origine dati" icon={Database}>
+              <div className="flex flex-wrap gap-2">
                 {ORIGIN_OPTIONS.map(opt => (
                   <button
                     key={opt.value} onClick={() => toggleOrigin(opt.value)}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5",
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-all border flex items-center gap-2",
                       g.filters.origin.has(opt.value) ? opt.color : "border-border/40 text-muted-foreground hover:bg-muted/40"
                     )}
                   >
-                    {g.filters.origin.has(opt.value) && <Check className="w-3 h-3" />}
+                    {g.filters.origin.has(opt.value) && <Check className="w-3.5 h-3.5" />}
                     {opt.label}
                   </button>
                 ))}
@@ -230,10 +228,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
-          {/* Quality */}
           {showQuality && (
-            <FilterSection title="Qualità dati">
-              <div className="flex flex-wrap gap-1.5">
+            <FilterSection title="Qualità dati" icon={Shield}>
+              <div className="flex flex-wrap gap-2">
                 {QUALITY_OPTIONS.map(opt => (
                   <ChipButton key={opt.value} active={g.filters.quality === opt.value} onClick={() => g.setQuality(opt.value)}>
                     {opt.label}
@@ -243,11 +240,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </FilterSection>
           )}
 
-          {/* Contacts-specific */}
           {showContacts && (
             <>
-              <FilterSection title="Raggruppa per">
-                <div className="flex flex-wrap gap-1.5">
+              <FilterSection title="Raggruppa per" icon={Layers}>
+                <div className="flex flex-wrap gap-2">
                   {GROUPBY_OPTIONS.map(opt => (
                     <ChipButton key={opt.value} active={g.filters.groupBy === opt.value} onClick={() => g.setGroupBy(opt.value)}>
                       {opt.label}
@@ -256,8 +252,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 </div>
               </FilterSection>
 
-              <FilterSection title="Circuito attesa">
-                <div className="flex flex-wrap gap-1.5">
+              <FilterSection title="Circuito attesa" icon={ArrowUpDown}>
+                <div className="flex flex-wrap gap-2">
                   {HOLDING_OPTIONS.map(opt => (
                     <ChipButton key={opt.value} active={g.filters.holdingPattern === opt.value} onClick={() => g.setHoldingPattern(opt.value)}>
                       {opt.label}
@@ -266,8 +262,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 </div>
               </FilterSection>
 
-              <FilterSection title="Stato lead">
-                <div className="flex flex-wrap gap-1.5">
+              <FilterSection title="Stato lead" icon={Users}>
+                <div className="flex flex-wrap gap-2">
                   {LEAD_STATUS_OPTIONS.map(opt => (
                     <ChipButton key={opt.value} active={g.filters.leadStatus === opt.value} onClick={() => g.setLeadStatus(opt.value)}>
                       {opt.label}
@@ -278,11 +274,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
-          {/* ── WORKSPACE FILTERS ── */}
           {showWorkspace && (
             <>
-              <FilterSection title="Stato Email">
-                <div className="flex flex-wrap gap-1.5">
+              <FilterSection title="Stato Email" icon={Mail}>
+                <div className="flex flex-wrap gap-2">
                   {EMAIL_GEN_OPTIONS.map(opt => (
                     <ChipButton key={opt.key} active={g.filters.emailGenFilter === opt.key} onClick={() => g.setEmailGenFilter(opt.key)}>
                       {opt.label}
@@ -292,8 +287,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
               </FilterSection>
 
               {WS_FILTER_SECTIONS.map(section => (
-                <FilterSection key={section.label} title={section.label}>
-                  <div className="flex flex-wrap gap-1.5">
+                <FilterSection key={section.label} title={section.label} icon={section.icon}>
+                  <div className="flex flex-wrap gap-2">
                     {section.chips.map(chip => (
                       <ChipButton key={chip.key} active={g.filters.workspaceFilters.has(chip.key)} onClick={() => toggleWsFilter(chip.key)}>
                         {chip.label}
@@ -305,10 +300,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             </>
           )}
 
-          {/* ── SORTING FILTERS ── */}
           {showSorting && (
-            <FilterSection title="Stato coda">
-              <div className="flex flex-wrap gap-1.5">
+            <FilterSection title="Stato coda" icon={Layers}>
+              <div className="flex flex-wrap gap-2">
                 {SORTING_FILTER_OPTIONS.map(opt => (
                   <ChipButton key={opt.key} active={g.filters.sortingFilter === opt.key} onClick={() => g.setSortingFilter(opt.key)}>
                     {opt.label}
@@ -321,11 +315,11 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-border/50 bg-muted/20 flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5 text-xs" onClick={handleReset}>
-            <RotateCcw className="w-3.5 h-3.5" /> Reset
+          <Button variant="outline" className="flex-1 h-10 gap-2 text-sm" onClick={handleReset}>
+            <RotateCcw className="w-4 h-4" /> Reset
           </Button>
-          <Button size="sm" className="flex-1 h-9 gap-1.5 text-xs" onClick={handleApply}>
-            <Check className="w-3.5 h-3.5" /> Applica
+          <Button className="flex-1 h-10 gap-2 text-sm" onClick={handleApply}>
+            <Check className="w-4 h-4" /> Applica
           </Button>
         </div>
       </SheetContent>
@@ -333,10 +327,13 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   );
 }
 
-function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterSection({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">{title}</p>
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-2">
+        <Icon className="w-4 h-4 text-muted-foreground" />
+        <p className="text-[13px] text-foreground font-bold">{title}</p>
+      </div>
       {children}
     </div>
   );
@@ -347,7 +344,7 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
     <button
       onClick={onClick}
       className={cn(
-        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+        "px-4 py-2 rounded-lg text-sm font-medium transition-all border",
         active
           ? "bg-primary/15 border-primary/30 text-primary shadow-sm shadow-primary/5"
           : "border-border/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground"

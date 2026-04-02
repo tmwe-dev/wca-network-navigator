@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ChevronDown, FileText, Link2, Plus, X, Upload, Save, Trash2, Search, Building2, Mail, Users } from "lucide-react";
-import { useMission, type SelectedRecipient } from "@/contexts/MissionContext";
+import {
+  Target, FileText, Link2, Plus, X, Upload, Save, Trash2,
+  Search, Building2, Mail, Users, Paperclip, Zap, Bookmark,
+  ChevronDown,
+} from "lucide-react";
+import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import QualitySelector from "@/components/workspace/QualitySelector";
-import ContentPicker from "@/components/shared/ContentPicker";
+import ContentSelect from "@/components/shared/ContentSelect";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,14 +27,9 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
   const [newLink, setNewLink] = useState("");
   const [presetName, setPresetName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const [openSections, setOpenSections] = useState({
-    goal: true, proposal: true, recipients: true, documents: false, links: false,
-  });
   const [recipientSearch, setRecipientSearch] = useState("");
-
-  const toggle = (key: keyof typeof openSections) =>
-    setOpenSections(p => ({ ...p, [key]: !p[key] }));
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
 
   const addLink = () => {
     const url = newLink.trim();
@@ -47,165 +46,166 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[360px] sm:max-w-[400px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
+      <SheetContent side="right" className="w-[400px] sm:max-w-[440px] p-0 flex flex-col border-l border-primary/10 bg-background/95 backdrop-blur-xl">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-r from-primary/[0.04] to-transparent">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Target className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Target className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Mission Context</h3>
-              <p className="text-[11px] text-muted-foreground">Configura obiettivo e materiali per AI</p>
+              <h3 className="text-sm font-bold text-foreground">Mission Context</h3>
+              <p className="text-xs text-muted-foreground">Configura obiettivo e materiali per AI</p>
             </div>
           </div>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
 
-          {/* Preset — in alto */}
-          <div className="bg-muted/20 rounded-lg p-3 space-y-2">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">📋 Preset</p>
+          {/* ── PRESET ── */}
+          <div className="bg-muted/20 rounded-xl p-4 space-y-3 border border-border/30">
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4.5 h-4.5 text-amber-500" />
+              <span className="text-sm font-bold text-foreground">Preset Rapido</span>
+            </div>
             {m.presets.length > 0 && (
               <Select value={m.activePresetId || ""} onValueChange={v => { const p = m.presets.find(x => x.id === v); if (p) m.loadPreset(p); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Carica preset..." /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Carica un preset salvato..." /></SelectTrigger>
                 <SelectContent>
                   {m.presets.map(p => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={p.id} className="text-sm">{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
-            <div className="flex gap-1.5">
-              <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome preset..." className="h-8 text-xs flex-1" />
-              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={handleSavePreset}><Save className="w-3 h-3" /> Salva</Button>
+            <div className="flex gap-2">
+              <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Nome preset..." className="h-10 text-sm flex-1" />
+              <Button variant="outline" className="h-10 gap-1.5 text-sm px-3" onClick={handleSavePreset}>
+                <Save className="w-4 h-4" /> Salva
+              </Button>
             </div>
             {m.activePresetId && (
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive gap-1 w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
-                <Trash2 className="w-3 h-3" /> Elimina preset attivo
+              <Button variant="ghost" className="h-9 text-sm text-destructive gap-1.5 w-full" onClick={() => m.deletePreset(m.activePresetId!)}>
+                <Trash2 className="w-4 h-4" /> Elimina preset attivo
               </Button>
             )}
           </div>
 
-          {/* Qualità AI — sempre visibile, non collassabile */}
-          <div className="space-y-1.5">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1.5">
-              ⚡ Qualità AI
-            </p>
-            <p className="text-[10px] text-muted-foreground">Livello di generazione per email e outreach AI</p>
+          {/* ── QUALITÀ AI ── */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4.5 h-4.5 text-yellow-500" />
+              <span className="text-sm font-bold text-foreground">Qualità AI</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Livello di generazione per email e outreach</p>
             <QualitySelector value={m.quality} onChange={m.setQuality} size="md" />
           </div>
 
-          {/* Obiettivo con ContentPicker */}
-          <Section title="Obiettivo" icon="🎯" open={openSections.goal} onToggle={() => toggle("goal")}>
-            <div className="space-y-2">
-              <ContentPicker
-                type="goals"
-                onSelect={(text) => m.setGoal(text)}
-                selectedText={m.goal}
-                triggerLabel="Seleziona obiettivo..."
-                className="w-full"
-              />
-              <Textarea
-                value={m.goal} onChange={e => m.setGoal(e.target.value)}
-                placeholder="Descrivi l'obiettivo delle comunicazioni..."
-                className="min-h-[120px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
-              />
+          <hr className="border-border/30" />
+
+          {/* ── OBIETTIVO ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              <span className="text-sm font-bold text-foreground">Obiettivo</span>
             </div>
-          </Section>
+            <ContentSelect
+              type="goals"
+              onSelect={(text) => m.setGoal(text)}
+              selectedText={m.goal}
+              placeholder="Seleziona obiettivo dalla libreria..."
+            />
+            <Textarea
+              value={m.goal} onChange={e => m.setGoal(e.target.value)}
+              placeholder="Descrivi l'obiettivo delle comunicazioni..."
+              className="min-h-[100px] text-sm bg-muted/20 border-border/40 resize-none focus:border-primary/50"
+            />
+          </div>
 
-          {/* Proposta Base con ContentPicker */}
-          <Section title="Proposta Base" icon="📝" open={openSections.proposal} onToggle={() => toggle("proposal")}>
-            <div className="space-y-2">
-              <ContentPicker
-                type="proposals"
-                onSelect={(text) => m.setBaseProposal(text)}
-                selectedText={m.baseProposal}
-                triggerLabel="Seleziona proposta..."
-                className="w-full"
-              />
-              <Textarea
-                value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)}
-                placeholder="La proposta commerciale di base..."
-                className="min-h-[160px] text-sm bg-muted/30 border-border/40 resize-none focus:border-primary/50"
-              />
+          {/* ── PROPOSTA ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-500" />
+              <span className="text-sm font-bold text-foreground">Proposta Base</span>
             </div>
-          </Section>
+            <ContentSelect
+              type="proposals"
+              onSelect={(text) => m.setBaseProposal(text)}
+              selectedText={m.baseProposal}
+              placeholder="Seleziona proposta dalla libreria..."
+            />
+            <Textarea
+              value={m.baseProposal} onChange={e => m.setBaseProposal(e.target.value)}
+              placeholder="La proposta commerciale di base..."
+              className="min-h-[120px] text-sm bg-muted/20 border-border/40 resize-none focus:border-primary/50"
+            />
+          </div>
 
-          {/* Recipients */}
-          <RecipientsSection
-            search={recipientSearch}
-            setSearch={setRecipientSearch}
-            open={openSections.recipients}
-            onToggle={() => toggle("recipients")}
-          />
+          {/* ── DESTINATARI ── */}
+          <RecipientsSection search={recipientSearch} setSearch={setRecipientSearch} />
 
-          {/* Documents */}
-          <Section title="Documenti" icon="📎" open={openSections.documents} onToggle={() => toggle("documents")} badge={m.documents.length || undefined}>
-            <div className="space-y-2">
+          {/* ── DOCUMENTI (collapsible) ── */}
+          <Collapsible open={docsOpen} onOpenChange={setDocsOpen}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 group">
+              <Paperclip className="w-4.5 h-4.5 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground flex-1 text-left">Documenti</span>
+              {m.documents.length > 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{m.documents.length}</span>
+              )}
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", docsOpen && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-2">
               {m.documents.map(doc => (
-                <div key={doc.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/30 group">
-                  <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-foreground truncate flex-1">{doc.file_name}</span>
-                  <span className="text-[10px] text-muted-foreground">{(doc.file_size / 1024).toFixed(0)}KB</span>
-                  <button onClick={() => m.removeDocument(doc.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded">
-                    <X className="w-3 h-3 text-destructive" />
+                <div key={doc.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm text-foreground truncate flex-1">{doc.file_name}</span>
+                  <span className="text-xs text-muted-foreground">{(doc.file_size / 1024).toFixed(0)}KB</span>
+                  <button onClick={() => m.removeDocument(doc.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
+                    <X className="w-3.5 h-3.5 text-destructive" />
                   </button>
                 </div>
               ))}
               <input ref={fileRef} type="file" className="hidden" onChange={e => { if (e.target.files?.[0]) m.upload(e.target.files[0]); }} />
-              <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5 border-dashed" onClick={() => fileRef.current?.click()} disabled={m.uploading}>
-                <Upload className="w-3.5 h-3.5" /> {m.uploading ? "Caricamento..." : "Carica documento"}
+              <Button variant="outline" className="w-full h-10 text-sm gap-2 border-dashed" onClick={() => fileRef.current?.click()} disabled={m.uploading}>
+                <Upload className="w-4 h-4" /> {m.uploading ? "Caricamento..." : "Carica documento"}
               </Button>
-            </div>
-          </Section>
+            </CollapsibleContent>
+          </Collapsible>
 
-          {/* Links */}
-          <Section title="Link di Riferimento" icon="🔗" open={openSections.links} onToggle={() => toggle("links")} badge={m.referenceLinks.length || undefined}>
-            <div className="space-y-2">
+          {/* ── LINK (collapsible) ── */}
+          <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 group">
+              <Link2 className="w-4.5 h-4.5 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground flex-1 text-left">Link di Riferimento</span>
+              {m.referenceLinks.length > 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{m.referenceLinks.length}</span>
+              )}
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", linksOpen && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-2">
               {m.referenceLinks.map((url, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/30 group">
-                  <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-foreground truncate flex-1">{url}</span>
-                  <button onClick={() => m.setReferenceLinks(prev => prev.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded">
-                    <X className="w-3 h-3 text-destructive" />
+                <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
+                  <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm text-foreground truncate flex-1">{url}</span>
+                  <button onClick={() => m.setReferenceLinks(prev => prev.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
+                    <X className="w-3.5 h-3.5 text-destructive" />
                   </button>
                 </div>
               ))}
-              <div className="flex gap-1.5">
-                <Input value={newLink} onChange={e => setNewLink(e.target.value)} placeholder="https://..." className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && addLink()} />
-                <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={addLink}><Plus className="w-3.5 h-3.5" /></Button>
+              <div className="flex gap-2">
+                <Input value={newLink} onChange={e => setNewLink(e.target.value)} placeholder="https://..." className="h-10 text-sm flex-1" onKeyDown={e => e.key === "Enter" && addLink()} />
+                <Button variant="outline" className="h-10 w-10 p-0" onClick={addLink}><Plus className="w-4 h-4" /></Button>
               </div>
-            </div>
-          </Section>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-function Section({ title, icon, open, onToggle, badge, children }: {
-  title: string; icon: string; open: boolean; onToggle: () => void; badge?: number; children: React.ReactNode;
-}) {
-  return (
-    <Collapsible open={open} onOpenChange={onToggle}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg hover:bg-muted/40 transition-colors group">
-        <span className="text-sm">{icon}</span>
-        <span className="text-xs font-medium text-foreground flex-1 text-left">{title}</span>
-        {badge && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-mono">{badge}</span>}
-        <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="px-3 pb-2 pt-1">
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function RecipientsSection({ search, setSearch, open, onToggle }: {
-  search: string; setSearch: (s: string) => void; open: boolean; onToggle: () => void;
-}) {
+function RecipientsSection({ search, setSearch }: { search: string; setSearch: (s: string) => void }) {
   const m = useMission();
 
   const { data: searchResults = [] } = useQuery({
@@ -237,66 +237,72 @@ function RecipientsSection({ search, setSearch, open, onToggle }: {
   };
 
   return (
-    <Section title="Destinatari" icon="📧" open={open} onToggle={onToggle} badge={m.recipients.length || undefined}>
-      <div className="space-y-2">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca azienda..."
-            className="h-8 text-xs pl-8 border-border bg-muted/30"
-          />
-        </div>
-
-        {/* Results */}
-        {search.length >= 2 && searchResults.length > 0 && (
-          <div className="max-h-[150px] overflow-y-auto space-y-0.5">
-            {searchResults.map((p: any) => (
-              <button
-                key={p.id}
-                onClick={() => handleAdd(p)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/50 transition-colors"
-              >
-                <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium truncate">{p.company_name}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
-                </div>
-                {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
-                <Plus className="w-3 h-3 text-primary shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Selected */}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Users className="w-5 h-5 text-emerald-500" />
+        <span className="text-sm font-bold text-foreground">Destinatari</span>
         {m.recipients.length > 0 && (
-          <div className="space-y-0.5">
-            <p className="text-[10px] text-muted-foreground font-medium">{m.recipients.length} selezionati</p>
-            {m.recipients.map((r, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30 border border-border/30 group">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium truncate">{r.companyName}</p>
-                  {r.contactName && <p className="text-[9px] text-muted-foreground truncate">{r.contactName}</p>}
-                </div>
-                {r.email ? <Mail className="w-3 h-3 text-emerald-500 shrink-0" /> : <span className="text-[8px] text-destructive">no email</span>}
-                <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded">
-                  <X className="w-3 h-3 text-destructive" />
-                </button>
-              </div>
-            ))}
-            <Button variant="ghost" size="sm" className="w-full h-6 text-[10px] text-muted-foreground" onClick={m.clearRecipients}>
-              Rimuovi tutti
-            </Button>
-          </div>
-        )}
-
-        {m.recipients.length === 0 && search.length < 2 && (
-          <p className="text-[10px] text-muted-foreground text-center py-2">Cerca e aggiungi destinatari</p>
+          <span className="text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full font-medium">{m.recipients.length}</span>
         )}
       </div>
-    </Section>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cerca azienda da aggiungere..."
+          className="h-10 text-sm pl-10 border-border/50 bg-muted/20"
+        />
+      </div>
+
+      {/* Results */}
+      {search.length >= 2 && searchResults.length > 0 && (
+        <div className="max-h-[180px] overflow-y-auto space-y-1 rounded-lg border border-border/30 p-1.5">
+          {searchResults.map((p: any) => (
+            <button
+              key={p.id}
+              onClick={() => handleAdd(p)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-muted/50 transition-colors"
+            >
+              <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{p.company_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+              </div>
+              {p.email && <Mail className="w-4 h-4 text-emerald-500 shrink-0" />}
+              <Plus className="w-4 h-4 text-primary shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Selected */}
+      {m.recipients.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs text-muted-foreground font-medium">{m.recipients.length} selezionati</p>
+          {m.recipients.map((r, idx) => (
+            <div key={idx} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/20 border border-border/30 group">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{r.companyName}</p>
+                {r.contactName && <p className="text-xs text-muted-foreground truncate">{r.contactName}</p>}
+              </div>
+              {r.email ? <Mail className="w-4 h-4 text-emerald-500 shrink-0" /> : <span className="text-xs text-destructive">no email</span>}
+              <button onClick={() => m.removeRecipient(idx)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
+                <X className="w-3.5 h-3.5 text-destructive" />
+              </button>
+            </div>
+          ))}
+          <Button variant="ghost" className="w-full h-8 text-xs text-muted-foreground" onClick={m.clearRecipients}>
+            Rimuovi tutti
+          </Button>
+        </div>
+      )}
+
+      {m.recipients.length === 0 && search.length < 2 && (
+        <p className="text-xs text-muted-foreground text-center py-3">Cerca e aggiungi destinatari per le comunicazioni</p>
+      )}
+    </div>
   );
 }
