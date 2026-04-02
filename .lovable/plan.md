@@ -1,69 +1,78 @@
 
-# Piano: MissionDrawer Ultra-Compatto
 
-## Concetto
+# Piano: Download Corpo Email + Allegati con deno-imap
 
-Eliminare tutto lo spazio verticale sprecato. Tutto in alto, compatto, con icone. Le scelte si fanno tramite popup (Dialog).
+## Situazione
 
-## Layout nuovo
+La libreria `@workingdevshero/deno-imap` supporta nativamente:
+- `bodyStructure: true` nel fetch per ottenere la struttura MIME
+- `hasAttachments()` / `findAttachments()` per individuare allegati
+- `decodeAttachment()` per decodificarli
+- Fetch di sezioni MIME specifiche (es. `BODY[1]` per text/plain, `BODY[1.1]` per HTML)
 
-```text
-┌──────────────────────────────────────┐
-│ 🎯 Mission Context                  │
-├──────────────────────────────────────┤
-│ RIGA 1: Preset (bottoni/icone)       │
-│ [P1] [P2] [P3] [+] [⚡Rapida|Std]  │
-│ (se >5 preset → dropdown)           │
-├──────────────────────────────────────┤
-│ RIGA 2: Azioni compatte (icone)      │
-│ [🎯 Obiettivo] [📝 Proposta]        │
-│ [📎 Docs (2)] [🔗 Link (1)]         │
-│ Ogni icona apre popup per scegliere  │
-├──────────────────────────────────────┤
-│ RIGA 3: Destinatari                  │
-│ [🔍 Cerca azienda...]               │
-│ [risultati ricerca]                  │
-│ [chip] [chip] [chip] [Rimuovi]       │
-└──────────────────────────────────────┘
+Attualmente il fetch usa `body: true` ma il corpo arriva vuoto perché serve il fetch per sezione MIME specifica.
+
+## Modifiche
+
+### 1. Edge Function `check-inbox/index.ts`
+
+- Importare le utility: `hasAttachments`, `findAttachments`, `decodeAttachment`
+- Prima fetch: ottenere `envelope` + `bodyStructure` per tutti i messaggi
+- Analizzare la bodyStructure per trovare le sezioni text/plain e text/html
+- Seconda fetch per UID: richiedere `BODY[sezione]` per il testo e per ogni allegato
+- Per ogni allegato: decodificare con `decodeAttachment()`, uploadare su Storage bucket `workspace-docs` nel path `email-attachments/{userId}/{messageId}/{filename}`
+- Salvare `body_text` e `body_html` in `channel_messages`
+- Registrare ogni allegato nella nuova tabella `email_attachments`
+- Limiti di sicurezza: max 10 allegati per email, max 10MB per file
+
+### 2. Migrazione SQL — Nuova tabella `email_attachments`
+
+```sql
+CREATE TABLE public.email_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID REFERENCES channel_messages(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
+  filename TEXT NOT NULL,
+  content_type TEXT,
+  size_bytes INTEGER,
+  storage_path TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.email_attachments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own email_attachments"
+  ON public.email_attachments FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 ```
 
-## Dettaglio modifiche
+### 3. Flusso per ogni messaggio
 
-### 1. Preset — Bottoni icona, non form
+```text
+1. fetch(uids, { envelope, bodyStructure })
+2. Per ogni msg:
+   a. Trova sezione text/plain → fetch BODY[sezione] → body_text
+   b. Trova sezione text/html → fetch BODY[sezione] → body_html
+   c. Se hasAttachments(bodyStructure):
+      - findAttachments() → lista {filename, section, encoding, size}
+      - Per ogni allegato ≤10MB:
+        fetch BODY[section] → decodeAttachment() → upload Storage
+        insert in email_attachments
+3. Upsert channel_messages con body_text + body_html
+```
 
-- Se **≤5 preset**: bottoni compatti in fila con nome abbreviato, quello attivo evidenziato con colore primario
-- Se **>5 preset**: convertire automaticamente in dropdown Select
-- Bottone [+] per salvare nuovo preset → apre mini Dialog con campo nome
-- Bottone [🗑️] visibile solo se un preset e' attivo
-- Qualita' AI resta inline nella stessa riga come toggle compatto (Rapida / Standard / Premium)
-
-### 2. Obiettivo e Proposta — Icone compatte con popup
-
-- **Eliminare** le textarea e i ContentSelect dal body della sidebar
-- Sostituire con **2 bottoni icona** compatti in una riga orizzontale:
-  - Icona Target + "Obiettivo" (o il nome selezionato, troncato)
-  - Icona FileText + "Proposta" (o il nome selezionato, troncato)
-- Click su ciascuno → apre il Dialog popup (ContentSelect) per scegliere/editare
-- Il testo completo e' visibile solo nel popup, non nella sidebar
-
-### 3. Documenti e Link — Icone badge, non collapsible
-
-- Eliminare le sezioni collapsible
-- 2 bottoni icona compatti nella stessa riga: Paperclip + count, Link2 + count
-- Click → Dialog popup per gestire (lista + aggiungi/rimuovi)
-
-### 4. Destinatari — Subito sotto, piu' spazio
-
-- Ricerca + lista chip come ora, ma subito sotto le icone azioni
-- Molto piu' spazio verticale disponibile per i risultati grazie alla compattazione sopra
-
-## File coinvolti
+### File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/global/MissionDrawer.tsx` | Rewrite completo del layout — compattazione, Dialog per docs/link |
-| `src/components/shared/ContentSelect.tsx` | Nessuna modifica (popup gia' pronto) |
+| `supabase/functions/check-inbox/index.ts` | Aggiungere import utility, fetch bodyStructure, estrarre corpo e allegati, upload su Storage |
+| Migrazione SQL | Creare tabella `email_attachments` con RLS |
 
-## Risultato
+### Note tecniche
 
-La sidebar passa da ~600px di scroll a ~250px di contenuto visibile tutto in una schermata. Popup per i dettagli.
+- La libreria è la stessa (`@workingdevshero/deno-imap`), nessun cambio di dipendenze
+- Il bucket `workspace-docs` esiste già (privato) — perfetto per gli allegati
+- La colonna `body_html` esiste già in `channel_messages` ma non viene popolata — ora lo faremo
+- Il fetch per sezione MIME potrebbe richiedere fetch individuali per UID (un fetch per sezione per messaggio), quindi per evitare timeout limitiamo a 20 messaggi per sync invece di 50
+
