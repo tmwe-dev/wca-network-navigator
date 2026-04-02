@@ -262,26 +262,23 @@ Deno.serve(async (req) => {
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
-      // Step 1: Fetch envelopes only (no bodyStructure - it crashes on complex MIME)
-      const fetchRange = toFetch.map(u => String(u)).join(",");
-      let envelopeMap = new Map<number, any>();
-
-      try {
-        const envelopes = await client.fetch(fetchRange, {
-          uid: true,
-          envelope: true,
-        } as any);
-        for (const msg of envelopes) {
-          envelopeMap.set(msg.uid, msg.envelope);
-        }
-      } catch (envErr: any) {
-        console.error("[check-inbox] Envelope fetch error:", envErr.message);
-      }
-
-      // Step 2: For each UID, fetch full RFC822 body and parse with postal-mime
+      // For each UID, fetch envelope + full RFC822 source and parse with postal-mime
       for (const uid of toFetch) {
         try {
-          const envelope = envelopeMap.get(uid) || {};
+          // Fetch envelope for metadata
+          let envelope: any = {};
+          try {
+            const envFetch = await client.fetch(String(uid), {
+              uid: true,
+              envelope: true,
+            } as any);
+            if (envFetch?.[0]) {
+              envelope = envFetch[0].envelope || {};
+            }
+          } catch (envErr: any) {
+            console.warn(`[check-inbox] Envelope fetch error UID ${uid}:`, envErr.message);
+          }
+
           const fromAddr = envelope.from?.[0] ? extractEmailAddress(envelope.from[0]) : "";
           const toAddr = envelope.to?.[0] ? extractEmailAddress(envelope.to[0]) : "";
           const subject = envelope.subject || "(nessun oggetto)";
@@ -295,21 +292,22 @@ Deno.serve(async (req) => {
           let bodyHtml = "";
           let parsedAttachments: any[] = [];
 
-          // Fetch full RFC822 message
+          // Fetch full RFC822 source message
           try {
             const rfc822Fetch = await client.fetch(String(uid), {
               uid: true,
-              body: "",  // empty string = full RFC822 body
+              source: true,  // source = full RFC822 raw message
             } as any);
 
             if (rfc822Fetch?.[0]) {
-              const rawMessage = rfc822Fetch[0].body || rfc822Fetch[0].text || "";
+              const rawMessage = rfc822Fetch[0].source || rfc822Fetch[0].body || rfc822Fetch[0].text || "";
               
               if (rawMessage) {
-                // Convert to Uint8Array for postal-mime
                 let messageBytes: Uint8Array;
                 if (typeof rawMessage === "string") {
                   messageBytes = new TextEncoder().encode(rawMessage);
+                } else if (rawMessage instanceof ArrayBuffer) {
+                  messageBytes = new Uint8Array(rawMessage);
                 } else {
                   messageBytes = rawMessage;
                 }
@@ -322,7 +320,14 @@ Deno.serve(async (req) => {
                 bodyHtml = parsed.html || "";
                 parsedAttachments = parsed.attachments || [];
 
-                console.log(`[check-inbox] UID ${uid}: parsed OK, text=${bodyText.length}c, html=${bodyHtml.length}c, attachments=${parsedAttachments.length}, subject: ${subject}`);
+                // If envelope was empty, extract from parsed headers
+                if (!fromAddr && parsed.from?.address) {
+                  // Will use parsed.from below
+                }
+
+                console.log(`[check-inbox] UID ${uid}: parsed OK, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${parsedAttachments.length}, subj: ${subject}`);
+              } else {
+                console.warn(`[check-inbox] UID ${uid}: empty source returned`);
               }
             }
           } catch (bodyErr: any) {
