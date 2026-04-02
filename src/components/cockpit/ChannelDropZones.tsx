@@ -52,10 +52,11 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           </div>
         )}
 
-        {/* Compact channel buttons in a 2x2 grid */}
-        <div className="grid grid-cols-2 gap-2 w-full">
+        {/* Channel drop zones — same height as contact cards */}
+        <div className="flex flex-col gap-3 w-full">
           {channels.map((ch) => {
             const Icon = ch.icon;
+            const isHovered = hoveredChannel === ch.id;
             return (
               <div
                 key={ch.id}
@@ -66,10 +67,24 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   setHoveredChannel(null);
                   if (draggedContactId) onDrop(ch.id, draggedContactId, "Contact");
                 }}
-                className="flex items-center gap-2.5 px-4 py-3 rounded-lg border border-border/50 bg-card/60 text-muted-foreground/70"
+                className={cn(
+                  "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
+                  !isHovered && "border-border/40 bg-card/40 text-muted-foreground/60",
+                  isHovered && cn("border-[3px] shadow-lg", ch.hoverBg, ch.hoverBorder, ch.hoverText),
+                )}
               >
-                <Icon className="w-4 h-4" />
-                <span className="text-xs font-medium">{ch.label}</span>
+                <div className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                  isHovered ? cn(ch.hoverBg, ch.hoverText) : "bg-muted/40"
+                )}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className={cn("text-sm font-semibold", isHovered && "text-foreground")}>{ch.label}</span>
+                {isHovered && (
+                  <span className={cn("text-xs font-medium ml-auto", ch.hoverText)}>
+                    Rilascia{dragCount > 1 ? ` (×${dragCount})` : ""}
+                  </span>
+                )}
               </div>
             );
           })}
