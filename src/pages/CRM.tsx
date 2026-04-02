@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { UserCheck, ContactRound, Building2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { UserCheck, ContactRound } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 
 const Contacts = lazy(() => import("./Contacts"));
@@ -12,25 +11,15 @@ function TabFallback() {
 
 export default function CRM() {
   const [tab, setTab] = useState("contatti");
-  const navigate = useNavigate();
-
-  const handleTabChange = (value: string) => {
-    if (value === "ra") {
-      navigate("/ra");
-      return;
-    }
-    setTab(value);
-  };
 
   const tabs: VerticalTab[] = [
     { value: "contatti", label: "Contatti", icon: UserCheck },
     { value: "biglietti", label: "Biglietti", icon: ContactRound },
-    { value: "ra", label: "Report Aziende", icon: Building2 },
   ];
 
   return (
     <div className="flex h-full overflow-hidden">
-      <VerticalTabNav tabs={tabs} value={tab} onChange={handleTabChange} />
+      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
       <div className="flex-1 min-w-0 overflow-hidden">
         {tab === "contatti" && (
           <Suspense fallback={<TabFallback />}>
