@@ -1,114 +1,130 @@
 
+# Piano di Uniformazione UI — "Semplice come un gioco"
 
-# Piano: Eliminare Firecrawl e Riorganizzare il Sistema di Ricerca
+## Principio guida
+Ogni maschera deve avere la stessa struttura: **Nav verticale sx (con filtri integrati) → Contenuto principale**. Un bambino di 10 anni deve capire dove cliccare.
 
-## Stato Attuale
+---
 
-Firecrawl e' ancora presente in **6 edge functions** e **3 file frontend**. Il sistema LinkedIn ha 2 hook duplicati (`useSmartLinkedInSearch` + `useLinkedInLookup`). La Deep Search locale (`useDeepSearchLocal`, 541 righe) usa gia Partner Connect ma e' monolitica e non permette all'utente di scegliere cosa cercare.
+## 1. Componente Standard: `SectionShell`
 
-## Architettura Target
+Creare un wrapper riutilizzabile che tutte le maschere useranno:
 
-```text
+```
+┌──────────────────────────────────────────────┐
+│ [Header compatto: titolo + conteggio + azioni]│
+├──────────┬───────────────────────────────────┤
+│ Nav sx   │                                   │
+│ + Filtri │     Contenuto principale          │
+│ integrati│     (lista, calendario, ecc.)     │
+│          │                                   │
+└──────────┴───────────────────────────────────┘
+```
+
+**File:** `src/components/layout/SectionShell.tsx`
+- Props: `title`, `count`, `filters[]`, `actions[]`, `children`
+- Il nav verticale è PARTE del contenuto di ogni tab, non della shell Outreach
+
+## 2. VerticalTabNav → Aggiungere slot filtri
+
+La sidebar 140px attuale mostra solo i link. Modifica:
+- Sotto i tab: sezione **Filtri** collassabile
+- Ricerca testuale (input compatto)
+- Chip filtro per stato, agente, tipo, priorità
+- Conteggio risultati in tempo reale
+
+**File:** `src/components/ui/VerticalTabNav.tsx` — aggiungere prop `filterSlot?: ReactNode`
+
+## 3. Cards Standardizzate — `UnifiedContactRow`
+
+Creare UN componente card usato ovunque:
+
+```
 ┌─────────────────────────────────────────────────┐
-│  RICERCA LINKEDIN (Google-only)                 │
-│  useLinkedInLookup.ts (unificato)               │
-│  - Batch: cerca su Google → salva URL           │
-│  - Single: stessa logica, 1 contatto            │
-│  - Zero fallback LinkedIn people search         │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│  DEEP SEARCH (opzionale, popup con flags)       │
-│  DeepSearchOptionsDialog.tsx                    │
-│  ☑ Sito web aziendale                           │
-│  ☑ Profilo LinkedIn (scrape leggero)            │
-│  ☑ WhatsApp                                     │
-│  ☐ Analisi AI del profilo                       │
-│  [Avvia] [Annulla]                              │
+│ ☐ │ 🏢 Azienda        │ 👤 Nome · Ruolo │ 🏙 Città │ ● Stato │ ⚡ Canali │
 └─────────────────────────────────────────────────┘
 ```
 
-## Step 1 — Eliminare Edge Functions Firecrawl
+**File:** `src/components/shared/UnifiedContactRow.tsx`
+- Layout a riga singola, colonne fisse
+- Checkbox opzionale
+- Badge stato colorato (Nuovo=grigio, Contattato=blu, Trattativa=arancione, Chiuso=verde)
+- Icone canali compatte (mail, linkedin, whatsapp)
+- Doppio clic → apre ContactRecordDrawer
+- Usato in: Cockpit, Circuito, CRM Contatti, Attività
 
-**Eliminare completamente:**
-- `supabase/functions/firecrawl-search/index.ts`
+## 4. Empty States Utili
 
-**Rimuovere codice Firecrawl da:**
-- `supabase/functions/enrich-partner-website/index.ts` — rimuovere blocchi `FIRECRAWL_API_KEY`, far fallire gracefully se non c'e Partner Connect
-- `supabase/functions/generate-outreach/index.ts` — rimuovere 2 blocchi Firecrawl scrape (website + LinkedIn), usare solo dati gia salvati nel DB
-- `supabase/functions/generate-email/index.ts` — rimuovere blocco scrape reference_urls via Firecrawl
-- `supabase/functions/scrape-wca-directory/index.ts` — rimuovere `firecrawlFallback()`
-- `supabase/functions/scrape-wca-partners/index.ts` — rimuovere 2 blocchi fallback Firecrawl
+Creare `src/components/shared/EmptyState.tsx`:
+- Icona grande animata
+- Titolo chiaro ("Non ci sono contatti qui")
+- Sottotitolo con azione suggerita ("Vai al Cockpit per aggiungerne")
+- Pulsante CTA primario
 
-## Step 2 — Unificare la Ricerca LinkedIn
+Applicare a:
+- **Circuito**: "Nessun contatto in attesa → Contatta qualcuno dal Cockpit per iniziare"
+- **In Uscita**: "Nessun invio in coda → Trascina un contatto nel Cockpit per generare un messaggio"
+- **CRM vuoto**: "Nessun contatto importato → Importa un file CSV o aggiungi manualmente"
+- **Attività vuote**: "Tutto fatto! Nessuna attività in sospeso"
 
-**Eliminare:** `src/hooks/useSmartLinkedInSearch.ts`
+## 5. Cockpit — Semplificazione Drop Zone
 
-**Refactorizzare:** `src/hooks/useLinkedInLookup.ts` diventa l'unico hook:
-- Metodo `searchSingle(contact)` — per il cockpit, 1 contatto
-- Metodo `lookupBatch(contactIds)` — per completamento massivo
-- Strategia: SOLO Google via Partner Connect (`pcBridge.googleSearch`)
-- Rimuovere completamente il fallback LinkedIn People Search
-- Scoring e matching via `src/lib/linkedinSearch.ts` (invariato)
-- Salva `linkedin_profile_url` in `enrichment_data`
+Le 4 drop zone occupano il 50% dello schermo vuote. Modifica:
+- **Stato normale** (nessun drag): mostrare un pannello compatto con 4 pulsanti canale in riga orizzontale, non 4 box giganti
+- **Stato drag**: espandere le zone con animazione
+- Ridurre da `min-h-[80px]` a `min-h-[56px]` per le zone
 
-**Aggiornare i consumer:**
-- `src/pages/Cockpit.tsx` — sostituire `useSmartLinkedInSearch` con il nuovo `useLinkedInLookup.searchSingle()`
-- `src/pages/TestLinkedInSearch.tsx` — aggiornare import
-- `src/components/cockpit/AISearchMonitor.tsx` — aggiornare tipo `SearchLogEntry`
+**File:** `src/components/cockpit/ChannelDropZones.tsx`
 
-## Step 3 — Deep Search con Popup Opzionale
+## 6. Attività — Card più ricca
 
-**Nuovo componente:** `src/components/deep-search/DeepSearchOptionsDialog.tsx`
-- Dialog modale con checklist:
-  - ☑ Sito web aziendale (scrape via Partner Connect)
-  - ☑ Profilo LinkedIn (scrape leggero se URL presente)
-  - ☑ Numero WhatsApp
-  - ☑ Analisi AI del profilo
-- Pulsante "Avvia Deep Search"
-- Usato dal Cockpit, PartnerHub, Operations, Workspace
+La card attività attuale mostra solo titolo + priorità. Aggiungere:
+- Icona tipo attività (email, call, meeting)
+- Nome azienda/contatto
+- Agente assegnato (avatar emoji)
+- Data scadenza con colore (rosso se scaduta)
 
-**Refactorizzare:** `src/hooks/useDeepSearchLocal.ts`
-- Accettare parametro `options: { website: boolean, linkedin: boolean, whatsapp: boolean, aiAnalysis: boolean }`
-- Eseguire solo le sezioni selezionate
-- Nessun uso di Firecrawl
+**File:** `src/components/outreach/AttivitaTab.tsx`
+- Rimuovere le 4 card metriche giganti → sostituire con contatori inline nella toolbar
 
-**Aggiornare:** `src/hooks/useDeepSearchRunner.ts`
-- Passare le opzioni dalla dialog al local search
+## 7. Circuito — Da vuoto a funzionale
 
-## Step 4 — Pulizia Riferimenti Testuali
+Attualmente schermo vuoto con aereo. Anche con 0 contatti, mostrare:
+- Header con titolo + filtri stato (Contattati/In Corso/Trattativa)
+- Empty state utile con CTA
+- Quando ci sono dati: layout a colonne kanban (drag between status)
 
-- `src/pages/Guida.tsx` — rimuovere menzione "Firecrawl"
-- `src/data/operationsProcedures.ts` — rimuovere menzione "Firecrawl"
-- `src/components/settings/BlacklistManager.tsx` — aggiornare testo
-- `supabase/functions/ai-assistant/index.ts` — rimuovere menzione "Firecrawl" dal system prompt
+**File:** `src/components/outreach/HoldingPatternTab.tsx`
+
+## 8. Header Coerente
+
+Rimuovere la barra blu portal di Network. Tutte le pagine usano lo stesso header globale:
+- Hamburger sx
+- Titolo sezione al centro (opzionale)  
+- Azioni dx (sync, AI assistant)
+
+Non toccare Global/Campagne (escluse dal sistema UI).
+
+---
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `supabase/functions/firecrawl-search/` | **ELIMINARE** |
-| `supabase/functions/enrich-partner-website/index.ts` | Rimuovere Firecrawl |
-| `supabase/functions/generate-outreach/index.ts` | Rimuovere Firecrawl |
-| `supabase/functions/generate-email/index.ts` | Rimuovere Firecrawl |
-| `supabase/functions/scrape-wca-directory/index.ts` | Rimuovere fallback |
-| `supabase/functions/scrape-wca-partners/index.ts` | Rimuovere fallback |
-| `supabase/functions/ai-assistant/index.ts` | Pulizia testo |
-| `src/hooks/useSmartLinkedInSearch.ts` | **ELIMINARE** |
-| `src/hooks/useLinkedInLookup.ts` | Unificare, aggiungere `searchSingle` |
-| `src/hooks/useDeepSearchLocal.ts` | Aggiungere parametro opzioni |
-| `src/hooks/useDeepSearchRunner.ts` | Passare opzioni |
-| `src/components/deep-search/DeepSearchOptionsDialog.tsx` | **NUOVO** |
-| `src/pages/Cockpit.tsx` | Aggiornare import |
-| `src/pages/TestLinkedInSearch.tsx` | Aggiornare import |
-| `src/components/cockpit/AISearchMonitor.tsx` | Aggiornare tipo |
-| `src/pages/Guida.tsx` | Pulizia testo |
-| `src/data/operationsProcedures.ts` | Pulizia testo |
-| `src/components/settings/BlacklistManager.tsx` | Pulizia testo |
+| `src/components/shared/EmptyState.tsx` | **NUOVO** — empty state riutilizzabile |
+| `src/components/shared/UnifiedContactRow.tsx` | **NUOVO** — card contatto standard |
+| `src/components/ui/VerticalTabNav.tsx` | Aggiungere `filterSlot` |
+| `src/components/cockpit/ChannelDropZones.tsx` | Ridurre dimensioni, layout orizzontale |
+| `src/components/outreach/AttivitaTab.tsx` | Card più ricche, rimuovere metriche giganti |
+| `src/components/outreach/HoldingPatternTab.tsx` | Empty state, header filtri |
+| `src/components/outreach/InUscitaTab.tsx` | Empty state |
+| `src/pages/Cockpit.tsx` | Usare UnifiedContactRow in modalità lista |
 
-## Risultato
+## Ordine di esecuzione
 
-- Zero dipendenze Firecrawl in tutto il progetto
-- Un solo hook per la ricerca LinkedIn (Google-only)
-- Deep Search opzionale con popup che permette all'utente di scegliere cosa cercare prima di ogni invio
-
+1. EmptyState + UnifiedContactRow (componenti base)
+2. VerticalTabNav con filtri
+3. Cockpit drop zones compatte
+4. Attività card ricche
+5. Circuito funzionale
+6. In Uscita empty state
