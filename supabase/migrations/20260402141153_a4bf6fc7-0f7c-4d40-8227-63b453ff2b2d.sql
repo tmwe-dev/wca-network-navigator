@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_channel_messages_external_id;
+ALTER TABLE public.channel_messages ADD CONSTRAINT channel_messages_message_id_external_key UNIQUE (message_id_external);
