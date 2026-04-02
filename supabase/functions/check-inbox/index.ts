@@ -201,37 +201,35 @@ function envelopeAddr(addr: any): string {
   return "";
 }
 
-/* ── Helper: find text section in bodyStructure ── */
-function findTextSection(bs: any, prefix = ""): { section: string; type: string } | null {
-  if (!bs) return null;
-  
-  // Single part message
-  if (bs.type && !bs.childNodes) {
-    const mimeType = `${bs.type}/${bs.subtype || ""}`.toLowerCase();
-    if (mimeType === "text/plain") return { section: prefix || "1", type: "plain" };
-    if (mimeType === "text/html") return { section: prefix || "1", type: "html" };
-    return null;
-  }
-  
-  // Multipart — look through children
-  if (bs.childNodes && Array.isArray(bs.childNodes)) {
-    let plainResult: { section: string; type: string } | null = null;
-    let htmlResult: { section: string; type: string } | null = null;
-    
-    for (let i = 0; i < bs.childNodes.length; i++) {
-      const child = bs.childNodes[i];
-      const childPrefix = prefix ? `${prefix}.${i + 1}` : `${i + 1}`;
-      const result = findTextSection(child, childPrefix);
-      if (result) {
-        if (result.type === "plain" && !plainResult) plainResult = result;
-        if (result.type === "html" && !htmlResult) htmlResult = result;
+/* ── Helper: parse raw IMAP FETCH response to extract literal content ── */
+function extractLiteralFromResponse(lines: any[]): string {
+  let result = "";
+  let inLiteral = false;
+  let literalBytesLeft = 0;
+
+  for (const line of lines) {
+    if (line instanceof Uint8Array) {
+      result += new TextDecoder().decode(line);
+      continue;
+    }
+    if (typeof line === "string") {
+      // Check for literal start: {1234}
+      const litMatch = line.match(/\{(\d+)\}\s*$/);
+      if (litMatch) {
+        inLiteral = true;
+        literalBytesLeft = parseInt(litMatch[1]);
+        continue;
+      }
+      if (inLiteral) {
+        if (line.trim() === ")" || line.match(/^\S+ OK/)) {
+          inLiteral = false;
+        } else {
+          result += line + "\n";
+        }
       }
     }
-    // Prefer plain text, fall back to HTML
-    return plainResult || htmlResult;
   }
-  
-  return null;
+  return result.trim();
 }
 
 /* ── BATCH SIZE ── */
@@ -323,101 +321,73 @@ Deno.serve(async (req) => {
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
         try {
-          // Step 1: Fetch ENVELOPE only (lightweight — no body data)
-          const envFetch = await client.fetch(String(uid), {
-            byUid: true,
-            uid: true,
-            envelope: true,
-            bodyStructure: true,
-          } as any);
+          // Step 1: Fetch ENVELOPE only (NO bodyStructure — it crashes on complex emails)
+          let fromAddr = "";
+          let toAddr = "";
+          let senderName = "";
+          let subject = "(nessun oggetto)";
+          let messageId = `uid_${uid}_${Date.now()}`;
+          let date = "";
+          let inReplyTo: string | null = null;
 
-          const msg = envFetch?.[0];
-          if (!msg) {
-            console.warn(`[check-inbox] No data for UID ${uid}, skipping`);
-            continue;
+          try {
+            const envFetch = await client.fetch(String(uid), {
+              byUid: true,
+              uid: true,
+              envelope: true,
+            } as any);
+
+            const env = envFetch?.[0]?.envelope;
+            if (env) {
+              fromAddr = envelopeAddr(env.from?.[0]);
+              toAddr = envelopeAddr(env.to?.[0]);
+              senderName = env.from?.[0]?.name || fromAddr;
+              subject = env.subject || "(nessun oggetto)";
+              messageId = env.messageId || messageId;
+              date = env.date || "";
+              inReplyTo = env.inReplyTo || null;
+            }
+          } catch (envErr: any) {
+            console.warn(`[check-inbox] Envelope error UID ${uid}:`, envErr.message);
           }
 
-          const env = msg.envelope || {};
-          const fromAddr = envelopeAddr(env.from?.[0]) || "sconosciuto@unknown";
-          const toAddr = envelopeAddr(env.to?.[0]) || "";
-          const senderName = env.from?.[0]?.name || fromAddr;
-          const subject = env.subject || "(nessun oggetto)";
-          const messageId = env.messageId || `uid_${uid}_${Date.now()}`;
-          const date = env.date || "";
-          const inReplyTo = env.inReplyTo || null;
+          if (!fromAddr || fromAddr === "@") {
+            fromAddr = "sconosciuto@unknown";
+          }
 
-          // Step 2: Find text section in bodyStructure and fetch it
+          // Step 2: Fetch body text via raw IMAP command
+          // Try BODY.PEEK[1] first (text/plain in simple or first part of multipart)
+          // Then try BODY.PEEK[1.1] (text/plain inside multipart/alternative within multipart/mixed)
           let bodyText = "";
           let bodyHtml = "";
-          let attachmentCount = 0;
-          const bs = msg.bodyStructure;
 
-          // Count attachments from bodyStructure
-          function countAttachments(node: any): number {
-            if (!node) return 0;
-            if (node.childNodes && Array.isArray(node.childNodes)) {
-              let count = 0;
-              for (const child of node.childNodes) count += countAttachments(child);
-              return count;
-            }
-            const mime = `${node.type || ""}/${node.subtype || ""}`.toLowerCase();
-            if (mime !== "text/plain" && mime !== "text/html" && node.disposition?.type?.toLowerCase() !== "inline") {
-              return 1;
-            }
-            return 0;
-          }
-          attachmentCount = countAttachments(bs);
+          const sectionsToTry = ["1", "1.1", "1.2"];
+          for (const section of sectionsToTry) {
+            if (bodyText && bodyHtml) break; // got both, stop
 
-          // Find text body section
-          const textSection = findTextSection(bs);
-          if (textSection) {
             try {
-              // Fetch just the text section via raw IMAP command
-              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${textSection.section}])`;
+              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${section}])`;
               const bodyResponse = await (client as any).executeCommand(bodyCmd);
-              
-              // Parse the literal response — look for the text content
-              let textContent = "";
-              let capturing = false;
-              for (const line of bodyResponse) {
-                if (typeof line === "string") {
-                  // Check for literal start like: * 1 FETCH (... {1234}
-                  if (line.includes(`BODY[${textSection.section}]`) && line.includes("{")) {
-                    capturing = true;
-                    continue;
-                  }
-                  if (capturing) {
-                    // End of literal — line with just ")"
-                    if (line.trim() === ")" || line.match(/^\S+ OK/)) {
-                      capturing = false;
-                    } else {
-                      textContent += line + "\n";
-                    }
-                  }
-                } else if (line instanceof Uint8Array) {
-                  textContent += new TextDecoder().decode(line);
-                }
-              }
+              const content = extractLiteralFromResponse(bodyResponse);
 
-              if (textContent) {
-                if (textSection.type === "plain") {
-                  bodyText = textContent.trim().slice(0, 50000);
+              if (content && content.length > 5) {
+                // Heuristic: if it has HTML tags, it's HTML; otherwise text
+                if (content.includes("<html") || content.includes("<div") || content.includes("<p>") || content.includes("<br") || content.includes("<table")) {
+                  if (!bodyHtml) bodyHtml = content.slice(0, 100000);
                 } else {
-                  bodyHtml = textContent.trim().slice(0, 100000);
+                  if (!bodyText) bodyText = content.slice(0, 50000);
                 }
               }
             } catch (bodyErr: any) {
-              console.warn(`[check-inbox] Body fetch error UID ${uid} section ${textSection.section}:`, bodyErr.message);
+              // Section doesn't exist — that's fine, try next
+              if (!bodyErr.message?.includes("parse")) {
+                console.warn(`[check-inbox] Body section ${section} error UID ${uid}:`, bodyErr.message);
+              }
+              break; // If IMAP errors, stop trying more sections
             }
           }
 
-          // Also try to get HTML if we only got plain
-          if (bodyText && !bodyHtml && bs) {
-            const htmlSection = findTextSection(bs);
-            // Already handled above — skip double fetch for now
-          }
-
-          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentCount}, subj: ${subject}`);
+          console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, subj: ${subject}`);
 
           const match = await matchSender(supabase, fromAddr);
 
@@ -435,20 +405,20 @@ Deno.serve(async (req) => {
             body_html: bodyHtml,
             message_id_external: messageId,
             in_reply_to: inReplyTo,
-            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentCount },
+            raw_payload: { uid, date, sender_name: match.name || senderName },
           };
 
           // Save immediately (checkpoint per message)
           const { error: saveErr } = await supabase
             .from("channel_messages")
             .upsert([msgData], { onConflict: "message_id_external" });
-          
+
           if (saveErr) {
             console.error(`[check-inbox] Save error UID ${uid}:`, saveErr.message);
           } else {
             messages.push(msgData);
             maxUid = uid;
-            
+
             // Checkpoint: update last_uid after each successful save
             await supabase
               .from("email_sync_state")
@@ -463,6 +433,14 @@ Deno.serve(async (req) => {
 
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);
+          // Even on error, advance past this UID to avoid getting stuck
+          if (uid > maxUid) {
+            maxUid = uid;
+            await supabase
+              .from("email_sync_state")
+              .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+              .eq("user_id", userId);
+          }
         }
       }
     }
@@ -488,7 +466,6 @@ Deno.serve(async (req) => {
         has_body: !!(m.body_text || m.body_html),
         body_text_length: m.body_text?.length || 0,
         body_html_length: m.body_html?.length || 0,
-        attachment_count: m.raw_payload?.attachment_count || 0,
       })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
