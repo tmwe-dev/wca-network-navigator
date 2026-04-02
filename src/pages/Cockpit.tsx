@@ -12,7 +12,6 @@ import { Mail, Sparkles, Linkedin } from "lucide-react";
 import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
 import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
-import { useSmartLinkedInSearch } from "@/hooks/useSmartLinkedInSearch";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -68,7 +67,7 @@ export interface DraftState {
   isGenerating: boolean;
   scrapingPhase: ScrapingPhase;
   linkedinProfile: LinkedInProfileData | null;
-  searchLog?: import("@/hooks/useSmartLinkedInSearch").SearchLogEntry[];
+  searchLog?: import("@/hooks/useLinkedInLookup").SearchLogEntry[];
   _debug?: OutreachDebug;
 }
 
@@ -106,7 +105,6 @@ const Cockpit = () => {
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
-  const smartSearch = useSmartLinkedInSearch();
   const linkedInLookup = useLinkedInLookup();
 
   // Agent assignment
@@ -287,7 +285,7 @@ const Cockpit = () => {
         scrapingPhase: "searching", linkedinProfile: null, searchLog: [],
       });
 
-      const searchResult = await smartSearch.search({
+      const searchResult = await linkedInLookup.searchSingle({
         name: contact.name, company: contact.company, email: contact.email,
         role: contact.role, country: contact.country,
         sourceType: contact.sourceType, sourceId: contact.sourceId,

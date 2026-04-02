@@ -63,16 +63,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    if (!FIRECRAWL_API_KEY) {
-      return new Response(JSON.stringify({ error: "Firecrawl not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -119,20 +113,29 @@ Deno.serve(async (req) => {
       url = `https://${url}`;
     }
 
-    console.log(`Scraping website for ${partner.company_name}: ${url}`);
+    console.log(`Fetching website for ${partner.company_name}: ${url}`);
 
-    // Scrape with Firecrawl
-    const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true, waitFor: 3000 }),
-    });
-
-    const scrapeData = await scrapeResponse.json();
-    const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || "";
+    // Direct fetch website content
+    let markdown = "";
+    try {
+      const fetchResp = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
+        redirect: "follow",
+      });
+      if (fetchResp.ok) {
+        const html = await fetchResp.text();
+        // Simple HTML to text extraction
+        markdown = html
+          .replace(/<script[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .substring(0, 15000);
+      }
+    } catch (e) {
+      console.error("Website fetch failed:", e);
+    }
 
     if (!markdown || markdown.length < 50) {
       await supabase.from("partners").update({

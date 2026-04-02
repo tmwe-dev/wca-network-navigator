@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, CheckCircle2, XCircle, Clock, Linkedin, ChevronDown, ChevronUp, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SearchLogEntry } from "@/hooks/useSmartLinkedInSearch";
+import type { SearchLogEntry } from "@/hooks/useLinkedInLookup";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";

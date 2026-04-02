@@ -295,56 +295,7 @@ function extractMembersFromHtml(html: string): { members: { id: number; name: st
   return { members, totalResults }
 }
 
-// ─── Firecrawl Fallback ──────────────────────────────────────
-
-function parseMembersFromContent(html: string, markdown: string): { company_name: string; city?: string; wca_id?: number }[] {
-  const members: { company_name: string; city?: string; wca_id?: number }[] = []
-  const seen = new Set<number>()
-  const content = html || markdown || ''
-  const linkRegex = /href="[^"]*\/[Dd]irectory\/[Mm]embers\/(\d+)"[^>]*>([^<]+)</gi
-  let match
-  while ((match = linkRegex.exec(content)) !== null) {
-    const wcaId = parseInt(match[1])
-    let rawText = match[2].trim()
-    if (!wcaId || seen.has(wcaId) || rawText.length < 2) continue
-    seen.add(wcaId)
-    rawText = rawText.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
-    let companyName = rawText.replace(/\s*\([^)]*(?:Head Office|Branch)\)\s*$/i, '')
-    let city: string | undefined
-    const dashIdx = companyName.indexOf(' - ')
-    if (dashIdx > 0) {
-      city = companyName.substring(0, dashIdx).trim()
-      companyName = companyName.substring(dashIdx + 3).trim()
-    }
-    if (companyName.length > 0) members.push({ company_name: companyName, city, wca_id: wcaId })
-  }
-  return members
-}
-
-async function firecrawlFallback(countryCode: string, network: string, currentPage: number, size: number): Promise<{ members: any[]; hasNextPage: boolean } | null> {
-  const apiKey = Deno.env.get('FIRECRAWL_API_KEY')
-  if (!apiKey) return null
-  const networkIds = network ? [NETWORK_IDS[network]].filter(Boolean) : ALL_NETWORK_IDS
-  const params = new URLSearchParams()
-  params.set('siteID', '24'); params.set('pageIndex', String(currentPage)); params.set('pageSize', String(size))
-  params.set('searchby', 'CountryCode'); params.set('orderby', 'CountryCity')
-  params.set('layout', 'v1'); params.set('submitted', 'search'); params.set('country', countryCode)
-  const networkParams = networkIds.map(id => `networkIds=${id}`).join('&')
-  const url = `${BASE}/Directory?${params.toString()}&${networkParams}`
-  try {
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats: ['markdown', 'rawHtml'], waitFor: 3000 }),
-    })
-    const scrapeData = await scrapeResponse.json()
-    if (!scrapeResponse.ok) return null
-    const markdown = scrapeData?.data?.markdown || ''
-    const html = scrapeData?.data?.rawHtml || ''
-    const members = parseMembersFromContent(html, markdown)
-    return { members, hasNextPage: members.length >= size }
-  } catch { return null }
-}
+// ─── (Firecrawl fallback removed — all scraping goes through direct SSO) ──
 
 // ─── Main Handler ────────────────────────────────────────────
 
@@ -488,23 +439,11 @@ Deno.serve(async (req) => {
         }
       } catch (e) { console.log(`[discover] AJAX error: ${e}`) }
 
-      console.log('[discover] Direct methods returned 0 members, falling back to Firecrawl')
-    }
-
-    // ── Fallback: Firecrawl ──
-    console.log('[discover] Using Firecrawl fallback...')
-    const fallback = await firecrawlFallback(countryCode, network || '', currentPage, size)
-    if (fallback) {
-      console.log(`[discover] Firecrawl: ${fallback.members.length} members`)
-      return new Response(JSON.stringify({
-        success: true, members: fallback.members,
-        pagination: { total_results: fallback.members.length, current_page: currentPage, total_pages: 0, has_next_page: fallback.hasNextPage },
-        source: 'firecrawl',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.log('[discover] Direct methods returned 0 members')
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: 'No scraping method available', members: [] }),
+      JSON.stringify({ success: false, error: 'No scraping method available — ensure WCA credentials are configured', members: [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

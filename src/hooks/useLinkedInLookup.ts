@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from "react";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
-import { useLinkedInExtensionBridge } from "./useLinkedInExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ensureMinDuration, getPatternPause } from "@/hooks/useScrapingSettings";
@@ -8,7 +7,6 @@ import {
   buildLinkedInGoogleQueries,
   normalizeLinkedInProfileUrl,
   pickBestLinkedInCandidate,
-  scoreLinkedInCandidate,
 } from "@/lib/linkedinSearch";
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -16,12 +14,36 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 /** Get existing LinkedIn URL from enrichment_data (check all known fields) */
 const getExistingLinkedInUrl = (enrichmentData: Record<string, any> | null): string | null => {
   if (!enrichmentData) return null;
-  // Canonical field first, then legacy
   return enrichmentData.linkedin_profile_url
     || enrichmentData.linkedin_url
     || enrichmentData.social_links?.linkedin
     || null;
 };
+
+export interface SearchLogEntry {
+  step: number;
+  method: string;
+  query: string;
+  results: number;
+  match: string | null;
+  confidence: number;
+  ms: number;
+  reasoning?: string;
+}
+
+export interface SmartSearchResult {
+  url: string | null;
+  profile: {
+    name?: string;
+    headline?: string;
+    location?: string;
+    about?: string;
+    photoUrl?: string;
+    profileUrl?: string;
+  } | null;
+  searchLog: SearchLogEntry[];
+  resolvedMethod: string | null;
+}
 
 export interface LookupProgress {
   current: number;
@@ -38,20 +60,136 @@ const INITIAL_PROGRESS: LookupProgress = { current: 0, total: 0, currentName: ""
 
 export function useLinkedInLookup() {
   const pcBridge = useFireScrapeExtensionBridge();
-  const liBridge = useLinkedInExtensionBridge();
   const [progress, setProgress] = useState<LookupProgress>(INITIAL_PROGRESS);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchLog, setSearchLog] = useState<SearchLogEntry[]>([]);
   const abortRef = useRef(false);
 
+  // ── Single contact search (Google-only via Partner Connect) ──
+  const searchSingle = useCallback(async (contact: {
+    name: string;
+    company?: string | null;
+    email?: string | null;
+    role?: string | null;
+    country?: string | null;
+    sourceType?: string;
+    sourceId?: string;
+  }): Promise<SmartSearchResult> => {
+    setIsSearching(true);
+    setSearchLog([]);
+    abortRef.current = false;
+
+    const log: SearchLogEntry[] = [];
+    let foundUrl: string | null = null;
+    let foundProfile: SmartSearchResult["profile"] = null;
+    let resolvedMethod: string | null = null;
+
+    try {
+      if (!pcBridge.isAvailable) {
+        return { url: null, profile: null, searchLog: [], resolvedMethod: null };
+      }
+
+      const googleQueries = buildLinkedInGoogleQueries(contact.name, contact.company, contact.email, contact.role).slice(0, 3);
+
+      for (let i = 0; i < googleQueries.length; i++) {
+        if (abortRef.current || foundUrl) break;
+
+        const query = googleQueries[i];
+        const opStart = Date.now();
+
+        try {
+          const res = await pcBridge.googleSearch(query, 5);
+          const ms = Date.now() - opStart;
+          const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
+          const { candidate: bestCandidate, confidence, candidates } = pickBestLinkedInCandidate(rawResults, contact);
+
+          const entry: SearchLogEntry = {
+            step: log.length + 1,
+            method: "partner_connect_google_search",
+            query,
+            results: candidates.length,
+            match: bestCandidate?.profileUrl || null,
+            confidence,
+            ms,
+            reasoning: res.success
+              ? bestCandidate
+                ? `Google: ${candidates.length} profili LinkedIn, migliore "${bestCandidate.name || "?"}"${res._fromCache ? " (cache)" : ""}`
+                : `Google: nessun profilo LinkedIn utile${res._fromCache ? " (cache)" : ""}`
+              : res.error || "Ricerca Google fallita",
+          };
+
+          log.push(entry);
+          setSearchLog([...log]);
+
+          if (bestCandidate && confidence >= 0.5) {
+            foundUrl = bestCandidate.profileUrl;
+            foundProfile = bestCandidate;
+            resolvedMethod = "partner_connect_google_search";
+            break;
+          }
+        } catch (e) {
+          log.push({
+            step: log.length + 1,
+            method: "partner_connect_google_search",
+            query,
+            results: 0,
+            match: null,
+            confidence: 0,
+            ms: Date.now() - opStart,
+            reasoning: `Errore: ${(e as Error).message}`,
+          });
+          setSearchLog([...log]);
+        }
+
+        await ensureMinDuration(opStart);
+        if (i < googleQueries.length - 1 && !foundUrl && !abortRef.current) {
+          const pause = getPatternPause(i);
+          await wait(pause * 1000);
+        }
+      }
+
+      // Persist result
+      if (contact.sourceType && contact.sourceId && contact.sourceType === "contact") {
+        try {
+          const { data: ic } = await supabase
+            .from("imported_contacts")
+            .select("id, enrichment_data")
+            .eq("id", contact.sourceId)
+            .single();
+          if (ic) {
+            const existing = (ic.enrichment_data as Record<string, any>) || {};
+            await (supabase.from("imported_contacts").update({
+              enrichment_data: JSON.parse(JSON.stringify({
+                ...existing,
+                linkedin_search_log: log,
+                linkedin_resolved_at: foundUrl ? new Date().toISOString() : null,
+                linkedin_resolved_method: resolvedMethod,
+                linkedin_profile_url: foundUrl || existing.linkedin_profile_url,
+                ...(foundUrl ? { linkedin_url: foundUrl } : {}),
+              })),
+            }) as any).eq("id", contact.sourceId);
+          }
+        } catch (e) {
+          console.error("[LinkedInLookup] Failed to persist log:", e);
+        }
+      }
+
+      return { url: foundUrl, profile: foundProfile, searchLog: log, resolvedMethod };
+    } finally {
+      setIsSearching(false);
+    }
+  }, [pcBridge]);
+
+  // ── Batch lookup (Google-only via Partner Connect) ──
   const lookupBatch = useCallback(async (contactIds: string[]) => {
-    if (!pcBridge.isAvailable && !liBridge.isAvailable) {
-      toast({ title: "Nessuna estensione disponibile", description: "Installa Partner Connect o l'estensione LinkedIn", variant: "destructive" });
+    if (!pcBridge.isAvailable) {
+      toast({ title: "Partner Connect non disponibile", description: "Installa l'estensione Partner Connect", variant: "destructive" });
       return;
     }
     if (!contactIds.length) return;
 
     abortRef.current = false;
 
-    // Fetch contacts
     const { data: contacts, error } = await supabase
       .from("imported_contacts")
       .select("id, name, company_name, email, enrichment_data")
@@ -62,7 +200,6 @@ export function useLinkedInLookup() {
       return;
     }
 
-    // Filter: skip those already with a LinkedIn URL (check ALL known fields)
     const toProcess = contacts.filter(c => {
       const ed = (c.enrichment_data as Record<string, any>) || {};
       return !getExistingLinkedInUrl(ed);
@@ -73,15 +210,6 @@ export function useLinkedInLookup() {
 
     setProgress({ current: 0, total, currentName: "", found: 0, notFound: 0, skipped: skippedCount, status: "running" });
     toast({ title: `Trova profilo LinkedIn`, description: `${total} da cercare, ${skippedCount} già risolti` });
-
-    // Check LinkedIn auth once upfront for fallback
-    let liAuthOk = false;
-    if (liBridge.isAvailable) {
-      try {
-        const authCheck = await liBridge.ensureAuthenticated(120000);
-        liAuthOk = authCheck.ok;
-      } catch { liAuthOk = false; }
-    }
 
     let found = 0, notFound = 0, pauseIdx = 0;
 
@@ -96,64 +224,36 @@ export function useLinkedInLookup() {
       const searchName = c.name || c.company_name || "";
       if (!searchName.trim()) { notFound++; continue; }
 
-      setProgress(p => ({ ...p, current: i + 1, currentName: searchName }));
+      setProgress(p => ({ ...p, current: i + 1, currentName: searchName, currentMethod: "Google Search" }));
 
       const opStart = Date.now();
       let foundUrl: string | null = null;
       let resolvedMethod: string | null = null;
 
-      // ── Strategy 1: Google via Partner Connect ──
-      if (pcBridge.isAvailable && !foundUrl) {
-        setProgress(p => ({ ...p, currentMethod: "Partner Connect" }));
-        const queries = buildLinkedInGoogleQueries(searchName, c.company_name, c.email);
+      // Google-only via Partner Connect
+      const queries = buildLinkedInGoogleQueries(searchName, c.company_name, c.email);
 
-        for (const query of queries) {
-          if (abortRef.current || foundUrl) break;
-          try {
-            const res = await pcBridge.googleSearch(query, 5);
-            const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
-            const { candidate, confidence } = pickBestLinkedInCandidate(rawResults, {
-              name: searchName,
-              company: c.company_name,
-            });
-
-            if (candidate && confidence >= 0.5) {
-              foundUrl = candidate.profileUrl;
-              resolvedMethod = "partner_connect_google_search";
-              break;
-            }
-          } catch (e) {
-            console.warn("[LinkedInLookup] Google search error:", e);
-          }
-        }
-      }
-
-      // ── Strategy 2: LinkedIn People Search (fallback) ──
-      if (!foundUrl && liAuthOk) {
-        setProgress(p => ({ ...p, currentMethod: "LinkedIn Search" }));
+      for (const query of queries) {
+        if (abortRef.current || foundUrl) break;
         try {
-          const res = await liBridge.searchProfile(searchName + (c.company_name ? ` ${c.company_name}` : ""));
-          const normalizedProfileUrl = normalizeLinkedInProfileUrl(res.profile?.profileUrl);
-          if (res.success && normalizedProfileUrl) {
-            const confidence = scoreLinkedInCandidate({
-              name: res.profile?.name,
-              headline: res.profile?.headline,
-              profileUrl: normalizedProfileUrl,
-            }, {
-              name: searchName,
-              company: c.company_name,
-            });
-            if (confidence >= 0.5) {
-              foundUrl = normalizedProfileUrl;
-              resolvedMethod = "linkedin_people_search";
-            }
+          const res = await pcBridge.googleSearch(query, 5);
+          const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
+          const { candidate, confidence } = pickBestLinkedInCandidate(rawResults, {
+            name: searchName,
+            company: c.company_name,
+          });
+
+          if (candidate && confidence >= 0.5) {
+            foundUrl = candidate.profileUrl;
+            resolvedMethod = "partner_connect_google_search";
+            break;
           }
         } catch (e) {
-          console.warn("[LinkedInLookup] LinkedIn search fallback error:", e);
+          console.warn("[LinkedInLookup] Google search error:", e);
         }
       }
 
-      // ── Save result using CANONICAL field ──
+      // Save result
       const existing = (c.enrichment_data as Record<string, any>) || {};
       const updated = {
         ...existing,
@@ -167,7 +267,6 @@ export function useLinkedInLookup() {
       if (foundUrl) found++; else notFound++;
       setProgress(p => ({ ...p, found, notFound, currentMethod: undefined }));
 
-      // Ensure min duration + pattern pause
       await ensureMinDuration(opStart);
       if (i < toProcess.length - 1 && !abortRef.current) {
         const pause = getPatternPause(pauseIdx);
@@ -178,9 +277,9 @@ export function useLinkedInLookup() {
 
     setProgress(p => ({ ...p, status: "done" }));
     toast({ title: "Trova profilo LinkedIn completato", description: `${found} trovati, ${notFound} non trovati, ${skippedCount} già risolti` });
-  }, [pcBridge, liBridge]);
+  }, [pcBridge]);
 
   const abort = useCallback(() => { abortRef.current = true; }, []);
 
-  return { lookupBatch, progress, abort, isAvailable: pcBridge.isAvailable || liBridge.isAvailable };
+  return { searchSingle, lookupBatch, progress, abort, isAvailable: pcBridge.isAvailable, isSearching, searchLog };
 }

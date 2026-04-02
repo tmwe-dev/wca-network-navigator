@@ -156,7 +156,7 @@ const deepSearchSection = {
   title: "Deep Search",
   description: "Flusso di arricchimento automatico dei partner",
   details: [
-    "Scoperta sito web: estrazione dominio dall'email aziendale o ricerca tramite Firecrawl",
+    "Scoperta sito web: estrazione dominio dall'email aziendale o ricerca tramite Partner Connect",
     "Scraping sito web: estrazione contenuti principali (about, servizi, contatti)",
     "Analisi AI: elaborazione dei contenuti per generare descrizione, servizi e punti chiave",
     "Logo automatico: recupero favicon tramite Google Favicon API (https://www.google.com/s2/favicons)",

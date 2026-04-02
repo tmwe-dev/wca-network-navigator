@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useSmartLinkedInSearch, SearchLogEntry } from "@/hooks/useSmartLinkedInSearch";
+import { useLinkedInLookup, type SearchLogEntry } from "@/hooks/useLinkedInLookup";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +44,7 @@ const formatMethod = (method: string | null) => {
 };
 
 export default function TestLinkedInSearch() {
-  const smartSearch = useSmartLinkedInSearch();
+  const smartSearch = useLinkedInLookup();
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
   const [results, setResults] = useState<TestResult[]>(
@@ -109,7 +109,7 @@ export default function TestLinkedInSearch() {
       log("info", `━━━ Test ${i + 1}/5: ${contact.name} @ ${contact.company} ━━━`);
 
       try {
-        const searchResult = await smartSearch.search({
+        const searchResult = await smartSearch.searchSingle({
           name: contact.name,
           company: contact.company,
           role: contact.position,

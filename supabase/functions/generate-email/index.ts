@@ -486,43 +486,9 @@ serve(async (req) => {
       }
     }
 
-    // Scrape reference URLs via Firecrawl — only for "premium"
-    // FIX #7: Validate URLs to prevent SSRF
+    // Reference URLs — use cached data only (no live scraping)
     let linksContext = "";
-    if (quality === "premium" && reference_urls && reference_urls.length > 0) {
-      const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-      if (FIRECRAWL_API_KEY) {
-        const validUrls = (reference_urls as string[]).filter(isValidPublicUrl);
-        const urlsToScrape = validUrls.slice(0, 3);
-        const scrapeResults = await Promise.allSettled(
-          urlsToScrape.map(async (url: string) => {
-            try {
-              const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-              });
-              if (!resp.ok) return null;
-              const data = await resp.json();
-              const md = data?.data?.markdown || data?.markdown || "";
-              return md ? `--- ${url} ---\n${md.substring(0, 2000)}` : null;
-            } catch {
-              return null;
-            }
-          })
-        );
-        const scraped = scrapeResults
-          .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled" && !!r.value)
-          .map((r) => r.value)
-          .join("\n\n");
-        if (scraped) {
-          linksContext = `\nINFORMAZIONI DA LINK DI RIFERIMENTO:\n${scraped}\n`;
-        }
-      }
-    }
+    // Firecrawl removed — reference URLs are no longer scraped live
 
     // LinkedIn context — only for premium
     let linkedinContext = "";
