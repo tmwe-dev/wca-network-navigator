@@ -437,7 +437,7 @@ async function handleGoogleSearch(msg) {
     var data = (results[0] && results[0].result) || [];
     RateLimiter.recordRequest(searchUrl);
     var response = { success: true, data: data, query: msg.query, count: data.length };
-    await Cache.set('domain', cacheKey, response);
+    await Cache.set('search', cacheKey, response);
     return response;
   } catch (err) {
     throw new FireScrapeError('Google search failed: ' + err.message, 'SEARCH_ERROR');
