@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
             body_html: typeof bodyHtml === "string" ? bodyHtml.trim().slice(0, 100000) : "",
             message_id_external: messageId,
             in_reply_to: envelope.inReplyTo || null,
-            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: parsedAttachments.length },
+            raw_payload: { uid, date, sender_name: match.name || senderName, attachment_count: attachmentInfos.length },
           });
 
           if (uid > maxUid) maxUid = uid;
@@ -434,37 +434,7 @@ Deno.serve(async (req) => {
         .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      // Link attachments to saved messages
-      if (attachmentRecords.length > 0) {
-        const extIds = attachmentRecords.map(a => a._message_id_external);
-        const { data: savedMsgs } = await supabase
-          .from("channel_messages")
-          .select("id, message_id_external")
-          .in("message_id_external", extIds);
-
-        const idMap = new Map((savedMsgs || []).map((m: any) => [m.message_id_external, m.id]));
-
-        const toInsert = attachmentRecords
-          .map(a => {
-            const msgId = idMap.get(a._message_id_external);
-            if (!msgId) return null;
-            return {
-              message_id: msgId,
-              user_id: a.user_id,
-              filename: a.filename,
-              content_type: a.content_type,
-              size_bytes: a.size_bytes,
-              storage_path: a.storage_path,
-            };
-          })
-          .filter(Boolean);
-
-        if (toInsert.length > 0) {
-          const { error: attErr } = await supabase.from("email_attachments").insert(toInsert);
-          if (attErr) console.error("[check-inbox] Attachment record save error:", attErr.message);
-          else console.log(`[check-inbox] Saved ${toInsert.length} attachment records`);
-        }
-      }
+      // Note: attachment upload deferred to save CPU; metadata in raw_payload
 
       // Increment interaction count for known contacts
       for (const msg of messages) {
@@ -475,7 +445,7 @@ Deno.serve(async (req) => {
     }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;
-    const totalAttachments = attachmentRecords.length;
+    const totalAttachments = 0;
 
     return new Response(JSON.stringify({
       success: true,
