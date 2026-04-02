@@ -1,16 +1,47 @@
-import { useAssignmentMap } from "@/hooks/useClientAssignments";
+import { useAssignmentMap, useAssignClient } from "@/hooks/useClientAssignments";
+import { useAgents } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
-import { Bot, UserCheck } from "lucide-react";
+import { Bot, UserCheck, Loader2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface Props {
   sourceId: string;
+  sourceType?: string;
 }
 
-export function ContactRecordAgent({ sourceId }: Props) {
+export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) {
   const assignmentMap = useAssignmentMap();
   const assignment = assignmentMap.get(sourceId);
+  const { agents } = useAgents();
+  const assignClient = useAssignClient();
+  const didAutoAssign = useRef(false);
+
+  // Auto-assign agent if not assigned
+  useEffect(() => {
+    if (assignment || didAutoAssign.current || !agents || agents.length === 0) return;
+    didAutoAssign.current = true;
+
+    // Find first sales/outreach agent, fallback to first agent
+    const salesAgent = agents.find(a =>
+      a.is_active && ["sales", "outreach"].includes(a.role?.toLowerCase())
+    );
+    const agent = salesAgent || agents.find(a => a.is_active) || agents[0];
+    if (!agent) return;
+
+    // Find manager
+    const manager = agents.find(a =>
+      a.is_active && a.role?.toLowerCase().includes("manager") && a.id !== agent.id
+    );
+
+    assignClient.mutate({
+      sourceId,
+      sourceType,
+      agentId: agent.id,
+      managerId: manager?.id,
+    });
+  }, [assignment, agents, sourceId, sourceType]);
 
   const { data: agent } = useQuery({
     queryKey: ["agent-for-record", assignment?.agent_id],
@@ -25,6 +56,15 @@ export function ContactRecordAgent({ sourceId }: Props) {
     },
     enabled: !!assignment?.agent_id,
   });
+
+  if (!assignment && assignClient.isPending) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Assegnazione agente...</span>
+      </div>
+    );
+  }
 
   if (!assignment || !agent) {
     return (

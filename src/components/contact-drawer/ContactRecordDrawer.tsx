@@ -84,7 +84,7 @@ export function ContactRecordDrawer() {
                 />
 
                 <ScrollArea className="flex-1">
-                  <div className="p-5 space-y-5">
+                  <div className="p-6 space-y-5">
                     {/* Editable fields + status */}
                     <ContactRecordFields
                       record={record}
