@@ -268,7 +268,6 @@ Deno.serve(async (req) => {
     const toFetch = uids.sort((a, b) => a - b).slice(0, 20);
 
     const messages: any[] = [];
-    const attachmentRecords: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
