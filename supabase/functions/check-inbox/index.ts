@@ -280,7 +280,8 @@ Deno.serve(async (req) => {
 
     try {
       const loginRes = await imap.command(`LOGIN "${imapUser}" "${imapPass}"`);
-      if (loginRes.includes("NO") || loginRes.includes("BAD")) throw new Error("IMAP login failed: " + loginRes.slice(0, 200));
+      const loginTagMatch = loginRes.match(/^A\d+\s+(OK|NO|BAD)/m);
+      if (!loginTagMatch || loginTagMatch[1] !== "OK") throw new Error("IMAP login failed: " + loginRes.slice(0, 200));
       console.log("[check-inbox] Login OK");
 
       await imap.command("SELECT INBOX");
