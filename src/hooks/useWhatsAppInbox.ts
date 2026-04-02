@@ -4,15 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { toast } from "sonner";
 
-function hashMessage(contact: string, timestamp: string, text: string): string {
-  const raw = `${contact}|${timestamp}|${text}`;
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    const c = raw.charCodeAt(i);
-    hash = ((hash << 5) - hash) + c;
-    hash |= 0;
-  }
-  return `wa_${Math.abs(hash).toString(36)}`;
+function buildExternalId(contact: string, timestamp: string, text: string): string {
+  const safeText = (text || "").slice(0, 50).replace(/[|]/g, "_");
+  const safeContact = (contact || "unknown").replace(/[|]/g, "_");
+  return `wa_${safeContact}_${timestamp}_${safeText}`;
 }
 
 export function useWhatsAppInbox() {
@@ -39,11 +34,10 @@ export function useWhatsAppInbox() {
 
       let imported = 0;
       for (const msg of messages) {
-        const extId = hashMessage(
-          msg.contact || msg.from || "unknown",
-          msg.timestamp || new Date().toISOString(),
-          msg.text || ""
-        );
+        const contact = msg.contact || msg.from || "unknown";
+        const timestamp = msg.time || msg.timestamp || new Date().toISOString();
+        const text = msg.lastMessage || msg.text || "";
+        const extId = buildExternalId(contact, timestamp, text);
 
         const { error } = await supabase
           .from("channel_messages")
@@ -51,11 +45,11 @@ export function useWhatsAppInbox() {
             user_id: session.user.id,
             channel: "whatsapp",
             direction: "inbound",
-            from_address: msg.contact || msg.from || "Sconosciuto",
-            body_text: msg.text || "",
+            from_address: contact,
+            body_text: text,
             message_id_external: extId,
-            raw_payload: msg,
-            created_at: msg.timestamp || new Date().toISOString(),
+            raw_payload: msg as any,
+            created_at: timestamp,
           }, { onConflict: "message_id_external" });
 
         if (!error) imported++;

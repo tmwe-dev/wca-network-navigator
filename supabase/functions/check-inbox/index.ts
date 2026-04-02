@@ -6,41 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/* ── Minimal IMAP over TLS (Node compat for untrusted certs) ── */
+/* ── Minimal IMAP over TLS using Deno.connectTls ── */
 async function imapConnect(host: string, port: number) {
-  const tls = await import("node:tls");
-
-  const conn = await new Promise<import("node:tls").TLSSocket>((resolve, reject) => {
-    const sock = tls.connect({ host, port, rejectUnauthorized: false }, () => resolve(sock));
-    sock.once("error", reject);
-  });
+  const conn = await Deno.connectTls({ hostname: host, port });
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let tag = 0;
+  const buf = new Uint8Array(65536);
 
-  function readUntilComplete(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      let result = "";
-      const timeout = setTimeout(() => resolve(result), 10000);
-      const onData = (chunk: Buffer) => {
-        result += decoder.decode(chunk);
-        if (/^A\d+ (OK|NO|BAD)/m.test(result) || (result.startsWith("* OK") && tag === 0)) {
-          clearTimeout(timeout);
-          conn.removeListener("data", onData);
-          resolve(result);
-        }
-      };
-      conn.on("data", onData);
-      conn.once("error", (err: Error) => { clearTimeout(timeout); reject(err); });
-    });
+  async function readUntilComplete(): Promise<string> {
+    let result = "";
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      const n = await conn.read(buf);
+      if (n === null) break;
+      result += decoder.decode(buf.subarray(0, n));
+      if (/^A\d+ (OK|NO|BAD)/m.test(result) || (result.startsWith("* OK") && tag === 0)) {
+        return result;
+      }
+    }
+    return result;
   }
 
   async function command(cmd: string): Promise<string> {
     tag++;
     const tagStr = `A${tag}`;
     const line = `${tagStr} ${cmd}\r\n`;
-    conn.write(encoder.encode(line));
+    await conn.write(encoder.encode(line));
     return await readUntilComplete();
   }
 
@@ -48,11 +41,14 @@ async function imapConnect(host: string, port: number) {
   const greeting = await readUntilComplete();
   if (!greeting.includes("OK")) throw new Error("IMAP greeting failed: " + greeting.slice(0, 200));
 
-  return { command, close: () => conn.destroy(), greeting };
+  return {
+    command,
+    close: () => { try { conn.close(); } catch (_) {} },
+    greeting,
+  };
 }
 
 function parseEmailAddress(raw: string): string {
-  // Extract email from "Name <email>" or plain "email"
   const match = raw.match(/<([^>]+)>/);
   return match ? match[1].toLowerCase() : raw.trim().toLowerCase();
 }
@@ -78,7 +74,6 @@ function parseHeaders(raw: string): Record<string, string> {
 async function matchSender(supabase: any, email: string) {
   const emailLower = email.toLowerCase();
 
-  // Check partners
   const { data: partner } = await supabase
     .from("partners")
     .select("id, company_name")
@@ -87,7 +82,6 @@ async function matchSender(supabase: any, email: string) {
     .maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
 
-  // Check partner_contacts
   const { data: pc } = await supabase
     .from("partner_contacts")
     .select("id, partner_id, name")
@@ -96,7 +90,6 @@ async function matchSender(supabase: any, email: string) {
     .maybeSingle();
   if (pc) return { source_type: "partner_contact", source_id: pc.id, partner_id: pc.partner_id, name: pc.name };
 
-  // Check imported_contacts
   const { data: ic } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name")
@@ -105,7 +98,6 @@ async function matchSender(supabase: any, email: string) {
     .maybeSingle();
   if (ic) return { source_type: "imported_contact", source_id: ic.id, partner_id: null, name: ic.name || ic.company_name };
 
-  // Check prospects
   const { data: prospect } = await supabase
     .from("prospects")
     .select("id, company_name")
@@ -123,7 +115,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -146,7 +137,6 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // ── Get IMAP credentials ──
     const imapHost = Deno.env.get("IMAP_HOST") || "imaps.aruba.it";
     const imapUser = Deno.env.get("IMAP_USER");
     const imapPass = Deno.env.get("IMAP_PASSWORD");
@@ -157,7 +147,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Get last UID ──
     let { data: syncState } = await supabase
       .from("email_sync_state")
       .select("*")
@@ -175,27 +164,22 @@ Deno.serve(async (req) => {
 
     const lastUid = syncState?.last_uid || 0;
 
-    // ── Connect IMAP ──
-    console.log(`[check-inbox] Connecting to ${imapHost}:993...`);
+    console.log(`[check-inbox] Connecting to ${imapHost}:993 via Deno.connectTls...`);
     const imap = await imapConnect(imapHost, 993);
 
     try {
-      // Login
       const loginRes = await imap.command(`LOGIN "${imapUser}" "${imapPass}"`);
       if (loginRes.includes("NO") || loginRes.includes("BAD")) {
         throw new Error("IMAP login failed: " + loginRes.slice(0, 200));
       }
       console.log("[check-inbox] Login OK");
 
-      // Select INBOX
-      const selectRes = await imap.command("SELECT INBOX");
+      await imap.command("SELECT INBOX");
       console.log("[check-inbox] INBOX selected");
 
-      // Search for messages with UID > lastUid
       const searchCmd = lastUid > 0 ? `UID SEARCH UID ${lastUid + 1}:*` : "UID SEARCH ALL";
       const searchRes = await imap.command(searchCmd);
 
-      // Parse UIDs from "* SEARCH uid1 uid2 uid3"
       const searchLine = searchRes.split("\r\n").find(l => l.startsWith("* SEARCH"));
       const uids: number[] = [];
       if (searchLine) {
@@ -208,17 +192,14 @@ Deno.serve(async (req) => {
 
       console.log(`[check-inbox] Found ${uids.length} new messages (UIDs > ${lastUid})`);
 
-      // Limit to 50 messages per sync
       const toFetch = uids.sort((a, b) => a - b).slice(0, 50);
       const messages: any[] = [];
       let maxUid = lastUid;
 
       for (const uid of toFetch) {
         try {
-          // Fetch headers + body
           const fetchRes = await imap.command(`UID FETCH ${uid} (BODY[HEADER] BODY[TEXT])`);
 
-          // Split header/body
           const headerMatch = fetchRes.match(/BODY\[HEADER\]\s*\{(\d+)\}\r\n([\s\S]*?)(?=\s*BODY\[TEXT\])/);
           const bodyMatch = fetchRes.match(/BODY\[TEXT\]\s*\{(\d+)\}\r\n([\s\S]*?)(?=\s*\)|\s*A\d+)/);
 
@@ -229,14 +210,13 @@ Deno.serve(async (req) => {
           const fromEmail = parseEmailAddress(headers["from"] || "");
           const toEmail = parseEmailAddress(headers["to"] || "");
           const subject = headers["subject"] || "(nessun oggetto)";
-          const messageId = headers["message-id"] || "";
+          const messageId = headers["message-id"] || `uid_${uid}_${Date.now()}`;
           const inReplyTo = headers["in-reply-to"] || "";
           const date = headers["date"] || "";
 
-          // Match sender
           const match = await matchSender(supabase, fromEmail);
 
-          const msg = {
+          messages.push({
             user_id: userId,
             channel: "email",
             direction: "inbound",
@@ -250,45 +230,36 @@ Deno.serve(async (req) => {
             message_id_external: messageId,
             in_reply_to: inReplyTo || null,
             raw_payload: { uid, headers, date, sender_name: match.name },
-          };
-
-          messages.push(msg);
+          });
           if (uid > maxUid) maxUid = uid;
         } catch (fetchErr) {
           console.error(`[check-inbox] Error fetching UID ${uid}:`, fetchErr.message);
         }
       }
 
-      // Logout
       await imap.command("LOGOUT").catch(() => {});
       imap.close();
 
-      // ── Save messages ──
+      // Save messages with upsert to avoid duplicates
       if (messages.length > 0) {
-        const { error: insertErr } = await supabase
+        const { error: upsertError } = await supabase
           .from("channel_messages")
-          .insert(messages);
-        if (insertErr) {
-          console.error("[check-inbox] Insert error:", insertErr);
-          throw new Error("Errore nel salvataggio dei messaggi: " + insertErr.message);
+          .upsert(messages, { onConflict: "message_id_external" });
+
+        if (upsertError) {
+          console.error("[check-inbox] Upsert error:", upsertError);
+          throw new Error("Errore nel salvataggio dei messaggi: " + upsertError.message);
         }
 
-        // Update last_uid
         await supabase
           .from("email_sync_state")
           .update({ last_uid: maxUid, last_sync_at: new Date().toISOString() })
           .eq("user_id", userId);
 
-        // Update interaction counts for matched contacts
+        // Increment interaction count for matched imported_contacts
         for (const msg of messages) {
-          if (msg.partner_id) {
-            await supabase
-              .from("partners")
-              .update({
-                last_interaction_at: new Date().toISOString(),
-                interaction_count: supabase.rpc ? undefined : undefined,
-              })
-              .eq("id", msg.partner_id);
+          if (msg.source_type === "imported_contact" && msg.source_id) {
+            await supabase.rpc("increment_contact_interaction", { p_contact_id: msg.source_id });
           }
         }
       }
@@ -314,7 +285,7 @@ Deno.serve(async (req) => {
       });
 
     } catch (imapErr) {
-      try { imap.close(); } catch (_) {}
+      imap.close();
       throw imapErr;
     }
 
