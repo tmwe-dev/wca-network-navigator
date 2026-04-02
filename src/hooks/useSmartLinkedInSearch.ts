@@ -109,7 +109,7 @@ export function useSmartLinkedInSearch() {
     };
 
     try {
-      const googleQueries = buildGoogleQueries(contact.name, contact.company, contact.email, contact.role).slice(0, 2);
+      const googleQueries = buildLinkedInGoogleQueries(contact.name, contact.company, contact.email, contact.role).slice(0, 2);
       const linkedinQueries = buildQueries(contact.name, contact.company, contact.email, contact.role);
 
       if (pcBridge.isAvailable) {
@@ -123,38 +123,28 @@ export function useSmartLinkedInSearch() {
             const res = await pcBridge.googleSearch(query, 5);
             const ms = Date.now() - opStart;
             const rawResults = res.success && Array.isArray(res.data) ? res.data : [];
-            const candidates = rawResults
-              .map(extractGoogleCandidate)
-              .filter((candidate): candidate is NonNullable<SmartSearchResult["profile"]> => Boolean(candidate?.profileUrl));
+            const { candidate: bestCandidate, confidence, candidates } = pickBestLinkedInCandidate(rawResults, contact);
 
-            const scored = candidates
-              .map(candidate => ({
-                candidate,
-                confidence: validateMatch(candidate, contact),
-              }))
-              .sort((a, b) => b.confidence - a.confidence);
-
-            const best = scored[0];
             const entry: SearchLogEntry = {
               step: log.length + 1,
               method: "partner_connect_google_search",
               query,
               results: candidates.length,
-              match: best?.candidate.profileUrl || null,
-              confidence: best?.confidence || 0,
+              match: bestCandidate?.profileUrl || null,
+              confidence,
               ms,
               reasoning: res.success
-                ? best
-                  ? `Google via Partner Connect: ${candidates.length} profili LinkedIn, migliore "${best.candidate.name || "sconosciuto"}"${res._fromCache ? " (cache)" : ""}`
+                ? bestCandidate
+                  ? `Google via Partner Connect: ${candidates.length} profili LinkedIn, migliore "${bestCandidate.name || "sconosciuto"}"${res._fromCache ? " (cache)" : ""}`
                   : `Google via Partner Connect: nessun profilo LinkedIn utile${res._fromCache ? " (cache)" : ""}`
                 : res.error || "Ricerca Google fallita",
             };
 
             pushLog(entry);
 
-            if (best && best.confidence >= 0.5 && best.candidate.profileUrl) {
-              foundUrl = best.candidate.profileUrl;
-              foundProfile = best.candidate;
+            if (bestCandidate && confidence >= 0.5) {
+              foundUrl = bestCandidate.profileUrl;
+              foundProfile = bestCandidate;
               resolvedMethod = "partner_connect_google_search";
               await ensureMinDuration(opStart);
               break;
