@@ -96,7 +96,7 @@ export function ContactRecordDrawer() {
                     <ContactRecordActions record={record} />
 
                     {/* Agent assignment */}
-                    <ContactRecordAgent sourceId={record.sourceId} />
+                    <ContactRecordAgent sourceId={record.sourceId} sourceType={record.sourceType} />
 
                     {/* Enrichment data */}
                     {hasEnrichment && (
