@@ -44,7 +44,7 @@ const formatMethod = (method: string | null) => {
 };
 
 export default function TestLinkedInSearch() {
-  const smartSearch = useSmartLinkedInSearch();
+  const smartSearch = useLinkedInLookup();
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
   const [results, setResults] = useState<TestResult[]>(
