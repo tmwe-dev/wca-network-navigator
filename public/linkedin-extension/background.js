@@ -848,18 +848,24 @@ async function searchLinkedInProfile(query) {
       target: { tabId: tab.id },
       func: function () {
         try {
-          // Find the first person result link
-          var resultLinks = document.querySelectorAll("a.app-aware-link[href*='/in/']");
+          // Find the first person result link (multiple selectors for resilience)
+          var resultLinks = document.querySelectorAll(
+            "a.app-aware-link[href*='/in/'], " +
+            "a[href*='linkedin.com/in/'], " +
+            "span.entity-result__title-text a[href*='/in/'], " +
+            ".reusable-search__result-container a[href*='/in/']"
+          );
           for (var i = 0; i < resultLinks.length; i++) {
             var href = resultLinks[i].href;
             // Filter out non-profile links
-            if (/linkedin\.com\/in\/[^/]+/.test(href)) {
+            if (/linkedin\.com\/in\/[^/]+/.test(href) && !/\/in\/miniprofile/.test(href) && !/\/in\/ACo/.test(href)) {
               var nameEl = resultLinks[i].querySelector("span[aria-hidden='true']")
-                || resultLinks[i].querySelector("span.entity-result__title-text span");
+                || resultLinks[i].querySelector("span.entity-result__title-text span")
+                || resultLinks[i].closest(".entity-result__item, li")?.querySelector("span[dir='ltr']");
               var name = nameEl ? nameEl.textContent.trim() : "";
               // Extract headline from sibling
-              var container = resultLinks[i].closest(".entity-result__item, li.reusable-search__result-container");
-              var headlineEl = container ? container.querySelector(".entity-result__primary-subtitle, .entity-result__summary") : null;
+              var container = resultLinks[i].closest(".entity-result__item, li.reusable-search__result-container, li[class*='result'], div[data-chameleon-result-urn]");
+              var headlineEl = container ? (container.querySelector(".entity-result__primary-subtitle, .entity-result__summary, .t-14.t-black--light, .entity-result__content .t-14") || null) : null;
               var headline = headlineEl ? headlineEl.textContent.trim() : "";
               // Clean URL (remove query params)
               var cleanUrl = href.split("?")[0].replace(/\/$/, "");
