@@ -255,7 +255,7 @@ export default function BlacklistManager() {
             )}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
-            Utilizza Firecrawl per analizzare la pagina WCA Blacklist e aggiornare il database
+            Utilizza Partner Connect per analizzare la pagina WCA Blacklist e aggiornare il database
           </p>
         </CardContent>
       </Card>
