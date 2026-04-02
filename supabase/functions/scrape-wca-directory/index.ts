@@ -439,23 +439,11 @@ Deno.serve(async (req) => {
         }
       } catch (e) { console.log(`[discover] AJAX error: ${e}`) }
 
-      console.log('[discover] Direct methods returned 0 members, falling back to Firecrawl')
-    }
-
-    // ── Fallback: Firecrawl ──
-    console.log('[discover] Using Firecrawl fallback...')
-    const fallback = await firecrawlFallback(countryCode, network || '', currentPage, size)
-    if (fallback) {
-      console.log(`[discover] Firecrawl: ${fallback.members.length} members`)
-      return new Response(JSON.stringify({
-        success: true, members: fallback.members,
-        pagination: { total_results: fallback.members.length, current_page: currentPage, total_pages: 0, has_next_page: fallback.hasNextPage },
-        source: 'firecrawl',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.log('[discover] Direct methods returned 0 members')
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: 'No scraping method available', members: [] }),
+      JSON.stringify({ success: false, error: 'No scraping method available — ensure WCA credentials are configured', members: [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
