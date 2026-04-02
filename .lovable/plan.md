@@ -1,3 +1,4 @@
+
 # Piano: MissionDrawer Ultra-Compatto
 
 ## Concetto
@@ -30,39 +31,39 @@ Eliminare tutto lo spazio verticale sprecato. Tutto in alto, compatto, con icone
 
 ### 1. Preset — Bottoni icona, non form
 
-- Se ≤5 preset: renderli come **bottoni compatti** in fila con nome abbreviato, quello attivo evidenziato
-- Se >5: convertire in dropdown Select
-- Bottone [+] per salvare nuovo preset (apre mini Dialog con campo nome)
-- Bottone [🗑️] solo se un preset è attivo
-- Qualità AI resta inline nella stessa riga come toggle compatto
+- Se **≤5 preset**: bottoni compatti in fila con nome abbreviato, quello attivo evidenziato con colore primario
+- Se **>5 preset**: convertire automaticamente in dropdown Select
+- Bottone [+] per salvare nuovo preset → apre mini Dialog con campo nome
+- Bottone [🗑️] visibile solo se un preset e' attivo
+- Qualita' AI resta inline nella stessa riga come toggle compatto (Rapida / Standard / Premium)
 
 ### 2. Obiettivo e Proposta — Icone compatte con popup
 
 - **Eliminare** le textarea e i ContentSelect dal body della sidebar
-- Sostituire con **2 bottoni icona** compatti in una riga:
-  - Icona Target + "Obiettivo" (o il nome selezionato troncato)
-  - Icona FileText + "Proposta" (o il nome selezionato troncato)
-- Click su ciascuno → apre il **Dialog popup** (ContentSelect) per scegliere/editare
-- Il testo completo è visibile solo nel popup, non nella sidebar
+- Sostituire con **2 bottoni icona** compatti in una riga orizzontale:
+  - Icona Target + "Obiettivo" (o il nome selezionato, troncato)
+  - Icona FileText + "Proposta" (o il nome selezionato, troncato)
+- Click su ciascuno → apre il Dialog popup (ContentSelect) per scegliere/editare
+- Il testo completo e' visibile solo nel popup, non nella sidebar
 
 ### 3. Documenti e Link — Icone badge, non collapsible
 
 - Eliminare le sezioni collapsible
-- 2 bottoni icona compatti: Paperclip + count, Link2 + count
+- 2 bottoni icona compatti nella stessa riga: Paperclip + count, Link2 + count
 - Click → Dialog popup per gestire (lista + aggiungi/rimuovi)
 
-### 4. Destinatari — Resta sotto ma più compatto
+### 4. Destinatari — Subito sotto, piu' spazio
 
 - Ricerca + lista chip come ora, ma subito sotto le icone azioni
-- Più spazio verticale disponibile grazie alla compattazione sopra
+- Molto piu' spazio verticale disponibile per i risultati grazie alla compattazione sopra
 
 ## File coinvolti
 
 | File | Azione |
 |------|--------|
-| `src/components/global/MissionDrawer.tsx` | Rewrite completo del layout |
-| `src/components/shared/ContentSelect.tsx` | Nessuna modifica (popup già pronto) |
+| `src/components/global/MissionDrawer.tsx` | Rewrite completo del layout — compattazione, Dialog per docs/link |
+| `src/components/shared/ContentSelect.tsx` | Nessuna modifica (popup gia' pronto) |
 
 ## Risultato
 
-La sidebar passa da ~600px di scroll a ~250px di contenuto visibile tutto in una schermata, con popup per i dettagli.
+La sidebar passa da ~600px di scroll a ~250px di contenuto visibile tutto in una schermata. Popup per i dettagli.
