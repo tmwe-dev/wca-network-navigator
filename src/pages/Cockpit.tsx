@@ -105,7 +105,6 @@ const Cockpit = () => {
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
-  const smartSearch = useSmartLinkedInSearch();
   const linkedInLookup = useLinkedInLookup();
 
   // Agent assignment
