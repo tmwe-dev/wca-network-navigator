@@ -133,6 +133,14 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             </div>
           </Section>
 
+          {/* Recipients */}
+          <RecipientsSection
+            search={recipientSearch}
+            setSearch={setRecipientSearch}
+            open={openSections.recipients}
+            onToggle={() => toggle("recipients")}
+          />
+
           {/* Documents */}
           <Section title="Documenti" icon="📎" open={openSections.documents} onToggle={() => toggle("documents")} badge={m.documents.length || undefined}>
             <div className="space-y-2">
