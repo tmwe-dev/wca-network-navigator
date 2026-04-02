@@ -53,6 +53,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [referenceLinks, setReferenceLinks] = useState<string[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [quality, setQuality] = useState<EmailQuality>("standard");
+  const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
+
+  const addRecipient = (r: SelectedRecipient) => {
+    setRecipients(prev => {
+      const key = r.contactId ? `${r.partnerId}-${r.contactId}` : r.partnerId;
+      if (prev.some(x => (x.contactId ? `${x.partnerId}-${x.contactId}` : x.partnerId) === key)) return prev;
+      return [...prev, r];
+    });
+  };
+
+  const removeRecipientByIdx = (idx: number) => {
+    setRecipients(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const clearRecipients = () => setRecipients([]);
 
   const { documents, uploading, upload, remove } = useWorkspaceDocuments();
   const { presets, save: savePresetMut, remove: removePresetMut } = useWorkspacePresets();
