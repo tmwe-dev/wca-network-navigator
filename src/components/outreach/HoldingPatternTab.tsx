@@ -185,6 +185,17 @@ export function HoldingPatternTab() {
                       {g.label}
                     </button>
                   ))}
+                  <button
+                    onClick={() => handleChangeStatus(selected, "converted" as LeadStatus)}
+                    className={cn(
+                      "text-[10px] px-2 py-1 rounded font-medium transition-colors",
+                      selected.leadStatus === "converted"
+                        ? "text-emerald-500 bg-current/10 ring-1 ring-current/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    )}
+                  >
+                    Chiuso
+                  </button>
                 </div>
 
                 {/* Timeline */}
