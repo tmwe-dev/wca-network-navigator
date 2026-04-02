@@ -116,7 +116,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
       {/* Status + Holding Pattern */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HoldingPatternIndicator status={record.leadStatus as any} size="sm" />
+          <HoldingPatternIndicator status={record.leadStatus as any} />
           {editing ? (
             <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
               <SelectTrigger className="h-7 w-32 text-xs">
