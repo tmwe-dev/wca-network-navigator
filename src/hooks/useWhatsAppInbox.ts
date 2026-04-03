@@ -35,9 +35,19 @@ export function useWhatsAppInbox() {
       let imported = 0;
       for (const msg of messages) {
         const contact = msg.contact || msg.from || "unknown";
-        const timestamp = msg.time || msg.timestamp || new Date().toISOString();
+        const rawTime = msg.time || msg.timestamp || "";
         const text = msg.lastMessage || msg.text || "";
-        const extId = buildExternalId(contact, timestamp, text);
+        
+        // WhatsApp Web returns time like "14:30" or "ieri" — normalize to ISO
+        let timestamp: string;
+        try {
+          const parsed = new Date(rawTime);
+          timestamp = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+        } catch {
+          timestamp = new Date().toISOString();
+        }
+        
+        const extId = buildExternalId(contact, rawTime || timestamp, text);
 
         const { error } = await supabase
           .from("channel_messages")
