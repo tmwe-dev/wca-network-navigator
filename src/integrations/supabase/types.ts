@@ -1455,6 +1455,54 @@ export type Database = {
         }
         Relationships: []
       }
+      email_sync_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          downloaded_count: number
+          error_count: number
+          error_message: string | null
+          id: string
+          last_batch_at: string | null
+          skipped_count: number
+          started_at: string
+          status: string
+          total_remaining: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          downloaded_count?: number
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          last_batch_at?: string | null
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          total_remaining?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          downloaded_count?: number
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          last_batch_at?: string | null
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          total_remaining?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_sync_state: {
         Row: {
           created_at: string

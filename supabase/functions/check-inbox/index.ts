@@ -705,15 +705,34 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    // Service role client for storage operations (no RLS)
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !user) throw new Error("Unauthorized");
-    const userId = user.id;
+    // Support server-side worker: if called with service role + x-sync-user-id header,
+    // use service role client directly and trust the user_id from the header.
+    const syncUserId = req.headers.get("x-sync-user-id");
+    const isServiceRoleCall = authHeader === `Bearer ${serviceRoleKey}` && syncUserId;
+
+    let supabase: any;
+    let supabaseAdmin: any;
+    let userId: string;
+
+    if (isServiceRoleCall) {
+      // Worker mode: service role for everything
+      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      supabase = supabaseAdmin;
+      userId = syncUserId;
+      console.log(`[check-inbox] Worker mode for user ${userId}`);
+    } else {
+      // Normal user mode
+      supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) throw new Error("Unauthorized");
+      userId = user.id;
+    }
 
     const imapHost = Deno.env.get("IMAP_HOST") || "";
     const imapUser = Deno.env.get("IMAP_USER") || "";
