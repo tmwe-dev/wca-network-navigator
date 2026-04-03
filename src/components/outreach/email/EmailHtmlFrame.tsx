@@ -38,8 +38,7 @@ export function EmailHtmlFrame({ html, mode, blockRemote, cidMap }: Props) {
     const doc = iframe.contentDocument;
     if (!doc) return;
 
-    let processedHtml = html;
-    if (cidMap) processedHtml = resolveCidReferences(processedHtml, cidMap);
+    let processedHtml = resolveCidReferences(html, cidMap || {});
     if (blockRemote) processedHtml = blockRemoteImages(processedHtml);
 
     const baseStyles = mode === "safe" ? `
