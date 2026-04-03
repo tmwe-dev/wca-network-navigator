@@ -16,12 +16,16 @@ type Props = {
 };
 
 function resolveCidReferences(html: string, cidMap: Record<string, string>): string {
-  if (!cidMap || Object.keys(cidMap).length === 0) return html;
   let result = html;
-  for (const [cid, url] of Object.entries(cidMap)) {
-    const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    result = result.replace(new RegExp(`cid:${escapedCid}`, 'gi'), url);
+  // Replace known CIDs with resolved URLs
+  if (cidMap && Object.keys(cidMap).length > 0) {
+    for (const [cid, url] of Object.entries(cidMap)) {
+      const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(`cid:${escapedCid}`, 'gi'), url);
+    }
   }
+  // Remove remaining unresolved cid: image references entirely (hide broken images)
+  result = result.replace(/<img[^>]*src=["']cid:[^"']*["'][^>]*\/?>/gi, '');
   return result;
 }
 
