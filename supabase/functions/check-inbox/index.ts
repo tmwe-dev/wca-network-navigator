@@ -204,8 +204,6 @@ function envelopeAddr(addr: any): string {
 /* ── Helper: parse raw IMAP FETCH response to extract literal content ── */
 function extractLiteralFromResponse(lines: any[]): string {
   let result = "";
-  let inLiteral = false;
-  let literalBytesLeft = 0;
 
   for (const line of lines) {
     if (line instanceof Uint8Array) {
@@ -216,20 +214,94 @@ function extractLiteralFromResponse(lines: any[]): string {
       // Check for literal start: {1234}
       const litMatch = line.match(/\{(\d+)\}\s*$/);
       if (litMatch) {
-        inLiteral = true;
-        literalBytesLeft = parseInt(litMatch[1]);
         continue;
       }
-      if (inLiteral) {
-        if (line.trim() === ")" || line.match(/^\S+ OK/)) {
-          inLiteral = false;
-        } else {
-          result += line + "\n";
-        }
+      if (line.trim() === ")" || line.match(/^\S+ OK/)) {
+        // end of response
+      } else if (!line.match(/^\* \d+ FETCH/)) {
+        result += line + "\n";
       }
     }
   }
   return result.trim();
+}
+
+/* ── Helper: parse raw header fields from IMAP response ── */
+function parseRawHeaders(raw: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  let currentKey = "";
+  let currentValue = "";
+
+  for (const line of lines) {
+    if (line.match(/^\s/) && currentKey) {
+      // continuation line
+      currentValue += " " + line.trim();
+    } else {
+      if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();
+      const match = line.match(/^([A-Za-z\-]+):\s*(.*)/);
+      if (match) {
+        currentKey = match[1];
+        currentValue = match[2];
+      } else {
+        currentKey = "";
+        currentValue = "";
+      }
+    }
+  }
+  if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();
+  return headers;
+}
+
+/* ── Helper: extract email from raw From header ── */
+function parseEmailFromHeader(header: string): string {
+  if (!header) return "";
+  // Try to extract <email@domain> first
+  const angleMatch = header.match(/<([^>]+)>/);
+  if (angleMatch) return angleMatch[1].toLowerCase();
+  // Otherwise treat whole thing as email if it contains @
+  const trimmed = header.trim();
+  if (trimmed.includes("@")) return trimmed.toLowerCase();
+  return "";
+}
+
+/* ── Helper: check if content is raw MIME multipart (not a real body) ── */
+function isMultipartContainer(content: string): boolean {
+  if (!content) return false;
+  const first500 = content.slice(0, 500);
+  // Starts with a MIME boundary
+  if (first500.match(/^--[A-Za-z0-9_\-]+/)) return true;
+  // Contains structured MIME headers at the start
+  if (first500.match(/^Content-Type:\s*(?:multipart|text)\//im) && first500.match(/^Content-Transfer-Encoding:/im)) return true;
+  return false;
+}
+
+/* ── Helper: find text sections from bodyStructure ── */
+function findTextSections(bs: any, path: string = ""): { textSection: string; htmlSection: string } {
+  let textSection = "";
+  let htmlSection = "";
+  
+  if (!bs) return { textSection, htmlSection };
+  
+  // If it's a leaf node with type/subtype
+  if (bs.type && bs.subtype) {
+    const t = bs.type.toLowerCase();
+    const s = bs.subtype.toLowerCase();
+    if (t === "text" && s === "plain" && !textSection) textSection = path || "1";
+    if (t === "text" && s === "html" && !htmlSection) htmlSection = path || "1";
+  }
+  
+  // If it has childNodes (multipart)
+  if (bs.childNodes && Array.isArray(bs.childNodes)) {
+    for (let i = 0; i < bs.childNodes.length; i++) {
+      const childPath = path ? `${path}.${i + 1}` : `${i + 1}`;
+      const child = findTextSections(bs.childNodes[i], childPath);
+      if (!textSection && child.textSection) textSection = child.textSection;
+      if (!htmlSection && child.htmlSection) htmlSection = child.htmlSection;
+    }
+  }
+  
+  return { textSection, htmlSection };
 }
 
 /* ── BATCH SIZE ── */
@@ -331,13 +403,17 @@ Deno.serve(async (req) => {
           let inReplyTo: string | null = null;
 
           try {
+            // Try fetching envelope + bodyStructure together
+            let bodyStructure: any = null;
             const envFetch = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
               envelope: true,
+              bodyStructure: true,
             } as any);
 
             const env = envFetch?.[0]?.envelope;
+            bodyStructure = envFetch?.[0]?.bodyStructure || null;
             if (env) {
               fromAddr = envelopeAddr(env.from?.[0]);
               toAddr = envelopeAddr(env.to?.[0]);
@@ -348,42 +424,93 @@ Deno.serve(async (req) => {
               inReplyTo = env.inReplyTo || null;
             }
           } catch (envErr: any) {
-            console.warn(`[check-inbox] Envelope error UID ${uid}:`, envErr.message);
+            console.warn(`[check-inbox] Envelope/bodyStructure error UID ${uid}:`, envErr.message);
+          }
+
+          // === Bug 1 Fix: Fallback to raw headers if envelope gave us nothing ===
+          if (!fromAddr || fromAddr === "@" || fromAddr === "sconosciuto@unknown") {
+            try {
+              const hdrCmd = `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO)])`;
+              const hdrResponse = await (client as any).executeCommand(hdrCmd);
+              const rawHeaders = extractLiteralFromResponse(hdrResponse);
+              if (rawHeaders) {
+                const parsed = parseRawHeaders(rawHeaders);
+                const rawFrom = parseEmailFromHeader(parsed["from"] || "");
+                if (rawFrom && rawFrom !== "@") fromAddr = rawFrom;
+                if (!toAddr || toAddr === "@") toAddr = parseEmailFromHeader(parsed["to"] || "");
+                if (subject === "(nessun oggetto)" && parsed["subject"]) subject = parsed["subject"];
+                if (!date && parsed["date"]) date = parsed["date"];
+                if (messageId.startsWith("uid_") && parsed["message-id"]) {
+                  messageId = parsed["message-id"].replace(/[<>]/g, "");
+                }
+                if (!inReplyTo && parsed["in-reply-to"]) {
+                  inReplyTo = parsed["in-reply-to"].replace(/[<>]/g, "");
+                }
+                // Try to get sender name from raw From header
+                const rawFromFull = parsed["from"] || "";
+                const nameMatch = rawFromFull.match(/^"?([^"<]+)"?\s*</);
+                if (nameMatch) senderName = nameMatch[1].trim();
+                else senderName = fromAddr;
+                console.log(`[check-inbox] UID ${uid}: raw header fallback from=${fromAddr}, subj=${subject}`);
+              }
+            } catch (hdrErr: any) {
+              console.warn(`[check-inbox] Raw header fetch error UID ${uid}:`, hdrErr.message);
+            }
           }
 
           if (!fromAddr || fromAddr === "@") {
             fromAddr = "sconosciuto@unknown";
           }
 
-          // Step 2: Fetch body text via raw IMAP command
-          // Try BODY.PEEK[1] first (text/plain in simple or first part of multipart)
-          // Then try BODY.PEEK[1.1] (text/plain inside multipart/alternative within multipart/mixed)
+          // === Bug 2 Fix: Use bodyStructure to find correct text/html sections ===
           let bodyText = "";
           let bodyHtml = "";
 
-          const sectionsToTry = ["1", "1.1", "1.2"];
+          // Determine sections to fetch from bodyStructure if available
+          let sectionsToTry: Array<{ section: string; expect: "text" | "html" | "unknown" }> = [];
+          
+          if (bodyStructure) {
+            try {
+              const { textSection, htmlSection } = findTextSections(bodyStructure);
+              if (htmlSection) sectionsToTry.push({ section: htmlSection, expect: "html" });
+              if (textSection) sectionsToTry.push({ section: textSection, expect: "text" });
+              console.log(`[check-inbox] UID ${uid}: bodyStructure sections text=${textSection} html=${htmlSection}`);
+            } catch (bsErr: any) {
+              console.warn(`[check-inbox] UID ${uid}: bodyStructure parse failed, using fallback sections`);
+            }
+          }
+          
+          // Fallback: try common section paths if bodyStructure didn't give us anything
+          if (sectionsToTry.length === 0) {
+            sectionsToTry = [
+              { section: "1.2", expect: "html" },
+              { section: "1.1", expect: "text" },
+              { section: "1", expect: "unknown" },
+              { section: "2", expect: "unknown" },
+            ];
+          }
+
           for (const section of sectionsToTry) {
             if (bodyText && bodyHtml) break; // got both, stop
 
             try {
-              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${section}])`;
+              const bodyCmd = `UID FETCH ${uid} (BODY.PEEK[${section.section}])`;
               const bodyResponse = await (client as any).executeCommand(bodyCmd);
               const content = extractLiteralFromResponse(bodyResponse);
 
-              if (content && content.length > 5) {
-                // Heuristic: if it has HTML tags, it's HTML; otherwise text
-                if (content.includes("<html") || content.includes("<div") || content.includes("<p>") || content.includes("<br") || content.includes("<table")) {
-                  if (!bodyHtml) bodyHtml = content.slice(0, 100000);
-                } else {
-                  if (!bodyText) bodyText = content.slice(0, 50000);
+              if (content && content.length > 5 && !isMultipartContainer(content)) {
+                if (section.expect === "html" || (section.expect === "unknown" && (content.includes("<html") || content.includes("<div") || content.includes("<p>") || content.includes("<br") || content.includes("<table")))) {
+                  if (!bodyHtml) bodyHtml = content.slice(0, 100_000);
+                } else if (section.expect === "text" || section.expect === "unknown") {
+                  if (!bodyText) bodyText = content.slice(0, 50_000);
                 }
               }
             } catch (bodyErr: any) {
               // Section doesn't exist — that's fine, try next
               if (!bodyErr.message?.includes("parse")) {
-                console.warn(`[check-inbox] Body section ${section} error UID ${uid}:`, bodyErr.message);
+                console.warn(`[check-inbox] Body section ${section.section} error UID ${uid}:`, bodyErr.message);
               }
-              break; // If IMAP errors, stop trying more sections
+              // Don't break — try next section
             }
           }
 
