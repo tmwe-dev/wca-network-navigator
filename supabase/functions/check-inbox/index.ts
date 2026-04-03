@@ -915,6 +915,8 @@ Deno.serve(async (req) => {
             console.warn(`[check-inbox] UID ${uid}: metadata fetch error:`, rawErr.message);
           }
 
+          const isOversized = rfc822Size > MAX_RAW_FETCH_BYTES;
+
           /* ─── Phase 2: ENVELOPE + BODYSTRUCTURE ─── */
           let fromAddr = "";
           let toAddr = "";
