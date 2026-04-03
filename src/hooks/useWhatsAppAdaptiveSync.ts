@@ -119,7 +119,7 @@ export function useWhatsAppAdaptiveSync() {
           message_id_external: extId,
           raw_payload: msg as any,
           created_at: timestamp,
-        }, { onConflict: "message_id_external", ignoreDuplicates: true });
+        }, { onConflict: "user_id,message_id_external", ignoreDuplicates: true });
 
       if (!error && status === 201) {
         if (isVerify) verifyCount++;
