@@ -1,38 +1,52 @@
 
-# Refactoring Sistema Email — Piano di Ristrutturazione
 
-## Analisi Attuale
+# Piano: Barra di Progresso Download Email in Tempo Reale
 
-| File | Righe | Limite | Stato |
-|------|-------|--------|-------|
-| `check-inbox/index.ts` | **1.138** | ~200 | ⛔ 5.7x il limite — ma è edge function (1 solo file obbligatorio) |
-| `EmailDetailView.tsx` | **344** | 200 | ⚠️ 1.7x — va spezzato |
-| `useChannelMessages.ts` | **258** | 200 | ⚠️ 1.3x — va spezzato |
-| `EmailInboxView.tsx` | 147 | 200 | ✅ OK |
-| `EmailMessageList.tsx` | 77 | 200 | ✅ OK |
+## Problema
+Quando si preme "Scarica Tutto", l'unico feedback è un toast in basso che si aggiorna. L'utente non vede:
+- Quante email sono già in database
+- Il progresso in tempo reale nella UI principale
+- L'ultima email scaricata
 
-## Cosa faremo
+## Soluzione
 
-### 1. Frontend — Spezzare `EmailDetailView.tsx` (344→~4 file da ~80-100 righe)
-- **`EmailHtmlFrame.tsx`** — iframe sandboxed + blockRemoteImages (righe 56-145)
-- **`AttachmentThumbnail.tsx`** — thumbnail allegati (righe 147-182)  
-- **`EmailTechnicalHeaders.tsx`** — dettagli tecnici espandibili (righe 278-301)
-- **`EmailDetailView.tsx`** — solo orchestrazione (~120 righe)
-- **`emailUtils.ts`** — funzioni condivise (`decodeRfc2047`, `formatBytes`, `getAttachmentIcon`, `blockRemoteImages`)
+Aggiungere una **barra di stato sync** visibile sopra la lista email durante il download, con contatori live e lista che si aggiorna in tempo reale.
 
-### 2. Hook — Spezzare `useChannelMessages.ts` (258→3 file da ~80 righe)
-- **`useChannelMessages.ts`** — solo query + realtime (~80 righe)
-- **`useEmailSync.ts`** — `useCheckInbox` + `useContinuousSync` (~120 righe)
-- **`useEmailActions.ts`** — `useMarkAsRead` + `useUnreadCount` + `useMessageAttachments` (~60 righe)
+### 1. Barra di progresso sync nell'EmailInboxView
+Quando `isSyncing` è true, mostrare un pannello fisso tra toolbar e lista con:
+- **Contatore totale**: "📬 42 email scaricate" (dal `progress.downloaded`)
+- **Blocco corrente**: "Blocco 7..." (dal `progress.batch`)
+- **Ultimo soggetto**: troncato, l'ultima email scaricata
+- **Contatore DB**: numero totale email in database (da `messages.length` o query count separata)
+- **Barra animata** (indeterminata, visto che non sappiamo il totale)
 
-### 3. Edge Function — `check-inbox/index.ts` (1.138 righe)
-⚠️ Le edge function richiedono tutto in un unico `index.ts`. **Non possiamo spezzarlo in file separati.**
-Tuttavia possiamo:
-- Rimuovere i **certificati CA inline** (~145 righe di PEM) e caricarli da environment/config
-- Meglio: documentare chiaramente le sezioni con commenti strutturali
+### 2. Hook useEmailCount
+Nuovo hook leggero che fa `SELECT count(*) FROM channel_messages WHERE channel='email'` con polling ogni 3s durante il sync, per mostrare il contatore DB reale.
 
-### Risultato atteso
-- **EmailDetailView**: 344 → ~120 righe
-- **useChannelMessages**: 258 → ~80 righe  
-- **5 nuovi file** tutti sotto le 120 righe
-- Manutenibilità drasticamente migliorata
+### 3. Realtime già attivo
+Il realtime subscription su `channel_messages` (INSERT) già invalida la query, quindi le email appaiono nella lista man mano. Ma il `PAGE_SIZE=50` e l'ordinamento fanno sì che le nuove appaiano in cima — questo già funziona.
+
+### 4. Lista che si aggiorna live
+La query `useChannelMessages` viene già invalidata ad ogni batch nel loop sync. Le email dovrebbero già apparire. Verificheremo che il realtime INSERT trigger funzioni correttamente.
+
+### File da modificare
+- **`src/components/outreach/EmailInboxView.tsx`**: aggiungere pannello progresso sync tra toolbar e ScrollArea
+- **`src/hooks/useEmailSync.ts`**: esporre `progress` più ricco (aggiungere `totalInDb`)
+- **Nuovo `src/hooks/useEmailCount.ts`**: hook con polling count per il contatore DB totale
+
+### Risultato visivo
+```text
+┌─────────────────────────────────────────┐
+│ [Nuove] [Stop (42)] [Reset] [🔍 Cerca] │
+├─────────────────────────────────────────┤
+│ 📬 Sincronizzazione in corso...         │
+│ ██████████░░░░░░  42 scaricate          │
+│ 📊 156 email in database                │
+│ 📄 "Re: Quotation for shipment..."      │
+├─────────────────────────────────────────┤
+│ ✉ Email 1 (appare in tempo reale)      │
+│ ✉ Email 2                              │
+│ ...                                     │
+└─────────────────────────────────────────┘
+```
+
