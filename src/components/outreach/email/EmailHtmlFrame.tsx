@@ -66,18 +66,49 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
     doc.write(wrappedHtml);
     doc.close();
 
-    const resizeObserver = new ResizeObserver(() => {
-      const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 300;
+    // Robust height recalculation
+    const recalcHeight = () => {
+      if (!doc.documentElement) return;
+      const h = Math.max(
+        doc.documentElement.scrollHeight || 0,
+        doc.body?.scrollHeight || 0,
+        300
+      );
       iframe.style.height = `${h}px`;
-    });
+    };
 
-    setTimeout(() => {
+    // ResizeObserver for layout changes
+    const resizeObserver = new ResizeObserver(() => recalcHeight());
+
+    // After initial write, observe + recalc at intervals (images loading)
+    const t1 = setTimeout(() => {
       if (doc.body) resizeObserver.observe(doc.body);
-      const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 300;
-      iframe.style.height = `${h}px`;
-    }, 100);
+      recalcHeight();
 
-    return () => resizeObserver.disconnect();
+      // Attach load handlers to all images for re-resize
+      const imgs = doc.querySelectorAll("img");
+      imgs.forEach(img => {
+        if (!img.complete) {
+          img.addEventListener("load", recalcHeight);
+          img.addEventListener("error", recalcHeight);
+        }
+      });
+    }, 50);
+
+    // Periodic recalc for late-loading resources (fonts, images, css)
+    const t2 = setTimeout(recalcHeight, 300);
+    const t3 = setTimeout(recalcHeight, 800);
+    const t4 = setTimeout(recalcHeight, 2000);
+    const t5 = setTimeout(recalcHeight, 5000);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      clearTimeout(t5);
+    };
   }, [html, mode, blockRemote]);
 
   return (
