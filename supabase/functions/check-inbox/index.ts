@@ -1030,6 +1030,8 @@ Deno.serve(async (req) => {
             body_html: bodyHtml,
             message_id_external: messageId,
             in_reply_to: inReplyTo,
+            references_header: referencesHeader || null,
+            thread_id: computeThreadId(messageId, inReplyTo, referencesHeader),
             email_date: emailDate,
             raw_payload: { uid, date, sender_name: match.name || senderName },
             // New RFC-compliant fields
