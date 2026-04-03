@@ -143,6 +143,7 @@ const App = () => (
         </BrowserRouter>
         <ContactRecordDrawer />
       </TooltipProvider>
+      </ActiveOperatorProvider>
       </ContactDrawerProvider>
     </QueryClientProvider>
   </GlobalErrorBoundary>
