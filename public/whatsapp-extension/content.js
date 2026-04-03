@@ -4,6 +4,9 @@
 // ══════════════════════════════════════════════
 
 (function () {
+  if (globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__) return;
+  globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = true;
+
   var HEARTBEAT_MS = 4000;
   var alive = true;
 
