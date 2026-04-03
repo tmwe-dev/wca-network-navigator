@@ -3,8 +3,21 @@
   "name": "WhatsApp Direct Send",
   "version": "1.0",
   "description": "Invio diretto messaggi WhatsApp dal Cockpit.",
-  "permissions": ["tabs", "activeTab", "scripting"],
-  "host_permissions": ["https://web.whatsapp.com/*"],
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://*.lovable.app/*",
+    "https://*.lovableproject.com/*",
+    "http://localhost:*/*",
+    "*://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "*://127.0.0.1:*/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -14,9 +27,13 @@
         "https://*.lovable.app/*",
         "https://*.lovableproject.com/*",
         "http://localhost:*/*",
-        "*://localhost:*/*"
+        "*://localhost:*/*",
+        "http://127.0.0.1:*/*",
+        "*://127.0.0.1:*/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true,

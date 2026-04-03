@@ -6,6 +6,74 @@
 
 const WA_BASE = "https://web.whatsapp.com";
 
+const APP_URL_PATTERNS = [
+  /^https:\/\/[^/]*\.lovable\.app\//i,
+  /^https:\/\/[^/]*\.lovableproject\.com\//i,
+  /^https?:\/\/localhost(?::\d+)?\//i,
+  /^https?:\/\/127\.0\.0\.1(?::\d+)?\//i,
+];
+
+function isAppUrl(url) {
+  return typeof url === "string" && APP_URL_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+async function injectBridgeIntoFrame(tabId, frameId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [frameId] },
+      files: ["content.js"],
+    });
+    return true;
+  } catch (error) {
+    const message = error?.message || "";
+    if (
+      message.includes("Cannot access") ||
+      message.includes("Missing host permission") ||
+      message.includes("No frame with id") ||
+      message.includes("Frame with ID") ||
+      message.includes("The extensions gallery cannot be scripted")
+    ) {
+      return false;
+    }
+    console.warn("[WA Extension] Bridge injection failed:", message);
+    return false;
+  }
+}
+
+async function injectBridgeIntoTab(tabId) {
+  try {
+    const frames = await chrome.webNavigation.getAllFrames({ tabId });
+    if (!frames?.length) return false;
+
+    let injected = false;
+    for (const frame of frames) {
+      if (!isAppUrl(frame.url)) continue;
+      const ok = await injectBridgeIntoFrame(tabId, frame.frameId);
+      injected = ok || injected;
+    }
+    return injected;
+  } catch (error) {
+    const message = error?.message || "";
+    if (message) {
+      console.warn("[WA Extension] Unable to inspect tab frames:", message);
+    }
+    return false;
+  }
+}
+
+async function syncBridgeAcrossOpenTabs() {
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (typeof tab.id !== "number") continue;
+      await injectBridgeIntoTab(tab.id);
+    }
+  } catch (error) {
+    console.warn("[WA Extension] Failed to sync bridge on open tabs:", error?.message || error);
+  }
+}
+
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -338,6 +406,14 @@ async function readChatThread(contactName, maxMessages = 50) {
     return { success: false, error: err.message };
   }
 }
+
+chrome.runtime.onInstalled.addListener(() => {
+  syncBridgeAcrossOpenTabs().catch(() => {});
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  syncBridgeAcrossOpenTabs().catch(() => {});
+});
 
 // ── Message handler ──
 
