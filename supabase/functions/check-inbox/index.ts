@@ -388,7 +388,7 @@ function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
 }
 
 /* ── BATCH SIZE ── */
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1;
 
 /* ── Main handler ── */
 
