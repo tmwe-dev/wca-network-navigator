@@ -312,19 +312,42 @@ async function sendWhatsAppMessage(phone, text) {
 // ── Verify session ──
 async function verifySession() {
   try {
-    var r = await getOrCreateWaTab();
-    await sleep(r.reused ? 1000 : 4000);
-    var results = await chrome.scripting.executeScript({
-      target: { tabId: r.tab.id },
-      func: function() {
-        if (document.querySelector('canvas[aria-label], [data-testid="qrcode"]'))
-          return { success: true, authenticated: false, reason: "qr_required" };
-        if (document.querySelector("#side") || document.querySelector('[data-testid="chatlist"]'))
-          return { success: true, authenticated: true };
-        return { success: true, authenticated: false, reason: "unknown_state" };
-      },
-    });
-    return results?.[0]?.result || { success: false, authenticated: false, reason: "no_result" };
+    // First try to find an existing WA tab without creating one
+    var tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+    var tabId;
+    if (tabs.length > 0) {
+      tabId = tabs[0].id;
+      // If tab exists but not loaded, wait briefly
+      if (tabs[0].status !== "complete") await waitForLoad(tabId, 8000);
+    } else {
+      // No WA tab - create one
+      var r = await getOrCreateWaTab();
+      tabId = r.tab.id;
+      await sleep(3000);
+    }
+    
+    // Try up to 3 times with short delays (WA Web can be slow to render DOM)
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await sleep(2000);
+      try {
+        var results = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: function() {
+            if (document.querySelector('canvas[aria-label], [data-testid="qrcode"]'))
+              return { success: true, authenticated: false, reason: "qr_required" };
+            if (document.querySelector("#side") || document.querySelector('[data-testid="chatlist"]') || document.querySelector("#pane-side"))
+              return { success: true, authenticated: true };
+            // Check if page is still loading
+            if (document.querySelector('[data-testid="intro-md-beta-logo"]') || document.querySelector('.landing-window'))
+              return { success: true, authenticated: false, reason: "loading" };
+            return null; // retry
+          },
+        });
+        var result = results?.[0]?.result;
+        if (result) return result;
+      } catch (_) {}
+    }
+    return { success: true, authenticated: false, reason: "unknown_state" };
   } catch (err) {
     return { success: false, error: err.message };
   }
