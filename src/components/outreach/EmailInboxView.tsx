@@ -12,9 +12,16 @@ import { EmailDetailView } from "./EmailDetailView";
 
 export function EmailInboxView() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: messages = [], isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useChannelMessages("email");
+  // Debounce search for server-side full-text query
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: messages = [], isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useChannelMessages("email", debouncedSearch);
   const checkInbox = useCheckInbox();
   const markAsRead = useMarkAsRead();
   const { startSync, stopSync, isSyncing, progress } = useContinuousSync();
@@ -35,18 +42,7 @@ export function EmailInboxView() {
     return () => clearInterval(interval);
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return messages;
-    const q = search.toLowerCase();
-    return messages.filter(m =>
-      m.from_address?.toLowerCase().includes(q) ||
-      m.subject?.toLowerCase().includes(q) ||
-      m.body_text?.toLowerCase().includes(q) ||
-      m.raw_payload?.sender_name?.toLowerCase().includes(q)
-    );
-  }, [messages, search]);
-
-  const inbound = filtered.filter(m => m.direction === "inbound");
+  const inbound = messages.filter(m => m.direction === "inbound");
   const selectedMsg = selectedId ? messages.find(m => m.id === selectedId) : null;
 
   const handleSelect = (msg: ChannelMessage) => {
