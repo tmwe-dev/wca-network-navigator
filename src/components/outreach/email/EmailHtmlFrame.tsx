@@ -16,16 +16,12 @@ type Props = {
 };
 
 function resolveCidReferences(html: string, cidMap: Record<string, string>): string {
+  if (!cidMap || Object.keys(cidMap).length === 0) return html;
   let result = html;
-  // Replace known CIDs with resolved URLs
-  if (cidMap && Object.keys(cidMap).length > 0) {
-    for (const [cid, url] of Object.entries(cidMap)) {
-      const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      result = result.replace(new RegExp(`cid:${escapedCid}`, 'gi'), url);
-    }
+  for (const [cid, url] of Object.entries(cidMap)) {
+    const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`cid:${escapedCid}`, 'gi'), url);
   }
-  // Remove remaining unresolved cid: image references entirely (hide broken images)
-  result = result.replace(/<img[^>]*src=["']cid:[^"']*["'][^>]*\/?>/gi, '');
   return result;
 }
 
@@ -38,7 +34,8 @@ export function EmailHtmlFrame({ html, mode, blockRemote, cidMap }: Props) {
     const doc = iframe.contentDocument;
     if (!doc) return;
 
-    let processedHtml = resolveCidReferences(html, cidMap || {});
+    let processedHtml = html;
+    if (cidMap) processedHtml = resolveCidReferences(processedHtml, cidMap);
     if (blockRemote) processedHtml = blockRemoteImages(processedHtml);
 
     const baseStyles = mode === "safe" ? `
