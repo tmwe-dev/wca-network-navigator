@@ -284,5 +284,8 @@ export function useWhatsAppAdaptiveSync() {
     focusedChat,
     focusOn,
     readNow,
+    domIsStale,
+    lastLearnedAt,
+    forceRelearn,
   };
 }
