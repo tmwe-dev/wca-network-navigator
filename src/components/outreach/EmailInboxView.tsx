@@ -99,6 +99,21 @@ export function EmailInboxView() {
                 Scarica Tutto
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => resetSync.mutate()}
+              disabled={resetSync.isPending || isSyncing}
+              title="Reset sync — riscarica tutta la inbox"
+              className="gap-1.5"
+            >
+              {resetSync.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5" />
+              )}
+              Reset
+            </Button>
             <div className="flex-1 relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
