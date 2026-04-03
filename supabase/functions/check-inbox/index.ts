@@ -584,8 +584,9 @@ Deno.serve(async (req) => {
     if (!imapHost || !imapUser || !imapPassword) throw new Error("IMAP credentials not configured");
 
     const { data: syncState } = await supabase
-      .from("email_sync_state").select("last_uid").eq("user_id", userId).maybeSingle();
+      .from("email_sync_state").select("last_uid, stored_uidvalidity").eq("user_id", userId).maybeSingle();
     let lastUid = syncState?.last_uid || 0;
+    const storedUidvalidity = syncState?.stored_uidvalidity || null;
 
     if (!syncState) {
       await supabase.from("email_sync_state").upsert({
@@ -606,6 +607,21 @@ Deno.serve(async (req) => {
     const inbox = await client.selectMailbox("INBOX");
     const uidvalidity = (inbox as any).uidValidity || null;
     console.log(`[check-inbox] INBOX: ${inbox.exists} msgs, UIDVALIDITY: ${uidvalidity}`);
+
+    // UIDVALIDITY change detection (RFC 3501 §2.3.1.1)
+    // If UIDVALIDITY changed, all cached UIDs are invalid — must resync from scratch
+    if (storedUidvalidity && uidvalidity && storedUidvalidity !== uidvalidity) {
+      console.warn(`[check-inbox] UIDVALIDITY changed: ${storedUidvalidity} → ${uidvalidity}. Resetting sync.`);
+      lastUid = 0;
+      await supabase.from("email_sync_state")
+        .update({ last_uid: 0, stored_uidvalidity: uidvalidity })
+        .eq("user_id", userId);
+    } else if (uidvalidity && storedUidvalidity !== uidvalidity) {
+      // First time seeing UIDVALIDITY — store it
+      await supabase.from("email_sync_state")
+        .update({ stored_uidvalidity: uidvalidity })
+        .eq("user_id", userId);
+    }
 
     // UID SEARCH
     let uids: number[] = [];
