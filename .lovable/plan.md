@@ -1,18 +1,19 @@
 
 
-# Piano: Aggiungere tab "Operatori" in Settings
+# Piano: Usare EmailHtmlFrame standard nella pagina Download
 
 ## Problema
-La pagina `/settings/operators` esiste come route ma non è raggiungibile dal menu Settings. Manca la tab nella navigazione verticale.
+La pagina EmailDownloadPage usa un iframe custom semplificato per il rendering delle email, che non gestisce correttamente immagini, stili e layout complessi. Il componente standard `EmailHtmlFrame` già usato nella vista email normale gestisce tutto correttamente (mode faithful/safe, blocco immagini remote, responsive, etc.).
 
 ## Soluzione
-Aggiungere la tab "Operatori" con icona `Users` nella lista tabs di `Settings.tsx`, e integrare il componente `OperatorsSettings` direttamente come tab invece di usare una route separata.
+Sostituire il componente `EmailSlide` interno con l'uso di `EmailHtmlFrame` dal modulo standard.
 
-### File da modificare: `src/pages/Settings.tsx`
+### File: `src/pages/EmailDownloadPage.tsx`
 
-1. Importare `Users` da lucide-react e importare `OperatorsSettings` da `@/pages/OperatorsSettings`
-2. Aggiungere nella lista tabs: `{ value: "operatori", label: "Operatori", icon: Users }`
-3. Aggiungere il render condizionale: `{tab === "operatori" && <OperatorsSettings />}`
+1. Importare `EmailHtmlFrame` da `@/components/outreach/email/EmailHtmlFrame`
+2. Riscrivere `EmailSlide` per usare `EmailHtmlFrame` con `mode="faithful"` e `blockRemote={false}` invece dell'iframe custom
+3. Rimuovere la logica iframe manuale e la funzione `escapeHtml` (non più necessaria)
+4. Se `bodyHtml` è assente, fare fallback su un semplice `<pre>` con `bodyText`
 
-Risultato: la tab appare nel menu laterale di Settings, accessibile con un click.
+Il componente `EmailHtmlFrame` gestisce già: auto-resize, stili base, max-width immagini, table responsive, e rendering fedele del layout originale dell'email.
 
