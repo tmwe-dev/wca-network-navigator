@@ -976,6 +976,8 @@ Deno.serve(async (req) => {
             partner_id: match.partner_id,
             from_address: fromAddr,
             to_address: toAddr,
+            cc_addresses: ccAddresses || null,
+            bcc_addresses: bccAddresses || null,
             subject,
             body_text: bodyText,
             body_html: bodyHtml,
