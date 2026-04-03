@@ -98,7 +98,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string) {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []) as ChannelMessage[];
+      return ((data || []) as unknown) as ChannelMessage[];
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {

@@ -129,7 +129,7 @@ export function EmailDetailView({ message, onClose }: Props) {
         )}
 
         {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
-          <button onClick={() => setBlockRemote(false)} className="ml-12 flex items-center gap-1.5 text-[11px] text-amber-600 transition-colors hover:text-amber-700">
+          <button onClick={() => setBlockRemote(false)} className="ml-12 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
             <ImageOff className="h-3 w-3" />
             Immagini remote bloccate — clicca per caricare
           </button>
