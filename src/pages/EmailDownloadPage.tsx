@@ -219,52 +219,29 @@ export default function EmailDownloadPage() {
 function EmailSlide({ email }: { email: DownloadedEmail }) {
   const [fullHtml, setFullHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cidMap, setCidMap] = useState<Record<string, string>>({});
   const { brand, detail } = extractSenderBrand(email.from);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setFullHtml(null);
-    setCidMap({});
 
-    // Fetch body + inline attachments in parallel
-    const bodyPromise = supabase
+    supabase
       .from("channel_messages")
       .select("body_html, body_text")
       .eq("id", email.id)
-      .maybeSingle();
-
-    const attachPromise = supabase
-      .from("email_attachments")
-      .select("content_id, storage_path, is_inline")
-      .eq("message_id", email.id)
-      .eq("is_inline", true);
-
-    Promise.all([bodyPromise, attachPromise]).then(([bodyRes, attRes]) => {
-      if (cancelled) return;
-      const data = bodyRes.data;
-      if (data?.body_html) {
-        setFullHtml(data.body_html);
-      } else if (data?.body_text) {
-        setFullHtml(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${data.body_text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
-      } else {
-        setFullHtml(email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
-      }
-
-      // Build CID map
-      const map: Record<string, string> = {};
-      for (const att of (attRes.data || [])) {
-        if (att.content_id && att.storage_path) {
-          const url = att.storage_path.startsWith("data:")
-            ? att.storage_path
-            : supabase.storage.from("import-files").getPublicUrl(att.storage_path).data?.publicUrl || "";
-          if (url) map[att.content_id] = url;
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.body_html) {
+          setFullHtml(data.body_html);
+        } else if (data?.body_text) {
+          setFullHtml(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${data.body_text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
+        } else {
+          setFullHtml(email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
         }
-      }
-      setCidMap(map);
-      setLoading(false);
-    });
+        setLoading(false);
+      });
 
     return () => { cancelled = true; };
   }, [email.id]);
@@ -291,7 +268,7 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} cidMap={cidMap} />
+          <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} />
         )}
       </div>
     </div>

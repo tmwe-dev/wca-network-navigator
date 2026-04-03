@@ -347,11 +347,7 @@ function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
   const isTextBody = type === "text" && (subtype === "plain" || subtype === "html") &&
     dispositionType !== "attachment" && !filename;
 
-  // Inline image: has Content-ID, OR has inline disposition and is an image
-  const isInlineImage = type === "image" && (
-    (!!contentId && dispositionType !== "attachment") ||
-    (dispositionType === "inline")
-  );
+  const isInlineImage = type === "image" && !!contentId && dispositionType !== "attachment";
 
   return [{
     section, type, subtype, encoding, charset, contentId, dispositionType,
@@ -1127,11 +1123,10 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Inline images (RFC 2387 + cid:) — also handle disposition=inline without Content-ID
-            if (part.isInlineImage) {
-              const effectiveCid = part.contentId || `auto_${part.section}_${uid}`;
+            // Inline images (RFC 2387 + cid:)
+            if (part.isInlineImage && part.contentId) {
               if (part.size > MAX_ATTACHMENT_BYTES) {
-                parseWarnings.push(`inline image ${effectiveCid} too large (${part.size}B)`);
+                parseWarnings.push(`inline image ${part.contentId} too large (${part.size}B)`);
                 continue;
               }
 
@@ -1144,7 +1139,7 @@ Deno.serve(async (req) => {
                   const decoded: Uint8Array = decodeAttachment(imgRawBytes, part.encoding);
                   const contentType = `${part.type}/${part.subtype}`;
                   const ext = part.subtype === "jpeg" ? "jpg" : part.subtype;
-                  const filename = sanitizeFilename(part.filename || `inline_${effectiveCid}.${ext}`);
+                  const filename = sanitizeFilename(part.filename || `inline_${part.contentId}.${ext}`);
 
                   // For small images: data URI (no Storage dependency)
                   if (decoded.length <= INLINE_DATA_URI_THRESHOLD) {
@@ -1157,7 +1152,7 @@ Deno.serve(async (req) => {
                     b64 = btoa(b64);
                     const dataUri = `data:${contentType};base64,${b64}`;
                     attachmentRecords.push({
-                      cid: effectiveCid, publicUrl: dataUri, filename,
+                      cid: part.contentId, publicUrl: dataUri, filename,
                       storagePath: "", contentType, size: decoded.length,
                       isInline: true, isDataUri: true,
                     });
@@ -1172,7 +1167,7 @@ Deno.serve(async (req) => {
                       const { data: urlData } = supabaseAdmin.storage
                         .from("import-files").getPublicUrl(storagePath);
                       attachmentRecords.push({
-                        cid: effectiveCid, publicUrl: urlData?.publicUrl || "",
+                        cid: part.contentId, publicUrl: urlData?.publicUrl || "",
                         filename, storagePath, contentType, size: decoded.length,
                         isInline: true,
                       });
