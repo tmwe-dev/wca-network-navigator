@@ -28,6 +28,7 @@ export default function Settings() {
     { value: "import-export", label: "Import/Export", icon: Download },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
+    { value: "operatori", label: "Operatori", icon: Users },
   ];
 
   return (
