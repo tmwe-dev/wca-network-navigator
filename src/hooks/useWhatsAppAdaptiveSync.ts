@@ -39,6 +39,7 @@ export function useWhatsAppAdaptiveSync() {
   const [enabled, setEnabled] = useState(false);
 
   const { isAvailable, readUnread, readThread } = useWhatsAppExtensionBridge();
+  const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
   const levelRef = useRef<AttentionLevel>(0);
