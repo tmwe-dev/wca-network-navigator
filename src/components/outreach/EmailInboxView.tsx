@@ -129,6 +129,35 @@ export function EmailInboxView() {
           </div>
         </div>
 
+        {/* Sync progress panel */}
+        {isSyncing && (
+          <div className="flex-shrink-0 border-b border-border bg-muted/50 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              Sincronizzazione in corso...
+            </div>
+            <Progress value={undefined} className="h-2 [&>div]:animate-pulse" />
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5" />
+                <span><strong className="text-foreground">{progress.downloaded}</strong> scaricate in questa sessione</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5" />
+                <span><strong className="text-foreground">{emailCount}</strong> email totali in database</span>
+              </div>
+            </div>
+            {progress.batch > 0 && (
+              <div className="text-xs text-muted-foreground">
+                Blocco {progress.batch}
+                {progress.lastSubject && (
+                  <span className="ml-1 italic truncate">— "{progress.lastSubject.slice(0, 60)}{progress.lastSubject.length > 60 ? '...' : ''}"</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <ScrollArea className="flex-1">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
