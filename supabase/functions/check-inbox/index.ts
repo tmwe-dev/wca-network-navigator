@@ -585,9 +585,107 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): Fallback
    Constants
    ══════════════════════════════════════════════════════════════ */
 const BATCH_SIZE = 1;
+const UID_SEARCH_INITIAL_WINDOW = 250;
+const UID_SEARCH_MAX_EXPANSIONS = 10;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_RAW_BYTES = 15 * 1024 * 1024; // 15MB max raw email to store
 const INLINE_DATA_URI_THRESHOLD = 100 * 1024; // 100KB — below this, use data URI
+
+type NextUidBatch = {
+  uids: number[];
+  remaining: number;
+};
+
+function parseESearchMinCount(lines: any[]): { nextUid: number | null; count: number | null } {
+  for (const line of lines) {
+    if (typeof line !== "string" || !line.includes("ESEARCH")) continue;
+    const minMatch = line.match(/\bMIN\s+(\d+)\b/i);
+    const countMatch = line.match(/\bCOUNT\s+(\d+)\b/i);
+    return {
+      nextUid: minMatch ? Number(minMatch[1]) : null,
+      count: countMatch ? Number(countMatch[1]) : null,
+    };
+  }
+  return { nextUid: null, count: null };
+}
+
+function parseUidSearchResponse(lines: any[], minUid: number): number[] {
+  for (const line of lines) {
+    if (typeof line !== "string" || !line.startsWith("* SEARCH")) continue;
+    const payload = line.slice("* SEARCH".length).trim();
+    if (!payload) return [];
+    return payload
+      .split(/\s+/)
+      .map((token) => Number(token))
+      .filter((uid) => Number.isFinite(uid) && uid >= minUid);
+  }
+  return [];
+}
+
+function parseFirstUidSearchResponse(lines: any[], minUid: number): number | null {
+  for (const line of lines) {
+    if (typeof line !== "string" || !line.startsWith("* SEARCH")) continue;
+    const matches = line.match(/\d+/g);
+    if (!matches) return null;
+    for (const match of matches) {
+      const uid = Number(match);
+      if (Number.isFinite(uid) && uid >= minUid) return uid;
+    }
+  }
+  return null;
+}
+
+async function getNextUidBatch(client: any, lastUid: number): Promise<NextUidBatch> {
+  const minUid = Math.max(1, lastUid + 1);
+
+  try {
+    const esearchResponse = await (client as any).executeCommand(`UID SEARCH RETURN (MIN COUNT) UID ${minUid}:*`);
+    const { nextUid, count } = parseESearchMinCount(esearchResponse);
+
+    if (count === 0) {
+      return { uids: [], remaining: 0 };
+    }
+
+    if (nextUid && nextUid >= minUid) {
+      return {
+        uids: [nextUid],
+        remaining: Math.max(0, (count ?? 1) - 1),
+      };
+    }
+  } catch (esearchErr: any) {
+    console.warn(`[check-inbox] ESEARCH MIN fallback: ${esearchErr.message}`);
+  }
+
+  let windowSize = UID_SEARCH_INITIAL_WINDOW;
+  for (let attempt = 1; attempt <= UID_SEARCH_MAX_EXPANSIONS; attempt++) {
+    const maxUid = minUid + windowSize - 1;
+    try {
+      const searchResponse = await (client as any).executeCommand(`UID SEARCH UID ${minUid}:${maxUid}`);
+      const uids = parseUidSearchResponse(searchResponse, minUid).sort((a, b) => a - b);
+      if (uids.length > 0) {
+        return {
+          uids: uids.slice(0, BATCH_SIZE),
+          remaining: Math.max(0, uids.length - BATCH_SIZE),
+        };
+      }
+    } catch (searchErr: any) {
+      console.warn(`[check-inbox] UID SEARCH ${minUid}:${maxUid} failed: ${searchErr.message}`);
+    }
+    windowSize *= 2;
+  }
+
+  try {
+    const fallbackResponse = await (client as any).executeCommand(`UID SEARCH UID ${minUid}:*`);
+    const nextUid = parseFirstUidSearchResponse(fallbackResponse, minUid);
+    if (nextUid) {
+      return { uids: [nextUid], remaining: 0 };
+    }
+  } catch (fallbackErr: any) {
+    console.error("[check-inbox] UID SEARCH fallback error:", fallbackErr.message);
+  }
+
+  return { uids: [], remaining: 0 };
+}
 
 /* ══════════════════════════════════════════════════════════════
    Main handler
@@ -671,28 +769,28 @@ Deno.serve(async (req) => {
 
     // UID SEARCH
     let uids: number[] = [];
+    let remainingCount = 0;
     try {
-      const searchCmd = lastUid > 0 ? `UID SEARCH UID ${lastUid + 1}:*` : `UID SEARCH ALL`;
-      const searchResponse = await (client as any).executeCommand(searchCmd);
-      for (const line of searchResponse) {
-        if (typeof line === "string" && line.startsWith("* SEARCH")) {
-          uids = line.replace("* SEARCH", "").trim().split(/\s+/).filter(Boolean).map(Number);
-          break;
-        }
-      }
-      if (lastUid > 0) uids = uids.filter(u => u > lastUid);
+      const nextBatch = await getNextUidBatch(client, lastUid);
+      uids = nextBatch.uids;
+      remainingCount = nextBatch.remaining;
     } catch (searchErr: any) {
-      console.error("[check-inbox] UID SEARCH error:", searchErr.message);
+      console.error("[check-inbox] UID lookup error:", searchErr.message);
     }
 
-    console.log(`[check-inbox] Found ${uids.length} new UIDs`);
-    const toFetch = uids.sort((a, b) => a - b).slice(0, BATCH_SIZE);
+    if (uids.length > 0) {
+      console.log(`[check-inbox] Selected UID ${uids[0]} for this run (${remainingCount} remaining)`);
+    } else {
+      console.log("[check-inbox] No new UIDs");
+    }
+    const toFetch = uids;
 
     const messages: any[] = [];
     let maxUid = lastUid;
 
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
+        console.log(`[check-inbox] Processing UID ${uid}`);
         // Per-message warnings — reset for each message to prevent leaking
         const parseWarnings: string[] = [];
 
@@ -1144,7 +1242,7 @@ Deno.serve(async (req) => {
       matched,
       unmatched: messages.length - matched,
       last_uid: maxUid,
-      remaining: Math.max(0, uids.length - BATCH_SIZE),
+      remaining: remainingCount,
       messages: messages.map(m => ({
         from: m.from_address,
         subject: m.subject,
