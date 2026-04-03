@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle, CheckCircle2, Clock, Download, Mail, Pause, Play,
-  RotateCcw, Square, Loader2, Server, Monitor,
+  AlertCircle, CheckCircle2, Download, Mail, Pause, Play,
+  RotateCcw, Square, Loader2, Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,12 +10,8 @@ import { DownloadedEmailPreview } from "@/components/outreach/download/Downloade
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailCount } from "@/hooks/useEmailCount";
 import { useServerSyncJob } from "@/hooks/useServerSyncJob";
+import { useDownloadedEmailsFeed } from "@/hooks/useDownloadedEmailsFeed";
 import { cn } from "@/lib/utils";
-import {
-  bgSyncGetEmailHistory, bgSyncIsRunning, bgSyncStart, bgSyncStop,
-  bgSyncSubscribe, bgSyncSubscribeEmails,
-  type BgSyncProgress, type DownloadedEmail,
-} from "@/lib/backgroundSync";
 
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -33,62 +29,57 @@ function timeSince(iso: string): string {
 export default function EmailDownloadPage() {
   // Server-side job
   const { activeJob, lastCompletedJob, startJob, pauseJob, resumeJob, cancelJob } = useServerSyncJob();
+  const { emails, isLoading: isEmailsLoading } = useDownloadedEmailsFeed();
 
-  // Browser-side live feed (for real-time email preview during this session)
-  const [progress, setProgress] = useState<BgSyncProgress>(() => ({
-    downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
-  }));
-  const [emails, setEmails] = useState<DownloadedEmail[]>(() => bgSyncGetEmailHistory());
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(() => bgSyncGetEmailHistory()[0]?.id ?? null);
-  const [isBrowserSyncing, setIsBrowserSyncing] = useState(bgSyncIsRunning);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
 
   const resetSync = useResetSync();
   const { data: emailCount = 0 } = useEmailCount(
-    isBrowserSyncing || activeJob?.status === "running",
+    startJob.isPending || resumeJob.isPending || activeJob?.status === "running",
   );
 
   useEffect(() => {
-    const u1 = bgSyncSubscribe((p) => { setProgress(p); setIsBrowserSyncing(p.status === "syncing"); });
-    const u2 = bgSyncSubscribeEmails((e) => {
-      setEmails((prev) => [e, ...prev.filter((x) => x.id !== e.id)]);
-      setSelectedEmailId((prev) => prev ?? e.id);
-    });
-    return () => { u1(); u2(); };
-  }, []);
+    if (emails.length === 0) {
+      if (selectedEmailId !== null) setSelectedEmailId(null);
+      return;
+    }
+
+    const selectionStillExists = selectedEmailId
+      ? emails.some((email) => email.id === selectedEmailId)
+      : false;
+
+    if (!selectionStillExists) {
+      setSelectedEmailId(emails[0].id);
+    }
+  }, [emails, selectedEmailId]);
 
   const selectedEmail = useMemo(
     () => emails.find((e) => e.id === selectedEmailId) ?? null,
     [emails, selectedEmailId],
   );
 
-  // Start server job + optional browser live feed
+  // Start server job
   const handleStartServer = useCallback(() => {
     startJob.mutate();
-    // Also start browser sync for live preview
-    setEmails([]);
-    setSelectedEmailId(null);
-    bgSyncStart();
   }, [startJob]);
 
   const handlePause = useCallback(() => {
     pauseJob.mutate();
-    bgSyncStop();
   }, [pauseJob]);
 
   const handleResume = useCallback(() => {
     resumeJob.mutate();
-    bgSyncStart();
   }, [resumeJob]);
 
   const handleStop = useCallback(() => {
     cancelJob.mutate();
-    bgSyncStop();
   }, [cancelJob]);
 
   const isServerRunning = activeJob?.status === "running";
   const isServerPaused = activeJob?.status === "paused";
   const isServerError = activeJob?.status === "error";
   const hasActiveJob = !!activeJob;
+  const isSyncing = isServerRunning || startJob.isPending || resumeJob.isPending;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -224,12 +215,17 @@ export default function EmailDownloadPage() {
           emails={emails}
           selectedEmailId={selectedEmailId}
           onSelect={setSelectedEmailId}
-          isRunning={isBrowserSyncing}
+          isRunning={isSyncing}
+          isLoading={isEmailsLoading}
           emailCount={emailCount}
         />
         <div className="flex-1 min-w-0 overflow-hidden bg-muted/20">
           {selectedEmail ? (
             <DownloadedEmailPreview email={selectedEmail} />
+          ) : isEmailsLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
               <div>
