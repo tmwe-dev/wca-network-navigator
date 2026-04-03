@@ -29,6 +29,57 @@ function formatTime(iso: string): string {
   } catch { return ""; }
 }
 
+/** Extract brand/company name from email address or display name */
+function extractSenderBrand(from: string): { brand: string; detail: string } {
+  if (!from) return { brand: "Sconosciuto", detail: "" };
+
+  // Try to get display name first: "John Doe <john@fedex.com>"
+  const displayMatch = from.match(/^"?([^"<]+)"?\s*<(.+)>/);
+  const displayName = displayMatch ? displayMatch[1].trim() : "";
+  const emailAddr = displayMatch ? displayMatch[2].trim() : from.trim();
+
+  // Extract domain from email
+  const domainMatch = emailAddr.match(/@([^>]+)/);
+  const domain = domainMatch ? domainMatch[1].toLowerCase() : "";
+
+  // Known personal email providers
+  const personalProviders = new Set([
+    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
+    "icloud.com", "me.com", "mac.com", "aol.com", "protonmail.com",
+    "fastmail.com", "zoho.com", "mail.com", "yandex.com", "gmx.com",
+    "libero.it", "virgilio.it", "alice.it", "tin.it", "tiscali.it",
+    "yahoo.it", "hotmail.it", "outlook.it", "pec.it",
+  ]);
+
+  const isPersonal = personalProviders.has(domain);
+
+  if (isPersonal) {
+    // Personal email — show display name or local part
+    const localPart = emailAddr.split("@")[0] || "";
+    const name = displayName || localPart.replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    return { brand: name, detail: emailAddr };
+  }
+
+  // Business email — extract company name from domain
+  const domainParts = domain.split(".");
+  // Remove TLD(s) — handle .co.uk, .com.br etc.
+  let companySlug = domainParts[0];
+  if (domainParts.length > 2 && ["co", "com", "org", "net"].includes(domainParts[domainParts.length - 2])) {
+    companySlug = domainParts.slice(0, -2).join(".");
+  } else if (domainParts.length > 1) {
+    companySlug = domainParts.slice(0, -1).join(".");
+  }
+
+  // Capitalize brand name
+  const brand = companySlug
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  const detail = displayName ? `${displayName} — ${emailAddr}` : emailAddr;
+
+  return { brand, detail };
+}
+
 export default function EmailDownloadPage() {
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({
     downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
@@ -144,36 +195,38 @@ export default function EmailDownloadPage() {
           ) : (
             <ScrollArea className="flex-1">
               <div className="p-1">
-                {emails.map((email, idx) => (
-                  <div
-                    key={email.id}
-                    onClick={() => setSelectedIdx(idx)}
-                    className={cn(
-                      "flex items-start gap-2 px-3 py-2 rounded cursor-pointer transition-all duration-150 group",
-                      "hover:bg-accent/50",
-                      selectedIdx === idx
-                        ? "bg-primary/10 border-l-2 border-primary"
-                        : "border-l-2 border-transparent",
-                      // Matrix fade-in effect
-                      "animate-fade-in"
-                    )}
-                  >
-                    <span className="text-[10px] text-muted-foreground/50 font-mono mt-1 w-5 text-right flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-foreground truncate leading-tight">
-                        {email.subject}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                        {email.from}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground/60 mt-0.5">
-                        {formatTime(email.date)}
+                {emails.map((email, idx) => {
+                  const { brand } = extractSenderBrand(email.from);
+                  return (
+                    <div
+                      key={email.id}
+                      onClick={() => setSelectedIdx(idx)}
+                      className={cn(
+                        "flex items-start gap-2 px-3 py-2 rounded cursor-pointer transition-all duration-150 group",
+                        "hover:bg-accent/50",
+                        selectedIdx === idx
+                          ? "bg-primary/10 border-l-2 border-primary"
+                          : "border-l-2 border-transparent",
+                        "animate-fade-in"
+                      )}
+                    >
+                      <span className="text-[10px] text-muted-foreground/50 font-mono mt-1 w-5 text-right flex-shrink-0">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-bold text-primary truncate leading-tight">
+                          {brand}
+                        </div>
+                        <div className="text-xs text-foreground truncate leading-tight mt-0.5">
+                          {email.subject}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground/60 mt-0.5">
+                          {formatTime(email.date)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={listEndRef} />
                 {isRunning && (
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-primary animate-pulse">
@@ -192,14 +245,16 @@ export default function EmailDownloadPage() {
           </div>
         </div>
 
-        {/* Right: Email preview slide */}
-        <div className="flex-1 min-w-0 bg-muted/20 flex items-center justify-center p-4 overflow-hidden">
+        {/* Right: Email preview — pinned header + scrollable body */}
+        <div className="flex-1 min-w-0 bg-muted/20 flex flex-col overflow-hidden">
           {selectedEmail ? (
             <EmailSlide email={selectedEmail} key={selectedEmail.id} />
           ) : (
-            <div className="text-muted-foreground text-sm text-center">
-              <Mail className="w-12 h-12 mx-auto opacity-20 mb-2" />
-              <p>Seleziona una email per visualizzarla</p>
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm text-center">
+              <div>
+                <Mail className="w-12 h-12 mx-auto opacity-20 mb-2" />
+                <p>Seleziona una email per visualizzarla</p>
+              </div>
             </div>
           )}
         </div>
@@ -208,10 +263,11 @@ export default function EmailDownloadPage() {
   );
 }
 
-/** Email preview rendered as a slide/card — loads full body from DB */
+/** Email preview rendered as a slide/card — pinned header + scrollable body */
 function EmailSlide({ email }: { email: DownloadedEmail }) {
   const [fullHtml, setFullHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { brand, detail } = extractSenderBrand(email.from);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,7 +286,6 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
         } else if (data?.body_text) {
           setFullHtml(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${data.body_text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
         } else {
-          // Fallback to truncated data from sync
           setFullHtml(email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
         }
         setLoading(false);
@@ -242,16 +297,19 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
   const htmlContent = fullHtml || email.bodyHtml || `<p style="padding:20px;color:#999;">Caricamento...</p>`;
 
   return (
-    <div className="w-full max-w-3xl animate-scale-in">
-      <div className="bg-card border border-border rounded-t-lg px-4 py-3">
-        <div className="text-sm font-semibold text-foreground truncate">{email.subject}</div>
+    <div className="flex flex-col h-full">
+      {/* Pinned header */}
+      <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3">
+        <div className="text-base font-bold text-primary">{brand}</div>
+        <div className="text-sm font-semibold text-foreground truncate mt-0.5">{email.subject}</div>
         <div className="text-xs text-muted-foreground truncate mt-0.5">
-          Da: {email.from} — {formatTime(email.date)}
+          {detail || email.from} — {formatTime(email.date)}
         </div>
       </div>
-      <div className="border border-t-0 border-border rounded-b-lg overflow-y-auto bg-white" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>
+      {/* Scrollable email body */}
+      <div className="flex-1 overflow-y-auto bg-white">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-64">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
