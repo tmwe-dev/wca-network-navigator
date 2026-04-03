@@ -18,6 +18,8 @@ export interface DownloadedEmail {
 
 export interface BgSyncProgress {
   downloaded: number;
+  skipped: number;
+  remaining: number;
   batch: number;
   lastSubject: string;
   status: "idle" | "syncing" | "done" | "error";
@@ -30,7 +32,7 @@ type ProgressListener = (p: BgSyncProgress) => void;
 type EmailListener = (e: DownloadedEmail) => void;
 
 const INITIAL: BgSyncProgress = {
-  downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
+  downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
 };
 
 let _progress: BgSyncProgress = { ...INITIAL };
@@ -106,6 +108,7 @@ export async function bgSyncStart() {
   _emailHistory = [];
 
   let totalDownloaded = 0;
+  let totalSkipped = 0;
   let batchNum = 0;
   const startedAt = Date.now();
 
@@ -114,12 +117,12 @@ export async function bgSyncStart() {
     notifyProgress();
   }, 1000);
 
-  _progress = { downloaded: 0, batch: 0, lastSubject: "", status: "syncing", startedAt, elapsedSeconds: 0 };
+  _progress = { downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "syncing", startedAt, elapsedSeconds: 0 };
   notifyProgress();
 
   try {
     let consecutiveErrors = 0;
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 10;
 
     while (!_abort) {
       batchNum++;
@@ -151,6 +154,8 @@ export async function bgSyncStart() {
           ? result.remaining > 0
           : result.total > 0;
 
+      const serverRemaining = typeof result.remaining === "number" ? result.remaining : 0;
+
       if (result.total > 0) {
         totalDownloaded += result.total;
 
@@ -172,12 +177,23 @@ export async function bgSyncStart() {
         _progress = {
           ..._progress,
           downloaded: totalDownloaded,
+          skipped: totalSkipped,
+          remaining: serverRemaining,
           batch: batchNum,
           lastSubject: lastMsg?.subject || _progress.lastSubject,
           status: "syncing",
         };
       } else {
-        _progress = { ..._progress, batch: batchNum, status: "syncing" };
+        // No new emails but server responded OK — likely skipped duplicates
+        totalSkipped++;
+        _progress = {
+          ..._progress,
+          batch: batchNum,
+          skipped: totalSkipped,
+          remaining: serverRemaining,
+          lastSubject: hasMore ? "⏩ Scansione duplicati..." : _progress.lastSubject,
+          status: "syncing",
+        };
       }
       notifyProgress();
 
@@ -187,7 +203,7 @@ export async function bgSyncStart() {
       await new Promise(r => setTimeout(r, 100));
     }
 
-    _progress = { ..._progress, status: "done", downloaded: totalDownloaded, batch: batchNum };
+    _progress = { ..._progress, status: "done", downloaded: totalDownloaded, skipped: totalSkipped, batch: batchNum };
     notifyProgress();
   } catch (err: any) {
     _progress = { ..._progress, status: "error", errorMessage: err.message };

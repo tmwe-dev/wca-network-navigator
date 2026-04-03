@@ -797,6 +797,24 @@ Deno.serve(async (req) => {
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
         console.log(`[check-inbox] Processing UID ${uid}`);
+
+        // ─── Pre-check: skip if imap_uid already exists in DB (fast-forward) ───
+        const { data: existingByUid } = await supabase
+          .from("channel_messages")
+          .select("id")
+          .eq("imap_uid", uid)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (existingByUid) {
+          console.log(`[check-inbox] UID ${uid}: already in DB (fast-forward skip)`);
+          maxUid = uid;
+          await supabase.from("email_sync_state")
+            .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+            .eq("user_id", userId);
+          continue;
+        }
+
         // Per-message warnings — reset for each message to prevent leaking
         const parseWarnings: string[] = [];
 

@@ -35,7 +35,7 @@ function formatTime(iso: string): string {
 
 export default function EmailDownloadPage() {
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({
-    downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
+    downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
   }));
   const [emails, setEmails] = useState<DownloadedEmail[]>(() => bgSyncGetEmailHistory());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -95,12 +95,20 @@ export default function EmailDownloadPage() {
                 {formatElapsed(progress.elapsedSeconds)}
                 <span className="text-primary font-bold ml-2">{progress.downloaded}</span>
                 <span>scaricate</span>
+                {progress.skipped > 0 && (
+                  <>
+                    <span className="text-muted-foreground/60 ml-1">{progress.skipped} saltate</span>
+                  </>
+                )}
+                {progress.remaining > 0 && (
+                  <span className="text-muted-foreground/60 ml-1">({progress.remaining} rimanenti)</span>
+                )}
               </div>
             )}
             {isDone && (
               <div className="flex items-center gap-1.5 text-xs text-primary mr-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Completato — {progress.downloaded} email in {formatElapsed(progress.elapsedSeconds)}
+                Completato — {progress.downloaded} email{progress.skipped > 0 ? `, ${progress.skipped} saltate` : ""} in {formatElapsed(progress.elapsedSeconds)}
               </div>
             )}
             {isError && (
