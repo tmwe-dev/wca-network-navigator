@@ -21,7 +21,7 @@ export function CampagneTab() {
         .from("campaign_jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(50);
       return data || [];
     },
   });
