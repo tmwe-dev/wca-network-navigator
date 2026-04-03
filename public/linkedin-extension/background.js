@@ -487,10 +487,11 @@ async function autoLoginLinkedIn() {
     throw new Error("Credenziali LinkedIn non configurate.");
   }
 
-  var tab = await safeTabCreate({ url: "https://www.linkedin.com/", active: true });
+  var tab = await getLinkedInTab("https://www.linkedin.com/");
+  // Make it active for login flow (user may need to solve CAPTCHA)
+  try { await chrome.tabs.update(tab.id, { active: true }); } catch(_) {}
 
   try {
-    await waitForTabLoad(tab.id, 25000);
 
     var initialStateRes = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
