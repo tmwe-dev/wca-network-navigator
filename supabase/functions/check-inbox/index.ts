@@ -310,7 +310,8 @@ function sanitizeFilename(filename: string): string {
 }
 
 function sanitizeMessageId(mid: string): string {
-  return mid.replace(/[<>]/g, "").replace(/[@\/\\:*?"|\x00-\x1F]/g, "_").slice(0, 120) || "unknown";
+  // Only strip angle brackets — preserve @ and other RFC 5322 valid chars for deduplication
+  return mid.replace(/[<>]/g, "").trim().slice(0, 250) || "unknown";
 }
 
 function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
@@ -627,20 +628,45 @@ Deno.serve(async (req) => {
 
     const messages: any[] = [];
     let maxUid = lastUid;
-    const parseWarnings: string[] = [];
 
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
+        // Per-message warnings — reset for each message to prevent leaking
+        const parseWarnings: string[] = [];
+
         try {
           /* ─── Phase 1: Fetch raw RFC 5322 message (BODY.PEEK[]) ─── */
           let rawBytes: Uint8Array = new Uint8Array(0);
           let rawHash = "";
           let rawStoragePath = "";
+          let imapFlags = "";
+          let internalDate: string | null = null;
+          let rfc822Size = 0;
 
           try {
             const rawCmd = `UID FETCH ${uid} (BODY.PEEK[] FLAGS INTERNALDATE RFC822.SIZE)`;
             const rawResponse = await (client as any).executeCommand(rawCmd);
             rawBytes = extractLiteralBytesFromResponse(rawResponse);
+
+            // Extract FLAGS, INTERNALDATE, RFC822.SIZE from response lines
+            for (const line of rawResponse) {
+              if (typeof line !== "string") continue;
+              // FLAGS
+              const flagsMatch = line.match(/FLAGS\s*\(([^)]*)\)/i);
+              if (flagsMatch) imapFlags = flagsMatch[1].trim();
+              // INTERNALDATE
+              const idateMatch = line.match(/INTERNALDATE\s*"([^"]+)"/i);
+              if (idateMatch) {
+                try {
+                  const parsed = new Date(idateMatch[1]);
+                  if (!isNaN(parsed.getTime())) internalDate = parsed.toISOString();
+                } catch { /* ignore */ }
+              }
+              // RFC822.SIZE
+              const sizeMatch = line.match(/RFC822\.SIZE\s+(\d+)/i);
+              if (sizeMatch) rfc822Size = parseInt(sizeMatch[1], 10);
+            }
+            if (!rfc822Size) rfc822Size = rawBytes.length;
 
             if (rawBytes.length > 0) {
               rawHash = await sha256hex(rawBytes);
@@ -683,14 +709,6 @@ Deno.serve(async (req) => {
             parseWarnings.push(`raw fetch failed: ${rawErr.message}`);
             console.warn(`[check-inbox] UID ${uid}: raw fetch error:`, rawErr.message);
           }
-
-          // Parse FLAGS and INTERNALDATE from raw response
-          let imapFlags = "";
-          let internalDate: string | null = null;
-          let rfc822Size = rawBytes.length || 0;
-
-          // Try to extract from response lines
-          // (The raw response may contain lines like: * N FETCH (FLAGS (\Seen) INTERNALDATE "..." ...)
 
           /* ─── Phase 2: ENVELOPE + BODYSTRUCTURE ─── */
           let fromAddr = "";
@@ -830,7 +848,13 @@ Deno.serve(async (req) => {
 
                   // For small images: data URI (no Storage dependency)
                   if (decoded.length <= INLINE_DATA_URI_THRESHOLD) {
-                    const b64 = btoa(String.fromCharCode(...decoded));
+                    // Safe base64 encoding without spread operator (avoids stack overflow)
+                    let b64 = "";
+                    const CHUNK = 8192;
+                    for (let i = 0; i < decoded.length; i += CHUNK) {
+                      b64 += String.fromCharCode(...decoded.subarray(i, Math.min(i + CHUNK, decoded.length)));
+                    }
+                    b64 = btoa(b64);
                     const dataUri = `data:${contentType};base64,${b64}`;
                     attachmentRecords.push({
                       cid: part.contentId, publicUrl: dataUri, filename,
@@ -1011,8 +1035,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Clear warnings for next message
-          parseWarnings.length = 0;
+          // parseWarnings is now per-message (declared inside the loop), no need to clear
 
         } catch (e: any) {
           console.error(`[check-inbox] Error processing UID ${uid}:`, e.message);

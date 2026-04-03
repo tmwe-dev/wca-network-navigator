@@ -29,11 +29,23 @@ function getAttachmentIcon(contentType: string | null) {
 function decodeRfc2047(input: string): string {
   if (!input) return input;
   const joined = input.replace(/\?=\s+=\?/g, "?==?");
-  return joined.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, _charset, encoding, text) => {
+  return joined.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_match, charset, encoding, text) => {
     try {
-      if (encoding.toUpperCase() === "B") return atob(text);
-      return text.replace(/_/g, " ")
+      const cs = (charset || "utf-8").trim().toLowerCase();
+      if (encoding.toUpperCase() === "B") {
+        const binary = atob(text);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        try { return new TextDecoder(cs).decode(bytes); }
+        catch { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
+      }
+      // Q encoding
+      const decoded = text.replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      try { return new TextDecoder(cs).decode(bytes); }
+      catch { return decoded; }
     } catch { return text; }
   });
 }
