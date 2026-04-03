@@ -501,7 +501,6 @@ async function autoLoginLinkedIn() {
 
     if (initialState && initialState.authenticated) {
       var syncInitial = await syncLiCookieToServer();
-      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -517,7 +516,6 @@ async function autoLoginLinkedIn() {
     });
     var prep = prepRes[0] && prepRes[0].result;
     if (!prep || !prep.success) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -538,7 +536,6 @@ async function autoLoginLinkedIn() {
 
     if (readyState && readyState.authenticated) {
       var syncReady = await syncLiCookieToServer();
-      safeTabRemove(tab.id)
       return {
         success: true,
         authenticated: true,
@@ -550,14 +547,11 @@ async function autoLoginLinkedIn() {
 
     if (readyState && readyState.hasGoogleButton && !readyState.hasLoginForm) {
       var googleFlow = await pollForLinkedInAuthCompletion(tab.id, 180000, { sawGoogle: true });
-      if (googleFlow.success || !googleFlow.tabStillOpen) {
-        safeTabRemove(tab.id)
-      }
+      // Tab stays open
       return googleFlow;
     }
 
     if (!readyState || !readyState.hasLoginForm) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -574,7 +568,6 @@ async function autoLoginLinkedIn() {
     });
     var formResult = injRes[0] && injRes[0].result;
     if (!formResult || !formResult.success) {
-      safeTabRemove(tab.id)
       return {
         success: false,
         authenticated: false,
@@ -586,12 +579,9 @@ async function autoLoginLinkedIn() {
     await waitForTabLoad(tab.id, 30000);
 
     var completion = await pollForLinkedInAuthCompletion(tab.id, 180000);
-    if (completion.success || !completion.tabStillOpen) {
-      safeTabRemove(tab.id)
-    }
+    // Tab stays open
     return completion;
   } catch (err) {
-    safeTabRemove(tab.id)
     return {
       success: false,
       authenticated: false,
