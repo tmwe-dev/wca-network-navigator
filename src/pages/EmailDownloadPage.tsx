@@ -298,11 +298,14 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
   return (
     <div className="flex flex-col h-full">
       {/* Pinned header */}
-      <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3">
-        <div className="text-base font-bold text-primary">{brand}</div>
-        <div className="text-sm font-semibold text-foreground truncate mt-0.5">{email.subject}</div>
-        <div className="text-xs text-muted-foreground truncate mt-0.5">
-          {detail || email.from} — {formatTime(email.date)}
+      <div className="flex-shrink-0 bg-card border-b border-border px-5 py-3 flex items-center gap-3">
+        <CompanyLogo email={email.from} name={brand} size={36} className="flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-bold text-primary truncate">{brand}</div>
+          <div className="text-sm font-semibold text-foreground truncate mt-0.5">{email.subject}</div>
+          <div className="text-xs text-muted-foreground truncate mt-0.5">
+            {detail || email.from} — {formatTime(email.date)}
+          </div>
         </div>
       </div>
       {/* Scrollable email body */}
