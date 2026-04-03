@@ -1,55 +1,18 @@
 
-# Piano: Sistema Multi-Operatore con Identità Intercambiabile
 
-## Concetto
-Tutti gli utenti vedono gli stessi dati. La differenza è CHI sta comunicando: ogni operatore ha le proprie credenziali di invio (email IMAP/SMTP, WhatsApp, LinkedIn). Un dropdown nell'header permette di "impersonare" un altro operatore.
+# Piano: Aggiungere tab "Operatori" in Settings
 
-## Fase 1: Database — Tabella `operators`
+## Problema
+La pagina `/settings/operators` esiste come route ma non è raggiungibile dal menu Settings. Manca la tab nella navigazione verticale.
 
-Nuova tabella `operators` che contiene:
-- `user_id` → collegamento all'utente Supabase Auth
-- `name`, `email`, `avatar_url` → dati visibili
-- `imap_host`, `imap_user`, `imap_password` (cifrata) → credenziali email
-- `smtp_host`, `smtp_user`, `smtp_password` → per invio
-- `whatsapp_phone` → numero WhatsApp associato
-- `linkedin_profile_url` → profilo LinkedIn
-- `is_admin` → può invitare altri operatori
-- `invited_by`, `invited_at` → tracciabilità inviti
+## Soluzione
+Aggiungere la tab "Operatori" con icona `Users` nella lista tabs di `Settings.tsx`, e integrare il componente `OperatorsSettings` direttamente come tab invece di usare una route separata.
 
-## Fase 2: Sistema Inviti
+### File da modificare: `src/pages/Settings.tsx`
 
-- L'admin inserisce nome + email del nuovo operatore
-- Il sistema invia un invito tramite Supabase Auth (`inviteUserByEmail` via Edge Function)
-- L'utente invitato imposta la password al primo accesso
-- Al primo login, il profilo operatore viene creato automaticamente
+1. Importare `Users` da lucide-react e importare `OperatorsSettings` da `@/pages/OperatorsSettings`
+2. Aggiungere nella lista tabs: `{ value: "operatori", label: "Operatori", icon: Users }`
+3. Aggiungere il render condizionale: `{tab === "operatori" && <OperatorsSettings />}`
 
-## Fase 3: Dropdown Operatore nell'Header
+Risultato: la tab appare nel menu laterale di Settings, accessibile con un click.
 
-- Hook `useOperators()` carica la lista operatori
-- Hook `useActiveOperator()` gestisce l'operatore corrente (default = utente loggato)
-- Context `ActiveOperatorProvider` distribuisce l'operatore attivo a tutta l'app
-- Il dropdown mostra nome + avatar di ogni operatore
-
-## Fase 4: Integrazione con il sistema email
-
-- La Edge Function `check-inbox` legge le credenziali IMAP dalla tabella `operators` invece che dai secrets globali
-- L'invio email (cockpit) usa SMTP dell'operatore attivo
-- Il `channel_messages` aggiunge colonna `operator_id` per sapere chi ha inviato/ricevuto
-
-## Fase 5: Pagina Impostazioni Operatori
-
-- Nuova rotta `/settings/operators`
-- Lista operatori con stato (attivo/invitato/disabilitato)
-- Form per invitare nuovo operatore
-- Form per configurare credenziali di ogni operatore
-- Solo admin può invitare e modificare altri
-
-## Sicurezza
-- Le password IMAP/SMTP sono cifrate nel DB (mai esposte al frontend)
-- RLS: tutti gli utenti autenticati possono leggere gli operatori (dati condivisi), ma solo l'admin può modificare
-- Le credenziali sensibili sono accessibili solo via Edge Function (service role)
-
-## Cosa NON cambia
-- I dati (partners, contatti, email scaricate) restano condivisi e visibili a tutti
-- La struttura delle tabelle esistenti non viene toccata
-- Il sistema di categorie/prompt appena creato funziona normalmente
