@@ -848,7 +848,13 @@ Deno.serve(async (req) => {
 
                   // For small images: data URI (no Storage dependency)
                   if (decoded.length <= INLINE_DATA_URI_THRESHOLD) {
-                    const b64 = btoa(String.fromCharCode(...decoded));
+                    // Safe base64 encoding without spread operator (avoids stack overflow)
+                    let b64 = "";
+                    const CHUNK = 8192;
+                    for (let i = 0; i < decoded.length; i += CHUNK) {
+                      b64 += String.fromCharCode(...decoded.subarray(i, Math.min(i + CHUNK, decoded.length)));
+                    }
+                    b64 = btoa(b64);
                     const dataUri = `data:${contentType};base64,${b64}`;
                     attachmentRecords.push({
                       cid: part.contentId, publicUrl: dataUri, filename,
