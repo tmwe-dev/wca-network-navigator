@@ -249,7 +249,7 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
           Da: {email.from} — {formatTime(email.date)}
         </div>
       </div>
-      <div className="border border-t-0 border-border rounded-b-lg <div className="border border-t-0 border-border rounded-b-lg overflow-y-auto bg-white" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>
+      <div className="border border-t-0 border-border rounded-b-lg overflow-y-auto bg-white" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
