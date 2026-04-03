@@ -6,7 +6,9 @@
 var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
 var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
-// ── Safe tab create/remove with retry for "cannot be edited" errors ──
+// ── Persistent LinkedIn tab — reused across all operations ──
+var _liTabId = null;
+
 async function safeTabCreate(options, maxRetries) {
   maxRetries = maxRetries || 3;
   for (var attempt = 0; attempt < maxRetries; attempt++) {
@@ -23,7 +25,32 @@ async function safeTabCreate(options, maxRetries) {
 }
 
 async function safeTabRemove(tabId) {
+  // Never remove the persistent LinkedIn tab
+  if (tabId === _liTabId) return;
   try { await chrome.tabs.remove(tabId); } catch (e) {}
+}
+
+// Get or create a single persistent LinkedIn tab, navigate it to `url`
+async function getLinkedInTab(url) {
+  // Check if existing tab is still alive
+  if (_liTabId !== null) {
+    try {
+      var existing = await chrome.tabs.get(_liTabId);
+      if (existing) {
+        // Navigate existing tab to new URL
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForTabLoad(_liTabId, 20000);
+        return { id: _liTabId };
+      }
+    } catch (_) {
+      _liTabId = null; // tab was closed by user
+    }
+  }
+  // Create new persistent tab
+  var tab = await safeTabCreate({ url: url, active: false });
+  _liTabId = tab.id;
+  await waitForTabLoad(tab.id, 20000);
+  return tab;
 }
 
 // ── Wait for tab to finish loading ──
