@@ -6,6 +6,7 @@ import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock,
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { CompanyLogo, extractDomainFromEmail } from "@/components/ui/CompanyLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -30,56 +31,7 @@ function formatTime(iso: string): string {
   } catch { return ""; }
 }
 
-/** Extract brand/company name from email address or display name */
-function extractSenderBrand(from: string): { brand: string; detail: string } {
-  if (!from) return { brand: "Sconosciuto", detail: "" };
-
-  // Try to get display name first: "John Doe <john@fedex.com>"
-  const displayMatch = from.match(/^"?([^"<]+)"?\s*<(.+)>/);
-  const displayName = displayMatch ? displayMatch[1].trim() : "";
-  const emailAddr = displayMatch ? displayMatch[2].trim() : from.trim();
-
-  // Extract domain from email
-  const domainMatch = emailAddr.match(/@([^>]+)/);
-  const domain = domainMatch ? domainMatch[1].toLowerCase() : "";
-
-  // Known personal email providers
-  const personalProviders = new Set([
-    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
-    "icloud.com", "me.com", "mac.com", "aol.com", "protonmail.com",
-    "fastmail.com", "zoho.com", "mail.com", "yandex.com", "gmx.com",
-    "libero.it", "virgilio.it", "alice.it", "tin.it", "tiscali.it",
-    "yahoo.it", "hotmail.it", "outlook.it", "pec.it",
-  ]);
-
-  const isPersonal = personalProviders.has(domain);
-
-  if (isPersonal) {
-    // Personal email — show display name or local part
-    const localPart = emailAddr.split("@")[0] || "";
-    const name = displayName || localPart.replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    return { brand: name, detail: emailAddr };
-  }
-
-  // Business email — extract company name from domain
-  const domainParts = domain.split(".");
-  // Remove TLD(s) — handle .co.uk, .com.br etc.
-  let companySlug = domainParts[0];
-  if (domainParts.length > 2 && ["co", "com", "org", "net"].includes(domainParts[domainParts.length - 2])) {
-    companySlug = domainParts.slice(0, -2).join(".");
-  } else if (domainParts.length > 1) {
-    companySlug = domainParts.slice(0, -1).join(".");
-  }
-
-  // Capitalize brand name
-  const brand = companySlug
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
-
-  const detail = displayName ? `${displayName} — ${emailAddr}` : emailAddr;
-
-  return { brand, detail };
-}
+// extractSenderBrand is now imported from emailUtils
 
 export default function EmailDownloadPage() {
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({

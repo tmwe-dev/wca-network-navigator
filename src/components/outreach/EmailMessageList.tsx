@@ -1,8 +1,10 @@
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Mail, User, Building2 } from "lucide-react";
+import { Building2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 type Props = {
@@ -19,7 +21,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
       {messages.map(msg => {
         const isUnread = !msg.read_at;
         const isSelected = msg.id === selectedId;
-        const senderName = msg.raw_payload?.sender_name || msg.from_address || "Sconosciuto";
+        const { brand } = extractSenderBrand(msg.from_address || "");
         const displayDate = msg.email_date || msg.created_at;
 
         return (
@@ -32,12 +34,12 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
               isUnread && "bg-primary/5"
             )}
           >
-            <div className="flex items-start gap-2">
-              <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
+            <div className="flex items-start gap-2.5">
+              <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className={cn("text-sm truncate", isUnread ? "font-semibold" : "font-normal")}>
-                    {senderName}
+                  <span className={cn("text-sm truncate", isUnread ? "font-semibold text-primary" : "font-medium")}>
+                    {brand}
                   </span>
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">
                     {format(new Date(displayDate), "dd/MM HH:mm", { locale: it })}
@@ -53,7 +55,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, onLoadMore, h
               {isUnread && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
             </div>
             {msg.source_type && msg.source_type !== "unknown" && (
-              <div className="mt-1 ml-6">
+              <div className="mt-1 ml-9">
                 <Badge variant="outline" className="text-[9px] h-4 gap-0.5">
                   {msg.source_type === "partner" && <Building2 className="w-2.5 h-2.5" />}
                   {msg.source_type === "partner_contact" && <User className="w-2.5 h-2.5" />}
