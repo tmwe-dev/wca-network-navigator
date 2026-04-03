@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /** Extract domain from an email address string (handles "Name <email>" format) */
@@ -21,6 +21,13 @@ export function isPersonalEmail(domain: string): boolean {
   return PERSONAL_PROVIDERS.has(domain);
 }
 
+/**
+ * Global in-memory logo cache.
+ * Maps domain -> resolved source ("clearbit" | "google" | "none").
+ * Survives across re-renders and component instances within a session.
+ */
+const logoCache = new Map<string, "clearbit" | "google" | "none">();
+
 interface CompanyLogoProps {
   domain?: string | null;
   email?: string | null;
@@ -32,11 +39,23 @@ interface CompanyLogoProps {
 /**
  * Displays a company logo from Clearbit with Google Favicon fallback.
  * Shows initials as final fallback.
+ * Results are cached globally so each domain is resolved only once per session.
  */
 export function CompanyLogo({ domain: domainProp, email, name, size = 32, className }: CompanyLogoProps) {
-  const [src, setSrc] = useState<"clearbit" | "google" | "none">("clearbit");
-
   const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
+
+  // Start from cache if available, otherwise try clearbit first
+  const cached = domain ? logoCache.get(domain) : undefined;
+  const [src, setSrc] = useState<"clearbit" | "google" | "none">(cached || "clearbit");
+
+  // Sync with cache when domain changes
+  useEffect(() => {
+    if (domain) {
+      const c = logoCache.get(domain);
+      if (c) setSrc(c);
+      else setSrc("clearbit");
+    }
+  }, [domain]);
 
   if (!domain || isPersonalEmail(domain)) {
     return <InitialsAvatar name={name || domain || "?"} size={size} className={className} />;
@@ -49,6 +68,21 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
     return <InitialsAvatar name={name || domain} size={size} className={className} />;
   }
 
+  const handleError = () => {
+    if (src === "clearbit") {
+      setSrc("google");
+      // Don't cache yet — google might also fail
+    } else {
+      setSrc("none");
+      logoCache.set(domain, "none");
+    }
+  };
+
+  const handleLoad = () => {
+    // Cache the successful source so we never retry this domain
+    logoCache.set(domain, src);
+  };
+
   return (
     <img
       src={src === "clearbit" ? clearbitUrl : googleUrl}
@@ -56,10 +90,8 @@ export function CompanyLogo({ domain: domainProp, email, name, size = 32, classN
       width={size}
       height={size}
       className={cn("rounded object-contain bg-white", className)}
-      onError={() => {
-        if (src === "clearbit") setSrc("google");
-        else setSrc("none");
-      }}
+      onError={handleError}
+      onLoad={handleLoad}
       loading="lazy"
     />
   );
