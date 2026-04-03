@@ -409,9 +409,16 @@ async function readChatThread(contactName, maxMessages) {
   }
 }
 
-// ── Store config from webapp ──
+// ── Lifecycle: re-inject bridge after install/update/startup ──
 chrome.runtime.onInstalled.addListener(function() { syncBridgeAcrossOpenTabs().catch(function(){}); });
 chrome.runtime.onStartup.addListener(function() { syncBridgeAcrossOpenTabs().catch(function(){}); });
+
+// Re-inject bridge when app tabs finish loading (handles extension reload)
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  if (changeInfo.status === "complete" && tab.url && isAppUrl(tab.url)) {
+    injectBridgeIntoTab(tabId).catch(function(){});
+  }
+});
 
 // ── Message handler ──
 chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
