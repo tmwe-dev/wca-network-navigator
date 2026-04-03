@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
   Loader2,
@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -47,9 +46,30 @@ export function EmailInboxView() {
   const resetSync = useResetSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);
 
-  const inbound = messages.filter((message) => message.direction === "inbound");
-  const selectedMsg = selectedId ? inbound.find((message) => message.id === selectedId) ?? null : null;
+  const inbound = useMemo(
+    () => messages.filter((message) => message.direction === "inbound"),
+    [messages],
+  );
+  const selectedMsg = useMemo(
+    () => (selectedId ? inbound.find((message) => message.id === selectedId) ?? null : null),
+    [inbound, selectedId],
+  );
   const showSyncPanel = isSyncing || progress.status === "done" || progress.status === "error";
+
+  useEffect(() => {
+    if (inbound.length === 0) {
+      if (selectedId !== null) setSelectedId(null);
+      return;
+    }
+
+    const selectionStillExists = selectedId
+      ? inbound.some((message) => message.id === selectedId)
+      : false;
+
+    if (!selectionStillExists) {
+      setSelectedId(inbound[0].id);
+    }
+  }, [inbound, selectedId]);
 
   const handleSelect = (message: ChannelMessage) => {
     setSelectedId(message.id);

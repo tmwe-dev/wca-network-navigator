@@ -5,12 +5,13 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { User, Building2, Paperclip, Image, Users, Eye, Shield, ImageOff } from "lucide-react";
+import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Shield, User, Users } from "lucide-react";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMessageAttachments, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
@@ -24,18 +25,32 @@ type Props = {
   onClose: () => void;
 };
 
+function formatDisplayDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Data non disponibile";
+  }
+
+  return format(date, "dd MMM yyyy HH:mm", { locale: it });
+}
+
 export function EmailDetailView({ message, onClose }: Props) {
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
+  const { bodyHtml, bodyText, isLoading: isContentLoading, isError: isContentError } = useEmailMessageContent(message.id, {
+    bodyHtml: message.body_html,
+    bodyText: message.body_text,
+  });
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
   const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
   const normalizedContent = useMemo(
-    () => normalizeEmailContent({ bodyHtml: message.body_html, bodyText: message.body_text }),
-    [message.body_html, message.body_text],
+    () => normalizeEmailContent({ bodyHtml, bodyText }),
+    [bodyHtml, bodyText],
   );
+  const hasContent = Boolean(normalizedContent.bodyHtml || normalizedContent.bodyText);
 
   const sanitizedHtml = useMemo(() => {
     if (!normalizedContent.bodyHtml) return null;
@@ -102,7 +117,7 @@ export function EmailDetailView({ message, onClose }: Props) {
           <span>→</span>
           <span>{message.to_address}</span>
           <span>·</span>
-          <span>{format(new Date(displayDate), "dd MMM yyyy HH:mm", { locale: it })}</span>
+          <span>{formatDisplayDate(displayDate)}</span>
         </div>
 
         {message.cc_addresses && (
@@ -132,7 +147,18 @@ export function EmailDetailView({ message, onClose }: Props) {
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-4 p-4">
-          {sanitizedHtml ? (
+          {isContentError && (
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <AlertCircle className="mr-1 inline h-3.5 w-3.5" />
+              Contenuto caricato in modo parziale: sto mostrando la versione disponibile.
+            </div>
+          )}
+
+          {isContentLoading && !hasContent ? (
+            <div className="flex h-40 items-center justify-center rounded-md border border-border bg-background">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : sanitizedHtml ? (
             <EmailHtmlFrame html={sanitizedHtml} mode={viewMode} blockRemote={blockRemote} />
           ) : (
             <div className="rounded-md border border-border bg-background p-4 text-sm leading-relaxed text-foreground whitespace-pre-wrap">

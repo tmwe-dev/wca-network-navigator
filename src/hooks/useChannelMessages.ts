@@ -19,9 +19,9 @@ export type ChannelMessage = {
   cc_addresses: string | null;
   bcc_addresses: string | null;
   subject: string | null;
-  body_text: string | null;
-  body_html: string | null;
-  raw_payload: any;
+  body_text?: string | null;
+  body_html?: string | null;
+  raw_payload?: any;
   message_id_external: string | null;
   in_reply_to: string | null;
   read_at: string | null;
@@ -42,6 +42,37 @@ export type ChannelMessage = {
 
 const PAGE_SIZE = 50;
 
+const MESSAGE_LIST_SELECT = [
+  "id",
+  "user_id",
+  "channel",
+  "direction",
+  "source_type",
+  "source_id",
+  "partner_id",
+  "from_address",
+  "to_address",
+  "cc_addresses",
+  "bcc_addresses",
+  "subject",
+  "message_id_external",
+  "in_reply_to",
+  "read_at",
+  "created_at",
+  "email_date",
+  "raw_storage_path",
+  "raw_sha256",
+  "raw_size_bytes",
+  "imap_uid",
+  "uidvalidity",
+  "imap_flags",
+  "internal_date",
+  "parse_status",
+  "parse_warnings",
+  "thread_id",
+  "references_header",
+].join(", ");
+
 export function useChannelMessages(channel?: string, searchQuery?: string) {
   const queryClient = useQueryClient();
 
@@ -50,7 +81,7 @@ export function useChannelMessages(channel?: string, searchQuery?: string) {
     queryFn: async ({ pageParam = 0 }) => {
       let q = supabase
         .from("channel_messages")
-        .select("*")
+        .select(MESSAGE_LIST_SELECT)
         .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
