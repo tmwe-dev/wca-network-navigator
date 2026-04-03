@@ -18,6 +18,8 @@ export interface DownloadedEmail {
 
 export interface BgSyncProgress {
   downloaded: number;
+  skipped: number;
+  remaining: number;
   batch: number;
   lastSubject: string;
   status: "idle" | "syncing" | "done" | "error";
