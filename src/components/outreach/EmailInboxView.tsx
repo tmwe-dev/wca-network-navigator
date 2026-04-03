@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   RefreshCw, Loader2, Search, Inbox, Download, Square,
 } from "lucide-react";
