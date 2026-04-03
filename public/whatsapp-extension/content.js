@@ -40,9 +40,11 @@
     }
 
     try {
-      var msg = { source: "wa-content-bridge", action: data.action };
+    var msg = { source: "wa-content-bridge", action: data.action };
       if (data.phone) msg.phone = data.phone;
       if (data.text) msg.text = data.text;
+      if (data.contact) msg.contact = data.contact;
+      if (data.maxMessages) msg.maxMessages = data.maxMessages;
 
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {

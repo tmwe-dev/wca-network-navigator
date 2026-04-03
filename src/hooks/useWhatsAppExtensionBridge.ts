@@ -85,5 +85,11 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread };
+  const readThread = useCallback(
+    (contact: string, maxMessages = 50) =>
+      sendMsg("readThread", { contact, maxMessages }, 45000),
+    [sendMsg]
+  );
+
+  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread };
 }
