@@ -135,7 +135,7 @@ export function EmailDetailView({ message, onClose }: Props) {
 
       <ScrollArea className="flex-1 p-4">
         {sanitizedHtml ? (
-          <EmailHtmlFrame html={sanitizedHtml} mode={viewMode} blockRemote={blockRemote} />
+          <EmailHtmlFrame html={sanitizedHtml} mode={viewMode} blockRemote={blockRemote} cidMap={cidMap} />
         ) : (
           <div className="bg-background text-foreground rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed border border-border">
             {message.body_text || "(corpo vuoto)"}
