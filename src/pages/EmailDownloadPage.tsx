@@ -6,6 +6,7 @@ import { Download, Square, RotateCcw, Loader2, CheckCircle2, AlertCircle, Clock,
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailCount } from "@/hooks/useEmailCount";
@@ -207,9 +208,38 @@ export default function EmailDownloadPage() {
   );
 }
 
-/** Email preview rendered as a slide/card */
+/** Email preview rendered as a slide/card — loads full body from DB */
 function EmailSlide({ email }: { email: DownloadedEmail }) {
-  const htmlContent = email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
+  const [fullHtml, setFullHtml] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFullHtml(null);
+
+    supabase
+      .from("channel_messages")
+      .select("body_html, body_text")
+      .eq("id", email.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.body_html) {
+          setFullHtml(data.body_html);
+        } else if (data?.body_text) {
+          setFullHtml(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${data.body_text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
+        } else {
+          // Fallback to truncated data from sync
+          setFullHtml(email.bodyHtml || `<pre style="font-family:sans-serif;white-space:pre-wrap;padding:20px;color:#333;">${(email.bodyText || "(nessun contenuto)").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`);
+        }
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [email.id]);
+
+  const htmlContent = fullHtml || email.bodyHtml || `<p style="padding:20px;color:#999;">Caricamento...</p>`;
 
   return (
     <div className="w-full max-w-3xl animate-scale-in">
@@ -220,7 +250,13 @@ function EmailSlide({ email }: { email: DownloadedEmail }) {
         </div>
       </div>
       <div className="border border-t-0 border-border rounded-b-lg overflow-hidden bg-white" style={{ height: "calc(100vh - 260px)", minHeight: 300 }}>
-        <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} />
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <EmailHtmlFrame html={htmlContent} mode="faithful" blockRemote={false} />
+        )}
       </div>
     </div>
   );
