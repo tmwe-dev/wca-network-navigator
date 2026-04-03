@@ -1,1 +1,0 @@
-ALTER TABLE public.email_attachments ADD CONSTRAINT email_attachments_message_id_filename_key UNIQUE (message_id, filename);
