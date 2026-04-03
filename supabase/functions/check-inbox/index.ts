@@ -347,7 +347,11 @@ function collectMimeLeafParts(part: any, path: string = ""): MimeLeafPart[] {
   const isTextBody = type === "text" && (subtype === "plain" || subtype === "html") &&
     dispositionType !== "attachment" && !filename;
 
-  const isInlineImage = type === "image" && !!contentId && dispositionType !== "attachment";
+  // Inline image: has Content-ID, OR has inline disposition and is an image
+  const isInlineImage = type === "image" && (
+    (!!contentId && dispositionType !== "attachment") ||
+    (dispositionType === "inline")
+  );
 
   return [{
     section, type, subtype, encoding, charset, contentId, dispositionType,
