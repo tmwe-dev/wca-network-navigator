@@ -1,36 +1,33 @@
 
+## Architettura Polling Adattivo WhatsApp
 
-## Problema: Download lentissimo
+### Livelli di Attenzione
 
-Il collo di bottiglia principale è in `useContinuousSync.ts`:
+| Livello | Nome | Intervallo | Cosa fa | Quando |
+|---------|------|-----------|---------|--------|
+| 0 | Idle | 60-90s | Sidebar scan (lista chat) | Nessuna attività |
+| 3 | Alert | 10-20s | Sidebar scan rapido | Nuovo messaggio rilevato |
+| 6 | Conversazione | 3-5s | Thread scan chat attiva | Risposta ricevuta in chat attiva |
 
-```
-if (p.status === "syncing" || p.status === "done") {
-  queryClient.invalidateQueries({ queryKey: ["channel-messages"] });  // ← QUI
-  queryClient.invalidateQueries({ queryKey: ["email-count"] });
-}
-```
+### Logica di Escalation/De-escalation
 
-Questo viene chiamato **ad ogni batch** (ogni singola email scaricata). Siccome `channel-messages` è la query paginata principale, ogni invalidazione forza un re-fetch completo dal database. Con centinaia di email, il browser passa più tempo a ri-interrogare il DB che a scaricare.
+- **0 → 3**: Sidebar scan rileva nuovo messaggio non letto
+- **3 → 6**: La chat su cui ci si concentra riceve una risposta entro 30s
+- **6 → 3**: Nessuna nuova risposta per 60s nella chat attiva
+- **3 → 0**: Nessun nuovo messaggio per 3 minuti
+- **Focus singola chat**: Una sola conversazione attiva alla volta; le altre aspettano in coda
 
-Inoltre il realtime in `useChannelMessages.ts` e `useDownloadedEmailsFeed.ts` già aggiunge le nuove righe nella cache locale — quindi l'invalidazione è **doppia e ridondante**.
+### DOM Learning (ogni 3h)
 
-## Piano di fix
+- Una chiamata AI ogni 3 ore per "imparare" la struttura DOM di WhatsApp Web
+- Il risultato (selettori CSS per sidebar, messaggi, input, badge) viene salvato in `app_settings` con chiave `wa_dom_schema`
+- Le letture successive usano i selettori cached → **zero chiamate AI per lo scraping normale**
+- Se un selettore fallisce → trigger di ri-apprendimento immediato
 
-### 1. Rimuovere invalidateQueries da useContinuousSync durante il syncing
-- Durante `status === "syncing"`, il realtime già gestisce l'aggiornamento della lista
-- Invalidare solo a `"done"` (fine sync) e `"error"`
-- File: `src/hooks/useContinuousSync.ts`
+### Implementazione
 
-### 2. Throttle email-count invalidation
-- Invalidare `email-count` al massimo ogni 30 secondi durante il sync, non ad ogni batch
-- File: `src/hooks/useContinuousSync.ts`
-
-### 3. Rimuovere invalidateQueries da useCheckInbox
-- Stessa logica: il realtime copre già gli aggiornamenti
-- File: `src/hooks/useEmailSync.ts`
-
-### File modificati
-- `src/hooks/useContinuousSync.ts` — rimuovere invalidazioni durante syncing
-- `src/hooks/useEmailSync.ts` — rimuovere invalidazioni ridondanti dal mutation onSuccess
-
+1. **Creare `useWhatsAppAdaptiveSync` hook** — gestisce i livelli, escalation/de-escalation, timer adattivi
+2. **Aggiungere `focusChat` al bridge** — comando per aprire e monitorare una chat specifica
+3. **Aggiungere `learnDom` al bridge** — scansione AI della struttura DOM, salva selettori
+4. **Aggiornare background.js** — supporto comandi `focusChat`, `learnDom`, `readThread` con selettori cached
+5. **Aggiornare la UI WhatsApp** — mostrare il livello corrente e la chat in focus
