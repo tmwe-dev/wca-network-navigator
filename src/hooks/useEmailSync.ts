@@ -40,8 +40,7 @@ export function useCheckInbox() {
   return useMutation({
     mutationFn: callCheckInbox,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["channel-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+      // Realtime handles list updates; only refresh count
       queryClient.invalidateQueries({ queryKey: ["email-count"] });
 
       if (data.total > 0) {
