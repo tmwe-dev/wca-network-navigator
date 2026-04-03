@@ -13,6 +13,7 @@ import {
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { useWcaSession } from "@/hooks/useWcaSession";
 import BlacklistManager from "@/components/settings/BlacklistManager";
@@ -224,12 +225,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                   ⚙️ Setup avanzato (estensione Chrome)
                 </summary>
                 <div className="mt-2 space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                  <Button variant="outline" size="sm" onClick={() => {
-                    fetch("/whatsapp-extension.zip")
-                      .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                      .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "whatsapp-extension.zip"; a.click(); URL.revokeObjectURL(a.href); })
-                      .catch(() => toast.error("File non disponibile"));
-                  }}>
+                  <Button variant="outline" size="sm" onClick={downloadWhatsAppExtensionZip}>
                     <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica Estensione
                   </Button>
                   <ol className="text-[11px] text-muted-foreground list-decimal list-inside space-y-0.5">
@@ -371,12 +367,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
                   <p className="text-xs text-muted-foreground">Invio automatico messaggi WhatsApp</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => {
-                fetch("/whatsapp-extension.zip")
-                  .then(r => { if (!r.ok) throw new Error("Download failed"); return r.blob(); })
-                  .then(blob => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "whatsapp-extension.zip"; a.click(); URL.revokeObjectURL(a.href); toast.success("WhatsApp extension scaricata!"); })
-                  .catch(() => toast.error("File non disponibile — pacchettizzazione necessaria"));
-              }}>
+              <Button variant="outline" size="sm" onClick={downloadWhatsAppExtensionZip}>
                 <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica ZIP
               </Button>
             </div>
