@@ -783,7 +783,7 @@ Deno.serve(async (req) => {
           /* ─── Phase 2b: Fallback to raw headers ─── */
           if (!fromAddr || fromAddr === "@" || fromAddr === "sconosciuto@unknown") {
             try {
-              const hdrCmd = `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO)])`;
+              const hdrCmd = `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)])`;
               const hdrResponse = await (client as any).executeCommand(hdrCmd);
               const rawHeaders = extractLiteralTextFromResponse(hdrResponse);
               if (rawHeaders) {
