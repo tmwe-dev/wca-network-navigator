@@ -494,6 +494,22 @@ function parseEmailFromHeader(header: string): string {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   Threading — compute thread_id from References/In-Reply-To
+   ══════════════════════════════════════════════════════════════ */
+
+function computeThreadId(messageId: string, inReplyTo: string | null, references: string | null): string {
+  // The thread root is the first Message-ID in the References header (RFC 5322 §3.6.4)
+  if (references) {
+    const refs = references.match(/[^\s<>]+@[^\s<>]+/g);
+    if (refs && refs.length > 0) return refs[0];
+  }
+  // Fallback: use In-Reply-To as thread root
+  if (inReplyTo) return inReplyTo.replace(/[<>]/g, "");
+  // No threading info: this message is its own thread root
+  return messageId;
+}
+
+/* ══════════════════════════════════════════════════════════════
    RFC 2046 — Multipart MIME parser for RFC822.TEXT fallback
    ══════════════════════════════════════════════════════════════ */
 
