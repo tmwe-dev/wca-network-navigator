@@ -1019,16 +1019,53 @@ Deno.serve(async (req) => {
 
           if (parts.length === 0 && !isOversized) {
             try {
+              // First, get the Content-Type header to find boundary (not included in BODY[TEXT])
+              let mainBoundary = "";
+              try {
+                const ctHdrCmd = `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)])`;
+                const ctHdrResp = await (client as any).executeCommand(ctHdrCmd);
+                const ctHdrText = extractLiteralTextFromResponse(ctHdrResp);
+                const bndMatch = ctHdrText?.match(/boundary="?([^\s";\r\n]+)"?/i);
+                if (bndMatch) mainBoundary = bndMatch[1];
+              } catch { /* ignore */ }
+
               const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
               const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
               const textBytes = extractLiteralBytesFromResponse(rfc822Response);
               const textStr = new TextDecoder("utf-8", { fatal: false }).decode(textBytes);
 
               if (textStr && textStr.length > 5) {
-                const parsed = parseMultipartFallback(textBytes, textStr);
+                // Inject the boundary from header if TEXT doesn't contain it
+                let parseInput = textStr;
+                if (mainBoundary && !textStr.includes(`boundary`)) {
+                  parseInput = `Content-Type: multipart/mixed; boundary="${mainBoundary}"\r\n\r\n` + textStr;
+                }
+
+                const parsed = parseMultipartFallback(new TextEncoder().encode(parseInput), parseInput);
                 if (parsed.html) bodyHtml = parsed.html.slice(0, 100_000);
                 if (parsed.text) bodyText = parsed.text.slice(0, 50_000);
-                if (!bodyHtml && !bodyText) bodyText = textStr.slice(0, 50_000);
+
+                // Only use raw text as fallback if it doesn't look like raw MIME source
+                if (!bodyHtml && !bodyText) {
+                  const looksLikeRawMime = textStr.match(/^--[\w_=-]+\s*\r?\nContent-Type:/im) ||
+                    textStr.match(/Content-Transfer-Encoding:\s*(quoted-printable|base64)/im);
+                  if (looksLikeRawMime) {
+                    // Try harder: split by the boundary we found in the text itself
+                    const inlineBndMatch = textStr.match(/^--([\w_=+/-]+)\s*$/m);
+                    if (inlineBndMatch) {
+                      const retryInput = `Content-Type: multipart/mixed; boundary="${inlineBndMatch[1]}"\r\n\r\n` + textStr;
+                      const retry = parseMultipartFallback(new TextEncoder().encode(retryInput), retryInput);
+                      if (retry.html) bodyHtml = retry.html.slice(0, 100_000);
+                      if (retry.text) bodyText = retry.text.slice(0, 50_000);
+                    }
+                    if (!bodyHtml && !bodyText) {
+                      bodyText = "⚠️ Contenuto MIME complesso — parsing parziale non riuscito. Consultare il messaggio originale.";
+                      parseWarnings.push("raw MIME detected but could not extract body parts");
+                    }
+                  } else {
+                    bodyText = textStr.slice(0, 50_000);
+                  }
+                }
 
                 // Process inline images from fallback parser
                 for (const img of parsed.inlineImages) {

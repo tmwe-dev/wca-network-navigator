@@ -25,7 +25,7 @@ type Props = {
 export function EmailDetailView({ message, onClose }: Props) {
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
-  const [blockRemote, setBlockRemote] = useState(true);
+  const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
