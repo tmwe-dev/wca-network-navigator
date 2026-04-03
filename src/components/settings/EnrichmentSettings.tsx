@@ -316,6 +316,7 @@ export default function EnrichmentSettings() {
             <SelectItem value="wca">WCA Partner</SelectItem>
             <SelectItem value="contacts">Contatti Importati</SelectItem>
             <SelectItem value="email">Mittenti Email</SelectItem>
+            <SelectItem value="cockpit">Cockpit</SelectItem>
           </SelectContent>
         </Select>
       </div>
