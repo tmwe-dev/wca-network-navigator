@@ -1,12 +1,12 @@
 // ══════════════════════════════════════════════
 // WhatsApp Direct Send - Content Script Bridge
-// Self-healing: re-injects when extension reloads
+// Self-healing: reconnects when service worker restarts
 // ══════════════════════════════════════════════
 
 (function () {
-  // Allow re-injection after extension reload
-  var HEARTBEAT_MS = 3000;
+  var HEARTBEAT_MS = 2500;
   var alive = false;
+  var reconnectAttempts = 0;
 
   function isExtensionAlive() {
     try {
@@ -32,9 +32,39 @@
     });
   }
 
+  // Wake up service worker by sending a ping
+  function wakeServiceWorker() {
+    try {
+      chrome.runtime.sendMessage({ source: "wa-content-bridge", action: "ping" }, function(resp) {
+        if (chrome.runtime.lastError) {
+          alive = false;
+          return;
+        }
+        if (resp && resp.success) {
+          alive = true;
+          reconnectAttempts = 0;
+          post({ direction: "from-extension-wa", action: "contentScriptReady" });
+        }
+      });
+    } catch (_) {
+      alive = false;
+    }
+  }
+
   function relayMessage(data) {
     if (!isExtensionAlive()) {
       alive = false;
+      // Try to wake the service worker instead of immediately failing
+      reconnectAttempts++;
+      if (reconnectAttempts <= 3) {
+        wakeServiceWorker();
+        // Retry relay after a short delay
+        setTimeout(function() {
+          if (alive) relayMessage(data);
+          else failResponse(data, "Extension context invalidated — ricarica la pagina");
+        }, 1000);
+        return;
+      }
       failResponse(data, "Extension context invalidated — ricarica la pagina");
       post({ direction: "from-extension-wa", action: "extensionDead" });
       return;
@@ -54,12 +84,33 @@
         if (chrome.runtime.lastError) {
           alive = false;
           console.warn("[WA Content] Extension error:", chrome.runtime.lastError.message);
-          failResponse(data, "Extension context invalidated — prova a ricaricare la pagina");
-          post({ direction: "from-extension-wa", action: "extensionDead" });
+          // Don't immediately fail - try to wake the worker
+          wakeServiceWorker();
+          setTimeout(function() {
+            if (alive) {
+              // Retry the relay
+              chrome.runtime.sendMessage(msg, function(retryResp) {
+                if (chrome.runtime.lastError) {
+                  failResponse(data, "Extension non raggiungibile dopo retry");
+                  return;
+                }
+                post({
+                  direction: "from-extension-wa",
+                  action: data.action,
+                  requestId: data.requestId,
+                  response: retryResp || { success: false, error: "No response" },
+                });
+              });
+            } else {
+              failResponse(data, "Extension context invalidated — ricarica la pagina");
+              post({ direction: "from-extension-wa", action: "extensionDead" });
+            }
+          }, 1500);
           return;
         }
 
         alive = true;
+        reconnectAttempts = 0;
         post({
           direction: "from-extension-wa",
           action: data.action,
@@ -79,18 +130,14 @@
     }
   }
 
-  // Heartbeat: detect extension reload and re-announce
+  // Heartbeat: proactively wake service worker
   setInterval(function () {
     var nowAlive = isExtensionAlive();
-    if (nowAlive && !alive) {
-      alive = true;
-      // Re-mark as active so new injection is accepted
-      globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = true;
-      post({ direction: "from-extension-wa", action: "contentScriptReady" });
-      console.info("[WA Content] Extension reconnected");
-    } else if (!nowAlive && alive) {
+    if (nowAlive) {
+      // Proactively wake the service worker to keep it alive
+      wakeServiceWorker();
+    } else if (alive) {
       alive = false;
-      // Clear the flag so a fresh injection can take over
       globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = false;
       post({ direction: "from-extension-wa", action: "extensionDead" });
       console.warn("[WA Content] Extension context lost");
@@ -112,9 +159,9 @@
   window.addEventListener("message", globalThis.__WA_MSG_LISTENER__);
   globalThis.__WA_EXTENSION_BRIDGE_ACTIVE__ = true;
 
-  // Initial check
+  // Initial check + wake
   alive = isExtensionAlive();
   if (alive) {
-    post({ direction: "from-extension-wa", action: "contentScriptReady" });
+    wakeServiceWorker();
   }
 })();
