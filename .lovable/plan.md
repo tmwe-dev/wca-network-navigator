@@ -1,19 +1,23 @@
 
 
-# Piano: Usare EmailHtmlFrame standard nella pagina Download
+# Piano: Aggiungere scroll al container preview email
 
 ## Problema
-La pagina EmailDownloadPage usa un iframe custom semplificato per il rendering delle email, che non gestisce correttamente immagini, stili e layout complessi. Il componente standard `EmailHtmlFrame` già usato nella vista email normale gestisce tutto correttamente (mode faithful/safe, blocco immagini remote, responsive, etc.).
+Il container della preview email ha `overflow-hidden` e un'altezza fissa (`calc(100vh - 260px)`). L'iframe `EmailHtmlFrame` si auto-ridimensiona all'altezza completa dell'email, ma il container lo taglia. Se l'email inizia con un'immagine grande, il testo sotto viene nascosto.
 
 ## Soluzione
-Sostituire il componente `EmailSlide` interno con l'uso di `EmailHtmlFrame` dal modulo standard.
+Cambiare `overflow-hidden` in `overflow-y-auto` nel div container della preview in `EmailSlide`, così l'utente può scrollare per vedere tutto il contenuto dell'email.
 
-### File: `src/pages/EmailDownloadPage.tsx`
+### File: `src/pages/EmailDownloadPage.tsx` (riga 252)
 
-1. Importare `EmailHtmlFrame` da `@/components/outreach/email/EmailHtmlFrame`
-2. Riscrivere `EmailSlide` per usare `EmailHtmlFrame` con `mode="faithful"` e `blockRemote={false}` invece dell'iframe custom
-3. Rimuovere la logica iframe manuale e la funzione `escapeHtml` (non più necessaria)
-4. Se `bodyHtml` è assente, fare fallback su un semplice `<pre>` con `bodyText`
+Sostituire:
+```
+overflow-hidden
+```
+con:
+```
+overflow-y-auto
+```
 
-Il componente `EmailHtmlFrame` gestisce già: auto-resize, stili base, max-width immagini, table responsive, e rendering fedele del layout originale dell'email.
+Una modifica di una parola che abilita lo scroll verticale nel riquadro di anteprima.
 
