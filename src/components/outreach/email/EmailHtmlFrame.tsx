@@ -1,6 +1,7 @@
 /**
  * Sandboxed iframe for rendering email HTML content.
  * Supports two modes: "faithful" (original) and "safe" (normalized white bg).
+ * Resolves cid: references using an optional cidMap.
  */
 
 import { useRef, useEffect } from "react";
@@ -10,9 +11,21 @@ type Props = {
   html: string;
   mode: "faithful" | "safe";
   blockRemote: boolean;
+  /** Map of Content-ID → public URL for resolving cid: references */
+  cidMap?: Record<string, string>;
 };
 
-export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
+function resolveCidReferences(html: string, cidMap: Record<string, string>): string {
+  if (!cidMap || Object.keys(cidMap).length === 0) return html;
+  let result = html;
+  for (const [cid, url] of Object.entries(cidMap)) {
+    const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`cid:${escapedCid}`, 'gi'), url);
+  }
+  return result;
+}
+
+export function EmailHtmlFrame({ html, mode, blockRemote, cidMap }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -22,6 +35,7 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
     if (!doc) return;
 
     let processedHtml = html;
+    if (cidMap) processedHtml = resolveCidReferences(processedHtml, cidMap);
     if (blockRemote) processedHtml = blockRemoteImages(processedHtml);
 
     const baseStyles = mode === "safe" ? `
@@ -111,7 +125,7 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
       clearTimeout(t4);
       clearTimeout(t5);
     };
-  }, [html, mode, blockRemote]);
+  }, [html, mode, blockRemote, cidMap]);
 
   return (
     <iframe
