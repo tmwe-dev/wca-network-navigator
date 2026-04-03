@@ -1056,6 +1056,19 @@ Deno.serve(async (req) => {
             parts = [];
           }
 
+          // For oversized messages with no body parts, add placeholder
+          if (parts.length === 0 && isOversized) {
+            const sizeMB = (rfc822Size / (1024 * 1024)).toFixed(1);
+            bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Solo oggetto e metadati sono stati salvati. Gli allegati non sono stati scaricati.`;
+            bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif">
+              <strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/>
+              <p>Questo messaggio supera il limite di ${(MAX_RAW_FETCH_BYTES / (1024*1024)).toFixed(0)} MB per il download completo.</p>
+              <p>Sono stati salvati solo: oggetto, mittente, destinatari e data.</p>
+              <p>Allegati e corpo completo non sono disponibili.</p>
+            </div>`;
+            parseWarnings.push(`oversized message (${sizeMB}MB) — body/attachments skipped`);
+          }
+
           /* ─── Phase 3b: Fetch each MIME part ─── */
           for (const part of parts) {
             if (part.isInlineBody) {
