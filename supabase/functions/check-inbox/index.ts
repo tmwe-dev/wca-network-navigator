@@ -1144,7 +1144,7 @@ Deno.serve(async (req) => {
                   const decoded: Uint8Array = decodeAttachment(imgRawBytes, part.encoding);
                   const contentType = `${part.type}/${part.subtype}`;
                   const ext = part.subtype === "jpeg" ? "jpg" : part.subtype;
-                  const filename = sanitizeFilename(part.filename || `inline_${part.contentId}.${ext}`);
+                  const filename = sanitizeFilename(part.filename || `inline_${effectiveCid}.${ext}`);
 
                   // For small images: data URI (no Storage dependency)
                   if (decoded.length <= INLINE_DATA_URI_THRESHOLD) {
