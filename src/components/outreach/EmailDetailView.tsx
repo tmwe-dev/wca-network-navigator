@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { useMessageAttachments, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { supabase } from "@/integrations/supabase/client";
-import { decodeRfc2047 } from "./email/emailUtils";
+import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";
 import { EmailHtmlFrame } from "./email/EmailHtmlFrame";
 import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 
 type Props = {
   message: ChannelMessage;
@@ -29,7 +30,7 @@ export function EmailDetailView({ message, onClose }: Props) {
   const displayDate = message.email_date || message.created_at;
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
-  const decodedSender = useMemo(() => decodeRfc2047(message.raw_payload?.sender_name || message.from_address || ""), [message.raw_payload?.sender_name, message.from_address]);
+  const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
 
   const sanitizedHtml = useMemo(() => {
     if (!message.body_html) return null;
@@ -59,11 +60,17 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      {/* Header */}
+      {/* Header with logo */}
       <div className="flex-shrink-0 p-4 border-b border-border space-y-1">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold truncate">{decodedSubject}</h3>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-bold text-primary truncate">{brand}</div>
+              <h3 className="text-sm font-semibold truncate">{decodedSubject}</h3>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button size="sm" variant={blockRemote ? "secondary" : "ghost"}
               onClick={() => setBlockRemote(!blockRemote)} className="text-xs gap-1 h-7 px-2"
               title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}>
@@ -82,15 +89,15 @@ export function EmailDetailView({ message, onClose }: Props) {
             <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Chiudi</Button>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-          <span className="font-medium text-foreground">{decodedSender}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap ml-12">
+          <span className="font-medium text-foreground">{senderDetail || message.from_address}</span>
           <span>→</span>
           <span>{message.to_address}</span>
           <span>·</span>
           <span>{format(new Date(displayDate), "dd MMM yyyy HH:mm", { locale: it })}</span>
         </div>
         {message.cc_addresses && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground ml-12">
             <Users className="w-3 h-3" />
             <span className="font-medium">CC:</span>
             <span className="truncate">{message.cc_addresses}</span>
@@ -98,16 +105,16 @@ export function EmailDetailView({ message, onClose }: Props) {
         )}
         {blockRemote && sanitizedHtml && message.body_html?.match(/https?:\/\//i) && (
           <button onClick={() => setBlockRemote(false)}
-            className="flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 transition-colors">
+            className="flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 transition-colors ml-12">
             <ImageOff className="w-3 h-3" />
             Immagini remote bloccate — clicca per caricare
           </button>
         )}
         <EmailTechnicalHeaders message={message} />
         {message.source_type && message.source_type !== "unknown" && (
-          <Badge variant="secondary" className="text-xs gap-1">
+          <Badge variant="secondary" className="text-xs gap-1 ml-12">
             {message.source_type === "partner" ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
-            Associato: {decodedSender}
+            Associato: {brand}
           </Badge>
         )}
       </div>
