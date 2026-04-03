@@ -401,10 +401,10 @@ Deno.serve(async (req) => {
           let messageId = `uid_${uid}_${Date.now()}`;
           let date = "";
           let inReplyTo: string | null = null;
+          let bodyStructure: any = null;
 
           try {
             // Try fetching envelope + bodyStructure together
-            let bodyStructure: any = null;
             const envFetch = await client.fetch(String(uid), {
               byUid: true,
               uid: true,
