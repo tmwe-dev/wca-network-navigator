@@ -1,63 +1,79 @@
 
+Sì, possiamo andare avanti. Ho ricontrollato i file principali delle mail e la strada giusta è un refactor mirato, non un altro patch veloce: così sistemiamo layout, leggibilità e codice duplicato senza rompere di nuovo il download.
 
-# Piano: Rendere il download email robusto e visibile
+Obiettivi
+- nuove mail in alto, non in fondo
+- lista e preview che scorrono dentro i loro container, non l’intera pagina
+- recupero delle mail oggi illeggibili senza obbligare reset/cancellazioni
+- pulizia del codice duplicato che oggi aumenta il rischio di regressioni
 
-## Problemi identificati
+Problemi trovati
+- `src/pages/Settings.tsx`: il tab download resta dentro un wrapper `max-w-4xl` con `overflow-auto`, quindi non è davvero full-width/full-height e la pagina madre può continuare ad allungarsi.
+- `src/pages/EmailDownloadPage.tsx`: le nuove mail vengono aggiunte in fondo (`setEmails(prev => [...prev, e])`) e la UI fa auto-scroll in basso con `listEndRef.scrollIntoView(...)`. È il contrario di ciò che serve.
+- `EmailDownloadPage` usa `selectedIdx`: appena cambiamo l’ordine della lista, la selezione diventa fragile.
+- `src/lib/backgroundSync.ts`: la history in memoria viene accumulata in ordine crescente, quindi anche rientrando nella pagina si rischia di mantenere l’ordine sbagliato.
+- `src/components/outreach/EmailInboxView.tsx` e `EmailDetailView.tsx`: il pattern di containment/scroll non è normalizzato ovunque (`min-h-0`, `overflow-hidden`, scroll solo locale), quindi alcuni layout possono ancora spingere in basso la pagina.
+- `src/hooks/useEmailSync.ts` contiene ancora una vecchia `useContinuousSync`, mentre la versione nuova sta in `src/hooks/useContinuousSync.ts`: è codice morto/pericoloso.
+- `supabase/functions/check-inbox/index.ts` è molto lungo e oggi non ha un passaggio condiviso di normalizzazione finale del body: per questo alcune mail finiscono ancora come blob base64/encoded HTML invece che come HTML leggibile.
+- La fallback MIME parser gestisce bene molti casi, ma non copre ancora in modo robusto alcuni body HTML annidati / encoded / immagini inline problematiche.
 
-1. **Il download sembra fermo**: Quando le email sono duplicate (già nel DB), la funzione ritorna `total: 0` e nessun messaggio. La UI non mostra nulla, il contatore non avanza → sembra bloccato.
+Piano di implementazione
+1. Contenimento layout
+- Separare il layout del tab “Download Email” dagli altri tab di Settings.
+- Rendere il download tab full-bleed: niente `max-w-4xl`, niente scroll della pagina padre.
+- Applicare `min-h-0` / `overflow-hidden` ai contenitori chiave.
+- Consentire scroll solo in:
+  - lista mail a sinistra
+  - corpo preview a destra
 
-2. **Si ferma dopo 3 errori consecutivi**: `MAX_RETRIES = 3` è troppo basso per un sync di 3600+ email. Un timeout di rete o un errore transitorio uccide l'intero processo.
+2. Ordine corretto della live list
+- Cambiare la live subscription e la history locale in ordine newest-first.
+- Prepend delle nuove mail in alto invece di append in basso.
+- Sostituire `selectedIdx` con `selectedEmailId` per evitare salti/bug quando arrivano nuovi elementi.
+- Eliminare l’auto-scroll al fondo; se serve, mantenere focus/preview sul messaggio corretto senza far “scendere” l’interfaccia.
 
-3. **Nessun feedback per i duplicati**: L'utente non vede che il sistema sta saltando email già scaricate — sembra morto.
+3. Recupero leggibilità delle mail già salvate
+- Introdurre una utility condivisa di normalizzazione contenuto email usata sia nella preview standard sia nella pagina download.
+- Euristiche previste:
+  - se il body sembra base64, decodifica una volta
+  - se sembra quoted-printable o raw MIME, decodifica una volta
+  - se contiene HTML entity/markup codificato, normalizza prima del render
+- Questo permette di migliorare anche mail già presenti nel database, senza doverle cancellare o riscaricare.
 
-## Soluzione
+4. Hardening parser per i nuovi download
+- Aggiungere la stessa normalizzazione finale dentro `check-inbox` prima del salvataggio.
+- Rafforzare il fallback multipart per casi `text/html` annidati, body encoded e immagini inline non lette bene.
+- Mantenere intatto il fast-forward su UID duplicati: le mail già scaricate non vanno ripassate davvero.
 
-### 1. backgroundSync.ts — Resilienza e feedback
+5. Pulizia tecnica
+- Rimuovere o isolare la vecchia `useContinuousSync` rimasta in `useEmailSync.ts`.
+- Centralizzare la logica di sync/progress per evitare drift tra implementazioni.
+- Spezzare `EmailDownloadPage.tsx` in componenti più piccoli.
+- Estrarre dal `check-inbox` almeno il blocco decode/normalization in helper separati, senza riscrivere tutta la funzione IMAP.
 
-- **Aumentare MAX_RETRIES da 3 a 10** con backoff più aggressivo
-- **Mostrare progresso anche per duplicati**: Quando `total: 0` ma `has_more: true`, aggiornare il batch counter e mostrare `remaining` nella UI (la funzione già ritorna `remaining`)
-- **Aggiungere `skipped` al progress**: Contare le email saltate (duplicate) separatamente
-- **Non resettare `consecutiveErrors` solo su success** — resettare anche quando `total: 0` con `has_more: true` (il server ha risposto OK, non è un errore)
+File coinvolti
+- `src/pages/Settings.tsx`
+- `src/pages/EmailDownloadPage.tsx`
+- `src/lib/backgroundSync.ts`
+- `src/components/outreach/EmailInboxView.tsx`
+- `src/components/outreach/EmailDetailView.tsx`
+- `src/components/outreach/email/EmailHtmlFrame.tsx`
+- `src/components/outreach/email/emailUtils.ts` oppure nuova utility dedicata
+- `src/hooks/useContinuousSync.ts`
+- `src/hooks/useEmailSync.ts`
+- `supabase/functions/check-inbox/index.ts` più helper estratti nella stessa cartella
 
-### 2. EmailDownloadPage.tsx — Feedback visivo per duplicati
+Dettagli tecnici
+- Root cause del comportamento “scende in basso”: append in lista + `scrollIntoView` sul fondo.
+- Root cause della pagina che si allunga: wrapper `max-w-4xl`/`overflow-auto` in `Settings.tsx` + containment non abbastanza rigido nei pannelli email.
+- Root cause delle mail illeggibili: manca un layer condiviso di body normalization tra parser e renderer.
+- Root cause del rischio regressioni: doppia implementazione del continuous sync e file troppo lunghi nei punti più sensibili.
 
-- Mostrare nella barra di stato: "Blocco X — Y scaricate, Z saltate (duplicate), W rimanenti"
-- Quando `total: 0` e il sync è attivo, mostrare un indicatore "Scansione in corso..." con il numero rimanente
-- Il contatore `remaining` dal server dà il progresso reale
-
-### 3. check-inbox — Fast-forward per duplicati (opzionale ma consigliato)
-
-- Nella edge function, quando un UID viene skippato come duplicato, la funzione già fa `continue` e avanza `maxUid`. Il problema è che ogni duplicato richiede comunque: connessione IMAP → fetch dimensione → fetch raw → SHA-256 → query DB → skip. Sono ~3 secondi buttati per email.
-- **Aggiungere un pre-check per imap_uid**: Prima di fare il fetch IMAP, controllare se `imap_uid` + `uidvalidity` esiste già nel DB. Se sì, skip immediato senza toccare IMAP. Questo accelererà enormemente il passaggio attraverso i duplicati.
-
-## File da modificare
-
-| File | Cosa |
-|---|---|
-| `src/lib/backgroundSync.ts` | Aggiungere `skipped` e `remaining` al progress, aumentare retry, feedback duplicati |
-| `src/pages/EmailDownloadPage.tsx` | Mostrare skipped/remaining nella UI, indicatore scansione attivo |
-| `supabase/functions/check-inbox/index.ts` | Pre-check `imap_uid` nel DB prima del fetch IMAP per fast-forward duplicati |
-
-## Dettagli tecnici
-
-**Pre-check duplicati nel check-inbox** (riga ~800):
-```sql
-SELECT id FROM channel_messages 
-WHERE imap_uid = $uid AND uidvalidity = $uidvalidity AND user_id = $userId
-```
-Se esiste → skip immediatamente, aggiorna checkpoint, `continue`. Zero accesso IMAP.
-
-**backgroundSync progress** — aggiungere:
-```typescript
-interface BgSyncProgress {
-  // ...existing
-  skipped: number;    // email saltate (duplicate)
-  remaining: number;  // dal server
-}
-```
-
-Quando `result.total === 0` e `has_more === true`:
-- Incrementare `skipped`
-- Aggiornare `remaining` dal risultato
-- Continuare il loop (non è un errore)
-
+Verifica finale
+- le nuove mail compaiono in alto
+- la lista scorre dentro il suo container, non la pagina intera
+- la preview scorre solo nel body, con header fermo
+- il tab download usa tutta la larghezza utile
+- le mail già salvate ma “sporche” tornano leggibili in UI
+- il download continua a saltare i duplicati senza riscaricare tutto
+- aggiungo anche regressioni mirate per i casi peggiori: base64 HTML, quoted-printable HTML, multipart con `cid:` e duplicate UID
