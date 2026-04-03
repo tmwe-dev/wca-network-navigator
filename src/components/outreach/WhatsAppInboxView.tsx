@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  MessageCircle, RefreshCw, Loader2, Search, Inbox, Wifi, WifiOff,
+  MessageCircle, RefreshCw, Loader2, Search, Wifi, WifiOff, Play, Pause,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
-import { useWhatsAppInbox } from "@/hooks/useWhatsAppInbox";
-import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useWhatsAppAutoSync } from "@/hooks/useWhatsAppAutoSync";
 
 type ChatThread = {
   contact: string;
@@ -26,10 +25,9 @@ export function WhatsAppInboxView() {
 
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp");
   const markAsRead = useMarkAsRead();
-  const { isAvailable } = useWhatsAppExtensionBridge();
-  const { readInbox, isReading } = useWhatsAppInbox();
+  const { autoEnabled, toggle, isReading, isAvailable, readInbox } = useWhatsAppAutoSync(60_000);
 
-  // Group messages by contact (from_address for inbound, to_address for outbound)
+  // Group messages by contact
   const threads = useMemo(() => {
     const map = new Map<string, ChannelMessage[]>();
     messages.forEach(msg => {
@@ -69,7 +67,6 @@ export function WhatsAppInboxView() {
 
   const handleSelectThread = (thread: ChatThread) => {
     setSelectedContact(thread.contact);
-    // Mark all unread messages as read
     thread.messages.forEach(msg => {
       if (msg.direction === "inbound" && !msg.read_at) {
         markAsRead.mutate(msg.id);
@@ -85,7 +82,8 @@ export function WhatsAppInboxView() {
         selectedThread ? "w-[300px]" : "flex-1"
       )}>
         <div className="flex-shrink-0 p-3 space-y-2 border-b border-border">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* On-demand */}
             <Button
               size="sm"
               variant="outline"
@@ -98,8 +96,21 @@ export function WhatsAppInboxView() {
               ) : (
                 <RefreshCw className="w-3.5 h-3.5" />
               )}
-              Leggi WhatsApp
+              Leggi ora
             </Button>
+
+            {/* Auto-polling toggle */}
+            <Button
+              size="sm"
+              variant={autoEnabled ? "default" : "outline"}
+              onClick={toggle}
+              disabled={!isAvailable}
+              className="gap-1.5"
+            >
+              {autoEnabled ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {autoEnabled ? "Auto ON" : "Auto OFF"}
+            </Button>
+
             <Badge variant={isAvailable ? "default" : "destructive"} className="text-[10px] gap-1 h-5">
               {isAvailable ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {isAvailable ? "Connesso" : "Offline"}
@@ -127,7 +138,7 @@ export function WhatsAppInboxView() {
               <p className="text-sm">Nessuna conversazione</p>
               <p className="text-xs text-center">
                 {isAvailable
-                  ? 'Clicca "Leggi WhatsApp" per importare i messaggi'
+                  ? 'Clicca "Leggi ora" o attiva "Auto" per importare i messaggi'
                   : "Installa l'estensione WhatsApp per iniziare"
                 }
               </p>
@@ -181,7 +192,6 @@ export function WhatsAppInboxView() {
       {/* Right: chat conversation */}
       {selectedThread && (
         <div className="flex-1 flex flex-col min-w-0 bg-muted/10">
-          {/* Chat header */}
           <div className="flex-shrink-0 p-3 border-b border-border flex items-center justify-between bg-background">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -194,7 +204,6 @@ export function WhatsAppInboxView() {
             </Button>
           </div>
 
-          {/* Chat messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-2 max-w-lg mx-auto">
               {selectedThread.messages.map(msg => {
