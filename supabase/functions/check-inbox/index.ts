@@ -930,11 +930,14 @@ Deno.serve(async (req) => {
 
           try {
             const envFetch = await client.fetch(String(uid), {
-              byUid: true, uid: true, envelope: true, bodyStructure: true,
+              byUid: true,
+              uid: true,
+              envelope: true,
+              bodyStructure: !isOversized,
             } as any);
 
             const env = envFetch?.[0]?.envelope;
-            bodyStructure = envFetch?.[0]?.bodyStructure || null;
+            bodyStructure = !isOversized ? (envFetch?.[0]?.bodyStructure || null) : null;
             if (env) {
               fromAddr = envelopeAddr(env.from?.[0]);
               toAddr = envelopeAddrList(env.to);
