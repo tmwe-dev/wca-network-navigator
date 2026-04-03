@@ -14,7 +14,7 @@ import { Search, Building2, Mail, CheckCircle2, Image, Linkedin, Loader2, XCircl
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { toast } from "@/hooks/use-toast";
 
-type SourceFilter = "all" | "wca" | "contacts" | "email";
+type SourceFilter = "all" | "wca" | "contacts" | "email" | "cockpit";
 
 interface EnrichedRow {
   id: string;
