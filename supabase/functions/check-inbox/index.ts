@@ -1157,7 +1157,7 @@ Deno.serve(async (req) => {
                     b64 = btoa(b64);
                     const dataUri = `data:${contentType};base64,${b64}`;
                     attachmentRecords.push({
-                      cid: part.contentId, publicUrl: dataUri, filename,
+                      cid: effectiveCid, publicUrl: dataUri, filename,
                       storagePath: "", contentType, size: decoded.length,
                       isInline: true, isDataUri: true,
                     });
