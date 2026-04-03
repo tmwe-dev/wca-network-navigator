@@ -1331,7 +1331,7 @@ Deno.serve(async (req) => {
           if (saveErr) {
             console.error(`[check-inbox] Save error UID ${uid}:`, saveErr.message);
           } else {
-            messages.push(msgData);
+            messages.push({ ...msgData, id: savedMsg.id });
             maxUid = uid;
 
             // Save attachments with content_id and is_inline

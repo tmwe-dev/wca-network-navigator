@@ -24,6 +24,7 @@ type Props = {
   selectedEmailId: string | null;
   onSelect: (emailId: string) => void;
   isRunning: boolean;
+  isLoading?: boolean;
   emailCount: number;
 };
 
@@ -32,11 +33,23 @@ export function DownloadedEmailList({
   selectedEmailId,
   onSelect,
   isRunning,
+  isLoading = false,
   emailCount,
 }: Props) {
+  const visibleLabel = emailCount > emails.length
+    ? `ultime ${emails.length} visibili`
+    : `${emails.length} visibili`;
+
   return (
     <div className="flex w-[320px] flex-shrink-0 flex-col overflow-hidden border-r border-border bg-background">
-      {emails.length === 0 && !isRunning ? (
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
+          <div className="space-y-2 text-center">
+            <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+            <p className="text-sm">Caricamento email…</p>
+          </div>
+        </div>
+      ) : emails.length === 0 && !isRunning ? (
         <div className="flex flex-1 items-center justify-center text-muted-foreground">
           <div className="space-y-2 text-center">
             <Download className="mx-auto h-10 w-10 opacity-30" />
@@ -83,7 +96,7 @@ export function DownloadedEmailList({
       )}
 
       <div className="flex flex-shrink-0 items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-        <span>{emails.length} scaricate in questa sessione</span>
+        <span>{visibleLabel}</span>
         <span className="font-mono">{emailCount.toLocaleString()} totali</span>
       </div>
     </div>
