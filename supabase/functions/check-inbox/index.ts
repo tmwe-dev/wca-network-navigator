@@ -497,11 +497,18 @@ function parseEmailFromHeader(header: string): string {
    RFC 2046 — Multipart MIME parser for RFC822.TEXT fallback
    ══════════════════════════════════════════════════════════════ */
 
-function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: string; html: string } {
+type FallbackResult = {
+  text: string;
+  html: string;
+  inlineImages: Array<{ cid: string; contentType: string; data: Uint8Array }>;
+};
+
+function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): FallbackResult {
   let text = "";
   let html = "";
+  const inlineImages: FallbackResult["inlineImages"] = [];
   const boundaryMatch = rawText.match(/boundary="?([^\s";\r\n]+)"?/i);
-  if (!boundaryMatch) return { text: "", html: "" };
+  if (!boundaryMatch) return { text: "", html: "", inlineImages: [] };
 
   const boundary = boundaryMatch[1];
   const delimiter = "--" + boundary;
@@ -521,10 +528,12 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
     const ctMatch = headerPart.match(/content-type:\s*([^;\r\n]+)/i);
     const encMatch = headerPart.match(/content-transfer-encoding:\s*(\S+)/i);
     const charsetMatch = headerPart.match(/charset="?([^"\s;]+)"?/i);
+    const cidMatch = headerPart.match(/content-id:\s*<?([^>\s\r\n]+)>?/i);
 
     const contentType = (ctMatch?.[1] || "").trim().toLowerCase();
     const encoding = (encMatch?.[1] || "7bit").trim();
     const charset = charsetMatch?.[1] || "utf-8";
+    const cid = cidMatch?.[1] || "";
 
     if (contentType.startsWith("multipart/")) {
       const nestedBoundaryMatch = headerPart.match(/boundary="?([^\s";\r\n]+)"?/i);
@@ -533,6 +542,7 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
         const nested = parseMultipartFallback(nestedBytes, bodyPart);
         if (nested.text && !text) text = nested.text;
         if (nested.html && !html) html = nested.html;
+        inlineImages.push(...nested.inlineImages);
       }
       continue;
     }
@@ -541,9 +551,18 @@ function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): { text: 
       text = decodeMimePart(new TextEncoder().encode(bodyPart), encoding, charset);
     } else if (contentType === "text/html" && !html) {
       html = decodeMimePart(new TextEncoder().encode(bodyPart), encoding, charset);
+    } else if (contentType.startsWith("image/") && cid) {
+      // Inline image found via Content-ID in fallback parser
+      try {
+        const imgBytes = new TextEncoder().encode(bodyPart);
+        const decoded = encoding.toUpperCase() === "BASE64"
+          ? decodeBase64Bytes(imgBytes)
+          : imgBytes;
+        inlineImages.push({ cid, contentType, data: decoded });
+      } catch { /* skip broken inline images */ }
     }
   }
-  return { text, html };
+  return { text, html, inlineImages };
 }
 
 /* ══════════════════════════════════════════════════════════════
