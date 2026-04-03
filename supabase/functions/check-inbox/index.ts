@@ -589,6 +589,7 @@ const UID_SEARCH_INITIAL_WINDOW = 250;
 const UID_SEARCH_MAX_EXPANSIONS = 10;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_RAW_BYTES = 15 * 1024 * 1024; // 15MB max raw email to store
+const MAX_RAW_FETCH_BYTES = 2 * 1024 * 1024; // 2MB — skip BODY.PEEK[] for larger messages to stay within CPU limit
 const INLINE_DATA_URI_THRESHOLD = 100 * 1024; // 100KB — below this, use data URI
 
 type NextUidBatch = {
@@ -800,7 +801,7 @@ Deno.serve(async (req) => {
         const parseWarnings: string[] = [];
 
         try {
-          /* ─── Phase 1: Fetch raw RFC 5322 message (BODY.PEEK[]) ─── */
+          /* ─── Phase 1: Check size, then conditionally fetch raw ─── */
           let rawBytes: Uint8Array = new Uint8Array(0);
           let rawHash = "";
           let rawStoragePath = "";
@@ -809,17 +810,13 @@ Deno.serve(async (req) => {
           let rfc822Size = 0;
 
           try {
-            const rawCmd = `UID FETCH ${uid} (BODY.PEEK[] FLAGS INTERNALDATE RFC822.SIZE)`;
-            const rawResponse = await (client as any).executeCommand(rawCmd);
-            rawBytes = extractLiteralBytesFromResponse(rawResponse);
-
-            // Extract FLAGS, INTERNALDATE, RFC822.SIZE from response lines
-            for (const line of rawResponse) {
+            // Step 1a: Lightweight metadata fetch (no body download)
+            const metaCmd = `UID FETCH ${uid} (FLAGS INTERNALDATE RFC822.SIZE)`;
+            const metaResponse = await (client as any).executeCommand(metaCmd);
+            for (const line of metaResponse) {
               if (typeof line !== "string") continue;
-              // FLAGS
               const flagsMatch = line.match(/FLAGS\s*\(([^)]*)\)/i);
               if (flagsMatch) imapFlags = flagsMatch[1].trim();
-              // INTERNALDATE
               const idateMatch = line.match(/INTERNALDATE\s*"([^"]+)"/i);
               if (idateMatch) {
                 try {
@@ -827,34 +824,40 @@ Deno.serve(async (req) => {
                   if (!isNaN(parsed.getTime())) internalDate = parsed.toISOString();
                 } catch { /* ignore */ }
               }
-              // RFC822.SIZE
               const sizeMatch = line.match(/RFC822\.SIZE\s+(\d+)/i);
               if (sizeMatch) rfc822Size = parseInt(sizeMatch[1], 10);
             }
-            if (!rfc822Size) rfc822Size = rawBytes.length;
 
-            if (rawBytes.length > 0) {
-              rawHash = await sha256hex(rawBytes);
+            console.log(`[check-inbox] UID ${uid}: RFC822.SIZE=${rfc822Size}`);
 
-              // Check for duplicate by hash
-              const { data: existing } = await supabase
-                .from("channel_messages")
-                .select("id")
-                .eq("raw_sha256", rawHash)
-                .eq("user_id", userId)
-                .maybeSingle();
+            // Step 1b: Only fetch full raw if message is small enough for CPU budget
+            if (rfc822Size > 0 && rfc822Size <= MAX_RAW_FETCH_BYTES) {
+              const rawCmd = `UID FETCH ${uid} (BODY.PEEK[])`;
+              const rawResponse = await (client as any).executeCommand(rawCmd);
+              rawBytes = extractLiteralBytesFromResponse(rawResponse);
+              if (!rfc822Size) rfc822Size = rawBytes.length;
 
-              if (existing) {
-                console.log(`[check-inbox] UID ${uid}: duplicate by SHA-256, skipping`);
-                maxUid = uid;
-                await supabase.from("email_sync_state")
-                  .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
-                  .eq("user_id", userId);
-                continue;
-              }
+              if (rawBytes.length > 0) {
+                rawHash = await sha256hex(rawBytes);
 
-              // Store raw to Storage (if under limit)
-              if (rawBytes.length <= MAX_RAW_BYTES) {
+                // Check for duplicate by hash
+                const { data: existing } = await supabase
+                  .from("channel_messages")
+                  .select("id")
+                  .eq("raw_sha256", rawHash)
+                  .eq("user_id", userId)
+                  .maybeSingle();
+
+                if (existing) {
+                  console.log(`[check-inbox] UID ${uid}: duplicate by SHA-256, skipping`);
+                  maxUid = uid;
+                  await supabase.from("email_sync_state")
+                    .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+                    .eq("user_id", userId);
+                  continue;
+                }
+
+                // Store raw to Storage
                 rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
                 const { error: rawUpErr } = await supabaseAdmin.storage
                   .from("import-files")
@@ -866,13 +869,50 @@ Deno.serve(async (req) => {
                   parseWarnings.push(`raw upload failed: ${rawUpErr.message}`);
                   rawStoragePath = "";
                 }
-              } else {
-                parseWarnings.push(`raw too large (${rawBytes.length}B), not stored`);
+              }
+            } else if (rfc822Size > MAX_RAW_FETCH_BYTES) {
+              parseWarnings.push(`raw too large (${rfc822Size}B > ${MAX_RAW_FETCH_BYTES}B), skipping raw fetch to stay within CPU limits`);
+              console.log(`[check-inbox] UID ${uid}: skipping raw fetch (${rfc822Size}B too large for CPU budget)`);
+
+              // Dedup by Message-ID instead (will be checked after envelope fetch below)
+            } else {
+              // rfc822Size unknown (0) — try fetching but with a safety timeout approach
+              try {
+                const rawCmd = `UID FETCH ${uid} (BODY.PEEK[])`;
+                const rawResponse = await (client as any).executeCommand(rawCmd);
+                rawBytes = extractLiteralBytesFromResponse(rawResponse);
+                rfc822Size = rawBytes.length;
+
+                if (rawBytes.length > MAX_RAW_FETCH_BYTES) {
+                  // Too large — discard to save CPU
+                  parseWarnings.push(`raw fetched but too large (${rawBytes.length}B), discarding`);
+                  rawBytes = new Uint8Array(0);
+                } else if (rawBytes.length > 0) {
+                  rawHash = await sha256hex(rawBytes);
+                  const { data: existing } = await supabase
+                    .from("channel_messages").select("id")
+                    .eq("raw_sha256", rawHash).eq("user_id", userId).maybeSingle();
+                  if (existing) {
+                    console.log(`[check-inbox] UID ${uid}: duplicate by SHA-256, skipping`);
+                    maxUid = uid;
+                    await supabase.from("email_sync_state")
+                      .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+                      .eq("user_id", userId);
+                    continue;
+                  }
+                  rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
+                  const { error: rawUpErr } = await supabaseAdmin.storage
+                    .from("import-files")
+                    .upload(rawStoragePath, rawBytes, { contentType: "message/rfc822", upsert: true });
+                  if (rawUpErr) { parseWarnings.push(`raw upload failed: ${rawUpErr.message}`); rawStoragePath = ""; }
+                }
+              } catch (rawErr: any) {
+                parseWarnings.push(`raw fetch failed: ${rawErr.message}`);
               }
             }
           } catch (rawErr: any) {
-            parseWarnings.push(`raw fetch failed: ${rawErr.message}`);
-            console.warn(`[check-inbox] UID ${uid}: raw fetch error:`, rawErr.message);
+            parseWarnings.push(`metadata fetch failed: ${rawErr.message}`);
+            console.warn(`[check-inbox] UID ${uid}: metadata fetch error:`, rawErr.message);
           }
 
           /* ─── Phase 2: ENVELOPE + BODYSTRUCTURE ─── */
@@ -934,6 +974,24 @@ Deno.serve(async (req) => {
               }
             } catch (hdrErr: any) {
               parseWarnings.push(`header fallback error: ${hdrErr.message}`);
+            }
+          }
+
+          // Message-ID dedup for large messages (where we skipped raw hash dedup)
+          if (!rawHash && messageId && !messageId.startsWith("uid_")) {
+            const { data: existingByMid } = await supabase
+              .from("channel_messages")
+              .select("id")
+              .eq("message_id_external", messageId)
+              .eq("user_id", userId)
+              .maybeSingle();
+            if (existingByMid) {
+              console.log(`[check-inbox] UID ${uid}: duplicate by Message-ID, skipping`);
+              maxUid = uid;
+              await supabase.from("email_sync_state")
+                .update({ last_uid: uid, last_sync_at: new Date().toISOString() })
+                .eq("user_id", userId);
+              continue;
             }
           }
 
