@@ -691,9 +691,12 @@ export type Database = {
           raw_size_bytes: number | null
           raw_storage_path: string | null
           read_at: string | null
+          references_header: string | null
+          search_vector: unknown
           source_id: string | null
           source_type: string | null
           subject: string | null
+          thread_id: string | null
           to_address: string | null
           uidvalidity: number | null
           user_id: string
@@ -722,9 +725,12 @@ export type Database = {
           raw_size_bytes?: number | null
           raw_storage_path?: string | null
           read_at?: string | null
+          references_header?: string | null
+          search_vector?: unknown
           source_id?: string | null
           source_type?: string | null
           subject?: string | null
+          thread_id?: string | null
           to_address?: string | null
           uidvalidity?: number | null
           user_id: string
@@ -753,9 +759,12 @@ export type Database = {
           raw_size_bytes?: number | null
           raw_storage_path?: string | null
           read_at?: string | null
+          references_header?: string | null
+          search_vector?: unknown
           source_id?: string | null
           source_type?: string | null
           subject?: string | null
+          thread_id?: string | null
           to_address?: string | null
           uidvalidity?: number | null
           user_id?: string
