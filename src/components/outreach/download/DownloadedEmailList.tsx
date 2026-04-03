@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import type { DownloadedEmail } from "@/lib/backgroundSync";
@@ -28,6 +29,8 @@ type Props = {
   emailCount: number;
 };
 
+const ROW_HEIGHT = 64;
+
 export function DownloadedEmailList({
   emails,
   selectedEmailId,
@@ -36,6 +39,15 @@ export function DownloadedEmailList({
   isLoading = false,
   emailCount,
 }: Props) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: emails.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 5,
+  });
+
   const visibleLabel = emailCount > emails.length
     ? `ultime ${emails.length} visibili`
     : `${emails.length} visibili`;
@@ -53,13 +65,16 @@ export function DownloadedEmailList({
         <div className="flex flex-1 items-center justify-center text-muted-foreground">
           <div className="space-y-2 text-center">
             <Download className="mx-auto h-10 w-10 opacity-30" />
-            <p className="text-sm">Premi “Scarica Tutto” per iniziare</p>
+            <p className="text-sm">Premi "Scarica Tutto" per iniziare</p>
           </div>
         </div>
       ) : (
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-1">
-            {emails.map((email) => {
+        <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
+          <div
+            style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const email = emails[virtualRow.index];
               const { brand } = extractSenderBrand(email.from);
               const isSelected = selectedEmailId === email.id;
 
@@ -68,8 +83,16 @@ export function DownloadedEmailList({
                   key={email.id}
                   type="button"
                   onClick={() => onSelect(email.id)}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
                   className={cn(
-                    "flex w-full items-start gap-2 rounded px-3 py-2 text-left transition-all duration-150",
+                    "flex w-full items-start gap-2 px-3 py-2 text-left transition-all duration-150",
                     "hover:bg-accent/50",
                     isSelected
                       ? "border-l-2 border-primary bg-primary/10"
@@ -85,14 +108,14 @@ export function DownloadedEmailList({
                 </button>
               );
             })}
-            {isRunning && (
-              <div className="flex items-center gap-2 px-3 py-2 text-xs text-primary animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Scaricamento in corso...
-              </div>
-            )}
           </div>
-        </ScrollArea>
+          {isRunning && (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-primary animate-pulse">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Scaricamento in corso...
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex flex-shrink-0 items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
