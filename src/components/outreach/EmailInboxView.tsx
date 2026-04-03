@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  RefreshCw, Loader2, Search, Inbox, Download, Square, RotateCcw,
+  RefreshCw, Loader2, Search, Inbox, Download, Square, RotateCcw, Database, Mail,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useCheckInbox, useMarkAsRead, useContinuousSync, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
+import { useEmailCount } from "@/hooks/useEmailCount";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
 
