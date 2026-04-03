@@ -1127,10 +1127,11 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Inline images (RFC 2387 + cid:)
-            if (part.isInlineImage && part.contentId) {
+            // Inline images (RFC 2387 + cid:) — also handle disposition=inline without Content-ID
+            if (part.isInlineImage) {
+              const effectiveCid = part.contentId || `auto_${part.section}_${uid}`;
               if (part.size > MAX_ATTACHMENT_BYTES) {
-                parseWarnings.push(`inline image ${part.contentId} too large (${part.size}B)`);
+                parseWarnings.push(`inline image ${effectiveCid} too large (${part.size}B)`);
                 continue;
               }
 
