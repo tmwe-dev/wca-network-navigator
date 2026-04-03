@@ -12,6 +12,7 @@ import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav
 import OperatorsSettings from "@/pages/OperatorsSettings";
 import EmailDownloadPage from "@/pages/EmailDownloadPage";
 import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
+import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -36,59 +37,56 @@ export default function Settings() {
   ];
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full min-h-0 overflow-hidden">
       <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
-      <div className="flex-1 min-w-0 overflow-auto p-4">
-        <div className="max-w-4xl">
-          {tab === "generale" && (
-            <div className="float-panel p-5">
-              <GeneralSettings settings={settings} updateSetting={updateSetting} />
-            </div>
-          )}
-          {tab === "wca" && (
-            <div className="float-panel p-5">
-              <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
-            </div>
-          )}
-          {tab === "voce-ai" && (
-            <div className="float-panel p-5">
-              <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
-            </div>
-          )}
-          {tab === "import-export" && (
-            <div className="float-panel p-5">
-              <ImportExportSettings />
-            </div>
-          )}
-          {tab === "reportaziende" && (
-            <div className="float-panel p-5">
-              <RASettings settings={settings} updateSetting={updateSetting} />
-            </div>
-          )}
-          {tab === "contenuti" && (
-            <div className="float-panel p-5">
-              <ContentManager />
-            </div>
-          )}
-          {tab === "abbonamento" && (
-            <div className="float-panel p-5">
-              <SubscriptionPanel />
-            </div>
-          )}
-          {tab === "operatori" && (
-            <OperatorsSettings />
-          )}
-          {tab === "download-email" && (
-            <div className="h-full -m-4">
-              <EmailDownloadPage />
-            </div>
-          )}
-          {tab === "enrichment" && (
-            <div className="float-panel p-5">
-              <EnrichmentSettings />
-            </div>
-          )}
-        </div>
+      <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
+        {tab === "download-email" ? (
+          <EmailDownloadPage />
+        ) : (
+          <div className="max-w-4xl">
+            {tab === "generale" && (
+              <div className="float-panel p-5">
+                <GeneralSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "wca" && (
+              <div className="float-panel p-5">
+                <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "voce-ai" && (
+              <div className="float-panel p-5">
+                <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "import-export" && (
+              <div className="float-panel p-5">
+                <ImportExportSettings />
+              </div>
+            )}
+            {tab === "reportaziende" && (
+              <div className="float-panel p-5">
+                <RASettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "contenuti" && (
+              <div className="float-panel p-5">
+                <ContentManager />
+              </div>
+            )}
+            {tab === "abbonamento" && (
+              <div className="float-panel p-5">
+                <SubscriptionPanel />
+              </div>
+            )}
+            {tab === "operatori" && <OperatorsSettings />}
+            {tab === "enrichment" && (
+              <div className="float-panel p-5">
+                <EnrichmentSettings />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
