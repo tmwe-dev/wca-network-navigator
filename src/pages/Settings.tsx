@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, BookOpen, Link, Download, FileText, Crown, Volume2, Users, Mail } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { SubscriptionPanel } from "@/components/settings/SubscriptionPanel";
 import ContentManager from "@/components/settings/ContentManager";
@@ -10,6 +10,7 @@ import { RASettings } from "@/components/settings/RASettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/pages/OperatorsSettings";
+import EmailDownloadPage from "@/pages/EmailDownloadPage";
 
 export default function Settings() {
   const { data: settings, isLoading } = useAppSettings();
@@ -26,6 +27,7 @@ export default function Settings() {
     { value: "wca", label: "Connessioni", icon: Link },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
     { value: "import-export", label: "Import/Export", icon: Download },
+    { value: "download-email", label: "Download Email", icon: Mail },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "abbonamento", label: "Abbonamento", icon: Crown },
     { value: "operatori", label: "Operatori", icon: Users },
@@ -73,6 +75,11 @@ export default function Settings() {
           )}
           {tab === "operatori" && (
             <OperatorsSettings />
+          )}
+          {tab === "download-email" && (
+            <div className="h-full -m-4">
+              <EmailDownloadPage />
+            </div>
           )}
         </div>
       </div>
