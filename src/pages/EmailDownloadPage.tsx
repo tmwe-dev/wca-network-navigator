@@ -35,7 +35,7 @@ function formatTime(iso: string): string {
 
 export default function EmailDownloadPage() {
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({
-    downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
+    downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
   }));
   const [emails, setEmails] = useState<DownloadedEmail[]>(() => bgSyncGetEmailHistory());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);

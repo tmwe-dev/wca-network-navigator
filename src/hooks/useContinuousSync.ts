@@ -13,7 +13,7 @@ export type { BgSyncProgress as SyncProgress };
 export function useContinuousSync() {
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({
-    downloaded: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
+    downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
   }));
   const [isSyncing, setIsSyncing] = useState(bgSyncIsRunning);
 

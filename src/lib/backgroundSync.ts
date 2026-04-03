@@ -116,7 +116,7 @@ export async function bgSyncStart() {
     notifyProgress();
   }, 1000);
 
-  _progress = { downloaded: 0, batch: 0, lastSubject: "", status: "syncing", startedAt, elapsedSeconds: 0 };
+  _progress = { downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "syncing", startedAt, elapsedSeconds: 0 };
   notifyProgress();
 
   try {
