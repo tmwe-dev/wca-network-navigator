@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
 import { toast } from "sonner";
 
 // ── Attention Levels ──
@@ -38,6 +39,7 @@ export function useWhatsAppAdaptiveSync() {
   const [enabled, setEnabled] = useState(false);
 
   const { isAvailable, readUnread, readThread } = useWhatsAppExtensionBridge();
+  const { getSchema, forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
   const levelRef = useRef<AttentionLevel>(0);
@@ -282,5 +284,8 @@ export function useWhatsAppAdaptiveSync() {
     focusedChat,
     focusOn,
     readNow,
+    domIsStale,
+    lastLearnedAt,
+    forceRelearn,
   };
 }

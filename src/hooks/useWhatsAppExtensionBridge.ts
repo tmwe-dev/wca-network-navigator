@@ -132,5 +132,11 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread };
+  // DOM Learning: ask AI to map WhatsApp Web selectors, cache result
+  const learnDom = useCallback(
+    () => sendMsg("learnDom", {}, 90000),
+    [sendMsg]
+  );
+
+  return { isAvailable, verifySession, sendWhatsApp, readUnread, readThread, learnDom };
 }
