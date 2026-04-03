@@ -43,6 +43,8 @@ export type EmailAttachment = {
   content_type: string | null;
   size_bytes: number | null;
   storage_path: string;
+  content_id: string | null;
+  is_inline: boolean;
 };
 
 const PAGE_SIZE = 50;
