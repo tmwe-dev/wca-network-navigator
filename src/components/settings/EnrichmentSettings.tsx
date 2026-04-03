@@ -112,11 +112,58 @@ export default function EnrichmentSettings() {
     },
   });
 
+  // Fetch cockpit queue items
+  const { data: cockpitItems = [] } = useQuery({
+    queryKey: ["enrichment-cockpit"],
+    queryFn: async () => {
+      const { data: queue } = await supabase
+        .from("cockpit_queue")
+        .select("id, source_id, source_type, partner_id, status")
+        .limit(1000);
+
+      if (!queue?.length) return [];
+
+      // Resolve partner names for cockpit items that have partner_id
+      const partnerIds = [...new Set(queue.filter(q => q.partner_id).map(q => q.partner_id!))];
+      const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];
+
+      const [{ data: partnerData }, { data: contactData }] = await Promise.all([
+        partnerIds.length
+          ? supabase.from("partners").select("id, company_name, email, website").in("id", partnerIds)
+          : Promise.resolve({ data: [] as any[] }),
+        contactIds.length
+          ? supabase.from("imported_contacts").select("id, name, company_name, email").in("id", contactIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const pMap = new Map((partnerData || []).map(p => [p.id, p]));
+      const cMap = new Map((contactData || []).map(c => [c.id, c]));
+
+      return queue.map((q): EnrichedRow => {
+        const partner = q.partner_id ? pMap.get(q.partner_id) : null;
+        const contact = q.source_type === "contact" ? cMap.get(q.source_id) : null;
+        const name = partner?.company_name || contact?.name || contact?.company_name || q.source_id.slice(0, 8);
+        const email = partner?.email || contact?.email || undefined;
+        const domain = partner?.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(email || "");
+        return {
+          id: `cockpit-${q.id}`,
+          name,
+          domain: domain || null,
+          source: "cockpit",
+          hasLogo: false,
+          hasLinkedin: false,
+          email,
+        };
+      });
+    },
+  });
+
   const allRows = useMemo(() => {
     const rows: EnrichedRow[] = [];
     if (source === "all" || source === "wca") rows.push(...partners);
     if (source === "all" || source === "contacts") rows.push(...contacts);
     if (source === "all" || source === "email") rows.push(...emailSenders);
+    if (source === "all" || source === "cockpit") rows.push(...cockpitItems);
 
     if (!search) return rows;
     const q = search.toLowerCase();
