@@ -1001,18 +1001,24 @@ Deno.serve(async (req) => {
           let bodyText = "";
           let bodyHtml = "";
           const attachmentRecords: any[] = [];
+          const isOversized = rfc822Size > MAX_RAW_FETCH_BYTES;
 
           let parts: MimeLeafPart[] = [];
           if (bodyStructure) {
             try {
               parts = collectMimeLeafParts(bodyStructure);
               console.log(`[check-inbox] UID ${uid}: ${parts.length} MIME parts`);
+              // For oversized messages, only keep text/html body parts (skip attachments/inline images to save CPU)
+              if (isOversized) {
+                parts = parts.filter(p => p.isInlineBody);
+                console.log(`[check-inbox] UID ${uid}: oversized — keeping only ${parts.length} body parts`);
+              }
             } catch (bsErr: any) {
               parseWarnings.push(`BODYSTRUCTURE parse failed: ${bsErr.message}`);
             }
           }
 
-          if (parts.length === 0) {
+          if (parts.length === 0 && !isOversized) {
             try {
               const rfc822Cmd = `UID FETCH ${uid} (BODY.PEEK[TEXT])`;
               const rfc822Response = await (client as any).executeCommand(rfc822Cmd);
