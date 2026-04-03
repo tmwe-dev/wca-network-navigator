@@ -628,7 +628,6 @@ Deno.serve(async (req) => {
 
     const messages: any[] = [];
     let maxUid = lastUid;
-    const parseWarnings: string[] = [];
 
     if (toFetch.length > 0) {
       for (const uid of toFetch) {
