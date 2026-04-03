@@ -55,6 +55,7 @@ const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignJobs = lazy(() => import("./pages/CampaignJobs"));
 const TestDownload = lazy(() => import("./pages/TestDownload"));
 const TestLinkedInSearch = lazy(() => import("./pages/TestLinkedInSearch"));
+const TestExtensions = lazy(() => import("./pages/TestExtensions"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
 const SystemMap = lazy(() => import("./pages/SystemMap"));
 const Guida = lazy(() => import("./pages/Guida"));
@@ -120,6 +121,7 @@ const App = () => (
                   <Route path="/campaign-jobs" element={<CampaignJobs />} />
                   <Route path="/test-download" element={<TestDownload />} />
                   <Route path="/test-linkedin" element={<TestLinkedInSearch />} />
+                  <Route path="/test-extensions" element={<TestExtensions />} />
                   <Route path="/diagnostics" element={<Diagnostics />} />
                   <Route path="/system-map" element={<SystemMap />} />
                   <Route path="/guida" element={<Guida />} />
