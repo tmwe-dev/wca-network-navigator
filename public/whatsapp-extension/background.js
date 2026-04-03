@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════
-// WhatsApp Direct Send - Background Service Worker
-// Automates sending messages via web.whatsapp.com
+// WhatsApp Extension - Background Service Worker v2
+// Automates sending + reading messages via web.whatsapp.com
+// Robust DOM selectors with multiple fallbacks
 // ══════════════════════════════════════════════
 
 const WA_BASE = "https://web.whatsapp.com";
@@ -36,11 +37,39 @@ async function waitForLoad(tabId, timeoutMs = 30000) {
   return false;
 }
 
+// ── Find existing WhatsApp Web tab or create one ──
+
+async function getOrCreateWaTab() {
+  // Look for an already-open WA tab to avoid opening many tabs
+  try {
+    const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+    if (tabs.length > 0) {
+      const tab = tabs[0];
+      // Make sure it's loaded
+      if (tab.status === "complete") return { tab, reused: true };
+      await waitForLoad(tab.id, 15000);
+      return { tab, reused: true };
+    }
+  } catch (_) {}
+
+  // No existing tab — create one
+  const tab = await safeCreateTab(WA_BASE, false);
+  const loaded = await waitForLoad(tab.id, 30000);
+  if (!loaded) {
+    await safeRemoveTab(tab.id);
+    throw new Error("WhatsApp Web non ha caricato in tempo");
+  }
+  // Extra wait for SPA to render
+  await sleep(4000);
+  return { tab, reused: false };
+}
+
+// ── Send a WhatsApp message ──
+
 async function sendWhatsAppMessage(phone, text) {
-  // Use wa.me deep link which WhatsApp Web handles
   const cleanPhone = phone.replace(/[^0-9]/g, "");
   const url = `${WA_BASE}/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
-  
+
   let tab;
   try {
     tab = await safeCreateTab(url, false);
@@ -49,53 +78,35 @@ async function sendWhatsAppMessage(phone, text) {
       await safeRemoveTab(tab.id);
       return { success: false, error: "WhatsApp Web non ha caricato in tempo" };
     }
-
-    // Wait for WhatsApp Web to render and show the send button
     await sleep(3000);
 
-    // Try to click the send button
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: async () => {
-        // Wait for the chat to load and find the send button
         const maxWait = 15000;
         const start = Date.now();
-        
-        while (Date.now() - start < maxWait) {
-          // Check if we need QR code (not logged in)
-          const qrCanvas = document.querySelector("canvas[aria-label]");
-          if (qrCanvas) {
-            return { success: false, error: "WhatsApp Web non connesso. Scansiona il QR code prima." };
-          }
 
-          // Look for the send button (green arrow)
-          const sendBtn = document.querySelector('button[aria-label="Invia"], button[aria-label="Send"], span[data-icon="send"]');
+        while (Date.now() - start < maxWait) {
+          // QR code = not logged in
+          const qr = document.querySelector('canvas[aria-label], [data-testid="qrcode"]');
+          if (qr) return { success: false, error: "WhatsApp Web non connesso. Scansiona il QR code." };
+
+          // Look for send button with multiple selectors
+          const sendBtn =
+            document.querySelector('span[data-icon="send"]') ||
+            document.querySelector('button[aria-label="Invia"]') ||
+            document.querySelector('button[aria-label="Send"]') ||
+            document.querySelector('[data-testid="send"]');
+
           if (sendBtn) {
             const btn = sendBtn.closest("button") || sendBtn;
             btn.click();
             await new Promise(r => setTimeout(r, 1500));
             return { success: true };
           }
-
-          // Also check for the text input to verify we're in a chat
-          const input = document.querySelector('div[contenteditable="true"][data-tab="10"]');
-          if (input && input.textContent.length > 0) {
-            // Text is pre-filled, look harder for send button
-            const allBtns = document.querySelectorAll('button');
-            for (const b of allBtns) {
-              const icon = b.querySelector('span[data-icon="send"]');
-              if (icon) {
-                b.click();
-                await new Promise(r => setTimeout(r, 1500));
-                return { success: true };
-              }
-            }
-          }
-
           await new Promise(r => setTimeout(r, 500));
         }
-
-        return { success: false, error: "Pulsante invio non trovato. Verifica che WhatsApp Web sia connesso." };
+        return { success: false, error: "Pulsante invio non trovato." };
       },
     });
 
@@ -109,86 +120,232 @@ async function sendWhatsAppMessage(phone, text) {
   }
 }
 
+// ── Verify WhatsApp session ──
+
 async function verifySession() {
-  let tab;
   try {
-    tab = await safeCreateTab(WA_BASE, false);
-    const loaded = await waitForLoad(tab.id, 20000);
-    if (!loaded) {
-      await safeRemoveTab(tab.id);
-      return { success: false, authenticated: false, reason: "timeout" };
-    }
-    await sleep(3000);
+    const { tab, reused } = await getOrCreateWaTab();
+    await sleep(reused ? 1000 : 4000);
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
-        const qr = document.querySelector("canvas[aria-label]");
+        const qr = document.querySelector('canvas[aria-label], [data-testid="qrcode"]');
         if (qr) return { success: true, authenticated: false, reason: "qr_required" };
-        const side = document.querySelector("#side");
+        // #side is the left panel with chat list — means we're logged in
+        const side = document.querySelector("#side") || document.querySelector('[data-testid="chatlist"]');
         if (side) return { success: true, authenticated: true };
         return { success: true, authenticated: false, reason: "unknown_state" };
       },
     });
 
-    await safeRemoveTab(tab.id);
+    if (!reused) await safeRemoveTab(tab.id);
     return results?.[0]?.result || { success: false, authenticated: false, reason: "no_result" };
   } catch (err) {
-    if (tab?.id) await safeRemoveTab(tab.id);
     return { success: false, error: err.message };
   }
 }
 
+// ── Read unread messages (sidebar scan) ──
+
 async function readUnreadMessages() {
-  let tab;
   try {
-    tab = await safeCreateTab(WA_BASE, false);
-    const loaded = await waitForLoad(tab.id, 25000);
-    if (!loaded) {
-      await safeRemoveTab(tab.id);
-      return { success: false, error: "WhatsApp Web non ha caricato in tempo" };
-    }
-    await sleep(4000);
+    const { tab, reused } = await getOrCreateWaTab();
+    await sleep(reused ? 1500 : 5000);
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
-        const messages = [];
-        // Find chats with unread badges
-        const chatItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
-        for (const chat of chatItems) {
-          const unreadBadge = chat.querySelector('[aria-label*="non lett"], [aria-label*="unread"]');
-          if (!unreadBadge) continue;
+        // Check if logged in first
+        const qr = document.querySelector('canvas[aria-label], [data-testid="qrcode"]');
+        if (qr) return { success: false, error: "WhatsApp Web non connesso. Scansiona il QR code." };
 
-          const titleEl = chat.querySelector('[data-testid="cell-frame-title"] span[title]');
-          const lastMsgEl = chat.querySelector('[data-testid="last-msg-status"]');
-          const timeEl = chat.querySelector('[data-testid="cell-frame-primary-detail"]');
+        const messages = [];
+
+        // Strategy 1: data-testid selectors (most reliable)
+        let chatItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
+
+        // Strategy 2: fallback to role=listitem
+        if (!chatItems.length) {
+          chatItems = document.querySelectorAll('#pane-side [role="listitem"]');
+        }
+
+        // Strategy 3: fallback to divs inside the chat list panel
+        if (!chatItems.length) {
+          const pane = document.querySelector("#pane-side") || document.querySelector('[data-testid="chatlist"]');
+          if (pane) {
+            chatItems = pane.querySelectorAll('[tabindex="-1"]');
+          }
+        }
+
+        for (const chat of chatItems) {
+          // Detect unread badge — multiple selector strategies
+          const unreadBadge =
+            chat.querySelector('[data-testid="icon-unread-count"]') ||
+            chat.querySelector('span[aria-label*="non lett"]') ||
+            chat.querySelector('span[aria-label*="unread"]') ||
+            chat.querySelector('span[aria-label*="mensaje"]');
+
+          // Also check for a visible numeric badge (green circle with number)
+          let unreadCount = 0;
+          if (unreadBadge) {
+            unreadCount = parseInt(unreadBadge.textContent) || 1;
+          } else {
+            // Look for any small green circle badge
+            const badges = chat.querySelectorAll('span');
+            for (const b of badges) {
+              const style = window.getComputedStyle(b);
+              const bg = style.backgroundColor;
+              const text = b.textContent.trim();
+              // Green background + numeric content = unread badge
+              if (text && /^\d+$/.test(text) && bg && (bg.includes("37, 211") || bg.includes("25d366") || bg.includes("00a884"))) {
+                unreadCount = parseInt(text) || 1;
+                break;
+              }
+            }
+          }
+
+          if (unreadCount === 0) continue;
+
+          // Extract contact name
+          const titleEl =
+            chat.querySelector('[data-testid="cell-frame-title"] span[title]') ||
+            chat.querySelector('span[title][dir="auto"]') ||
+            chat.querySelector('span[title]');
+
+          // Extract last message preview
+          const lastMsgEl =
+            chat.querySelector('[data-testid="last-msg-status"]') ||
+            chat.querySelector('span[data-testid="last-msg-status"]') ||
+            chat.querySelector('[data-testid="cell-frame-secondary"] span[title]') ||
+            chat.querySelector('[data-testid="cell-frame-secondary"] span');
+
+          // Extract timestamp
+          const timeEl =
+            chat.querySelector('[data-testid="cell-frame-primary-detail"]') ||
+            chat.querySelector('div[class] > span[dir="auto"]:last-child');
+
+          const contact = titleEl?.getAttribute("title") || titleEl?.textContent?.trim() || "Sconosciuto";
+          const lastMessage = lastMsgEl?.textContent?.trim() || "";
+          const time = timeEl?.textContent?.trim() || new Date().toISOString();
 
           messages.push({
-            contact: titleEl?.getAttribute("title") || "Sconosciuto",
-            lastMessage: lastMsgEl?.textContent?.trim() || "",
-            time: timeEl?.textContent?.trim() || "",
-            unreadCount: parseInt(unreadBadge.textContent) || 1,
+            contact,
+            lastMessage,
+            time,
+            unreadCount,
           });
         }
-        return { success: true, messages };
+
+        return { success: true, messages, scanned: chatItems.length };
       },
     });
 
-    await safeRemoveTab(tab.id);
-    return results?.[0]?.result || { success: false, error: "Nessun risultato" };
+    if (!reused) await safeRemoveTab(tab.id);
+    const result = results?.[0]?.result;
+    return result || { success: false, error: "Nessun risultato dallo script" };
   } catch (err) {
-    if (tab?.id) await safeRemoveTab(tab.id);
     return { success: false, error: err.message };
   }
 }
 
-// Handle messages from content script
+// ── Read full conversation from a specific chat ──
+
+async function readChatThread(contactName, maxMessages = 50) {
+  try {
+    const { tab, reused } = await getOrCreateWaTab();
+    await sleep(reused ? 1500 : 5000);
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [contactName, maxMessages],
+      func: async (targetContact, limit) => {
+        // Find and click on the target chat
+        const searchBox = document.querySelector('[data-testid="chat-list-search"] [contenteditable="true"]')
+          || document.querySelector('[data-testid="search-input"]')
+          || document.querySelector('#side [contenteditable="true"]');
+
+        if (!searchBox) return { success: false, error: "Campo ricerca non trovato" };
+
+        // Clear and type contact name
+        searchBox.focus();
+        searchBox.textContent = "";
+        document.execCommand("insertText", false, targetContact);
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Click on the first matching chat
+        const chatResults = document.querySelectorAll('[data-testid="cell-frame-container"], #pane-side [role="listitem"]');
+        let clicked = false;
+        for (const chat of chatResults) {
+          const title = chat.querySelector('span[title]');
+          if (title && title.getAttribute("title").toLowerCase().includes(targetContact.toLowerCase())) {
+            chat.click();
+            clicked = true;
+            break;
+          }
+        }
+
+        if (!clicked) return { success: false, error: "Chat non trovata per: " + targetContact };
+
+        // Wait for chat messages to load
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Extract messages from the conversation panel
+        const msgElements = document.querySelectorAll('[data-testid="msg-container"], [data-testid="conversation-panel-messages"] [class*="message"]');
+        const messages = [];
+
+        const items = Array.from(msgElements).slice(-limit);
+        for (const el of items) {
+          const isIncoming = el.querySelector('[data-testid="msg-dblcheck"]') === null
+            && el.querySelector('[data-testid="msg-check"]') === null;
+
+          const textEl = el.querySelector('[data-testid="balloon-text"] span, .selectable-text span');
+          const timeEl = el.querySelector('[data-testid="msg-meta"] span, [data-pre-plain-text]');
+
+          const text = textEl?.textContent?.trim() || "";
+          if (!text) continue;
+
+          let timestamp = "";
+          if (timeEl) {
+            timestamp = timeEl.textContent?.trim() || "";
+          }
+          // Try data-pre-plain-text attribute which has full timestamp
+          const prePlain = el.querySelector('[data-pre-plain-text]');
+          if (prePlain) {
+            timestamp = prePlain.getAttribute("data-pre-plain-text") || timestamp;
+          }
+
+          messages.push({
+            direction: isIncoming ? "inbound" : "outbound",
+            text,
+            timestamp,
+            contact: isIncoming ? targetContact : "me",
+          });
+        }
+
+        // Clear search to go back to chat list
+        const clearBtn = document.querySelector('[data-testid="search-input-clear"]')
+          || document.querySelector('[data-testid="x-alt"]');
+        if (clearBtn) clearBtn.click();
+
+        return { success: true, messages, contact: targetContact };
+      },
+    });
+
+    if (!reused) await safeRemoveTab(tab.id);
+    return results?.[0]?.result || { success: false, error: "Nessun risultato" };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+// ── Message handler ──
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.source !== "wa-content-bridge") return false;
 
   if (msg.action === "ping") {
-    sendResponse({ success: true, version: "1.1" });
+    sendResponse({ success: true, version: "2.0" });
     return false;
   }
 
@@ -208,6 +365,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.action === "readUnread") {
     readUnreadMessages().then(sendResponse);
+    return true;
+  }
+
+  if (msg.action === "readThread") {
+    if (!msg.contact) {
+      sendResponse({ success: false, error: "contact richiesto" });
+      return false;
+    }
+    readChatThread(msg.contact, msg.maxMessages || 50).then(sendResponse);
     return true;
   }
 
