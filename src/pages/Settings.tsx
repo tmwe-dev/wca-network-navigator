@@ -83,6 +83,11 @@ export default function Settings() {
               <EmailDownloadPage />
             </div>
           )}
+          {tab === "enrichment" && (
+            <div className="float-panel p-5">
+              <EnrichmentSettings />
+            </div>
+          )}
         </div>
       </div>
     </div>
