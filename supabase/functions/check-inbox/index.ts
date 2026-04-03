@@ -1015,7 +1015,7 @@ Deno.serve(async (req) => {
               if (attRows.length > 0) {
                 const { error: attSaveErr } = await supabase
                   .from("email_attachments")
-                  .insert(attRows);
+                  .upsert(attRows, { onConflict: "message_id,filename" });
                 if (attSaveErr) {
                   console.warn(`[check-inbox] UID ${uid}: attachment DB save error:`, attSaveErr.message);
                 } else {
